@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T16:08:16.287859+00:00",
+  "generated_utc": "2026-09-10T16:33:41.889104+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14401,
+  "allowance_count": 14402,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -9461,6 +9461,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
       "category": "path-api",
       "source_fingerprint": "d92a29a76c8794b5c423ce1a5577be54630ac54606522c2130c6e0ac8e53be08",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/CoordinatedDatabaseTransaction.cs",
+      "category": "path-api",
+      "source_fingerprint": "9015cf8a13f19e4f7e208b79d73386e90e4c334c9d1f43f203873d58c4d4705d",
       "count": 1
     },
     {

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 
-public sealed class EfLlmConversationStore(AppDbContext dbContext)
+public sealed class EfLlmConversationStore(SimpleChatsDbContext dbContext)
     : ILlmConversationStore
 {
     public async Task<LlmConversationDocument> CreateAsync(
@@ -210,7 +210,7 @@ public sealed class EfLlmConversationStore(AppDbContext dbContext)
     }
 
     private static async Task<LlmConversationDocument?> LoadAsync(
-        AppDbContext dbContext,
+        SimpleChatsDbContext dbContext,
         Guid conversationId,
         CancellationToken cancellationToken)
     {
@@ -252,7 +252,7 @@ public sealed class EfLlmConversationStore(AppDbContext dbContext)
     }
 
     private static async Task<LlmConversationDocument> RequireStoredAsync(
-        AppDbContext dbContext,
+        SimpleChatsDbContext dbContext,
         Guid conversationId,
         CancellationToken cancellationToken)
         => await LoadAsync(dbContext, conversationId, cancellationToken).ConfigureAwait(false)

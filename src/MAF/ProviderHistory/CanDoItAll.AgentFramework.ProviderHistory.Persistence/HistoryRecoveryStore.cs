@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public sealed class HistoryRecoveryStore(IDbContextFactory<AppDbContext> factory, TimeProvider clock) {
+public sealed class HistoryRecoveryStore(IDbContextFactory<ProviderHistoryDbContext> factory, TimeProvider clock) {
     public async Task<int> InterruptAbandonedAsync(HistoryPartition partition, int maximumItems, CancellationToken cancellationToken) {
         if (maximumItems is < 1 or > 1000) {
             throw new ArgumentOutOfRangeException(nameof(maximumItems));

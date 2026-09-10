@@ -11,8 +11,8 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 internal sealed class SharedProviderInvocationRecoveryService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
-    SharedProviderHistoryProjection history)
-{
+    SharedProviderHistoryProjection history,
+    CoordinatedDatabaseTransaction transactions) {
     public const int DefaultMaximumCount = 100;
     public const int MaximumAllowedCount = 1_000;
 
@@ -68,6 +68,7 @@ internal sealed class SharedProviderInvocationRecoveryService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = dbContext.Database.IsRelational()
             ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        using var coordination = transactions.Enter(dbContext);
         var record = await dbContext.Set<SharedProviderInvocationRecord>()
             .SingleOrDefaultAsync(candidate => candidate.Id == candidateId, cancellationToken);
         if (record is null ||
@@ -80,9 +81,8 @@ internal sealed class SharedProviderInvocationRecoveryService(
             return false;
         }
 
-        await history.StageAsync(dbContext, record, cancellationToken);
-        try
-        {
+        try {
+            await history.StageAsync(record, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             if (transaction is not null) {
                 await transaction.CommitAsync(cancellationToken);

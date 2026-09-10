@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.ControlPlane;
 using System.Security.Cryptography;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
@@ -108,16 +109,32 @@ public sealed class SharedProviderPremergeUpgradeTests {
         Assert.Equal("Preserved canonical workflow output", (await db.Set<WorkflowRunRecordEntity>().SingleAsync()).Summary);
         Assert.Equal(SHA256.HashData(originalBytes), SHA256.HashData(await File.ReadAllBytesAsync(usagePath)));
 
-        var partition = await new HistoryPartitionStore(factory).GetAsync(default);
+        var historyProfile = new ResolvedDatabaseProfile(new() {
+            DisplayName = "Premerge history fixture",
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+            PostgreSql = new() { DatabaseName = database.DatabaseName }
+        }, DatabaseProfileResolutionSource.ExplicitOverride, database.ConnectionString);
+        var history = new HistoryTargetWriteSession(historyProfile, TimeProvider.System);
+        var historyOptions = new DbContextOptionsBuilder<ProviderHistoryDbContext>();
+        AppDbContextOptionsConfigurator.Configure(historyOptions, historyProfile);
+        var historyFactory = new HistoryPersistenceTestDatabase.HistoryTestFactory(historyOptions.Options);
+        var chatOptions = new DbContextOptionsBuilder<SimpleChatsDbContext>();
+        AppDbContextOptionsConfigurator.Configure(chatOptions, historyProfile);
+        var chatFactory = new Microsoft.EntityFrameworkCore.Infrastructure.PooledDbContextFactory<SimpleChatsDbContext>(chatOptions.Options);
+        var partition = await history.Partitions.GetAsync(default);
         var runtime = new HistoryPersistenceTestDatabase.TestRuntime();
         var maintenance = new HistoryMaintenanceContext(partition, runtime.GetSnapshot(), runtime);
-        var outbox = new HistoryOutboxWriter(TimeProvider.System);
-        IHistorySourceMaintenance[] sources = [new LlmChatHistorySource(factory, outbox), new WorkflowHistorySource(factory, outbox)];
+        var outbox = history.Outbox;
+        IHistorySourceMaintenance[] sources = [
+            new LlmChatHistorySource(chatFactory, history.Partitions, outbox, history.Transactions),
+            new WorkflowHistorySource(factory, history.Partitions, history.Transactions, outbox)
+        ];
         foreach (var source in sources) {
             var progress = await source.ProcessAsync(maintenance, null, 10, default);
             Assert.True(progress.BackfillComplete);
         }
-        var processor = new HistoryOutboxProcessor(factory, TimeProvider.System, NullLogger<HistoryOutboxProcessor>.Instance);
+        var processor = new HistoryOutboxProcessor(historyFactory, TimeProvider.System, NullLogger<HistoryOutboxProcessor>.Instance);
         Assert.Equal(2, await processor.ProcessAsync(partition, 10, default));
         using var backfill = new FileHistoryBackfill(files.RootPath, scope, partition);
         var complete = false;
@@ -128,7 +145,7 @@ public sealed class SharedProviderPremergeUpgradeTests {
         var journal = new FileProviderHistoryJournal(files.RootPath, scope);
         var batch = await journal.ReadBatchAsync(partition, 10);
         Assert.Single(batch);
-        await new AgentHistoryPublicationStore(factory).PublishAsync(partition, scope, batch, default);
+        await new AgentHistoryPublicationStore(factory, history.Partitions, history.Projection, history.Transactions).PublishAsync(partition, scope, batch, default);
         await journal.AcknowledgeAsync(batch[0]);
         Assert.Empty(await journal.ReadBatchAsync(partition, 10));
         db.ChangeTracker.Clear();

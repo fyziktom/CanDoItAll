@@ -1,11 +1,15 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
@@ -104,12 +108,23 @@ public sealed class PersistentWorkflowResumeBoundaryStoreInMemoryTests
         AppDbContextModelRegistry.ConfigureAssemblies([
             typeof(AgentFrameworkModuleAssemblyMarker).Assembly
         ]);
+        var databaseName = $"persistent-resume-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
         var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"persistent-resume-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(databaseName, databaseRoot)
             .Options;
         var factory = new TestDbContextFactory(options);
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
         var timeProvider = new FixedTimeProvider(Now);
+        var historyOptions = new DbContextOptionsBuilder<ProviderHistoryDbContext>()
+            .UseInMemoryDatabase(databaseName, databaseRoot).Options;
+        var historyFactory = new PooledDbContextFactory<ProviderHistoryDbContext>(historyOptions);
+        var transactions = CoordinatedDatabaseTransaction.ForProfile(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.InMemory,
+            SourceKind = DatabaseProfileSourceKind.InMemory
+        }, DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+        var partitions = new HistoryPartitionStore(historyFactory, historyOptions, transactions);
+        var history = new WorkflowHistoryProjection(partitions, new(historyOptions, transactions, timeProvider));
         var runStore = new PersistentWorkflowRunStore(factory);
         var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(factory);
         var operationStore = new PersistentWorkflowExternalResponseOperationStore(
@@ -118,7 +133,8 @@ public sealed class PersistentWorkflowResumeBoundaryStoreInMemoryTests
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
             factory,
             dataProtectionProvider,
-            new WorkflowHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(timeProvider)));
+            history,
+            transactions);
         var checkpointStore = new PersistentWorkflowBackendCheckpointPayloadStore(
             factory,
             dataProtectionProvider,

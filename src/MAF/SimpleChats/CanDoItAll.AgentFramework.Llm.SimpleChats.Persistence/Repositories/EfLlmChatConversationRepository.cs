@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 
-public sealed class EfLlmChatConversationRepository(AppDbContext dbContext) : ILlmChatConversationRepository
+public sealed class EfLlmChatConversationRepository(SimpleChatsDbContext dbContext) : ILlmChatConversationRepository
 {
     public async Task<LlmChatConversation?> TryGetAsync(
         LlmChatConversationId id,

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 
-public sealed class EfLlmChatInvocationRecordRepository(AppDbContext dbContext, LlmChatHistoryProjection history)
+public sealed class EfLlmChatInvocationRecordRepository(SimpleChatsDbContext dbContext, LlmChatHistoryProjection history)
     : ILlmChatInvocationRecordRepository {
     public async Task AppendAsync(LlmChatInvocationRecord record, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(record);

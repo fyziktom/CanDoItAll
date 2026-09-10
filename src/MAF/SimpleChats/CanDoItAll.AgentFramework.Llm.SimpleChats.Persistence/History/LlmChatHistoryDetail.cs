@@ -1,15 +1,15 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.ProviderHistory;
-using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 
 internal static class LlmChatHistoryDetail {
-    internal static async Task<HistoryDetail> ReadAsync(IDbContextFactory<AppDbContext> factory,
-        CanonicalEvidenceReference source, HistoryEntryId entryId, CancellationToken cancellationToken) {
+    internal static async Task<HistoryDetail> ReadAsync(IDbContextFactory<SimpleChatsDbContext> factory,
+        HistoryPartitionStore partitions, CanonicalEvidenceReference source, HistoryEntryId entryId, CancellationToken cancellationToken) {
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await ProviderHistory.Persistence.HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var operation = Guid.ParseExact(source.Owner.Value, "N");
         var rows = await db.Database.SqlQuery<TurnText>($"""
             SELECT message."Role" AS "Role", left(message."Text", 131072) AS "Text",

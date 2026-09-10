@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 
-public sealed class EfLlmConversationTurnStore(AppDbContext dbContext) : ILlmConversationTurnStore
+public sealed class EfLlmConversationTurnStore(SimpleChatsDbContext dbContext) : ILlmConversationTurnStore
 {
     public async Task<LlmConversationTurnSnapshot?> TryGetAsync(
         Guid conversationId,

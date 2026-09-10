@@ -9,7 +9,8 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowUsageObservationStore(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    WorkflowHistoryProjection history) :
+    WorkflowHistoryProjection history,
+    CoordinatedDatabaseTransaction transactions) :
     IWorkflowUsageObservationStore,
     IWorkflowUsageAnalyticsStore
 {
@@ -35,6 +36,7 @@ public sealed class PersistentWorkflowUsageObservationStore(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             await using var transaction = dbContext.Database.IsRelational()
                 ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+            using var coordination = transactions.Enter(dbContext);
             var ids = canonical.Keys.Select(id => id.Value).ToArray();
             var existing = await dbContext.Set<WorkflowUsageObservationRecordEntity>()
                 .AsNoTracking()
@@ -61,7 +63,7 @@ public sealed class PersistentWorkflowUsageObservationStore(
                 canonical.Values.Select(WorkflowUsageObservationRecordEntity.FromObservation));
             try
             {
-                await history.StageAsync(dbContext, canonical.Values, cancellationToken);
+                await history.StageAsync(canonical.Values, cancellationToken);
                 await dbContext.SaveChangesAsync(cancellationToken);
                 if (transaction is not null) {
                     await transaction.CommitAsync(cancellationToken);

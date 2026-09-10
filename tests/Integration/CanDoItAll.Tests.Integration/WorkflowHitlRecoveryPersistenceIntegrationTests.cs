@@ -5,12 +5,14 @@ using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
@@ -696,7 +698,8 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
             fixture.Factory,
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(),
+            fixture.History.Transactions);
         await Assert.ThrowsAsync<WorkflowExternalResponsePayloadCorruptException>(
             () => resumeStore.LoadAsync(new WorkflowResumeBoundaryLoadRequest(created.Operation!.Id)));
     }
@@ -729,7 +732,8 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
             fixture.Factory,
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(),
+            fixture.History.Transactions);
         var loadRequest = new WorkflowResumeBoundaryLoadRequest(created.Operation!.Id);
         var loaded = await resumeStore.LoadAsync(loadRequest);
         Assert.Equal(WorkflowResumeBoundaryLoadOutcome.Found, loaded.Outcome);
@@ -913,7 +917,8 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
             fixture.Factory,
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(),
+            fixture.History.Transactions);
         var cancelled = await resumeStore.TryCancelAsync(
             new WorkflowResumeBoundaryCancellationRequest(
                 seeded.Run.RunId,
@@ -1089,7 +1094,8 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         var boundaryStore = new PersistentWorkflowResumeBoundaryStore(
             fixture.Factory.WithInterceptor(saveFailure),
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(saveFailure),
+            fixture.History.Transactions);
         var invalid = await boundaryStore.TryCommitAsync(
             new WorkflowResumeBoundaryCommitRequest(
                 created.Operation.Id,
@@ -1163,7 +1169,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.True(await dbContext.Set<WorkflowUsageObservationRecordEntity>().AnyAsync(item => item.Id == usageObservation.Id.Value));
         var queued = Assert.Single(await dbContext.Set<HistoryOutboxRow>().ToListAsync());
         Assert.Equal(usageObservation.Id.Value, queued.Mutation.Entry!.Id.Value);
-        var processor = new HistoryOutboxProcessor(fixture.Factory, TimeProvider.System,
+        var processor = new HistoryOutboxProcessor(fixture.HistoryFactory, TimeProvider.System,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<HistoryOutboxProcessor>.Instance);
         Assert.Equal(1, await processor.ProcessAsync(queued.Mutation.Source.Partition, 10, default));
         var history = Assert.Single(await dbContext.Set<HistoryEntryRow>().AsNoTracking().ToListAsync());
@@ -1463,6 +1469,19 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     {
         public WorkflowHitlDbContextFactory Factory { get; } = factory;
 
+        public HistoryPersistenceTestDatabase.HistoryTestFactory HistoryFactory { get; } = new(
+            new DbContextOptionsBuilder<ProviderHistoryDbContext>().UseNpgsql(database.ConnectionString).Options);
+
+        public HistoryTargetWriteSession History { get; } = new(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection
+        }, DatabaseProfileResolutionSource.ExplicitOverride, database.ConnectionString), TimeProvider.System);
+
+        public WorkflowHistoryProjection CreateHistoryProjection(IInterceptor? interceptor = null) {
+            var historyFactory = interceptor is null ? HistoryFactory : HistoryFactory.WithInterceptor(interceptor);
+            return new(History.Partitions, new(historyFactory.Options, History.Transactions, TimeProvider.System));
+        }
+
         public PersistentWorkflowBackendCheckpointPayloadStore CreateCheckpointStore(
             bool reconstructDataProtectionProvider = false)
             => new(
@@ -1582,13 +1601,19 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     }
 
     private sealed class FailAfterResumeHistorySave(bool enabled) : SaveChangesInterceptor {
+        private DbTransaction? outboxTransaction;
         public bool Failed { get; private set; }
 
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData,
             int result, CancellationToken cancellationToken = default) {
-            if (enabled && eventData.Context is { } db &&
+            if (eventData.Context is ProviderHistoryDbContext history &&
+                history.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
+                outboxTransaction = history.Database.CurrentTransaction?.GetDbTransaction();
+            }
+            if (enabled && eventData.Context is AppDbContext db &&
                 db.ChangeTracker.Entries<WorkflowUsageObservationRecordEntity>().Any() &&
-                db.ChangeTracker.Entries<HistoryOutboxRow>().Any() && db.Database.CurrentTransaction is not null) {
+                db.Database.CurrentTransaction is { } transaction && outboxTransaction is not null &&
+                ReferenceEquals(transaction.GetDbTransaction(), outboxTransaction)) {
                 Failed = true;
                 throw new InvalidOperationException("Injected failure after resume source and outbox flush.");
             }

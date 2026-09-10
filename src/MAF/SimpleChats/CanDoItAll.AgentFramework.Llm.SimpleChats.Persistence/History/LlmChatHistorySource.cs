@@ -10,8 +10,10 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 
 public sealed class LlmChatHistorySource(
-    IDbContextFactory<AppDbContext> factory,
-    HistoryOutboxWriter outbox) : IProviderHistorySource, IHistorySourceMaintenance {
+    IDbContextFactory<SimpleChatsDbContext> factory,
+    HistoryPartitionStore partitions,
+    HistoryOutboxWriter outbox,
+    CoordinatedDatabaseTransaction transactions) : IProviderHistorySource, IHistorySourceMaintenance {
     public HistorySourceKind Kind => HistorySourceKind.SimpleChat;
 
     public Task<HistorySourceProgress> ProcessAsync(HistoryMaintenanceContext context, string? cursor,
@@ -28,17 +30,22 @@ public sealed class LlmChatHistorySource(
             return new(cursor, true);
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+        using var enlistment = transactions.Enter(db);
+        await partitions.RequireForWriteAsync(partition, cancellationToken);
         var rows = await db.Set<LlmChatInvocationRecordRow>().AsNoTracking()
             .Where(row => row.OperationId.CompareTo(position.Operation) > 0 ||
                 row.OperationId == position.Operation && row.Ordinal > position.Ordinal)
             .OrderBy(row => row.OperationId).ThenBy(row => row.Ordinal).Take(maximumItems).ToArrayAsync(cancellationToken);
         foreach (var row in rows) {
-            outbox.Stage(db, LlmChatHistoryProjection.Create(LlmChatPersistenceMapper.ToDomain(row), partition));
+            await outbox.StageAsync(LlmChatHistoryProjection.Create(LlmChatPersistenceMapper.ToDomain(row), partition), cancellationToken);
         }
         await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction is not null) {
+            await transaction.CommitAsync(cancellationToken);
+        }
         var last = rows.LastOrDefault();
         var next = new Position(last?.OperationId ?? position.Operation, last?.Ordinal ?? position.Ordinal, rows.Length < maximumItems);
         return new(JsonSerializer.Serialize(next), next.Complete);
@@ -49,7 +56,7 @@ public sealed class LlmChatHistorySource(
             return null;
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         if (int.TryParse(source.Evidence.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var ordinal)) {
             var row = await db.Set<LlmChatInvocationRecordRow>().AsNoTracking()
                 .SingleOrDefaultAsync(row => row.OperationId == operation && row.Ordinal == ordinal, cancellationToken);
@@ -77,7 +84,7 @@ public sealed class LlmChatHistorySource(
         if (evidence is null || evidence.Entry?.Id != entryId && !evidence.Attempts.Any(entry => entry.Id == entryId)) {
             return new(entryId, HistoryDetailState.Unavailable);
         }
-        return await LlmChatHistoryDetail.ReadAsync(factory, source, entryId, cancellationToken);
+        return await LlmChatHistoryDetail.ReadAsync(factory, partitions, source, entryId, cancellationToken);
     }
 
     private sealed record Position(Guid Operation, int Ordinal, bool Complete);

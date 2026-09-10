@@ -1,12 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public static class ProviderHistoryPersistenceServiceCollectionExtensions {
     public static IServiceCollection AddProviderHistoryPersistence(this IServiceCollection services) {
-        services.AddSingleton<IProviderHistoryPartition, HistoryPartitionStore>();
+        services.AddPooledDbContextFactory<ProviderHistoryDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
+        services.AddSingleton<HistoryPartitionStore>();
+        services.AddSingleton<IProviderHistoryPartition>(serviceProvider => serviceProvider.GetRequiredService<HistoryPartitionStore>());
         services.AddSingleton<HistoryHostLeaseStore>();
         services.AddSingleton<HistoryTextProtector>();
         services.AddSingleton<HistoryDetailStore>();

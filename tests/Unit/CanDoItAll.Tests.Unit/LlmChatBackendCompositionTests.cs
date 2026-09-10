@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.ProviderRuntime;
@@ -110,17 +111,21 @@ public sealed class LlmChatBackendCompositionTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
+        var databaseName = $"llm-chat-composition-{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"llm-chat-composition-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(databaseName)
             .Options;
         var providerProfile = ProviderRuntimeTestData.CreateProvider();
         services.AddScoped(_ => new AppDbContext(options));
         services.AddSingleton<IDbContextFactory<AppDbContext>>(new TestDbContextFactory(options));
+        services.AddSingleton<CoordinatedDatabaseTransaction>();
+        services.AddDbContextFactory<ProviderHistoryDbContext>(builder =>
+            builder.UseInMemoryDatabase(databaseName));
         services.AddSingleton<IDatabaseRuntimeState>(
             new MutableDatabaseRuntimeState(ProviderRuntimeTestData.RuntimeIdentity));
         services.AddSingleton<IDatabaseRuntimeWriteFence, TestDatabaseRuntimeWriteFence>();
         services.AddSingleton<ICanonicalRuntimeDatabase>(
-            ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity));
+            new InMemoryCanonicalDatabase(databaseName));
         services.AddSingleton<IDatabaseSwitchNotificationService, TestDatabaseSwitchNotificationService>();
         services.AddScoped<IProviderRuntimeProfileSource>(_ => new StaticProviderSource(providerProfile));
         services.AddSingleton(CreateInterfaceProxy<IProviderRuntimeDescriptorStore>());
@@ -136,6 +141,17 @@ public sealed class LlmChatBackendCompositionTests
 
     private static T CreateInterfaceProxy<T>() where T : class
         => DispatchProxy.Create<T, ThrowingDispatchProxy>();
+
+    private sealed class InMemoryCanonicalDatabase(string databaseName) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = new(new DatabaseProfileRecord {
+            Id = ProviderRuntimeTestData.RuntimeIdentity.ActiveProfileId!.Value,
+            DisplayName = "Simple Chats composition fixture",
+            ProviderKind = DatabaseProviderKind.InMemory,
+            Runtime = new() { Fingerprint = ProviderRuntimeTestData.RuntimeIdentity.ActiveFingerprint! }
+        }, DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+
+        public long Generation => ProviderRuntimeTestData.RuntimeIdentity.Generation;
+    }
 
     private sealed class StaticProviderSource(ProviderProfile provider) : IProviderRuntimeProfileSource
     {

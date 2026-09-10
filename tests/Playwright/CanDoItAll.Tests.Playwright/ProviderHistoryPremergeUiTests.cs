@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,11 @@ public sealed class ProviderHistoryPremergeUiTests(PlaywrightAppFixture fixture,
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
         var factory = new ContextFactory(new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(fixture.DatabaseConnectionString).Options);
-        var providerId = await SeedVisualRowsAsync(factory);
+        var history = new HistoryTargetWriteSession(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection
+        }, DatabaseProfileResolutionSource.ExplicitOverride, fixture.DatabaseConnectionString!), TimeProvider.System);
+        var providerId = await SeedVisualRowsAsync(factory, await history.Partitions.GetAsync(default));
         var evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(evidence);
         await using var context = await fixture.Browser.NewContextAsync(new() {
@@ -123,8 +128,7 @@ public sealed class ProviderHistoryPremergeUiTests(PlaywrightAppFixture fixture,
         }
     }
 
-    private static async Task<Guid> SeedVisualRowsAsync(ContextFactory factory) {
-        var partition = await new HistoryPartitionStore(factory).GetAsync(default);
+    private static async Task<Guid> SeedVisualRowsAsync(ContextFactory factory, HistoryPartition partition) {
         await using var db = factory.CreateDbContext();
         var profile = new PersistedProvider {
             Name = ProviderName, ConnectorPluginKey = ProviderConnectorKeys.OpenAi,

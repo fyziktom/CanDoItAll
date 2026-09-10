@@ -2,8 +2,8 @@ using System.Linq.Expressions;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public static class HistoryEntrySqlProjection {
-    public static Expression<Func<HistoryEntryRow, HistoryEntry>> For(HistoryPartition partition) => row => new HistoryEntry(
+internal static class HistoryEntrySqlProjection {
+    internal static Expression<Func<HistoryEntryRow, HistoryEntry>> For(HistoryPartition partition) => row => new HistoryEntry(
         new HistoryEntryId(row.Id), partition,
         row.RequestId.HasValue ? new ProviderRequestId(row.RequestId.Value) : null,
         row.AttemptId.HasValue ? new ProviderAttemptId(row.AttemptId.Value) : null,

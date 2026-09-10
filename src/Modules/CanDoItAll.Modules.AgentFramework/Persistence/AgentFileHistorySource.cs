@@ -15,6 +15,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class AgentFileHistorySource(
     IDbContextFactory<AppDbContext> factory,
+    HistoryPartitionStore partitions,
     IDatabaseProfileRuntimeAccessor profiles,
     IWorkspacePathResolver paths,
     AgentHistoryPublicationStore publications,
@@ -105,7 +106,7 @@ public sealed class AgentFileHistorySource(
             return null;
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var locator = await db.Set<AgentHistoryLocator>().AsNoTracking().SingleOrDefaultAsync(row =>
             row.PartitionId == source.Partition.StorageLineageId && row.EvidenceId == evidence && row.OwnerId == owner, cancellationToken);
         if (locator is null) {
@@ -129,7 +130,7 @@ public sealed class AgentFileHistorySource(
             return new(entryId, HistoryDetailState.Unavailable);
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var owner = Guid.ParseExact(source.Owner.Value, "N");
         var evidenceId = Guid.ParseExact(source.Evidence.Value, "N");
         var locator = await db.Set<AgentHistoryLocator>().AsNoTracking().SingleOrDefaultAsync(row =>

@@ -2,9 +2,12 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -340,12 +343,15 @@ public sealed class WorkflowUsageAnalyticsTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(PersistentWorkflowUsageObservationStore).Assembly,
             typeof(CanDoItAll.AgentFramework.ProviderHistory.Persistence.ProviderHistoryPersistenceAssemblyMarker).Assembly]);
+        var databaseName = $"workflow-usage-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
         var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"workflow-usage-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(databaseName, databaseRoot)
             .Options;
+        var history = CreateHistory(databaseName, databaseRoot);
         var store = new PersistentWorkflowUsageObservationStore(
             new WorkflowUsageTestDbContextFactory(options),
-            new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
+            new(history.Partitions, history.Outbox), history.Transactions);
         var runId = new WorkflowRunId(Guid.Parse("70000000-0000-0000-0000-000000000001"));
         var processRunId = Guid.Parse("70000000-0000-0000-0000-000000000002");
         var origin = new WorkflowLaunchOrigin.ProcessAssignment(
@@ -380,13 +386,18 @@ public sealed class WorkflowUsageAnalyticsTests
     [Fact]
     public void ModuleCompositionUsesOnePersistentStoreForRawFactsAndDatabaseAggregates()
     {
+        var databaseName = $"workflow-usage-composition-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
         var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"workflow-usage-composition-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(databaseName, databaseRoot)
             .Options;
+        var history = CreateHistory(databaseName, databaseRoot);
         var services = new ServiceCollection();
         services.AddSingleton<IDbContextFactory<AppDbContext>>(
             new WorkflowUsageTestDbContextFactory(options));
-        services.AddSingleton(new HistoryOutboxWriter(TimeProvider.System));
+        services.AddSingleton(history.Partitions);
+        services.AddSingleton(history.Outbox);
+        services.AddSingleton(history.Transactions);
         services.AddAgentFrameworkModule(new ConfigurationBuilder().Build());
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
@@ -413,6 +424,18 @@ public sealed class WorkflowUsageAnalyticsTests
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType == typeof(IWorkflowAnalyticsQueryService));
+    }
+
+    private static (HistoryPartitionStore Partitions, HistoryOutboxWriter Outbox, CoordinatedDatabaseTransaction Transactions)
+        CreateHistory(string databaseName, InMemoryDatabaseRoot databaseRoot) {
+        var options = new DbContextOptionsBuilder<ProviderHistoryDbContext>()
+            .UseInMemoryDatabase(databaseName, databaseRoot).Options;
+        var factory = new PooledDbContextFactory<ProviderHistoryDbContext>(options);
+        var transactions = CoordinatedDatabaseTransaction.ForProfile(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.InMemory,
+            SourceKind = DatabaseProfileSourceKind.InMemory
+        }, DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+        return (new(factory, options, transactions), new(options, transactions, TimeProvider.System), transactions);
     }
 
     private static WorkflowUsageObservationContext CreateContext()

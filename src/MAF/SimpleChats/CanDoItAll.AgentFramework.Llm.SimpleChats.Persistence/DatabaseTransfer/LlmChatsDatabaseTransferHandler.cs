@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
 
-public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions options, HistoryOutboxWriter historyOutbox) : IDatabaseTransferHandler
-{
+public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions options, TimeProvider clock) : IDatabaseTransferHandler {
     public DatabaseTransferItemDescriptor Descriptor { get; } = new(
         "llm-chats",
         "LLM chats",
@@ -62,8 +61,10 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
         await using var transaction = await context.TargetDbContext.Database
             .BeginTransactionAsync(cancellationToken)
             .ConfigureAwait(false);
-        var partition = await LlmChatHistoryTransfer.ValidateAsync(context.TargetDbContext, target.RecordCount > 0, cancellationToken);
-        LlmChatHistoryTransfer.Stage(context.TargetDbContext, document.InvocationRecords, partition, historyOutbox);
+        var history = new HistoryTargetWriteSession(context.TargetProfile, clock);
+        using var coordination = history.Transactions.Enter(context.TargetDbContext);
+        var partition = await LlmChatHistoryTransfer.ValidateAsync(history, target.RecordCount > 0, cancellationToken);
+        await LlmChatHistoryTransfer.StageAsync(document.InvocationRecords, partition, history.Outbox, cancellationToken);
         if (target.RecordCount > 0)
         {
             await LlmChatsTransferDocument.ClearAsync(context.TargetDbContext, cancellationToken).ConfigureAwait(false);

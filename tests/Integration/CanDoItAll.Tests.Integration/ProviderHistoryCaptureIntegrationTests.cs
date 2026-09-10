@@ -17,14 +17,14 @@ public sealed class ProviderHistoryCaptureIntegrationTests {
     public async Task Actual_recorder_keeps_input_expiry_after_orphan_cleanup_but_allows_new_revision() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         await EnableDetailsAsync(fixture);
-        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.Factory), fixture.Factory,
+        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions), fixture.HistoryFactory,
             fixture.Runtime, fixture.Capture, fixture.Clock, NullLogger<HistoryInvocationRecorder>.Instance);
         var context = HistoryInvocationContext.Create(currentTurn: new("original input", 0));
         var invocation = new HistoryInvocation(fixture.Start().Provider, HistoryOperation.CompleteChat, context);
         var first = await recorder.BeginAsync(invocation, default);
         await recorder.CompleteAsync(first, fixture.Completion(), "response", default);
         fixture.Clock.Now += TimeSpan.FromDays(40);
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         await retention.PurgeExpiredDetailAsync(fixture.Partition, 10, default);
         await retention.PurgeExpiredMetadataAsync(fixture.Partition, 10, default);
         var retry = await recorder.BeginAsync(invocation, default);
@@ -189,7 +189,7 @@ public sealed class ProviderHistoryCaptureIntegrationTests {
     public async Task Local_project_reference_survives_capture_and_canonical_evidence() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         var reference = new HistoryExternalReference(Guid.NewGuid().ToString("D"), HistoryExternalReference.LocalProjectType);
-        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.Factory), fixture.Factory,
+        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions), fixture.HistoryFactory,
             fixture.Runtime, fixture.Capture, fixture.Clock, NullLogger<HistoryInvocationRecorder>.Instance);
         var context = HistoryInvocationContext.Create(HistoryWorkload.Agent) with { ExternalReference = reference };
         var start = await recorder.BeginAsync(new(fixture.Start().Provider, HistoryOperation.CompleteChat, context), default);
@@ -208,7 +208,7 @@ public sealed class ProviderHistoryCaptureIntegrationTests {
     }
 
     private static HistoryProviderDriverFactory CreateFactory(HistoryPersistenceTestDatabase fixture, HttpClient http) {
-        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.Factory), fixture.Factory,
+        var recorder = new HistoryInvocationRecorder(new HistoryPartitionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions), fixture.HistoryFactory,
             fixture.Runtime, fixture.Capture, fixture.Clock, NullLogger<HistoryInvocationRecorder>.Instance);
         return new(new AgentProviderDriverRegistryBuilder().AddDriver(new OpenAiProviderDriver(http, new Credentials())).Build(),
             recorder, fixture.Clock);

@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Usage;
 using CanDoItAll.AgentFramework.Usage;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -18,8 +19,13 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
     public static IServiceCollection AddLlmChatsPersistence(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.AddDbContextFactory<SimpleChatsDbContext>((provider, options) => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(options, database.Profile);
+        });
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter>();
+        services.TryAddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionStore>();
         services.TryAddSingleton<ILlmChatRuntimeLeaseFactory, DatabaseProfileLlmChatRuntimeLeaseFactory>();
         services.AddScoped<ILlmChatDefinitionRepository, EfLlmChatDefinitionRepository>();
         services.AddScoped<ILlmChatDefinitionReadStore, EfLlmChatDefinitionReadStore>();

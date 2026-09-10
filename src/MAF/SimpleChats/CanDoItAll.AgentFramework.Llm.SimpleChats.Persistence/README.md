@@ -22,9 +22,15 @@ The project owns EF configurations/repositories, the shared-context LLM Chat uni
 PostgreSQL `ILlmConversationStore`, provider/model resolution through the canonical runtime profile
 source, the product conversation engine, runtime-generation and execution-lease adapters, durable event
 journal storage, retention, operation cancellation, and complete database-transfer participation. The
-conversation store uses the same scoped `AppDbContext` as the owning unit of work; it must not create an
+conversation store uses the same scoped `SimpleChatsDbContext` as the owning unit of work; it must not create an
 independent context for canonical transcript mutations. Provider I/O runs after admission commit and
 outside database transactions.
+
+The runtime model explicitly contains only the nine existing Simple Chats entities. History
+outbox/projection writes enlist an independent History context in the owner's actual connection and
+transaction through infrastructure coordination. Ordinary reads keep independent owner factories.
+The complete application model remains the migration authority. Opaque GUID stamping is not applied
+to the existing numeric Simple Chats revisions/concurrency values.
 
 It does not reference Web/Razor, Agent module execution or UI, tools, skills, MCP, memory, processes,
 Workbench, or other product UI implementations. The generic ordinary-conversation service is

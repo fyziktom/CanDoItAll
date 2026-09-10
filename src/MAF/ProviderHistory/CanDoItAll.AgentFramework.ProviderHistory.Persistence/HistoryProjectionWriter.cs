@@ -3,8 +3,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public sealed class HistoryProjectionWriter(IDbContextFactory<AppDbContext> factory) {
-    public static Task StageAsync(AppDbContext ownerContext, HistorySourceMutation mutation, CancellationToken cancellationToken) {
+public sealed class HistoryProjectionWriter(
+    IDbContextFactory<ProviderHistoryDbContext> factory,
+    DbContextOptions<ProviderHistoryDbContext> options,
+    CoordinatedDatabaseTransaction transactions) {
+    public async Task StageAsync(HistorySourceMutation mutation, CancellationToken cancellationToken) {
+        await using var db = await transactions.CreateEnlistedAsync(options, static value => new ProviderHistoryDbContext(value), cancellationToken);
+        await StageAsync(db, mutation, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    internal static Task StageAsync(ProviderHistoryDbContext ownerContext, HistorySourceMutation mutation, CancellationToken cancellationToken) {
         if (ownerContext.Database.CurrentTransaction is null) {
             throw new InvalidOperationException("History projection requires the owner's active transaction.");
         }

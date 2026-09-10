@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public sealed class HistorySourceMaintenanceRunner(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<ProviderHistoryDbContext> factory,
     TimeProvider clock) {
     public async Task<bool> ProcessAsync(IHistorySourceMaintenance source, HistoryMaintenanceContext context,
         int maximumItems, CancellationToken cancellationToken) {

@@ -16,8 +16,9 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         var mutation = Mutation(fixture);
         await using (var ownerDb = fixture.Factory.CreateDbContext()) {
             await using var transaction = await ownerDb.Database.BeginTransactionAsync();
+            using var participation = fixture.Transactions.Enter(ownerDb);
             ownerDb.Add(new WorkspaceSettings { DefaultProviderProfileId = Guid.NewGuid(), UpdatedAtUtc = fixture.Clock.Now });
-            fixture.Outbox.Stage(ownerDb, mutation);
+            await fixture.Outbox.StageAsync(mutation, default);
             await ownerDb.SaveChangesAsync();
             await transaction.RollbackAsync();
         }
@@ -26,9 +27,12 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
             Assert.Empty(await db.Set<HistoryOutboxRow>().ToListAsync());
         }
         await using (var ownerDb = fixture.Factory.CreateDbContext()) {
+            await using var transaction = await ownerDb.Database.BeginTransactionAsync();
+            using var participation = fixture.Transactions.Enter(ownerDb);
             ownerDb.Add(new WorkspaceSettings { DefaultProviderProfileId = Guid.NewGuid(), UpdatedAtUtc = fixture.Clock.Now });
-            fixture.Outbox.Stage(ownerDb, mutation);
+            await fixture.Outbox.StageAsync(mutation, default);
             await ownerDb.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
         Assert.Equal(1, await fixture.Processor.ProcessAsync(fixture.Partition, 50, default));
         await using (var db = fixture.Factory.CreateDbContext()) {
@@ -98,7 +102,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         var entry = await db.Set<HistoryEntryRow>().SingleAsync();
         Assert.Equal(HistoryRetentionAuthority.CanonicalOwner, entry.RetentionAuthority);
         Assert.Null(entry.ExpiresAtUtc);
-        Assert.Equal(HistoryDetailState.Expired, (await fixture.Details.ReadAsync(db, entry, default)).State);
+        Assert.Equal(HistoryDetailState.Expired, (await fixture.Details.ReadAsync(fixture.Partition, new(entry.Id), default)).State);
     }
 
     [Fact]
@@ -119,8 +123,10 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         var mutation = Mutation(fixture) with { Entry = null, LinkedEntries = [HistoryEntryId.New()] };
         await using (var db = fixture.Factory.CreateDbContext()) {
-            fixture.Outbox.Stage(db, mutation);
-            await db.SaveChangesAsync();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            using var participation = fixture.Transactions.Enter(db);
+            await fixture.Outbox.StageAsync(mutation, default);
+            await transaction.CommitAsync();
         }
         await Assert.ThrowsAsync<ProviderHistoryException>(() => fixture.Processor.ProcessAsync(fixture.Partition, 10, default));
         await using (var db = fixture.Factory.CreateDbContext()) {
@@ -136,7 +142,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         var start = fixture.Start();
         await fixture.Capture.BeginAsync(start, null, default);
-        var recovery = new HistoryRecoveryStore(fixture.Factory, fixture.Clock);
+        var recovery = new HistoryRecoveryStore(fixture.HistoryFactory, fixture.Clock);
         Assert.Equal(0, await recovery.InterruptAbandonedAsync(fixture.Partition, 10, default));
         fixture.Clock.Now += TimeSpan.FromSeconds(91);
         Assert.Equal(1, await recovery.InterruptAbandonedAsync(fixture.Partition, 10, default));
@@ -154,8 +160,10 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         var mutation = Mutation(fixture);
         await using (var db = fixture.Factory.CreateDbContext()) {
-            fixture.Outbox.Stage(db, mutation);
-            await db.SaveChangesAsync();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            using var participation = fixture.Transactions.Enter(db);
+            await fixture.Outbox.StageAsync(mutation, default);
+            await transaction.CommitAsync();
         }
         var expired = fixture.Start();
         await fixture.Capture.BeginAsync(expired, null, default);
@@ -167,6 +175,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
             services.AddSingleton<IDatabaseRuntimeState>(fixture.Runtime);
             services.AddSingleton<IDatabaseRuntimeWriteFence>(fixture.Runtime);
             services.AddSingleton<ICanonicalRuntimeDatabase>(fixture);
+            services.AddSingleton(fixture.Transactions);
             services.AddProviderHistoryPersistence();
         }).Build();
         await host.StartAsync();
@@ -205,6 +214,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
             services.AddSingleton<IDatabaseRuntimeState>(runtime);
             services.AddSingleton<IDatabaseRuntimeWriteFence>(runtime);
             services.AddSingleton<ICanonicalRuntimeDatabase>(fixture);
+            services.AddSingleton(fixture.Transactions);
             services.AddSingleton<IHistorySourceMaintenance>(broken);
             services.AddSingleton<IHistorySourceMaintenance>(fileIo);
             services.AddProviderHistoryPersistence();
@@ -230,7 +240,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         var policy = await fixture.Policy.UpdateAsync(new(new() { CaptureMode = HistoryCaptureMode.Detailed }, 0, false), default);
         var start = fixture.Start(policy);
         await fixture.Capture.BeginAsync(start, new("retained only seven days", 0), default);
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         fixture.Clock.Now += TimeSpan.FromDays(40);
         Assert.Equal(1, await retention.PurgeExpiredDetailAsync(fixture.Partition, 500, default));
         Assert.Equal(0, await retention.PurgeExpiredMetadataAsync(fixture.Partition, 500, default));
@@ -265,15 +275,17 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
     [Fact]
     public async Task Source_checkpoint_advances_only_after_durable_work_and_replay_is_idempotent() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
-        var runner = new HistorySourceMaintenanceRunner(fixture.Factory, fixture.Clock);
+        var runner = new HistorySourceMaintenanceRunner(fixture.HistoryFactory, fixture.Clock);
         var mutation = Mutation(fixture);
         var fail = true;
         var source = new MaintenanceSource(async (partition, cursor, maximum, token) => {
             Assert.Null(cursor);
             Assert.Equal(2, maximum);
             await using var db = fixture.Factory.CreateDbContext();
-            fixture.Outbox.Stage(db, mutation);
-            await db.SaveChangesAsync(token);
+            await using var transaction = await db.Database.BeginTransactionAsync(token);
+            using var participation = fixture.Transactions.Enter(db);
+            await fixture.Outbox.StageAsync(mutation, token);
+            await transaction.CommitAsync(token);
             if (fail) {
                 throw new InvalidOperationException("Crash after durable work, before checkpoint.");
             }
@@ -307,7 +319,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
     [Fact]
     public async Task Source_maintenance_lease_excludes_competitors_until_expiry() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
-        var runner = new HistorySourceMaintenanceRunner(fixture.Factory, fixture.Clock);
+        var runner = new HistorySourceMaintenanceRunner(fixture.HistoryFactory, fixture.Clock);
         await using (var db = fixture.Factory.CreateDbContext()) {
             var checkpoint = await db.Set<HistoryCheckpointRow>().SingleAsync(row => row.SourceKind == HistorySourceKind.SimpleChat);
             checkpoint.LeaseOwner = Guid.NewGuid();
@@ -329,7 +341,7 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
     [Fact]
     public async Task Source_maintenance_rejects_profile_change_before_checkpoint_without_using_the_new_database() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
-        var runner = new HistorySourceMaintenanceRunner(fixture.Factory, fixture.Clock);
+        var runner = new HistorySourceMaintenanceRunner(fixture.HistoryFactory, fixture.Clock);
         var context = fixture.Maintenance;
         var source = new MaintenanceSource((_, _, _, _) => {
             fixture.Runtime.Generation++;
@@ -350,9 +362,9 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         var second = first with { Source = first.Source with { Evidence = new("second-owner") } };
         await using (var owner = fixture.Factory.CreateDbContext()) {
             await using var transaction = await owner.Database.BeginTransactionAsync();
-            await HistoryProjectionWriter.StageAsync(owner, first, default);
-            await HistoryProjectionWriter.StageAsync(owner, second, default);
-            await owner.SaveChangesAsync();
+            using var participation = fixture.Transactions.Enter(owner);
+            await fixture.Projection.StageAsync(first, default);
+            await fixture.Projection.StageAsync(second, default);
             await transaction.CommitAsync();
         }
         await using var db = fixture.Factory.CreateDbContext();
@@ -370,9 +382,9 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         await fixture.Projection.ApplyAsync(second, default);
         await using (var owner = fixture.Factory.CreateDbContext()) {
             await using var transaction = await owner.Database.BeginTransactionAsync();
-            await HistoryProjectionWriter.StageAsync(owner, first with { Version = new(2), Kind = HistorySourceMutationKind.Delete, Entry = null }, default);
-            await HistoryProjectionWriter.StageAsync(owner, second with { Version = new(2), Kind = HistorySourceMutationKind.Delete, Entry = null }, default);
-            await owner.SaveChangesAsync();
+            using var participation = fixture.Transactions.Enter(owner);
+            await fixture.Projection.StageAsync(first with { Version = new(2), Kind = HistorySourceMutationKind.Delete, Entry = null }, default);
+            await fixture.Projection.StageAsync(second with { Version = new(2), Kind = HistorySourceMutationKind.Delete, Entry = null }, default);
             await transaction.CommitAsync();
         }
         await using var db = fixture.Factory.CreateDbContext();
@@ -388,9 +400,9 @@ public sealed class ProviderHistorySourceProjectionIntegrationTests {
         await fixture.Projection.ApplyAsync(first, default);
         await using (var owner = fixture.Factory.CreateDbContext()) {
             await using var transaction = await owner.Database.BeginTransactionAsync();
-            await HistoryProjectionWriter.StageAsync(owner, second, default);
-            await HistoryProjectionWriter.StageAsync(owner, first with { Version = new(2), Kind = HistorySourceMutationKind.Delete, Entry = null }, default);
-            await owner.SaveChangesAsync();
+            using var participation = fixture.Transactions.Enter(owner);
+            await fixture.Projection.StageAsync(second, default);
+            await fixture.Projection.StageAsync(first with { Version = new(2), Kind = HistorySourceMutationKind.Delete, Entry = null }, default);
             await transaction.CommitAsync();
         }
         await using var db = fixture.Factory.CreateDbContext();

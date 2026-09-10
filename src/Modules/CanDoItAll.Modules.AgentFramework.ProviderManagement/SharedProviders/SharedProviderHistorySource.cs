@@ -8,6 +8,8 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderHistorySource(
     IDbContextFactory<AppDbContext> factory,
+    HistoryPartitionStore partitions,
+    CoordinatedDatabaseTransaction transactions,
     HistoryOutboxWriter outbox,
     TimeProvider clock) : IProviderHistorySource, IHistorySourceMaintenance {
     public HistorySourceKind Kind => HistorySourceKind.SharedRelay;
@@ -28,11 +30,12 @@ public sealed class SharedProviderHistorySource(
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
+        using var coordination = transactions.Enter(db);
+        await partitions.RequireForWriteAsync(partition, cancellationToken);
         var rows = await db.Set<SharedProviderInvocationRecord>().AsNoTracking()
             .Where(row => row.Id.CompareTo(position.Id) > 0).OrderBy(row => row.Id).Take(maximumItems).ToArrayAsync(cancellationToken);
         foreach (var row in rows) {
-            outbox.Stage(db, SharedProviderHistoryProjection.Create(row, partition));
+            await outbox.StageAsync(SharedProviderHistoryProjection.Create(row, partition), cancellationToken);
         }
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -43,18 +46,27 @@ public sealed class SharedProviderHistorySource(
     private async Task PurgeExpiredAsync(HistoryPartition partition, int maximumItems, CancellationToken cancellationToken) {
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
+        using var coordination = transactions.Enter(db);
+        await partitions.RequireForWriteAsync(partition, cancellationToken);
         var now = clock.GetUtcNow();
-        var expired = await db.Set<SharedProviderInvocationRecord>()
-            .Where(row => row.Outcome != SharedProviderInvocationOutcome.InProgress &&
-                (row.DeleteAfterUtc <= now || db.Set<HistoryEntryRow>().Any(entry =>
-                    entry.PartitionId == partition.StorageLineageId && entry.Id == row.Id &&
-                    entry.RetentionAuthority == HistoryRetentionAuthority.HistoryPolicy && entry.ExpiresAtUtc <= now)))
-            .OrderBy(row => row.DeleteAfterUtc).ThenBy(row => row.Id).Take(maximumItems).ToArrayAsync(cancellationToken);
+        // The read-only integration join applies both owners' expiry predicates before the batch limit.
+        var expired = await db.Set<SharedProviderInvocationRecord>().FromSql($"""
+            SELECT invocation.*
+            FROM "Workspace_SharedProviderInvocations" AS invocation
+            WHERE invocation."Outcome" <> {SharedProviderInvocationOutcome.InProgress.ToString()}
+              AND (invocation."DeleteAfterUtc" <= {now} OR EXISTS (
+                  SELECT 1 FROM "ProviderHistory_Entries" AS entry
+                  WHERE entry."PartitionId" = {partition.StorageLineageId}
+                    AND entry."Id" = invocation."Id"
+                    AND entry."RetentionAuthority" = {(int)HistoryRetentionAuthority.HistoryPolicy}
+                    AND entry."ExpiresAtUtc" <= {now}))
+            ORDER BY invocation."DeleteAfterUtc", invocation."Id"
+            LIMIT {maximumItems}
+            """).ToArrayAsync(cancellationToken);
         foreach (var row in expired) {
             var id = row.Id.ToString("N");
-            outbox.Stage(db, new(new(partition, Kind, new(id), new(id)),
-                new(checked(row.HistoryVersion + 1)), HistorySourceMutationKind.Delete, null, []));
+            await outbox.StageAsync(new(new(partition, Kind, new(id), new(id)),
+                new(checked(row.HistoryVersion + 1)), HistorySourceMutationKind.Delete, null, []), cancellationToken);
         }
         db.RemoveRange(expired);
         await db.SaveChangesAsync(cancellationToken);
@@ -67,7 +79,7 @@ public sealed class SharedProviderHistorySource(
             return null;
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var row = await db.Set<SharedProviderInvocationRecord>().AsNoTracking().SingleOrDefaultAsync(row => row.Id == id, cancellationToken);
         return row is null ? null : SharedProviderHistoryProjection.Create(row, source.Partition);
     }

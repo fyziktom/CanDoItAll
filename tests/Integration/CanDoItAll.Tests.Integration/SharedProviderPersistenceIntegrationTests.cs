@@ -1,3 +1,6 @@
+using System.Data.Common;
+using CanDoItAll.Infrastructure.ControlPlane;
+using Microsoft.EntityFrameworkCore.Storage;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -461,8 +464,10 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var publication = new SharedProviderPublicationId(Guid.NewGuid());
         var providerId = await SeedInvocationOwnerAsync(database, publication);
         var interceptor = new FailAfterHistoryAuditSave();
+        var failingOutbox = new HistoryOutboxWriter(new DbContextOptionsBuilder<ProviderHistoryDbContext>(database.HistoryOptions)
+            .AddInterceptors(interceptor).Options, database.History.Transactions, TimeProvider.System);
         var service = new SharedProviderInvocationAuditService(database.WithInterceptor(interceptor), new FixedClock(Now),
-            new SharedProviderHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            new(database.History.Partitions, database.History.Retention, failingOutbox), database.History.Transactions);
         var request = new SharedProviderInvocationStartRequest("rollback-call", publication, providerId,
             "caller", null, "trace", "correlation", SharedProviderRelayOperation.Responses,
             SharedProviderRoutingModelIdCodec.Create(publication, "upstream-model"), "upstream-model", Now.AddDays(30));
@@ -480,7 +485,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
     {
         await using var database = await SharedProviderTestDatabase.CreateAsync("sharedprovider-audit");
         var service = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now),
-            new SharedProviderHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
+            new(database.History.Partitions, database.History.Retention, database.History.Outbox), database.History.Transactions);
         const string requestId = "invocation-001";
         var publicationId = new SharedProviderPublicationId(Guid.Parse("11111111-1111-4111-8111-111111111111"));
         var providerProfileId = await SeedInvocationOwnerAsync(database, publicationId);
@@ -538,8 +543,8 @@ public sealed class SharedProviderPersistenceIntegrationTests
         Assert.Contains("does not own", mismatch.Message, StringComparison.Ordinal);
 
         await service.BeginAsync(start);
-        var partition = await new HistoryPartitionStore(database.Factory).GetAsync(default);
-        var processor = new HistoryOutboxProcessor(database.Factory, TimeProvider.System, NullLogger<HistoryOutboxProcessor>.Instance);
+        var partition = await database.History.Partitions.GetAsync(default);
+        var processor = new HistoryOutboxProcessor(database.HistoryFactory, TimeProvider.System, NullLogger<HistoryOutboxProcessor>.Instance);
         Assert.Equal(1, await processor.ProcessAsync(partition, 50, default));
         await using (var startedDb = database.Factory.CreateDbContext()) {
             Assert.Equal(HistoryOutcome.Started, (await startedDb.Set<HistoryEntryRow>().SingleAsync()).Outcome);
@@ -628,13 +633,15 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var publication = new SharedProviderPublicationId(Guid.NewGuid());
         var provider = await SeedInvocationOwnerAsync(database, publication);
         var clock = new HistoryPersistenceTestDatabase.TestClock { Now = Now };
-        var outbox = new HistoryOutboxWriter(clock);
-        var audit = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now), new(outbox));
+        var history = database.CreateHistory(clock);
+        var outbox = history.Outbox;
+        var audit = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now),
+            new(history.Partitions, history.Retention, outbox), history.Transactions);
         var start = new SharedProviderInvocationStartRequest("expired", publication, provider, "caller", null,
             "trace", "correlation", SharedProviderRelayOperation.ChatCompletions,
             SharedProviderRoutingModelIdCodec.Create(publication, "model"), "model", null);
         await audit.BeginAsync(start);
-        var partition = await new HistoryPartitionStore(database.Factory).GetAsync(default);
+        var partition = await database.History.Partitions.GetAsync(default);
         await using (var db = database.Factory.CreateDbContext()) {
             Assert.Equal(Now.AddDays(30), (await db.Set<SharedProviderInvocationRecord>().SingleAsync()).DeleteAfterUtc);
             var policy = await db.Set<HistoryPolicyRow>().SingleAsync();
@@ -646,7 +653,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         await audit.BeginAsync(start with { RequestId = "active" });
         await audit.FinalizeAsync("expired", new(SharedProviderInvocationOutcome.Succeeded, Now.AddSeconds(1), null,
             10, 5, SharedProviderMetadataCompleteness.Complete, null, SharedProviderMetadataCompleteness.Unavailable));
-        var processor = new HistoryOutboxProcessor(database.Factory, clock, NullLogger<HistoryOutboxProcessor>.Instance);
+        var processor = new HistoryOutboxProcessor(database.HistoryFactory, clock, NullLogger<HistoryOutboxProcessor>.Instance);
         await processor.ProcessAsync(partition, 50, default);
         HistorySourceMutation stale;
         await using (var db = database.Factory.CreateDbContext()) {
@@ -664,30 +671,89 @@ public sealed class SharedProviderPersistenceIntegrationTests
         if (failAfterFlush) {
             var fault = new FailAfterRelayRetentionFlush();
             var failingFactory = database.WithInterceptor(fault);
-            var failing = new SharedProviderHistorySource(failingFactory, outbox, clock);
+            var failingOutbox = new HistoryOutboxWriter(new DbContextOptionsBuilder<ProviderHistoryDbContext>(database.HistoryOptions)
+                .AddInterceptors(fault).Options, history.Transactions, clock);
+            var failing = new SharedProviderHistorySource(failingFactory, history.Partitions, history.Transactions, failingOutbox, clock);
             await Assert.ThrowsAsync<InvalidOperationException>(() => failing.ProcessAsync(context, null, 10, default));
+            Assert.True(fault.ObservedBothFlushes);
             await using var verification = database.Factory.CreateDbContext();
             Assert.Equal(2, await verification.Set<SharedProviderInvocationRecord>().CountAsync());
             Assert.Empty(await verification.Set<HistoryOutboxRow>().ToListAsync());
         }
-        var source = new SharedProviderHistorySource(database.Factory, outbox, clock);
+        var source = new SharedProviderHistorySource(database.Factory, history.Partitions, history.Transactions, outbox, clock);
         await source.ProcessAsync(context, null, 10, default);
         await processor.ProcessAsync(partition, 50, default);
-        await new HistoryProjectionWriter(database.Factory).ApplyAsync(stale, default);
+        await history.Projection.ApplyAsync(stale, default);
         await using (var db = database.Factory.CreateDbContext()) {
             Assert.Equal("active", (await db.Set<SharedProviderInvocationRecord>().SingleAsync()).RequestId);
             Assert.False((await db.Set<HistoryEntryRow>().SingleAsync(row => row.Id == stale.Entry!.Id.Value)).IsVisible);
             Assert.True(await db.Set<HistorySourceRow>().AnyAsync(row => row.Kind == HistorySourceKind.SharedRelay && row.IsDeleted));
         }
-        Assert.Equal(1, await new HistoryRetentionStore(database.Factory, clock).PurgeExpiredMetadataAsync(partition, 10, default));
+        Assert.Equal(1, await history.Retention.PurgeExpiredMetadataAsync(partition, 10, default));
+    }
+
+    [Fact]
+    public async Task Relay_retention_filters_both_owners_before_limiting_and_keeps_deadline_order() {
+        await using var database = await SharedProviderTestDatabase.CreateAsync("relay-history-retention-limit");
+        var publication = new SharedProviderPublicationId(Guid.NewGuid());
+        var provider = await SeedInvocationOwnerAsync(database, publication);
+        var clock = new HistoryPersistenceTestDatabase.TestClock { Now = Now };
+        var history = database.CreateHistory(clock);
+        var audit = new SharedProviderInvocationAuditService(database.Factory, new FixedClock(Now),
+            new(history.Partitions, history.Retention, history.Outbox), history.Transactions);
+        var request = new SharedProviderInvocationStartRequest("owner-expired", publication, provider, "caller", null,
+            "trace", "correlation", SharedProviderRelayOperation.ChatCompletions,
+            SharedProviderRoutingModelIdCodec.Create(publication, "model"), "model", Now.AddDays(1));
+        await audit.BeginAsync(request);
+        await audit.BeginAsync(request with { RequestId = "active-expired" });
+        await audit.BeginAsync(request with { RequestId = "unexpired-before-policy", RetainUntilUtc = Now.AddDays(5) });
+        await audit.BeginAsync(request with { RequestId = "policy-expired", RetainUntilUtc = Now.AddDays(30) });
+        foreach (var requestId in new[] { "owner-expired", "unexpired-before-policy", "policy-expired" }) {
+            await audit.FinalizeAsync(requestId, new(SharedProviderInvocationOutcome.Succeeded, Now.AddSeconds(1), null,
+                10, 5, SharedProviderMetadataCompleteness.Complete, null, SharedProviderMetadataCompleteness.Unavailable));
+        }
+        var partition = await history.Partitions.GetAsync(default);
+        var processor = new HistoryOutboxProcessor(database.HistoryFactory, clock, NullLogger<HistoryOutboxProcessor>.Instance);
+        Assert.Equal(7, await processor.ProcessAsync(partition, 50, default));
+        await using (var db = database.Factory.CreateDbContext()) {
+            var policyExpiredId = await db.Set<SharedProviderInvocationRecord>()
+                .Where(row => row.RequestId == "policy-expired").Select(row => row.Id).SingleAsync();
+            var entry = await db.Set<HistoryEntryRow>().SingleAsync(row => row.Id == policyExpiredId);
+            entry.ExpiresAtUtc = Now.AddDays(1);
+            await db.SaveChangesAsync();
+        }
+        clock.Now = Now.AddDays(2);
+        var runtime = new HistoryPersistenceTestDatabase.TestRuntime();
+        var context = new HistoryMaintenanceContext(partition, runtime.GetSnapshot(), runtime);
+        var source = new SharedProviderHistorySource(database.Factory, history.Partitions, history.Transactions, history.Outbox, clock);
+        var progress = await source.ProcessAsync(context, null, 1, default);
+        await using (var first = database.Factory.CreateDbContext()) {
+            var remaining = await first.Set<SharedProviderInvocationRecord>().Select(row => row.RequestId).ToArrayAsync();
+            Assert.DoesNotContain("owner-expired", remaining);
+            Assert.Contains("policy-expired", remaining);
+            Assert.Equal(3, remaining.Length);
+        }
+        await source.ProcessAsync(context, progress.Cursor, 1, default);
+        await using var final = database.Factory.CreateDbContext();
+        var retained = await final.Set<SharedProviderInvocationRecord>().OrderBy(row => row.RequestId)
+            .Select(row => row.RequestId).ToArrayAsync();
+        Assert.Equal(["active-expired", "unexpired-before-policy"], retained);
     }
 
     private sealed class FailAfterRelayRetentionFlush : SaveChangesInterceptor {
+        private DbTransaction? outboxTransaction;
+        public bool ObservedBothFlushes { get; private set; }
+
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
             CancellationToken cancellationToken = default) {
-            if (eventData.Context!.ChangeTracker.Entries<HistoryOutboxRow>().Any(entry =>
-                entry.Entity.Mutation.Kind == HistorySourceMutationKind.Delete)) {
-                throw new InvalidOperationException("Injected relay cleanup failure after flush.");
+            var context = eventData.Context!;
+            if (context is ProviderHistoryDbContext && context.ChangeTracker.Entries<HistoryOutboxRow>().Any(entry =>
+                    entry.Entity.Mutation.Kind == HistorySourceMutationKind.Delete)) {
+                outboxTransaction = context.Database.CurrentTransaction!.GetDbTransaction();
+            } else if (context is AppDbContext && outboxTransaction is not null &&
+                    ReferenceEquals(outboxTransaction, context.Database.CurrentTransaction?.GetDbTransaction())) {
+                ObservedBothFlushes = true;
+                throw new InvalidOperationException("Injected relay cleanup failure after both owner flushes.");
             }
             return ValueTask.FromResult(result);
         }
@@ -956,14 +1022,30 @@ public sealed class SharedProviderPersistenceIntegrationTests
     private sealed class SharedProviderTestDatabase : IAsyncDisposable
     {
         private readonly PostgresTestDatabaseLease lease;
+        private readonly ResolvedDatabaseProfile profile;
 
         private SharedProviderTestDatabase(PostgresTestDatabaseLease lease)
         {
             this.lease = lease;
             Factory = new SharedProviderDbContextFactory(lease.CreateAppDbContextOptions());
+            profile = new(new() {
+                DisplayName = "Shared provider history fixture",
+                ProviderKind = DatabaseProviderKind.PostgreSql,
+                SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+                PostgreSql = new() { DatabaseName = lease.DatabaseName }
+            }, DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
+            var historyOptions = new DbContextOptionsBuilder<ProviderHistoryDbContext>();
+            AppDbContextOptionsConfigurator.Configure(historyOptions, profile);
+            HistoryOptions = historyOptions.Options;
+            HistoryFactory = new(HistoryOptions);
+            History = CreateHistory(TimeProvider.System);
         }
 
         public SharedProviderDbContextFactory Factory { get; }
+        public DbContextOptions<ProviderHistoryDbContext> HistoryOptions { get; }
+        public HistoryPersistenceTestDatabase.HistoryTestFactory HistoryFactory { get; }
+        public HistoryTargetWriteSession History { get; }
+        public HistoryTargetWriteSession CreateHistory(TimeProvider clock) => new(profile, clock);
 
         public SharedProviderDbContextFactory WithInterceptor(IInterceptor interceptor) =>
             new(new DbContextOptionsBuilder<AppDbContext>(lease.CreateAppDbContextOptions()).AddInterceptors(interceptor).Options);
@@ -989,13 +1071,20 @@ public sealed class SharedProviderPersistenceIntegrationTests
     }
 
     private sealed class FailAfterHistoryAuditSave : SaveChangesInterceptor {
+        private DbTransaction? outboxTransaction;
         public bool ObservedAuditAndOutbox { get; private set; }
+
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
             CancellationToken cancellationToken = default) {
-            ObservedAuditAndOutbox = eventData.Context!.ChangeTracker.Entries<SharedProviderInvocationRecord>().Any()
-                && eventData.Context.ChangeTracker.Entries<HistoryOutboxRow>().Any()
-                && eventData.Context.Database.CurrentTransaction is not null;
-            return ValueTask.FromException<int>(new InvalidOperationException("Fail after the actual audit and outbox database flush."));
+            var context = eventData.Context!;
+            if (context is ProviderHistoryDbContext && context.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
+                outboxTransaction = context.Database.CurrentTransaction!.GetDbTransaction();
+            } else if (context.ChangeTracker.Entries<SharedProviderInvocationRecord>().Any()) {
+                ObservedAuditAndOutbox = outboxTransaction is not null &&
+                    ReferenceEquals(outboxTransaction, context.Database.CurrentTransaction?.GetDbTransaction());
+                throw new InvalidOperationException("Fail after the actual audit and outbox database flush.");
+            }
+            return ValueTask.FromResult(result);
         }
     }
 

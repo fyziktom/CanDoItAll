@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 
 public sealed class EfLlmChatProjectStructureReportStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) : ILlmChatProjectStructureReportStore
+    IDbContextFactory<SimpleChatsDbContext> dbContextFactory) : ILlmChatProjectStructureReportStore
 {
     public async Task<LlmChatProjectStructureReport> QueryProjectStructureReportAsync(
         LlmChatProjectStructureReportQuery query,

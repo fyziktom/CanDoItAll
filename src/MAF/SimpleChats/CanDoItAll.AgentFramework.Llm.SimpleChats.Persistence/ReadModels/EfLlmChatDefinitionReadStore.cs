@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 
-public sealed class EfLlmChatDefinitionReadStore(AppDbContext dbContext) : ILlmChatDefinitionReadStore
+public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext) : ILlmChatDefinitionReadStore
 {
     public async Task<LlmChatDefinitionReadModel?> TryGetAsync(
         LlmChatDefinitionId id,

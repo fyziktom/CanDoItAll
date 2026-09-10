@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 internal static class HistorySourceProjection {
-    internal static async Task ReserveAsync(AppDbContext db, HistoryEntryRow entry,
+    internal static async Task ReserveAsync(ProviderHistoryDbContext db, HistoryEntryRow entry,
         CanonicalEvidenceReference reference, CancellationToken cancellationToken) {
         if (reference.Partition.StorageLineageId != entry.PartitionId) {
             throw new ProviderHistoryException(HistoryFailure.Conflict, "A history owner cannot cross storage partitions.");
@@ -21,7 +21,7 @@ internal static class HistorySourceProjection {
         }
     }
 
-    internal static async Task ApplyAsync(AppDbContext db, HistorySourceMutation mutation, CancellationToken cancellationToken) {
+    internal static async Task ApplyAsync(ProviderHistoryDbContext db, HistorySourceMutation mutation, CancellationToken cancellationToken) {
         HistorySourceIdentity.Validate(mutation);
         await HistoryPartitionStore.RequireAsync(db, mutation.Source.Partition, cancellationToken);
         var source = await FindOrAddAsync(db, mutation.Source, cancellationToken);
@@ -83,7 +83,7 @@ internal static class HistorySourceProjection {
         }
     }
 
-    private static async Task<HistorySourceRow> FindOrAddAsync(AppDbContext db,
+    private static async Task<HistorySourceRow> FindOrAddAsync(ProviderHistoryDbContext db,
         CanonicalEvidenceReference reference, CancellationToken cancellationToken) {
         var id = HistorySourceIdentity.Key(reference);
         await HistoryWriteLock.AttemptAsync(db, id, cancellationToken);
@@ -118,7 +118,7 @@ internal static class HistorySourceProjection {
         }
     }
 
-    private static async Task DeleteAsync(AppDbContext db, HistorySourceRow source,
+    private static async Task DeleteAsync(ProviderHistoryDbContext db, HistorySourceRow source,
         List<HistoryOwnerRow> owners, CancellationToken cancellationToken) {
         var ids = owners.Select(owner => owner.EntryId).ToArray();
         var candidates = await db.Set<HistoryOwnerRow>().Where(row =>

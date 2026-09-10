@@ -192,7 +192,7 @@ public sealed class SharedProviderPremergePerformanceTests(ITestOutputHelper out
             command.Parameters.Add(now);
             output.WriteLine("Orphan candidate EXPLAIN: " + await command.ExecuteScalarAsync());
         }
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         var started = Stopwatch.GetTimestamp();
         var removed = 0;
         for (var pass = 0; pass < rows / 500; pass++) {

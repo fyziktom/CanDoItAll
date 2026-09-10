@@ -2,25 +2,21 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
-using CanDoItAll.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
 
 internal static class LlmChatHistoryTransfer {
-    internal static async Task<HistoryPartition> ValidateAsync(AppDbContext target, bool replacesChatData,
+    internal static async Task<HistoryPartition> ValidateAsync(HistoryTargetWriteSession history, bool replacesChatData,
         CancellationToken cancellationToken) {
-        var partition = await HistoryPartitionStore.GetForWriteAsync(target, cancellationToken);
-        if (replacesChatData && (await target.Set<HistorySourceRow>()
-                .AnyAsync(row => row.Kind == HistorySourceKind.SimpleChat, cancellationToken) ||
-            await target.Set<HistoryOutboxRow>().AnyAsync(cancellationToken))) {
+        var partition = await history.Partitions.GetForWriteAsync(cancellationToken);
+        if (replacesChatData && await history.HasRetainedSourceOrPendingMutationsAsync(HistorySourceKind.SimpleChat, cancellationToken)) {
             throw new InvalidOperationException("Chat replacement would invalidate retained history. Use an empty target database and transfer provider history first.");
         }
         return partition;
     }
 
-    internal static void Stage(AppDbContext target, IReadOnlyList<LlmChatInvocationRecordRow> rows,
-        HistoryPartition partition, HistoryOutboxWriter outbox) {
+    internal static async Task StageAsync(IReadOnlyList<LlmChatInvocationRecordRow> rows,
+        HistoryPartition partition, HistoryOutboxWriter outbox, CancellationToken cancellationToken) {
         foreach (var operation in rows.GroupBy(row => row.OperationId)) {
             var attempts = new List<HistoryEntry>();
             var ordinal = 0;
@@ -33,13 +29,13 @@ internal static class LlmChatHistoryTransfer {
                 if (attempts.Count > HistoryAttemptCollection.MaximumAttempts) {
                     throw new InvalidDataException("The imported chat operation exceeds the bounded history evidence contract.");
                 }
-                outbox.Stage(target, LlmChatHistoryProjection.Create(record, partition));
+                await outbox.StageAsync(LlmChatHistoryProjection.Create(record, partition), cancellationToken);
                 ordinal = row.Ordinal;
             }
             if (attempts.Count > 0) {
                 var id = operation.Key.ToString("N");
-                outbox.Stage(target, new(new(partition, HistorySourceKind.SimpleChat, new(id), new(id)),
-                    new(ordinal), HistorySourceMutationKind.Upsert, null, []) { Attempts = attempts });
+                await outbox.StageAsync(new(new(partition, HistorySourceKind.SimpleChat, new(id), new(id)),
+                    new(ordinal), HistorySourceMutationKind.Upsert, null, []) { Attempts = attempts }, cancellationToken);
             }
         }
     }

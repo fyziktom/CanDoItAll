@@ -8,8 +8,8 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 public sealed class SharedProviderInvocationAuditService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
-    SharedProviderHistoryProjection history)
-{
+    SharedProviderHistoryProjection history,
+    CoordinatedDatabaseTransaction transactions) {
     public async Task<Guid> BeginAsync(
         SharedProviderInvocationStartRequest request,
         CancellationToken cancellationToken = default)
@@ -18,6 +18,7 @@ public sealed class SharedProviderInvocationAuditService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = dbContext.Database.IsRelational()
             ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        using var coordination = transactions.Enter(dbContext);
         var existing = await dbContext.Set<SharedProviderInvocationRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(record => record.RequestId == request.RequestId, cancellationToken);
@@ -42,7 +43,7 @@ public sealed class SharedProviderInvocationAuditService(
         }
 
         var startedAt = HistoryStorageTimestamp.Normalize(clock.GetUtcNow());
-        var retainUntil = await history.ResolveRetentionAsync(dbContext, startedAt, request.RetainUntilUtc, cancellationToken);
+        var retainUntil = await history.ResolveRetentionAsync(startedAt, request.RetainUntilUtc, cancellationToken);
         var record = SharedProviderInvocationTransitions.Create(
             request.RequestId,
             request.PublicationId,
@@ -65,9 +66,8 @@ public sealed class SharedProviderInvocationAuditService(
         record.ProviderNameSnapshot = provider.Name;
         record.ProviderKindSnapshot = provider.ProviderKind;
         dbContext.Add(record);
-        await history.StageAsync(dbContext, record, cancellationToken);
-        try
-        {
+        try {
+            await history.StageAsync(record, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             if (transaction is not null) {
                 await transaction.CommitAsync(cancellationToken);
@@ -100,6 +100,7 @@ public sealed class SharedProviderInvocationAuditService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = dbContext.Database.IsRelational()
             ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        using var coordination = transactions.Enter(dbContext);
         var record = await dbContext.Set<SharedProviderInvocationRecord>()
             .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken)
             ?? throw new KeyNotFoundException($"Shared-provider invocation '{requestId}' was not found.");
@@ -109,9 +110,8 @@ public sealed class SharedProviderInvocationAuditService(
         if (record.HistoryVersion == previousVersion) {
             return;
         }
-        await history.StageAsync(dbContext, record, cancellationToken);
-        try
-        {
+        try {
+            await history.StageAsync(record, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             if (transaction is not null) {
                 await transaction.CommitAsync(cancellationToken);

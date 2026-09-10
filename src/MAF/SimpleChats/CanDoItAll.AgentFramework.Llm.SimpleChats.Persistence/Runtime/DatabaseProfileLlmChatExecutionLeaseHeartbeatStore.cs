@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 
 public sealed class DatabaseProfileLlmChatExecutionLeaseHeartbeatStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SimpleChatsDbContext> dbContextFactory,
     IDatabaseRuntimeWriteFence writeFence) : ILlmChatExecutionLeaseHeartbeatStore
 {
     public Task<LlmChatExecutionLeaseObservation> RenewAndObserveAsync(
@@ -79,7 +79,7 @@ public sealed class DatabaseProfileLlmChatExecutionLeaseHeartbeatStore(
     }
 
     private static async Task<LlmChatExecutionLeaseObservation> ObserveCoreAsync(
-        AppDbContext dbContext,
+        SimpleChatsDbContext dbContext,
         LlmChatExecutionLeaseIdentity lease,
         DateTimeOffset observedAtUtc,
         CancellationToken cancellationToken)

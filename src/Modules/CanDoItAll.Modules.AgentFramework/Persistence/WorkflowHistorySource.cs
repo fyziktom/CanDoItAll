@@ -8,6 +8,8 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class WorkflowHistorySource(
     IDbContextFactory<AppDbContext> factory,
+    HistoryPartitionStore partitions,
+    CoordinatedDatabaseTransaction transactions,
     HistoryOutboxWriter outbox) : IProviderHistorySource, IHistorySourceMaintenance {
     public HistorySourceKind Kind => HistorySourceKind.Workflow;
 
@@ -26,12 +28,13 @@ public sealed class WorkflowHistorySource(
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
+        using var coordination = transactions.Enter(db);
+        await partitions.RequireForWriteAsync(partition, cancellationToken);
         var rows = await db.Set<WorkflowUsageObservationRecordEntity>().AsNoTracking()
             .Where(row => row.Id.CompareTo(position.Id) > 0).OrderBy(row => row.Id).Take(maximumItems).ToArrayAsync(cancellationToken);
         foreach (var row in rows) {
             if (WorkflowHistoryProjection.Create(row.ToObservation(), partition) is { } mutation) {
-                outbox.Stage(db, mutation);
+                await outbox.StageAsync(mutation, cancellationToken);
             }
         }
         await db.SaveChangesAsync(cancellationToken);
@@ -46,7 +49,7 @@ public sealed class WorkflowHistorySource(
             return null;
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var row = await db.Set<WorkflowUsageObservationRecordEntity>().AsNoTracking()
             .SingleOrDefaultAsync(row => row.Id == evidence && row.RunId == run, cancellationToken);
         return row is null ? null : WorkflowHistoryProjection.Create(row.ToObservation(), source.Partition);
@@ -59,7 +62,7 @@ public sealed class WorkflowHistorySource(
             return new(entryId, HistoryDetailState.Unavailable);
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var runId = Guid.ParseExact(source.Owner.Value, "N");
         var evidenceId = Guid.ParseExact(source.Evidence.Value, "N");
         var observation = await db.Set<WorkflowUsageObservationRecordEntity>().AsNoTracking()

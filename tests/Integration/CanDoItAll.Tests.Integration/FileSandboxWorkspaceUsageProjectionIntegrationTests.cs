@@ -246,7 +246,7 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         await history.Capture.BeginAsync(start, null, default);
         await history.Capture.CompleteAsync(start, completion, null, default);
         history.Clock.Now += TimeSpan.FromDays(40);
-        Assert.Equal(1, await new HistoryRetentionStore(history.Factory, history.Clock)
+        Assert.Equal(1, await new HistoryRetentionStore(history.HistoryFactory, history.HistoryOptions, history.Transactions, history.Clock)
             .PurgeExpiredMetadataAsync(history.Partition, 10, default));
         var observation = CreateUsageObservation(runId, agentId, history.Clock.Now,
             "Fixture", ProviderKind.OpenAi, "exact-model", 700, 300) with {
@@ -445,9 +445,9 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         }
         var runtime = new DatabaseRuntimeState(new DatabaseSwitchNotificationService());
         var context = new HistoryMaintenanceContext(history.Partition, runtime.GetSnapshot(), runtime);
-        var runner = new HistorySourceMaintenanceRunner(history.Factory, TimeProvider.System);
-        AgentFileHistorySource CreateSource() => new(history.Factory, new FixedHistoryProfile(profile),
-            new HistoryWorkspacePaths(scenario.WorkspaceRoot), new(history.Factory),
+        var runner = new HistorySourceMaintenanceRunner(history.HistoryFactory, TimeProvider.System);
+        AgentFileHistorySource CreateSource() => new(history.Factory, history.Partitions, new FixedHistoryProfile(profile),
+            new HistoryWorkspacePaths(scenario.WorkspaceRoot), new(history.Factory, history.Partitions, history.Projection, history.Transactions),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance,
             new SingleRecordBudgetClock());
         var source = CreateSource();
@@ -510,8 +510,9 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         var journal = new FileProviderHistoryJournal(scenario.WorkspaceRoot, scenario.Scope);
         var publication = Assert.Single(await journal.ReadBatchAsync(history.Partition, 10));
         if (failAfterFlush) {
-            var failingStore = new AgentHistoryPublicationStore(history.Factory.WithInterceptor(new FailAfterLocatorFlush()));
-            using var failingSource = new AgentFileHistorySource(history.Factory, new FixedHistoryProfile(profile),
+            var failingStore = new AgentHistoryPublicationStore(history.Factory.WithInterceptor(new FailAfterLocatorFlush()),
+                history.Partitions, history.Projection, history.Transactions);
+            using var failingSource = new AgentFileHistorySource(history.Factory, history.Partitions, new FixedHistoryProfile(profile),
                 new HistoryWorkspacePaths(scenario.WorkspaceRoot), failingStore, Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance);
             await Assert.ThrowsAsync<InvalidOperationException>(() => failingSource.ProcessAsync(history.Maintenance, null, 10, default));
             await using var db = history.Factory.CreateDbContext();
@@ -519,8 +520,9 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
             Assert.Empty(await db.Set<AgentHistoryLocator>().ToArrayAsync());
             Assert.Single(await journal.ReadBatchAsync(history.Partition, 10));
         }
-        using var source = new AgentFileHistorySource(history.Factory, new FixedHistoryProfile(profile),
-            new HistoryWorkspacePaths(scenario.WorkspaceRoot), new(history.Factory), Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance);
+        using var source = new AgentFileHistorySource(history.Factory, history.Partitions, new FixedHistoryProfile(profile),
+            new HistoryWorkspacePaths(scenario.WorkspaceRoot), new(history.Factory, history.Partitions, history.Projection, history.Transactions),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance);
         var progress = await source.ProcessAsync(history.Maintenance, null, 10, default);
         progress = await source.ProcessAsync(history.Maintenance, progress.Cursor, 10, default);
         Assert.True(progress.BackfillComplete);
@@ -569,7 +571,7 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         await scenario.Store.SaveExecutionRunDetailAsync(CreateRunDetail(run, agent, history.Clock.Now, "Local", "model", [usage]));
         var journal = new FileProviderHistoryJournal(scenario.WorkspaceRoot, scenario.Scope);
         var publication = Assert.Single(await journal.ReadBatchAsync(history.Partition, 10));
-        var store = new AgentHistoryPublicationStore(history.Factory);
+        var store = new AgentHistoryPublicationStore(history.Factory, history.Partitions, history.Projection, history.Transactions);
         await store.PublishAsync(history.Partition, scenario.Scope, [publication], default);
         await journal.AcknowledgeAsync(publication);
         await using (var db = history.Factory.CreateDbContext()) {

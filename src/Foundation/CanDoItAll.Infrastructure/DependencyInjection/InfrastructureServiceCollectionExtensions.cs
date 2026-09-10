@@ -122,6 +122,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IDatabaseRuntimeWriteFence>(serviceProvider =>
             (DatabaseRuntimeState)serviceProvider.GetRequiredService<IDatabaseRuntimeState>());
         services.AddSingleton<ICanonicalRuntimeDatabase, CanonicalRuntimeDatabase>();
+        services.AddSingleton<CoordinatedDatabaseTransaction>();
         services.AddSingleton<CanonicalDatabaseProfileRuntimeAccessor>();
         services.AddSingleton<IActiveDatabaseProfileResolver>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());
         services.AddSingleton<IDatabaseProfileRuntimeAccessor>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());

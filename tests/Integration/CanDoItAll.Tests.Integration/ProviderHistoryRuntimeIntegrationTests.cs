@@ -15,8 +15,8 @@ public sealed class ProviderHistoryRuntimeIntegrationTests(ITestOutputHelper out
             fixture, 10_000, "runtime-active", fixture.Clock.Now.AddDays(30));
         var expired = await ProviderHistoryScaleFixture.SeedAsync(
             fixture, 5_000, "runtime-expired", fixture.Clock.Now.AddDays(-1));
-        var store = new HistoryReadStore(fixture.Factory, new([]), fixture.Details, fixture.Clock);
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var store = new HistoryReadStore(fixture.HistoryFactory, new([]), fixture.Details, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         var beginSamples = new List<double>();
         var completeSamples = new List<double>();
         for (var index = 0; index < 20; index++) {

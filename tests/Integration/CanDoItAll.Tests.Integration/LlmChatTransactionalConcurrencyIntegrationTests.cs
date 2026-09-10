@@ -26,8 +26,8 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatdefinitionupdatecas");
         var definitionId = await SeedDefinitionAsync(database);
         var barrier = new TwoPartyAsyncBarrier();
-        await using var firstContext = database.CreateDbContext();
-        await using var secondContext = database.CreateDbContext();
+        await using var firstContext = database.CreateSimpleChatsDbContext();
+        await using var secondContext = database.CreateSimpleChatsDbContext();
         var first = CreateDefinitionService(firstContext, new BarrierDefinitionRepository(
             new EfLlmChatDefinitionRepository(firstContext), barrier));
         var second = CreateDefinitionService(secondContext, new BarrierDefinitionRepository(
@@ -40,7 +40,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         Assert.Single(results, result => result.IsSuccess);
         var conflict = Assert.Single(results, result => result.IsFailure);
         Assert.Equal(LlmChatErrorCodes.DefinitionConcurrencyConflict, Assert.Single(conflict.Errors).Code);
-        await using var assertionContext = database.CreateDbContext();
+        await using var assertionContext = database.CreateSimpleChatsDbContext();
         Assert.Equal(1, await assertionContext.Set<LlmChatDefinitionRow>().CountAsync());
         Assert.Equal(2, await assertionContext.Set<LlmChatDefinitionRevisionRow>().CountAsync());
         Assert.Equal(1, await assertionContext.Set<LlmChatDefinitionRow>()
@@ -54,8 +54,8 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatdefinitionstatuscas");
         var definitionId = await SeedDefinitionAsync(database);
         var barrier = new TwoPartyAsyncBarrier();
-        await using var firstContext = database.CreateDbContext();
-        await using var secondContext = database.CreateDbContext();
+        await using var firstContext = database.CreateSimpleChatsDbContext();
+        await using var secondContext = database.CreateSimpleChatsDbContext();
         var first = CreateDefinitionService(firstContext, new BarrierDefinitionRepository(
             new EfLlmChatDefinitionRepository(firstContext), barrier));
         var second = CreateDefinitionService(secondContext, new BarrierDefinitionRepository(
@@ -74,7 +74,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         Assert.Single(results, result => result.IsSuccess);
         var conflict = Assert.Single(results, result => result.IsFailure);
         Assert.Equal(LlmChatErrorCodes.DefinitionConcurrencyConflict, Assert.Single(conflict.Errors).Code);
-        await using var assertionContext = database.CreateDbContext();
+        await using var assertionContext = database.CreateSimpleChatsDbContext();
         var row = await assertionContext.Set<LlmChatDefinitionRow>().AsNoTracking().SingleAsync();
         Assert.Equal(1, row.ConcurrencyToken);
         Assert.Contains(row.Status, new[] { LlmChatDefinitionStatus.Suspended, LlmChatDefinitionStatus.Archived });
@@ -87,8 +87,8 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         var definitionId = await SeedDefinitionAsync(database);
         var conversationId = await SeedConversationAsync(database, definitionId);
         var barrier = new TwoPartyAsyncBarrier();
-        await using var firstContext = database.CreateDbContext();
-        await using var secondContext = database.CreateDbContext();
+        await using var firstContext = database.CreateSimpleChatsDbContext();
+        await using var secondContext = database.CreateSimpleChatsDbContext();
         var first = CreateConversationService(firstContext, new BarrierConversationRepository(
             new EfLlmChatConversationRepository(firstContext), barrier));
         var second = CreateConversationService(secondContext, new BarrierConversationRepository(
@@ -101,7 +101,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         Assert.Single(results, result => result.IsSuccess);
         var conflict = Assert.Single(results, result => result.IsFailure);
         Assert.Equal(LlmChatErrorCodes.StorageConflict, Assert.Single(conflict.Errors).Code);
-        await using var assertionContext = database.CreateDbContext();
+        await using var assertionContext = database.CreateSimpleChatsDbContext();
         var row = await assertionContext.Set<LlmChatConversationRow>().AsNoTracking().SingleAsync();
         Assert.Equal(1, row.ConcurrencyToken);
         Assert.Contains(row.Title, new[] { "First", "Second" });
@@ -112,7 +112,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcreatearchiverace");
         var definitionId = await SeedDefinitionAsync(database);
-        await using var createContext = database.CreateDbContext();
+        await using var createContext = database.CreateSimpleChatsDbContext();
         var gate = new DefinitionReadGate();
         var service = CreateConversationService(
             createContext,
@@ -123,7 +123,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
             "Concurrent archive",
             LlmChatConversationOrigin.Api));
         await gate.Entered.WaitAsync(TimeSpan.FromSeconds(10));
-        await using (var archiveContext = database.CreateDbContext())
+        await using (var archiveContext = database.CreateSimpleChatsDbContext())
         {
             var affected = await archiveContext.Set<LlmChatDefinitionRow>()
                 .Where(row => row.Id == definitionId.Value && row.ConcurrencyToken == 0)
@@ -138,7 +138,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(LlmChatErrorCodes.DefinitionNotActive, Assert.Single(result.Errors).Code);
-        await using var assertionContext = database.CreateDbContext();
+        await using var assertionContext = database.CreateSimpleChatsDbContext();
         Assert.Equal(0, await assertionContext.Set<LlmChatConversationRow>().CountAsync());
     }
 
@@ -147,7 +147,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcreaterevisionrace");
         var definitionId = await SeedDefinitionAsync(database);
-        await using var createContext = database.CreateDbContext();
+        await using var createContext = database.CreateSimpleChatsDbContext();
         var gate = new DefinitionReadGate();
         var service = CreateConversationService(
             createContext,
@@ -158,7 +158,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
             "Concurrent revision",
             LlmChatConversationOrigin.Api));
         await gate.Entered.WaitAsync(TimeSpan.FromSeconds(10));
-        await using (var updateContext = database.CreateDbContext())
+        await using (var updateContext = database.CreateSimpleChatsDbContext())
         {
             var now = DateTimeOffset.UtcNow;
             updateContext.Add(CreateRevisionRow(definitionId, 2, now));
@@ -175,7 +175,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value!.Conversation.DefinitionRevision.Value);
         Assert.Equal(2, result.Value.Transcript.TranscriptRevision);
-        await using var assertionContext = database.CreateDbContext();
+        await using var assertionContext = database.CreateSimpleChatsDbContext();
         var conversation = await assertionContext.Set<LlmChatConversationRow>().AsNoTracking().SingleAsync();
         Assert.Equal(2, conversation.DefinitionRevision);
     }
@@ -185,7 +185,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatreconcileliveowner");
         var seeded = await SeedRecoverableOperationAsync(database, liveLease: true);
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var harness = CreateReconciliationHarness(dbContext);
 
         var result = await harness.Service.ReconcileAsync(seeded.OperationId);
@@ -211,7 +211,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         var seeded = await SeedRecoverableOperationAsync(
             database,
             invocationOutcome: LlmChatInvocationOutcome.Failed);
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var harness = CreateReconciliationHarness(dbContext);
 
         var result = await harness.Service.ReconcileAsync(seeded.OperationId);
@@ -251,7 +251,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatreconcileambiguous");
         var seeded = await SeedRecoverableOperationAsync(database);
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var harness = CreateReconciliationHarness(dbContext);
 
         var result = await harness.Service.ReconcileAsync(seeded.OperationId);
@@ -274,21 +274,21 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     }
 
     private static LlmChatDefinitionApplicationService CreateDefinitionService(
-        AppDbContext dbContext,
+        SimpleChatsDbContext dbContext,
         ILlmChatDefinitionRepository repository)
         => new(
             repository,
             new EfLlmChatDefinitionReadStore(dbContext),
-            new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance),
+            new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(dbContext)),
             FixedProviderResolver.Instance,
             TimeProvider.System);
 
-    private static ReconciliationHarness CreateReconciliationHarness(AppDbContext dbContext)
+    private static ReconciliationHarness CreateReconciliationHarness(SimpleChatsDbContext dbContext)
     {
         var timeProvider = TimeProvider.System;
-        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(dbContext));
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
-        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext, LlmChatTestPersistence.CreateProjection(dbContext));
         var conversationEngine = new PostgreSqlReconciliationConversationEngine(dbContext);
         var operationScope = new LlmChatOperationScopeAccessor();
         var eventJournal = new LlmChatOperationEventJournal(
@@ -342,7 +342,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     }
 
     private static LlmChatConversationApplicationService CreateConversationService(
-        AppDbContext dbContext,
+        SimpleChatsDbContext dbContext,
         ILlmChatConversationRepository conversationRepository,
         ILlmChatDefinitionRepository? definitionRepository = null)
         => new(
@@ -350,7 +350,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
             conversationRepository,
             new EfLlmChatConversationReadStore(dbContext),
             ExistingTurnStateRepository.Instance,
-            new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance),
+            new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance, LlmChatTestPersistence.TransactionsFor(dbContext)),
             new DeterministicConversationEngine(dbContext),
             TimeProvider.System);
 
@@ -374,7 +374,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     private static async Task<LlmChatDefinitionId> SeedDefinitionAsync(
         LlmChatsPostgreSqlTestDatabase database)
     {
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var id = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
         dbContext.Add(new LlmChatDefinitionRow
@@ -398,7 +398,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
         LlmChatsPostgreSqlTestDatabase database,
         LlmChatDefinitionId definitionId)
     {
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var id = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
         dbContext.Add(new LlmChatTranscriptRow
@@ -434,7 +434,7 @@ public sealed class LlmChatTransactionalConcurrencyIntegrationTests
     {
         var definitionId = await SeedDefinitionAsync(database);
         var conversationId = await SeedConversationAsync(database, definitionId);
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var operationId = LlmChatOperationId.New();
         var pendingUserEntryId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
@@ -709,7 +709,7 @@ internal sealed class RecordingOperationDispatchSignal : ILlmChatOperationDispat
         => throw new NotSupportedException();
 }
 
-internal sealed class PostgreSqlReconciliationConversationEngine(AppDbContext dbContext)
+internal sealed class PostgreSqlReconciliationConversationEngine(SimpleChatsDbContext dbContext)
     : ILlmChatConversationEngine
 {
     private readonly EfLlmChatConversationReadStore readStore = new(dbContext);
@@ -821,7 +821,7 @@ internal sealed class PostgreSqlReconciliationConversationEngine(AppDbContext db
         => throw new NotSupportedException();
 }
 
-internal sealed class DeterministicConversationEngine(AppDbContext dbContext) : ILlmChatConversationEngine
+internal sealed class DeterministicConversationEngine(SimpleChatsDbContext dbContext) : ILlmChatConversationEngine
 {
     public Task<LlmChatConversationEngineState> CreateAsync(LlmChatConversationId conversationId, LlmChatDefinitionRevision definitionRevision, string title, CancellationToken cancellationToken = default)
     {

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 
-public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
+public sealed class EfLlmChatOperationEventRepository(SimpleChatsDbContext dbContext)
     : ILlmChatOperationEventRepository
 {
     public async Task<LlmChatOperationEvent> AppendAsync(

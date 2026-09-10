@@ -12,7 +12,7 @@ public sealed class DatabaseLlmChatRuntimePersistenceBoundary : ILlmChatRuntimeP
     private readonly ILlmChatOperationScopeAccessor operationScope;
 
     public DatabaseLlmChatRuntimePersistenceBoundary(
-        AppDbContext dbContext,
+        SimpleChatsDbContext dbContext,
         IDatabaseRuntimeState runtimeState,
         ILlmChatOperationScopeAccessor operationScope,
         IServiceScopeFactory serviceScopeFactory)

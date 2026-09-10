@@ -214,8 +214,10 @@ public sealed class ProviderHistoryQueryIntegrationTests(ITestOutputHelper outpu
         Assert.Equal(HistoryCoverageState.Current, page.Coverage.State);
         var source = new CanonicalEvidenceReference(fixture.Partition, HistorySourceKind.SimpleChat, new("owner"), new("evidence"));
         await using (var db = fixture.Factory.CreateDbContext()) {
-            fixture.Outbox.Stage(db, new(source, new(1), HistorySourceMutationKind.Delete, null, []));
-            await db.SaveChangesAsync();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            using var participation = fixture.Transactions.Enter(db);
+            await fixture.Outbox.StageAsync(new(source, new(1), HistorySourceMutationKind.Delete, null, []), default);
+            await transaction.CommitAsync();
         }
         page = await Store(fixture).SearchAsync(fixture.Access.Context, Query(fixture), null, default);
         Assert.Equal(HistoryCoverageState.Partial, page.Coverage.State);
@@ -274,7 +276,7 @@ public sealed class ProviderHistoryQueryIntegrationTests(ITestOutputHelper outpu
         new(new HistoryProviderScope.AllAuthorized(), fixture.Clock.Now.AddHours(-1), fixture.Clock.Now.AddHours(1));
 
     private static HistoryReadStore Store(HistoryPersistenceTestDatabase fixture, Commands? commands = null) =>
-        new(commands is null ? fixture.Factory : fixture.Factory.WithInterceptor(commands),
+        new(commands is null ? fixture.HistoryFactory : fixture.HistoryFactory.WithInterceptor(commands),
             new([new RegisteredSource()]), fixture.Details, fixture.Clock);
 
     private static async Task<string> ExplainAsync(HistoryPersistenceTestDatabase fixture, ReadCommand read) {
@@ -309,6 +311,5 @@ public sealed class ProviderHistoryQueryIntegrationTests(ITestOutputHelper outpu
         }
     }
 }
-
 
 

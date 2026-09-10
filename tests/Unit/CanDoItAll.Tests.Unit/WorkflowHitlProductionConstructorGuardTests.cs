@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.AspNetCore.DataProtection;
@@ -20,6 +22,8 @@ public sealed class WorkflowHitlProductionConstructorGuardTests
     [InlineData(ConstructorDependency.ResponseOperationProtectionProvider, "dataProtectionProvider")]
     [InlineData(ConstructorDependency.ResumeBoundaryFactory, "dbContextFactory")]
     [InlineData(ConstructorDependency.ResumeBoundaryProtectionProvider, "dataProtectionProvider")]
+    [InlineData(ConstructorDependency.ResumeBoundaryHistoryProjection, "historyProjection")]
+    [InlineData(ConstructorDependency.ResumeBoundaryTransactions, "transactions")]
     public void ProductionSeamsRejectNullDependencies(
         ConstructorDependency dependency,
         string expectedParameterName)
@@ -38,6 +42,11 @@ public sealed class WorkflowHitlProductionConstructorGuardTests
         var store = new PersistentWorkflowExecutorInvocationDeduplicationStore(
             dbContextFactory,
             dataProtectionProvider);
+        var history = new HistoryTargetWriteSession(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.InMemory,
+            SourceKind = DatabaseProfileSourceKind.InMemory
+        }, DatabaseProfileResolutionSource.ExplicitOverride, "workflow-constructor-guard"), TimeProvider.System);
+        var historyProjection = new WorkflowHistoryProjection(history.Partitions, history.Outbox);
 
         return dependency switch
         {
@@ -76,12 +85,20 @@ public sealed class WorkflowHitlProductionConstructorGuardTests
                 () => _ = new PersistentWorkflowResumeBoundaryStore(
                     null!,
                     dataProtectionProvider,
-                    new WorkflowHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System))),
+                    historyProjection,
+                    history.Transactions),
             ConstructorDependency.ResumeBoundaryProtectionProvider =>
                 () => _ = new PersistentWorkflowResumeBoundaryStore(
                     dbContextFactory,
                     null!,
-                    new WorkflowHistoryProjection(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System))),
+                    historyProjection,
+                    history.Transactions),
+            ConstructorDependency.ResumeBoundaryHistoryProjection =>
+                () => _ = new PersistentWorkflowResumeBoundaryStore(
+                    dbContextFactory, dataProtectionProvider, null!, history.Transactions),
+            ConstructorDependency.ResumeBoundaryTransactions =>
+                () => _ = new PersistentWorkflowResumeBoundaryStore(
+                    dbContextFactory, dataProtectionProvider, historyProjection, null!),
             _ => throw new ArgumentOutOfRangeException(nameof(dependency), dependency, null)
         };
     }
@@ -98,7 +115,9 @@ public sealed class WorkflowHitlProductionConstructorGuardTests
         ResponseOperationFactory,
         ResponseOperationProtectionProvider,
         ResumeBoundaryFactory,
-        ResumeBoundaryProtectionProvider
+        ResumeBoundaryProtectionProvider,
+        ResumeBoundaryHistoryProjection,
+        ResumeBoundaryTransactions
     }
 
     private sealed class ThrowingDbContextFactory : IDbContextFactory<AppDbContext>
