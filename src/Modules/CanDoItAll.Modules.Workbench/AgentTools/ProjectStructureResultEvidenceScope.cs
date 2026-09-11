@@ -123,6 +123,10 @@ internal sealed class ProjectStructureResultEvidenceScope(
         original[admission.ProjectId] = admission;
     }
 
+    internal void RecordKnownFailure() {
+        hasResult = true;
+    }
+
     internal ProjectStructureDisclosureEvidence Finish(IReadOnlyDictionary<Guid, ProjectWriteAdmission> current) {
         if (!hasResult) {
             MarkUnavailable(ProjectStructureDisclosureState.UnsupportedResult);

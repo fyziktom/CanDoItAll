@@ -26,6 +26,9 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     public IBrowser Browser { get; private set; } = default!;
 
+    internal TestDatabaseProfile OwnedDatabaseProfile => _activeProfile
+        ?? throw new InvalidOperationException("The Playwright fixture must own its host profile before creating a seed provider.");
+
     public string? DatabaseConnectionString => _activeProfile?.ConnectionString;
 
     public string? StorageWorkspaceRoot => _activeProfile?.WorkspaceRootPath;

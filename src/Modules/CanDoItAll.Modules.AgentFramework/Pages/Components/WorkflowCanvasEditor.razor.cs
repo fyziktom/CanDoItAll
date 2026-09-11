@@ -151,7 +151,7 @@ public partial class WorkflowCanvasEditor
     private string SelectionWindowSummary
         => SelectedNode is null
             ? $"{document.Nodes.Count} nodes"
-            : $"{SelectedNode.Kind} Â· {SelectedNode.Id.Value}";
+            : $"{SelectedNode.Kind} · {SelectedNode.Id.Value}";
 
     private sealed record RemovalBridge(
         WorkflowNodeId SourceNodeId,
@@ -2406,8 +2406,8 @@ public partial class WorkflowCanvasEditor
 
     private string BuildNodeDetailsDialogSubtitle(WorkflowCanvasNodeDraft node)
         => node.Kind == WorkflowNodeKind.Executor && ResolveSelectedExecutorDescriptor(node) is { } descriptor
-            ? $"{descriptor.Category} executor Â· {node.Id.Value}"
-            : $"{node.Kind} Â· {node.Id.Value}";
+            ? $"{descriptor.Category} executor · {node.Id.Value}"
+            : $"{node.Kind} · {node.Id.Value}";
 
     private string FormatExecutorSettingsJson(WorkflowCanvasNodeDraft node)
     {
@@ -2593,7 +2593,7 @@ public partial class WorkflowCanvasEditor
 
         var artifact = component.PromptArtifactId?.ToString("D") ?? "missing artifact";
         var revision = component.PromptVersionId?.ToString("D") ?? "missing revision";
-        return $"{component.Name} Â· Gallery item {artifact} Â· immutable revision {revision}";
+        return $"{component.Name} · Gallery item {artifact} · immutable revision {revision}";
     }
 
     private string BuildProviderOptionsSummary()

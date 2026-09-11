@@ -268,7 +268,21 @@ internal sealed class ProjectStructureResultDisclosureService(
         protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken) {
             var capture = await owner.BeginAsync(context, Name, arguments, sourceAdmission, cancellationToken);
             using var bound = capture.Bind();
-            var result = await base.InvokeCoreAsync(arguments, cancellationToken);
+            object? result;
+            try {
+                result = await base.InvokeCoreAsync(arguments, cancellationToken);
+            } catch (Exception failure) when (failure is IAgentToolFailureEffectEvidence {
+                IsSafeToExpose: true, EffectState: AgentToolEffectState.None or AgentToolEffectState.NotCommitted
+            }) {
+                capture.RecordKnownFailure();
+                try {
+                    await owner.CompleteAsync(capture, cancellationToken);
+                } catch (Exception completionFailure) when (completionFailure is not OperationCanceledException) {
+                    throw new AggregateException("The failed Structure operation has no completed disclosure checkpoint.",
+                        failure, completionFailure);
+                }
+                throw;
+            }
             await owner.CompleteAsync(capture, cancellationToken);
             return result;
         }

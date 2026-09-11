@@ -264,12 +264,15 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         return (await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(id))!;
     }
 
-    private static async Task<AgentToolAdmissionJournalFixture> CreateJournalAsync(IServiceProvider services, Guid projectId) {
+    private static async Task<AgentToolAdmissionJournalFixture> CreateJournalAsync(IServiceProvider services, Guid projectId, bool requireApproval = false) {
         var profile = services.GetRequiredService<IDatabaseRuntimeState>().GetSnapshot();
         var fixture = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding: new(profile.ActiveProfileId!.Value,
             profile.ActiveFingerprint!, new(profile.Generation)), transientContext: new("Admitted Structure scope",
                 workspaceScope: WorkspaceScopeDescriptor.Project(projectId.ToString("D"))),
-            storageScope: WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+            storageScope: WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+            configureAgent: requireApproval ? agent => agent with {
+                Permissions = agent.Permissions with { RequiresApprovalForExternalCalls = true, AutoApproveExternalCallsByDefault = false }
+            } : null);
         Assert.Null(await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().GetExecutionRunAsync(fixture.Session.ExecutionRunId));
         Assert.NotNull(await fixture.NewStore().GetExecutionRunAsync(fixture.Session.ExecutionRunId));
         return fixture;
@@ -380,10 +383,11 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
             Governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(fixture.Detail.Run.MetadataJson),
             AuthorityPolicyFingerprint = "fixture-authority", ModelContextDigest = "fixture-context", ContextIntent = Intent(projectId)
         };
+        var model = ManagedSeedProviderFallbacks.ResolveModel(agent, fixture.Provider);
         return runtime.ExecutionPort.ExecuteAsync(new(agent,
-            fixture.Provider with { Kind = ProviderKind.Ollama, Transport = ProviderTransportKind.ChatCompletions,
-                    ConfigurationJson = ProviderModelThinkingConfiguration.Write(fixture.Provider.ConfigurationJson, fixture.Provider.DefaultModel,
-                        new(fixture.Provider.DefaultModel, AgentThinkingEffortSupportStatus.Supported,
+            fixture.Provider with {
+                    ConfigurationJson = ProviderModelThinkingConfiguration.Write(fixture.Provider.ConfigurationJson, model,
+                        new(model, AgentThinkingEffortSupportStatus.Supported,
                             AgentThinkingEffortControlMode.EffortLevels, [AgentReasoningEffortLevel.Medium], AgentReasoningEffortLevel.Medium))
                 },
             fixture.Detail.ChatSession!, [], [], "Read the authorized project.", string.Empty,
@@ -405,14 +409,22 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         public AIAgent CreateFrameworkAgent(ProviderProfile provider, string model, ChatClientAgentOptions options,
             bool frameworkManagedHistory, bool allowBackgroundResponses) {
             Assert.True(frameworkManagedHistory);
+            Assert.Equal(ProviderTransportKind.Responses, provider.Transport);
             Assert.Equal(AgentThinkingEffortCapabilitySource.Configured, AgentThinkingEffortPolicy.ResolveCapability(provider, model).Source);
             Assert.Contains(options.ChatOptions!.Tools!, tool => tool.Name == client.ToolName);
+            if (client.RequiresTaskApproval) {
+                Assert.Equal(ProviderKind.OpenAi, provider.Kind);
+                Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(options.ChatOptions.Tools!,
+                    tool => tool.Name == ProjectStructureToolPolicy.ProjectTaskCreate));
+            }
             return new ChatClientAgent(new MafToolAdmissionChatClient(client), options);
         }
     }
 
-    private sealed class ScriptClient(string toolName, Dictionary<string, object?> arguments, bool failAfterResult = false) : IChatClient {
+    private sealed class ScriptClient(string toolName, Dictionary<string, object?> arguments, bool failAfterResult = false,
+        ProjectStructureTaskCreateRequest? followupTask = null) : IChatClient {
         internal string ToolName => toolName;
+        internal bool RequiresTaskApproval => followupTask is not null;
         internal int Requests { get; private set; }
         internal List<string> Inputs { get; } = [];
 
@@ -421,7 +433,13 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
             Requests++;
             var input = messages.ToArray();
             Inputs.Add(JsonSerializer.Serialize(input, MafToolProtocolCodec.SerializationOptions));
-            if (input.SelectMany(message => message.Contents).OfType<FunctionResultContent>().Any()) {
+            var results = input.SelectMany(message => message.Contents).OfType<FunctionResultContent>().ToArray();
+            if (results.Length > 0) {
+                if (followupTask is not null && results.All(result => result.CallId != FailureFollowupTaskCall)) {
+                    return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+                        [new FunctionCallContent(FailureFollowupTaskCall, ProjectStructureToolPolicy.ProjectTaskCreate,
+                            new Dictionary<string, object?> { ["projectId"] = arguments["projectId"], ["request"] = followupTask })])));
+                }
                 if (failAfterResult) {
                     throw new IOException("Injected final provider acknowledgement loss after the saved tool result.");
                 }

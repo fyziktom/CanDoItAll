@@ -603,7 +603,7 @@ public sealed class WorkflowLaunchService(
             case WorkflowLaunchOrigin.ProjectStructureNode project when
                 project.ProjectId != Guid.Empty &&
                 !string.IsNullOrWhiteSpace(project.NodeId.Value) &&
-                project.RequestingActor is { Kind: WorkflowLaunchActorKind.Agent } &&
+                project.RequestingActor is { Kind: WorkflowLaunchActorKind.Agent or WorkflowLaunchActorKind.User } &&
                 !string.IsNullOrWhiteSpace(project.SessionId.Value):
                 return;
             case WorkflowLaunchOrigin.AgentRuntimeInvocation agent when

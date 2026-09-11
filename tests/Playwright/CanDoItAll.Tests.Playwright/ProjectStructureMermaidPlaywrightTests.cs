@@ -36,6 +36,7 @@ public sealed class ProjectStructureMermaidPlaywrightTests(PlaywrightAppFixture 
     [Fact]
     public async Task Project_structure_mermaid_node_opens_rendered_diagram_modal()
     {
+        _ = fixture.OwnedDatabaseProfile;
         var project = await CreateProjectAsync("Mermaid browser proof");
         string mermaidNodeId;
         await using (var provider = await BuildSeedProviderAsync())
@@ -312,24 +313,8 @@ public sealed class ProjectStructureMermaidPlaywrightTests(PlaywrightAppFixture 
 
     private async Task<ServiceProvider> BuildSeedProviderAsync()
     {
-        var connectionString = fixture.DatabaseConnectionString
-            ?? throw new InvalidOperationException("The Playwright fixture did not expose a database connection string.");
-        var workspaceRoot = fixture.StorageWorkspaceRoot
-            ?? throw new InvalidOperationException("The Playwright fixture did not expose a storage workspace root.");
-        var profileRoot = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright-mermaid-seed");
-        Directory.CreateDirectory(profileRoot);
-
-        var profile = new TestDatabaseProfile(
-            "playwright-mermaid",
-            PlaywrightTestHostPaths.RepositoryRoot,
-            profileRoot,
-            TestDatabaseProviderKind.PostgreSql,
-            connectionString,
-            workspaceRoot,
-            Path.Combine(profileRoot, "manager-artifacts"));
-
         return await TestApplicationBootstrap.BuildServiceProviderAsync(
-            profile,
+            fixture.OwnedDatabaseProfile,
             "CanDoItAll.MermaidPlaywrightSeed",
             TestSchemaBootstrapModules.Full,
             new Dictionary<string, string?>

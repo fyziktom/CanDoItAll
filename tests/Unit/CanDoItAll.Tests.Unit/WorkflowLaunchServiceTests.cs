@@ -10,6 +10,40 @@ public sealed class WorkflowLaunchServiceTests
 {
     private static readonly DateTimeOffset FixedUtcNow = new(2026, 7, 12, 19, 0, 0, TimeSpan.Zero);
 
+    [Fact]
+    public async Task LaunchAsync_StructureOperator_PreservesUserIdentityAndExactLineage() {
+        var definition = CreateDefinition(status: WorkflowLifecycleStatus.Active);
+        var fixture = CreateFixture([definition]);
+        var origin = new WorkflowLaunchOrigin.ProjectStructureNode(Guid.NewGuid(), new("operator-workflow-node"),
+            CreateActor(), CreateSession(), CreateCorrelation());
+        var result = await fixture.Service.LaunchAsync(CreateIntent(
+            new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
+            WorkflowLaunchMode.Production) with { Origin = origin });
+
+        var actual = Assert.IsType<WorkflowLaunchOrigin.ProjectStructureNode>(Assert.Single(fixture.RunLauncher.Requests).Origin);
+        Assert.Equal(WorkflowLaunchActorKind.User, actual.RequestingActor.Kind);
+        Assert.Equal(origin.RequestingActor, actual.RequestingActor);
+        Assert.Equal(origin.ProjectId, actual.ProjectId);
+        Assert.Equal(origin.NodeId, actual.NodeId);
+        Assert.Equal(origin.SessionId, actual.SessionId);
+        Assert.Equal(origin.CorrelationId, actual.CorrelationId);
+        Assert.Equal(actual, result.ResolvedRequest.Origin);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_StructureServiceActor_IsRejectedBeforeCatalogOrRuntime() {
+        var definition = CreateDefinition(status: WorkflowLifecycleStatus.Active);
+        var fixture = CreateFixture([definition]);
+        var origin = new WorkflowLaunchOrigin.ProjectStructureNode(Guid.NewGuid(), new("service-workflow-node"),
+            new(WorkflowLaunchActorKind.Service, "synthetic-service"), CreateSession(), CreateCorrelation());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.LaunchAsync(CreateIntent(
+            new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
+            WorkflowLaunchMode.Production) with { Origin = origin }));
+        Assert.Empty(fixture.Catalog.Requests);
+        Assert.Empty(fixture.RunLauncher.Requests);
+    }
+
     [Theory]
     [InlineData(WorkflowLifecycleStatus.Draft)]
     [InlineData(WorkflowLifecycleStatus.Suspended)]

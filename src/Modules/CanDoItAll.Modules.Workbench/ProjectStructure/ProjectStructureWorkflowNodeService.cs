@@ -1133,7 +1133,7 @@ public sealed class ProjectStructureWorkflowNodeService(
     {
         var nodeCount = definition.Graph.Nodes.Count;
         var stepLabel = nodeCount == 1 ? "node" : "nodes";
-        return $"{definition.Status} workflow Ă„â€šĂ˘â‚¬ĹˇÄ‚â€šĂ‚Â· {nodeCount} {stepLabel}";
+        return $"{definition.Status} workflow · {nodeCount} {stepLabel}";
     }
 
     private static string BuildNotes(WorkflowDefinition definition, ProjectStructureNode parentNode)

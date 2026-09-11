@@ -263,7 +263,7 @@ internal sealed class MafRuntimeAgentFactory
                 runtimeOptions.Governance,
                 // Script inspection reads through the effective run scope so
                 // policy evaluation inspects exactly the file the run's tools can
-                // execute â€” never the runtime construction scope.
+                // execute — never the runtime construction scope.
                 new MafScriptPolicyInspectionService(
                     workspaceRoot,
                     contextWorkspaceScope,
