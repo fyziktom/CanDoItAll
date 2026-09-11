@@ -24,7 +24,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Processes;
 
-public sealed class ProcessWorkspaceShellTests
+public sealed partial class ProcessWorkspaceShellTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 30, 0, TimeSpan.Zero);
     private static readonly Guid ProjectSubprocessRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
@@ -1925,6 +1925,7 @@ public sealed class ProcessWorkspaceShellTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddSingleton<AgentToolPolicyCatalog>();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));

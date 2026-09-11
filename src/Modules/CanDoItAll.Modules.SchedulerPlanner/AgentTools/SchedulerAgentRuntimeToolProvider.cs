@@ -2,13 +2,15 @@ using System.Collections.Frozen;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Modules.SchedulerPlanner;
 
 public sealed class SchedulerAgentRuntimeToolProvider(
     ISchedulerPlannerService schedulerPlannerService,
-    SchedulerAgentRuntimeAuthorizationService authorizationService) : IAgentRuntimeToolProvider
+    SchedulerAgentRuntimeAuthorizationService authorizationService,
+    IWorkflowStructureAuthorityFactory structureAuthorityFactory) : IAgentRuntimeToolProvider
 {
     public const string ProviderKey = "scheduler-agent.runtime-tools";
 
@@ -79,7 +81,7 @@ public sealed class SchedulerAgentRuntimeToolProvider(
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
                         AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
-                        authorizedToken => CreateWorkflowScheduleAsync(request, authorizedToken),
+                        authorizedToken => CreateWorkflowScheduleAsync(context, request, authorizedToken),
                         token),
                 AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
                 "Creates one workflow-only scheduler plan through the canonical Scheduler service. The exact workflow/version must be discovered first, and this mutation requires host approval."));
@@ -168,6 +170,7 @@ public sealed class SchedulerAgentRuntimeToolProvider(
     }
 
     private async Task<SchedulerWorkflowScheduleCreateResult> CreateWorkflowScheduleAsync(
+        AgentRuntimeToolProviderContext context,
         SchedulerWorkflowScheduleCreateInput request,
         CancellationToken cancellationToken)
     {
@@ -200,7 +203,10 @@ public sealed class SchedulerAgentRuntimeToolProvider(
                 InputJson = request.InputJson,
                 IsEnabled = request.IsEnabled,
                 StartAtUtc = request.StartAtUtc,
-                EndAtUtc = request.EndAtUtc
+                EndAtUtc = request.EndAtUtc,
+                StructureAuthority = context.Governance is { } governance
+                    ? structureAuthorityFactory.CaptureAgent(context.Agent, governance)
+                    : null
             },
             cancellationToken);
 

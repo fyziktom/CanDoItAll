@@ -147,7 +147,7 @@ public sealed partial class ProjectWorkbenchService {
         return await ReadWorkflowTargetBindingAsync(database, projectId, parentNodeId, cancellationToken);
     }
 
-    private async Task<string> ReadWorkflowTargetBindingAsync(WorkbenchDbContext database, Guid projectId,
+    internal async Task<string> ReadWorkflowTargetBindingAsync(WorkbenchDbContext database, Guid projectId,
         string parentNodeId, CancellationToken cancellationToken) {
         if (parentNodeId == ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId)) {
             return ProjectWorkflowContributionFingerprint.Hash(JsonSerializer.Serialize(new { projectId, parentNodeId }));

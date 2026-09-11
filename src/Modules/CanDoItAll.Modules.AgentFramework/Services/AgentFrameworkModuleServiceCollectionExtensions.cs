@@ -96,10 +96,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IMcpSetupTestService, McpSetupTestService>();
         services.TryAddScoped<ICapabilityAccessPolicyEvaluator, CapabilityAccessPolicyEvaluator>();
         services.TryAddScoped<IAgentCapabilitySetupFlowService, AgentCapabilitySetupFlowService>();
+        services.AddScoped<IAgentCatalogMutationPolicy>(serviceProvider => new AgentProjectAccessCatalogPolicy(
+            serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(),
+            serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id));
         services.AddScoped<ISandboxWorkspaceStore>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
-            return new FileSandboxWorkspaceStore(workspaceRoot, scope);
+            return new FileSandboxWorkspaceStore(workspaceRoot, scope, serviceProvider.GetRequiredService<IAgentCatalogMutationPolicy>());
         });
         services.TryAddScoped<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddScoped<IWorkspaceFileService>(serviceProvider =>

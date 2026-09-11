@@ -41,15 +41,19 @@
                     ButtonStyle="ButtonStyle.Base"
                     Disabled="@Dialog.IsBusy"
                     Click="Close" />
+            @if (Dialog.PreparedRequest is not null || !string.IsNullOrWhiteSpace(Dialog.Error)) {
+                <Button Text="Prepare another launch" Variant="Variant.Text" Disabled="@Dialog.IsBusy"
+                        Click="PrepareAnotherProcessLaunch" data-testid="project-structure-process-assignment-new-intent" />
+            }
             <Button Text="Save and close"
                     Variant="Variant.Outlined"
                     ButtonStyle="ButtonStyle.Info"
                     Disabled="@Dialog.IsBusy"
                     data-testid="project-structure-process-assignment-save-close"
                     Click="Close" />
-            <Button Text="Review and start"
+            <Button Text="@(Dialog.IsAccepted ? "Resume accepted run" : Dialog.PreparedRequest?.PreparedAdmissionId is null ? "Prepare reviewed launch" : "Start reviewed run")"
                     ButtonStyle="ButtonStyle.Info"
-                    Disabled="@(Dialog.RequiredGapCount > 0 || Dialog.IsBusy)"
+                    Disabled="@((Dialog.RequiredGapCount > 0 && !Dialog.IsAccepted) || Dialog.IsBusy)"
                     IsBusy="@Dialog.IsBusy"
                     data-testid="project-structure-process-assignment-review-start"
                     Click="ReviewAndStartProcess" />
@@ -490,6 +494,9 @@
 
     [Parameter]
     public EventCallback ReviewAndStartProcess { get; set; }
+
+    [Parameter]
+    public EventCallback PrepareAnotherProcessLaunch { get; set; }
 
     [Parameter]
     public EventCallback RequestHrManagerMatch { get; set; }

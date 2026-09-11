@@ -317,6 +317,7 @@ else
             CloseProcessStart="CloseProcessStartDialog"
             ExecuteProcessStart="ExecuteProcessStartAsync"
             ReviewAndStartProcess="ReviewAndStartProcessAsync"
+                                   PrepareAnotherProcessLaunch="PrepareAnotherProcessLaunchAsync"
             SelectProcessStartCandidate="SelectProcessStartCandidateAsync"
             AssignProcessStartAgent="OpenManualProcessStartAgentPickerAsync"
             ProcessStartAssignmentsReviewedChanged="HandleProcessStartAssignmentsReviewedChanged"
@@ -572,6 +573,7 @@ else
                                    CloseProcessStart="CloseProcessStartDialog"
                                    ExecuteProcessStart="ExecuteProcessStartAsync"
                                    ReviewAndStartProcess="ReviewAndStartProcessAsync"
+                                   PrepareAnotherProcessLaunch="PrepareAnotherProcessLaunchAsync"
                                    SelectProcessStartCandidate="SelectProcessStartCandidateAsync"
                                    AssignProcessStartAgent="OpenManualProcessStartAgentPickerAsync"
                                    ProcessStartAssignmentsReviewedChanged="HandleProcessStartAssignmentsReviewedChanged"
@@ -962,6 +964,13 @@ else
     protected override async Task OnParametersSetAsync()
     {
         ApplyRequestedStructureView();
+
+        var processNavigation = AgentChatNavigationFence;
+        if (loadedProjectId != ProjectId || processDialogNavigationIdentity != processNavigation) {
+            processDialogNavigationIdentity = processNavigation;
+            CloseProcessStartDialog();
+            CloseProcessLinkDialog();
+        }
 
         if (loadedProjectId != ProjectId)
         {
@@ -3045,7 +3054,8 @@ else
     {
         Interlocked.Increment(ref surfaceReloadGeneration);
         CancelPendingCanvasViewStatePersistence();
-        ResetProcessStartEstimateState();
+        CloseProcessStartDialog();
+        CloseProcessLinkDialog();
         deferredCompletionCts.Cancel();
         deferredCompletionCts.Dispose();
         nodeMoveCommitGate.Dispose();

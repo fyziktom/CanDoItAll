@@ -138,7 +138,8 @@ public sealed class SchedulerPlannerService(
     IWorkflowCatalogService workflowCatalogService,
     ISchedulerWorkflowInputSchemaService workflowInputSchemaService,
     IClock clock,
-    ILogger<SchedulerPlannerService> logger) : ISchedulerPlannerService
+    ILogger<SchedulerPlannerService> logger,
+    IWorkflowScheduledSourceAuthorityPolicy? sourceAuthority = null) : ISchedulerPlannerService
 {
     public async Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
         SchedulerHistoryQuery? historyQuery = null,
@@ -247,10 +248,19 @@ public sealed class SchedulerPlannerService(
         plan.StartAtUtc = editor.StartAtUtc;
         plan.EndAtUtc = editor.EndAtUtc;
         plan.InputJson = normalizedInputJson;
+        plan.StructureAuthorityJson = SchedulerFireSnapshot.SerializeAuthority(editor.StructureAuthority);
         plan.LastError = string.Empty;
         plan.UpdatedAtUtc = now;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await using (var source = editor.StructureAuthority is { } authority
+            ? await (sourceAuthority ?? throw new InvalidOperationException("A schedule with a saved source authority requires its current source policy."))
+                .AcquireAsync(authority, cancellationToken)
+            : null) {
+            if (source is not null) {
+                await source.RequireForMutationAsync(cancellationToken);
+            }
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
         await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
         await dbContext.Entry(plan).ReloadAsync(cancellationToken);
 
@@ -883,78 +893,89 @@ public sealed class SchedulerTargetLauncher(
     private async Task<SchedulerTargetLaunchResult> LaunchWorkflowAsync(
         SchedulerPlan plan,
         SchedulerTargetLaunchContext context,
-        CancellationToken cancellationToken)
-    {
-        var workflowId = new WorkflowId(plan.TargetId);
-        WorkflowDefinitionSelection selection = plan.TargetVersionId.HasValue
-            ? new WorkflowDefinitionSelection.ExactSavedVersion(
-                workflowId,
-                new WorkflowVersionId(plan.TargetVersionId.Value))
-            : new WorkflowDefinitionSelection.LatestActive(workflowId);
-        var launchResult = await workflowLaunchService.LaunchAsync(
-            new WorkflowLaunchIntent(
-                selection,
-                WorkflowLaunchMode.Production,
-                new WorkflowLaunchOrigin.SchedulerPlanRun(
-                    context.PlanId,
-                    context.PlanRunId,
-                    context.SchedulerFireId,
-                    context.FiredAtUtc,
-                    context.CorrelationId),
-                plan.InputJson,
-                WorkflowLaunchCompletionPolicy.WaitForStopped,
-                new WorkflowLaunchIdempotency.CallerSupplied(context.IdempotencyKey)),
-            cancellationToken);
-        var run = launchResult.Run;
-        var events = await workflowRuntimeManager.ListEventsAsync(run.RunId, cancellationToken);
+        CancellationToken cancellationToken) {
+        WorkflowRunSnapshot? run = context.PreparedRunId is { } prepared
+            ? await workflowRuntimeManager.GetRunAsync(prepared, cancellationToken) : null;
+        if (run is not null) {
+            RequireExactRun(run, plan, context);
+        } else {
+            if (!context.MayLaunch) {
+                throw new SchedulerTargetLaunchException("The saved schedule is disabled or deleted; its unaccepted fire cannot launch.",
+                    SchedulerPlanRunRetryCategory.SchedulerFailure, SchedulerPlanRunRoutes.Failed);
+            }
+            var workflowId = new WorkflowId(plan.TargetId);
+            WorkflowDefinitionSelection selection = plan.TargetVersionId.HasValue
+                ? new WorkflowDefinitionSelection.ExactSavedVersion(workflowId, new(plan.TargetVersionId.Value))
+                : new WorkflowDefinitionSelection.LatestActive(workflowId);
+            var launchResult = await workflowLaunchService.LaunchAsync(new WorkflowLaunchIntent(
+                selection, WorkflowLaunchMode.Production,
+                new WorkflowLaunchOrigin.SchedulerPlanRun(context.PlanId, context.PlanRunId, context.SchedulerFireId,
+                    context.FiredAtUtc, context.CorrelationId) {
+                    PreparedRunId = context.PreparedRunId,
+                    StructureAuthority = context.StructureAuthority
+                },
+                plan.InputJson, WorkflowLaunchCompletionPolicy.WaitForStopped,
+                new WorkflowLaunchIdempotency.CallerSupplied(context.IdempotencyKey)), cancellationToken);
+            run = launchResult.Run;
+            RequireExactRun(run, plan, context);
+            if (launchResult.ObservationException is { } observationFailure) {
+                return ObservationPending(run, observationFailure);
+            }
+            if (launchResult.ReceiptObservationException is { } receiptFailure) {
+                return ObservationPending(run, receiptFailure);
+            }
+        }
+
+        IReadOnlyList<WorkflowEventRecord> events;
+        try {
+            events = await workflowRuntimeManager.ListEventsAsync(run.RunId, cancellationToken);
+        } catch (Exception exception) {
+            return ObservationPending(run, exception);
+        }
         var routeResult = ResolveWorkflowRouteResult(events);
-
-        if (run.State == WorkflowRunState.WaitingForInput)
-        {
-            return new SchedulerTargetLaunchResult(
-                SchedulerPlanTargetKind.Workflow,
-                run.RunId.Value,
-                run.State.ToString(),
-                string.IsNullOrWhiteSpace(run.Summary)
-                    ? $"Workflow run '{run.RunId.Value:D}' is waiting for approval."
-                    : run.Summary,
-                SchedulerPlanRunDispatchStatus.WaitingForApproval,
-                SchedulerPlanRunRoutes.WaitingForApproval,
-                SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval);
+        if (run.State == WorkflowRunState.WaitingForInput) {
+            return new(SchedulerPlanTargetKind.Workflow, run.RunId.Value, run.State.ToString(),
+                string.IsNullOrWhiteSpace(run.Summary) ? $"Workflow run '{run.RunId.Value:D}' is waiting for approval." : run.Summary,
+                SchedulerPlanRunDispatchStatus.WaitingForApproval, SchedulerPlanRunRoutes.WaitingForApproval,
+                SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval) { WorkflowState = run.State, RequiresObservation = true };
         }
-
-        if (run.State == WorkflowRunState.Failed)
-        {
+        if (run.State == WorkflowRunState.Failed) {
             var failureSummary = ResolveWorkflowFailureSummary(events, run.Summary);
-            throw new SchedulerTargetLaunchException(
-                $"Workflow run '{run.RunId.Value:D}' failed: {failureSummary}",
-                SchedulerPlanRunRetryClassifier.ClassifyWorkflowFailure(failureSummary),
-                SchedulerPlanRunRoutes.Failed,
-                run.RunId.Value,
-                SchedulerPlanTargetKind.Workflow);
+            throw new SchedulerTargetLaunchException($"Workflow run '{run.RunId.Value:D}' failed: {failureSummary}",
+                SchedulerPlanRunRetryClassifier.ClassifyWorkflowFailure(failureSummary), SchedulerPlanRunRoutes.Failed,
+                run.RunId.Value, SchedulerPlanTargetKind.Workflow);
         }
-
-        var dispatchStatus = routeResult.IsNoMessages
-            ? SchedulerPlanRunDispatchStatus.NoMessages
-            : SchedulerPlanRunDispatchStatus.Dispatched;
-
-        return new SchedulerTargetLaunchResult(
-            SchedulerPlanTargetKind.Workflow,
-            run.RunId.Value,
+        return new(SchedulerPlanTargetKind.Workflow, run.RunId.Value,
             routeResult.IsNoMessages ? SchedulerPlanRunDispatchStatus.NoMessages.ToString() : run.State.ToString(),
-            routeResult.IsNoMessages
-                ? ResolveNoMessagesSummary(routeResult.Summary)
-                : !string.IsNullOrWhiteSpace(routeResult.Summary)
-                ? routeResult.Summary
-                : string.IsNullOrWhiteSpace(run.Summary)
-                ? $"Started workflow run '{run.RunId.Value:D}'."
-                : run.Summary,
-            dispatchStatus,
-            routeResult.Route,
-            routeResult.IsNoMessages
-                ? SchedulerPlanRunRetryCategory.NoAction
-                : SchedulerPlanRunRetryCategory.None);
+            routeResult.IsNoMessages ? ResolveNoMessagesSummary(routeResult.Summary) : !string.IsNullOrWhiteSpace(routeResult.Summary)
+                ? routeResult.Summary : string.IsNullOrWhiteSpace(run.Summary) ? $"Started workflow run '{run.RunId.Value:D}'." : run.Summary,
+            routeResult.IsNoMessages ? SchedulerPlanRunDispatchStatus.NoMessages : SchedulerPlanRunDispatchStatus.Dispatched,
+            routeResult.Route, routeResult.IsNoMessages ? SchedulerPlanRunRetryCategory.NoAction : SchedulerPlanRunRetryCategory.None) {
+            WorkflowState = run.State,
+            RequiresObservation = run.State is not (WorkflowRunState.Completed or WorkflowRunState.Cancelled)
+        };
     }
+
+    private static void RequireExactRun(WorkflowRunSnapshot run, SchedulerPlan plan, SchedulerTargetLaunchContext context) {
+        if (context.PreparedRunId is null) {
+            return;
+        }
+        if (run.RunId != context.PreparedRunId || run.WorkflowId.Value != plan.TargetId || run.VersionId.Value != plan.TargetVersionId ||
+            run.Origin is not WorkflowLaunchOrigin.SchedulerPlanRun origin || origin.PlanId != context.PlanId ||
+            origin.PlanRunId != context.PlanRunId || origin.FireId != context.SchedulerFireId || origin.FiredAtUtc != context.FiredAtUtc) {
+            throw new InvalidOperationException("The saved Scheduler Workflow run does not match its prepared fire origin and version.");
+        }
+    }
+
+    private static SchedulerTargetLaunchResult ObservationPending(WorkflowRunSnapshot run, Exception exception) => new(
+        SchedulerPlanTargetKind.Workflow, run.RunId.Value, run.State.ToString(),
+        $"Workflow run '{run.RunId.Value:D}' was accepted; its latest result observation is pending.",
+        SchedulerPlanRunDispatchStatus.ObservationPending, SchedulerPlanRunRoutes.Processed,
+        SchedulerPlanRunRetryCategory.TransientExternalFailure) {
+        WorkflowState = run.State,
+        RequiresObservation = true,
+        ObservationException = exception
+    };
 
     private static SchedulerWorkflowRouteLaunchResult ResolveWorkflowRouteResult(IReadOnlyList<WorkflowEventRecord> events)
     {
@@ -1113,168 +1134,29 @@ public sealed record SchedulerPlanFireRequest(
     DateTimeOffset? NextPlannedFireAtUtc);
 
 public sealed class SchedulerPlannerRunDispatcher(
-    IDbContextFactory<SchedulerPlannerDbContext> dbContextFactory,
+    SchedulerFireAdmissionStore admissions,
     ISchedulerTargetLauncher targetLauncher,
-    IClock clock,
-    ILogger<SchedulerPlannerRunDispatcher> logger) : ISchedulerPlannerRunDispatcher
-{
-    public async Task DispatchAsync(
-        SchedulerPlanFireRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (request.PlanId == Guid.Empty)
-        {
-            throw new ArgumentException("Scheduler plan id is required.", nameof(request));
-        }
-
-        if (request.SchedulerFireId == Guid.Empty)
-        {
-            throw new ArgumentException("Scheduler fire id is required.", nameof(request));
-        }
-
-        if (request.FiredAtUtc == default)
-        {
-            throw new ArgumentException("Scheduler fired-at timestamp is required.", nameof(request));
-        }
-
-        var now = clock.GetUtcNow();
-        var dedupeKey = BuildFireDedupeKey(request.PlanId, request.FiredAtUtc);
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == request.PlanId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Scheduler plan '{request.PlanId:D}' was not found.");
-        if (!plan.IsEnabled)
-        {
-            logger.LogInformation(
-                "Ignoring disabled scheduler plan {PlanId} after scheduler fire {SchedulerFireId}.",
-                plan.Id,
-                request.SchedulerFireId);
+    ILogger<SchedulerPlannerRunDispatcher> logger) : ISchedulerPlannerRunDispatcher {
+    public async Task DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken = default) {
+        var claim = await admissions.AcquireAsync(request, cancellationToken);
+        if (claim is null) {
             return;
         }
-
-        var run = await dbContext.Set<SchedulerPlanRun>()
-            .SingleOrDefaultAsync(item => item.DedupeKey == dedupeKey, cancellationToken);
-        if (run is not null && IsNoRetryTerminalStatus(run.Status))
-        {
-            return;
-        }
-
-        if (run is null)
-        {
-            var correlationId = request.CorrelationId ?? request.SchedulerFireId;
-            run = new SchedulerPlanRun
-            {
-                Id = Guid.NewGuid(),
-                PlanId = plan.Id,
-                DedupeKey = dedupeKey,
-                SchedulerFireId = request.SchedulerFireId,
-                CorrelationId = correlationId,
-                FiredAtUtc = request.FiredAtUtc,
-                CreatedAtUtc = now
-            };
-            await dbContext.Set<SchedulerPlanRun>().AddAsync(run, cancellationToken);
-        }
-
-        else if (!run.CorrelationId.HasValue)
-        {
-            run.CorrelationId = request.CorrelationId ?? request.SchedulerFireId;
-        }
-
-        run.Status = SchedulerPlanRunDispatchStatus.Dispatching;
-        run.AttemptCount++;
-        run.TargetRunId = null;
-        run.TargetRunKind = string.Empty;
-        run.Summary = string.Empty;
-        run.ErrorMessage = string.Empty;
-        run.Route = string.Empty;
-        run.RetryCategory = SchedulerPlanRunRetryCategory.None;
-        run.DispatchedAtUtc = null;
-        run.UpdatedAtUtc = now;
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        try
-        {
-            var launchResult = await targetLauncher.LaunchAsync(
-                plan,
-                new SchedulerTargetLaunchContext(
-                    plan.Id,
-                    run.Id,
-                    new WorkflowSchedulerFireId(run.SchedulerFireId),
-                    run.FiredAtUtc,
-                    new WorkflowLaunchCorrelationId(run.CorrelationId!.Value)),
-                cancellationToken);
-            var completedAt = clock.GetUtcNow();
-            run.Status = launchResult.DispatchStatus;
-            run.TargetRunId = launchResult.TargetRunId;
-            run.TargetRunKind = launchResult.TargetKind.ToString();
-            run.Summary = launchResult.Summary;
-            run.Route = launchResult.Route;
-            run.RetryCategory = launchResult.RetryCategory;
-            run.DispatchedAtUtc = completedAt;
-            run.UpdatedAtUtc = completedAt;
-            if (launchResult.DispatchStatus == SchedulerPlanRunDispatchStatus.Dispatched)
-            {
-                plan.LastError = string.Empty;
+        SchedulerTargetLaunchResult result;
+        try {
+            result = await targetLauncher.LaunchAsync(claim.Snapshot.ToPlan(),
+                claim.Snapshot.ToContext(claim.PreparedRunId, claim.MayLaunch), cancellationToken);
+        } catch (Exception exception) {
+            try {
+                await admissions.CompleteAsync(claim, null, exception, CancellationToken.None);
+            } catch (Exception receiptFailure) {
+                logger.LogError(receiptFailure, "Scheduler failure observation could not be saved for admission {AdmissionId}.", claim.Snapshot.PlanRunId);
             }
-
-            plan.LastFiredAtUtc = request.FiredAtUtc;
-            plan.NextPlannedFireAtUtc = request.NextPlannedFireAtUtc;
-            plan.UpdatedAtUtc = completedAt;
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception exception) when (WorkflowExternalRequestPendingException.TryFind(exception, out _))
-        {
-            var waitingAt = clock.GetUtcNow();
-            run.Status = SchedulerPlanRunDispatchStatus.WaitingForApproval;
-            run.Summary = exception.GetBaseException().Message;
-            run.ErrorMessage = string.Empty;
-            run.Route = SchedulerPlanRunRoutes.WaitingForApproval;
-            run.RetryCategory = SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval;
-            run.DispatchedAtUtc = waitingAt;
-            run.UpdatedAtUtc = waitingAt;
-            plan.LastFiredAtUtc = request.FiredAtUtc;
-            plan.NextPlannedFireAtUtc = request.NextPlannedFireAtUtc;
-            plan.UpdatedAtUtc = waitingAt;
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            var failedAt = clock.GetUtcNow();
-            var retryCategory = SchedulerPlanRunRetryClassifier.Classify(exception);
-            run.Status = SchedulerPlanRunDispatchStatus.Failed;
-            if (exception is SchedulerTargetLaunchException launchException)
-            {
-                run.TargetRunId = launchException.TargetRunId;
-                run.TargetRunKind = launchException.TargetKind?.ToString() ?? string.Empty;
-            }
-
-            run.ErrorMessage = exception.Message;
-            run.Route = SchedulerPlanRunRoutes.Failed;
-            run.RetryCategory = retryCategory;
-            run.UpdatedAtUtc = failedAt;
-            plan.LastError = exception.Message;
-            plan.LastFiredAtUtc = request.FiredAtUtc;
-            plan.NextPlannedFireAtUtc = request.NextPlannedFireAtUtc;
-            plan.UpdatedAtUtc = failedAt;
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            logger.LogError(
-                exception,
-                "Scheduler plan {PlanId} failed to dispatch after scheduler fire {SchedulerFireId} at {FiredAtUtc}.",
-                request.PlanId,
-                request.SchedulerFireId,
-                request.FiredAtUtc);
             throw;
         }
+        await admissions.CompleteAsync(claim, result, null, CancellationToken.None);
+        if (result.ObservationException is { } observationFailure) {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(observationFailure).Throw();
+        }
     }
-
-    private static string BuildFireDedupeKey(Guid planId, DateTimeOffset firedAtUtc)
-    {
-        return $"scheduler-planner:{planId:N}:{firedAtUtc.UtcTicks}";
-    }
-
-    private static bool IsNoRetryTerminalStatus(SchedulerPlanRunDispatchStatus status)
-        => status is SchedulerPlanRunDispatchStatus.Dispatched
-            or SchedulerPlanRunDispatchStatus.NoMessages
-            or SchedulerPlanRunDispatchStatus.WaitingForApproval;
 }

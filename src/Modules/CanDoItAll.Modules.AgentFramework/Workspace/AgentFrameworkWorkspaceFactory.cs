@@ -9,6 +9,7 @@ using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,7 +122,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         string workspaceRoot,
         string profileFingerprint)
     {
-        var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
+        var store = new FileSandboxWorkspaceStore(workspaceRoot, scope,
+            new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId));
         var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
             new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
                 workspaceIdentity.DatabaseProfileGeneration));

@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
 using System.Data;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +11,10 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessRuntimeUnitOfWork(
     ProcessPersistenceDbContext dbContext,
-    TimeProvider? timeProvider = null) :
+    TimeProvider? timeProvider = null,
+    CoordinatedDatabaseTransaction? coordinatedTransaction = null,
+    IProcessProjectAdmissionPolicy? projectAdmissionPolicy = null,
+    IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null) :
     IProcessRuntimeUnitOfWork,
     IProcessRuntimeStateStore,
     IProcessRuntimeActivityStore,
@@ -160,6 +165,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         ValidateInitialPlanMatchesState(request);
         ValidateAtomicMutation(request);
 
+        await using var authorityLease = await AcquirePreparedAuthorityLeaseAsync(request, cancellationToken).ConfigureAwait(false);
         using var rootSequenceLock = await ProcessRuntimeRootSequenceLocks
             .AcquireAsync([request.OriginalState.RootRunId.Value], cancellationToken)
             .ConfigureAwait(false);
@@ -168,7 +174,10 @@ public sealed class EfProcessRuntimeUnitOfWork(
         {
             try
             {
-                return await CommitCoreAsync(request, cancellationToken).ConfigureAwait(false);
+                using var participation = request.InitialPlan is not null && (request.Mutation.State.ProjectAdmission is not null || request.InitialLaunchAdmission is not null)
+                    ? coordinatedTransaction?.Enter(dbContext)
+                    : null;
+                return await CommitCoreAsync(request, authorityLease, cancellationToken).ConfigureAwait(false);
             }
             catch
             {
@@ -182,12 +191,16 @@ public sealed class EfProcessRuntimeUnitOfWork(
             .ConfigureAwait(false);
         try
         {
+            using var participation = request.InitialPlan is not null && (request.Mutation.State.ProjectAdmission is not null || request.InitialLaunchAdmission is not null)
+                ? coordinatedTransaction?.Enter(dbContext)
+                : null;
             await AcquireRootMutationLockAsync(
                     request.OriginalState.RootRunId.Value,
                     cancellationToken)
                 .ConfigureAwait(false);
-            var result = await CommitCoreAsync(request, cancellationToken).ConfigureAwait(false);
+            var result = await CommitCoreAsync(request, authorityLease, cancellationToken).ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            participation?.Dispose();
             return result;
         }
         catch
@@ -199,18 +212,25 @@ public sealed class EfProcessRuntimeUnitOfWork(
 
     private async Task<ProcessRuntimeCommitResult> CommitCoreAsync(
         ProcessRuntimeCommitRequest request,
+        IProcessLaunchAuthorityLease? authorityLease,
         CancellationToken cancellationToken)
     {
+        dbContext.ChangeTracker.Clear();
+        var preparedLaunch = await RequirePreparedLaunchAsync(request, cancellationToken).ConfigureAwait(false);
         var duplicate = await FindCompletedCommandAsync(
             request.OriginalState.RunId,
             request.CommandId,
             cancellationToken).ConfigureAwait(false);
         if (duplicate is not null)
         {
+            RequireSameProjectAdmission(duplicate.State.ProjectAdmission, request.Mutation.State.ProjectAdmission);
+            RequireSameLaunchAdmission(duplicate.State.LaunchAdmissionId, request.Mutation.State.LaunchAdmissionId);
+            if (preparedLaunch is not null && preparedLaunch.AcceptedAtUtc is null) {
+                throw new InvalidOperationException("The process command receipt has no matching accepted launch admission.");
+            }
             return duplicate;
         }
 
-        dbContext.ChangeTracker.Clear();
         var existing = await LoadStateEntityAsync(
             request.Mutation.State.RunId.Value,
             trackChanges: true,
@@ -225,6 +245,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
             return rejection;
         }
 
+        await ValidateProjectAdmissionAsync(request, existing, cancellationToken).ConfigureAwait(false);
+        await ValidatePreparedAuthorityAsync(request, existing, preparedLaunch, authorityLease, cancellationToken).ConfigureAwait(false);
         await StageInitialPlanAsync(
             request,
             isNewState: existing is null,
@@ -261,9 +283,107 @@ public sealed class EfProcessRuntimeUnitOfWork(
             CompletedAtUtc = request.Mutation.State.UpdatedAtUtc
         });
 
+        if (preparedLaunch is not null) {
+            preparedLaunch.AcceptedAtUtc = ProcessPreparedLaunchCodec.NormalizeTimestamp(clock.GetUtcNow());
+            preparedLaunch.Execute = request.InitialLaunchAdmission!.Execute;
+            preparedLaunch.State = ProcessLaunchContinuationState.Accepted;
+        }
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         dbContext.ChangeTracker.Clear();
         return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
+    }
+
+    private async Task<IProcessLaunchAuthorityLease?> AcquirePreparedAuthorityLeaseAsync(ProcessRuntimeCommitRequest request,
+        CancellationToken cancellationToken) {
+        if (request.InitialLaunchAdmission is not { } reference) {
+            return null;
+        }
+        var entity = await dbContext.PreparedLaunches.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == reference.AdmissionId.Value, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("The prepared process launch admission was not found.");
+        var saved = ProcessPreparedLaunchCodec.Read(entity);
+        ProcessPreparedLaunchCodec.RequireInitialCommit(saved, request);
+        if (saved.AcceptedAtUtc is not null || saved.Preparation.Authority is not { } authority) {
+            return null;
+        }
+        if (coordinatedTransaction is null || launchAuthorityPolicy is null) {
+            throw new InvalidOperationException("A trusted process launch requires configured transaction coordination and a current authority policy.");
+        }
+        var currentCaller = reference.CurrentCallerAuthority
+            ?? throw new InvalidOperationException("A new trusted process admission requires the actual caller's current authority.");
+        ProcessLaunchIntentFingerprint.RequireSameCaller(saved.Preparation, currentCaller);
+        return await launchAuthorityPolicy.AcquireAsync(authority, currentCaller, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ProcessPreparedLaunchEntity?> RequirePreparedLaunchAsync(ProcessRuntimeCommitRequest request,
+        CancellationToken cancellationToken) {
+        if (request.InitialLaunchAdmission is not { } reference) {
+            if (request.InitialPlan is not null && request.Mutation.State.LaunchAdmissionId is not null) {
+                throw new InvalidOperationException("A prepared process run requires its exact initial launch admission reference.");
+            }
+            return null;
+        }
+        if (request.InitialPlan is null || request.Mutation.State.LaunchAdmissionId != reference.AdmissionId) {
+            throw new InvalidOperationException("The initial process launch reference does not match its immutable run state.");
+        }
+        var entity = await EfProcessPreparedLaunchStore.RequireLockedAsync(dbContext, reference.AdmissionId, cancellationToken).ConfigureAwait(false);
+        ProcessPreparedLaunchCodec.RequireInitialCommit(ProcessPreparedLaunchCodec.Read(entity), request);
+        return entity;
+    }
+
+    private async Task ValidatePreparedAuthorityAsync(ProcessRuntimeCommitRequest request, ProcessRuntimeStateEntity? existing,
+        ProcessPreparedLaunchEntity? preparedLaunch, IProcessLaunchAuthorityLease? authorityLease, CancellationToken cancellationToken) {
+        if (existing is not null) {
+            RequireSameLaunchAdmission(existing.LaunchAdmissionId is { } id ? new(id) : null, request.Mutation.State.LaunchAdmissionId);
+            return;
+        }
+        if (preparedLaunch is null) {
+            if (request.Mutation.State.LaunchAdmissionId is not null) {
+                throw new InvalidOperationException("A process run cannot introduce a launch admission without its prepared owner receipt.");
+            }
+            return;
+        }
+        if (preparedLaunch.AcceptedAtUtc is not null) {
+            throw new InvalidOperationException("The accepted process launch is missing its runtime state; reconciliation is required before any execution.");
+        }
+        var preparation = ProcessPreparedLaunchCodec.Read(preparedLaunch).Preparation;
+        if (preparation.Authority is not null) {
+            if (authorityLease is null) {
+                throw new InvalidOperationException("The new process admission does not hold its current source authority lease.");
+            }
+            await authorityLease.RequireForMutationAsync(preparation.LinkTarget, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static void RequireSameLaunchAdmission(ProcessLaunchAdmissionId? saved, ProcessLaunchAdmissionId? requested) {
+        if (saved != requested) {
+            throw new InvalidOperationException("A process run's saved launch admission cannot be added, removed or changed by a runtime mutation or replay.");
+        }
+    }
+
+    private async Task ValidateProjectAdmissionAsync(ProcessRuntimeCommitRequest request, ProcessRuntimeStateEntity? existing,
+        CancellationToken cancellationToken) {
+        var admission = request.Mutation.State.ProjectAdmission;
+        if (existing is not null) {
+            RequireSameProjectAdmission(ProcessPersistenceMappers.ReadProjectAdmission(existing), admission);
+            return;
+        }
+        if (admission is null) {
+            return;
+        }
+        if (request.InitialPlan is null || request.InitialAssignments is null) {
+            throw new InvalidOperationException("A new project-admitted process run must atomically commit its immutable plan and assignments.");
+        }
+        if (coordinatedTransaction is null || projectAdmissionPolicy is null) {
+            throw new InvalidOperationException("A new process project admission requires configured transaction coordination and a project admission policy.");
+        }
+        await projectAdmissionPolicy.RequireForMutationAsync(admission, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void RequireSameProjectAdmission(ProcessProjectAdmission? saved, ProcessProjectAdmission? requested) {
+        if (saved != requested) {
+            throw new InvalidOperationException("A process run's saved project admission cannot be added, removed or changed by a runtime mutation or replay.");
+        }
     }
 
     private void StageInitialAssignments(
@@ -494,6 +614,12 @@ public sealed class EfProcessRuntimeUnitOfWork(
                 request,
                 "Runtime.ParentRunMissing",
                 $"Child process run '{request.Mutation.State.RunId}' cannot start because parent run '{parentStepPrecondition.RunId}' is missing from root '{request.Mutation.State.RootRunId}'.");
+        }
+
+        if (isNewState && (ProcessPersistenceMappers.ReadProjectAdmission(rootState) != request.Mutation.State.ProjectAdmission ||
+                ProcessPersistenceMappers.ReadProjectAdmission(parentState) != request.Mutation.State.ProjectAdmission)) {
+            return RejectParentStepPrecondition(request, "Runtime.ParentProjectAdmissionMismatch",
+                "A child process run must retain its root and parent run's exact saved project admission.");
         }
 
         if (parentState.Status != ProcessRuntimeStatus.Active)
@@ -809,7 +935,9 @@ public sealed class EfProcessRuntimeUnitOfWork(
         ProcessRuntimeStateEntity existing,
         ProcessRuntimeStateSnapshot originalState)
     {
-        if (existing.RunId != originalState.RunId.Value ||
+        if (existing.LaunchAdmissionId != originalState.LaunchAdmissionId?.Value ||
+            ProcessPersistenceMappers.ReadProjectAdmission(existing) != originalState.ProjectAdmission ||
+            existing.RunId != originalState.RunId.Value ||
             existing.RootRunId != originalState.RootRunId.Value ||
             existing.PlanId != originalState.PlanId.Value ||
             !string.Equals(existing.PlanHash, originalState.PlanHash, StringComparison.Ordinal) ||
@@ -845,6 +973,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
 
     private static void ValidateCommitIdentity(ProcessRuntimeCommitRequest request)
     {
+        RequireSameLaunchAdmission(request.OriginalState.LaunchAdmissionId, request.Mutation.State.LaunchAdmissionId);
+        RequireSameProjectAdmission(request.OriginalState.ProjectAdmission, request.Mutation.State.ProjectAdmission);
         if (request.OriginalState.RunId != request.Mutation.State.RunId ||
             request.OriginalState.RootRunId != request.Mutation.State.RootRunId ||
             request.OriginalState.PlanId != request.Mutation.State.PlanId ||

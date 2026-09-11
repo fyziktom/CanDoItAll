@@ -147,7 +147,8 @@ redacted `500`. The workflow response boundary never uses `502`.
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Discover the route contract. |
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
-| `POST` | `/api/processes/launch` | Create and optionally queue a durable run. |
+| `POST` | `/api/processes/launch` | Accept a prepared launch and optionally queue its durable run. |
+| `GET` | `/api/processes/launch/{admissionId}` | Observe the original preparation, accepted run and delivery state without executing it. |
 | `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
 | `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
@@ -161,7 +162,7 @@ redacted `500`. The workflow response boundary never uses `502`.
 | `GET` | `/api/processes/events/stream` | Subscribe to bounded all-run lifecycle signals. |
 | `GET` | `/api/processes/runs/{runId}/events/stream` | Subscribe to bounded exact-run lifecycle signals. |
 
-`launch/check` is non-mutating. `launch` persists the run when readiness permits; `execute: false` prevents immediate dispatch queueing but does not turn the launch into a dry run. See the [operator runbook](process-agent-operator-runbook.md) for triage and configuration.
+`launch/check` persists a reviewable preparation but does not create or dispatch a run. Retain its `callerIntentId` and returned admission identity for the subsequent launch and retry. The optional `callerIntentId` and `preparedAdmissionId` fields reuse the original plan and source; changed input conflicts. Callers omitting these identities retain intentional-repeat behavior and cannot safely infer whether an unacknowledged call created a run. `launch` persists the run when readiness permits; `execute: false` prevents immediate queueing but still accepts the run. Its `observation` distinguishes acceptance, continuation and Structure delivery. See the [operator runbook](process-agent-operator-runbook.md) for recovery and configuration.
 
 ## Agent Approval And Usage Contract
 

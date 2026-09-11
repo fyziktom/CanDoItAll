@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
@@ -20,6 +22,7 @@ internal static class ProcessesApi
                 "GET /api/processes/contract",
                 "POST /api/processes/launch/check",
                 "POST /api/processes/launch",
+                "GET /api/processes/launch/{admissionId}",
                 "POST /api/processes/runs/{runId}/dispatch",
                 "POST /api/processes/runs/{runId}/cancel",
                 "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
@@ -38,6 +41,9 @@ internal static class ProcessesApi
 
         processes.MapPost("/launch/check", async (
                 ProcessLaunchApiRequest request,
+                HttpContext context,
+                IProcessLaunchOperatorAuthoritySource authoritySource,
+                IProcessPreparedLaunchStore preparations,
                 ProcessLaunchApplicationService launchService,
                 ProcessLaunchVariablePreparationService launchVariablePreparationService,
                 ProjectStructureProcessNodeService projectStructureProcessNodeService,
@@ -45,6 +51,9 @@ internal static class ProcessesApi
                 CancellationToken cancellationToken) =>
             await ExecuteLaunchOperationAsync(
                 request,
+                context,
+                authoritySource,
+                preparations,
                 launchService,
                 launchVariablePreparationService,
                 projectStructureProcessNodeService,
@@ -55,6 +64,9 @@ internal static class ProcessesApi
 
         processes.MapPost("/launch", async (
                 ProcessLaunchApiRequest request,
+                HttpContext context,
+                IProcessLaunchOperatorAuthoritySource authoritySource,
+                IProcessPreparedLaunchStore preparations,
                 ProcessLaunchApplicationService launchService,
                 ProcessLaunchVariablePreparationService launchVariablePreparationService,
                 ProjectStructureProcessNodeService projectStructureProcessNodeService,
@@ -62,6 +74,9 @@ internal static class ProcessesApi
                 CancellationToken cancellationToken) =>
             await ExecuteLaunchOperationAsync(
                 request,
+                context,
+                authoritySource,
+                preparations,
                 launchService,
                 launchVariablePreparationService,
                 projectStructureProcessNodeService,
@@ -69,6 +84,20 @@ internal static class ProcessesApi
                 previewOnly: false,
                 cancellationToken))
         .WithName("LaunchProcess");
+
+        processes.MapGet("/launch/{admissionId:guid}", async (Guid admissionId, HttpContext context,
+            IProcessLaunchOperatorAuthoritySource authoritySource, IProcessPreparedLaunchStore preparations,
+            ProcessLaunchApplicationService launchService, CancellationToken cancellationToken) => {
+            var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
+            if (await preparations.GetAsync(new(admissionId), cancellationToken) is null) {
+                return ApiEndpointResults.NotFound("The process launch admission was not found.", "process.launch_not_found");
+            }
+            try {
+                return Results.Ok(MapLaunchObservation(await launchService.GetLaunchStatusAsync(new(admissionId), caller, cancellationToken)));
+            } catch (InvalidOperationException) {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+        }).WithName("GetProcessLaunchStatus");
 
         processes.MapPost("/runs/{runId:guid}/dispatch", async (
                 Guid runId,
@@ -243,6 +272,9 @@ internal static class ProcessesApi
 
     private static async Task<IResult> ExecuteLaunchOperationAsync(
         ProcessLaunchApiRequest request,
+        HttpContext context,
+        IProcessLaunchOperatorAuthoritySource authoritySource,
+        IProcessPreparedLaunchStore preparations,
         ProcessLaunchApplicationService launchService,
         ProcessLaunchVariablePreparationService launchVariablePreparationService,
         ProjectStructureProcessNodeService projectStructureProcessNodeService,
@@ -254,14 +286,23 @@ internal static class ProcessesApi
         {
             var launchRequest = await MapLaunchRequestAsync(
                 request,
+                context,
+                authoritySource,
+                preparations,
                 launchVariablePreparationService,
                 projectStructureProcessNodeService,
                 cancellationToken).ConfigureAwait(false);
-            var result = previewOnly
-                ? await launchService.PreviewAsync(launchRequest with { Execute = false }, cancellationToken).ConfigureAwait(false)
-                : await launchService.LaunchAsync(launchRequest, cancellationToken).ConfigureAwait(false);
+            var result = await ExecuteMappedLaunchAsync(launchRequest, launchService, preparations, previewOnly, cancellationToken);
 
             return Results.Ok(MapLaunchResult(result));
+        }
+        catch (ProcessLaunchIntentConflictException) {
+            return Results.Conflict(new ApiErrorResponse([
+                new("process.launch_intent_conflict", "The process launch intent no longer matches its original input.", CanDoItAll.SharedKernel.ErrorSeverity.Error)
+            ]));
+        }
+        catch (ProcessLaunchAuthorityRejectedException) {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -287,8 +328,26 @@ internal static class ProcessesApi
         }
     }
 
+    private static async Task<ProcessLaunchResult> ExecuteMappedLaunchAsync(ProcessLaunchRequest request,
+        ProcessLaunchApplicationService service, IProcessPreparedLaunchStore preparations, bool previewOnly, CancellationToken cancellationToken) {
+        try {
+            return previewOnly ? await service.PreviewAsync(request with { Execute = false }, cancellationToken)
+                : await service.LaunchAsync(request, cancellationToken);
+        } catch (ProcessLaunchIntentConflictException) {
+            var winner = await ProcessLaunchProducerRequests.FindConcurrentReplayAsync(request, preparations, cancellationToken);
+            if (winner is null) {
+                throw;
+            }
+            return previewOnly ? await service.PreviewAsync(winner with { Execute = false }, cancellationToken)
+                : await service.LaunchAsync(winner, cancellationToken);
+        }
+    }
+
     private static async Task<ProcessLaunchRequest> MapLaunchRequestAsync(
         ProcessLaunchApiRequest request,
+        HttpContext context,
+        IProcessLaunchOperatorAuthoritySource authoritySource,
+        IProcessPreparedLaunchStore preparations,
         ProcessLaunchVariablePreparationService launchVariablePreparationService,
         ProjectStructureProcessNodeService projectStructureProcessNodeService,
         CancellationToken cancellationToken)
@@ -296,6 +355,22 @@ internal static class ProcessesApi
         ArgumentNullException.ThrowIfNull(request);
 
         var variables = request.Variables ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        var input = new ProcessLaunchRequest(request.DefinitionKey,
+            request.ProcessDefinitionId is { } definitionId ? new ProcessDefinitionId(definitionId) : null,
+            request.LiveRunProfileKey, request.ProjectId, request.ProjectNodeId,
+            string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
+            variables, request.RunReadiness, request.Execute) {
+            CallerIntentId = request.CallerIntentId is { } intent ? new(intent) : null,
+            PreparedAdmissionId = request.PreparedAdmissionId is { } admission ? new(admission) : null
+        };
+        var caller = await ResolveOperatorAsync(context, authoritySource, projectId: null, cancellationToken);
+        var replay = await ProcessLaunchProducerRequests.FindReplayAsync(input, caller, preparations, cancellationToken);
+        if (replay is not null) {
+            return replay;
+        }
+        var authority = input.ProjectId is null ? caller
+            : await ResolveOperatorAsync(context, authoritySource, input.ProjectId, cancellationToken);
+        var producerFingerprint = ProcessLaunchProducerRequests.InputFingerprint(input, caller);
         if (request.ProjectId is { } projectId &&
             projectId != Guid.Empty &&
             !string.IsNullOrWhiteSpace(request.ProjectNodeId))
@@ -314,16 +389,25 @@ internal static class ProcessesApi
                 StringComparer.Ordinal);
         }
 
-        return new ProcessLaunchRequest(
-            request.DefinitionKey,
-            request.ProcessDefinitionId is { } definitionId ? new ProcessDefinitionId(definitionId) : null,
-            request.LiveRunProfileKey,
-            request.ProjectId,
-            request.ProjectNodeId,
-            string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
-            variables,
-            request.RunReadiness,
-            request.Execute);
+        return input with {
+            Variables = variables,
+            Authority = authority,
+            ProjectAdmission = authority.ProjectAdmission,
+            ProducerInputFingerprint = producerFingerprint
+        };
+    }
+
+    private static Task<ProcessLaunchAuthority> ResolveOperatorAsync(HttpContext context,
+        IProcessLaunchOperatorAuthoritySource source, Guid? projectId, CancellationToken cancellationToken) {
+        if (context.User.Identity?.IsAuthenticated != true) {
+            return source.CaptureLocalAsync(projectId, ProcessLaunchOperatorSurface.Api, cancellationToken);
+        }
+        var subject = context.User.FindFirst("sub")?.Value ?? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(subject) || !long.TryParse(context.User.FindFirst("exp")?.Value,
+                System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var expiry)) {
+            throw new ProcessLaunchAuthorityRejectedException("The authenticated process request requires its validated subject and token expiry.");
+        }
+        return source.CaptureAuthenticatedAsync(projectId, subject, DateTimeOffset.FromUnixTimeSeconds(expiry), cancellationToken);
     }
 
     private static ProcessLaunchApiResponse MapLaunchResult(ProcessLaunchResult result)
@@ -345,8 +429,12 @@ internal static class ProcessesApi
                 result.LaunchPlan.PlanHash,
                 result.LaunchPlan.Steps.Select(MapLaunchStep).ToArray(),
                 result.LaunchPlan.ReadinessFindings.Select(MapReadinessFinding).ToArray()),
-            result.Warnings);
+            result.Warnings) { Observation = result.Observation is { } observation ? MapLaunchObservation(observation) : null };
     }
+
+    private static ProcessLaunchObservationApiView MapLaunchObservation(ProcessLaunchObservation observation)
+        => new(observation.AdmissionId.Value, observation.AcceptedRunId?.Value, observation.ContinuationState.ToString(),
+            observation.LinkDeliveryState.ToString(), observation.RuntimeStatus?.ToString(), observation.PublicFailure);
 
     private static ProcessLaunchStepApiView MapLaunchStep(ProcessLaunchStepView step)
     {
@@ -570,7 +658,9 @@ internal sealed record ProcessLaunchApiRequest(
     string RequestedBy = "process-api",
     Dictionary<string, string>? Variables = null,
     bool RunReadiness = true,
-    bool Execute = false);
+    bool Execute = false,
+    Guid? CallerIntentId = null,
+    Guid? PreparedAdmissionId = null);
 
 internal sealed record ProcessDispatchApiRequest(string RequestedBy = "process-api");
 
@@ -589,7 +679,12 @@ internal sealed record ProcessLaunchApiResponse(
     string Stage,
     string Route,
     ProcessLaunchPlanApiView LaunchPlan,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings) {
+    public ProcessLaunchObservationApiView? Observation { get; init; }
+}
+
+internal sealed record ProcessLaunchObservationApiView(
+    Guid AdmissionId, Guid? AcceptedRunId, string ContinuationState, string LinkDeliveryState, string? RuntimeStatus, string? PublicFailure);
 
 internal sealed record ProcessLaunchPlanApiView(
     Guid PlanId,

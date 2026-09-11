@@ -153,7 +153,7 @@ public sealed class SchedulerWorkspaceOwnerPersistenceTests {
 
     private static void AssertModel(AppDbContext canonical, DbContext owner) {
         var entities = owner.GetService<IDesignTimeModel>().Model.GetEntityTypes().ToArray();
-        Assert.Equal(2, entities.Length);
+        Assert.Equal(owner is SchedulerPlannerDbContext ? 3 : 2, entities.Length);
         foreach (var entity in entities) {
             var complete = Assert.IsAssignableFrom<IEntityType>(canonical.GetService<IDesignTimeModel>().Model.FindEntityType(entity.ClrType));
             Assert.Equal(complete.ToDebugString(MetadataDebugStringOptions.LongDefault), entity.ToDebugString(MetadataDebugStringOptions.LongDefault));
@@ -161,12 +161,13 @@ public sealed class SchedulerWorkspaceOwnerPersistenceTests {
     }
 
     private sealed class RecordingLauncher : ISchedulerTargetLauncher {
-        public Guid TargetRunId { get; } = Guid.NewGuid();
+        public Guid TargetRunId { get; private set; }
         public List<SchedulerTargetLaunchContext> Requests { get; } = [];
         public Task<SchedulerTargetLaunchResult> LaunchAsync(SchedulerPlan plan, SchedulerTargetLaunchContext context,
             CancellationToken cancellationToken = default) {
             Requests.Add(context);
-            return Task.FromResult(new SchedulerTargetLaunchResult(plan.TargetKind, TargetRunId, "Running", "Persisted target receipt"));
+            TargetRunId = context.PreparedRunId!.Value.Value;
+            return Task.FromResult(new SchedulerTargetLaunchResult(plan.TargetKind, TargetRunId, "Completed", "Persisted target receipt"));
         }
     }
 }

@@ -15,29 +15,42 @@ internal sealed class ProjectStructureSerializableMutationScope(SerializableMuta
 
 public sealed class ProjectStructureMutationScopeFactory(
     ProjectRecordQueryService projects,
+    ProjectWriteAdmissionService admissions,
     CoordinatedDatabaseTransaction transactions) {
     internal Task<ProjectStructureSerializableMutationScope> BeginAsync(WorkbenchDbContext context,
-        string scopeKey, CancellationToken cancellationToken) => BeginAsync(context, [scopeKey], cancellationToken);
+        string scopeKey, CancellationToken cancellationToken, IReadOnlyCollection<ProjectWriteAdmission>? expectedAdmissions = null)
+        => BeginAsync(context, [scopeKey], cancellationToken, expectedAdmissions);
 
     internal Task<ProjectStructureSerializableMutationScope> BeginBindingWriteAsync(WorkbenchDbContext context,
-        string scopeKey, CancellationToken cancellationToken) => BeginBindingWriteAsync(context, [scopeKey], cancellationToken);
+        string scopeKey, CancellationToken cancellationToken, IReadOnlyCollection<ProjectWriteAdmission>? expectedAdmissions = null)
+        => BeginBindingWriteAsync(context, [scopeKey], cancellationToken, expectedAdmissions);
 
     internal Task<ProjectStructureSerializableMutationScope> BeginBindingWriteAsync(WorkbenchDbContext context,
-        IReadOnlyCollection<string> scopeKeys, CancellationToken cancellationToken) {
+        IReadOnlyCollection<string> scopeKeys, CancellationToken cancellationToken,
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedAdmissions = null) {
         ArgumentNullException.ThrowIfNull(scopeKeys);
-        return BeginAsync(context, scopeKeys.Append(ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey).ToArray(), cancellationToken);
+        return BeginAsync(context, scopeKeys.Append(ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey).ToArray(), cancellationToken, expectedAdmissions);
     }
 
     internal async Task<ProjectStructureSerializableMutationScope> BeginAsync(WorkbenchDbContext context,
-        IReadOnlyCollection<string> scopeKeys, CancellationToken cancellationToken) {
+        IReadOnlyCollection<string> scopeKeys, CancellationToken cancellationToken,
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedAdmissions = null) {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(scopeKeys);
         var scope = new ProjectStructureSerializableMutationScope(
             await SerializableMutationScope.BeginAsync(context, scopeKeys, cancellationToken));
         try {
             var projectIds = scopeKeys.Select(TryParseProjectId).OfType<Guid>().Distinct().ToArray();
+            if (expectedAdmissions is not null &&
+                (expectedAdmissions.Count != projectIds.Length || !projectIds.ToHashSet().SetEquals(expectedAdmissions.Select(admission => admission.ProjectId)))) {
+                throw new ArgumentException("Explicit admissions must cover exactly the projects in this ordered mutation scope.", nameof(expectedAdmissions));
+            }
             if (projectIds.Length > 0) {
                 using var coordination = transactions.Enter(context);
+                if (expectedAdmissions is not null) {
+                    await admissions.RequireManyForMutationAsync(expectedAdmissions, cancellationToken);
+                    return scope;
+                }
                 var existing = await projects.GetManyForMutationAsync(projectIds, cancellationToken);
                 var missing = projectIds.Except(existing.Select(project => project.Id)).Select(id => (Guid?)id).FirstOrDefault();
                 if (missing.HasValue) {

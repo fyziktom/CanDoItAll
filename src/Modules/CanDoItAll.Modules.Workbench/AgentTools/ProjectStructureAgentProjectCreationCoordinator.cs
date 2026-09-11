@@ -1,21 +1,25 @@
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureAgentProjectCreationCoordinator(
     ProjectStructureAgentAuthorizationService authorizationService,
+    ProjectWriteAdmissionService writeAdmissionService,
     Func<Guid>? projectIdFactory = null)
 {
     private readonly Func<Guid> projectIdFactory = projectIdFactory ?? Guid.NewGuid;
 
     public async Task<T> CreateAsync<T>(
         AgentDefinition agent,
-        Func<Guid, CancellationToken, Task<T>> create,
+        Func<ProjectCreationReservation, CancellationToken, Task<T>> create,
         Func<T, Guid> projectIdSelector,
         CancellationToken cancellationToken,
-        Action<Guid>? retainProjectAccessForSession = null)
+        Action<Guid>? retainProjectAccessForSession = null,
+        Guid? parentProjectId = null,
+        Action<ProjectCreationReservation>? retainLifetimeAccessForSession = null)
     {
         var reservedProjectId = projectIdFactory();
         if (reservedProjectId == Guid.Empty)
@@ -23,14 +27,17 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
             throw new InvalidOperationException("The project id factory returned an empty id.");
         }
 
+        var reservation = await writeAdmissionService.ReserveCreationAsync(
+            reservedProjectId, agent.Id, Guid.NewGuid(), parentProjectId, cancellationToken);
+        await writeAdmissionService.RequireCreationGrantAsync(reservation, cancellationToken);
         await authorizationService.GrantCreatedProjectAccessAsync(
             agent.Id,
-            reservedProjectId,
+            reservation,
             cancellationToken);
 
         try
         {
-            var result = await create(reservedProjectId, cancellationToken);
+            var result = await create(reservation, cancellationToken);
             var createdProjectId = projectIdSelector(result);
             if (createdProjectId != reservedProjectId)
             {
@@ -38,6 +45,7 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
                     $"The project creation operation returned '{createdProjectId:D}' instead of reserved id '{reservedProjectId:D}'.");
             }
 
+            retainLifetimeAccessForSession?.Invoke(reservation);
             return result;
         }
         catch (Exception exception) when (ProjectStructureExceptionGraph.TryFind(
@@ -51,7 +59,7 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
                 : exception;
             await RevokeReservedAccessOrThrowAsync(
                 agent.Id,
-                reservedProjectId,
+                reservation,
                 failureToSurface,
                 "The empty subproject was removed after transfer failure, but its reserved access grant could not be revoked.");
             ExceptionDispatchInfo.Capture(failureToSurface).Throw();
@@ -67,6 +75,7 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
             try
             {
                 retainProjectAccessForSession?.Invoke(reservedProjectId);
+                retainLifetimeAccessForSession?.Invoke(reservation);
             }
             catch (Exception sessionAccessFailure)
             {
@@ -85,7 +94,7 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
         {
             await RevokeReservedAccessOrThrowAsync(
                 agent.Id,
-                reservedProjectId,
+                reservation,
                 exception,
                 "Project creation was rejected and its reserved access grant could not be revoked.");
 
@@ -95,15 +104,16 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
 
     private async Task RevokeReservedAccessOrThrowAsync(
         Guid agentId,
-        Guid reservedProjectId,
+        ProjectCreationReservation reservation,
         Exception originalFailure,
         string compensationFailureMessage)
     {
         try
         {
+            await writeAdmissionService.CancelCreationAsync(reservation, CancellationToken.None);
             await authorizationService.RevokeCreatedProjectAccessAsync(
                 agentId,
-                reservedProjectId,
+                reservation,
                 CancellationToken.None);
         }
         catch (Exception compensationException)

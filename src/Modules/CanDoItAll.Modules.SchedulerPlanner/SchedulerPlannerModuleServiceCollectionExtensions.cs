@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.EntityFrameworkCore;
 using CanDoItAll.AgentFramework.Tooling;
@@ -38,6 +39,8 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
         services.AddScoped<ISchedulerWorkflowInputOptionService, SchedulerWorkflowInputOptionService>();
         services.AddScoped<ISchedulerTargetLauncher, SchedulerTargetLauncher>();
         services.AddScoped<ISchedulerPlannerTriggerScheduler, SchedulerPlannerTriggerScheduler>();
+        services.AddScoped<SchedulerFireAdmissionStore>();
+        services.AddScoped<IWorkflowScheduledAuthorityPolicy, SchedulerWorkflowAuthorityPolicy>();
         services.AddScoped<ISchedulerPlannerRunDispatcher, SchedulerPlannerRunDispatcher>();
         services.AddScoped<ISchedulerPlannerService, SchedulerPlannerService>();
         services.AddScoped<SchedulerAgentRuntimeAuthorizationService>();
@@ -51,6 +54,7 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
                 options.WaitForJobsToComplete = true;
             });
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchedulerPlannerProjectionHostedService>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchedulerFireRecoveryWorker>());
         }
 
         return services;

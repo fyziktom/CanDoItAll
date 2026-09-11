@@ -187,6 +187,15 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             ProjectStructureAccessChange.Granted, cancellationToken);
     }
 
+    public async Task RevokeAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(lifetime);
+        var workspace = ResolveProjectLifetimeWorkspace(lifetime.DatabaseProfileId);
+        await workspace.RevokeAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
+        await RefreshProjectStructureAccessProjectionsAsync(agentId, lifetime.ProjectId,
+            ProjectStructureAccessChange.Revoked, cancellationToken);
+    }
+
     public async Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(target);

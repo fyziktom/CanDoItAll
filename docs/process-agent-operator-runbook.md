@@ -32,7 +32,8 @@ This runbook covers the current PostgreSQL-backed process runtime, local dispatc
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Discover the route contract. |
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
-| `POST` | `/api/processes/launch` | Create a durable run and optionally queue it. |
+| `POST` | `/api/processes/launch` | Accept the prepared durable run and optionally queue it. |
+| `GET` | `/api/processes/launch/{admissionId}` | Read preparation, acceptance, continuation and link delivery without executing them. |
 | `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work once. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
 | `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
@@ -44,7 +45,7 @@ This runbook covers the current PostgreSQL-backed process runtime, local dispatc
 | `GET` | `/api/processes/runs/{runId}/graph` | Read a paged run graph. |
 | `GET` | `/api/processes/runs/{runId}/history` | Read timeline history. |
 
-Use OpenAPI for query and body schemas. `launch/check` is the dry run. A successful `launch` persists a run; `execute: false` only prevents immediate queueing.
+Use OpenAPI for query and body schemas. `launch/check` saves a durable preparation for review, without creating or dispatching a run. Use one `callerIntentId` for a deliberate launch and retain the returned admission identity; retry the same input with those identities. Changed input requires a new intent. A successful `launch` accepts the original prepared run; `execute: false` only prevents immediate queueing. Requests without an intent retain intentional-repeat behavior, so a lost response does not establish that another launch is safe.
 
 ## Dispatch And Run-Record Defaults
 
@@ -82,7 +83,11 @@ Project Structure starts are handled by `ProjectStructureProcessNodeService`.
 - `project_structure_node_process_start` prepares or launches the associated definition.
 - `project_structure_process_subprocess_launch` launches a child from governed automation and requires the parent operation contract to allow external action.
 
-Preserve project id, node id, definition id, run id, launch variables, and the parent run/step relationship in operator evidence.
+Preserve project id, its original lifetime, node id, definition id, caller intent, admission id, run id, launch variables, and the parent run/step relationship in operator evidence. The source caller is distinct from the Agent selected to execute the Process.
+
+The Structure dialog and Processes workspace retain only the launch intent UUID in per-tab `sessionStorage`. Reload restores the exact owner preparation and accepted run. A missing owner preparation or corrupt marker requires explicit resolution; it is never rebuilt against the current project. Use `Prepare another launch` or `Launch another run` only for an intentional repetition.
+
+An accepted run can still have pending continuation or Structure link delivery. Inspect the saved observation after a connection or queue failure before attempting another launch. The continuation worker retries the original outstanding work; pure status reads do not dispatch or recreate links. A removed link remains removed, and a conflicting target is reported explicitly. Historical acceptance remains observable after project retirement or source revocation; a new effect still requires current authority for its original project lifetime.
 
 ## Dispatch
 

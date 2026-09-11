@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Contracts;
@@ -20,6 +21,19 @@ public sealed record ProcessLaunchRequest(
 {
     public IReadOnlyList<ProcessLaunchExecutorOverride> ExecutorOverrides { get; init; } = [];
     public ProcessRunId? RootRunIdOverride { get; init; }
+
+    [JsonIgnore]
+    public ProcessProjectAdmission? ProjectAdmission { get; init; }
+
+    public ProcessLaunchIntentId? CallerIntentId { get; init; }
+    public ProcessLaunchAdmissionId? PreparedAdmissionId { get; init; }
+    public string? ProducerInputFingerprint { get; init; }
+
+    [JsonIgnore]
+    public ProcessLaunchAuthority? Authority { get; init; }
+
+    [JsonIgnore]
+    public ProcessLaunchLinkTarget? LinkTarget { get; init; }
 }
 
 public sealed record ProcessExistingLaunchLookupRequest(
@@ -72,6 +86,8 @@ public sealed record ProcessLaunchResult
     public ProcessLaunchPlanView LaunchPlan { get; }
 
     public IReadOnlyList<string> Warnings { get; }
+
+    public ProcessLaunchObservation? Observation { get; init; }
 }
 
 public enum ProcessLaunchStage

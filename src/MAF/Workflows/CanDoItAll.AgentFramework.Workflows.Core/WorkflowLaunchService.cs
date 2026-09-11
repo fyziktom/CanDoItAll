@@ -61,8 +61,14 @@ public sealed class WorkflowLaunchService(
             cancellationToken.ThrowIfCancellationRequested();
             var now = timeProvider.GetUtcNow();
             var claimToken = WorkflowLaunchIdempotencyClaimToken.New();
-            var proposedRunId = intent.Origin is WorkflowLaunchOrigin.ProjectStructureNode { StructureAdmission: { } admission }
-                ? admission.RunId : WorkflowRunId.New();
+            var proposedRunId = intent.Origin switch {
+                WorkflowLaunchOrigin.ProjectStructureNode { StructureAdmission: { } admission } => admission.RunId,
+                WorkflowLaunchOrigin.SchedulerPlanRun { PreparedRunId: { } preparedRunId } => preparedRunId,
+                _ => WorkflowRunId.New()
+            };
+            if (proposedRunId.Value == Guid.Empty) {
+                throw new ArgumentException("A prepared Workflow run identity cannot be empty.", nameof(intent));
+            }
             var claim = await idempotencyStore.TryClaimAsync(
                 scope,
                 fingerprint,

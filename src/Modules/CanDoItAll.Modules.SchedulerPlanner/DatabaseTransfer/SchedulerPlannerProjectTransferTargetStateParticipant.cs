@@ -4,24 +4,26 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.SchedulerPlanner;
 
 internal sealed class SchedulerPlannerProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.SchedulerPlanner;
 
     public IReadOnlyCollection<Type> EntityTypesToLock { get; } =
     [
         typeof(SchedulerPlan),
-        typeof(SchedulerPlanRun)
+        typeof(SchedulerPlanRun),
+        typeof(SchedulerFireAdmissionRecord)
     ];
 
     public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
         FindResiduesAsync(
             AppDbContext dbContext,
-            CancellationToken cancellationToken)
-    {
+            CancellationToken cancellationToken) {
         var hasResidue =
             await dbContext.Set<SchedulerPlan>()
+                .AsNoTracking()
+                .AnyAsync(cancellationToken) ||
+            await dbContext.Set<SchedulerFireAdmissionRecord>()
                 .AsNoTracking()
                 .AnyAsync(cancellationToken) ||
             await dbContext.Set<SchedulerPlanRun>()

@@ -44,12 +44,15 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
         }
 
         var admission = await writeAdmissionService.CaptureForMutationAsync(projectId, cancellationToken);
-        var lifetimeId = admission?.LifetimeId;
+        var reservation = admission is null
+            ? await writeAdmissionService.CaptureReservedCreationForMutationAsync(projectId, cancellationToken) : null;
+        var lifetimeId = admission?.LifetimeId ?? reservation?.LifetimeId;
+        var profileId = admission?.DatabaseProfileId ?? reservation?.DatabaseProfileId;
         await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
             contextOptions, static options => new AgentProjectAccessDbContext(options), cancellationToken);
         var record = await dbContext.Set<AgentProjectStructureAccessRevocationRecord>()
             .SingleOrDefaultAsync(record => record.ProjectId == projectId && record.ProjectLifetimeId == lifetimeId, cancellationToken);
-        if (record is not null && record.DatabaseProfileId != admission?.DatabaseProfileId) {
+        if (record is not null && record.DatabaseProfileId != profileId) {
             throw new InvalidOperationException("The stored project-access revocation belongs to another database profile.");
         }
         if (record?.Status == AgentProjectStructureAccessRevocationStatus.Completed) {
@@ -64,7 +67,7 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
             {
                 Id = Guid.NewGuid(),
                 ProjectId = projectId,
-                DatabaseProfileId = admission?.DatabaseProfileId,
+                DatabaseProfileId = profileId,
                 ProjectLifetimeId = lifetimeId,
                 Status = AgentProjectStructureAccessRevocationStatus.Pending,
                 CreatedAtUtc = now,

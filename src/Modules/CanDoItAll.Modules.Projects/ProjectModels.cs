@@ -13,6 +13,8 @@ public static class ProjectErrorCodes
 {
     public const string NotFound = "projects.not-found";
     public const string LifetimeChanged = "projects.lifetime-changed";
+    public const string ReservedIdConflict = "projects.reserved-id-conflict";
+    public const string ReservationClosed = "projects.reservation-closed";
 }
 
 public enum ProjectStatus
@@ -53,6 +55,13 @@ public sealed class Project
 
     [JsonIgnore]
     public bool LegacyAgentAccessBindingEligible { get; private set; }
+
+    internal void BindReservedLifetime(Guid lifetimeId) {
+        if (lifetimeId == Guid.Empty) {
+            throw new ArgumentException("A nonempty reserved lifetime is required.", nameof(lifetimeId));
+        }
+        LifetimeId = lifetimeId;
+    }
 
     public string Name { get; set; } = string.Empty;
 
@@ -622,6 +631,24 @@ public sealed class ProjectsService(
         CancellationToken cancellationToken = default)
         => SaveCoreAsync(model, parentProjectId: null, newProjectId: null, cancellationToken);
 
+    public Task<Result<Guid>> CreateAsync(ProjectCreationReservation reservation, ProjectEditorModel model,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        if (model.Id.HasValue) {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new project cannot use an existing project id.")));
+        }
+        return SaveCoreAsync(model, parentProjectId: null, reservation.ProjectId, cancellationToken, reservation);
+    }
+
+    public Task<Result<Guid>> CreateSubprojectAsync(Guid parentProjectId, ProjectCreationReservation reservation,
+        ProjectEditorModel model, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        if (parentProjectId == Guid.Empty || model.Id.HasValue) {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new subproject requires a parent and cannot edit an existing project.")));
+        }
+        return SaveCoreAsync(model, parentProjectId, reservation.ProjectId, cancellationToken, reservation);
+    }
+
     public Task<Result<Guid>> CreateAsync(
         Guid newProjectId,
         ProjectEditorModel model,
@@ -698,7 +725,8 @@ public sealed class ProjectsService(
         ProjectEditorModel model,
         Guid? parentProjectId,
         Guid? newProjectId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectCreationReservation? reservation = null)
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
@@ -720,7 +748,7 @@ public sealed class ProjectsService(
         {
             return Result<Guid>.Failure(Error.Failure(
                 "The reserved project id is already in use.",
-                "projects.reserved-id-conflict"));
+                ProjectErrorCodes.ReservedIdConflict));
         }
 
         Project? parentProject = null;
@@ -752,12 +780,22 @@ public sealed class ProjectsService(
 
         if (entity is null)
         {
+            if (reservation is null && await dbContext.Set<ProjectCreationReservationRecord>().AnyAsync(record =>
+                    record.ProjectId == targetProjectId && record.State == ProjectCreationReservationState.Reserved, cancellationToken)) {
+                return Result<Guid>.Failure(Error.Failure("The project id belongs to a pending creation reservation.", ProjectErrorCodes.ReservedIdConflict));
+            }
+            if (reservation is not null && !await writeAdmissionService.TryConsumeCreationAsync(dbContext, reservation, parentProjectId, cancellationToken)) {
+                return Result<Guid>.Failure(Error.Failure("The exact project creation reservation is closed or its parent lifetime has changed.", ProjectErrorCodes.ReservationClosed));
+            }
             entity = new Project
             {
                 Id = targetProjectId,
                 CreatedAtUtc = clock.GetUtcNow()
             };
 
+            if (reservation is not null) {
+                entity.BindReservedLifetime(reservation.LifetimeId);
+            }
             await dbContext.Set<Project>().AddAsync(entity, cancellationToken);
         }
 
@@ -997,6 +1035,7 @@ public sealed class ProjectsService(
                 preparedParticipants.Add((participant, preparation));
             }
 
+            await ProjectWriteAdmissionService.CancelCreationForDeletionAsync(dbContext, id, cancellationToken);
             if (project is not null)
             {
                 var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);

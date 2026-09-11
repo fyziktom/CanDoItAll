@@ -21,9 +21,11 @@ public sealed class ProcessLaunchAtomicCommitTests
     private static readonly DateTimeOffset Now =
         new(2026, 7, 25, 12, 0, 0, TimeSpan.Zero);
 
-    [Fact]
-    public async Task Launch_passes_compiled_plan_to_initial_runtime_commit_without_separate_plan_write()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Launch_passes_compiled_plan_to_initial_runtime_commit_without_separate_plan_write(bool withProjectAdmission) {
+        var admission = withProjectAdmission ? new ProcessProjectAdmission(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()) : null;
         var planStore = new TrackingPlanStore();
         var unitOfWork = new RejectingUnitOfWork();
         var service = new ProcessLaunchApplicationService(
@@ -46,12 +48,12 @@ public sealed class ProcessLaunchAtomicCommitTests
             DefinitionKey: "dotnet-runtime-command-writeback",
             ProcessDefinitionId: null,
             LiveRunProfileKey: null,
-            ProjectId: null,
+            ProjectId: admission?.ProjectId,
             ProjectNodeId: null,
             RequestedBy: "unit-test",
             Variables: new Dictionary<string, string>(StringComparer.Ordinal),
             RunReadiness: false,
-            Execute: false));
+            Execute: false) { ProjectAdmission = admission });
 
         Assert.Equal(ProcessLaunchStage.Failed, result.Stage);
         Assert.Null(result.RunId);
@@ -61,6 +63,8 @@ public sealed class ProcessLaunchAtomicCommitTests
         Assert.Equal(result.LaunchPlanId, commit.InitialPlan.Header.PlanId);
         Assert.Equal(commit.Mutation.State.PlanId, commit.InitialPlan.Header.PlanId);
         Assert.Equal(commit.Mutation.State.PlanHash, commit.InitialPlan.PlanHash);
+        Assert.Equal(admission, commit.OriginalState.ProjectAdmission);
+        Assert.Equal(admission, commit.Mutation.State.ProjectAdmission);
     }
 
     [Fact]

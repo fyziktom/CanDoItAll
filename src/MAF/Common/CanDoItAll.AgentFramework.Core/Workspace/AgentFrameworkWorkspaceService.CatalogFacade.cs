@@ -45,6 +45,10 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.GrantAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
 
+    public Task RevokeAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default)
+        => catalogService.RevokeAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
+
     public Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
         CancellationToken cancellationToken = default)
         => catalogService.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(target, cancellationToken);

@@ -2,6 +2,10 @@ using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit.Projects;
 
@@ -19,7 +23,7 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
             (projectId, _) =>
             {
                 createCalled = true;
-                return Task.FromResult(projectId);
+                return Task.FromResult(projectId.ProjectId);
             },
             projectId => projectId,
             CancellationToken.None));
@@ -33,20 +37,25 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
     {
         var (coordinator, proxy, agent, reservedProjectId) = CreateCoordinator();
         Guid? receivedProjectId = null;
+        ProjectCreationReservation? sessionReservation = null;
 
         var result = await coordinator.CreateAsync(
             agent,
             (projectId, _) =>
             {
                 proxy.Events.Add("create");
-                receivedProjectId = projectId;
-                return Task.FromResult(projectId);
+                receivedProjectId = projectId.ProjectId;
+                return Task.FromResult(projectId.ProjectId);
             },
             projectId => projectId,
-            CancellationToken.None);
+            CancellationToken.None,
+            retainLifetimeAccessForSession: reservation => sessionReservation = reservation);
 
         Assert.Equal(reservedProjectId, result);
         Assert.Equal(reservedProjectId, receivedProjectId);
+        Assert.NotNull(sessionReservation);
+        Assert.Equal(reservedProjectId, sessionReservation.ProjectId);
+        Assert.Equal(Assert.Single(await proxy.ReadReservationsAsync()).LifetimeId, sessionReservation.LifetimeId);
         Assert.Equal(["grant", "create"], proxy.Events);
     }
 
@@ -62,6 +71,7 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
             CancellationToken.None));
 
         Assert.Equal(["grant", "revoke"], proxy.Events);
+        Assert.Equal(ProjectCreationReservationState.Cancelled, Assert.Single(await proxy.ReadReservationsAsync()).State);
         Assert.DoesNotContain(
             reservedProjectId,
             AgentProjectStructureAccessMetadata.Read(proxy.Agent.ConfigurationJson).AllowedProjectIds);
@@ -99,6 +109,9 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
             CancellationToken.None));
 
         Assert.Equal(["grant"], proxy.Events);
+        var retained = Assert.Single(await proxy.ReadReservationsAsync());
+        Assert.Equal(ProjectCreationReservationState.Reserved, retained.State);
+        Assert.Equal(retained.LifetimeId, Assert.Single(AgentProjectStructureAccessMetadata.Read(proxy.Agent.ConfigurationJson).AllowedProjectLifetimes).LifetimeId);
         Assert.Contains(
             reservedProjectId,
             AgentProjectStructureAccessMetadata.Read(proxy.Agent.ConfigurationJson).AllowedProjectIds);
@@ -138,7 +151,7 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
         var exception = await Assert.ThrowsAsync<ProjectStructureTransferRejectedException>(() => coordinator.CreateAsync<Guid>(
             agent,
             (projectId, _) => throw new ProjectStructureCompensatedSubprojectTransferException(
-                projectId,
+                projectId.ProjectId,
                 transferFailure),
             projectId => projectId,
             CancellationToken.None));
@@ -198,16 +211,21 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
         var leaseReleaseFailure = new InvalidOperationException("The target lease release failed.");
         var combinedFailure = new AggregateException(partialCommit, leaseReleaseFailure);
         Guid? sessionProjectId = null;
+        ProjectCreationReservation? sessionReservation = null;
 
         var exception = await Assert.ThrowsAsync<AggregateException>(() => coordinator.CreateAsync<Guid>(
             agent,
             (_, _) => throw combinedFailure,
             projectId => projectId,
             CancellationToken.None,
-            projectId => sessionProjectId = projectId));
+            projectId => sessionProjectId = projectId,
+            retainLifetimeAccessForSession: reservation => sessionReservation = reservation));
 
         Assert.Same(combinedFailure, exception);
         Assert.Equal(reservedProjectId, sessionProjectId);
+        Assert.NotNull(sessionReservation);
+        Assert.Equal(reservedProjectId, sessionReservation.ProjectId);
+        Assert.Equal(Assert.Single(await proxy.ReadReservationsAsync()).LifetimeId, sessionReservation.LifetimeId);
         Assert.Equal(["grant"], proxy.Events);
         Assert.Contains(
             reservedProjectId,
@@ -254,9 +272,18 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
         proxy.Agent = agent;
         var authorizationService = new ProjectStructureAgentAuthorizationService(workspace);
         var reservedProjectId = Guid.NewGuid();
+        var databaseName = $"project-creation-reservation-{Guid.NewGuid():N}";
+        var profile = new ResolvedDatabaseProfile(new() { Id = Guid.NewGuid(), ProviderKind = DatabaseProviderKind.InMemory },
+            DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+        var options = new DbContextOptionsBuilder<ProjectsDbContext>();
+        AppDbContextOptionsConfigurator.Configure(options, profile);
+        var factory = new ProjectFactory(options.Options);
+        proxy.ReservationFactory = factory;
+        var admission = new ProjectWriteAdmissionService(factory, options.Options, CoordinatedDatabaseTransaction.ForProfile(profile), new CanonicalDatabase(profile));
         return (
             new ProjectStructureAgentProjectCreationCoordinator(
                 authorizationService,
+                admission,
                 () => reservedProjectId),
             proxy,
             agent,
@@ -300,6 +327,13 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
 
         public bool ThrowOnGrant { get; set; }
 
+        public IDbContextFactory<ProjectsDbContext> ReservationFactory { get; set; } = null!;
+
+        public async Task<ProjectCreationReservationRecord[]> ReadReservationsAsync() {
+            await using var context = await ReservationFactory.CreateDbContextAsync();
+            return await context.Set<ProjectCreationReservationRecord>().AsNoTracking().ToArrayAsync();
+        }
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             ArgumentNullException.ThrowIfNull(targetMethod);
@@ -310,7 +344,7 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
                 return Task.FromResult<IReadOnlyList<AgentDefinition>>([Agent]);
             }
 
-            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.GrantAgentProjectStructureAccessAsync))
+            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.GrantAgentProjectStructureLifetimeAsync))
             {
                 Events.Add("grant");
                 if (ThrowOnGrant)
@@ -318,36 +352,37 @@ public sealed class ProjectStructureAgentProjectCreationCoordinatorTests
                     throw new InvalidOperationException("Expected catalog grant failure.");
                 }
 
-                UpdateProjectAccess((Guid)args[1]!, add: true);
+                UpdateProjectAccess((AgentProjectStructureLifetime)args[1]!, add: true);
                 return Task.CompletedTask;
             }
 
-            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.RevokeAgentProjectStructureAccessAsync))
+            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.RevokeAgentProjectStructureLifetimeAsync))
             {
                 Events.Add("revoke");
-                UpdateProjectAccess((Guid)args[1]!, add: false);
+                UpdateProjectAccess((AgentProjectStructureLifetime)args[1]!, add: false);
                 return Task.CompletedTask;
             }
 
             throw new NotSupportedException($"Unexpected workspace call '{targetMethod.Name}'.");
         }
 
-        private void UpdateProjectAccess(Guid projectId, bool add)
-        {
-            var access = AgentProjectStructureAccessMetadata.Read(Agent.ConfigurationJson);
-            if (add)
-            {
-                access.AllowedProjectIds.Add(projectId);
-            }
-            else
-            {
-                access.AllowedProjectIds.Remove(projectId);
-            }
-
-            Agent = Agent with
-            {
-                ConfigurationJson = AgentProjectStructureAccessMetadata.Write(Agent.ConfigurationJson, access)
+        private void UpdateProjectAccess(AgentProjectStructureLifetime lifetime, bool add) {
+            Agent = Agent with {
+                ConfigurationJson = add
+                    ? AgentProjectStructureAccessMetadata.GrantProjectLifetime(Agent.ConfigurationJson, lifetime)
+                    : AgentProjectStructureAccessMetadata.RevokeProjectLifetime(Agent.ConfigurationJson,
+                        AgentProjectStructureRevocationTarget.ForLifetime(lifetime)).ConfigurationJson
             };
         }
+
     }
+    private sealed class ProjectFactory(DbContextOptions<ProjectsDbContext> options) : IDbContextFactory<ProjectsDbContext> {
+        public ProjectsDbContext CreateDbContext() => new(options);
+    }
+
+    private sealed class CanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 1;
+    }
+
 }

@@ -83,6 +83,17 @@ public sealed class ProjectWorkbenchRelationService(
         await mutationScope.CommitAsync(cancellationToken);
     }
 
+    internal async Task<Guid> StageAcceptedProcessLinkAsync(WorkbenchDbContext context, Guid projectId, string sourceNodeKey,
+        string targetNodeKey, CancellationToken cancellationToken) {
+        var nodes = (await projectStructureAssemblyService.LoadAsync(context, projectId, cancellationToken)).Nodes;
+        InvariantService.ValidateUserAuthoredLink(projectId, sourceNodeKey, targetNodeKey, ProjectObjectLinkKind.Uses, nodes, IsProcessProjectionNodeKey);
+        var link = await UpsertUserAuthoredLinkAsync(context, projectId, sourceNodeKey, targetNodeKey,
+            ProjectObjectLinkKind.Uses, clock.GetUtcNow(), cancellationToken);
+        await ClearProjectionVisibilityOverrideAsync(context, projectId, sourceNodeKey, cancellationToken);
+        await ClearProjectionVisibilityOverrideAsync(context, projectId, targetNodeKey, cancellationToken);
+        return link.Id;
+    }
+
     private static Guid? TryResolveProcessDefinitionId(string nodeKey)
     {
         return nodeKey.StartsWith("process-definition:", StringComparison.Ordinal) &&
@@ -696,7 +707,7 @@ public sealed class ProjectWorkbenchRelationService(
         return new ProjectStructureSubtreeRecompositionResult(rootNodeKey, plan.DescendantCount, repositionedNodeIds.Count);
     }
 
-    private static async Task UpsertUserAuthoredLinkAsync(
+    private static async Task<ProjectObjectLinkRecord> UpsertUserAuthoredLinkAsync(
         WorkbenchDbContext dbContext,
         Guid projectId,
         string sourceNodeKey,
@@ -715,17 +726,18 @@ public sealed class ProjectWorkbenchRelationService(
         if (existingLink is not null)
         {
             existingLink.IsSystemManaged = false;
-            return;
+            return existingLink;
         }
 
-        await dbContext.Set<ProjectObjectLinkRecord>().AddAsync(new ProjectObjectLinkRecord
-        {
+        var link = new ProjectObjectLinkRecord {
             ProjectId = projectId,
             SourceNodeKey = sourceNodeKey,
             TargetNodeKey = targetNodeKey,
             LinkKind = linkKind,
             IsSystemManaged = false,
             CreatedAtUtc = createdAtUtc
-        }, cancellationToken);
+        };
+        await dbContext.Set<ProjectObjectLinkRecord>().AddAsync(link, cancellationToken);
+        return link;
     }
 }

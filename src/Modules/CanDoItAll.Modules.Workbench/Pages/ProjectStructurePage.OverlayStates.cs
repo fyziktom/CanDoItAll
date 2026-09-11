@@ -1,6 +1,8 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -112,6 +114,14 @@ public sealed record ProjectStructureProcessLinkDialogState(
     Guid? SelectedDefinitionId,
     string Error)
 {
+    internal Guid ProjectId { get; init; }
+
+    internal Guid DialogId { get; init; }
+
+    internal AgentChatNavigationIdentity NavigationIdentity { get; init; }
+
+    internal bool IsBusy { get; init; }
+
     public string Title => $"Add process for {SourceNodeTitle}";
 
     public string Copy => "Choose an existing process definition to link to this node. The link stays explicit in the project structure and does not create a new process.";
@@ -269,11 +279,35 @@ public sealed record ProjectStructureProcessStartDialogState(
 
     public int RequiredGapCount => Roles.Count(item => item.HasBlockingGap);
 
-    public bool CanStart => Stage != ProjectStructureProcessStartStage.Staffing || (RequiredGapCount == 0 && AssignmentsReviewed);
+    public bool CanStart => Stage != ProjectStructureProcessStartStage.Staffing || IsAccepted || (RequiredGapCount == 0 && AssignmentsReviewed);
 
     public bool EstimateOnlyMode { get; init; }
 
     public ProjectStructureProcessEstimateSummary? Estimate { get; init; }
+
+    internal Guid DialogId { get; init; } = Guid.NewGuid();
+
+    internal AgentChatNavigationIdentity NavigationIdentity { get; init; }
+
+    internal IReadOnlyDictionary<string, string>? LaunchVariables { get; init; }
+
+    internal ProcessLaunchSourceSnapshot? SourceSnapshot { get; init; }
+
+    internal bool LinkStartedRun { get; init; }
+
+    internal ProcessLaunchIntentId LaunchIntentId { get; init; } = new(Guid.NewGuid());
+
+    internal ProcessLaunchAuthority? LaunchAuthority { get; init; }
+
+    internal ProcessLaunchLinkTarget? LaunchLinkTarget { get; init; }
+
+    internal ProcessLaunchRequest? PreparedRequest { get; init; }
+
+    internal string? IntentStorageKey { get; init; }
+
+    internal ProcessLaunchObservation? LaunchObservation { get; init; }
+
+    internal bool IsAccepted => LaunchObservation?.AcceptedRunId is not null;
 }
 
 public sealed record ProjectStructureProcessEstimateSummary(

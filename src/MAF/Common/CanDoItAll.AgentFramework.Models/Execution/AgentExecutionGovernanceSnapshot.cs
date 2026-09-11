@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Models;
@@ -68,6 +70,17 @@ public sealed record AgentExecutionGovernanceSnapshot
         AllowedManagedArtifactReadRefs = NormalizeSet(allowedManagedArtifactReadRefs, StringComparer.OrdinalIgnoreCase);
     }
 
+    [JsonConstructor]
+    private AgentExecutionGovernanceSnapshot(AgentExecutionAuthorityId authorityId, Guid agentId, Guid databaseProfileId,
+        DatabaseProfileGeneration databaseProfileGeneration, WorkspaceScopeDescriptor workspaceScope, bool readAllowed,
+        bool mutationAllowed, string policyVersion, string policyFingerprint, ImmutableHashSet<string>? allowedOperations,
+        ImmutableHashSet<string>? allowedCapabilityKeys, ImmutableHashSet<string>? writableExternalTargetAliases,
+        ImmutableHashSet<string>? readOnlyExternalTargetAliases, ImmutableHashSet<string>? allowedManagedArtifactReadRefs)
+        : this(authorityId, agentId, databaseProfileId, databaseProfileGeneration, workspaceScope, readAllowed, mutationAllowed,
+            policyVersion, policyFingerprint, (IReadOnlyList<string>?)allowedOperations?.ToArray(), allowedCapabilityKeys?.ToArray(),
+            writableExternalTargetAliases?.ToArray(), readOnlyExternalTargetAliases?.ToArray(), allowedManagedArtifactReadRefs?.ToArray()) {
+    }
+
     public AgentExecutionAuthorityId AuthorityId { get; }
 
     public Guid AgentId { get; }
@@ -87,15 +100,20 @@ public sealed record AgentExecutionGovernanceSnapshot
     public string PolicyFingerprint { get; }
 
     /// <summary>Empty means "not operation-restricted by the admitted authority".</summary>
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> AllowedOperations { get; }
 
     /// <summary>Empty means "not capability-restricted by the admitted authority".</summary>
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> AllowedCapabilityKeys { get; }
 
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> WritableExternalTargetAliases { get; }
 
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> ReadOnlyExternalTargetAliases { get; }
 
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> AllowedManagedArtifactReadRefs { get; }
 
     /// <summary>
@@ -121,6 +139,25 @@ public sealed record AgentExecutionGovernanceSnapshot
             authority.AllowedCapabilityKeys,
             authority.AllowedExternalTargetAliases,
             authority.ReadOnlyExternalTargetAliases);
+    }
+
+    private sealed class GrantSetJsonConverter : JsonConverter<ImmutableHashSet<string>> {
+        public GrantSetJsonConverter() {
+        }
+
+        public override ImmutableHashSet<string> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+            var entries = JsonSerializer.Deserialize<string[]>(ref reader, options)
+                ?? throw new JsonException("An Agent governance grant set must be an array.");
+            return entries.ToImmutableHashSet(StringComparer.Ordinal);
+        }
+
+        public override void Write(Utf8JsonWriter writer, ImmutableHashSet<string> value, JsonSerializerOptions options) {
+            writer.WriteStartArray();
+            foreach (var entry in value.Order(StringComparer.Ordinal)) {
+                writer.WriteStringValue(entry);
+            }
+            writer.WriteEndArray();
+        }
     }
 
     private static ImmutableHashSet<string> NormalizeSet(

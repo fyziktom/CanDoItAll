@@ -497,7 +497,8 @@ public sealed class ProjectStructureProcessNodeService(
                     RunReadiness: request.RunHrMatch,
                     Execute: request.Execute)
                 {
-                    RootRunIdOverride = parentState.RootRunId
+                    RootRunIdOverride = parentState.RootRunId,
+                    ProjectAdmission = parentState.ProjectAdmission
                 },
                 cancellationToken)
             .ConfigureAwait(false);

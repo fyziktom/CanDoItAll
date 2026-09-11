@@ -7,10 +7,10 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProjectsWorkbenchDbContextTests {
     [Fact]
-    public void Projects_model_contains_exactly_the_five_owner_records() {
+    public void Projects_model_contains_exactly_the_six_owner_records() {
         using var context = new ProjectsDbContext(new DbContextOptionsBuilder<ProjectsDbContext>()
             .UseInMemoryDatabase($"projects-model-{Guid.NewGuid():N}").Options);
-        Assert.Equal(new[] { typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink), typeof(ProjectRetirementRecord) }
+        Assert.Equal(new[] { typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink), typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord) }
             .OrderBy(type => type.Name), context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
         Assert.DoesNotContain(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.IsConcurrencyToken);
         Assert.Throws<InvalidOperationException>(() => context.Set<CrmAccountConnectionProjectLink>().ToList());
@@ -25,7 +25,8 @@ public sealed class ProjectsWorkbenchDbContextTests {
             "Workbench_ProjectObjects", "Workbench_ProjectObjectLinks", "Workbench_ViewStates",
             "Workbench_ProjectProjectionLayouts", "Workbench_ProjectStructureOperationAnalytics",
             "Workbench_ProjectStructureLeases", "Workbench_ProjectNodeBindings", "Workbench_ProjectNodeReferences",
-            "Workbench_ProjectNodeLifecycleEvents", "Workbench_ProjectCrossModuleMutations"
+            "Workbench_ProjectNodeLifecycleEvents", "Workbench_ProjectCrossModuleMutations",
+            "Workbench_WorkAssignments", "Workbench_WorkflowAdmissions", "Workbench_WorkflowContributionReceipts"
         }.Order(), context.Model.GetEntityTypes().Select(entity => entity.GetTableName()).Order());
         Assert.Single(context.Model.GetEntityTypes(), entity => entity.ClrType == typeof(ProjectObjectRecord));
         Assert.All(context.Model.GetEntityTypes().SelectMany(entity => entity.GetForeignKeys()),

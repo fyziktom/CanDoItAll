@@ -62,7 +62,8 @@ public sealed class ProjectStructureWorkflowAuthorityService(
     IAgentFrameworkWorkspaceService workspace,
     IProcessRuntimeStateStore processStates,
     IProcessRuntimeStepAssignmentStore processAssignments,
-    TimeProvider timeProvider) : IWorkflowStructureAuthorityFactory {
+    TimeProvider timeProvider,
+    IWorkflowScheduledAuthorityPolicy scheduledAuthority) : IWorkflowStructureAuthorityFactory {
     public Task<WorkflowStructureAuthority> CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface surface,
         CancellationToken cancellationToken = default)
         => CaptureAsync(Guid.Empty, ProjectStructureWorkflowAuthoritySource.LocalOperator(surface), cancellationToken);
@@ -120,8 +121,14 @@ public sealed class ProjectStructureWorkflowAuthorityService(
         return authority;
     }
 
-    public async Task EnsureCurrentAsync(WorkflowStructureAuthority authority, WorkflowStructureOutputKind? kind,
-        CancellationToken cancellationToken = default) {
+    public Task EnsureCurrentAsync(WorkflowStructureAuthority authority, WorkflowStructureOutputKind? kind,
+        CancellationToken cancellationToken = default) => EnsureCurrentCoreAsync(authority, kind, false, cancellationToken);
+
+    public Task EnsureCurrentForMutationAsync(WorkflowStructureAuthority authority, WorkflowStructureOutputKind? kind,
+        CancellationToken cancellationToken = default) => EnsureCurrentCoreAsync(authority, kind, true, cancellationToken);
+
+    private async Task EnsureCurrentCoreAsync(WorkflowStructureAuthority authority, WorkflowStructureOutputKind? kind,
+        bool forMutation, CancellationToken cancellationToken) {
         if (!Enum.IsDefined(authority.Channel) || !Enum.IsDefined(authority.OperatorSurface) ||
             string.IsNullOrWhiteSpace(authority.PolicyFingerprint) ||
             authority.DatabaseProfileId != canonicalDatabase.Profile.Profile.Id ||
@@ -130,6 +137,14 @@ public sealed class ProjectStructureWorkflowAuthorityService(
             kind == WorkflowStructureOutputKind.Task && !authority.CanCreateTasks ||
             kind == WorkflowStructureOutputKind.Asset && !authority.CanCreateAssets) {
             throw Denied("The admitted workflow authority does not permit this output.");
+        }
+
+        if (authority.SchedulerAuthority is { } scheduler) {
+            if (forMutation) {
+                await scheduledAuthority.RequireCurrentForMutationAsync(scheduler, cancellationToken);
+            } else {
+                await scheduledAuthority.RequireCurrentAsync(scheduler, cancellationToken);
+            }
         }
 
         if (authority.Channel != WorkflowStructureAuthorityChannel.AgentExecution) {
@@ -150,7 +165,8 @@ public sealed class ProjectStructureWorkflowAuthorityService(
         }
 
         var agent = (await workspace.ListAgentsAsync(false, cancellationToken)).SingleOrDefault(item => item.Id == agentId);
-        if (agent is null || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active || !agent.Permissions.CanUseTools) {
+        if (agent is null || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active || !agent.Permissions.CanUseTools ||
+            authority.SchedulerAuthority is not null && !agent.Permissions.CanScheduleWork) {
             throw Denied("The workflow agent is no longer active or permitted to use tools.");
         }
 

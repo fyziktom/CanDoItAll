@@ -32,9 +32,12 @@ public sealed record WorkflowStructureAuthority(
     public WorkflowStructureOperatorSurface OperatorSurface { get; init; }
     public AgentExecutionGovernanceSnapshot? AgentGovernance { get; init; }
     public WorkflowStructureProcessAuthority? ProcessAuthority { get; init; }
+    public WorkflowStructureSchedulerAuthority? SchedulerAuthority { get; init; }
     public bool AllProjects { get; init; }
     public IReadOnlyList<Guid> ProjectIds { get; init; } = [];
 }
+
+public sealed record WorkflowStructureSchedulerAuthority(Guid PlanId, Guid FireAdmissionId, string AuthorityFingerprint);
 
 public sealed record WorkflowStructureProcessAuthority(Guid RunId, Guid StepInstanceId, string ReadinessHash);
 

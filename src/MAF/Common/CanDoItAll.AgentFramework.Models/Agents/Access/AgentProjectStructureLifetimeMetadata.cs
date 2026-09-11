@@ -39,11 +39,46 @@ public sealed record AgentProjectStructureRevocationTarget {
     }
 }
 
+public sealed record AgentProjectStructureBindingScope(bool AllowAllProjects, IReadOnlyList<Guid> ProjectIds,
+    IReadOnlyList<AgentProjectStructureLifetime> Lifetimes);
+
 public static partial class AgentProjectStructureAccessMetadata {
     private const string AllowedProjectLifetimesPropertyName = "allowedProjectLifetimes";
     private const string DatabaseProfileIdPropertyName = "databaseProfileId";
     private const string ProjectIdPropertyName = "projectId";
     private const string LifetimeIdPropertyName = "lifetimeId";
+
+    public static AgentProjectStructureBindingScope ReadBindingScopeForMutation(string? configurationJson) {
+        var root = ParseObjectForMutation(configurationJson);
+        var projectStructure = GetProjectStructureForLifetimeMutation(root);
+        if (projectStructure is null) {
+            return new(false, [], []);
+        }
+        var projectIds = ReadProjectIdsForMutation(projectStructure).Select(item => item.ProjectId).Distinct().ToArray();
+        var lifetimes = ReadProjectLifetimesForMutation(projectStructure).Select(item => item.Lifetime).Distinct().ToArray();
+        if (lifetimes.Any(lifetime => !projectIds.Contains(lifetime.ProjectId))) {
+            throw CreateMalformedMetadataException("A project lifetime must belong to a selected project identifier.");
+        }
+        return new(ReadBooleanForMutation(projectStructure, AllowAllProjectsPropertyName), projectIds, lifetimes);
+    }
+
+    public static string BindProjectLifetimes(string? configurationJson, IReadOnlyCollection<AgentProjectStructureLifetime> lifetimes) {
+        ArgumentNullException.ThrowIfNull(lifetimes);
+        var current = ReadBindingScopeForMutation(configurationJson);
+        var requested = lifetimes.Distinct().ToArray();
+        if (requested.Any(lifetime => !current.ProjectIds.Contains(lifetime.ProjectId))) {
+            throw new ArgumentException("A lifetime binding must belong to a selected project identifier.", nameof(lifetimes));
+        }
+        if (current.Lifetimes.ToHashSet().SetEquals(requested)) {
+            return configurationJson ?? string.Empty;
+        }
+        var root = ParseObjectForMutation(configurationJson);
+        var projectStructure = GetProjectStructureForLifetimeMutation(root)
+            ?? throw CreateMalformedMetadataException("A project access scope is required before binding a lifetime.");
+        projectStructure[AllowedProjectLifetimesPropertyName] = new JsonArray(requested.OrderBy(lifetime => lifetime.DatabaseProfileId)
+            .ThenBy(lifetime => lifetime.ProjectId).ThenBy(lifetime => lifetime.LifetimeId).Select(WriteProjectLifetime).Cast<JsonNode>().ToArray());
+        return root.ToJsonString();
+    }
 
     public static string GrantProjectLifetime(string? configurationJson, AgentProjectStructureLifetime lifetime) {
         ArgumentNullException.ThrowIfNull(lifetime);

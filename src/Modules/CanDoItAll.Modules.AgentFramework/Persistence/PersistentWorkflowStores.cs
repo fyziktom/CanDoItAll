@@ -1463,7 +1463,9 @@ public sealed class PersistentWorkflowCatalogService(
         string DefinitionJson);
 }
 
-public sealed class PersistentWorkflowRunStore(IDbContextFactory<WorkflowDbContext> dbContextFactory) :
+public sealed class PersistentWorkflowRunStore(IDbContextFactory<WorkflowDbContext> dbContextFactory,
+    IWorkflowScheduledSourceAuthorityPolicy? scheduledSourceAuthority = null,
+    CoordinatedDatabaseTransaction? coordinatedTransactions = null) :
     IWorkflowRunStore,
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore,
@@ -1492,8 +1494,13 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<WorkflowDbConte
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var source = await AcquireScheduledSourceAsync(dbContext, run, cancellationToken);
         if (WorkflowPersistenceProvider.IsInMemory(dbContext))
         {
+            using var participation = source is not null ? coordinatedTransactions!.Enter(dbContext) : null;
+            if (source is not null) {
+                await source.RequireForMutationAsync(cancellationToken);
+            }
             await CreateRunWithStartedEventInMemoryAsync(
                 dbContext,
                 run,
@@ -1506,18 +1513,42 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<WorkflowDbConte
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
+        using var coordination = source is not null ? coordinatedTransactions!.Enter(dbContext) : null;
+        if (source is not null) {
+            await source.RequireForMutationAsync(cancellationToken);
+        }
         dbContext.Set<WorkflowRunRecordEntity>().Add(WorkflowRunRecordEntity.FromSnapshot(run));
         dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(startedEvent));
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            coordination?.Dispose();
         }
         catch (DbUpdateException exception) when (IsWorkflowRunPrimaryKeyViolation(exception))
         {
             await transaction.RollbackAsync(CancellationToken.None);
             throw new WorkflowRunAlreadyExistsException(run.RunId);
         }
+    }
+
+    private async Task<IWorkflowScheduledSourceAuthorityLease?> AcquireScheduledSourceAsync(WorkflowDbContext database,
+        WorkflowRunSnapshot run, CancellationToken cancellationToken) {
+        if (run.Origin is not WorkflowLaunchOrigin.SchedulerPlanRun scheduled) {
+            return null;
+        }
+        if (await database.Set<WorkflowRunRecordEntity>().AsNoTracking().AnyAsync(row => row.RunId == run.RunId.Value, cancellationToken)) {
+            throw new WorkflowRunAlreadyExistsException(run.RunId);
+        }
+        if (scheduled.StructureAuthority is not { SchedulerAuthority: { } binding } authority ||
+                binding.PlanId != scheduled.PlanId || binding.FireAdmissionId != scheduled.PlanRunId ||
+                scheduled.PreparedRunId != run.RunId) {
+            throw new WorkflowScheduledSourceAuthorityException("The scheduled Workflow requires its exact saved fire and source authority before a new admission; reconcile legacy source evidence first.");
+        }
+        if (scheduledSourceAuthority is null || coordinatedTransactions is null) {
+            throw new InvalidOperationException("Scheduled Workflow admission requires configured source authority and transaction coordination.");
+        }
+        return await scheduledSourceAuthority.AcquireAsync(authority, cancellationToken);
     }
 
     public async Task<WorkflowRunTransitionResult> TryTransitionRunAsync(

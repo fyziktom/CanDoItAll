@@ -9,6 +9,8 @@
 @using CanDoItAll.Modules.AgentFramework
 @using CanDoItAll.Modules.Processes.AgentChat
 @using CanDoItAll.Processes.Application
+@using CanDoItAll.Processes.Contracts
+@using CanDoItAll.Processes.Runtime
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.JSInterop
 @implements IDisposable
@@ -76,8 +78,8 @@
                         @foreach (var command in shell.Commands)
                         {
                             <PageHeaderActionButton Icon="@command.Icon"
-                                                    Label="@command.Text"
-                                                    TooltipText="@(command.DisabledReason ?? command.Text)"
+                                                    Label="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && CanStartAnotherLaunch ? "Launch another run" : command.Text)"
+                                                    TooltipText="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && CanStartAnotherLaunch ? "Start a separate process launch and keep the accepted run." : command.DisabledReason ?? command.Text)"
                                                     Disabled="@(!command.IsEnabled)"
                                                     Click="@(() => ExecuteCommandAsync(command))"
                                                     data-testid="@BuildCommandTestId(command.Kind)" />
@@ -95,6 +97,11 @@
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
                 <h2 class="text-base font-semibold text-rose-900">Process shell projection failed</h2>
                 <p class="mt-2 text-sm leading-6 text-rose-700">@errorMessage</p>
+                @if (pendingLaunchStorageKey is not null) {
+                    <Button Text="Launch another run" Disabled="@isBusy" Click="StartNewProcessLaunchAsync"
+                            data-testid="processes-launch-new-intent" />
+                    <TextBlock TextStyle="TextStyle.Note" Value="This starts a separate launch and keeps any earlier accepted run." />
+                }
             </SurfaceCard>
         }
 
@@ -334,6 +341,11 @@
     private string? selectedDefinitionKey;
     private ProcessDefinitionCatalogScopeKind selectedDefinitionScope = ProcessDefinitionCatalogScopeKind.All;
     private string? catalogCommandNotice;
+    private ProcessLaunchRequest? pendingLaunchRequest;
+    private string? pendingLaunchStorageKey;
+    private bool pendingLaunchAccepted;
+    private bool CanStartAnotherLaunch => pendingLaunchAccepted && pendingLaunchRequest?.ProjectId == ProjectId &&
+        pendingLaunchRequest?.DefinitionKey == shell?.DefinitionCatalog.SelectedItem?.Key.Value;
     private ProcessDefinitionCatalogItemKey? editorDefinitionKey;
     private ProcessDefinitionEditorVersionToken? editorVersionToken;
     private string? editorCommandNotice;
@@ -950,68 +962,114 @@
                     : "/processes/live");
                 break;
             case ProcessWorkspaceCommandKind.LaunchRun:
-                await LaunchSelectedDefinitionAsync();
+                if (CanStartAnotherLaunch) {
+                    await StartNewProcessLaunchAsync();
+                } else {
+                    await LaunchSelectedDefinitionAsync();
+                }
                 break;
         }
     }
 
-    private async Task LaunchSelectedDefinitionAsync()
-    {
+    private async Task LaunchSelectedDefinitionAsync() {
         var selectedDefinition = shell?.DefinitionCatalog.SelectedItem;
-        if (selectedDefinition is null)
-        {
+        if (selectedDefinition is null || isBusy) {
             catalogCommandNotice = "Select a process definition before launching.";
             return;
         }
-
-        var launchService = Services.GetService<ProcessLaunchApplicationService>();
-        if (launchService is null)
-        {
-            errorMessage = "Process launch services are not registered.";
-            return;
-        }
-
+        var projectId = ProjectId;
+        var definitionKey = selectedDefinition.Key.Value;
+        var navigation = AgentChatNavigationFence;
         isBusy = true;
         errorMessage = null;
-        try
-        {
-            var variables = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["LaunchSource"] = ProjectId.HasValue ? "project-processes-ui" : "processes-ui"
-            };
-            if (ProjectId.HasValue)
-            {
-                variables["ProjectId"] = ProjectId.Value.ToString("D");
+        try {
+            var launchService = Services.GetRequiredService<ProcessLaunchApplicationService>();
+            var authorities = Services.GetRequiredService<IProcessLaunchOperatorAuthoritySource>();
+            var preparations = Services.GetRequiredService<IProcessPreparedLaunchStore>();
+            var caller = await authorities.CaptureLocalAsync(null, ProcessLaunchOperatorSurface.UserInterface);
+            var storageKey = $"candoitall.process-launch.workspace:{caller.DatabaseProfileId:D}:{projectId?.ToString("D") ?? "global"}:{definitionKey}";
+            if (pendingLaunchStorageKey != storageKey) {
+                pendingLaunchRequest = null;
+                pendingLaunchAccepted = false;
+                pendingLaunchStorageKey = storageKey;
             }
-
-            var result = await launchService.LaunchAsync(
-                new ProcessLaunchRequest(
-                    selectedDefinition.Key.Value,
-                    ProcessDefinitionId: null,
-                    LiveRunProfileKey: null,
-                    ProjectId,
-                    ProjectNodeId: null,
-                    RequestedBy: "processes-ui",
-                    variables,
-                    RunReadiness: true,
-                    Execute: true));
-
-            catalogCommandNotice = result.Warnings.Count == 0
-                ? $"Launch {result.Stage}."
-                : string.Join(" ", result.Warnings);
+            ProcessLaunchRequest request;
+            if (pendingLaunchStorageKey == storageKey && pendingLaunchRequest is { } retained) {
+                request = retained;
+            } else {
+                var stored = await JsRuntime.InvokeAsync<string?>("sessionStorage.getItem", storageKey);
+                if (!string.IsNullOrEmpty(stored)) {
+                    if (!Guid.TryParse(stored, out var intentId) || intentId == Guid.Empty) {
+                        throw new InvalidOperationException("The browser process launch identity is invalid; it requires reconciliation before another launch.");
+                    }
+                    var saved = await preparations.FindByIntentAsync(new(intentId))
+                        ?? throw new InvalidOperationException($"Process launch intent {intentId:D} has no observable preparation yet. Retry observation after the original request completes.");
+                    request = ProcessLaunchProducerRequests.Restore(saved, caller, execute: true);
+                    if (request.ProjectId != projectId || request.DefinitionKey != definitionKey) {
+                        throw new InvalidOperationException("The retained process preparation belongs to another workspace selection.");
+                    }
+                } else {
+                    var authority = projectId is null ? caller
+                        : await authorities.CaptureLocalAsync(projectId, ProcessLaunchOperatorSurface.UserInterface);
+                    var variables = new Dictionary<string, string>(StringComparer.Ordinal) {
+                        ["LaunchSource"] = projectId.HasValue ? "project-processes-ui" : "processes-ui"
+                    };
+                    if (projectId.HasValue) {
+                        variables["ProjectId"] = projectId.Value.ToString("D");
+                    }
+                    request = new(definitionKey, null, null, projectId, null, "processes-ui", variables, true, true) {
+                        CallerIntentId = new(Guid.NewGuid()),
+                        Authority = authority,
+                        ProjectAdmission = authority.ProjectAdmission
+                    };
+                }
+            }
+            if (ProjectId != projectId || AgentChatNavigationFence != navigation || shell?.DefinitionCatalog.SelectedItem?.Key.Value != definitionKey) {
+                return;
+            }
+            pendingLaunchRequest = request;
+            pendingLaunchStorageKey = storageKey;
+            await JsRuntime.InvokeVoidAsync("sessionStorage.setItem", storageKey, request.CallerIntentId!.Value.Value.ToString("D"));
+            if (ProjectId != projectId || AgentChatNavigationFence != navigation) {
+                return;
+            }
+            var result = await launchService.LaunchAsync(request);
+            if (result.RunId is not null && pendingLaunchStorageKey == storageKey) {
+                pendingLaunchAccepted = true;
+                pendingLaunchRequest = request with { PreparedAdmissionId = result.Observation?.AdmissionId ?? request.PreparedAdmissionId };
+            }
+            if (ProjectId != projectId || AgentChatNavigationFence != navigation) {
+                return;
+            }
+            catalogCommandNotice = result.RunId is { } runId
+                ? $"Process {runId.Value:D} accepted. {string.Join(" ", result.Warnings)}".Trim()
+                : result.Warnings.Count == 0 ? $"Launch {result.Stage}." : string.Join(" ", result.Warnings);
             await LoadAsync(forceRefresh: true);
-            if (result.RunId is not null && !string.IsNullOrWhiteSpace(result.Route))
-            {
+            if (ProjectId == projectId && AgentChatNavigationFence == navigation && result.RunId is not null && !string.IsNullOrWhiteSpace(result.Route)) {
                 Navigation.NavigateTo(result.Route);
             }
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            errorMessage = exception.Message;
-        }
-        finally
-        {
+        } catch (Exception exception) when (exception is not OperationCanceledException) {
+            if (ProjectId == projectId && AgentChatNavigationFence == navigation) {
+                errorMessage = ProcessPublicReceiptTextPolicy.NormalizePublicMessage(exception.Message, "Process launch could not be completed. The retained intent will be reused on retry.");
+            }
+        } finally {
             isBusy = false;
+        }
+    }
+
+    private async Task StartNewProcessLaunchAsync() {
+        if (isBusy || pendingLaunchStorageKey is not { } storageKey) {
+            return;
+        }
+        var projectId = ProjectId;
+        var definitionKey = shell?.DefinitionCatalog.SelectedItem?.Key.Value;
+        var navigation = AgentChatNavigationFence;
+        await JsRuntime.InvokeVoidAsync("sessionStorage.removeItem", storageKey);
+        pendingLaunchRequest = null;
+        pendingLaunchStorageKey = null;
+        pendingLaunchAccepted = false;
+        if (ProjectId == projectId && AgentChatNavigationFence == navigation && shell?.DefinitionCatalog.SelectedItem?.Key.Value == definitionKey) {
+            await LaunchSelectedDefinitionAsync();
         }
     }
 

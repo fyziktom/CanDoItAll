@@ -496,6 +496,10 @@ public interface IAgentFrameworkWorkspaceService :
         CancellationToken cancellationToken = default) {
         throw new NotSupportedException("This workspace does not support project lifetime access grants.");
     }
+    Task RevokeAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        throw new NotSupportedException("This workspace does not support project lifetime access revocation for an agent.");
+    }
     Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
         CancellationToken cancellationToken = default) {
         throw new NotSupportedException("This workspace does not support project lifetime access revocation.");

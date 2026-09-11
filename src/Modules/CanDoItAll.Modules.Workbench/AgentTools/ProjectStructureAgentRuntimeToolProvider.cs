@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using CanDoItAll.Infrastructure.Persistence;
@@ -42,6 +43,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         IProjectStructureAnalyticsService analyticsService,
         ProjectPlanAnalyticsQueryService planAnalyticsService,
         ProjectStructureAgentAuthorizationService authorizationService,
+        ProjectStructureAgentAdmissionService admissionService,
         ProjectStructureTaskCreationService taskCreationService,
         ProjectStructureTaskDetailsService taskDetailsService,
         ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
@@ -61,6 +63,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ArgumentNullException.ThrowIfNull(analyticsService);
         ArgumentNullException.ThrowIfNull(planAnalyticsService);
         ArgumentNullException.ThrowIfNull(authorizationService);
+        ArgumentNullException.ThrowIfNull(admissionService);
         ArgumentNullException.ThrowIfNull(taskCreationService);
         ArgumentNullException.ThrowIfNull(taskDetailsService);
         ArgumentNullException.ThrowIfNull(taskResourceAttachmentService);
@@ -82,6 +85,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             analyticsService,
             planAnalyticsService,
             authorizationService,
+            admissionService,
             projectCreationCoordinator,
             nodeCopyCoordinator,
             taskCreationService,
@@ -233,6 +237,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         IProjectStructureAnalyticsService analyticsService,
         ProjectPlanAnalyticsQueryService planAnalyticsService,
         ProjectStructureAgentAuthorizationService authorizationService,
+        ProjectStructureAgentAdmissionService admissionService,
         ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
         ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator,
         ProjectStructureTaskCreationService taskCreationService,
@@ -254,6 +259,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         private readonly ProjectStructureAgentToolAnalyticsRecorder analyticsRecorder = new(analyticsService, logger);
         private readonly ProjectPlanAnalyticsQueryService planAnalyticsService = planAnalyticsService;
         private readonly ProjectStructureAgentAuthorizationService authorizationService = authorizationService;
+        private readonly ProjectStructureAgentAdmissionService admissionService = admissionService;
         private readonly ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator = projectCreationCoordinator;
         private readonly ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator = nodeCopyCoordinator;
         private readonly ProjectStructureTaskCreationService taskCreationService = taskCreationService;
@@ -792,8 +798,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             context,
                             cancellationToken),
                         response => response.Id,
-                        cancellationToken);
-                    GrantSessionCreatedProjectAccess(accessState, created.Id);
+                        cancellationToken,
+                        retainLifetimeAccessForSession: reservation => GrantSessionCreatedProjectAccess(accessState, reservation));
                     return created;
                 },
                 cancellationToken,
@@ -834,8 +840,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             BuildAgentContext(agent, accessState, parentProjectId),
                             cancellationToken),
                         response => response.Id,
-                        cancellationToken);
-                    GrantSessionCreatedProjectAccess(accessState, created.Id);
+                        cancellationToken,
+                        parentProjectId: parentProjectId,
+                        retainLifetimeAccessForSession: reservation => GrantSessionCreatedProjectAccess(accessState, reservation));
                     return created;
                 },
                 cancellationToken,
@@ -967,8 +974,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             cancellationToken),
                         response => response.TargetProjectId,
                         cancellationToken,
-                        retainedProjectId => GrantSessionCreatedProjectAccess(accessState, retainedProjectId));
-                    GrantSessionCreatedProjectAccess(accessState, result.TargetProjectId);
+                        parentProjectId: projectId,
+                        retainLifetimeAccessForSession: reservation => GrantSessionCreatedProjectAccess(accessState, reservation));
                     return result;
                 },
                 cancellationToken);
@@ -1228,6 +1235,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
@@ -1246,12 +1254,13 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             accessState,
                             projectId,
                             effectiveRequest,
+                            projectAdmission,
                             cancellationToken) is { } existingNode)
                     {
                         return existingNode;
                     }
 
-                    return await agentService.CreateNodeAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return await agentService.CreateNodeAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                 },
                 cancellationToken);
         }
@@ -1276,6 +1285,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
@@ -1298,7 +1308,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             externalTargetPathRegistryFactory);
                     }
 
-                    return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                 },
                 cancellationToken);
         }
@@ -1323,6 +1333,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     var currentNode = await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
@@ -1339,7 +1350,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             externalTargetPathRegistryFactory);
                     }
 
-                    return await agentService.UpdateNodeTypeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return await agentService.UpdateNodeTypeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                 },
                 cancellationToken);
         }
@@ -1364,6 +1375,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
@@ -1376,7 +1388,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         requestedObjectType: null,
                         requestedObjectSubtype: null,
                         cancellationToken);
-                    return await agentService.UpdateNodeMetadataAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return await agentService.UpdateNodeMetadataAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                 },
                 cancellationToken);
         }
@@ -1400,8 +1412,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
-                    var count = await agentService.UpdateNodeStatusesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var count = await agentService.UpdateNodeStatusesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                     return new OperationCount(count);
                 },
                 cancellationToken);
@@ -1427,11 +1440,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeStatusesAsync(
                         projectId,
                         new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken),
-                        BuildAgentContext(agent, accessState, projectId),
+                        BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                         cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1457,8 +1471,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
-                    var count = await agentService.UpdateNodeProgressAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var count = await agentService.UpdateNodeProgressAsync(projectId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                     return new OperationCount(count);
                 },
                 cancellationToken);
@@ -1484,11 +1499,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeProgressAsync(
                         projectId,
                         new ProjectStructureProgressBatchInput([nodeId], request.ProgressMode, request.ProgressPercent, request.LeaseToken),
-                        BuildAgentContext(agent, accessState, projectId),
+                        BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                         cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1514,8 +1530,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
-                    var count = await agentService.UpdateNodeMarkerAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var count = await agentService.UpdateNodeMarkerAsync(projectId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                     return new OperationCount(count);
                 },
                 cancellationToken);
@@ -1541,8 +1558,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
-                    var count = await agentService.ChangeNodeMarkerAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var count = await agentService.ChangeNodeMarkerAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                     return new OperationCount(count);
                 },
                 cancellationToken);
@@ -1567,8 +1585,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
-                    var count = await agentService.UpdateNodePriorityAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var count = await agentService.UpdateNodePriorityAsync(projectId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                     return new OperationCount(count);
                 },
                 cancellationToken);
@@ -1594,11 +1613,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodePriorityAsync(
                         projectId,
                         new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken),
-                        BuildAgentContext(agent, accessState, projectId),
+                        BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                         cancellationToken);
                     return new OperationCount(count);
                 },
@@ -2719,6 +2739,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             ProjectStructureAccessState accessState,
             Guid projectId,
             ProjectStructureNodeCreateInput request,
+            ProjectWriteAdmission projectAdmission,
             CancellationToken cancellationToken)
         {
             if (accessState.ScopedProcessAccess is null ||
@@ -2772,8 +2793,29 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     request.MetadataJson,
                     request.LeaseToken,
                     request.DurationSeconds),
-                BuildAgentContext(agent, accessState, projectId),
+                BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                 cancellationToken);
+        }
+
+        private Task<ProjectWriteAdmission> CaptureNodeMutationAdmissionAsync(AgentDefinition agent,
+            ProjectStructureAccessState accessState, Guid projectId, CancellationToken cancellationToken) {
+            if (accessState.ScopedProcessAccess is { CanWrite: true } scoped && scoped.ProjectId == projectId) {
+                if (scoped.ExpectedProjectAdmission is not { } producerAdmission) {
+                    throw new ProjectStructureAgentException(409, "ProcessProjectAdmissionReconciliationRequired",
+                        "This process has no retained project-lifetime admission. Reconcile its launch authority before resuming structure mutations.");
+                }
+                return admissionService.ValidateProducerWriteAsync(producerAdmission, projectId, cancellationToken);
+            }
+            var captured = accessState.ProjectGrantSnapshot;
+            var session = accessState.SessionCreatedLifetimes.Values.ToArray();
+            var invocationAccess = new AgentProjectStructureAccessSettings {
+                CanWrite = accessState.CanWriteUnscoped,
+                CanWriteNonTaskStructure = accessState.CanWriteStructureUnscoped,
+                AllowAllProjects = captured.AllowAllProjects,
+                AllowedProjectIds = captured.AllowedProjectIds.Concat(session.Select(lifetime => lifetime.ProjectId)).Distinct().ToList(),
+                AllowedProjectLifetimes = captured.AllowedProjectLifetimes.Concat(session).Distinct().ToList()
+            };
+            return admissionService.CaptureNonTaskWriteAsync(agent.Id, invocationAccess, projectId, cancellationToken);
         }
 
         private ProjectStructureAgentContext BuildAgentContext(
@@ -3215,10 +3257,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
 
         private static void GrantSessionCreatedProjectAccess(
             ProjectStructureAccessState accessState,
-            Guid projectId)
-        {
-            accessState.AllowedProjectIds.Add(projectId);
-            accessState.SessionCreatedProjectIds.Add(projectId);
+            ProjectCreationReservation reservation) {
+            accessState.AllowedProjectIds.Add(reservation.ProjectId);
+            accessState.SessionCreatedProjectIds.Add(reservation.ProjectId);
+            accessState.SessionCreatedLifetimes[reservation.ProjectId] = new(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId);
         }
 
         private static ProjectStructureScopedProcessAccess? ResolveScopedProcessAccess(AgentRuntimeToolProviderContext context)
@@ -3366,6 +3408,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             var governanceReadCeiling = governance?.ReadAllowed ?? true;
             var governanceMutationCeiling = governance?.MutationAllowed ?? true;
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
+            ProjectGrantSnapshot = normalized;
             CanRead = (normalized.CanRead || scopedProcessAccess?.CanRead == true) && governanceReadCeiling;
             CanWrite = (ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized) || scopedProcessAccess?.CanWrite == true) && governanceMutationCeiling;
             CanWriteUnscoped = normalized.CanWrite && governanceMutationCeiling;
@@ -3412,6 +3455,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
 
         public HashSet<Guid> SessionCreatedProjectIds { get; }
 
+        public AgentProjectStructureAccessSettings ProjectGrantSnapshot { get; }
+        public ConcurrentDictionary<Guid, AgentProjectStructureLifetime> SessionCreatedLifetimes { get; } = new();
+
         public ProjectStructureScopedProcessAccess? ScopedProcessAccess { get; }
 
         public AgentRuntimeContextIntent ContextIntent { get; }
@@ -3430,7 +3476,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         bool CanRead,
         bool CanWrite,
         ProjectStructureAgentContext? AgentContext,
-        ProjectStructureProcessNodeContextDescriptor? ProcessNodeContext);
+        ProjectStructureProcessNodeContextDescriptor? ProcessNodeContext,
+        ProjectWriteAdmission? ExpectedProjectAdmission = null);
 
     private sealed record ProjectStructureResolvedScope(
         ProjectStructureLeaseScopeKind ScopeKind,

@@ -88,14 +88,21 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
             cancellationToken);
     }
 
-    public Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectAsync(
-        Guid sourceProjectId,
-        Guid targetProjectId,
-        ProjectEditorModel targetProject,
-        IReadOnlyCollection<string> sourceNodeIds,
-        bool includeDescendants,
+    public Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectAsync(Guid sourceProjectId, Guid targetProjectId,
+        ProjectEditorModel targetProject, IReadOnlyCollection<string> sourceNodeIds, bool includeDescendants,
         CancellationToken cancellationToken = default)
-    {
+        => MoveNodesToNewSubprojectCoreAsync(sourceProjectId, targetProjectId, null, targetProject, sourceNodeIds, includeDescendants, cancellationToken);
+
+    public Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectAsync(Guid sourceProjectId, ProjectCreationReservation reservation,
+        ProjectEditorModel targetProject, IReadOnlyCollection<string> sourceNodeIds, bool includeDescendants,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        return MoveNodesToNewSubprojectCoreAsync(sourceProjectId, reservation.ProjectId, reservation, targetProject, sourceNodeIds, includeDescendants, cancellationToken);
+    }
+
+    private Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectCoreAsync(Guid sourceProjectId, Guid targetProjectId,
+        ProjectCreationReservation? reservation, ProjectEditorModel targetProject, IReadOnlyCollection<string> sourceNodeIds,
+        bool includeDescendants, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(sourceNodeIds);
         var normalizedSourceNodeIds = sourceNodeIds
             .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
@@ -123,7 +130,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
                 cancellationToken),
             ProjectStructureTransferRejectionReason.SelectedNodesUnavailable,
             "The selected nodes could not be moved to the new subproject.",
-            cancellationToken);
+            cancellationToken,
+            reservation);
     }
 
     private async Task<ProjectStructureCreatedSubprojectTransferResult> ExecuteAsync(
@@ -133,7 +141,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
         Func<CancellationToken, Task<ProjectStructureSubprojectTransferResult?>> transferAsync,
         ProjectStructureTransferRejectionReason unavailableReason,
         string unavailableMessage,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectCreationReservation? reservation = null)
     {
         ValidateProjectIds(sourceProjectId, targetProjectId);
         ArgumentNullException.ThrowIfNull(targetProject);
@@ -142,11 +151,10 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
         var targetProjectCreated = false;
         try
         {
-            var createResult = await operations.CreateSubprojectAsync(
-                sourceProjectId,
-                targetProjectId,
-                targetProject,
-                cancellationToken);
+            var createResult = reservation is null
+                ? await operations.CreateSubprojectAsync(sourceProjectId, targetProjectId, targetProject, cancellationToken)
+                : await (operations.CreateReservedSubprojectAsync ?? throw new InvalidOperationException("Reserved project creation is not configured."))(
+                    sourceProjectId, reservation, targetProject, cancellationToken);
             ProjectStructureProjectCreationResult.ThrowIfRejected(
                 createResult,
                 "The subproject could not be created.");
@@ -288,6 +296,8 @@ internal sealed record ProjectStructureSubprojectTransferOperations(
     Func<Guid, CancellationToken, Task> DeleteProjectAsync,
     Func<Guid, CancellationToken, Task<bool>> ProjectExistsAsync)
 {
+    public Func<Guid, ProjectCreationReservation, ProjectEditorModel, CancellationToken, Task<Result<Guid>>>? CreateReservedSubprojectAsync { get; init; }
+
     public static ProjectStructureSubprojectTransferOperations Create(
         ProjectsService projectsService,
         ProjectWorkbenchService projectWorkbenchService)
@@ -303,6 +313,8 @@ internal sealed record ProjectStructureSubprojectTransferOperations(
             projectsService.DeleteAsync,
             async (projectId, cancellationToken) =>
                 (await projectsService.ListAsync(cancellationToken))
-                .Any(project => project.Id == projectId));
+                .Any(project => project.Id == projectId)) {
+            CreateReservedSubprojectAsync = projectsService.CreateSubprojectAsync
+        };
     }
 }

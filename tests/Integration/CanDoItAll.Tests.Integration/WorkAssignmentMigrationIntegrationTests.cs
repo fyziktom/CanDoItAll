@@ -41,7 +41,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             await context.Database.MigrateAsync();
             AssertState(expected, await ReadStateAsync(context, ownerTable: true));
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(156, context.Model.GetEntityTypes().Count());
+            Assert.Equal(159, context.Model.GetEntityTypes().Count());
             await using var work = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
             Assert.Equal(3, await work.Set<ProjectWorkAssignmentRecord>().CountAsync());
             Assert.Equal(2, await work.Set<ProjectWorkAssignmentRecord>().CountAsync(row => row.NodeKey == "legacy-task"));

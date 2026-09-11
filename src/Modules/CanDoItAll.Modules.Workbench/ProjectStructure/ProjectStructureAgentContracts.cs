@@ -28,6 +28,8 @@ public sealed record ProjectStructureAgentContext(
     string SessionId) {
     [JsonIgnore]
     public ProjectStructureWorkflowAuthoritySource? WorkflowAuthority { get; init; }
+    [JsonIgnore]
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 }
 
 [JsonConverter(typeof(FlexibleProjectStructureLeaseScopeKindJsonConverter))]

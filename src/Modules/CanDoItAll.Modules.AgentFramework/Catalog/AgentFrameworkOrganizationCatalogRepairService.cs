@@ -14,7 +14,8 @@ public interface IAgentFrameworkOrganizationCatalogRepairService
 internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     IAiTechnicalAgentProjectionStore projections,
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    IProviderProfileService providerProfileService) : IAgentFrameworkOrganizationCatalogRepairService
+    IProviderProfileService providerProfileService,
+    IAgentCatalogMutationPolicy catalogMutationPolicy) : IAgentFrameworkOrganizationCatalogRepairService
 {
     private const string CrmHrRuntimeAgentTemplateKeyPrefix = "crmhr-ai-resource-";
 
@@ -137,7 +138,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
 
         var store = new FileSandboxWorkspaceStore(
             workspaceFactory.GetWorkspaceRoot(),
-            workspaceFactory.GetOrganizationScope());
+            workspaceFactory.GetOrganizationScope(),
+            catalogMutationPolicy);
         var repairedOpenAiProviderConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
             openAiProvider.ConfigurationJson,
             "service-managed");

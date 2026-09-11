@@ -77,12 +77,18 @@ public sealed class ProjectStructureAgentService(
         });
     }
 
-    public async Task<ProjectSummary> CreateProjectAsync(
-        Guid newProjectId,
-        ProjectStructureProjectSaveRequest request,
-        ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
-    {
+    public Task<ProjectSummary> CreateProjectAsync(Guid newProjectId, ProjectStructureProjectSaveRequest request,
+        ProjectStructureAgentContext agent, CancellationToken cancellationToken = default)
+        => CreateProjectCoreAsync(newProjectId, null, request, cancellationToken);
+
+    public Task<ProjectSummary> CreateProjectAsync(ProjectCreationReservation reservation, ProjectStructureProjectSaveRequest request,
+        ProjectStructureAgentContext agent, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        return CreateProjectCoreAsync(reservation.ProjectId, reservation, request, cancellationToken);
+    }
+
+    private async Task<ProjectSummary> CreateProjectCoreAsync(Guid newProjectId, ProjectCreationReservation? reservation,
+        ProjectStructureProjectSaveRequest request, CancellationToken cancellationToken) {
         if (newProjectId == Guid.Empty)
         {
             throw new ProjectStructureAgentException(400, "ProjectIdRequired", "A reserved project id is required.");
@@ -91,10 +97,10 @@ public sealed class ProjectStructureAgentService(
         ValidateProjectRequest(request);
         return await ExecuteWithAgentFailureMappingAsync(async () =>
         {
-            var createResult = await projectsService.CreateAsync(
-                newProjectId,
-                BuildProjectEditor(projectId: null, request),
-                cancellationToken);
+            var editor = BuildProjectEditor(projectId: null, request);
+            var createResult = reservation is null
+                ? await projectsService.CreateAsync(newProjectId, editor, cancellationToken)
+                : await projectsService.CreateAsync(reservation, editor, cancellationToken);
             return await ResolveSavedProjectAsync(createResult, cancellationToken);
         });
     }
@@ -113,13 +119,18 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public async Task<ProjectSummary> CreateSubprojectAsync(
-        Guid parentProjectId,
-        Guid newProjectId,
-        ProjectStructureProjectSaveRequest request,
-        ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
-    {
+    public Task<ProjectSummary> CreateSubprojectAsync(Guid parentProjectId, Guid newProjectId, ProjectStructureProjectSaveRequest request,
+        ProjectStructureAgentContext agent, CancellationToken cancellationToken = default)
+        => CreateSubprojectCoreAsync(parentProjectId, newProjectId, null, request, agent, cancellationToken);
+
+    public Task<ProjectSummary> CreateSubprojectAsync(Guid parentProjectId, ProjectCreationReservation reservation,
+        ProjectStructureProjectSaveRequest request, ProjectStructureAgentContext agent, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        return CreateSubprojectCoreAsync(parentProjectId, reservation.ProjectId, reservation, request, agent, cancellationToken);
+    }
+
+    private async Task<ProjectSummary> CreateSubprojectCoreAsync(Guid parentProjectId, Guid newProjectId, ProjectCreationReservation? reservation,
+        ProjectStructureProjectSaveRequest request, ProjectStructureAgentContext agent, CancellationToken cancellationToken) {
         if (parentProjectId == Guid.Empty)
         {
             throw new ProjectStructureAgentException(400, "ParentProjectRequired", "A parent project id is required.");
@@ -139,11 +150,10 @@ public sealed class ProjectStructureAgentService(
                 "create-subproject",
                 async cancellationToken =>
                 {
-                    var createResult = await projectsService.CreateSubprojectAsync(
-                        parentProjectId,
-                        newProjectId,
-                        BuildProjectEditor(projectId: null, request),
-                        cancellationToken);
+                    var editor = BuildProjectEditor(projectId: null, request);
+                    var createResult = reservation is null
+                        ? await projectsService.CreateSubprojectAsync(parentProjectId, newProjectId, editor, cancellationToken)
+                        : await projectsService.CreateSubprojectAsync(parentProjectId, reservation, editor, cancellationToken);
                     return await ResolveSavedProjectAsync(createResult, cancellationToken);
                 },
                 cancellationToken));
@@ -326,7 +336,9 @@ public sealed class ProjectStructureAgentService(
                         PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent,
                         TaskPricingInitialization: allowCanonicalTask
                             ? ProjectObjectTaskPricingInitialization.PreserveValidatedAuthoritativePricing
-                            : ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing),
+                            : ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing) {
+                        ExpectedProjectAdmission = agent.ExpectedProjectAdmission
+                    },
                     cancellationToken);
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
             },
@@ -389,7 +401,9 @@ public sealed class ProjectStructureAgentService(
                             request.DurationSeconds,
                             UpdateTiming: request.StartUtc.HasValue ||
                                 request.EndUtc.HasValue ||
-                                request.DurationSeconds.HasValue),
+                                request.DurationSeconds.HasValue) {
+                            ExpectedProjectAdmission = agent.ExpectedProjectAdmission
+                        },
                         cancellationToken);
                     if (updatedNode is null)
                     {
@@ -412,7 +426,9 @@ public sealed class ProjectStructureAgentService(
                             request.StartUtc,
                             request.EndUtc,
                             metadataJson,
-                            request.DurationSeconds),
+                            request.DurationSeconds) {
+                            ExpectedProjectAdmission = agent.ExpectedProjectAdmission
+                        },
                         cancellationToken);
                 }
 
@@ -478,7 +494,8 @@ public sealed class ProjectStructureAgentService(
                     metadataJson,
                     request.Notes,
                     request.Status,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken,
+                    expectedProjectAdmission: agent.ExpectedProjectAdmission);
                 return MapRequiredNode(updatedNode, nodeId);
             },
             cancellationToken);
@@ -527,7 +544,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-statuses",
-            cancellationToken => projectWorkbenchService.UpdateObjectStatusesAsync(projectId, request.NodeIds, request.Status, cancellationToken),
+            cancellationToken => projectWorkbenchService.UpdateObjectStatusesAsync(projectId, request.NodeIds, request.Status, cancellationToken, agent.ExpectedProjectAdmission),
             cancellationToken);
     }
 
@@ -542,7 +559,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-progress",
-            cancellationToken => projectWorkbenchService.UpdateObjectProgressAsync(projectId, request.NodeIds, request.ProgressMode, request.ProgressPercent, cancellationToken),
+            cancellationToken => projectWorkbenchService.UpdateObjectProgressAsync(projectId, request.NodeIds, request.ProgressMode, request.ProgressPercent, cancellationToken, agent.ExpectedProjectAdmission),
             cancellationToken);
     }
 
@@ -557,7 +574,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-marker",
-            cancellationToken => projectWorkbenchService.UpdateObjectMarkerAsync(projectId, request.NodeIds, request.MarkerIcon, request.MarkerTone, request.MarkerLabel, cancellationToken),
+            cancellationToken => projectWorkbenchService.UpdateObjectMarkerAsync(projectId, request.NodeIds, request.MarkerIcon, request.MarkerTone, request.MarkerLabel, cancellationToken, agent.ExpectedProjectAdmission),
             cancellationToken);
     }
 
@@ -572,7 +589,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-priority",
-            cancellationToken => projectWorkbenchService.UpdateObjectPriorityAsync(projectId, request.NodeIds, request.Priority, cancellationToken),
+            cancellationToken => projectWorkbenchService.UpdateObjectPriorityAsync(projectId, request.NodeIds, request.Priority, cancellationToken, agent.ExpectedProjectAdmission),
             cancellationToken);
     }
 
@@ -596,32 +613,32 @@ public sealed class ProjectStructureAgentService(
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken),
+                    cancellationToken, agent.ExpectedProjectAdmission),
                 ProjectStructureMarkerMutationMode.Toggle => projectWorkbenchService.ToggleObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken),
+                    cancellationToken, agent.ExpectedProjectAdmission),
                 ProjectStructureMarkerMutationMode.Remove => projectWorkbenchService.RemoveObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken),
+                    cancellationToken, agent.ExpectedProjectAdmission),
                 ProjectStructureMarkerMutationMode.Clear => projectWorkbenchService.ClearObjectMarkersAsync(
                     projectId,
                     [nodeId],
-                    cancellationToken),
+                    cancellationToken, agent.ExpectedProjectAdmission),
                 _ => projectWorkbenchService.UpdateObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken)
+                    cancellationToken, agent.ExpectedProjectAdmission)
             },
             cancellationToken);
     }
@@ -1087,13 +1104,19 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public async Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectAsync(
-        Guid sourceProjectId,
-        Guid targetProjectId,
-        ProjectStructureNodesToSubprojectInput request,
-        ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
-    {
+    public Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectAsync(Guid sourceProjectId, Guid targetProjectId,
+        ProjectStructureNodesToSubprojectInput request, ProjectStructureAgentContext agent, CancellationToken cancellationToken = default)
+        => MoveNodesToNewSubprojectCoreAsync(sourceProjectId, targetProjectId, null, request, agent, cancellationToken);
+
+    public Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectAsync(Guid sourceProjectId, ProjectCreationReservation reservation,
+        ProjectStructureNodesToSubprojectInput request, ProjectStructureAgentContext agent, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        return MoveNodesToNewSubprojectCoreAsync(sourceProjectId, reservation.ProjectId, reservation, request, agent, cancellationToken);
+    }
+
+    private async Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectCoreAsync(Guid sourceProjectId, Guid targetProjectId,
+        ProjectCreationReservation? reservation, ProjectStructureNodesToSubprojectInput request, ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken) {
         var requestedNodeIds = NormalizeTransferNodeIds(request.NodeIds);
         if (targetProjectId == Guid.Empty)
         {
@@ -1161,13 +1184,11 @@ public sealed class ProjectStructureAgentService(
                             : request.CurrentPhase.Trim(),
                         Status = request.Status
                     };
-                    var result = await subprojectTransferCoordinator.MoveNodesToNewSubprojectAsync(
-                        sourceProjectId,
-                        targetProjectId,
-                        targetEditor,
-                        existingRequestedNodeIds,
-                        request.IncludeDescendants,
-                        cancellationToken);
+                    var result = reservation is null
+                        ? await subprojectTransferCoordinator.MoveNodesToNewSubprojectAsync(sourceProjectId, targetProjectId,
+                            targetEditor, existingRequestedNodeIds, request.IncludeDescendants, cancellationToken)
+                        : await subprojectTransferCoordinator.MoveNodesToNewSubprojectAsync(sourceProjectId, reservation,
+                            targetEditor, existingRequestedNodeIds, request.IncludeDescendants, cancellationToken);
                     var transfer = result.Transfer;
 
                     if (transfer.RemovedBoundaryLinks.Count > 0)

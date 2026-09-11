@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
@@ -19,7 +20,8 @@ public enum SchedulerPlanRunDispatchStatus
     Dispatched,
     Failed,
     NoMessages,
-    WaitingForApproval
+    WaitingForApproval,
+    ObservationPending
 }
 
 public enum SchedulerPlanRunRetryCategory
@@ -80,6 +82,8 @@ public sealed class SchedulerPlan
 
     public string InputJson { get; set; } = "{}";
 
+    public string? StructureAuthorityJson { get; set; }
+
     public Guid SchedulerTriggerId { get; set; }
 
     public string SchedulerTriggerKey { get; set; } = string.Empty;
@@ -108,6 +112,7 @@ internal sealed class SchedulerPlanConfiguration : IEntityTypeConfiguration<Sche
         builder.Property(item => item.CronDescription).HasMaxLength(500).IsRequired();
         builder.Property(item => item.TimeZoneId).HasMaxLength(120).IsRequired();
         builder.Property(item => item.InputJson).HasColumnType("TEXT");
+        builder.Property(item => item.StructureAuthorityJson).HasColumnType("TEXT");
         builder.Property(item => item.SchedulerTriggerId).HasColumnName("AutomationTriggerId");
         builder.Property(item => item.SchedulerTriggerKey).HasColumnName("AutomationTriggerKey").HasMaxLength(180).IsRequired();
         builder.Property(item => item.LastError).HasColumnType("TEXT");
@@ -263,6 +268,9 @@ public sealed class SchedulerPlanEditorModel
     public DateTimeOffset? EndAtUtc { get; set; }
 
     public string InputJson { get; set; } = "{}";
+
+    [JsonIgnore]
+    public WorkflowStructureAuthority? StructureAuthority { get; set; }
 }
 
 public sealed record SchedulerWorkflowInputSchema(
@@ -349,6 +357,12 @@ public sealed record SchedulerTargetLaunchContext
     public WorkflowLaunchCorrelationId CorrelationId { get; }
 
     public WorkflowLaunchIdempotencyKey IdempotencyKey { get; }
+
+    public WorkflowRunId? PreparedRunId { get; init; }
+
+    public WorkflowStructureAuthority? StructureAuthority { get; init; }
+
+    public bool MayLaunch { get; init; } = true;
 }
 
 public sealed record SchedulerTargetLaunchResult(
@@ -358,5 +372,10 @@ public sealed record SchedulerTargetLaunchResult(
     string Summary,
     SchedulerPlanRunDispatchStatus DispatchStatus = SchedulerPlanRunDispatchStatus.Dispatched,
     string Route = SchedulerPlanRunRoutes.Processed,
-    SchedulerPlanRunRetryCategory RetryCategory = SchedulerPlanRunRetryCategory.None);
+    SchedulerPlanRunRetryCategory RetryCategory = SchedulerPlanRunRetryCategory.None) {
+    public WorkflowRunState? WorkflowState { get; init; }
+    public bool RequiresObservation { get; init; }
+    [JsonIgnore]
+    public Exception? ObservationException { get; init; }
+}
 

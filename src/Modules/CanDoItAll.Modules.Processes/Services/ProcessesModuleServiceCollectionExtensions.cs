@@ -92,6 +92,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
         services.TryAddSingleton<ProcessTemplatePackLoader>();
+        services.TryAddScoped<EfProcessPreparedLaunchStore>();
+        services.TryAddScoped<IProcessPreparedLaunchStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
+        services.TryAddScoped<IProcessLaunchLinkReceiptStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
         services.TryAddScoped<EfProcessRuntimeUnitOfWork>();
         services.TryAddScoped<IProcessRuntimeUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeStateStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
@@ -234,6 +237,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AgentFrameworkProcessExecutionClaimRecoveryWorker>());
         if (backgroundWorkersEnabled)
         {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessLaunchContinuationWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeProjectionReplayBackgroundWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRunRecordBackgroundWorker>());
         }

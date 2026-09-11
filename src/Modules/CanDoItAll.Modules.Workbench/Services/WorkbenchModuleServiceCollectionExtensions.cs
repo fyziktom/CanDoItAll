@@ -103,6 +103,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectManagerSummaryQueryService>();
         services.AddScoped<ProjectManagerSummaryStateStore>();
         services.AddScoped<ProjectStructureAgentAuthorizationService>();
+        services.AddScoped<ProjectStructureAgentAdmissionService>();
         services.AddScoped<ProjectStructureAgentProjectCreationCoordinator>();
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();

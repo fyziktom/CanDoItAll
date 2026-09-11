@@ -28,7 +28,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class SharedProviderPremergeUpgradeTests {
     private const string DevelopmentMigration = "20260822013043_AddWorkflowNativeCheckpointRequestUniqueness";
-    private const string ReviewedMigration = "20260911000227_MoveWorkItemAssignments";
+    private const string ReviewedMigration = "20260911010404_AddSourceBoundExecutionAdmissions";
     private static readonly DateTimeOffset RecordedAt = new(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]

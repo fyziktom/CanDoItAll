@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.SchedulerPlanner;
 using Microsoft.Extensions.AI;
@@ -208,6 +209,7 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
         Assert.Equal(SchedulerPlanTargetKind.Workflow, schedulerService.SavedEditor?.TargetKind);
         Assert.Equal(workflowVersionId, schedulerService.SavedEditor?.TargetVersionId);
         Assert.Equal("0 0 15 ? * MON-FRI", schedulerService.SavedEditor?.CronExpression);
+        Assert.Null(schedulerService.SavedEditor?.StructureAuthority);
     }
 
     private static RuntimeHarness CreateHarness(RecordingSchedulerPlannerService? schedulerService = null)
@@ -293,7 +295,7 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             new CanvasCalendarSurface { SurfaceId = "scheduler-agent-tests" }));
         var runtimeProvider = new SchedulerAgentRuntimeToolProvider(
             schedulerService,
-            new SchedulerAgentRuntimeAuthorizationService(workspaceService));
+            new SchedulerAgentRuntimeAuthorizationService(workspaceService), new LegacyAuthorityFactory());
         var context = new AgentRuntimeToolProviderContext(
             agent,
             providerProfile,
@@ -403,4 +405,13 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             };
         }
     }
+    private sealed class LegacyAuthorityFactory : IWorkflowStructureAuthorityFactory {
+        public Task<WorkflowStructureAuthority> CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface surface, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("A legacy agent context must not acquire operator authority.");
+        public Task<WorkflowStructureAuthority> CaptureAuthenticatedOperatorAsync(string subject, DateTimeOffset expiresAtUtc, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("A legacy agent context must not acquire operator authority.");
+        public WorkflowStructureAuthority CaptureAgent(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance)
+            => throw new InvalidOperationException("The legacy fixture has no admitted governance to capture.");
+    }
+
 }

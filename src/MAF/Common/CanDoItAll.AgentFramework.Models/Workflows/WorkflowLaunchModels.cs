@@ -289,6 +289,8 @@ public abstract record WorkflowLaunchOrigin
 
         public Guid PlanRunId { get; }
 
+        public WorkflowRunId? PreparedRunId { get; init; }
+
         public WorkflowSchedulerFireId FireId { get; }
 
         public DateTimeOffset FiredAtUtc { get; }

@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -140,6 +141,28 @@ public sealed class ProjectStructureAgentAuthorizationService(
 
         return new ProjectStructureNodesToSubprojectAuthorization(
             RequiresNonTaskWriteGuard: access.CanWriteNonTaskStructure && !access.CanWrite);
+    }
+
+    public async Task GrantCreatedProjectAccessAsync(Guid agentId, ProjectCreationReservation reservation,
+        CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        if (reservation.RequesterId != agentId || !agents.Any(agent => agent.Id == agentId)) {
+            throw CreateDeniedException("project-structure.access-grant");
+        }
+        await workspaceService.GrantAgentProjectStructureLifetimeAsync(agentId,
+            new(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId), cancellationToken);
+    }
+
+    public async Task RevokeCreatedProjectAccessAsync(Guid agentId, ProjectCreationReservation reservation,
+        CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        if (reservation.RequesterId != agentId || !agents.Any(agent => agent.Id == agentId)) {
+            throw CreateDeniedException("project-structure.access-revoke");
+        }
+        await workspaceService.RevokeAgentProjectStructureLifetimeAsync(agentId,
+            new(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId), cancellationToken);
     }
 
     public async Task GrantCreatedProjectAccessAsync(

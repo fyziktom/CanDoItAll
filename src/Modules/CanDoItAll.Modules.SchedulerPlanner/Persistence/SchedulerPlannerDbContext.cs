@@ -7,6 +7,7 @@ public sealed class SchedulerPlannerDbContext(DbContextOptions<SchedulerPlannerD
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.ApplyConfiguration(new SchedulerPlanConfiguration());
         modelBuilder.ApplyConfiguration(new SchedulerPlanRunConfiguration());
+        modelBuilder.ApplyConfiguration(new SchedulerFireAdmissionRecordConfiguration());
         base.OnModelCreating(modelBuilder);
     }
 

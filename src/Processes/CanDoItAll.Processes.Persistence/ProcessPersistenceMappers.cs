@@ -26,6 +26,10 @@ internal static class ProcessPersistenceMappers
             Status = state.Status,
             UpdatedAtUtc = state.UpdatedAtUtc,
             ConcurrencyToken = Guid.NewGuid(),
+            LaunchAdmissionId = state.LaunchAdmissionId?.Value,
+            ProjectAdmissionDatabaseProfileId = state.ProjectAdmission?.DatabaseProfileId,
+            ProjectAdmissionProjectId = state.ProjectAdmission?.ProjectId,
+            ProjectAdmissionLifetimeId = state.ProjectAdmission?.LifetimeId,
             BlockedRecoveryActionsJson = SerializeBlockedRecoveryActions(state.BlockedRecoveryActions)
         };
 
@@ -221,10 +225,24 @@ internal static class ProcessPersistenceMappers
             availableSlots,
             entity.UpdatedAtUtc)
         {
+            LaunchAdmissionId = entity.LaunchAdmissionId is { } admissionId ? new ProcessLaunchAdmissionId(admissionId) : null,
+            ProjectAdmission = ReadProjectAdmission(entity),
             ConnectedInputArtifacts = connectedInputArtifacts,
             BlockedRecoveryActions = DeserializeBlockedRecoveryActions(
                 entity.BlockedRecoveryActionsJson)
         };
+    }
+
+    internal static ProcessProjectAdmission? ReadProjectAdmission(ProcessRuntimeStateEntity entity) {
+        if (entity.ProjectAdmissionDatabaseProfileId is null && entity.ProjectAdmissionProjectId is null &&
+                entity.ProjectAdmissionLifetimeId is null) {
+            return null;
+        }
+        if (entity.ProjectAdmissionDatabaseProfileId is not { } profileId || entity.ProjectAdmissionProjectId is not { } projectId ||
+                entity.ProjectAdmissionLifetimeId is not { } lifetimeId) {
+            throw new InvalidOperationException($"Process run '{entity.RunId:D}' has an incomplete saved project admission; reconciliation is required.");
+        }
+        return new(profileId, projectId, lifetimeId);
     }
 
     public static ProcessRuntimeEventEntity ToEventEntity(

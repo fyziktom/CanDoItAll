@@ -28,6 +28,9 @@ using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Runtime;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.SharedProviders.Http;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -80,6 +83,14 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddCanDoItAllGmailPlugin();
         services.AddCanDoItAllOffice365Plugin();
         services.AddProcessesModule(configuration);
+        services.TryAddScoped<IAgentCatalogReadLeaseStore, CanonicalAgentCatalogLeaseSource>();
+        services.TryAddScoped<IProcessProjectAdmissionPolicy, ProjectProcessAdmissionPolicy>();
+        services.TryAddScoped<ProjectProcessLaunchTargetQuery>();
+        services.TryAddScoped<ProjectProcessLaunchDeliveryService>();
+        services.TryAddScoped<ProjectProcessLaunchAuthorityService>();
+        services.TryAddScoped<IProcessLaunchAuthorityPolicy>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
+        services.TryAddScoped<IProcessLaunchOperatorAuthoritySource>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
+        services.TryAddScoped<IWorkflowScheduledSourceAuthorityPolicy, ProjectScheduledWorkflowSourceAuthorityPolicy>();
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
         services

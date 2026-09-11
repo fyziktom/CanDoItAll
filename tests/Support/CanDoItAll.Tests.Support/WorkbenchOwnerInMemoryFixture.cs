@@ -24,13 +24,20 @@ public sealed class WorkbenchOwnerInMemoryFixture {
         CompleteOptions = complete.Options;
         WorkbenchFactory = new PooledDbContextFactory<WorkbenchDbContext>(workbench.Options);
         ProjectsFactory = new PooledDbContextFactory<ProjectsDbContext>(projects.Options);
-        Transactions = CoordinatedDatabaseTransaction.ForProfile(new(new DatabaseProfileRecord {
+        var profile = new ResolvedDatabaseProfile(new DatabaseProfileRecord {
+            Id = Guid.NewGuid(),
             ProviderKind = DatabaseProviderKind.InMemory,
             SourceKind = DatabaseProfileSourceKind.InMemory
-        }, DatabaseProfileResolutionSource.ExplicitOverride, name));
+        }, DatabaseProfileResolutionSource.ExplicitOverride, name);
+        Transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
         Projects = new(ProjectsFactory, projects.Options, Transactions);
         Hierarchy = new(ProjectsFactory, projects.Options, Transactions);
-        MutationScopes = new(Projects, Transactions);
+        MutationScopes = new(Projects, new ProjectWriteAdmissionService(ProjectsFactory, projects.Options, Transactions, new CanonicalDatabase(profile)), Transactions);
+    }
+
+    private sealed class CanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 0;
     }
 
     public DbContextOptions<AppDbContext> CompleteOptions { get; }
