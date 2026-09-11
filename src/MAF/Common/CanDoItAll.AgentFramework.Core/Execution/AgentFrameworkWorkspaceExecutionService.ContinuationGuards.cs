@@ -332,9 +332,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw new AgentToolAdmissionException("tool-admission.actor-unavailable", "The admitted agent is no longer active.");
             }
 
-            var session = detail.ChatSession ?? throw new InvalidDataException("The admitted chat was not found.");
-            if (session.Id != journal.Session.Reference.ChatSessionId || session.AgentId != run.AgentId || session.LatestExecutionRunId != run.Id) {
+            var session = detail.ChatSession;
+            if (journal.Session.Reference.BackgroundSource is null && (session is null ||
+                    session.Id != journal.Session.Reference.ChatSessionId || session.AgentId != run.AgentId || session.LatestExecutionRunId != run.Id)) {
                 throw new AgentToolAdmissionException("tool-admission.chat-mismatch", "The saved run is no longer this chat's current execution.");
+            }
+            if (journal.Session.Reference.BackgroundSource is not null && (session is not null || run.ChatSessionId is not null)) {
+                throw new AgentToolAdmissionException("tool-admission.background-chat-mismatch", "A background admission cannot resume through an interactive chat.");
             }
 
             var transitioned = run with { State = ExecutionState.Running, Outcome = null, CompletedAtUtc = null,
@@ -351,11 +355,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var journal = run.ToolAdmission ?? throw new AgentToolAdmissionException("tool-admission.legacy-run",
             "This run has no durable tool admission journal; no effect identity can be fabricated for recovery.");
         journal.Validate();
-        if (journal.Support != AgentToolAdmissionSupport.Recoverable || journal.OriginalInput is null || journal.Segments.Length == 0) {
+        if (journal.Support != AgentToolAdmissionSupport.Recoverable || journal.RecoveryInputContent is null || journal.Segments.Length == 0) {
             throw new AgentToolAdmissionException("tool-admission.unsupported-recovery",
                 "This run has no supported immutable input and SDK checkpoint for recovery.");
         }
 
+        if (journal.HasUnresolvedProviderDispatch) {
+            throw new AgentToolAdmissionException("tool-admission.provider-reconciliation-required",
+                "A prior provider request may have executed native tools. Reconcile that saved request before another provider call.");
+        }
         if (journal.Batches.SelectMany(batch => batch.Proposals).Any(proposal =>
                 proposal.State is AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired &&
                 proposal.Payload.Recovery == AgentToolProposalRecovery.ReconcileBeforeRetry)) {
@@ -386,6 +394,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     }
 
     private async Task ValidateAdmittedResultReadAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
+        if (run.ToolAdmission?.Session.Reference.BackgroundSource is not null) {
+            if (!await (toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."))
+                    .CanReadBackgroundResultAsync(run, cancellationToken)) {
+                throw new AgentToolAdmissionException("tool-admission.result-read-denied", "The source owner denied this background execution result.");
+            }
+            return;
+        }
         var contextScope = ResolveAdmittedRuntimeContext(run)?.WorkspaceScope
             ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
         var original = ResolveValidatedExecutionGovernance(run, contextScope, activityWorkspaceIdentity)
@@ -418,6 +433,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private async Task ValidateAdmittedResumeAuthorityAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
         if (run.ToolAdmission is not { Support: AgentToolAdmissionSupport.Recoverable, Segments.Length: > 0 }) {
+            return;
+        }
+
+        if (run.ToolAdmission.Session.Reference.BackgroundSource is not null) {
+            await (toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."))
+                .RequireBackgroundDispatchAsync(run, cancellationToken);
             return;
         }
 

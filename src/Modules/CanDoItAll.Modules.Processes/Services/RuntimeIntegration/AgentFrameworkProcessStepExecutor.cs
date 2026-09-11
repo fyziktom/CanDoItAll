@@ -40,7 +40,7 @@ using static CanDoItAll.Modules.Processes.ProcessSubprocessState;
 namespace CanDoItAll.Modules.Processes;
 
 
-internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcessStepExecutor
+internal sealed partial class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcessStepExecutor
 {
     private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
     private readonly IAgentReferenceDataProvider agentReferenceDataProvider;
@@ -149,9 +149,11 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
         ProcessHostCapabilityEvaluationEvidence? dispatchHostCapabilityEvidence =
             request.DispatchHostCapabilityEvidence;
+        ProcessExecutionRunId? admittedExecutionRunId = null;
 
         ProcessExecutionAdapterResult CompleteWithDispatchHostEvidence(ProcessExecutionAdapterResult result)
-            => AttachHostCapabilityEvidence(result, dispatchHostCapabilityEvidence);
+            => AttachHostCapabilityEvidence(result.ExecutionRunId is null && admittedExecutionRunId is { } admitted
+                ? result with { ExecutionRunId = admitted } : result, dispatchHostCapabilityEvidence);
 
         async ValueTask<ProcessExecutionAdapterResult?> EvaluateHostCapabilityGateAsync(
             CancellationToken gateCancellationToken)
@@ -329,8 +331,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 assignment.StepKey,
                 subprocessContract);
             executionStage = ProcessAgentExecutionStage.AgentExecution;
-            var result = await workspaceService
-                .ExecuteRunAsync(
+            var result = await ExecuteAdmittedProcessRunAsync(workspaceService, assignment,
                     new ExecutionRunRequest(
                         agentId,
                         processStepPrompt,
@@ -350,7 +351,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                                 AllowRequiredFinalizerStructuredOutputRecovery: true)),
                         AutoApprovePendingToolCalls: true,
                         StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult),
-                    cancellationToken)
+                    cancellationToken, id => admittedExecutionRunId = id)
                 .ConfigureAwait(false);
             executionStage = ProcessAgentExecutionStage.AgentOutputValidation;
 
@@ -465,6 +466,17 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 appendRuntimeGateFindings: true,
                 stepContract: request.StepContract));
         }
+        catch (ProcessRuntimeDispatchInProgressException) {
+            throw;
+        }
+        catch (ProcessSourceExecutionReconciliationException exception) {
+            return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(assignment,
+                ComputeHash($"{exception.ExecutionRunId.Value:D}:{exception.Code}"), new(exception.Code,
+                    "A prior execution of this Process step must be recovered or reconciled before another provider request.",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:{exception.ExecutionRunId.Value:D}",
+                    assignment.ProducedArtifactSlotIds, ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.NonIdempotent)) with { ExecutionRunId = exception.ExecutionRunId });
+        }
         catch (ProcessRuntimeDispatchDeferredException)
         {
             throw;
@@ -478,6 +490,9 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (exception is AgentRunFailedException admittedFailure && admittedFailure.ExecutionRunId != Guid.Empty) {
+                admittedExecutionRunId = new(admittedFailure.ExecutionRunId);
+            }
             if (await ParentSubprocessArtifactBridge.TryResolveExistingPendingChildRunAsync(
                     assignment,
                     assignmentStore,

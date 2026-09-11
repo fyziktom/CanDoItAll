@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -30,6 +31,12 @@ public sealed record ProjectStructureAgentContext(
     public ProjectStructureWorkflowAuthoritySource? WorkflowAuthority { get; init; }
     [JsonIgnore]
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+    [JsonIgnore]
+    public ProjectProcessMutationAdmission? ProcessMutationAdmission { get; init; }
+
+    [JsonIgnore]
+    public ProjectStructureProcessLaunchInvocation? ProcessLaunchInvocation { get; init; }
 }
 
 [JsonConverter(typeof(FlexibleProjectStructureLeaseScopeKindJsonConverter))]
@@ -896,7 +903,12 @@ public sealed record ProjectStructureProcessNodeStartResult(
     string Stage,
     string Route,
     object? LaunchPlan,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings) : IAgentToolOwnerObservationEvidence {
+    public ProcessLaunchObservation? Observation { get; init; }
+
+    [JsonIgnore]
+    public bool RequiresOwnerReconciliation => Observation?.ContinuationState == ProcessLaunchContinuationState.ReconciliationRequired;
+}
 
 public sealed record ProjectStructureProcessSubprocessLaunchInput(
     string DefinitionKey,

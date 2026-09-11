@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
@@ -8,7 +9,10 @@ namespace CanDoItAll.Agents.Storage;
 public sealed class StorageAgentRuntimeToolProvider(
     IStorageCatalogService? catalogService = null,
     IStorageDriverRegistry? driverRegistry = null,
-    IStorageBrowseDriverRegistry? browseDriverRegistry = null) : IAgentRuntimeToolProvider {
+    IStorageBrowseDriverRegistry? browseDriverRegistry = null,
+    StorageCatalogService? catalogInspection = null,
+    IAgentCatalogReadLeaseStore? catalogLeases = null,
+    IAgentToolAdmissionVerifier? admissionVerifier = null) : IAgentRuntimeToolProvider {
     public int Order => 0;
 
     public AgentRuntimeToolProviderDescriptor Descriptor { get; } = new(
@@ -51,13 +55,49 @@ public sealed class StorageAgentRuntimeToolProvider(
         if (!context.Agent.Permissions.CanUseTools || !context.ContextIntent.WorkspaceToolsEnabled) {
             return [];
         }
-        var names = GetConfiguredWorkspacePolicy(RequireWorkspaceAccess(context), context.ContextIntent)
+        var access = RequireWorkspaceAccess(context);
+        var names = GetConfiguredWorkspacePolicy(access, context.ContextIntent)
             .Capabilities.Select(capability => capability.RuntimeToolName!.Value.Value).ToHashSet(StringComparer.Ordinal);
+        if (names.Count == 0) {
+            return [];
+        }
+        var runtime = new StorageRuntimePlugin(catalogService!, driverRegistry!, browseDriverRegistry, access);
         return StorageToolPolicy.Capabilities.Where(policy => names.Contains(policy.Name))
             .Select(policy => new AgentRuntimeToolMetadata(StorageToolPolicy.ProviderKey, policy.Name,
                 policy.IsStateChanging ? AgentRuntimeToolOperationKind.Mutation : AgentRuntimeToolOperationKind.Read,
-                policy.RequiresApprovalByDefault, ["configured", "storage"]))
+                policy.RequiresApprovalByDefault, ["configured", "storage"]) {
+                AuthorizeResultDisclosureAsync = (disclosure, token) =>
+                    AuthorizeResultDisclosureAsync(context, runtime, policy.Name, disclosure, token)
+            })
             .ToArray();
+    }
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(AgentRuntimeToolProviderContext context,
+        StorageRuntimePlugin original, string toolName, AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
+        if (catalogInspection is null || catalogLeases is null || admissionVerifier is null || context.AdmittedToolSession is null) {
+            throw new AgentToolAdmissionException("storage.result-authority-unavailable",
+                "Current canonical Agent grants and the original admitted session are required to disclose a saved Storage result.");
+        }
+        var admission = await admissionVerifier.RequireSessionAsync(context.AdmittedToolSession, cancellationToken);
+        var held = await catalogLeases.AcquireAgentReadLeaseAsync(context.Agent.Id, cancellationToken);
+        try {
+            var agent = held.Agent;
+            if (admission.AgentId != context.Agent.Id || held.Scope != WorkspaceScopeDescriptor.Organization(admission.Profile.ProfileId.ToString("N")) ||
+                    agent is null || agent.Id != context.Agent.Id || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active ||
+                    !agent.Permissions.CanUseTools) {
+                throw new AgentToolAdmissionException("storage.result-disclosure-denied",
+                    "The original Agent is no longer authorized to read the saved Storage result.");
+            }
+            var facts = await catalogInspection.ListCatalogPlanningFactsAsync([], cancellationToken).ConfigureAwait(false);
+            original.AuthorizeResultDisclosure(toolName, disclosure, facts);
+            var current = new StorageRuntimePlugin(catalogService!, driverRegistry!, browseDriverRegistry,
+                AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+            current.AuthorizeResultDisclosure(toolName, disclosure, facts);
+            return held;
+        } catch {
+            await held.DisposeAsync();
+            throw;
+        }
     }
 
     private static AgentWorkspaceToolAccessSettings RequireWorkspaceAccess(AgentRuntimeToolProviderContext context)

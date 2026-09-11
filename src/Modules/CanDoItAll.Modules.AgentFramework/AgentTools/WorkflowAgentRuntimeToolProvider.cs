@@ -171,7 +171,52 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                 context.Agent,
                 context.Capabilities,
                 item.ToolName))
+            .Select(item => item with {
+                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item.ToolName, disclosure, token)
+            })
             .ToArray();
+    }
+
+    private static readonly JsonSerializerOptions DisclosureJson = new(JsonSerializerDefaults.Web) {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(AgentRuntimeToolProviderContext context,
+        string toolName, AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
+        if (!WorkflowAgentRuntimeAuthorizationPolicy.CanAttach(context) || disclosure.Payload.ToolName != toolName) {
+            throw new UnauthorizedAccessException("The saved Workflow result does not match the current tool context.");
+        }
+        var readTool = toolName == WorkflowToolPolicy.WorkflowsDefinitionsList
+            ? WorkflowToolPolicy.WorkflowsDefinitionsList : WorkflowToolPolicy.WorkflowsRunStatusGet;
+        await RequireReadAsync();
+        if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
+            if (toolName == WorkflowToolPolicy.WorkflowsDefinitionsList) {
+                var saved = disclosure.Result.Deserialize<WorkflowAgentDefinitionListResult>(DisclosureJson)
+                    ?? throw new InvalidOperationException("The saved Workflow catalog result is unavailable.");
+                foreach (var item in saved.Definitions) {
+                    var detail = await catalog.GetDefinitionAsync(new(item.WorkflowId), new WorkflowVersionId(item.VersionId), cancellationToken);
+                    if (detail?.Definition is not { Status: WorkflowLifecycleStatus.Active } definition ||
+                        definition.Id.Value != item.WorkflowId || definition.VersionId.Value != item.VersionId) {
+                        throw new UnauthorizedAccessException("A saved Workflow catalog entry is no longer available as an active version.");
+                    }
+                }
+            } else {
+                var json = disclosure.Result.GetProperty("run");
+                if (json.ValueKind != JsonValueKind.Null) {
+                    var saved = json.Deserialize<WorkflowAgentRunDescriptor>(DisclosureJson)
+                        ?? throw new InvalidOperationException("The saved Workflow run result is unavailable.");
+                    var current = await runtimeManager.GetRunAsync(new(saved.RunId), cancellationToken);
+                    if (current is null || current.RunId.Value != saved.RunId || current.WorkflowId.Value != saved.WorkflowId ||
+                        current.VersionId.Value != saved.VersionId) {
+                        throw new UnauthorizedAccessException("The saved Workflow run identity is no longer available for status disclosure.");
+                    }
+                }
+            }
+        }
+        await RequireReadAsync();
+        return null;
+
+        Task RequireReadAsync() => authorizationService.EnsureToolInvocationAuthorizedAsync(context.Agent.Id, readTool, cancellationToken);
     }
 
     private async Task<WorkflowAgentDefinitionListResult> ListActiveDefinitionsAsync(
@@ -580,8 +625,11 @@ public sealed record WorkflowAgentStartResult(
     WorkflowAgentDefinitionSelectionMode SelectionMode,
     WorkflowRuntimeBackendKind ResolvedBackend,
     WorkflowLaunchIdempotencyDisposition IdempotencyDisposition,
-    string Message) {
+    string Message) : IAgentToolOwnerObservationEvidence {
     public WorkflowLaunchObservation Observation { get; init; }
+
+    [JsonIgnore]
+    public bool RequiresOwnerReconciliation => Observation == WorkflowLaunchObservation.AdmissionReceiptPending;
 }
 
 public enum WorkflowAgentRunLookupOutcome

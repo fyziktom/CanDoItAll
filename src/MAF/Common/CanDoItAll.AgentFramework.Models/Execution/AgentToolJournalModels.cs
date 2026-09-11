@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -84,8 +85,10 @@ public sealed record AgentToolCancellationOutcome(
 public sealed record AgentToolRunCancellationReconciliation(
     Guid ExecutionRunId,
     Guid ChatSessionId,
-    IReadOnlyList<AgentToolCancellationOutcome> Outcomes) {
-    public bool HasUnknownEffects => Outcomes.Any(outcome => outcome.EffectState == AgentToolEffectState.Unknown);
+    IReadOnlyList<AgentToolCancellationOutcome> Outcomes,
+    IReadOnlyList<AgentToolProviderDispatchOutcome>? ProviderDispatches = null) {
+    public bool HasUnknownEffects => Outcomes.Any(outcome => outcome.EffectState == AgentToolEffectState.Unknown) ||
+        ProviderDispatches?.Any(dispatch => dispatch.State != AgentToolProviderDispatchState.ResponseAdmitted) == true;
 }
 
 public sealed record AgentToolApprovalBinding(
@@ -97,7 +100,8 @@ public sealed record AgentToolApprovalBinding(
 public sealed record AgentToolPreparedCall(
     string CallId,
     AgentToolPreparedPayload Payload,
-    bool RequiresApproval);
+    bool RequiresApproval,
+    AgentToolProviderCallBinding? ProviderCall = null);
 
 public sealed record AgentToolProposalRecord(
     AgentToolBusinessIntentId IntentId,
@@ -112,14 +116,18 @@ public sealed record AgentToolProposalRecord(
     Guid? DispatchClaimId = null,
     AgentToolProtocolEnvelope? Result = null,
     AgentToolEffectState EffectState = AgentToolEffectState.Unknown,
-    AgentToolCancellationResolution? Cancellation = null);
+    AgentToolCancellationResolution? Cancellation = null,
+    AgentToolProviderCallBinding? ProviderCall = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    AgentToolProtocolEnvelope? DisclosureEvidence = null);
 
 public sealed record AgentToolBatchRecord(
     AgentToolBatchId Id,
     int Ordinal,
     AgentToolSemanticDigest RequestDigest,
     AgentToolProtocolEnvelope Response,
-    ImmutableArray<AgentToolProposalRecord> Proposals);
+    ImmutableArray<AgentToolProposalRecord> Proposals,
+    AgentToolProviderDispatchId? ProviderDispatchId = null);
 
 public sealed record AgentToolInvocationSegment(
     Guid Id,
@@ -143,18 +151,30 @@ public sealed record AgentToolJournalRecord(
     Guid? ActiveDispatchLeaseId = null,
     AgentToolAdmissionSupport Support = AgentToolAdmissionSupport.Recoverable,
     AgentToolOriginalInput? OriginalInput = null,
-    AgentToolAdmittedRuntimeContext? RuntimeContext = null) {
+    AgentToolAdmittedRuntimeContext? RuntimeContext = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AgentToolBackgroundInput? BackgroundInput = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    ImmutableArray<AgentToolProviderDispatchRecord> ProviderDispatches = default) {
     public const int CurrentSchemaVersion = 1;
+    public const int BackgroundSchemaVersion = 2;
+    public const int ProviderDispatchSchemaVersion = 3;
     public const int MaximumBatches = 64;
     public const int MaximumCallsPerBatch = 64;
     public const int MaximumSegments = 32;
     public const int MaximumUtf8Bytes = 24 * 1024 * 1024;
 
-    public bool HasUnresolvedEffects => Batches.Any(batch => batch.Proposals.Any(proposal =>
+    [JsonIgnore]
+    public string? RecoveryInputContent => OriginalInput?.Content ?? BackgroundInput?.Content;
+
+    public bool HasUnresolvedEffects => HasUnresolvedProviderDispatch || Batches.Any(batch => batch.Proposals.Any(proposal =>
         proposal.State is AgentToolProposalState.Prepared or AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired));
 
+    [JsonIgnore]
+    public bool HasUnresolvedProviderDispatch => !ProviderDispatches.IsDefault &&
+        ProviderDispatches.Any(dispatch => dispatch.State != AgentToolProviderDispatchState.ResponseAdmitted);
+
     public void Validate() {
-        if (SchemaVersion != CurrentSchemaVersion || Revision < 1 || !Enum.IsDefined(Support) ||
+        if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion) || Revision < 1 || !Enum.IsDefined(Support) ||
             Batches.IsDefault || Segments.IsDefault || Batches.Length > MaximumBatches || Segments.Length > MaximumSegments ||
             Support != AgentToolAdmissionSupport.Recoverable && (Batches.Length != 0 || Segments.Length != 0) || Batches.Length != 0 && Segments.Length == 0) {
             throw new InvalidDataException("The tool admission journal version, revision or batch count is unsupported.");
@@ -163,12 +183,19 @@ public sealed record AgentToolJournalRecord(
         ArgumentNullException.ThrowIfNull(Session);
         ArgumentNullException.ThrowIfNull(Session.Reference);
         ArgumentNullException.ThrowIfNull(Session.Profile);
+        if (Session.Reference.BackgroundSource is null ? SchemaVersion is not (CurrentSchemaVersion or ProviderDispatchSchemaVersion) || BackgroundInput is not null :
+                SchemaVersion is not (BackgroundSchemaVersion or ProviderDispatchSchemaVersion) || Session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation || OriginalInput is not null ||
+                BackgroundInput is null || string.IsNullOrWhiteSpace(BackgroundInput.Content) ||
+                Encoding.UTF8.GetByteCount(BackgroundInput.Content) > AgentToolProtocolEnvelope.MaximumUtf8Bytes) {
+            throw new InvalidDataException("The admitted tool input does not match its interactive or background source.");
+        }
         if (OriginalInput is { } input && (input.MessageId == Guid.Empty || string.IsNullOrWhiteSpace(input.Content) ||
                 Encoding.UTF8.GetByteCount(input.Content) > AgentToolProtocolEnvelope.MaximumUtf8Bytes)) {
             throw new InvalidDataException("The admitted original input or typed context attachments cannot be recovered safely.");
         }
 
         _ = RuntimeContext?.ToTransientContext();
+        AgentToolProviderJournalValidation.Validate(this);
 
         var bytes = 0L;
         var segmentIds = new HashSet<Guid>();
@@ -210,6 +237,11 @@ public sealed record AgentToolJournalRecord(
                     throw new InvalidDataException("The admitted tool proposal or exact approval binding is invalid.");
                 }
 
+                if (proposal.DisclosureEvidence is not null && (proposal.Result is null || proposal.DispatchClaimId is null ||
+                        proposal.State is AgentToolProposalState.Prepared or AgentToolProposalState.Rejected)) {
+                    throw new InvalidDataException("Disclosure evidence must accompany the original dispatched result checkpoint.");
+                }
+
                 if ((proposal.State == AgentToolProposalState.Cancelled) != (proposal.Cancellation is not null) ||
                     proposal.Cancellation is { } resolution && (!Enum.IsDefined(resolution.Disposition) || !Enum.IsDefined(resolution.Reason) ||
                         (resolution.Disposition == AgentToolCancellationDisposition.ReceiptCommitted) !=
@@ -235,6 +267,7 @@ public sealed record AgentToolJournalRecord(
 
                 bytes += Encoding.UTF8.GetByteCount(proposal.Payload.ArgumentsJson);
                 bytes += proposal.Result is null ? 0L : Encoding.UTF8.GetByteCount(proposal.Result.PayloadJson);
+                bytes += proposal.DisclosureEvidence is { } evidence ? Encoding.UTF8.GetByteCount(evidence.PayloadJson) : 0L;
                 bytes += proposal.Cancellation?.Receipt is { } receipt ? Encoding.UTF8.GetByteCount(receipt.PayloadJson) : 0L;
             }
         }

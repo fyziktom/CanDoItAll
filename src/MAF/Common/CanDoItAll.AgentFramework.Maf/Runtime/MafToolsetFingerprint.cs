@@ -55,9 +55,9 @@ internal static class MafToolsetFingerprint
             .Where(tool => !string.IsNullOrWhiteSpace(tool.Name))
             .Select(tool =>
             {
-                var schemaText = tool is AIFunction function
+                var schemaText = tool is AIFunctionDeclaration function
                     ? function.JsonSchema.GetRawText()
-                    : string.Empty;
+                    : MafNativeToolContracts.Capture(tool).Digest.Value;
                 var classification = (toolPolicies ?? AgentToolPolicyCatalog.BuiltIn).Classify(tool.Name);
                 var approvalWrapped = tool is ApprovalRequiredAIFunction;
                 return string.Join(

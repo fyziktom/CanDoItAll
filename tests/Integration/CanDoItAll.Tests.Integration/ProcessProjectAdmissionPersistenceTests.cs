@@ -17,6 +17,47 @@ using Npgsql;
 namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed class ProcessProjectAdmissionPersistenceTests {
+    [Fact]
+    public async Task Commit_returns_persisted_timestamp_precision_for_sequential_commands_and_still_rejects_stale_state() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var admission = await CreateProjectAsync(services);
+        var initial = ProcessProjectAdmissionFixture.Initial(admission);
+        var timestamp = ProcessProjectAdmissionFixture.Now.AddTicks(7);
+        initial = initial with {
+            OriginalState = initial.OriginalState with { UpdatedAtUtc = timestamp },
+            Mutation = initial.Mutation with {
+                State = initial.Mutation.State with { UpdatedAtUtc = timestamp },
+                Events = initial.Mutation.Events.Select(item => item with { OccurredAtUtc = timestamp }).ToArray()
+            }
+        };
+        var coordinator = Coordinator(services);
+        await using var owner = Context(services);
+        var unit = new EfProcessRuntimeUnitOfWork(owner, coordinatedTransaction: coordinator,
+            projectAdmissionPolicy: Policy(services, coordinator));
+        var committed = await unit.CommitAsync(initial);
+        Assert.True(committed.Succeeded);
+        await using var restarted = Context(services);
+        var reader = new EfProcessRuntimeUnitOfWork(restarted);
+        var persisted = Assert.IsType<ProcessRuntimeStateSnapshot>(await reader.LoadAsync(committed.State.RunId));
+        Assert.Equal(ProcessProjectAdmissionFixture.Now, persisted.UpdatedAtUtc);
+        Assert.Equal(persisted.UpdatedAtUtc, committed.State.UpdatedAtUtc);
+        var originalToken = (await restarted.RuntimeStates.AsNoTracking().SingleAsync()).ConcurrencyToken;
+        Assert.NotEqual(Guid.Empty, originalToken);
+
+        var cancelled = await unit.CommitAsync(ProcessProjectAdmissionFixture.Cancel(committed.State));
+        Assert.True(cancelled.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, cancelled.State.Status);
+        var stored = await restarted.RuntimeStates.AsNoTracking().SingleAsync();
+        Assert.Equal(cancelled.State.UpdatedAtUtc, stored.UpdatedAtUtc);
+        Assert.NotEqual(originalToken, stored.ConcurrencyToken);
+        await Assert.ThrowsAsync<ProcessRuntimeOptimisticConcurrencyException>(() =>
+            unit.CommitAsync(ProcessProjectAdmissionFixture.Cancel(committed.State)));
+        Assert.Equal(2, await restarted.IdempotencyKeys.CountAsync());
+        Assert.Equal(2, await restarted.RuntimeEvents.CountAsync());
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]

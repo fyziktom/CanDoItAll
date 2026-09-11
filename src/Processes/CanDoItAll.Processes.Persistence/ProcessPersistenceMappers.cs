@@ -574,6 +574,9 @@ internal static class ProcessPersistenceMappers
             ReceiptJsonOptions);
     }
 
+    internal static ProcessExecutionRunId? ReadReceiptExecutionRunId(string? value)
+        => DeserializeDiagnostics(value).ExecutionRunId;
+
     private static DeserializedStrategyResultDiagnostics DeserializeDiagnostics(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

@@ -16,6 +16,8 @@ internal sealed class MafToolRunContext {
     private readonly AgentToolRunLease lease;
     private readonly IReadOnlyDictionary<string, AgentRuntimeToolMetadata> metadata;
     private readonly IReadOnlyDictionary<string, AITool> tools;
+    private readonly IReadOnlyList<AITool> nativeTools;
+    private readonly HashSet<AgentToolBusinessIntentId> completedInCurrentInvocation = [];
     private int responseCursor;
     private AgentToolBatchId? dispatchBatch;
 
@@ -27,11 +29,13 @@ internal sealed class MafToolRunContext {
         Segment = segment;
         responseCursor = segment.FirstBatchOrdinal;
         metadata = (capabilities?.RuntimeToolMetadata ?? []).ToDictionary(item => item.ToolName, StringComparer.Ordinal);
-        tools = (capabilities?.Tools ?? []).ToDictionary(tool => tool.Name, StringComparer.Ordinal);
+        tools = (capabilities?.Tools ?? []).Where(tool => tool is AIFunction).ToDictionary(tool => tool.Name, StringComparer.Ordinal);
+        nativeTools = (capabilities?.Tools ?? []).Where(tool => tool is not AIFunctionDeclaration).ToArray();
     }
 
     internal static MafToolRunContext? Current => Ambient.Value;
     internal AgentToolInvocationSegment Segment { get; }
+    internal bool HasActiveProviderDispatch { get; private set; }
 
     internal IDisposable Bind() {
         var previous = Ambient.Value;
@@ -73,6 +77,7 @@ internal sealed class MafToolRunContext {
             session = await MafRuntimeSessionBuilder.RestoreOrCreateSessionAsync(runtimeAgent, agent, provider, model,
                 chat, options, cancellationToken, isApprovalContinuation: true, progress);
             input = new MafApprovalContinuationDriver().CreateApprovalInputMessages(chat, decisions).ToList();
+            RestoreNativeApprovalInputs(saved, input);
             isApprovalContinuation = true;
             continuesSegmentId = latest.Id;
         }
@@ -135,7 +140,7 @@ internal sealed class MafToolRunContext {
         await CheckRecoveryAsync(cancellationToken);
         var saved = await journal.ReadAsync(lease, cancellationToken);
         if (responseCursor == saved.Batches.Length) {
-            if (saved.HasUnresolvedEffects) {
+            if (saved.HasUnresolvedEffects && !CanContinueNativeApprovals(saved)) {
                 throw Denied("Drain or reconcile the saved serial batch before requesting another model proposal.");
             }
 
@@ -152,17 +157,97 @@ internal sealed class MafToolRunContext {
     }
 
     internal async Task AdmitResponseAsync(AgentToolSemanticDigest requestDigest, AgentToolProtocolEnvelope response,
-        IReadOnlyList<FunctionCallContent> calls, CancellationToken cancellationToken) {
-        var prepared = calls.Select(call => {
-            var payload = Prepare(call.Name, call.Arguments);
-            var requiresApproval = tools[call.Name] is ApprovalRequiredAIFunction ||
-                payload.Effect == AgentToolProposalEffect.SensitiveDisclosure;
-            return new AgentToolPreparedCall(call.CallId, payload, requiresApproval);
+        IReadOnlyList<AIContent> contents, CancellationToken cancellationToken,
+        AgentToolProviderDispatchRecord? providerDispatch = null) {
+        var handled = contents.OfType<FunctionResultContent>().Select(result => result.CallId).ToHashSet(StringComparer.Ordinal);
+        var prepared = contents.SelectMany(content => content switch {
+            FunctionCallContent { InformationalOnly: false } call when !handled.Contains(call.CallId)
+                => new[] { PrepareFunction(call, requiresApproval: false) },
+            ToolApprovalRequestContent { ToolCall: FunctionCallContent { InformationalOnly: false } call }
+                => new[] { PrepareFunction(call, requiresApproval: true) },
+            ToolApprovalRequestContent approval => new[] { MafNativeToolContracts.PrepareApproval(approval, nativeTools) },
+            _ => Array.Empty<AgentToolPreparedCall>()
         }).ToArray();
-        var saved = await journal.AdmitBatchAsync(lease, requestDigest, response, prepared, cancellationToken);
+        if (prepared.Any(call => call.ProviderCall is null && call.RequiresApproval)) {
+            prepared = prepared.Select(call => call.ProviderCall is null ? call with { RequiresApproval = true } : call).ToArray();
+        }
+        var saved = providerDispatch is null
+            ? await journal.AdmitBatchAsync(lease, requestDigest, response, prepared, cancellationToken)
+            : await journal.CompleteProviderDispatchAsync(lease, providerDispatch.Id, requestDigest, response, prepared, cancellationToken);
         var batch = saved.Batches[^1];
+        HasActiveProviderDispatch = false;
         dispatchBatch = batch.Id;
         responseCursor = batch.Ordinal + 1;
+    }
+
+    internal async Task<AgentToolProviderDispatchRecord?> BeginProviderRequestAsync(AgentToolSemanticDigest requestDigest,
+        IReadOnlyList<ChatMessage> input, IReadOnlyList<MafNativeToolContract> nativeContracts,
+        CancellationToken cancellationToken) {
+        if (nativeContracts.Count == 0) {
+            return null;
+        }
+
+        var saved = await journal.ReadAsync(lease, cancellationToken);
+        var approved = new List<AgentToolApprovalBinding>();
+        foreach (var response in input.SelectMany(message => message.Contents).OfType<ToolApprovalResponseContent>()
+            .Where(response => response.ToolCall is McpServerToolCallContent)) {
+            var matches = saved.Batches.SelectMany(batch => batch.Proposals.Select(proposal => (batch.Id, Proposal: proposal)))
+                .Where(item => item.Proposal.ProviderCall is not null && item.Proposal.ApprovalId == response.RequestId).ToArray();
+            if (matches.Length != 1) {
+                throw Denied("The native approval response does not identify exactly one saved proposal.");
+            }
+
+            var (batchId, proposal) = matches[0];
+            var prepared = MafNativeToolContracts.PrepareApproval(new(response.RequestId, response.ToolCall), nativeTools);
+            if (prepared.Payload != proposal.Payload || response.ToolCall.CallId != proposal.CallId ||
+                response.Approved != (proposal.ApprovalStatus == ExecutionApprovalStatus.Approved) ||
+                proposal.ApprovalStatus == ExecutionApprovalStatus.Pending) {
+                throw Denied("The native approval response differs from its exact durable decision or prepared payload.");
+            }
+
+            if (proposal.State == AgentToolProposalState.Prepared && response.Approved) {
+                approved.Add(new(batchId, proposal.IntentId, proposal.Payload.SemanticVersion, proposal.Payload.Digest));
+            }
+        }
+
+        var dispatch = await journal.BeginProviderDispatchAsync(lease, Segment.Id, requestDigest,
+            MafToolProtocolCodec.Digest(nativeContracts), approved, cancellationToken);
+        HasActiveProviderDispatch = true;
+        return dispatch;
+    }
+
+    private AgentToolPreparedCall PrepareFunction(FunctionCallContent call, bool requiresApproval) {
+        var payload = Prepare(call.Name, call.Arguments);
+        return new(call.CallId, payload, requiresApproval || tools[call.Name].GetService<ApprovalRequiredAIFunction>() is not null ||
+            payload.Effect == AgentToolProposalEffect.SensitiveDisclosure);
+    }
+
+    private bool CanContinueNativeApprovals(AgentToolJournalRecord saved) {
+        if (saved.HasUnresolvedProviderDispatch) {
+            return false;
+        }
+
+        var previous = saved.Segments.SingleOrDefault(segment => segment.Id == Segment.ContinuesSegmentId);
+        return previous is not null && saved.Batches.All(batch => batch.Proposals.All(proposal =>
+            proposal.State is AgentToolProposalState.Completed or AgentToolProposalState.Rejected ||
+            proposal.State == AgentToolProposalState.Prepared && proposal.ProviderCall is not null &&
+            proposal.ApprovalStatus == ExecutionApprovalStatus.Approved &&
+            previous.PendingApprovals.Any(approval => approval.ToolAdmission?.IntentId == proposal.IntentId)));
+    }
+
+    private static void RestoreNativeApprovalInputs(AgentToolJournalRecord saved, List<ChatMessage> input) {
+        foreach (var message in input) {
+            for (var index = 0; index < message.Contents.Count; index++) {
+                if (message.Contents[index] is not ToolApprovalResponseContent response || response.ToolCall is not McpServerToolCallContent) {
+                    continue;
+                }
+
+                var proposal = saved.Batches.SelectMany(batch => batch.Proposals).SingleOrDefault(proposal =>
+                    proposal.ProviderCall is not null && proposal.ApprovalId == response.RequestId)
+                    ?? throw Denied("The native approval input has no original admitted protocol envelope.");
+                message.Contents[index] = MafNativeToolContracts.RestoreApproval(proposal).CreateResponse(response.Approved);
+            }
+        }
     }
 
     internal async ValueTask<object?> InvokeAsync(FunctionCallContent call, Func<CancellationToken, ValueTask<object?>> invoke,
@@ -171,32 +256,55 @@ internal sealed class MafToolRunContext {
         var batch = dispatchBatch ?? FindContinuationBatch(await journal.ReadAsync(lease, cancellationToken), call, payload);
         var claim = await journal.ClaimInvocationAsync(lease, batch, call.CallId, payload, cancellationToken);
         using var dispatch = claim.Bind();
-        await using var authorization = await AuthorizeAsync(payload, cancellationToken);
         if (claim.Proposal.State == AgentToolProposalState.Completed) {
+            await PauseForPendingNativeApprovalAsync(cancellationToken);
+            await using var disclosure = await AuthorizeDisclosureAsync(claim.Proposal, cancellationToken);
             return RestoreResult(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."));
         }
 
-        try {
-            object? result;
+        async ValueTask<object?> InvokeAuthorizedAsync() {
+            IAsyncDisposable? authorization;
             try {
-                result = await invoke(cancellationToken);
+                authorization = await AuthorizeAsync(payload, cancellationToken);
+            } catch (Exception exception) when (claim.Proposal.State == AgentToolProposalState.Prepared &&
+                effectScope.CommittedEffect is null &&
+                exception is AgentToolAdmissionException or AgentToolPolicyBlockedException or UnauthorizedAccessException) {
+                return RecordPolicyDenial("Current execution authority denied this saved proposal.");
+            }
+            await using var authorizationScope = authorization;
+            try {
+                return await invoke(cancellationToken);
             } catch (Exception exception) when (effectScope.CommittedEffect is null &&
                 MafAgentToolFailureMapper.TryMap(exception, out var failure) &&
                 failure.EffectState is AgentToolEffectState.NotCommitted or AgentToolEffectState.None) {
-                result = failure;
-            } catch (AgentToolPolicyBlockedException) {
-                var denied = new AgentToolFailureResult(false, "ToolPolicyDenied", "Current execution policy denied this saved proposal.", false) {
-                    EffectState = AgentToolEffectState.NotCommitted
-                };
-                await journal.CompleteInvocationAsync(claim, CaptureResult(denied), AgentToolEffectState.NotCommitted, cancellationToken);
-                throw;
+                return failure;
+            } catch (AgentToolPolicyBlockedException) when (claim.Proposal.State == AgentToolProposalState.Prepared &&
+                effectScope.CommittedEffect is null) {
+                return RecordPolicyDenial("Current execution policy denied this saved proposal.");
+            }
+        }
+
+        try {
+            var result = await InvokeAuthorizedAsync();
+            if (claim.Proposal.State != AgentToolProposalState.Prepared &&
+                (effectScope.PreDispatchFailure is not null || result is AgentToolFailureResult {
+                    Succeeded: false, EffectState: AgentToolEffectState.None or AgentToolEffectState.NotCommitted
+                })) {
+                throw new AgentToolAdmissionException("tool-admission.reconciliation-required",
+                    "A current denial cannot resolve the earlier dispatched effect. The original outcome evidence requires owner reconciliation.");
             }
 
             var checkpoint = CaptureResult(result, effectScope.PreDispatchFailure);
             var effect = effectScope.CommittedEffect is not null ? AgentToolEffectState.Committed :
                 MafRuntimeToolInvocationResultClassifier.Assess(call.Name,
                     toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure).EffectState;
-            await journal.CompleteInvocationAsync(claim, checkpoint, effect, cancellationToken);
+            var requiresReconciliation = result is IAgentToolOwnerObservationEvidence { RequiresOwnerReconciliation: true };
+            await journal.CompleteInvocationAsync(claim, checkpoint, effect, cancellationToken, requiresReconciliation,
+                effectScope.DisclosureEvidence);
+            if (!requiresReconciliation) {
+                completedInCurrentInvocation.Add(claim.Proposal.IntentId);
+            }
+            await PauseForPendingNativeApprovalAsync(cancellationToken);
             return RestoreResult(checkpoint);
         } catch {
             try {
@@ -209,6 +317,14 @@ internal sealed class MafToolRunContext {
         }
     }
 
+    private static AgentToolFailureResult RecordPolicyDenial(string message) {
+        var denied = new AgentToolFailureResult(false, "ToolPolicyDenied", message, false) {
+            EffectState = AgentToolEffectState.NotCommitted
+        };
+        AgentToolInvocationEffectScope.RecordPreDispatchFailure(new(denied.ErrorCode, denied.Message));
+        return denied;
+    }
+
     internal async Task<IReadOnlyList<PendingToolApprovalRecord>> SaveApprovalsAsync(string serializedSessionStateJson,
         IReadOnlyList<PendingToolApprovalRecord> pending, CancellationToken cancellationToken) {
         var checkpoint = MafToolProtocolCodec.Encode(serializedSessionStateJson);
@@ -216,13 +332,40 @@ internal sealed class MafToolRunContext {
             pending, cancellationToken);
     }
 
+    private async Task PauseForPendingNativeApprovalAsync(CancellationToken cancellationToken) {
+        var saved = await journal.ReadAsync(lease, cancellationToken);
+        var proposals = saved.Batches.Skip(Segment.FirstBatchOrdinal).SelectMany(batch => batch.Proposals).ToArray();
+        if (!proposals.Any(proposal => proposal.ProviderCall is not null && proposal.ApprovalStatus == ExecutionApprovalStatus.Pending) ||
+            proposals.Any(proposal => proposal.ProviderCall is null && proposal.State is not (AgentToolProposalState.Completed or AgentToolProposalState.Rejected))) {
+            return;
+        }
+
+        var invocation = FunctionInvokingChatClient.CurrentContext
+            ?? throw Denied("The SDK invocation has no control context to publish its pending native approval safely.");
+        invocation.Terminate = true;
+    }
+
     private async Task CheckRecoveryAsync(CancellationToken cancellationToken) {
         var saved = await journal.ReadAsync(lease, cancellationToken);
+        if (saved.HasUnresolvedProviderDispatch) {
+            throw new AgentToolAdmissionException("tool-admission.reconciliation-required",
+                "A provider request may already have executed a hosted tool. Its missing response requires reconciliation before any provider replay.");
+        }
+
         foreach (var proposal in saved.Batches.SelectMany(batch => batch.Proposals)) {
             if (proposal.State is AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired &&
                 proposal.Payload.Recovery == AgentToolProposalRecovery.ReconcileBeforeRetry) {
                 throw new AgentToolAdmissionException("tool-admission.reconciliation-required",
                     "A previously dispatched non-idempotent tool is uncertain. Reconcile it before provider replay or any effect.");
+            }
+
+            if (proposal.ProviderCall is not null) {
+                var prepared = MafNativeToolContracts.PrepareApproval(MafNativeToolContracts.RestoreApproval(proposal), nativeTools);
+                if (prepared.Payload != proposal.Payload || prepared.ProviderCall?.ContractDigest != proposal.ProviderCall.ContractDigest) {
+                    throw Denied("The current native contract differs from the admitted provider proposal.");
+                }
+
+                continue;
             }
 
             using var arguments = JsonDocument.Parse(proposal.Payload.ArgumentsJson);
@@ -231,8 +374,31 @@ internal sealed class MafToolRunContext {
                 throw Denied("The installed provider preparation policy no longer matches the admitted payload.");
             }
 
-            await using var authorization = await AuthorizeAsync(proposal.Payload, cancellationToken);
+            await using var authorization = proposal.State == AgentToolProposalState.Completed
+                ? await AuthorizeDisclosureAsync(proposal, cancellationToken, allowFreshResult: true)
+                : await AuthorizeAsync(proposal.Payload, cancellationToken);
         }
+    }
+
+    private ValueTask<IAsyncDisposable?> AuthorizeDisclosureAsync(AgentToolProposalRecord proposal,
+        CancellationToken cancellationToken, bool allowFreshResult = false) {
+        if (allowFreshResult && completedInCurrentInvocation.Contains(proposal.IntentId)) {
+            return ValueTask.FromResult<IAsyncDisposable?>(null);
+        }
+        if (metadata.TryGetValue(proposal.Payload.ToolName, out var descriptor) &&
+            descriptor.AuthorizeResultDisclosureAsync is { } authorize) {
+            var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(proposal.Result
+                ?? throw Denied("The completed invocation has no saved result."));
+            return authorize(new(proposal.IntentId, proposal.Payload, proposal.EffectState, result.Value,
+                proposal.DisclosureEvidence), cancellationToken);
+        }
+
+        if (completedInCurrentInvocation.Contains(proposal.IntentId)) {
+            return ValueTask.FromResult<IAsyncDisposable?>(null);
+        }
+
+        throw new AgentToolAdmissionException("tool-admission.disclosure-authorization-unavailable",
+            "This saved tool result has no current owner disclosure check. Explicit recovery is required; the completed effect will not be repeated.");
     }
 
     private ValueTask<IAsyncDisposable?> AuthorizeAsync(AgentToolPreparedPayload payload, CancellationToken cancellationToken)

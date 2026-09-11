@@ -34,6 +34,9 @@ public sealed record ProcessLaunchRequest(
 
     [JsonIgnore]
     public ProcessLaunchLinkTarget? LinkTarget { get; init; }
+
+    [JsonIgnore]
+    public ProcessLaunchToolSource? ToolSource { get; init; }
 }
 
 public sealed record ProcessExistingLaunchLookupRequest(

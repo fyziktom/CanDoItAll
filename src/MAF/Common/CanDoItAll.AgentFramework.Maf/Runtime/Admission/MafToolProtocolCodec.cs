@@ -41,7 +41,7 @@ internal static class MafToolProtocolCodec {
             return envelope;
         } catch (Exception exception) when (exception is JsonException or NotSupportedException or ArgumentException) {
             throw new AgentToolAdmissionException("tool-admission.unsupported-protocol",
-                $"The provider protocol cannot be saved safely ({exception.GetType().Name}). No tool was dispatched.");
+                $"The protocol checkpoint cannot be saved safely ({exception.GetType().Name}). Recovery must inspect the persisted dispatch state before any retry.");
         }
     }
 

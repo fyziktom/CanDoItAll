@@ -337,7 +337,8 @@ public sealed class ProjectStructureAgentService(
                         TaskPricingInitialization: allowCanonicalTask
                             ? ProjectObjectTaskPricingInitialization.PreserveValidatedAuthoritativePricing
                             : ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing) {
-                        ExpectedProjectAdmission = agent.ExpectedProjectAdmission
+                        ExpectedProjectAdmission = agent.ExpectedProjectAdmission,
+                            ProcessMutationAdmission = agent.ProcessMutationAdmission
                     },
                     cancellationToken);
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
@@ -402,7 +403,8 @@ public sealed class ProjectStructureAgentService(
                             UpdateTiming: request.StartUtc.HasValue ||
                                 request.EndUtc.HasValue ||
                                 request.DurationSeconds.HasValue) {
-                            ExpectedProjectAdmission = agent.ExpectedProjectAdmission
+                            ExpectedProjectAdmission = agent.ExpectedProjectAdmission,
+                            ProcessMutationAdmission = agent.ProcessMutationAdmission
                         },
                         cancellationToken);
                     if (updatedNode is null)
@@ -427,7 +429,8 @@ public sealed class ProjectStructureAgentService(
                             request.EndUtc,
                             metadataJson,
                             request.DurationSeconds) {
-                            ExpectedProjectAdmission = agent.ExpectedProjectAdmission
+                            ExpectedProjectAdmission = agent.ExpectedProjectAdmission,
+                            ProcessMutationAdmission = agent.ProcessMutationAdmission
                         },
                         cancellationToken);
                 }
@@ -495,7 +498,7 @@ public sealed class ProjectStructureAgentService(
                     request.Notes,
                     request.Status,
                     cancellationToken: cancellationToken,
-                    expectedProjectAdmission: agent.ExpectedProjectAdmission);
+                    expectedProjectAdmission: agent.ExpectedProjectAdmission, processMutationAdmission: agent.ProcessMutationAdmission);
                 return MapRequiredNode(updatedNode, nodeId);
             },
             cancellationToken);
@@ -544,7 +547,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-statuses",
-            cancellationToken => projectWorkbenchService.UpdateObjectStatusesAsync(projectId, request.NodeIds, request.Status, cancellationToken, agent.ExpectedProjectAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectStatusesAsync(projectId, request.NodeIds, request.Status, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
             cancellationToken);
     }
 
@@ -559,7 +562,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-progress",
-            cancellationToken => projectWorkbenchService.UpdateObjectProgressAsync(projectId, request.NodeIds, request.ProgressMode, request.ProgressPercent, cancellationToken, agent.ExpectedProjectAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectProgressAsync(projectId, request.NodeIds, request.ProgressMode, request.ProgressPercent, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
             cancellationToken);
     }
 
@@ -574,7 +577,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-marker",
-            cancellationToken => projectWorkbenchService.UpdateObjectMarkerAsync(projectId, request.NodeIds, request.MarkerIcon, request.MarkerTone, request.MarkerLabel, cancellationToken, agent.ExpectedProjectAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectMarkerAsync(projectId, request.NodeIds, request.MarkerIcon, request.MarkerTone, request.MarkerLabel, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
             cancellationToken);
     }
 
@@ -589,7 +592,7 @@ public sealed class ProjectStructureAgentService(
             request.LeaseToken,
             agent,
             "update-node-priority",
-            cancellationToken => projectWorkbenchService.UpdateObjectPriorityAsync(projectId, request.NodeIds, request.Priority, cancellationToken, agent.ExpectedProjectAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectPriorityAsync(projectId, request.NodeIds, request.Priority, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
             cancellationToken);
     }
 
@@ -613,32 +616,32 @@ public sealed class ProjectStructureAgentService(
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
                 ProjectStructureMarkerMutationMode.Toggle => projectWorkbenchService.ToggleObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
                 ProjectStructureMarkerMutationMode.Remove => projectWorkbenchService.RemoveObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
                 ProjectStructureMarkerMutationMode.Clear => projectWorkbenchService.ClearObjectMarkersAsync(
                     projectId,
                     [nodeId],
-                    cancellationToken, agent.ExpectedProjectAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission),
                 _ => projectWorkbenchService.UpdateObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission)
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission)
             },
             cancellationToken);
     }

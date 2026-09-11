@@ -108,8 +108,22 @@ public sealed class SchedulerAgentRuntimeToolProvider(
                 item.Key,
                 item.Value,
                 SchedulerToolPolicy.Capabilities.Single(policy => policy.Name == item.Key).RequiresApprovalByDefault,
-                ["scheduler", "workflow", "managed-agent"]))
+                ["scheduler", "workflow", "managed-agent"]) {
+                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item.Key, disclosure, token)
+            })
             .ToArray();
+    }
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(
+        AgentRuntimeToolProviderContext context, string toolName, AgentToolResultDisclosure disclosure,
+        CancellationToken cancellationToken) {
+        if (!SchedulerAgentRuntimeAuthorizationPolicy.CanAttach(context) || disclosure.Payload.ToolName != toolName) {
+            throw new UnauthorizedAccessException("The saved Scheduler result does not match the current managed tool context.");
+        }
+        var readTool = toolName == SchedulerToolPolicy.SchedulerWorkflowScheduleCreate
+            ? SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch : toolName;
+        await authorizationService.EnsureToolInvocationAuthorizedAsync(context.Agent.Id, readTool, cancellationToken);
+        return null;
     }
 
     private async Task<SchedulerWorkflowTargetSearchResult> SearchWorkflowTargetsAsync(

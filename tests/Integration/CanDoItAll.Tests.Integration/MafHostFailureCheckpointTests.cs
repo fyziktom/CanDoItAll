@@ -32,6 +32,9 @@ public sealed class MafHostFailureCheckpointTests {
     [InlineData(InvocationKind.ReturnedBodyNone)]
     [InlineData(InvocationKind.ReturnedBodyNotCommitted)]
     [InlineData(InvocationKind.UntrustedTypedJson)]
+    [InlineData(InvocationKind.AuthorizationOwnerDenial)]
+    [InlineData(InvocationKind.AuthorizationPolicyDenial)]
+    [InlineData(InvocationKind.AuthorizationAccessDenial)]
     public async Task Actual_host_failure_and_legacy_results_survive_an_independent_file_journal_restart(InvocationKind kind) {
         await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
         var probe = new InvocationProbe();
@@ -65,6 +68,19 @@ public sealed class MafHostFailureCheckpointTests {
                 PrepareAdmission = input => new(ToolName, 1, MafToolProtocolCodec.Digest(input),
                     MafToolProtocolCodec.Canonicalize(input), AgentToolProposalEffect.Mutation, AgentToolProposalRecovery.OwnerReceipt),
                 AuthorizeAdmissionAsync = async (_, token) => {
+                    await journal.RequireSessionAsync(fixture.Session, token);
+                    probe.Authorizations++;
+                    if (IsAuthorizationDenial(kind)) {
+                        throw kind switch {
+                            InvocationKind.AuthorizationOwnerDenial => new AgentToolAdmissionException("fixture.owner-denied", SafeBodyFailure.PrivateMessage),
+                            InvocationKind.AuthorizationPolicyDenial => new AgentToolPolicyBlockedException(ToolName,
+                                ToolInvocationDecisionKind.Deny, SafeBodyFailure.PrivateMessage),
+                            _ => new UnauthorizedAccessException(SafeBodyFailure.PrivateMessage)
+                        };
+                    }
+                    return new EmptyScope();
+                },
+                AuthorizeResultDisclosureAsync = async (_, token) => {
                     await journal.RequireSessionAsync(fixture.Session, token);
                     return new EmptyScope();
                 }
@@ -106,7 +122,7 @@ public sealed class MafHostFailureCheckpointTests {
             var resultJson = JsonSerializer.SerializeToElement(probe.Results[^1], MafToolProtocolCodec.SerializationOptions);
             Assert.Equal(JsonSerializer.SerializeToElement(expected, MafToolProtocolCodec.SerializationOptions).GetRawText(), resultJson.GetRawText());
             if (expected is AgentToolFailureResult failure) {
-                if (kind is InvocationKind.Unavailable or InvocationKind.InvalidArgument) {
+                if (kind is InvocationKind.Unavailable or InvocationKind.InvalidArgument || IsAuthorizationDenial(kind)) {
                     Assert.IsType<JsonElement>(probe.Results[^1]);
                 } else {
                     Assert.IsType<AgentToolFailureResult>(probe.Results[^1]);
@@ -121,6 +137,7 @@ public sealed class MafHostFailureCheckpointTests {
                 Assert.Equal(failure.ErrorCode, trace.FailureCode);
                 Assert.Equal(failure.CanRetryWithCorrectedInput, trace.CanRetryWithCorrectedInput);
                 Assert.Equal(failure.Message, trace.FailureMessage);
+                Assert.DoesNotContain(SafeBodyFailure.PrivateMessage, proposal.Result!.PayloadJson, StringComparison.Ordinal);
             } else {
                 Assert.Equal(AgentToolEffectState.Unknown, trace.EffectState);
                 Assert.Equal(AgentToolEffectState.Unknown, proposal.EffectState);
@@ -132,14 +149,24 @@ public sealed class MafHostFailureCheckpointTests {
             }
         }
         Assert.Equal(2, probe.Results.Count);
-        Assert.Equal(kind is InvocationKind.Unavailable or InvocationKind.InvalidArgument ? 0 : 1, probe.Dispatches);
+        Assert.Equal(kind is InvocationKind.Unavailable or InvocationKind.InvalidArgument || IsAuthorizationDenial(kind) ? 0 : 1, probe.Dispatches);
+        if (IsAuthorizationDenial(kind)) {
+            Assert.Equal(1, probe.Authorizations);
+        }
     }
+
+    private static bool IsAuthorizationDenial(InvocationKind kind) => kind is InvocationKind.AuthorizationOwnerDenial or
+        InvocationKind.AuthorizationPolicyDenial or InvocationKind.AuthorizationAccessDenial;
 
     private static object? ExpectedResult(InvocationKind kind) => kind switch {
         InvocationKind.Unavailable => new AgentToolFailureResult(false, UnavailableCode, UnavailableMessage, false) {
             EffectState = AgentToolEffectState.NotCommitted
         },
         InvocationKind.InvalidArgument => null,
+        InvocationKind.AuthorizationOwnerDenial or InvocationKind.AuthorizationPolicyDenial or InvocationKind.AuthorizationAccessDenial =>
+            new AgentToolFailureResult(false, "ToolPolicyDenied", "Current execution authority denied this saved proposal.", false) {
+                EffectState = AgentToolEffectState.NotCommitted
+            },
         InvocationKind.UntrustedJson or InvocationKind.UntrustedTypedJson => JsonSerializer.SerializeToElement(new {
             succeeded = false,
             errorCode = "UntrustedHostFailure",
@@ -176,7 +203,8 @@ public sealed class MafHostFailureCheckpointTests {
 
     public enum InvocationKind {
         Unavailable, InvalidArgument, UntrustedJson, LegacyNull, LegacyText, LegacyJson,
-        MappedBodyNone, MappedBodyNotCommitted, ReturnedBodyNone, ReturnedBodyNotCommitted, UntrustedTypedJson
+        MappedBodyNone, MappedBodyNotCommitted, ReturnedBodyNone, ReturnedBodyNotCommitted, UntrustedTypedJson,
+        AuthorizationOwnerDenial, AuthorizationPolicyDenial, AuthorizationAccessDenial
     }
 
     private sealed class SafeBodyFailure(AgentToolEffectState effectState) : Exception(PrivateMessage), IAgentToolFailureEffectEvidence {
@@ -190,6 +218,7 @@ public sealed class MafHostFailureCheckpointTests {
 
     private sealed class InvocationProbe {
         public int Dispatches { get; set; }
+        public int Authorizations { get; set; }
         public List<object?> Results { get; } = [];
     }
 

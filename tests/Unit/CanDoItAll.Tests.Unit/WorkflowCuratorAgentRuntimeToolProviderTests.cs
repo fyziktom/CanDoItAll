@@ -18,6 +18,39 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
+    [Theory]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorCatalogSearch, WorkflowCuratorToolPolicy.WorkflowCuratorCatalogSearch)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorAuthoringOptionsGet, WorkflowCuratorToolPolicy.WorkflowCuratorAuthoringOptionsGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorDraftCreate, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorDraftUpdate, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorLifecycleChange, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    public async Task Saved_results_revalidate_the_current_read_capability_without_repeating_the_action(
+        string toolName, string readTool) {
+        var harness = CreateHarness();
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item => item.ToolName == toolName);
+        var authorize = Assert.IsType<Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>>(
+            metadata.AuthorizeResultDisclosureAsync);
+        var disclosure = ManagedToolDisclosureTestData.Create(metadata, null);
+        var readKeys = new HashSet<string>(StringComparer.Ordinal) { WorkflowCuratorAgentCapabilityKeys.ToolNameToCapabilityKey[readTool] };
+        var readActor = harness.Context.Agent with {
+            Capabilities = harness.Context.Agent.Capabilities.Where(item => readKeys.Contains(item.CapabilityKey)).ToArray()
+        };
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var allowed = await authorize(disclosure, default)) {
+            Assert.Null(allowed);
+        }
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id
+            ? readActor with { Capabilities = [] } : item).ToArray();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(disclosure, default).AsTask());
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var restored = await authorize(disclosure, default)) {
+            Assert.Null(restored);
+        }
+        Assert.Equal(AgentToolEffectState.Unknown, disclosure.EffectState);
+    }
+
     [Fact]
     public async Task Provider_fails_closed_for_identity_lifecycle_permission_purpose_and_catalog_spoofs()
     {

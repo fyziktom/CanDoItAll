@@ -328,6 +328,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
             options: new OpenAIClientOptions
             {
                 Endpoint = ResolveAzureOpenAiEndpoint(provider, model),
+                RetryPolicy = new MafNativeRequestRetryPolicy(),
                 NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
             });
 
@@ -497,6 +498,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 
         var options = new OpenAIClientOptions
         {
+            RetryPolicy = new MafNativeRequestRetryPolicy(),
             NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
         };
         if (!MafProviderRuntimeSettings.ShouldUseDefaultOpenAiEndpoint(provider.BaseUrl))

@@ -46,6 +46,10 @@ public sealed class MafPolicyDenialCheckpointTests {
                 AuthorizeAdmissionAsync = async (_, token) => {
                     await journal.RequireSessionAsync(fixture.Session, token);
                     return new EmptyScope();
+                },
+                AuthorizeResultDisclosureAsync = async (_, token) => {
+                    await journal.RequireSessionAsync(fixture.Session, token);
+                    return new EmptyScope();
                 }
             });
             var options = MafChatClientAgentOptionsFactory.Create(new ChatOptions {

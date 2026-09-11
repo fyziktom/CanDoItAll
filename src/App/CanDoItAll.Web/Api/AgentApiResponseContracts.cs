@@ -32,7 +32,10 @@ internal sealed record AgentCancellationReconciliationApiResponse(
     Guid ExecutionRunId,
     Guid ChatSessionId,
     bool HasUnknownEffects,
-    IReadOnlyList<AgentToolCancellationOutcomeApiResponse> Outcomes);
+    IReadOnlyList<AgentToolCancellationOutcomeApiResponse> Outcomes,
+    IReadOnlyList<AgentProviderDispatchOutcomeApiResponse> ProviderDispatches);
+
+internal sealed record AgentProviderDispatchOutcomeApiResponse(Guid DispatchId, AgentToolProviderDispatchState State);
 
 internal sealed record AgentChatMessageApiResponse(
     Guid Id,
@@ -243,7 +246,9 @@ internal static class AgentApiResponseMapper
             source.Outcomes.Select(outcome => new AgentToolCancellationOutcomeApiResponse(
                 outcome.IntentId.Value, outcome.ToolName, outcome.EffectState,
                 outcome.Cancellation?.Disposition, outcome.Cancellation?.Reason,
-                outcome.Cancellation?.CommittedEffect is { } effect ? new(effect.SourceKind, effect.SourceId) : null)).ToArray());
+                outcome.Cancellation?.CommittedEffect is { } effect ? new(effect.SourceKind, effect.SourceId) : null)).ToArray(),
+            (source.ProviderDispatches ?? []).Select(dispatch => new AgentProviderDispatchOutcomeApiResponse(
+                dispatch.Id.Value, dispatch.State)).ToArray());
     }
 
     public static AgentChatPageBootstrapApiResponse ToChatPageBootstrap(ChatPageBootstrapSnapshot source)

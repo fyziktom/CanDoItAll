@@ -26,6 +26,9 @@ public sealed record AgentRuntimeToolMetadata
     [JsonIgnore]
     public Func<AgentToolPreparedPayload, CancellationToken, ValueTask<IAsyncDisposable>>? AuthorizeAdmissionAsync { get; init; }
 
+    [JsonIgnore]
+    public Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>? AuthorizeResultDisclosureAsync { get; init; }
+
     public AgentRuntimeToolUnavailability? Unavailability { get; init; }
 
     public string ProviderKey { get; }

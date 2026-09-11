@@ -196,6 +196,12 @@ public sealed class MafToolAdmissionNativeLoopIntegrationTests {
             AuthorizeAdmissionAsync = async (_, token) => {
                 await journal.RequireSessionAsync(fixture.Session, token);
                 return new EmptyScope();
+            },
+            AuthorizeResultDisclosureAsync = async (disclosure, token) => {
+                await journal.RequireSessionAsync(fixture.Session, token);
+                Assert.Contains(disclosure.IntentId.Value, probe.Intents);
+                Assert.Equal($"created:{disclosure.IntentId.Value:N}", disclosure.Result.GetString());
+                return null;
             }
         });
         var options = MafChatClientAgentOptionsFactory.Create(new ChatOptions { ModelId = fixture.Provider.DefaultModel, Tools = [function] });

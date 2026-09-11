@@ -48,6 +48,35 @@ after entering the tool body. Their separate typed result kind preserves the ori
 provenance. Legacy JSON and tool-controlled JSON remain untyped, even when they contain
 fields that imitate this failure contract.
 
+## Durable invocation and result recovery
+
+The admission journal binds the original provider segment, tool batch, exact arguments,
+server-issued intent, approval and dispatch claim before serial invocation. Provider-native
+calls also retain dispatch evidence; a cancelled or disconnected provider request is not
+proof that its external effect did not occur. Transport hashing omits only the private
+per-call provider-history request identifier through the existing transport normalization.
+Actual messages, tool schemas and provider options still participate in the digest.
+
+Trusted pre-dispatch denial can complete a fresh Prepared proposal as `NotCommitted`.
+It cannot overwrite an earlier claimed, committed or uncertain effect during recovery.
+Explicit owner observations control required reconciliation; a generic completed result
+with `Unknown` effect state keeps its existing completion semantics. Cancellation of a
+reconciliation-required read after dispatch retains uncertainty, including metered reads.
+
+A stored result is not continuing permission to disclose it. Before restoring a saved
+result into provider context, the owning callback checks its original target and current
+read authority and holds any returned lease through restoration. A missing owner policy
+or withdrawn read grant denies disclosure while retaining the original result and intent.
+Reauthorization restores that same checkpoint without executing the tool again. Storage
+and Memory check current canonical Agent grants as well as the original configured limit,
+including when the runtime and attached tool instances have not been recreated.
+
+Owner receipts and result-disclosure evidence remain separate. Process node-start recovery
+preserves the exact launch admission receipt instead of a generic project effect marker.
+SDK string-enum and canonical numeric results read compatibly; canonical proposal
+fingerprints retain their original representation. New private journal evidence requires
+an aware reader and is not covered by SQL downgrade alone.
+
 ## Incident evidence
 
 Execution run `e3a22e82-d3db-48af-abb7-22c35083d3f3` had the spreadsheet skill,

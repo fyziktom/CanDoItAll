@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -271,7 +273,9 @@ public sealed class HrAgentRuntimeToolProvider(
                 item.Key,
                 item.Value,
                 HrAgentToolPolicy.Capabilities.Single(policy => policy.Name == item.Key).RequiresApprovalByDefault,
-                ["hr-agent", "governance"]))
+                ["hr-agent", "governance"]) {
+                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item.Key, disclosure, token)
+            })
             .ToArray();
     }
 
@@ -331,6 +335,82 @@ public sealed class HrAgentRuntimeToolProvider(
                string.Equals(toolName, HrAgentToolPolicy.HrCrmPartyCreate, StringComparison.Ordinal) ||
                string.Equals(toolName, HrAgentToolPolicy.HrCrmPartyAffiliationsList, StringComparison.Ordinal) ||
                string.Equals(toolName, HrAgentToolPolicy.HrCrmAffiliationUpsert, StringComparison.Ordinal);
+    }
+
+    private static readonly JsonSerializerOptions DisclosureJson = new(JsonSerializerDefaults.Web) {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(
+        AgentRuntimeToolProviderContext context, string toolName, AgentToolResultDisclosure disclosure,
+        CancellationToken cancellationToken) {
+        if (!CanAttach(context) || disclosure.Payload.ToolName != toolName) {
+            throw new UnauthorizedAccessException("The saved HR result does not match the current managed tool context.");
+        }
+
+        var readTool = toolName switch {
+            HrAgentToolPolicy.HrAgentCreate or HrAgentToolPolicy.HrAgentSettingsUpdate => HrAgentToolPolicy.HrAgentsSearch,
+            HrAgentToolPolicy.HrAgentAvatarGenerate => HrAgentToolPolicy.HrAgentSettingsGet,
+            HrAgentToolPolicy.HrCrmPartyCreate => HrAgentToolPolicy.HrCrmItemSummaryGet,
+            HrAgentToolPolicy.HrCrmAffiliationUpsert => HrAgentToolPolicy.HrCrmPartyAffiliationsList,
+            _ => toolName
+        };
+        await RequireReadAsync();
+        if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
+            switch (toolName) {
+                case HrAgentToolPolicy.HrCrmSearch:
+                    foreach (var item in ReadResult<CrmHrAgentQueryItem[]>()) {
+                        await RequireVisibleAsync(item.RecordKind, item.Id, item.RedactionState);
+                    }
+                    break;
+                case HrAgentToolPolicy.HrCrmItemSummaryGet:
+                    var summary = ReadResult<CrmHrAgentQueryItem>();
+                    await RequireVisibleAsync(summary.RecordKind, summary.Id, summary.RedactionState);
+                    break;
+                case HrAgentToolPolicy.HrCrmPartyCreate:
+                    await RequireVisibleAsync(CrmHrAgentRecordKind.Party, ReadResult<CrmPartyCreateResult>().PartyId);
+                    break;
+                case HrAgentToolPolicy.HrCrmPartyAffiliationsList:
+                    using (var arguments = JsonDocument.Parse(disclosure.Payload.ArgumentsJson)) {
+                        var request = arguments.RootElement.GetProperty("request").Deserialize<HrCrmPersonPartyInput>(DisclosureJson)
+                            ?? throw new InvalidOperationException("The saved affiliation request is unavailable.");
+                        await RequireAffiliationsAsync(request.PersonPartyId, ReadResult<CrmPartyAffiliationResult[]>());
+                    }
+                    break;
+                case HrAgentToolPolicy.HrCrmAffiliationUpsert:
+                    var affiliation = ReadResult<CrmPartyAffiliationResult>();
+                    await RequireAffiliationsAsync(affiliation.PersonPartyId, [affiliation]);
+                    break;
+            }
+        }
+        await RequireReadAsync();
+        return null;
+
+        Task RequireReadAsync() => authorizationService.EnsureToolInvocationAuthorizedAsync(
+            context.Agent.Id, readTool, IsCrmTool(readTool), cancellationToken);
+
+        T ReadResult<T>() => disclosure.Result.Deserialize<T>(DisclosureJson)
+            ?? throw new InvalidOperationException("The saved HR result has no supported result value.");
+
+        async Task RequireVisibleAsync(CrmHrAgentRecordKind kind, Guid id,
+            CrmHrAgentRedactionState priorRedaction = CrmHrAgentRedactionState.None) {
+            var current = await crmHrQueryService.GetSummaryAsync(new(kind, id), cancellationToken);
+            if (current.IsFailure || current.Value is not { } item || item.Id != id || item.RecordKind != kind ||
+                item.RedactionState == CrmHrAgentRedactionState.SensitiveRecordRedacted &&
+                priorRedaction != CrmHrAgentRedactionState.SensitiveRecordRedacted) {
+                throw new UnauthorizedAccessException("A CRM record represented in the saved HR result is no longer available for disclosure.");
+            }
+        }
+
+        async Task RequireAffiliationsAsync(Guid personId, IReadOnlyList<CrmPartyAffiliationResult> saved) {
+            var current = await crmPartyCommandService.ListAffiliationsAsync(personId, cancellationToken);
+            if (current.IsFailure || current.Value is null || saved.Any(item => !current.Value.Any(visible =>
+                visible.AffiliationId == item.AffiliationId && visible.PersonPartyId == item.PersonPartyId &&
+                visible.OrganizationPartyId == item.OrganizationPartyId &&
+                visible.OrganizationUnitPartyId == item.OrganizationUnitPartyId && visible.ManagerPartyId == item.ManagerPartyId))) {
+                throw new UnauthorizedAccessException("An affiliation represented in the saved HR result is no longer available for disclosure.");
+            }
+        }
     }
 
     private async Task<TResult> ExecuteAuthorizedAsync<TResult>(

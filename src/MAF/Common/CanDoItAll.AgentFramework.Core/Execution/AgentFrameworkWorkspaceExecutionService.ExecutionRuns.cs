@@ -180,24 +180,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             request.AutoApprovePendingToolCalls,
             request.InitialActivityOperationId,
             request.StructuredOutput);
-        var reservation = await reservationStore
-            .ReserveExecutionRunAsync(
-                source,
-                CreateExecutionRunDetail(
-                    run,
-                    session: null,
-                    executionLog: [],
-                    metrics: [],
-                    usageObservations: [],
-                    approvals: [],
-                    artifacts: [],
-                    checkpoints: [],
-                    toolReceipts: []),
-                cancellationToken)
-            .ConfigureAwait(false);
+        run = await AdmitBackgroundRunAsync(run, request, inputAttachments, cancellationToken);
+        var candidate = CreateExecutionRunDetail(run, session: null, executionLog: [], metrics: [], usageObservations: [],
+            approvals: [], artifacts: [], checkpoints: [], toolReceipts: []);
+        var reservation = source.RequiresBackgroundAdmission
+            ? await reservationStore.ReserveBackgroundExecutionRunAsync(source, candidate,
+                await (toolAdmissionJournal ?? throw new AgentToolAdmissionException("tool-admission.journal-missing",
+                    "The background owner requires a durable admission journal."))
+                    .PrepareBackgroundReservationAsync(run, cancellationToken), cancellationToken).ConfigureAwait(false)
+            : await reservationStore.ReserveExecutionRunAsync(source, candidate, cancellationToken).ConfigureAwait(false);
 
         if (reservation.Disposition != ExecutionRunSourceDisposition.Created)
         {
+            if (reservation.Disposition != ExecutionRunSourceDisposition.SourceReconciliationRequired && source.RequiresBackgroundAdmission) {
+                await ValidateAdmittedResultReadAsync(reservation.Run, cancellationToken);
+            }
             EnsureActivityRunBinding(activityOperation, reservation.Run);
             TerminalizeSameSourceReservationActivity(
                 activityOperation,
@@ -290,6 +287,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     }
 
     private async Task<bool> CanReadCancelledReceiptsAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
+        if (run.ToolAdmission?.Session.Reference.BackgroundSource is not null) {
+            return await (toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."))
+                .CanReadBackgroundResultAsync(run, cancellationToken);
+        }
         var contextScope = ResolveAdmittedRuntimeContext(run)?.WorkspaceScope
             ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
         var original = ResolveValidatedExecutionGovernance(run, contextScope, activityWorkspaceIdentity)
@@ -379,13 +380,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     "Use cancelled-run receipt reconciliation; a cancelled execution cannot resume effects.");
             }
 
-            RequireRecoverableToolJournal(currentRun);
             if (currentRun.State == ExecutionState.Completed) {
+                (currentRun.ToolAdmission ?? throw new AgentToolAdmissionException("tool-admission.legacy-run",
+                    "This historical execution has no saved tool admission for result recovery.")).Validate();
                 var completed = await LoadExistingExecutionRunResultAsync(executionRunId, cancellationToken);
                 await ValidateAdmittedResultReadAsync(currentRun, cancellationToken);
                 ReportAndTerminalizeExistingResult(activityOperation, completed);
                 return completed;
             }
+            RequireRecoverableToolJournal(currentRun);
         }
 
         await using var recoveryLease = recoverAdmittedTools
@@ -627,7 +630,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 if (recoverAdmittedTools) {
                     runtimeResponse = TrackRuntimeResponse(await executionRuntime.ExecuteAsync(new AgentRuntimeExecutionRequest(
                         runtimeAgent, provider, runtimeSession, attachedCapabilities, memory,
-                        prepared.OriginalRun.ToolAdmission!.OriginalInput!.Content,
+                        prepared.OriginalRun.ToolAdmission!.RecoveryInputContent
+                            ?? throw new InvalidDataException("The admitted execution has no retained input."),
                         string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
                         (state, phase, message) => ReportRuntimeProgressAsync(activityOperation, run, agent.Id,
                             state, phase, message, cancellationToken),
@@ -1343,6 +1347,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 request.StructuredOutput,
                 jsonSchemaOutput);
 
+            run = await AdmitBackgroundRunAsync(run, request, inputAttachments, cancellationToken);
             await PersistNewExecutionRunAsync(
                 run,
                 cancellationToken);
@@ -1990,6 +1995,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 TerminalizePersistedActivity(
                     activityOperation,
                     reservation.Run.State);
+                break;
+            case ExecutionRunSourceDisposition.ExistingAdmittedFailure:
+            case ExecutionRunSourceDisposition.SourceReconciliationRequired:
+                activityOperation.Report(AgentExecutionActivityPhase.PersistingResult,
+                    "A retained source execution requires recovery or reconciliation before another dispatch.");
+                activityOperation.Complete("The original source execution was retained without starting another provider request.");
                 break;
             case ExecutionRunSourceDisposition.ExistingActive:
                 activityOperation.Report(
@@ -2658,7 +2669,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             // stamped by the adapter after capability composition.
             ModelContextDigest = AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson)?.ModelContextDigest
                 ?? AgentTurnContextMetadata.EmptyModelContextDigest,
-            AuthorityPolicyFingerprint = governance?.PolicyFingerprint ?? string.Empty,
+            AuthorityPolicyFingerprint = governance?.PolicyFingerprint ?? run.ToolAdmission?.Session.Reference.BackgroundSource?.OwnerFingerprint.Value ?? string.Empty,
             Governance = governance
         };
     }
@@ -2687,6 +2698,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         if (readResult.State == AgentExecutionGovernanceReadState.Absent)
         {
+            if (run.ToolAdmission?.Session.Reference.BackgroundSource is not null) {
+                if (AgentTurnContextMetadata.ContainsTurnContextReference(run.MetadataJson)) {
+                    throw new AgentExecutionAuthorityMismatchException("A background source cannot carry an interactive turn-context reference.");
+                }
+                return null;
+            }
             if (AgentTurnContextMetadata.ContainsTurnContextReference(run.MetadataJson) ||
                 ExecutionInvocationMetadata.RequiresTransientContext(run))
             {

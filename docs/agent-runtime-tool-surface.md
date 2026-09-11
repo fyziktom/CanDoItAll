@@ -53,6 +53,24 @@ Do not publish a copied count or complete tool-name inventory here. Provider cod
 
 The [HR definition adapter](../src/Integration/CanDoItAll.Agents.SimpleChats/README.md) persists exact proposals and server-issued business intents before approval or serial dispatch. Recovery retains the original run, input, scope and provider segment and rechecks current authority. An uncertain create resolves through the owner's atomic receipt; update/status uncertainty requires reconciliation. Ordinary Simple Chats gain no tools, implicit context or transcript disclosure. Portable Agent history excludes the executable admission journal and its private runtime checkpoint.
 
+## Saved results and governed background invocation
+
+A completed tool result is restored only after its owner rechecks current disclosure
+permission for the original admitted scope and target. Read permission is distinct from
+permission to perform a new mutation. Unsupported or revoked disclosure fails explicitly;
+recovery retains the exact result and business intent. Configured Storage and Memory tools
+also check the canonical Agent's current grants when their original callbacks remain
+attached to a long-lived runtime.
+
+Governed Process invocations retain the original source actor, actual executor, Process
+run/step and current dispatch claim. Dynamic provider batches reserve their exact tool
+proposals and distinct intents before dispatch. Structure node-start proposals use the
+Process owner's prepared launch and receipt; observation or retry does not create a new
+child. The background run does not inherit an interactive HR or Scheduler identity.
+
+See [Tool failure and recovery](architecture/agent-tool-failure-recovery-boundary.md)
+for pre-dispatch denial, cancellation and owner uncertainty semantics.
+
 ## Process Boundary
 
 There is no general first-party `ProcessAgentRuntimeToolProvider`. Current process operations use:

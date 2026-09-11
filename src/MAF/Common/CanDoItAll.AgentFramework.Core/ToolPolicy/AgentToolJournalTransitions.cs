@@ -12,8 +12,10 @@ public static class AgentToolJournalTransitions {
         }
 
         current.Validate();
-        if (proposed is null || proposed.Session != current.Session || proposed.Support != current.Support ||
-            proposed.OriginalInput != current.OriginalInput || proposed.RuntimeContext?.Content != current.RuntimeContext?.Content ||
+        if (proposed is null || proposed.SchemaVersion < current.SchemaVersion ||
+            proposed.Session != current.Session || proposed.Support != current.Support ||
+            proposed.OriginalInput != current.OriginalInput || proposed.BackgroundInput != current.BackgroundInput ||
+            proposed.RuntimeContext?.Content != current.RuntimeContext?.Content ||
             proposed.RuntimeContext?.WorkspaceScope != current.RuntimeContext?.WorkspaceScope || proposed.Revision < current.Revision ||
             proposed.Batches.Length < current.Batches.Length || proposed.Segments.Length < current.Segments.Length) {
             throw Conflict("A run update cannot remove or replace its current tool admission journal.");
@@ -22,6 +24,8 @@ public static class AgentToolJournalTransitions {
         if (proposed.Revision == current.Revision && !Equivalent(current, proposed)) {
             throw Conflict("A stale run snapshot cannot change the current tool admission journal.");
         }
+
+        ValidateProviderDispatches(current, proposed);
 
         for (var index = 0; index < current.Segments.Length; index++) {
             var previous = current.Segments[index];
@@ -39,13 +43,19 @@ public static class AgentToolJournalTransitions {
             var previous = current.Batches[index];
             var next = proposed.Batches[index];
             if (previous.Id != next.Id || previous.Ordinal != next.Ordinal || previous.RequestDigest != next.RequestDigest ||
-                previous.Response != next.Response || previous.Proposals.Length != next.Proposals.Length) {
+                previous.Response != next.Response || previous.Proposals.Length != next.Proposals.Length ||
+                previous.ProviderDispatchId != next.ProviderDispatchId) {
                 throw Conflict("An admitted assistant batch cannot be retargeted or reordered.");
             }
 
             for (var ordinal = 0; ordinal < previous.Proposals.Length; ordinal++) {
                 var prior = previous.Proposals[ordinal];
                 var target = next.Proposals[ordinal];
+                if ((prior.Result is not null || prior.DisclosureEvidence is not null) &&
+                    target.DisclosureEvidence != prior.DisclosureEvidence) {
+                    throw Conflict("A saved result cannot change or acquire disclosure evidence after its original checkpoint.");
+                }
+
                 if (prior.State == AgentToolProposalState.Cancelled &&
                     (target.State != AgentToolProposalState.Cancelled || target.Result != prior.Result ||
                         target.DispatchClaimId != prior.DispatchClaimId ||
@@ -57,7 +67,7 @@ public static class AgentToolJournalTransitions {
                 }
 
                 if (prior.IntentId != target.IntentId || prior.Ordinal != target.Ordinal || prior.CallId != target.CallId ||
-                    prior.Payload != target.Payload || prior.RequiresApproval != target.RequiresApproval ||
+                    prior.Payload != target.Payload || prior.RequiresApproval != target.RequiresApproval || prior.ProviderCall != target.ProviderCall ||
                     prior.ApprovalId is not null && target.ApprovalId != prior.ApprovalId ||
                     prior.ApprovalStatus != ExecutionApprovalStatus.Pending &&
                         (target.ApprovalStatus != prior.ApprovalStatus || target.ApprovedDigest != prior.ApprovedDigest) ||
@@ -84,7 +94,54 @@ public static class AgentToolJournalTransitions {
             }
         }
 
-        return updated;
+        return CancelProviderDispatches(updated);
+    }
+
+    private static void ValidateProviderDispatches(AgentToolJournalRecord current, AgentToolJournalRecord proposed) {
+        var previous = current.ProviderDispatches.IsDefault ? [] : current.ProviderDispatches;
+        var next = proposed.ProviderDispatches.IsDefault ? [] : proposed.ProviderDispatches;
+        if (next.Length < previous.Length) {
+            throw Conflict("A run update cannot remove a provider dispatch or its uncertainty.");
+        }
+
+        for (var index = 0; index < previous.Length; index++) {
+            var prior = previous[index];
+            var target = next[index];
+            if (prior.Id != target.Id || prior.Ordinal != target.Ordinal || prior.SegmentId != target.SegmentId ||
+                prior.RequestDigest != target.RequestDigest || prior.ContractDigest != target.ContractDigest ||
+                !prior.ApprovedCalls.SequenceEqual(target.ApprovedCalls) ||
+                prior.State != AgentToolProviderDispatchState.Started &&
+                    (target.State != prior.State || target.ResponseBatchId != prior.ResponseBatchId) ||
+                target.State == AgentToolProviderDispatchState.Started && target.ResponseBatchId is not null) {
+                throw Conflict("The original provider request, approval bindings and completed disposition are immutable.");
+            }
+        }
+    }
+
+    private static AgentToolJournalRecord CancelProviderDispatches(AgentToolJournalRecord journal) {
+        if (journal.ProviderDispatches.IsDefault ||
+            !journal.ProviderDispatches.Any(dispatch => dispatch.State == AgentToolProviderDispatchState.Started)) {
+            return journal;
+        }
+
+        var batches = journal.Batches;
+        var dispatches = journal.ProviderDispatches;
+        foreach (var dispatch in dispatches.Where(dispatch => dispatch.State == AgentToolProviderDispatchState.Started)) {
+            foreach (var binding in dispatch.ApprovedCalls) {
+                var batch = batches.Single(batch => batch.Id == binding.BatchId);
+                var proposal = batch.Proposals.Single(proposal => proposal.IntentId == binding.IntentId);
+                batches = batches.SetItem(batch.Ordinal, batch with { Proposals = batch.Proposals.SetItem(proposal.Ordinal,
+                    proposal with {
+                        State = AgentToolProposalState.Cancelled,
+                        EffectState = AgentToolEffectState.Unknown,
+                        Cancellation = new(AgentToolCancellationDisposition.CancelledUnreconciled, AgentToolCancellationReason.NoReceiptProtocol)
+                    }) });
+            }
+
+            dispatches = dispatches.SetItem(dispatch.Ordinal, dispatch with { State = AgentToolProviderDispatchState.CancelledUnreconciled });
+        }
+
+        return journal with { Revision = checked(journal.Revision + 1), Batches = batches, ProviderDispatches = dispatches };
     }
 
     public static AgentToolJournalRecord BindApprovals(AgentToolJournalRecord journal,

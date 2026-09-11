@@ -13725,6 +13725,22 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<AgentDefinition>>([agent]);
 
+        public async Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(ExecutionRunSourceKey source,
+            ExecutionRunRequest request, CancellationToken cancellationToken = default) {
+            Assert.True(source.RequiresBackgroundAdmission);
+            Assert.Equal(request.Context!.CorrelationId, source.CorrelationId);
+            Assert.Equal(request.Context.CausationId, source.CausationId);
+            var result = await ExecuteRunAsync(request, cancellationToken);
+            var now = DateTimeOffset.UtcNow;
+            var context = request.Context;
+            var run = executionDetail?.Run ?? new ExecutionRunRecord(result.ExecutionRunId, request.AgentId, null,
+                "Process adapter fixture", source.SourceKind, source.SourceId, context.CorrelationId, context.CausationId,
+                context.RequestedBy, context.RequestedByKind, context.MetadataJson, request.Prompt, result.ResponseText,
+                result.Metric.ProviderName, result.Metric.Model, result.State, result.Metric.Outcome, now, now, now, now,
+                string.Empty, null, []);
+            return new(ExecutionRunSourceDisposition.Created, run, result);
+        }
+
         public Task<ExecutionRunResult> ExecuteRunAsync(
             ExecutionRunRequest request,
             CancellationToken cancellationToken = default)

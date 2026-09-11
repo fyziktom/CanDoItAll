@@ -41,7 +41,10 @@ public sealed record ProcessPreparedLaunch(
     ProcessRuntimeCommitRequest InitialCommit,
     ProcessLaunchPlanView Review,
     ProcessLaunchLinkTarget? LinkTarget,
-    DateTimeOffset PreparedAtUtc);
+    DateTimeOffset PreparedAtUtc) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessLaunchToolSource? ToolSource { get; init; }
+}
 
 public sealed record ProcessPreparedLaunchSnapshot(
     ProcessPreparedLaunch Preparation,

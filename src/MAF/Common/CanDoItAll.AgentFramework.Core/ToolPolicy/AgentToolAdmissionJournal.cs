@@ -3,14 +3,15 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
+public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
     private readonly ISandboxWorkspaceExecutionRunStore reader;
     private readonly ISandboxWorkspaceExecutionRunMutationStore writer;
     private readonly ISandboxWorkspaceExecutionRunLeaseStore leases;
     private readonly AgentToolProfileBinding profile;
     private readonly TimeProvider clock;
 
-    public AgentToolAdmissionJournal(ISandboxWorkspaceStore store, AgentToolProfileBinding profile, TimeProvider? clock = null) {
+    public AgentToolAdmissionJournal(ISandboxWorkspaceStore store, AgentToolProfileBinding profile, TimeProvider? clock = null,
+        IEnumerable<IAgentToolBackgroundSourcePolicy>? backgroundSources = null) {
         reader = store as ISandboxWorkspaceExecutionRunStore
             ?? throw new InvalidOperationException("Tool admission requires the canonical execution-run reader.");
         writer = store as ISandboxWorkspaceExecutionRunMutationStore
@@ -19,6 +20,7 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
             ?? throw new InvalidOperationException("Tool admission requires a real cross-instance run dispatch lease.");
         this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
         this.clock = clock ?? TimeProvider.System;
+        this.backgroundSources = (backgroundSources ?? []).ToDictionary(item => item.SourceKind, StringComparer.OrdinalIgnoreCase);
     }
 
     public AgentToolJournalRecord CreateForNewRun(ExecutionRunRecord run, ChatSessionRecord chat,
@@ -55,7 +57,7 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
             var lease = new AgentToolRunLease(this, reference, Guid.NewGuid(), handle);
             await MutateAsync(lease, requireClaim: false, journal => journal with {
                 Revision = checked(journal.Revision + 1), ActiveDispatchLeaseId = lease.Id
-            }, cancellationToken);
+            }, cancellationToken, backgroundCheck: BackgroundCheck.Read);
             return lease;
         } catch {
             await handle.DisposeAsync();
@@ -74,6 +76,9 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
         var detail = await RequireDetailAsync(lease.Session.ExecutionRunId, cancellationToken);
         var journal = RequireJournal(detail);
         RequireCurrent(journal.Session, detail, reconciliationOnly);
+        if (!reconciliationOnly) {
+            await RequireBackgroundSourceAsync(detail.Run, readOnly: true, cancellationToken);
+        }
         RequireLease(lease, journal);
         return journal;
     }
@@ -111,6 +116,10 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
         IReadOnlyList<PendingToolApprovalRecord> approvals, CancellationToken cancellationToken) {
         lease.RequireOwner(this);
         IReadOnlyList<PendingToolApprovalRecord>? bound = null;
+        if (lease.Session.BackgroundSource is not null) {
+            await RequireBackgroundSourceAsync((await RequireDetailAsync(lease.Session.ExecutionRunId, cancellationToken)).Run,
+                readOnly: false, cancellationToken);
+        }
         await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, detail => {
             var journal = RequireJournal(detail);
             RequireCurrent(journal.Session, detail);
@@ -155,12 +164,7 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
                 throw Failure("Restore and drain the saved tool batch before admitting another provider proposal.");
             }
 
-            var proposals = calls.Select((call, ordinal) => new AgentToolProposalRecord(
-                new(Guid.NewGuid()), ordinal, call.CallId, call.Payload, call.RequiresApproval,
-                AgentToolProposalState.Prepared,
-                call.RequiresApproval ? ExecutionApprovalStatus.Pending : ExecutionApprovalStatus.Approved,
-                call.RequiresApproval ? null : call.Payload.Digest)).ToImmutableArray();
-            var batch = new AgentToolBatchRecord(new(Guid.NewGuid()), journal.Batches.Length, requestDigest, response, proposals);
+            var batch = CreateBatch(journal, requestDigest, response, calls);
             return journal with { Revision = checked(journal.Revision + 1), Batches = journal.Batches.Add(batch) };
         }, cancellationToken);
 
@@ -168,18 +172,30 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
         string callId, AgentToolPreparedPayload payload, CancellationToken cancellationToken) {
         var claimId = Guid.NewGuid();
         AgentToolProposalRecord? selected = null;
+        var backgroundCheck = BackgroundCheck.Dispatch;
+        if (lease.Session.BackgroundSource is not null) {
+            var observed = await ReadAsync(lease, cancellationToken);
+            var prior = observed.Batches.SingleOrDefault(item => item.Id == batchId)?.Proposals.SingleOrDefault(item => item.CallId == callId);
+            if (prior?.State == AgentToolProposalState.Completed) {
+                backgroundCheck = BackgroundCheck.Read;
+            }
+        }
         var journal = await MutateAsync(lease, true, current => {
             var batch = current.Batches.SingleOrDefault(item => item.Id == batchId)
                 ?? throw Failure("The current serial batch does not exist.");
             var proposal = batch.Proposals.SingleOrDefault(item => item.CallId == callId)
                 ?? throw Failure("The protocol call is not part of the admitted batch.");
+            if (proposal.ProviderCall is not null) {
+                throw Failure("A native provider proposal cannot acquire a local function-dispatch claim.");
+            }
             if (proposal.Payload != payload || proposal.ApprovalStatus != ExecutionApprovalStatus.Approved ||
                 proposal.ApprovedDigest != payload.Digest) {
                 throw Failure("The invocation does not match its exact approved payload.");
             }
 
             if (batch.Proposals.Take(proposal.Ordinal).Any(item =>
-                    item.State is not (AgentToolProposalState.Completed or AgentToolProposalState.Rejected))) {
+                    item.State is not (AgentToolProposalState.Completed or AgentToolProposalState.Rejected) &&
+                    !(item.ProviderCall is not null && item.State == AgentToolProposalState.Prepared))) {
                 throw Failure("Tool invocation cannot bypass an earlier unresolved serial proposal.");
             }
 
@@ -201,13 +217,14 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
             return AgentToolJournalTransitions.Replace(current, Binding(batch.Id, proposal), prior => prior with {
                 State = AgentToolProposalState.Executing, DispatchClaimId = claimId
             });
-        }, cancellationToken);
+        }, cancellationToken, backgroundCheck: backgroundCheck);
         var admitted = selected ?? throw Failure("The current dispatch did not select a saved proposal.");
         return new(this, lease, Binding(batchId, admitted), admitted, claimId, journal.Revision);
     }
 
     public async Task CompleteInvocationAsync(AgentToolInvocationClaim claim, AgentToolProtocolEnvelope result,
-        AgentToolEffectState effect, CancellationToken cancellationToken) {
+        AgentToolEffectState effect, CancellationToken cancellationToken, bool requiresOwnerReconciliation = false,
+        AgentToolProtocolEnvelope? disclosureEvidence = null) {
         claim.RequireOwner(this);
         if (claim.Proposal.State == AgentToolProposalState.Completed) {
             return;
@@ -215,8 +232,13 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
 
         await MutateAsync(claim.RunLease, true, journal => AgentToolJournalTransitions.Replace(journal, claim.Binding, proposal => {
             RequireClaim(claim, proposal);
-            return proposal with { State = AgentToolProposalState.Completed, Result = result, EffectState = effect };
-        }), cancellationToken);
+            return proposal with {
+                State = requiresOwnerReconciliation ? AgentToolProposalState.ReconciliationRequired : AgentToolProposalState.Completed,
+                Result = result,
+                EffectState = effect,
+                DisclosureEvidence = disclosureEvidence
+            };
+        }), cancellationToken, backgroundCheck: BackgroundCheck.RecordOutcome);
     }
 
     public async Task PreserveUncertainInvocationAsync(AgentToolInvocationClaim claim, CancellationToken cancellationToken) {
@@ -225,10 +247,15 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
             return;
         }
 
-        await MutateAsync(claim.RunLease, true, journal => AgentToolJournalTransitions.Replace(journal, claim.Binding, proposal => {
+        await MutateAsync(claim.RunLease, true, journal => {
+            var proposal = AgentToolJournalTransitions.RequireProposal(journal, claim.Binding);
+            if (proposal.State == AgentToolProposalState.Completed && proposal.DispatchClaimId == claim.Id) {
+                return journal;
+            }
             RequireClaim(claim, proposal);
-            return proposal with { State = AgentToolProposalState.ReconciliationRequired };
-        }), cancellationToken);
+            return AgentToolJournalTransitions.Replace(journal, claim.Binding,
+                current => current with { State = AgentToolProposalState.ReconciliationRequired });
+        }, cancellationToken, backgroundCheck: BackgroundCheck.RecordOutcome);
     }
 
     public async ValueTask<AgentToolSessionAdmission> RequireSessionAsync(
@@ -263,9 +290,13 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
 
     private async Task<AgentToolJournalRecord> MutateAsync(AgentToolRunLease lease, bool requireClaim,
         Func<AgentToolJournalRecord, AgentToolJournalRecord> update, CancellationToken cancellationToken,
-        bool reconciliationOnly = false) {
+        bool reconciliationOnly = false, BackgroundCheck backgroundCheck = BackgroundCheck.Dispatch) {
         lease.RequireOwner(this);
         RequireLeaseMode(lease, reconciliationOnly);
+        if (lease.Session.BackgroundSource is not null && backgroundCheck != BackgroundCheck.RecordOutcome) {
+            await RequireBackgroundSourceAsync((await RequireDetailAsync(lease.Session.ExecutionRunId, cancellationToken)).Run,
+                reconciliationOnly || backgroundCheck == BackgroundCheck.Read, cancellationToken);
+        }
         var detail = await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, current => {
             var journal = RequireJournal(current);
             RequireCurrent(journal.Session, current, reconciliationOnly);
@@ -284,6 +315,14 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
 
     private void RequireCurrent(AgentToolSessionAdmission session, ExecutionRunDetail detail, bool reconciliationOnly = false) {
         var run = detail.Run;
+        if (session.Reference.BackgroundSource is { } background) {
+            RequireBackgroundIdentity(session, run, background);
+            if (detail.ChatSession is not null || (reconciliationOnly ? run.Outcome != RunOutcome.Cancelled :
+                    run.State == ExecutionState.Completed || run.Outcome == RunOutcome.Cancelled)) {
+                throw Failure("The background execution cannot dispatch in its current terminal or chat state.");
+            }
+            return;
+        }
         var chat = detail.ChatSession;
         var authority = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson);
         if (session.Profile != profile || session.Purpose != AgentRuntimeContextPurpose.InteractiveChat ||
@@ -314,7 +353,7 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
             var lease = new AgentToolRunLease(this, reference, Guid.NewGuid(), handle, reconciliationOnly: true);
             await MutateAsync(lease, false, journal => journal with {
                 Revision = checked(journal.Revision + 1), ActiveDispatchLeaseId = lease.Id
-            }, cancellationToken, reconciliationOnly: true);
+            }, cancellationToken, reconciliationOnly: true, backgroundCheck: BackgroundCheck.RecordOutcome);
             return lease;
         } catch {
             await handle.DisposeAsync();
@@ -326,6 +365,10 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
         AgentToolReceiptReconciliationClaim claim, CancellationToken cancellationToken) {
         claim.RequireOwner(this);
         var journal = await ReadVerifiedAsync(claim.Lease, reconciliationOnly: true, cancellationToken);
+        if (journal.Session.Reference.BackgroundSource is not null &&
+                !await CanReadBackgroundResultAsync((await RequireDetailAsync(claim.Lease.Session.ExecutionRunId, cancellationToken)).Run, cancellationToken)) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
         var proposal = AgentToolJournalTransitions.RequireProposal(journal, claim.Binding);
         var allowedState = claim.Purpose switch {
             AgentToolReceiptReconciliationPurpose.CachedReceiptDisclosure => proposal.State == AgentToolProposalState.Cancelled &&
@@ -346,7 +389,7 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
     public async Task<AgentToolRunCancellationReconciliation> ReconcileCancelledAsync(AgentToolRunLease lease,
         IReadOnlyList<IAgentToolReceiptReconciliationProvider> providers, bool currentReadAllowed, CancellationToken cancellationToken) {
         var saved = await MutateAsync(lease, true, AgentToolJournalTransitions.RejectUndispatchedOnCancellation,
-            cancellationToken, reconciliationOnly: true);
+            cancellationToken, reconciliationOnly: true, backgroundCheck: BackgroundCheck.RecordOutcome);
         var observedThisRequest = new HashSet<AgentToolBusinessIntentId>();
         foreach (var batch in saved.Batches) {
             foreach (var proposal in batch.Proposals) {
@@ -359,7 +402,8 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
                 var binding = Binding(batch.Id, proposal);
                 var resolution = new AgentToolCancellationResolution(AgentToolCancellationDisposition.CancelledUnreconciled,
                     AgentToolCancellationReason.NoReceiptProtocol);
-                if (proposal.Payload.Effect == AgentToolProposalEffect.Read) {
+                if (proposal.Payload.Effect == AgentToolProposalEffect.Read &&
+                    proposal.Payload.Recovery == AgentToolProposalRecovery.RevalidateAndRead) {
                     resolution = new(AgentToolCancellationDisposition.NoExternalMutation, AgentToolCancellationReason.ReadOnlyInvocation);
                 } else if (proposal.Payload.Recovery == AgentToolProposalRecovery.OwnerReceipt) {
                     var matches = providers.Where(provider => provider.Supports(proposal.Payload.ToolName)).ToArray();
@@ -404,7 +448,7 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
                             _ => AgentToolEffectState.Unknown
                         }
                     };
-                }), cancellationToken, reconciliationOnly: true);
+                }), cancellationToken, reconciliationOnly: true, backgroundCheck: BackgroundCheck.RecordOutcome);
             }
         }
 
@@ -418,7 +462,9 @@ public sealed class AgentToolAdmissionJournal : IAgentToolAdmissionVerifier {
         }
         return new(lease.Session.ExecutionRunId, lease.Session.ChatSessionId, completed.Batches.SelectMany(batch => batch.Proposals)
             .Select(proposal => new AgentToolCancellationOutcome(proposal.IntentId, proposal.Payload.ToolName,
-                proposal.EffectState, proposal.Cancellation)).ToArray());
+                proposal.EffectState, proposal.Cancellation)).ToArray(),
+            (completed.ProviderDispatches.IsDefault ? [] : completed.ProviderDispatches)
+                .Select(dispatch => new AgentToolProviderDispatchOutcome(dispatch.Id, dispatch.State)).ToArray());
     }
 
     private async Task ValidateCachedReceiptDisclosureAsync(AgentToolRunLease lease, AgentToolBatchId batch,

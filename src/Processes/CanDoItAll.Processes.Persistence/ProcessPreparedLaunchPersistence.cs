@@ -28,6 +28,21 @@ public sealed class ProcessPreparedLaunchEntity {
     public Guid? DeliveredLinkId { get; set; }
     public ProcessLaunchLinkConflictReason? LinkConflictReason { get; set; }
     public string? PublicFailure { get; set; }
+
+    public bool ReferencesProject() {
+        var preparation = ProcessPreparedLaunchCodec.Read(this).Preparation;
+        return LinkDeliveryState != ProcessLaunchLinkDeliveryState.NotRequested || DeliveredLinkId.HasValue ||
+            preparation.Authority?.ProjectAdmission is not null || preparation.LinkTarget is not null ||
+            preparation.ToolSource?.Execution.SourceAuthority?.ProjectAdmission is not null ||
+            preparation.Request.ProjectId.HasValue || !string.IsNullOrWhiteSpace(preparation.Request.ProjectNodeId) ||
+            HasProjectVariables(preparation.Request.Variables) ||
+            preparation.InitialCommit.OriginalState.ProjectAdmission is not null ||
+            preparation.InitialCommit.Mutation.State.ProjectAdmission is not null ||
+            preparation.InitialCommit.InitialAssignments!.Any(assignment => HasProjectVariables(assignment.LaunchVariables));
+
+        static bool HasProjectVariables(IReadOnlyDictionary<string, string> variables)
+            => variables.ContainsKey(ProcessRuntimeLaunchVariables.ProjectId) || variables.ContainsKey(ProcessRuntimeLaunchVariables.ProjectNodeId);
+    }
 }
 
 internal sealed class ProcessPreparedLaunchEntityConfiguration : IEntityTypeConfiguration<ProcessPreparedLaunchEntity> {
@@ -51,11 +66,13 @@ internal sealed class ProcessPreparedLaunchEntityConfiguration : IEntityTypeConf
 }
 
 internal static class ProcessPreparedLaunchCodec {
+    private const string ToolSourceHashDomain = "process-tool-source-v1\n";
     private static readonly JsonSerializerOptions Options = ProcessInstancePlanPersistenceMapper.CreateSerializerOptions();
 
     public static ProcessPreparedLaunchEntity ToEntity(ProcessPreparedLaunch preparation) {
         ArgumentNullException.ThrowIfNull(preparation);
         preparation.Authority?.Validate();
+        preparation.ToolSource?.RequirePreparation(preparation);
         preparation = preparation with { PreparedAtUtc = NormalizeTimestamp(preparation.PreparedAtUtc) };
         if (preparation.AdmissionId.Value == Guid.Empty || preparation.CallerIntentId is { } intent && intent.Value == Guid.Empty ||
                 preparation.InitialCommit.InitialPlan is null ||
@@ -81,7 +98,7 @@ internal static class ProcessPreparedLaunchCodec {
             RunId = preparation.InitialCommit.Mutation.State.RunId.Value,
             PlanId = preparation.InitialCommit.InitialPlan.Header.PlanId.Value,
             RequestFingerprint = preparation.RequestFingerprint,
-            PreparationFingerprint = Hash(payload),
+            PreparationFingerprint = HashPayload(preparation, payload),
             PayloadJson = payload,
             PreparedAtUtc = preparation.PreparedAtUtc,
             State = ProcessLaunchContinuationState.Prepared,
@@ -90,12 +107,13 @@ internal static class ProcessPreparedLaunchCodec {
     }
 
     public static ProcessPreparedLaunchSnapshot Read(ProcessPreparedLaunchEntity entity) {
-        if (Hash(entity.PayloadJson) != entity.PreparationFingerprint) {
-            throw new InvalidOperationException($"Process launch admission '{entity.Id:D}' has inconsistent immutable evidence.");
-        }
         var preparation = JsonSerializer.Deserialize<ProcessPreparedLaunch>(entity.PayloadJson, Options)
             ?? throw new InvalidOperationException($"Process launch admission '{entity.Id:D}' has no prepared payload.");
+        if (HashPayload(preparation, entity.PayloadJson) != entity.PreparationFingerprint) {
+            throw new InvalidOperationException($"Process launch admission '{entity.Id:D}' has inconsistent immutable evidence.");
+        }
         preparation.Authority?.Validate();
+        preparation.ToolSource?.RequirePreparation(preparation);
         if (preparation.AdmissionId.Value != entity.Id || preparation.InitialCommit.Mutation.State.RunId.Value != entity.RunId ||
                 preparation.InitialCommit.InitialPlan?.Header.PlanId.Value != entity.PlanId ||
                 preparation.RequestFingerprint != entity.RequestFingerprint || preparation.CallerIntentId?.Value != entity.CallerIntentId ||
@@ -123,4 +141,12 @@ internal static class ProcessPreparedLaunchCodec {
     }
 
     private static string Hash(string value) => "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+
+    private static string HashPayload(ProcessPreparedLaunch preparation, string payload) {
+        if (preparation.ToolSource is not { } source) {
+            return Hash(payload);
+        }
+        source.Validate();
+        return Hash(ToolSourceHashDomain + payload);
+    }
 }

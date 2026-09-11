@@ -14,7 +14,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
     TimeProvider? timeProvider = null,
     CoordinatedDatabaseTransaction? coordinatedTransaction = null,
     IProcessProjectAdmissionPolicy? projectAdmissionPolicy = null,
-    IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null) :
+    IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null,
+    IProcessToolLaunchAdmissionPolicy? toolLaunchPolicy = null) :
     IProcessRuntimeUnitOfWork,
     IProcessRuntimeStateStore,
     IProcessRuntimeActivityStore,
@@ -165,9 +166,13 @@ public sealed class EfProcessRuntimeUnitOfWork(
         ValidateInitialPlanMatchesState(request);
         ValidateAtomicMutation(request);
 
-        await using var authorityLease = await AcquirePreparedAuthorityLeaseAsync(request, cancellationToken).ConfigureAwait(false);
+        var preparedAuthority = await AcquirePreparedAuthorityLeaseAsync(request, cancellationToken).ConfigureAwait(false);
+        await using var authorityLease = preparedAuthority.Lease;
+        var rootIds = preparedAuthority.SourceRootRunId is { } sourceRoot
+            ? new[] { request.OriginalState.RootRunId.Value, sourceRoot }.Distinct().Order().ToArray()
+            : [request.OriginalState.RootRunId.Value];
         using var rootSequenceLock = await ProcessRuntimeRootSequenceLocks
-            .AcquireAsync([request.OriginalState.RootRunId.Value], cancellationToken)
+            .AcquireAsync(rootIds, cancellationToken)
             .ConfigureAwait(false);
 
         if (!dbContext.Database.IsRelational())
@@ -194,13 +199,15 @@ public sealed class EfProcessRuntimeUnitOfWork(
             using var participation = request.InitialPlan is not null && (request.Mutation.State.ProjectAdmission is not null || request.InitialLaunchAdmission is not null)
                 ? coordinatedTransaction?.Enter(dbContext)
                 : null;
-            await AcquireRootMutationLockAsync(
-                    request.OriginalState.RootRunId.Value,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            foreach (var rootId in rootIds) {
+                await AcquireRootMutationLockAsync(rootId, cancellationToken).ConfigureAwait(false);
+            }
             var result = await CommitCoreAsync(request, authorityLease, cancellationToken).ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             participation?.Dispose();
+            if (authorityLease is not null) {
+                await authorityLease.DisposeAsync();
+            }
             return result;
         }
         catch
@@ -289,14 +296,20 @@ public sealed class EfProcessRuntimeUnitOfWork(
             preparedLaunch.State = ProcessLaunchContinuationState.Accepted;
         }
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        if (preparedLaunch is not null && authorityLease is not null &&
+                ProcessPreparedLaunchCodec.Read(preparedLaunch).Preparation is { ToolSource: not null } toolPreparation) {
+            await authorityLease.RequireForMutationAsync(toolPreparation.LinkTarget, cancellationToken).ConfigureAwait(false);
+        }
         dbContext.ChangeTracker.Clear();
-        return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
+        var persistedState = await LoadAsync(request.Mutation.State.RunId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("The Process runtime state was not found after its mutation was saved.");
+        return ProcessRuntimeCommitResult.FromMutation(request.Mutation) with { State = persistedState };
     }
 
-    private async Task<IProcessLaunchAuthorityLease?> AcquirePreparedAuthorityLeaseAsync(ProcessRuntimeCommitRequest request,
+    private async Task<PreparedLaunchMutationAuthority> AcquirePreparedAuthorityLeaseAsync(ProcessRuntimeCommitRequest request,
         CancellationToken cancellationToken) {
         if (request.InitialLaunchAdmission is not { } reference) {
-            return null;
+            return new(null);
         }
         var entity = await dbContext.PreparedLaunches.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == reference.AdmissionId.Value, cancellationToken).ConfigureAwait(false)
@@ -304,7 +317,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         var saved = ProcessPreparedLaunchCodec.Read(entity);
         ProcessPreparedLaunchCodec.RequireInitialCommit(saved, request);
         if (saved.AcceptedAtUtc is not null || saved.Preparation.Authority is not { } authority) {
-            return null;
+            return new(null);
         }
         if (coordinatedTransaction is null || launchAuthorityPolicy is null) {
             throw new InvalidOperationException("A trusted process launch requires configured transaction coordination and a current authority policy.");
@@ -312,8 +325,16 @@ public sealed class EfProcessRuntimeUnitOfWork(
         var currentCaller = reference.CurrentCallerAuthority
             ?? throw new InvalidOperationException("A new trusted process admission requires the actual caller's current authority.");
         ProcessLaunchIntentFingerprint.RequireSameCaller(saved.Preparation, currentCaller);
-        return await launchAuthorityPolicy.AcquireAsync(authority, currentCaller, cancellationToken).ConfigureAwait(false);
+        if (saved.Preparation.ToolSource is { } toolSource) {
+            var held = await (toolLaunchPolicy ?? throw new InvalidOperationException("Process tool acceptance requires its owner admission policy."))
+                .AcquireAsync(saved.Preparation, cancellationToken).ConfigureAwait(false);
+            return new(held, toolSource.Execution.RootRunId.Value);
+        }
+        return new(await launchAuthorityPolicy.AcquireAsync(authority, currentCaller, cancellationToken).ConfigureAwait(false));
     }
+
+    private sealed record PreparedLaunchMutationAuthority(IProcessLaunchAuthorityLease? Lease,
+        Guid? SourceRootRunId = null);
 
     private async Task<ProcessPreparedLaunchEntity?> RequirePreparedLaunchAsync(ProcessRuntimeCommitRequest request,
         CancellationToken cancellationToken) {

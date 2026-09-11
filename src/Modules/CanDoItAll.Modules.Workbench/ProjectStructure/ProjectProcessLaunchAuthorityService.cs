@@ -12,14 +12,14 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public sealed class ProjectProcessLaunchAuthorityService(
+public sealed partial class ProjectProcessLaunchAuthorityService(
     ICanonicalRuntimeDatabase database,
     IAgentCatalogReadLeaseStore catalog,
     IAgentExecutionProfileGenerationSource generations,
     ProjectWriteAdmissionService projectAdmissions,
     ProjectProcessLaunchTargetQuery targets,
     IOptionsMonitor<ApiAccessOptions> apiOptions,
-    TimeProvider clock) : IProcessLaunchAuthorityPolicy, IProcessLaunchOperatorAuthoritySource {
+    TimeProvider clock) : IProcessLaunchAuthorityPolicy, IProcessLaunchOperatorAuthoritySource, IProcessSourceAuthorityObservationPolicy {
     public async Task<ProcessLaunchAuthority> CaptureLocalAsync(Guid? projectId, ProcessLaunchOperatorSurface surface,
         CancellationToken cancellationToken = default) {
         var authority = new ProcessLaunchAuthority(new ProcessLaunchPrincipal.LocalOperator(surface), database.Profile.Profile.Id,
@@ -49,17 +49,7 @@ public sealed class ProjectProcessLaunchAuthorityService(
         RequireCatalogScope(held);
         var agent = held.Agent ?? throw Denied("The process source Agent no longer exists.");
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
-        var ceiling = new ProcessLaunchAgentCeiling(governance.AuthorityId.Value, governance.AgentId,
-            governance.DatabaseProfileGeneration.Value, governance.WorkspaceScope.Kind switch {
-                WorkspaceScopeKind.Organization => ProcessLaunchSourceScopeKind.Organization,
-                WorkspaceScopeKind.Project => ProcessLaunchSourceScopeKind.Project,
-                _ => throw Denied("This Agent authority scope cannot admit a project Process launch.")
-            }, governance.WorkspaceScope.Key, governance.ReadAllowed, governance.MutationAllowed,
-            governance.PolicyVersion, governance.PolicyFingerprint, governance.AllowedOperations.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            governance.AllowedCapabilityKeys.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            governance.WritableExternalTargetAliases.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            governance.ReadOnlyExternalTargetAliases.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            governance.AllowedManagedArtifactReadRefs.Order(StringComparer.OrdinalIgnoreCase).ToArray());
+        var ceiling = CreateAgentCeiling(governance);
         var authority = new ProcessLaunchAuthority(new ProcessLaunchPrincipal.AgentExecution(ceiling, operation),
             governance.DatabaseProfileId, expectedProject,
             governance.MutationAllowed && ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(access) &&
@@ -70,6 +60,19 @@ public sealed class ProjectProcessLaunchAuthorityService(
         await projectAdmissions.RequireCurrentAsync(ToProject(expectedProject), cancellationToken);
         return authority;
     }
+
+    private static ProcessLaunchAgentCeiling CreateAgentCeiling(AgentExecutionGovernanceSnapshot governance)
+        => new(governance.AuthorityId.Value, governance.AgentId,
+            governance.DatabaseProfileGeneration.Value, governance.WorkspaceScope.Kind switch {
+                WorkspaceScopeKind.Organization => ProcessLaunchSourceScopeKind.Organization,
+                WorkspaceScopeKind.Project => ProcessLaunchSourceScopeKind.Project,
+                _ => throw Denied("This Agent authority scope cannot access a project Process launch.")
+            }, governance.WorkspaceScope.Key, governance.ReadAllowed, governance.MutationAllowed,
+            governance.PolicyVersion, governance.PolicyFingerprint, governance.AllowedOperations.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            governance.AllowedCapabilityKeys.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            governance.WritableExternalTargetAliases.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            governance.ReadOnlyExternalTargetAliases.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            governance.AllowedManagedArtifactReadRefs.Order(StringComparer.OrdinalIgnoreCase).ToArray());
 
     public async Task<IProcessLaunchAuthorityLease> AcquireAsync(ProcessLaunchAuthority saved, ProcessLaunchAuthority currentCaller,
         CancellationToken cancellationToken = default) {

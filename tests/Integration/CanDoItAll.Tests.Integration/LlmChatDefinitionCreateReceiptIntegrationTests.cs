@@ -14,6 +14,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
@@ -563,6 +564,112 @@ public sealed class LlmChatDefinitionCreateReceiptIntegrationTests {
     [InlineData(CachedReceiptReadChange.OwnerReceiptUnavailable)]
     public Task Cached_hr_receipt_requires_current_read_and_exact_capability_without_losing_durable_evidence(CachedReceiptReadChange change)
         => VerifyCancelledReceiptAsync(inFlightCommit: false, change);
+
+    [Theory]
+    [InlineData(CachedReceiptReadChange.ProjectReadRevoked)]
+    [InlineData(CachedReceiptReadChange.ReceiptCapabilityRevoked)]
+    [InlineData(CachedReceiptReadChange.OwnerReceiptUnavailable)]
+    public async Task Completed_tool_result_revalidates_the_real_owner_receipt_and_saved_source_without_repeating_create(CachedReceiptReadChange change) {
+        await using var database = ReceiptDatabase.Create("simple-chat-completed-result");
+        await using var originalOwner = await database.OpenAsync(new Resolver());
+        var profile = originalOwner.Services.GetRequiredService<IDatabaseRuntimeState>().GetSnapshot();
+        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync(
+            profileBinding: new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)),
+            includeRecoveryInput: true, managedHr: true,
+            transientContext: new("Original project scope.", WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"))));
+        var codec = new HrSimpleChatProposalCodec();
+        var payload = codec.PrepareCreate(CreateCommand().Definition);
+        var initialJournal = fixture.NewJournal();
+        AgentToolResultDisclosure disclosure;
+        AgentToolProtocolEnvelope resultEnvelope;
+        await using (var lease = await initialJournal.AcquireRunAsync(fixture.Session, default)) {
+            using var bound = lease.Bind();
+            var segment = await initialJournal.BeginSegmentAsync(lease, AgentToolAdmissionJournalFixture.Envelope(), null, default);
+            var admitted = await initialJournal.AdmitBatchAsync(lease, payload.Digest, AgentToolAdmissionJournalFixture.Envelope(),
+                [new("original-call", payload, true)], default);
+            var batch = Assert.Single(admitted.Batches);
+            var approvals = await initialJournal.SaveApprovalCheckpointAsync(lease, segment.Segments[0].Id,
+                AgentToolAdmissionJournalFixture.Envelope(), "{}",
+                [new("approval", "original-call", payload.ToolName, "function", "Review", payload.ArgumentsJson)], default);
+            await fixture.ApproveAsync(approvals);
+            var claim = await initialJournal.ClaimInvocationAsync(lease, batch.Id, "original-call", payload, default);
+            await using var scope = originalOwner.Services.CreateAsyncScope();
+            var key = new LlmChatDefinitionCreateKey(new(HrSimpleChatToolPolicy.CreateProducer, fixture.Agent.Id.ToString("N"),
+                $"agent-chat:{fixture.Session.ChatSessionId:N}"), new(claim.Proposal.IntentId.Value));
+            var result = await scope.ServiceProvider.GetRequiredService<ILlmChatDefinitionCreateReceiptService>()
+                .CreateOnceAsync(new(key, codec.Read<CreateLlmChatDefinitionCommand>(payload)));
+            Assert.True(result.IsSuccess);
+            var receipt = result.Value!.Receipt;
+            var response = new HrSimpleChatCreateResponse(new(receipt.Key.IntentId.Value, receipt.DefinitionId.Value,
+                receipt.DefinitionRevision.Value, receipt.OriginalConcurrencyToken, receipt.CreatedAtUtc), result.Value.WasReplay);
+            var json = JsonSerializer.SerializeToElement(response, HrSimpleChatProposalCodec.SerializerOptions);
+            resultEnvelope = AgentToolProtocolEnvelope.Create("fixture-owner-result", 1, json.GetRawText());
+            await initialJournal.CompleteInvocationAsync(claim, resultEnvelope, AgentToolEffectState.Committed, default);
+            disclosure = new(claim.Proposal.IntentId, payload, AgentToolEffectState.Committed, json);
+        }
+
+        var unavailable = new Resolver { Reject = true };
+        await using var restartedOwner = await database.OpenAsync(unavailable);
+        await using var lookupScope = restartedOwner.Services.CreateAsyncScope();
+        var store = fixture.NewStore();
+        var journal = fixture.NewJournal(store);
+        var receipts = new ReadOnlyReceiptService(lookupScope.ServiceProvider.GetRequiredService<ILlmChatDefinitionCreateReceiptService>());
+        var authority = new ReceiptAuthority(fixture);
+        var administration = new HrSimpleChatAdministration(
+            lookupScope.ServiceProvider.GetRequiredService<ILlmChatDefinitionApplicationService>(), receipts,
+            lookupScope.ServiceProvider.GetRequiredService<ILlmChatProviderResolver>(),
+            lookupScope.ServiceProvider.GetRequiredService<ILlmChatRuntimeLeaseFactory>(),
+            lookupScope.ServiceProvider.GetRequiredService<ILlmChatOperationScopeAccessor>(),
+            new HrSimpleChatRuntimeAuthorization(store, store, journal, authority), codec);
+        var context = new AgentRuntimeToolProviderContext(fixture.Agent, fixture.Provider,
+            (await store.LoadCatalogSnapshotAsync()).Catalog.Capabilities, false, AgentRuntimeToolProviderPurpose.InteractiveChat,
+            string.Empty, AgentRuntimeContextIntent.Empty with { Purpose = AgentRuntimeContextPurpose.InteractiveChat },
+            new Dictionary<string, string>()) {
+            Governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(fixture.Detail.Run.MetadataJson),
+            AdmittedToolSession = fixture.Session
+        };
+        var acquire = new HrSimpleChatRuntimeToolProvider(administration).GetToolMetadata(context)
+            .Single(metadata => metadata.ToolName == payload.ToolName).AuthorizeResultDisclosureAsync!;
+        await using var disclosureLease = await journal.AcquireRunAsync(fixture.Session, default);
+        using var disclosureScope = disclosureLease.Bind();
+        await using (await acquire(disclosure, default)) { }
+        Assert.Equal(1, receipts.Reads);
+        var receiptKey = HrSimpleChatToolPolicy.Get(HrSimpleChatOperation.Receipt).CapabilityKey;
+        var originalAssignment = fixture.Agent.Capabilities.Single(assignment => assignment.CapabilityKey == receiptKey);
+        if (change == CachedReceiptReadChange.ProjectReadRevoked) {
+            authority.ReadAllowed = false;
+        } else if (change == CachedReceiptReadChange.ReceiptCapabilityRevoked) {
+            await store.UpdateCatalogAsync(catalog => catalog with {
+                Agents = catalog.Agents.Select(agent => agent.Id == fixture.Agent.Id ? agent with {
+                    ConfigurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(agent.ConfigurationJson),
+                    Capabilities = agent.Capabilities.Where(assignment => assignment.CapabilityKey != receiptKey).ToArray()
+                } : agent).ToArray()
+            });
+            Assert.DoesNotContain((await fixture.NewStore().LoadCatalogSnapshotAsync()).Catalog.Agents.Single(agent => agent.Id == fixture.Agent.Id)
+                .Capabilities, assignment => assignment.CapabilityKey == receiptKey);
+        } else {
+            receipts.ReturnMissing = true;
+        }
+        await Assert.ThrowsAsync<HrSimpleChatAdministrationException>(async () => await acquire(disclosure, default));
+        Assert.Equal(change == CachedReceiptReadChange.OwnerReceiptUnavailable ? 2 : 1, receipts.Reads);
+        var retained = Assert.Single(Assert.Single((await fixture.NewStore().GetExecutionRunAsync(fixture.Session.ExecutionRunId))!
+            .ToolAdmission!.Batches).Proposals);
+        Assert.Equal(AgentToolEffectState.Committed, retained.EffectState);
+        Assert.Equal(resultEnvelope, retained.Result);
+
+        authority.ReadAllowed = true;
+        receipts.ReturnMissing = false;
+        if (change == CachedReceiptReadChange.ReceiptCapabilityRevoked) {
+            await store.UpdateCatalogAsync(catalog => catalog with {
+                Agents = catalog.Agents.Select(agent => agent.Id == fixture.Agent.Id ? agent with {
+                    Capabilities = [.. agent.Capabilities, originalAssignment]
+                } : agent).ToArray()
+            });
+        }
+        await using (await acquire(disclosure, default)) { }
+        Assert.Equal(0, unavailable.Calls);
+        await AssertCountsAsync(restartedOwner, 1, 1);
+    }
 
     private static async Task VerifyCancelledReceiptAsync(bool inFlightCommit, CachedReceiptReadChange cachedReadChange) {
         await using var database = ReceiptDatabase.Create("simple-chat-cancelled-receipt");

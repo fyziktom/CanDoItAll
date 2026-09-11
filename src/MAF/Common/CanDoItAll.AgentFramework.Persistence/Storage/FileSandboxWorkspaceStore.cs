@@ -579,6 +579,9 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(candidate);
+        if (source.RequiresBackgroundAdmission) {
+            throw new InvalidOperationException("Use the explicitly admitted background reservation operation.");
+        }
         if (!source.Matches(candidate.Run))
         {
             throw new InvalidOperationException(

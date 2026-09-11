@@ -478,26 +478,21 @@ internal sealed class McpCapabilityBuilder(
                 ServerDescription = capability.Description
             };
 
-            var allowedTools = hostedTool.AllowedTools;
-            foreach (var allowedTool in configuration.AllowedTools?.Where(item => !string.IsNullOrWhiteSpace(item)).Select(item => item!) ?? [])
-            {
-                allowedTools?.Add(allowedTool);
+            var allowedTools = configuration.AllowedTools?.Where(item => !string.IsNullOrWhiteSpace(item)).Select(item => item!).ToList();
+            if (allowedTools is { Count: > 0 }) {
+                hostedTool.AllowedTools = allowedTools;
             }
 
-            var hostedHeaders = hostedTool.Headers;
-            foreach (var header in await ResolveSecretBindingsAsync(
+            var headers = await ResolveSecretBindingsAsync(
                          configuration.HeaderBindings,
                          agent,
                          capability.Name,
                          "header",
                          SecretRuntimePurposes.AgentMcpHeader,
                          StringComparer.OrdinalIgnoreCase,
-                         cancellationToken))
-            {
-                if (hostedHeaders is not null)
-                {
-                    hostedHeaders[header.Key] = header.Value;
-                }
+                         cancellationToken);
+            if (headers.Count > 0) {
+                hostedTool.Headers = headers.ToDictionary(header => header.Key, header => header.Value, StringComparer.OrdinalIgnoreCase);
             }
 
             return hostedTool;

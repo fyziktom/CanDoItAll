@@ -20,6 +20,75 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
+    [Theory]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorCatalogSearch, CapabilityCuratorToolPolicy.CapabilityCuratorCatalogSearch)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet, CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorSave, CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest, CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest, CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet, CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate, CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorVerify, CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet)]
+    public async Task Saved_results_revalidate_the_current_read_capability_without_repeating_the_action(
+        string toolName, string readTool) {
+        var harness = CreateHarness();
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item => item.ToolName == toolName);
+        var authorize = Assert.IsType<Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>>(
+            metadata.AuthorizeResultDisclosureAsync);
+        var disclosure = ManagedToolDisclosureTestData.Create(metadata, new { agentId = harness.TargetAgentId });
+        var readKeys = new HashSet<string>(StringComparer.Ordinal) { CapabilityCuratorAgentCapabilityKeys.ToolNameToCapabilityKey[readTool] };
+        var readActor = harness.Context.Agent with {
+            Capabilities = harness.Context.Agent.Capabilities.Where(item => readKeys.Contains(item.CapabilityKey)).ToArray()
+        };
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var allowed = await authorize(disclosure, default)) {
+            Assert.Null(allowed);
+        }
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id
+            ? readActor with { Capabilities = [] } : item).ToArray();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(disclosure, default).AsTask());
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var restored = await authorize(disclosure, default)) {
+            Assert.Null(restored);
+        }
+        Assert.Equal(AgentToolEffectState.Unknown, disclosure.EffectState);
+        Assert.Empty(harness.SetupFlow.ToolRequests);
+        Assert.Empty(harness.SetupFlow.McpRequests);
+        Assert.Equal(0, harness.Workspace.SaveCapabilityCallCount);
+    }
+
+    [Fact]
+    public async Task Saved_HR_verification_uses_its_existing_editor_read_access_without_gaining_assignment_tools() {
+        var harness = CreateHarness(useHrActor: true);
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item =>
+            item.ToolName == CapabilityCuratorToolPolicy.CapabilityCuratorVerify);
+        var saved = ManagedToolDisclosureTestData.Create(metadata, new { agentId = harness.TargetAgentId });
+        var reader = harness.Context.Agent with { Capabilities = harness.Context.Agent.Capabilities.Where(item =>
+            item.CapabilityKey == CapabilityCuratorAgentCapabilityKeys.EditorGet).ToArray() };
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == reader.Id ? reader : item).ToArray();
+        await using var lease = await metadata.AuthorizeResultDisclosureAsync!(saved, default);
+        Assert.Null(lease);
+        Assert.DoesNotContain(harness.Provider.GetToolMetadata(harness.Context), item =>
+            item.ToolName == CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet);
+        Assert.Empty(harness.SetupFlow.ToolRequests);
+        Assert.Empty(harness.SetupFlow.McpRequests);
+    }
+
+    [Fact]
+    public async Task Saved_assignment_result_does_not_disclose_a_target_that_has_become_a_template() {
+        var harness = CreateHarness();
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item =>
+            item.ToolName == CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate);
+        var saved = ManagedToolDisclosureTestData.Create(metadata, new { agentId = harness.TargetAgentId });
+        var target = harness.Workspace.Agents.Single(item => item.Id == harness.TargetAgentId);
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == target.Id
+            ? item with { IsTemplate = true } : item).ToArray();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => metadata.AuthorizeResultDisclosureAsync!(saved, default).AsTask());
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == target.Id ? target : item).ToArray();
+        await using var lease = await metadata.AuthorizeResultDisclosureAsync!(saved, default);
+        Assert.Null(lease);
+    }
+
     [Fact]
     public void MCP_curator_preserves_case_distinct_path_authority_and_exact_runtime_data()
     {

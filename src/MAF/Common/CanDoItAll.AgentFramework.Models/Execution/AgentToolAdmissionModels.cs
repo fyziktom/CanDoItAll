@@ -37,18 +37,32 @@ public readonly record struct AgentToolSemanticDigest {
 }
 
 public sealed record AgentToolSessionReference {
-    public AgentToolSessionReference(Guid executionRunId, Guid chatSessionId, AgentExecutionAuthorityId authorityId) {
+    [JsonConstructor]
+    public AgentToolSessionReference(Guid executionRunId, Guid chatSessionId, AgentExecutionAuthorityId authorityId,
+        AgentToolBackgroundSourceBinding? backgroundSource = null) {
         ArgumentOutOfRangeException.ThrowIfEqual(executionRunId, Guid.Empty);
-        ArgumentOutOfRangeException.ThrowIfEqual(chatSessionId, Guid.Empty);
-        ArgumentOutOfRangeException.ThrowIfEqual(authorityId.Value, Guid.Empty);
+        if (backgroundSource is null) {
+            ArgumentOutOfRangeException.ThrowIfEqual(chatSessionId, Guid.Empty);
+            ArgumentOutOfRangeException.ThrowIfEqual(authorityId.Value, Guid.Empty);
+        } else if (chatSessionId != Guid.Empty || authorityId.Value != Guid.Empty) {
+            throw new ArgumentException("A background tool source cannot claim an interactive chat or authority.");
+        }
         ExecutionRunId = executionRunId;
         ChatSessionId = chatSessionId;
         AuthorityId = authorityId;
+        BackgroundSource = backgroundSource;
     }
 
     public Guid ExecutionRunId { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Guid ChatSessionId { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public AgentExecutionAuthorityId AuthorityId { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentToolBackgroundSourceBinding? BackgroundSource { get; }
 }
 
 public sealed record AgentToolProfileBinding {

@@ -15,19 +15,21 @@ internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : Dele
         }
 
         var input = messages.ToArray();
-        var digest = RequestDigest(input, options);
+        var nativeContracts = MafNativeToolContracts.Capture(options?.Tools ?? []);
+        var digest = RequestDigest(input, options, nativeContracts);
         var replay = await admission.ReplayResponseAsync(digest, cancellationToken);
         if (replay is not null) {
             return MafToolProtocolCodec.Decode<ChatResponse>(replay);
         }
 
+        var dispatch = await admission.BeginProviderRequestAsync(digest, input, nativeContracts, cancellationToken);
         var response = await base.GetResponseAsync(input, options, cancellationToken);
         foreach (var message in response.Messages.Where(message => string.IsNullOrEmpty(message.MessageId))) {
             message.MessageId = Guid.NewGuid().ToString("N");
         }
 
         await admission.AdmitResponseAsync(digest, MafToolProtocolCodec.Encode(response),
-            response.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>().ToArray(), cancellationToken);
+            response.Messages.SelectMany(message => message.Contents).ToArray(), cancellationToken, dispatch);
         return response;
     }
 
@@ -43,13 +45,15 @@ internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : Dele
         }
 
         var input = messages.ToArray();
-        var digest = RequestDigest(input, options);
+        var nativeContracts = MafNativeToolContracts.Capture(options?.Tools ?? []);
+        var digest = RequestDigest(input, options, nativeContracts);
         var replay = await admission.ReplayResponseAsync(digest, cancellationToken);
         ChatResponseUpdate[] updates;
         var visiblePrefixCount = 0;
         if (replay is not null) {
             updates = MafToolProtocolCodec.Decode<ChatResponseUpdate[]>(replay);
         } else {
+            var dispatch = await admission.BeginProviderRequestAsync(digest, input, nativeContracts, cancellationToken);
             var buffered = new List<ChatResponseUpdate>();
             var fallbackMessageId = Guid.NewGuid().ToString("N");
             var utf8Bytes = 0L;
@@ -63,7 +67,7 @@ internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : Dele
                 utf8Bytes += Encoding.UTF8.GetByteCount(encoded.PayloadJson);
                 if (utf8Bytes > AgentToolProtocolEnvelope.MaximumUtf8Bytes || buffered.Count >= 65536) {
                     throw new AgentToolAdmissionException("tool-admission.protocol-too-large",
-                        "The complete provider response exceeds the supported admission bound; no tool was dispatched.");
+                        "The complete provider response exceeds the supported admission bound. Any started provider dispatch remains unresolved; automatic retry is prohibited.");
                 }
 
                 buffered.Add(MafToolProtocolCodec.Decode<ChatResponseUpdate>(encoded));
@@ -75,9 +79,8 @@ internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : Dele
             }
 
             updates = buffered.ToArray();
-            var calls = updates.ToChatResponse().Messages.SelectMany(message => message.Contents)
-                .OfType<FunctionCallContent>().ToArray();
-            await admission.AdmitResponseAsync(digest, MafToolProtocolCodec.Encode(updates), calls, cancellationToken);
+            var contents = updates.ToChatResponse().Messages.SelectMany(message => message.Contents).ToArray();
+            await admission.AdmitResponseAsync(digest, MafToolProtocolCodec.Encode(updates), contents, cancellationToken, dispatch);
         }
 
         for (var index = visiblePrefixCount; index < updates.Length; index++) {
@@ -86,8 +89,9 @@ internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : Dele
         }
     }
 
-    private static AgentToolSemanticDigest RequestDigest(ChatMessage[] messages, ChatOptions? options) {
-        var ordinaryOptions = options?.Clone();
+    internal static AgentToolSemanticDigest RequestDigest(ChatMessage[] messages, ChatOptions? options,
+        IReadOnlyList<MafNativeToolContract> nativeContracts) {
+        var ordinaryOptions = ProviderHistoryChatContext.ForTransport(options)?.Clone();
         if (ordinaryOptions is not null) {
             ordinaryOptions.Tools = null;
             ordinaryOptions.RawRepresentationFactory = null;
@@ -106,6 +110,15 @@ internal sealed class MafToolAdmissionChatClient(IChatClient innerClient) : Dele
             copy.MessageId = null;
             return copy;
         }).ToArray();
-        return MafToolProtocolCodec.Digest(new { Messages = protocolMessages, Options = ordinaryOptions, Tools = tools });
+        if (nativeContracts.Count == 0) {
+            return MafToolProtocolCodec.Digest(new { Messages = protocolMessages, Options = ordinaryOptions, Tools = tools });
+        }
+
+        var declarations = options?.Tools?.OfType<AIFunctionDeclaration>().Select(tool => new {
+            tool.Name, tool.Description, tool.JsonSchema
+        }).ToArray();
+        return MafToolProtocolCodec.Digest(new {
+            Messages = protocolMessages, Options = ordinaryOptions, Tools = declarations, NativeTools = nativeContracts
+        });
     }
 }

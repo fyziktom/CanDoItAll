@@ -158,6 +158,63 @@ public sealed class HrSimpleChatAdministration(
         }
     }
 
+    internal async ValueTask<IAsyncDisposable?> AcquireResultDisclosureAsync(
+        AgentRuntimeToolProviderContext context, HrSimpleChatToolOperation operation,
+        AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
+        if (operation.ToolName != disclosure.Payload.ToolName || operation.Effect != disclosure.Payload.Effect ||
+            operation.Recovery != disclosure.Payload.Recovery) {
+            throw new HrSimpleChatAdministrationException("hr-simple-chat.authorization-denied",
+                "The saved result does not match this provider-owned operation policy.");
+        }
+
+        var lease = await leaseFactory.AcquireAsync(cancellationToken);
+        try {
+            EnsureCurrent(lease);
+            using var scope = operationScope.Push(new(LlmChatOperationId.New(), lease.Identity));
+            var session = await authorization.RequireResultDisclosureAsync(context, operation, lease.Identity, lease.CancellationToken);
+            if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
+                switch (operation.Operation) {
+                    case HrSimpleChatOperation.Settings:
+                        await ReadExpectedAsync(codec.Read<HrSimpleChatDefinitionVersion>(disclosure.Payload), lease.CancellationToken);
+                        break;
+                    case HrSimpleChatOperation.Create:
+                        var result = disclosure.Result.Deserialize<HrSimpleChatCreateResponse>(HrSimpleChatProposalCodec.SerializerOptions)
+                            ?? throw new InvalidOperationException("The saved create result has no original receipt identity.");
+                        if (result.Receipt.IntentId != disclosure.IntentId.Value) {
+                            throw new InvalidOperationException("The saved receipt does not match its durable proposal intent.");
+                        }
+                        await RequireReceiptAsync(disclosure.IntentId.Value, result.Receipt);
+                        break;
+                    case HrSimpleChatOperation.Receipt:
+                        var original = disclosure.Result.ValueKind == JsonValueKind.Null ? null
+                            : disclosure.Result.Deserialize<HrSimpleChatOriginalIdentity>(HrSimpleChatProposalCodec.SerializerOptions);
+                        if (original is not null) {
+                            var request = codec.Read<HrSimpleChatReceiptRequest>(disclosure.Payload);
+                            await RequireReceiptAsync(request.IntentId, original);
+                        }
+                        break;
+                }
+            }
+
+            EnsureCurrent(lease);
+            await authorization.RequireResultDisclosureAsync(context, operation, lease.Identity, lease.CancellationToken);
+            EnsureCurrent(lease);
+            return lease;
+
+            async Task RequireReceiptAsync(Guid intentId, HrSimpleChatOriginalIdentity expected) {
+                var found = await receipts.FindReceiptAsync(CreateKey(session, intentId), lease.CancellationToken);
+                EnsureSuccess(found);
+                if (found.Value is not { } receipt || OriginalIdentity(receipt) != expected) {
+                    throw new HrSimpleChatAdministrationException("hr-simple-chat.receipt-unavailable",
+                        "The original owner receipt could not be confirmed for disclosure; the saved effect remains recorded.");
+                }
+            }
+        } catch {
+            await lease.DisposeAsync();
+            throw;
+        }
+    }
+
     private async Task<T> ExecuteAsync<T>(AgentRuntimeToolProviderContext context, HrSimpleChatOperation operation,
         Func<AgentToolSessionAdmission, CancellationToken, Task<T>> action, CancellationToken cancellationToken) {
         if (HrSimpleChatRuntimeToolProvider.Unavailability(context, HrSimpleChatToolPolicy.Get(operation)) is { } unavailable) {

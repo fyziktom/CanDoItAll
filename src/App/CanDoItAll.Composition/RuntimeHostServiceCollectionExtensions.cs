@@ -90,6 +90,12 @@ public static class RuntimeHostServiceCollectionExtensions
         services.TryAddScoped<ProjectProcessLaunchAuthorityService>();
         services.TryAddScoped<IProcessLaunchAuthorityPolicy>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
         services.TryAddScoped<IProcessLaunchOperatorAuthoritySource>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
+        services.TryAddScoped<IProcessSourceAuthorityObservationPolicy>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
+        services.TryAddScoped<ProjectProcessExecutionMutationService>();
+        services.TryAddScoped<IProcessToolLaunchAdmissionPolicy, ProjectProcessToolLaunchAdmissionPolicy>();
+        services.TryAddSingleton<ProjectStructureProcessProposalCodec>();
+        services.TryAddScoped<ProjectStructureProcessToolAdmission>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider>(provider => provider.GetRequiredService<ProjectStructureProcessToolAdmission>());
         services.TryAddScoped<IWorkflowScheduledSourceAuthorityPolicy, ProjectScheduledWorkflowSourceAuthorityPolicy>();
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);

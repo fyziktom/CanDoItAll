@@ -165,8 +165,22 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
                 item.Key,
                 item.Value,
                 WorkflowCuratorToolPolicy.Capabilities.Single(policy => policy.Name == item.Key).RequiresApprovalByDefault,
-                ["workflow-curator", "workflow"]))
+                ["workflow-curator", "workflow"]) {
+                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item.Key, disclosure, token)
+            })
             .ToArray();
+    }
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(
+        AgentRuntimeToolProviderContext context, string toolName, AgentToolResultDisclosure disclosure,
+        CancellationToken cancellationToken) {
+        if (!WorkflowCuratorAgentRuntimeAuthorizationPolicy.CanAttach(context) || disclosure.Payload.ToolName != toolName) {
+            throw new UnauthorizedAccessException("The saved Workflow Curator result does not match the current managed tool context.");
+        }
+        var readTool = ToolOperations[toolName] == AgentRuntimeToolOperationKind.Mutation
+            ? WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet : toolName;
+        await authorizationService.EnsureToolInvocationAuthorizedAsync(context.Agent.Id, readTool, cancellationToken);
+        return null;
     }
 
     private async Task<WorkflowCuratorCatalogSearchResult> SearchAsync(

@@ -126,7 +126,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId));
         var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
             new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
-                workspaceIdentity.DatabaseProfileGeneration));
+                workspaceIdentity.DatabaseProfileGeneration), backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>());
         var lifecycleFactExtractors = serviceProvider
             .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
             .ToList();

@@ -390,7 +390,7 @@ public sealed class ProcessPreparedLaunchPersistenceTests {
     private static ProjectProcessAdmissionPolicy ProjectPolicy(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)
         => new(Admissions(services, coordinator));
     private static ProjectProcessLaunchTargetQuery Targets(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)
-        => new(new WorkbenchFactory(WorkbenchOptions(services)), WorkbenchOptions(services), coordinator, services.GetRequiredService<ProjectWorkbenchService>());
+        => new(new WorkbenchFactory(WorkbenchOptions(services)), WorkbenchOptions(services), coordinator, services.GetRequiredService<ProjectStructureAssemblyService>());
     private static ProjectProcessLaunchDeliveryService Delivery(IServiceProvider services, CoordinatedDatabaseTransaction coordinator,
         DbContextOptions<WorkbenchDbContext>? ownerOptions = null, IProcessLaunchLinkReceiptStore? receiptStore = null)
         => new(new WorkbenchFactory(ownerOptions ?? WorkbenchOptions(services)), coordinator, Admissions(services, coordinator),

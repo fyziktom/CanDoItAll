@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -72,9 +73,56 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
 
         return
         [
-            CreateMetadata(PromptGalleryToolPolicy.PromptGallerySearch),
-            CreateMetadata(PromptGalleryToolPolicy.PromptGalleryItemGet)
+            CreateMetadata(context, PromptGalleryToolPolicy.PromptGallerySearch),
+            CreateMetadata(context, PromptGalleryToolPolicy.PromptGalleryItemGet)
         ];
+    }
+
+    private static readonly JsonSerializerOptions DisclosureJson = new(JsonSerializerDefaults.Web) {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(AgentRuntimeToolProviderContext context,
+        string toolName, AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
+        if (!context.Agent.Permissions.CanUseTools || disclosure.Payload.ToolName != toolName) {
+            throw new UnauthorizedAccessException("The saved Prompt Gallery result does not match the current tool context.");
+        }
+        if (disclosure.EffectState == AgentToolEffectState.NotCommitted) {
+            return null;
+        }
+        PromptGalleryAgentItemResult? item = null;
+        IReadOnlyCollection<Guid> ids;
+        if (toolName == PromptGalleryToolPolicy.PromptGallerySearch) {
+            var saved = disclosure.Result.Deserialize<PromptGalleryAgentSearchResult>(DisclosureJson)
+                ?? throw new InvalidOperationException("The saved Prompt Gallery search result is unavailable.");
+            ids = saved.Items.Select(entry => entry.PromptArtifactId).Distinct().ToArray();
+        } else {
+            item = disclosure.Result.Deserialize<PromptGalleryAgentItemResult>(DisclosureJson)
+                ?? throw new InvalidOperationException("The saved Prompt Gallery item result is unavailable.");
+            using var arguments = JsonDocument.Parse(disclosure.Payload.ArgumentsJson);
+            if (arguments.RootElement.GetProperty("request").GetProperty("promptArtifactId").GetGuid() != item.PromptArtifactId) {
+                throw new UnauthorizedAccessException("The saved Prompt Gallery body belongs to another requested item.");
+            }
+            ids = [item.PromptArtifactId];
+        }
+        var current = RequireValue(await promptGallery.GetCompatibilitySnapshotsAsync(ids, cancellationToken),
+            "Saved Prompt Gallery result compatibility");
+        var model = string.IsNullOrWhiteSpace(context.Agent.Model) ? context.Provider.DefaultModel : context.Agent.Model;
+        var consumer = new PromptGalleryConsumerContext(PromptGalleryConsumer.AgentRuntime,
+            PromptGalleryCompatibilityPurpose.Execution, Provider: context.Provider.Kind.ToString(), Model: model,
+            RequiresFinalVersion: true);
+        if (ids.Any(id => !current.TryGetValue(id, out var snapshot) || !compatibilityEvaluator.Evaluate(snapshot, consumer).CanUse)) {
+            throw new UnauthorizedAccessException("A saved Prompt Gallery result is no longer available to this runtime consumer and model.");
+        }
+        if (item is not null) {
+            var version = RequireValue(await promptGallery.GetVersionSnapshotAsync(item.PromptVersionId, cancellationToken),
+                "Saved Prompt Gallery immutable version");
+            if (version.PromptArtifactId != item.PromptArtifactId || version.VersionNumber != item.VersionNumber ||
+                version.PromptVersionId != item.PromptVersionId || version.Content != item.Content) {
+                throw new UnauthorizedAccessException("The saved Prompt Gallery body no longer matches its immutable owner version.");
+            }
+        }
+        return null;
     }
 
     private async Task<PromptGalleryAgentSearchResult> SearchAsync(
@@ -183,11 +231,13 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
         throw new InvalidOperationException($"{resourceName} could not be loaded. {detail}");
     }
 
-    private static AgentRuntimeToolMetadata CreateMetadata(string toolName)
+    private AgentRuntimeToolMetadata CreateMetadata(AgentRuntimeToolProviderContext context, string toolName)
         => PromptGalleryToolPolicy.CreateRuntimeMetadata(
             ProviderKey,
             toolName,
-            ["prompt-gallery", "instructions", "canonical-read"]);
+            ["prompt-gallery", "instructions", "canonical-read"]) with {
+                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, toolName, disclosure, token)
+            };
 }
 
 public sealed record PromptGalleryAgentSearchInput

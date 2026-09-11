@@ -36,7 +36,7 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
     internal static async Task<AgentToolAdmissionJournalFixture> CreateAsync(
         AgentToolAdmissionSupport support = AgentToolAdmissionSupport.Recoverable,
         AgentToolProfileBinding? profileBinding = null, AgentRuntimeTransientContext? transientContext = null,
-        bool includeRecoveryInput = false, bool managedHr = false) {
+        bool includeRecoveryInput = false, bool managedHr = false, Func<AgentDefinition, AgentDefinition>? configureAgent = null) {
         var environment = CanDoItAllTestEnvironment.Create($"tool-admission-{Guid.NewGuid():N}");
         try {
             var profile = environment.CreateInMemoryProfile("primary");
@@ -45,6 +45,9 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
             var agent = catalog.Catalog.Agents.First(item => item.ProviderProfileId.HasValue) with {
                 ChatHistoryMode = AgentChatHistoryMode.FrameworkManaged
             };
+            if (configureAgent is not null) {
+                agent = configureAgent(agent) ?? throw new InvalidOperationException("The journal fixture requires an Agent definition.");
+            }
             var provider = new ProviderProfile(agent.ProviderProfileId!.Value, "Journal provider", ProviderKind.OpenAi,
                 "https://provider.example.test", string.Empty, "fixture-model", ProviderTransportKind.Responses,
                 true, true, true, true, false, "{}", string.Empty, string.Empty, null, [], ProviderProfilePurpose.Chat);
@@ -72,6 +75,11 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
                         .Concat(hrCapabilities).ToArray() : current.Capabilities,
                     Providers = current.Providers.Where(item => item.Id != provider.Id).Append(provider).ToArray()
                 });
+            } else if (configureAgent is not null) {
+                var saved = await store.UpdateCatalogAsync(current => current with {
+                    Agents = current.Agents.Where(item => item.Id != agent.Id).Append(agent).ToArray()
+                });
+                agent = saved.Agents.Single(item => item.Id == agent.Id);
             }
 
             var now = DateTimeOffset.UtcNow;
@@ -103,6 +111,15 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
             await environment.DisposeAsync();
             throw;
         }
+    }
+
+    internal static void RequireScriptedFault(Exception failure, string expectedMessage) {
+        for (Exception? current = failure; current is not null; current = current.InnerException) {
+            if (current is IOException && current.Message == expectedMessage) {
+                return;
+            }
+        }
+        throw new InvalidOperationException("The provider fixture did not reach its expected fault.", failure);
     }
 
     internal static AgentToolProtocolEnvelope Envelope(string json = "{}") => AgentToolProtocolEnvelope.Create("fixture-sdk", 1, json);

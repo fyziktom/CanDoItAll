@@ -12,6 +12,12 @@ public static class AgentFrameworkMemoryServiceCollectionExtensions
     public static IServiceCollection AddAgentFrameworkMemory(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in MemoryToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, MemoryAgentRuntimeToolProvider>());
         services.TryAddEnumerable(

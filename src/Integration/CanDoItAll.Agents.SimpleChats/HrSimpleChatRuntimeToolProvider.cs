@@ -40,7 +40,8 @@ public sealed class HrSimpleChatRuntimeToolProvider(HrSimpleChatAdministration a
                 operation.ToolName, operation.OperationKind, operation.RequiresApproval, ["hr-agent", "simple-chats"]) {
                     Unavailability = Unavailability(context, operation),
                     PrepareAdmission = arguments => AdmissionCodec.Prepare(operation.ToolName, arguments),
-                    AuthorizeAdmissionAsync = (payload, token) => administration.AcquireAdmissionAuthorizationAsync(context, operation, payload, token)
+                    AuthorizeAdmissionAsync = (payload, token) => administration.AcquireAdmissionAuthorizationAsync(context, operation, payload, token),
+                    AuthorizeResultDisclosureAsync = (disclosure, token) => administration.AcquireResultDisclosureAsync(context, operation, disclosure, token)
                 }).ToArray()
             : [];
 

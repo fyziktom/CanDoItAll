@@ -91,11 +91,27 @@ public sealed class HrSimpleChatRuntimeAuthorization(
         return governance.AllowedCapabilityKeys.Count == 0 || governance.AllowedCapabilityKeys.Contains(operation.CapabilityKey);
     }
 
-    public async Task<AgentToolSessionAdmission> RequireSessionAsync(
+    public Task<AgentToolSessionAdmission> RequireSessionAsync(
         AgentRuntimeToolProviderContext context,
         HrSimpleChatToolOperation operation,
         LlmChatRuntimeIdentity profile,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken)
+        => RequireSessionAsync(context, operation, operation, profile, cancellationToken);
+
+    internal Task<AgentToolSessionAdmission> RequireResultDisclosureAsync(
+        AgentRuntimeToolProviderContext context, HrSimpleChatToolOperation operation,
+        LlmChatRuntimeIdentity profile, CancellationToken cancellationToken) {
+        var readOperation = operation.Operation switch {
+            HrSimpleChatOperation.Create => HrSimpleChatOperation.Receipt,
+            HrSimpleChatOperation.Update or HrSimpleChatOperation.Status => HrSimpleChatOperation.Search,
+            _ => operation.Operation
+        };
+        return RequireSessionAsync(context, operation, HrSimpleChatToolPolicy.Get(readOperation), profile, cancellationToken);
+    }
+
+    private async Task<AgentToolSessionAdmission> RequireSessionAsync(
+        AgentRuntimeToolProviderContext context, HrSimpleChatToolOperation operation,
+        HrSimpleChatToolOperation currentOperation, LlmChatRuntimeIdentity profile, CancellationToken cancellationToken) {
         if (!CanAttach(context)) {
             throw Denied("An admitted interactive managed HR session is required.");
         }
@@ -144,7 +160,7 @@ public sealed class HrSimpleChatRuntimeAuthorization(
 
         if (current.AgentId != admission.AgentId || current.DatabaseProfileId != profile.ProfileId ||
             current.DatabaseProfileGeneration.Value != profile.Generation || current.WorkspaceScope != governance.WorkspaceScope ||
-            !IsWithinAuthority(AgentExecutionGovernanceSnapshot.FromAuthority(current), operation)) {
+            !IsWithinAuthority(AgentExecutionGovernanceSnapshot.FromAuthority(current), currentOperation)) {
             throw Denied("The current source authority does not allow this Simple Chat operation.");
         }
 
@@ -154,7 +170,7 @@ public sealed class HrSimpleChatRuntimeAuthorization(
             throw Denied("The managed HR actor is no longer active or permitted to use tools.");
         }
 
-        if (!IsAssigned(actor, catalog.Capabilities, operation)) {
+        if (!IsAssigned(actor, catalog.Capabilities, currentOperation)) {
             throw Denied("The managed HR actor does not have the exact Simple Chat capability assignment.");
         }
 

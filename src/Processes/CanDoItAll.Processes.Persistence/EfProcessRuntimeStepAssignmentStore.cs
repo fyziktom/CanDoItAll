@@ -339,7 +339,7 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             $"Process assignment '{assignment.RunId}/{assignment.StepInstanceId}' cannot add, remove, or change immutable parent-lineage key '{key}'.");
     }
 
-    private static ProcessRuntimeStepAssignment ToAssignment(ProcessRuntimeStepAssignmentEntity entity)
+    internal static ProcessRuntimeStepAssignment ToAssignment(ProcessRuntimeStepAssignmentEntity entity)
     {
         var branchGate = string.IsNullOrWhiteSpace(entity.BranchGateSourceStepKey) ||
             string.IsNullOrWhiteSpace(entity.BranchGateRequiredOutcomeKey)

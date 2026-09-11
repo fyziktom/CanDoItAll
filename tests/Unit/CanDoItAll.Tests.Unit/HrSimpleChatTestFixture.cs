@@ -265,6 +265,8 @@ internal sealed class HrSimpleChatTestFixture {
     public sealed class ReceiptOwner(HrSimpleChatTestFixture fixture) : ILlmChatDefinitionCreateReceiptService {
         public CreateLlmChatDefinitionOnceCommand? Command { get; private set; }
         public LlmChatDefinitionCreateKey? LookupKey { get; private set; }
+        public LlmChatDefinitionCreateReceipt? SavedReceipt { get; set; }
+        public int Lookups { get; private set; }
         public Exception? Failure { get; set; }
         public bool WasReplay { get; set; }
         public Action? AfterCommit { get; set; }
@@ -281,12 +283,15 @@ internal sealed class HrSimpleChatTestFixture {
 
             AfterCommit?.Invoke();
             var receipt = new LlmChatDefinitionCreateReceipt(command.Key, new(DefinitionId), new(1), 0, Now);
+            SavedReceipt = receipt;
             return Task.FromResult(Result<LlmChatDefinitionCreateResponse>.Success(new(receipt, WasReplay)));
         }
 
         public Task<Result<LlmChatDefinitionCreateReceipt?>> FindReceiptAsync(LlmChatDefinitionCreateKey key, CancellationToken cancellationToken) {
             LookupKey = key;
-            return Task.FromResult(Result<LlmChatDefinitionCreateReceipt?>.Success(null));
+            Lookups++;
+            ObservedProfile = fixture.Scope.Current?.RuntimeIdentity;
+            return Task.FromResult(Result<LlmChatDefinitionCreateReceipt?>.Success(SavedReceipt?.Key == key ? SavedReceipt : null));
         }
     }
 

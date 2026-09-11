@@ -128,8 +128,25 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
             .Select(item => PromptGalleryToolPolicy.CreateRuntimeMetadata(
                 ProviderKey,
                 item,
-                ["prompts-curator", "prompt-gallery"]))
+                ["prompts-curator", "prompt-gallery"]) with {
+                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item, disclosure, token)
+            })
             .ToArray();
+    }
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(
+        AgentRuntimeToolProviderContext context, string toolName, AgentToolResultDisclosure disclosure,
+        CancellationToken cancellationToken) {
+        if (!PromptsCuratorAgentRuntimeAuthorizationPolicy.CanAttach(context) || disclosure.Payload.ToolName != toolName) {
+            throw new UnauthorizedAccessException("The saved Prompt Curator result does not match the current managed tool context.");
+        }
+        var readTool = toolName switch {
+            PromptGalleryToolPolicy.PromptGalleryDraftCreate or PromptGalleryToolPolicy.PromptGalleryDraftUpdate or
+                PromptGalleryToolPolicy.PromptGalleryVersionCreate => PromptGalleryToolPolicy.PromptGalleryItemEditorGet,
+            _ => toolName
+        };
+        await authorizationService.EnsureToolInvocationAuthorizedAsync(context.Agent.Id, readTool, cancellationToken);
+        return null;
     }
 
     private async Task<PromptsCuratorCatalogSearchResult> SearchAsync(

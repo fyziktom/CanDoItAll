@@ -1,3 +1,4 @@
+using System.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -212,6 +213,149 @@ public sealed class HrAgentRuntimeToolProviderTests
         var provider = Assert.Single(scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>());
 
         Assert.IsType<HrAgentRuntimeToolProvider>(provider);
+    }
+
+    [Theory]
+    [InlineData(HrAgentToolPolicy.HrAgentCreate, HrAgentToolPolicy.HrAgentsSearch)]
+    [InlineData(HrAgentToolPolicy.HrAgentSettingsUpdate, HrAgentToolPolicy.HrAgentsSearch)]
+    [InlineData(HrAgentToolPolicy.HrAgentAvatarGenerate, HrAgentToolPolicy.HrAgentSettingsGet)]
+    [InlineData(HrAgentToolPolicy.HrAgentProcessManagerReviewRequest, HrAgentToolPolicy.HrAgentProcessManagerReviewRequest)]
+    public async Task Saved_HR_acknowledgements_require_the_current_matching_disclosure_capability(string toolName, string readTool) {
+        var context = CreateContext(HrAgentCapabilityKeys.ToolNameToCapabilityKey.Values, allowCrmScope: true);
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DisclosureWorkspace>();
+        var state = (DisclosureWorkspace)(object)workspace;
+        state.Capabilities = context.Capabilities;
+        var provider = CreateDisclosureProvider(workspace, new ThrowingCrmHrAgentQueryService(), new ThrowingCrmPartyCommandService());
+        var metadata = provider.GetToolMetadata(context).Single(item => item.ToolName == toolName);
+        var authorize = metadata.AuthorizeResultDisclosureAsync!;
+        Assert.NotNull(authorize);
+        var saved = ManagedToolDisclosureTestData.Create(metadata);
+        var allowed = context.Agent with { Capabilities = context.Agent.Capabilities.Where(item =>
+            item.CapabilityKey == HrAgentCapabilityKeys.ToolNameToCapabilityKey[readTool]).ToArray() };
+        state.Agents = [allowed];
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+        state.Agents = [allowed with { Capabilities = [] }];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        state.Agents = [allowed];
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+        Assert.Equal(AgentToolEffectState.Unknown, saved.EffectState);
+    }
+
+    [Theory]
+    [InlineData(HrAgentToolPolicy.HrCrmSearch)]
+    [InlineData(HrAgentToolPolicy.HrCrmItemSummaryGet)]
+    [InlineData(HrAgentToolPolicy.HrCrmPartyCreate)]
+    public async Task Saved_CRM_data_is_denied_after_privacy_or_scope_revocation_and_remains_available_after_restore(string toolName) {
+        var context = CreateContext(HrAgentCapabilityKeys.ToolNameToCapabilityKey.Values, allowCrmScope: true);
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DisclosureWorkspace>();
+        var state = (DisclosureWorkspace)(object)workspace;
+        state.Agents = [context.Agent];
+        state.Capabilities = context.Capabilities;
+        var item = new CrmHrAgentQueryItem(Guid.NewGuid(), CrmHrAgentRecordKind.Party, "Original private name", new(),
+            "Original safe summary", [], null, CrmHrAgentRedactionState.None, CrmHrAgentBusinessTextTrust.UntrustedBusinessData);
+        var owner = new DisclosureCrmQuery(item);
+        var provider = CreateDisclosureProvider(workspace, owner, new ThrowingCrmPartyCommandService());
+        var metadata = provider.GetToolMetadata(context).Single(value => value.ToolName == toolName);
+        object result = toolName switch {
+            HrAgentToolPolicy.HrCrmSearch => new[] { item },
+            HrAgentToolPolicy.HrCrmPartyCreate => new CrmPartyCreateResult(item.Id, PartyType.Person,
+                PartyLifecycleStatus.Active, item.DisplayLabel, string.Empty, []),
+            _ => item
+        };
+        var saved = ManagedToolDisclosureTestData.Create(metadata, result: result);
+        var authorize = metadata.AuthorizeResultDisclosureAsync!;
+        Assert.NotNull(authorize);
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+        owner.Item = item with { RedactionState = CrmHrAgentRedactionState.SensitiveRecordRedacted };
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        owner.Item = item;
+        state.Agents = [context.Agent with { ConfigurationJson = "{}" }];
+        var readsBeforeDeniedScope = owner.Reads;
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        Assert.Equal(readsBeforeDeniedScope, owner.Reads);
+        state.Agents = [context.Agent];
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+        Assert.Contains(item.DisplayLabel, saved.Result.GetRawText(), StringComparison.Ordinal);
+        Assert.Equal(AgentToolEffectState.Unknown, saved.EffectState);
+    }
+
+    [Theory]
+    [InlineData(HrAgentToolPolicy.HrCrmPartyAffiliationsList)]
+    [InlineData(HrAgentToolPolicy.HrCrmAffiliationUpsert)]
+    public async Task Saved_affiliations_recheck_all_current_visible_endpoints_without_upserting(string toolName) {
+        var context = CreateContext(HrAgentCapabilityKeys.ToolNameToCapabilityKey.Values, allowCrmScope: true);
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DisclosureWorkspace>();
+        var state = (DisclosureWorkspace)(object)workspace;
+        state.Agents = [context.Agent];
+        state.Capabilities = context.Capabilities;
+        var item = new CrmPartyAffiliationResult(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Organization",
+            PartyOrganizationAffiliationKind.Employee, false, "Role", null, null, null, null, true, DateTimeOffset.UtcNow);
+        var owner = new DisclosureAffiliations { Items = [item] };
+        var provider = CreateDisclosureProvider(workspace, new ThrowingCrmHrAgentQueryService(), owner);
+        var metadata = provider.GetToolMetadata(context).Single(value => value.ToolName == toolName);
+        var saved = ManagedToolDisclosureTestData.Create(metadata, new HrCrmPersonPartyInput(item.PersonPartyId),
+            toolName == HrAgentToolPolicy.HrCrmAffiliationUpsert ? item : new[] { item });
+        var authorize = metadata.AuthorizeResultDisclosureAsync!;
+        Assert.NotNull(authorize);
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+        owner.Items = [];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        owner.Items = [item with { OrganizationPartyId = Guid.NewGuid() }];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        owner.Items = [item];
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+    }
+
+    private static HrAgentRuntimeToolProvider CreateDisclosureProvider(IAgentFrameworkWorkspaceService workspace,
+        ICrmHrAgentQueryService query, ICrmPartyCommandService commands) => new(
+            CreateUninitialized<HrAgentAdministrationService>(), CreateUninitialized<HrAgentAvatarGenerationService>(),
+            CreateUninitialized<HrAgentUsageAnalyticsService>(), CreateUninitialized<HrAgentProcessReviewService>(),
+            query, commands, new HrAgentRuntimeAuthorizationService(workspace));
+
+    private class DisclosureWorkspace : DispatchProxy {
+        public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+        public IReadOnlyList<CapabilityCatalogItem> Capabilities { get; set; } = [];
+        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch {
+            nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => Task.FromResult(Agents),
+            nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) => Task.FromResult(Capabilities),
+            _ => throw new InvalidOperationException("Disclosure must not call an agent writer or runtime.")
+        };
+    }
+
+    private sealed class DisclosureCrmQuery(CrmHrAgentQueryItem item) : ICrmHrAgentQueryService {
+        public CrmHrAgentQueryItem Item { get; set; } = item;
+        public int Reads { get; private set; }
+        public Task<Result<IReadOnlyList<CrmHrAgentQueryItem>>> SearchAsync(CrmHrAgentSearchQuery query,
+            CancellationToken cancellationToken = default) => throw new InvalidOperationException("Disclosure must use exact saved resource identities.");
+        public Task<Result<CrmHrAgentQueryItem>> GetSummaryAsync(CrmHrAgentItemReference reference,
+            CancellationToken cancellationToken = default) {
+            Assert.Equal(Item.Id, reference.Id);
+            Assert.Equal(Item.RecordKind, reference.RecordKind);
+            Reads++;
+            return Task.FromResult(Result<CrmHrAgentQueryItem>.Success(Item));
+        }
+    }
+
+    private sealed class DisclosureAffiliations : ICrmPartyCommandService {
+        public IReadOnlyList<CrmPartyAffiliationResult> Items { get; set; } = [];
+        public Task<Result<CrmPartyCreateResult>> CreatePartyAsync(CrmPartyCreateCommand command, string actor,
+            CancellationToken cancellationToken = default) => throw new InvalidOperationException("Disclosure cannot create a party.");
+        public Task<Result<IReadOnlyList<CrmPartyAffiliationResult>>> ListAffiliationsAsync(Guid personPartyId,
+            CancellationToken cancellationToken = default) => Task.FromResult(Result<IReadOnlyList<CrmPartyAffiliationResult>>.Success(Items));
+        public Task<Result<CrmPartyAffiliationResult>> UpsertAffiliationAsync(CrmPartyAffiliationUpsertCommand command,
+            string actor, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Disclosure cannot change an affiliation.");
     }
 
     private static HrAgentRuntimeToolProvider CreateProvider()

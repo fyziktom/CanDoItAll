@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Runtime;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
@@ -36,6 +37,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     ];
 
     private readonly ProjectStructureToolBuilder toolBuilder;
+    private readonly ProjectStructureProcessToolAdmission? processToolAdmission;
 
     public ProjectStructureAgentRuntimeToolProvider(
         ProjectStructureAgentService agentService,
@@ -56,7 +58,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         IDatabaseRuntimeState databaseRuntimeState,
         IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
         TimeProvider timeProvider,
-        ILogger<ProjectStructureAgentRuntimeToolProvider> logger)
+        ILogger<ProjectStructureAgentRuntimeToolProvider> logger,
+        ProjectStructureProcessToolAdmission? processToolAdmission = null,
+        ProjectProcessExecutionMutationService? processMutations = null)
     {
         ArgumentNullException.ThrowIfNull(agentService);
         ArgumentNullException.ThrowIfNull(leaseService);
@@ -78,6 +82,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
+        this.processToolAdmission = processToolAdmission;
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
         toolBuilder = new ProjectStructureToolBuilder(
             agentService,
@@ -99,7 +104,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             databaseRuntimeState,
             externalTargetPathRegistryFactory,
             timeProvider,
-            logger);
+            logger,
+            processToolAdmission,
+            processMutations);
     }
 
     public int Order => ProviderOrder;
@@ -115,7 +122,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive
         ]);
 
-    public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(
+    public async ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(
         AgentRuntimeToolProviderContext context,
         CancellationToken cancellationToken)
     {
@@ -124,10 +131,25 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
 
         if (!ShouldAttachForContext(context.ContextIntent))
         {
-            return ValueTask.FromResult<IReadOnlyList<AITool>>([]);
+            return [];
         }
 
-        return ValueTask.FromResult(toolBuilder.CreateTools(context));
+        return await toolBuilder.CreateToolsAsync(context, cancellationToken);
+    }
+
+    public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(AgentRuntimeToolProviderContext context) {
+        if (!ShouldAttachForContext(context.ContextIntent) || !ProjectStructureProcessToolAdmission.UsesJournal(context)) {
+            return [];
+        }
+        var admission = processToolAdmission ?? throw new InvalidOperationException(
+            "Recoverable Structure Process tools require their owner admission adapter.");
+        var codec = new ProjectStructureProcessProposalCodec();
+        return [new(Descriptor.ProviderKey, ProjectStructureToolPolicy.ProjectStructureNodeProcessStart,
+            AgentRuntimeToolOperationKind.Mutation, requiresApprovalByDefault: true, ["project-structure", "processes"]) {
+            PrepareAdmission = arguments => codec.Prepare(ProjectStructureToolPolicy.ProjectStructureNodeProcessStart, arguments),
+            AuthorizeAdmissionAsync = (payload, token) => admission.AuthorizeProposalAsync(context, payload, token),
+            AuthorizeResultDisclosureAsync = (disclosure, token) => admission.AuthorizeResultDisclosureAsync(context, disclosure, token)
+        }];
     }
 
     internal static AIFunction CreateProjectStructureAssetCreateTool(
@@ -251,7 +273,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         IDatabaseRuntimeState databaseRuntimeState,
         IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
         TimeProvider timeProvider,
-        ILogger logger)
+        ILogger logger,
+        ProjectStructureProcessToolAdmission? processToolAdmission,
+        ProjectProcessExecutionMutationService? processMutations)
     {
         private readonly ProjectStructureAgentService agentService = agentService;
         private readonly ProjectStructureLeaseService leaseService = leaseService;
@@ -276,18 +300,18 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         private readonly TimeProvider timeProvider = timeProvider;
         private string? currentBranchName;
 
-        public IReadOnlyList<AITool> CreateTools(AgentRuntimeToolProviderContext context)
+        public async Task<IReadOnlyList<AITool>> CreateToolsAsync(AgentRuntimeToolProviderContext context, CancellationToken cancellationToken)
         {
             var agent = context.Agent;
             var accessSettings = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
             var workspaceAccessSettings = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
             var accessState = new ProjectStructureAccessState(
                 accessSettings,
-                ResolveScopedProcessAccess(context),
+                await ResolveScopedProcessAccessAsync(context, cancellationToken),
                 context.ContextIntent,
                 context.Purpose,
                 ProjectStructureInvocationSnapshotReadContext.Capture(context),
-                context.Governance);
+                context.Governance) { ProviderContext = context };
             if (!accessState.CanRead &&
                 !accessState.CanWrite &&
                 !accessState.CanCreateProjects &&
@@ -588,6 +612,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     "Attaches an exact workflow version or process to a canonical task and commits authoritative expected pricing as one compensated operation. First call project_structure_read with the exact task id in nodeIds and includeMetadata true. Parse the returned metadataJson and copy workItem.executionState, workItem.actualStartedAtUtc, and workItem.actualEndedAtUtc exactly into currentExecution.state, currentExecution.actualStartedAtUtc, and currentExecution.actualEndedAtUtc. Do not infer defaults, reuse a stale snapshot, or use generic workflow, process-link, metadata, or Uses-link tools for canonical task resources."));
             }
 
+            if (accessState.ScopedProcessAccess?.ProcessMutationAdmission?.Dispatch.SourceAuthority?.Principal is ProcessLaunchPrincipal.AgentExecution source &&
+                    source.Ceiling.AllowedOperations.Count != 0) {
+                return tools.Where(tool => source.Ceiling.AllowedOperations.Contains(tool.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
+            }
             return tools;
         }
 
@@ -1828,11 +1856,32 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 request,
                 async cancellationToken =>
                 {
+                    if (accessState.ProviderContext is { } providerContext && ProjectStructureProcessToolAdmission.UsesJournal(providerContext)) {
+                        var admission = processToolAdmission ?? throw new InvalidOperationException(
+                            "Recoverable Structure Process tools require their owner admission adapter.");
+                        var claim = await admission.RequireInvocationAsync(providerContext,
+                            new(projectId, nodeId, request, estimatedMinutes), cancellationToken);
+                        var invocation = await admission.FindReplayAsync(claim, cancellationToken);
+                        if (invocation is null) {
+                            EnsureProjectWriteAllowed(accessState, projectId);
+                            await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
+                            var project = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
+                            invocation = await admission.CaptureAsync(claim, project, cancellationToken);
+                        }
+                        var result = await agentService.StartProcessNodeAsync(projectId, nodeId, request,
+                            BuildAgentContext(agent, accessState, projectId) with { ProcessLaunchInvocation = invocation }, cancellationToken);
+                        return result;
+                    }
                     EnsureProjectWriteAllowed(accessState, projectId);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     return await agentService.StartProcessNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
-                cancellationToken);
+                cancellationToken,
+                committedEffectSelector: accessState.ProviderContext is { } admittedContext && ProjectStructureProcessToolAdmission.UsesJournal(admittedContext)
+                    ? result => result.Observation is { } observation
+                        ? new(ProjectStructureProcessToolAdmission.EffectSourceKind, observation.AdmissionId.Value.ToString("D"))
+                        : null
+                    : null);
         }
 
         private Task<ProjectStructureProcessSubprocessLaunchResult> ProjectStructureProcessSubprocessLaunchAsync(
@@ -2584,7 +2633,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             object? requestSummary,
             Func<CancellationToken, Task<T>> action,
             CancellationToken cancellationToken,
-            Func<T, Guid?>? projectIdSelector = null)
+            Func<T, Guid?>? projectIdSelector = null,
+            Func<T, AgentToolCommittedEffect?>? committedEffectSelector = null)
         {
             var stopwatch = Stopwatch.StartNew();
             var context = BuildAgentContext(agent);
@@ -2594,12 +2644,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             {
                 response = await action(cancellationToken);
                 var committedProjectId = projectId ?? projectIdSelector?.Invoke(response);
-                if (committedProjectId.HasValue &&
-                    (scopeKind.HasValue || projectIdSelector is not null))
-                {
-                    AgentToolInvocationEffectScope.RecordCommitted(
-                        ProjectStructureSourceKind,
-                        committedProjectId.Value.ToString("D"));
+                if (committedEffectSelector is not null) {
+                    if (committedEffectSelector(response) is { } effect) {
+                        AgentToolInvocationEffectScope.RecordCommitted(effect.SourceKind, effect.SourceId);
+                    }
+                } else if (committedProjectId.HasValue && (scopeKind.HasValue || projectIdSelector is not null)) {
+                    AgentToolInvocationEffectScope.RecordCommitted(ProjectStructureSourceKind, committedProjectId.Value.ToString("D"));
                 }
             }
             catch (ProjectStructureAgentException exception)
@@ -2799,10 +2849,19 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
 
         private Task<ProjectWriteAdmission> CaptureNodeMutationAdmissionAsync(AgentDefinition agent,
             ProjectStructureAccessState accessState, Guid projectId, CancellationToken cancellationToken) {
-            if (accessState.ScopedProcessAccess is { CanWrite: true } scoped && scoped.ProjectId == projectId) {
+            if (accessState.Purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation && accessState.ScopedProcessAccess is null) {
+                throw new ProjectStructureAgentException(409, "ProcessProjectAdmissionReconciliationRequired", "The Process execution has no retained project scope for native mutations.");
+            }
+            if (accessState.ScopedProcessAccess is { } scoped) {
+                if (scoped.ProjectId != projectId) {
+                    throw new ProjectStructureAgentException(403, "ProcessProjectScopeDenied", "The Process assignment targets a different project.");
+                }
                 if (scoped.ExpectedProjectAdmission is not { } producerAdmission) {
                     throw new ProjectStructureAgentException(409, "ProcessProjectAdmissionReconciliationRequired",
                         "This process has no retained project-lifetime admission. Reconcile its launch authority before resuming structure mutations.");
+                }
+                if (!scoped.CanWrite || scoped.ProcessMutationAdmission is null) {
+                    throw new ProjectStructureAgentException(403, "ProcessMutationDenied", "The current Process source or dispatch claim denies new native effects.");
                 }
                 return admissionService.ValidateProducerWriteAsync(producerAdmission, projectId, cancellationToken);
             }
@@ -2852,10 +2911,18 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 accessState.ScopedProcessAccess is { AgentContext: { } scopedAgentContext } scopedProcessAccess &&
                 scopedProcessAccess.ProjectId == projectId.Value)
             {
-                return scopedAgentContext with { WorkflowAuthority = workflowAuthority };
+                return scopedAgentContext with {
+                    WorkflowAuthority = workflowAuthority,
+                    ExpectedProjectAdmission = scopedProcessAccess.ExpectedProjectAdmission,
+                    ProcessMutationAdmission = scopedProcessAccess.ProcessMutationAdmission
+                };
             }
 
-            return BuildAgentContext(agent, branchName, repositoryRoot) with { WorkflowAuthority = workflowAuthority };
+            return BuildAgentContext(agent, branchName, repositoryRoot) with {
+                WorkflowAuthority = workflowAuthority,
+                ExpectedProjectAdmission = accessState.ScopedProcessAccess?.ExpectedProjectAdmission,
+                ProcessMutationAdmission = accessState.ScopedProcessAccess?.ProcessMutationAdmission
+            };
         }
 
         private string ResolveRepositoryRoot(string repositoryRoot)
@@ -3263,33 +3330,35 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             accessState.SessionCreatedLifetimes[reservation.ProjectId] = new(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId);
         }
 
-        private static ProjectStructureScopedProcessAccess? ResolveScopedProcessAccess(AgentRuntimeToolProviderContext context)
-        {
-            if (context.Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation ||
-                WorkspaceExecutionAuditContext.Current is not { } auditScope ||
-                string.IsNullOrWhiteSpace(auditScope.ProcessRunId) ||
-                string.IsNullOrWhiteSpace(auditScope.ProcessStepId) ||
-                !TryResolveScopedProcessProjectId(context, auditScope, out var projectId))
-            {
+        private async Task<ProjectStructureScopedProcessAccess?> ResolveScopedProcessAccessAsync(
+            AgentRuntimeToolProviderContext context, CancellationToken cancellationToken) {
+            if (context.Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation) {
                 return null;
             }
-
-            var canRead = ContainsProcessOperation(
-                auditScope.ProcessStepAllowedOperations,
-                ProcessOperationContractNames.ReadProjectStructure);
-            var canWrite = ContainsProcessOperation(
-                auditScope.ProcessStepAllowedOperations,
-                ProcessOperationContractNames.ExecuteExternalAction);
-            return !canRead && !canWrite
-                ? null
-                : new ProjectStructureScopedProcessAccess(
-                    projectId,
-                    auditScope.ProcessRunId.Trim(),
-                    auditScope.ProcessStepId.Trim(),
-                    canRead,
-                    canWrite,
-                    MapScopedProcessAgentContext(auditScope.ProjectStructureLaunchAgent),
-                    auditScope.ProjectStructureProcessNodeContext);
+            if (WorkspaceExecutionAuditContext.Current is not { } audit || audit.ExecutionRunId == Guid.Empty) {
+                throw new ProjectStructureAgentException(409, "ProcessExecutionReconciliationRequired", "The Process tool context has no saved execution identity.");
+            }
+            var service = processMutations ?? throw new InvalidOperationException("Process native execution authority is not installed.");
+            var access = await service.ReadAccessAsync(audit.ExecutionRunId, cancellationToken)
+                ?? throw new ProjectStructureAgentException(409, "ProcessExecutionReconciliationRequired", "The saved Process execution has no matching dispatch lineage.");
+            var dispatch = access.Dispatch;
+            if (dispatch.Evidence.ExecutorAgentId != context.Agent.Id ||
+                    dispatch.Evidence.RunId.ToString() != audit.ProcessRunId || dispatch.Evidence.StepInstanceId.ToString() != audit.ProcessStepId) {
+                throw new ProjectStructureAgentException(403, "ProcessExecutionScopeDenied", "The tool context does not match the saved Process executor and occurrence.");
+            }
+            if (dispatch.ProjectId is not { } projectId) {
+                return null;
+            }
+            if (TryResolveScopedProcessProjectId(context, audit, out var selectedProject) && selectedProject != projectId) {
+                throw new ProjectStructureAgentException(403, "ProcessProjectScopeDenied", "The displayed Process scope differs from its saved assignment.");
+            }
+            var admission = dispatch.SourceAuthority?.ProjectAdmission is not null && dispatch.ProjectReference is not null
+                ? new ProjectProcessMutationAdmission(dispatch) : null;
+            var canRead = access.CanRead && ContainsProcessOperation(dispatch.AllowedOperations, ProcessOperationContractNames.ReadProjectStructure);
+            var canWrite = access.CanWrite && ContainsProcessOperation(dispatch.AllowedOperations, ProcessOperationContractNames.ExecuteExternalAction);
+            return new(projectId, dispatch.Evidence.RunId.ToString(), dispatch.Evidence.StepInstanceId.ToString(), canRead, canWrite,
+                MapScopedProcessAgentContext(audit.ProjectStructureLaunchAgent), audit.ProjectStructureProcessNodeContext,
+                admission?.ProjectAdmission, admission);
         }
 
         private static ProjectStructureNodeCreateInput NormalizeGovernedProcessCreateParent(
@@ -3408,19 +3477,21 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             var governanceReadCeiling = governance?.ReadAllowed ?? true;
             var governanceMutationCeiling = governance?.MutationAllowed ?? true;
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
+            var governed = purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation && scopedProcessAccess is not null;
             ProjectGrantSnapshot = normalized;
-            CanRead = (normalized.CanRead || scopedProcessAccess?.CanRead == true) && governanceReadCeiling;
-            CanWrite = (ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized) || scopedProcessAccess?.CanWrite == true) && governanceMutationCeiling;
-            CanWriteUnscoped = normalized.CanWrite && governanceMutationCeiling;
-            CanWriteStructureUnscoped = (normalized.CanWrite || normalized.CanWriteNonTaskStructure) && governanceMutationCeiling;
-            CanWriteTasksUnscoped = ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(normalized) && governanceMutationCeiling;
-            CanCreateProjects = normalized.CanCreateProjects && governanceMutationCeiling;
-            CanCreateSubprojects = normalized.CanCreateSubprojects && governanceMutationCeiling;
+            CanRead = (governed ? scopedProcessAccess!.CanRead : normalized.CanRead) && governanceReadCeiling;
+            CanWrite = (governed ? scopedProcessAccess!.CanWrite : ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized)) && governanceMutationCeiling;
+            CanWriteUnscoped = normalized.CanWrite && governanceMutationCeiling && (!governed || scopedProcessAccess!.CanWrite);
+            CanWriteStructureUnscoped = (normalized.CanWrite || normalized.CanWriteNonTaskStructure) && governanceMutationCeiling && (!governed || scopedProcessAccess!.CanWrite);
+            CanWriteTasksUnscoped = ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(normalized) && governanceMutationCeiling &&
+                (!governed || scopedProcessAccess!.CanWrite && scopedProcessAccess.ProcessMutationAdmission?.Dispatch.SourceAuthority?.CanCreateTasks == true);
+            CanCreateProjects = normalized.CanCreateProjects && governanceMutationCeiling && (!governed || scopedProcessAccess!.CanWrite);
+            CanCreateSubprojects = normalized.CanCreateSubprojects && governanceMutationCeiling && (!governed || scopedProcessAccess!.CanWrite);
             RequiresNonTaskWriteGuard = normalized.CanWriteNonTaskStructure &&
                 !normalized.CanWrite &&
                 scopedProcessAccess?.CanWrite != true;
-            AllowAllProjects = normalized.AllowAllProjects;
-            AllowedProjectIds = normalized.AllowedProjectIds.ToHashSet();
+            AllowAllProjects = !governed && normalized.AllowAllProjects;
+            AllowedProjectIds = governed ? [] : normalized.AllowedProjectIds.ToHashSet();
             SessionCreatedProjectIds = [];
             ScopedProcessAccess = scopedProcessAccess;
             ContextIntent = contextIntent;
@@ -3432,6 +3503,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AllowedProjectIds.Add(scopedProcessAccess.ProjectId);
             }
         }
+
+        public AgentRuntimeToolProviderContext? ProviderContext { get; init; }
 
         public bool CanRead { get; }
 
@@ -3477,7 +3550,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         bool CanWrite,
         ProjectStructureAgentContext? AgentContext,
         ProjectStructureProcessNodeContextDescriptor? ProcessNodeContext,
-        ProjectWriteAdmission? ExpectedProjectAdmission = null);
+        ProjectWriteAdmission? ExpectedProjectAdmission = null,
+        ProjectProcessMutationAdmission? ProcessMutationAdmission = null);
 
     private sealed record ProjectStructureResolvedScope(
         ProjectStructureLeaseScopeKind ScopeKind,

@@ -22,7 +22,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
-public sealed class ProcessCatalogAuthorityPersistenceTests {
+public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     [Fact]
     public async Task Source_Agent_authority_is_held_through_actual_Process_commit_and_is_distinct_from_assigned_executor() {
         await using var app = await TestApplication.CreateAsync(Harness());
@@ -290,7 +290,7 @@ public sealed class ProcessCatalogAuthorityPersistenceTests {
             => new(services.GetRequiredService<ICanonicalRuntimeDatabase>(), source,
                 services.GetRequiredService<IAgentExecutionProfileGenerationSource>(), Admissions(),
                 new(new Factory<WorkbenchDbContext>(Options<WorkbenchDbContext>(), static options => new(options)),
-                    Options<WorkbenchDbContext>(), Coordinator, services.GetRequiredService<ProjectWorkbenchService>()),
+                    Options<WorkbenchDbContext>(), Coordinator, services.GetRequiredService<ProjectStructureAssemblyService>()),
                 services.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>(), TimeProvider.System);
 
         public Task<ProcessPreparedLaunchSnapshot> PrepareAsync()

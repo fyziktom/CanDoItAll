@@ -117,7 +117,9 @@ public sealed partial class ProcessLaunchApplicationService {
             InitialAssignments = prepared.Assignments
         };
         var result = await store.PrepareAsync(new(admissionId, request.CallerIntentId, fingerprint, request.Authority,
-            request with { PreparedAdmissionId = null }, initial, review, request.LinkTarget, now), cancellationToken).ConfigureAwait(false);
+            request with { PreparedAdmissionId = null }, initial, review, request.LinkTarget, now) {
+                ToolSource = request.ToolSource
+            }, cancellationToken).ConfigureAwait(false);
         if (request.CallerIntentId is not null) {
             RequireMatchingRequest(result, request, fingerprint);
         }
@@ -244,9 +246,12 @@ public sealed partial class ProcessLaunchApplicationService {
 
     private static void ValidatePreparedRequest(ProcessLaunchRequest request) {
         request.Authority?.Validate();
+        request.ToolSource?.Validate();
         if (request.ProjectAdmission is { } admission && request.ProjectId != admission.ProjectId ||
                 request.Authority is { } authority && request.ProjectAdmission != authority.ProjectAdmission ||
-                request.CallerIntentId is not null && request.Authority is null) {
+                request.CallerIntentId is not null && request.Authority is null ||
+                request.ToolSource is { } source && (request.CallerIntentId != source.IntentId ||
+                    request.ProjectAdmission != source.Execution.SourceAuthority!.ProjectAdmission)) {
             throw new InvalidOperationException("The process launch's trusted authority, project admission or caller intent is missing or inconsistent.");
         }
         if (request.LinkTarget is { } target &&
@@ -270,7 +275,8 @@ public sealed partial class ProcessLaunchApplicationService {
         => preparedLaunchStore ?? throw new InvalidOperationException("Prepared process launch requires its configured durable owner store.");
 
     private static bool UsesPreparedPreview(ProcessLaunchRequest request)
-        => request.CallerIntentId is not null || request.PreparedAdmissionId is not null || request.Authority is not null || request.LinkTarget is not null;
+        => request.CallerIntentId is not null || request.PreparedAdmissionId is not null || request.Authority is not null || request.LinkTarget is not null ||
+            request.ToolSource is not null;
 
     private static ProcessRuntimeCommitResult ObservedCommit(ProcessRuntimeStateSnapshot state)
         => new(ProcessRuntimeTransitionOutcome.Duplicate, state, [], [], [], []);

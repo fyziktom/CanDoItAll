@@ -33,8 +33,11 @@ public static class ProcessLaunchIntentFingerprint {
             AgentOperation = (request.Authority?.Principal as ProcessLaunchPrincipal.AgentExecution)?.Operation,
             Caller = Caller(request.Authority)
         }));
-        return request.ProducerInputFingerprint is { } input
+        requestHash = request.ProducerInputFingerprint is { } input
             ? Hash(JsonSerializer.Serialize(new { Request = requestHash, ProducerInput = input }))
+            : requestHash;
+        return request.ToolSource is { } source
+            ? Hash(JsonSerializer.Serialize(new { Request = requestHash, ToolSource = source.SemanticFingerprint }))
             : requestHash;
     }
 

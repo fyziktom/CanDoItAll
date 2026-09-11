@@ -236,7 +236,10 @@ internal sealed class MafRuntimeAgentFactory
             options.Name = agent.Name;
             options.Description = agent.Summary;
             options.AIContextProviders = capabilityState.ContextProviders;
-            options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider(runtimeOptions.RequireDurableToolProtocol) : null;
+            var hasDurableToolProtocol = runtimeOptions.RequireDurableToolProtocol ||
+                runtimeOptions.AdmittedToolSession is not null &&
+                runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable && capabilityState.Tools.Count > 0;
+            options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider(hasDurableToolProtocol) : null;
             options.RequirePerServiceCallChatHistoryPersistence =
                 MafChatClientAgentOptionsFactory.ResolvePerServiceCallHistoryPersistence(
                     agent.RequirePerServiceCallChatHistoryPersistence,

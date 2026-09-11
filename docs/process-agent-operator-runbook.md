@@ -95,6 +95,23 @@ Use manual dispatch only after confirming that the run has ready work and the ba
 
 After dispatch, read current detail, summary, and history again. Projection readback is the evidence that the operation completed.
 
+## Agent invocation recovery
+
+An Agent-backed dispatch reserves its durable execution against the actual Process claim.
+A repeated observation uses that execution and its saved provider/tool journal. Preserve
+the original source actor separately from the assigned executor; changing a UI selection
+or replacing a worker claim must not retarget an admitted tool operation.
+
+For a node-start tool, inspect the exact Process launch admission and accepted child before
+retrying. Saved results still require current read authority; restoring a grant permits
+readback of the original result, not another launch. A generic project effect marker is
+not a replacement for the child admission receipt.
+
+Cancellation after a tool or provider has been dispatched does not establish rollback.
+Use the saved owner observation and required reconciliation state. A later permission
+denial must not erase prior committed or uncertain evidence, and a failed result refresh
+must not be reported as if nothing happened.
+
 ## Provider Failures
 
 Provider failures are normalized into quota/billing, rate-limit, and general provider categories.

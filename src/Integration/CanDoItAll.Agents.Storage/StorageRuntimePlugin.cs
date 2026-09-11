@@ -1,5 +1,8 @@
 using System.Text;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Agents.Storage;
@@ -14,6 +17,45 @@ internal sealed class StorageRuntimePlugin(
     private readonly IStorageDriverRegistry driverRegistry = driverRegistry;
     private readonly IStorageBrowseDriverRegistry? browseDriverRegistry = browseDriverRegistry;
     private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
+
+    internal void AuthorizeResultDisclosure(string toolName, AgentToolResultDisclosure disclosure,
+        IReadOnlyList<StorageCatalogPlanningFact> facts) {
+        if (disclosure.Payload.ToolName != toolName) {
+            throw new AgentToolAdmissionException("storage.result-disclosure-denied", "The saved result belongs to another Storage tool.");
+        }
+        EnsureStorageReadAllowed();
+        using var arguments = JsonDocument.Parse(disclosure.Payload.ArgumentsJson);
+        if (toolName == StorageToolPolicy.StorageCatalogList) {
+            var includeDisabled = arguments.RootElement.TryGetProperty("includeDisabled", out var include) && include.GetBoolean();
+            if (disclosure.Result.TryGetProperty("storages", out var storages)) {
+                foreach (var entry in storages.EnumerateArray()) {
+                    RequireAllowed(entry.GetProperty("id").GetGuid(), requireEnabled: !includeDisabled);
+                }
+            }
+            return;
+        }
+
+        var storageId = arguments.RootElement.GetProperty("storageId").GetGuid();
+        var storage = RequireAllowed(storageId, requireEnabled: true);
+        ResolveDriver(storage.ProviderKind, storage.CapabilityMask, storage.Name, StorageCapability.Read);
+        if (toolName == StorageToolPolicy.StorageBrowse) {
+            var browser = browseDriverRegistry?.Resolve(storage.ProviderKind)
+                ?? throw new InvalidOperationException("Storage browsing is not available because no browse-driver registry is configured.");
+            if (arguments.RootElement.TryGetProperty("includeMetadata", out var includeMetadata) && includeMetadata.GetBoolean()) {
+                ResolveBrowseMetadata(browser);
+            }
+        }
+        return;
+
+        StorageCatalogPlanningFact RequireAllowed(Guid id, bool requireEnabled) {
+            var fact = facts.SingleOrDefault(candidate => candidate.Id == id);
+            if (id == Guid.Empty || fact is null || requireEnabled && !fact.IsEnabled || !IsStorageCatalogAllowed(id)) {
+                throw new AgentToolAdmissionException("storage.result-disclosure-denied",
+                    "A catalog represented by the saved Storage result is no longer available to this agent.");
+            }
+            return fact;
+        }
+    }
 
     public async Task<AgentStorageCatalogListResult> ListStorageCatalogs(
         bool includeDisabled = false,
@@ -205,22 +247,27 @@ internal sealed class StorageRuntimePlugin(
     }
 
     private IStorageDriver ResolveDriver(StorageCatalogRecord storage, StorageCapability requiredCapability)
-    {
-        var driver = driverRegistry.Resolve(storage.ProviderKind);
-        var effectiveCapabilities = storage.CapabilityMask & driver.SupportedCapabilities;
+        => ResolveDriver(storage.ProviderKind, storage.CapabilityMask, storage.Name, requiredCapability);
+
+    private IStorageDriver ResolveDriver(StorageProviderKind providerKind, StorageCapability capabilityMask,
+        string storageName, StorageCapability requiredCapability) {
+        var driver = driverRegistry.Resolve(providerKind);
+        var effectiveCapabilities = capabilityMask & driver.SupportedCapabilities;
         if ((effectiveCapabilities & requiredCapability) != requiredCapability)
         {
             throw new InvalidOperationException(
-                $"Storage catalog '{storage.Name}' does not support required capability '{requiredCapability}'.");
+                $"Storage catalog '{storageName}' does not support required capability '{requiredCapability}'.");
         }
 
         return driver;
     }
 
     private bool IsStorageCatalogAllowed(StorageCatalogRecord storage)
-    {
+        => IsStorageCatalogAllowed(storage.Id);
+
+    private bool IsStorageCatalogAllowed(Guid storageId) {
         return accessSettings.AllowAllStorageCatalogs ||
-               accessSettings.AllowedStorageCatalogIds.Contains(storage.Id);
+               accessSettings.AllowedStorageCatalogIds.Contains(storageId);
     }
 
     private void EnsureStorageReadAllowed()

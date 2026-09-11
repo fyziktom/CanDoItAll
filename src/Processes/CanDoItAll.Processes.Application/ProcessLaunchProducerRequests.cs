@@ -61,6 +61,7 @@ public static class ProcessLaunchProducerRequests {
             Authority = caller with { ProjectAdmission = authority.ProjectAdmission },
             ProjectAdmission = authority.ProjectAdmission,
             LinkTarget = original.LinkTarget,
+            ToolSource = original.ToolSource,
             Execute = execute
         };
     }

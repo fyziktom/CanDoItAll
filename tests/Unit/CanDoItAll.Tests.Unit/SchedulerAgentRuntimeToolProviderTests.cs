@@ -19,6 +19,38 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
         Converters = { new JsonStringEnumConverter() }
     };
 
+    [Theory]
+    [InlineData(SchedulerToolPolicy.SchedulerWorkflowTargetsSearch, SchedulerToolPolicy.SchedulerWorkflowTargetsSearch)]
+    [InlineData(SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch, SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch)]
+    [InlineData(SchedulerToolPolicy.SchedulerWorkflowScheduleCreate, SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch)]
+    public async Task Saved_results_revalidate_the_current_read_capability_without_repeating_the_action(
+        string toolName, string readTool) {
+        var owner = new RecordingSchedulerPlannerService(new SchedulerPlannerWorkspace([], [], [],
+            new CanvasCalendarSurface { SurfaceId = "scheduler-disclosure-test" }));
+        var harness = CreateHarness(schedulerService: owner);
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item => item.ToolName == toolName);
+        var authorize = Assert.IsType<Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>>(
+            metadata.AuthorizeResultDisclosureAsync);
+        var disclosure = ManagedToolDisclosureTestData.Create(metadata, null);
+        var readKeys = new HashSet<string>(StringComparer.Ordinal) { SchedulerAgentCapabilityKeys.ToolNameToCapabilityKey[readTool] };
+        var readActor = harness.Context.Agent with {
+            Capabilities = harness.Context.Agent.Capabilities.Where(item => readKeys.Contains(item.CapabilityKey)).ToArray()
+        };
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var allowed = await authorize(disclosure, default)) {
+            Assert.Null(allowed);
+        }
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id
+            ? readActor with { Capabilities = [] } : item).ToArray();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(disclosure, default).AsTask());
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var restored = await authorize(disclosure, default)) {
+            Assert.Null(restored);
+        }
+        Assert.Equal(AgentToolEffectState.Unknown, disclosure.EffectState);
+        Assert.Null(owner.SavedEditor);
+    }
+
     [Fact]
     public async Task Provider_attaches_only_to_the_exact_managed_scheduler_agent_and_assigned_tools()
     {

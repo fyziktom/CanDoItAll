@@ -14,7 +14,8 @@ public sealed class EfProcessPreparedLaunchStore(
     IDbContextFactory<ProcessPersistenceDbContext> factory,
     DbContextOptions<ProcessPersistenceDbContext> contextOptions,
     TimeProvider? timeProvider = null,
-    CoordinatedDatabaseTransaction? coordinatedTransaction = null) : IProcessPreparedLaunchStore, IProcessLaunchLinkReceiptStore {
+    CoordinatedDatabaseTransaction? coordinatedTransaction = null,
+    IProcessToolLaunchAdmissionPolicy? toolLaunchPolicy = null) : IProcessPreparedLaunchStore, IProcessLaunchLinkReceiptStore {
     private static readonly TimeSpan ContinuationLease = TimeSpan.FromMinutes(2);
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
@@ -41,11 +42,29 @@ public sealed class EfProcessPreparedLaunchStore(
 
     public async Task<ProcessPreparedLaunchSnapshot> PrepareAsync(ProcessPreparedLaunch preparation, CancellationToken cancellationToken = default) {
         var entity = ProcessPreparedLaunchCodec.ToEntity(preparation);
+        if (preparation.ToolSource is not null && preparation.CallerIntentId is { } toolIntent &&
+                await FindByIntentAsync(toolIntent, cancellationToken) is { } retained) {
+            if (retained.Preparation.RequestFingerprint != entity.RequestFingerprint) {
+                throw new ProcessLaunchIntentConflictException(toolIntent,
+                    "The Process tool intent was already prepared with different content, source or target.");
+            }
+            return retained;
+        }
+        await using var source = preparation.ToolSource is null ? null
+            : await (toolLaunchPolicy ?? throw new InvalidOperationException("Process tool preparation requires its owner admission policy."))
+                .AcquireAsync(preparation, cancellationToken);
         await using var context = await factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         RequireSupportedProvider(context);
+        if (source is not null && (coordinatedTransaction is null || !context.Database.IsNpgsql())) {
+            throw new InvalidOperationException("Process tool preparation requires coordinated PostgreSQL owner persistence.");
+        }
         await using var transaction = context.Database.IsRelational()
             ? await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken).ConfigureAwait(false)
             : null;
+        using var coordination = source is null ? null : coordinatedTransaction!.Enter(context);
+        if (source is not null) {
+            await source.RequireForMutationAsync(preparation.LinkTarget, cancellationToken);
+        }
         if (preparation.CallerIntentId is { } intentId) {
             if (context.Database.IsNpgsql()) {
                 var lockBytes = SHA256.HashData(Encoding.UTF8.GetBytes("process-launch-intent:" + intentId.Value.ToString("D")));
@@ -63,8 +82,15 @@ public sealed class EfProcessPreparedLaunchStore(
         }
         context.PreparedLaunches.Add(entity);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        if (source is not null) {
+            await source.RequireForMutationAsync(preparation.LinkTarget, cancellationToken);
+        }
         if (transaction is not null) {
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        coordination?.Dispose();
+        if (source is not null) {
+            await source.DisposeAsync();
         }
         return ProcessPreparedLaunchCodec.Read(entity);
     }

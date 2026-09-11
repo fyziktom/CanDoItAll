@@ -147,35 +147,9 @@ public sealed partial class ProjectWorkbenchService {
         return await ReadWorkflowTargetBindingAsync(database, projectId, parentNodeId, cancellationToken);
     }
 
-    internal async Task<string> ReadWorkflowTargetBindingAsync(WorkbenchDbContext database, Guid projectId,
-        string parentNodeId, CancellationToken cancellationToken) {
-        if (parentNodeId == ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId)) {
-            return ProjectWorkflowContributionFingerprint.Hash(JsonSerializer.Serialize(new { projectId, parentNodeId }));
-        }
-
-        var native = await database.Set<ProjectObjectRecord>().AsNoTracking()
-            .SingleOrDefaultAsync(node => node.ProjectId == projectId && node.NodeKey == parentNodeId, cancellationToken);
-        if (native is null) {
-            var assembly = await projectStructureAssemblyService.LoadAsync(database, projectId, cancellationToken);
-            native = assembly.Nodes.SingleOrDefault(node => node.NodeKey == parentNodeId)
-                ?? throw new ProjectStructureAgentException(404, "ParentNodeNotFound", "The prepared workflow output parent no longer exists.");
-        }
-
-        var binding = await database.Set<ProjectNodeBindingRecord>().AsNoTracking()
-            .SingleOrDefaultAsync(item => item.ProjectObjectId == native.Id, cancellationToken);
-        if (binding is not null) {
-            native.Binding = new(binding.Route, binding.ExternalArtifactKind, binding.ExternalArtifactId, binding.MediaRelativePath,
-                binding.MediaContentType, binding.MediaOriginalFileName, binding.StorageObjectReferenceJson);
-        }
-
-        return ProjectWorkflowContributionFingerprint.Hash(JsonSerializer.Serialize(new {
-            Target = ProjectWorkflowContributionFingerprint.Target(native),
-            Binding = binding is null ? null : new {
-                binding.Id, binding.Route, binding.ExternalArtifactKind, binding.ExternalArtifactId,
-                binding.MediaRelativePath, binding.MediaContentType, binding.MediaOriginalFileName, binding.StorageObjectReferenceJson
-            }
-        }));
-    }
+    internal Task<string> ReadWorkflowTargetBindingAsync(WorkbenchDbContext database, Guid projectId,
+        string parentNodeId, CancellationToken cancellationToken)
+        => ProjectProcessLaunchTargetQuery.ReadBindingAsync(database, projectStructureAssemblyService, projectId, parentNodeId, cancellationToken);
 
     private async Task ValidateWorkflowContributionTargetAsync(WorkbenchDbContext database, Guid projectId, string parentNodeId,
         WorkflowStructureOutputPlan plan, ProjectObjectCreateRequest request, CancellationToken cancellationToken) {

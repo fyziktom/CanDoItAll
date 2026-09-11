@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Collections.Frozen;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
@@ -191,8 +192,37 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
                 item.Key,
                 item.Value,
                 CapabilityCuratorToolPolicy.Capabilities.Single(policy => policy.Name == item.Key).RequiresApprovalByDefault,
-                ["capability-curator", "capabilities"]))
+                ["capability-curator", "capabilities"]) {
+                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item.Key, disclosure, token)
+            })
             .ToArray();
+    }
+
+    private async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(
+        AgentRuntimeToolProviderContext context, string toolName, AgentToolResultDisclosure disclosure,
+        CancellationToken cancellationToken) {
+        if (!CapabilityCuratorAgentRuntimeAuthorizationPolicy.CanAttach(context) || disclosure.Payload.ToolName != toolName) {
+            throw new UnauthorizedAccessException("The saved Capability Curator result does not match the current managed tool context.");
+        }
+        var readTool = toolName switch {
+            CapabilityCuratorToolPolicy.CapabilityCuratorSave or CapabilityCuratorToolPolicy.CapabilityCuratorVerify =>
+                CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet,
+            CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate => CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet,
+            _ => toolName
+        };
+        await RequireReadAsync(readTool);
+        if (disclosure.EffectState != AgentToolEffectState.NotCommitted && toolName is
+            CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet or
+            CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate or
+            CapabilityCuratorToolPolicy.CapabilityCuratorVerify) {
+            using var arguments = JsonDocument.Parse(disclosure.Payload.ArgumentsJson);
+            var agentId = arguments.RootElement.GetProperty("request").GetProperty("agentId").GetGuid();
+            await GetAssignmentEditorAsync(new(agentId), cancellationToken);
+        }
+        await RequireReadAsync(readTool);
+        return null;
+
+        Task RequireReadAsync(string name) => authorizationService.EnsureToolInvocationAuthorizedAsync(context.Agent.Id, name, cancellationToken);
     }
 
     private async Task<CapabilityCuratorCatalogSearchResult> SearchAsync(

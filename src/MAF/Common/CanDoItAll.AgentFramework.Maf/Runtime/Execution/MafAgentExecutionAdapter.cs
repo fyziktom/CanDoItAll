@@ -172,7 +172,7 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
             // before session restore evaluates runtime-state compatibility.
             var capabilityState = runtimeBuild.CapabilityState;
             var canRecoverToolInvocations = supportsToolRecovery &&
-                (capabilityState?.RuntimeToolMetadata.Any(item => item.PrepareAdmission is not null) == true ||
+                (capabilityState?.Tools.Count > 0 ||
                     (await toolAdmissionJournal!.ReadAsync(admissionLease!, cancellationToken)).Segments.Length != 0);
             runtimeOptions = runtimeOptions with
             {
