@@ -273,7 +273,7 @@ public sealed class SchedulerSourceAuthorityPersistenceTests {
             var governance = new AgentExecutionGovernanceSnapshot(new(Guid.NewGuid()), fixture.Agent.Id, profile.Profile.Profile.Id,
                 services.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration(),
                 WorkspaceScopeDescriptor.Organization(profile.Profile.Profile.Id.ToString("N")), true, true,
-                "saved-scheduler-policy", "saved-scheduler-fingerprint", [AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate]);
+                "saved-scheduler-policy", "saved-scheduler-fingerprint", [SchedulerToolPolicy.SchedulerWorkflowScheduleCreate]);
             var authority = new WorkflowStructureAuthority(WorkflowStructureAuthorityChannel.AgentExecution,
                 new(WorkflowLaunchActorKind.Agent, fixture.Agent.Id.ToString("D")), profile.Profile.Profile.Id, Guid.Empty,
                 false, false, null, governance.PolicyFingerprint) { AgentGovernance = governance };

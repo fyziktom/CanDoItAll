@@ -3,30 +3,27 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-internal enum ProcessScriptSideEffectFindingKind
-{
+public enum WorkspaceScriptSideEffectFindingKind {
     Write,
     EncodedCommand,
     ShellDelegation,
     ChildScript
 }
 
-internal sealed record ProcessScriptSideEffectFinding(
-    ProcessScriptSideEffectFindingKind Kind,
+public sealed record WorkspaceScriptSideEffectFinding(
+    WorkspaceScriptSideEffectFindingKind Kind,
     string Signal);
 
-internal sealed record ProcessScriptSideEffectAnalysis(IReadOnlyList<ProcessScriptSideEffectFinding> Findings)
-{
-    public bool HasWriteSignal => Findings.Any(finding => finding.Kind == ProcessScriptSideEffectFindingKind.Write);
+public sealed record WorkspaceScriptSideEffectAnalysis(IReadOnlyList<WorkspaceScriptSideEffectFinding> Findings) {
+    public bool HasWriteSignal => Findings.Any(finding => finding.Kind == WorkspaceScriptSideEffectFindingKind.Write);
 
-    public IReadOnlyList<string> EncodedCommandSignals => ResolveSignals(ProcessScriptSideEffectFindingKind.EncodedCommand);
+    public IReadOnlyList<string> EncodedCommandSignals => ResolveSignals(WorkspaceScriptSideEffectFindingKind.EncodedCommand);
 
-    public IReadOnlyList<string> ShellDelegationSignals => ResolveSignals(ProcessScriptSideEffectFindingKind.ShellDelegation);
+    public IReadOnlyList<string> ShellDelegationSignals => ResolveSignals(WorkspaceScriptSideEffectFindingKind.ShellDelegation);
 
-    public IReadOnlyList<string> ChildScriptSignals => ResolveSignals(ProcessScriptSideEffectFindingKind.ChildScript);
+    public IReadOnlyList<string> ChildScriptSignals => ResolveSignals(WorkspaceScriptSideEffectFindingKind.ChildScript);
 
-    private IReadOnlyList<string> ResolveSignals(ProcessScriptSideEffectFindingKind kind)
-    {
+    private IReadOnlyList<string> ResolveSignals(WorkspaceScriptSideEffectFindingKind kind) {
         return Findings
             .Where(finding => finding.Kind == kind)
             .Select(finding => finding.Signal)
@@ -36,8 +33,7 @@ internal sealed record ProcessScriptSideEffectAnalysis(IReadOnlyList<ProcessScri
     }
 }
 
-internal static class ProcessScriptSideEffectAnalyzer
-{
+public static class WorkspaceScriptSideEffectAnalyzer {
     private static readonly Regex PowerShellWriteSignalRegex = new(
         @"(?:\b(?:Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Set-ItemProperty|New-ItemProperty)\b|\[(?:System\.)?IO\.File\]::(?:WriteAllText|WriteAllLines|WriteAllBytes|AppendAllText|AppendAllLines|Delete|Move|Copy)\s*\(|(?<![<>=])>{1,2}(?![=>&]))",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
@@ -60,36 +56,31 @@ internal static class ProcessScriptSideEffectAnalyzer
         @"\b(?:subprocess\.(?:run|Popen|call|check_call|check_output)|runpy\.run_path)\s*\([^\r\n]*(?<path>['""][^'""]+\.py['""])",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-    public static ProcessScriptSideEffectAnalysis Analyze(string toolName, string scriptContent)
-    {
-        if (string.IsNullOrWhiteSpace(scriptContent))
-        {
-            return new ProcessScriptSideEffectAnalysis([]);
+    public static WorkspaceScriptSideEffectAnalysis Analyze(string toolName, string scriptContent) {
+        if (string.IsNullOrWhiteSpace(scriptContent)) {
+            return new WorkspaceScriptSideEffectAnalysis([]);
         }
 
-        var findings = new List<ProcessScriptSideEffectFinding>();
-        if (string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript, StringComparison.OrdinalIgnoreCase))
-        {
-            AddMatches(findings, PowerShellWriteSignalRegex, scriptContent, ProcessScriptSideEffectFindingKind.Write);
-            AddMatches(findings, PowerShellEncodedCommandRegex, scriptContent, ProcessScriptSideEffectFindingKind.EncodedCommand);
-            AddMatches(findings, PowerShellShellDelegationRegex, scriptContent, ProcessScriptSideEffectFindingKind.ShellDelegation);
+        var findings = new List<WorkspaceScriptSideEffectFinding>();
+        if (string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript, StringComparison.OrdinalIgnoreCase)) {
+            AddMatches(findings, PowerShellWriteSignalRegex, scriptContent, WorkspaceScriptSideEffectFindingKind.Write);
+            AddMatches(findings, PowerShellEncodedCommandRegex, scriptContent, WorkspaceScriptSideEffectFindingKind.EncodedCommand);
+            AddMatches(findings, PowerShellShellDelegationRegex, scriptContent, WorkspaceScriptSideEffectFindingKind.ShellDelegation);
             AddChildScriptMatches(findings, PowerShellChildScriptRegex, scriptContent);
-            return new ProcessScriptSideEffectAnalysis(findings);
+            return new WorkspaceScriptSideEffectAnalysis(findings);
         }
 
-        if (string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile, StringComparison.OrdinalIgnoreCase))
-        {
-            AddMatches(findings, PythonWriteSignalRegex, scriptContent, ProcessScriptSideEffectFindingKind.Write);
-            AddMatches(findings, PythonShellDelegationRegex, scriptContent, ProcessScriptSideEffectFindingKind.ShellDelegation);
+        if (string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile, StringComparison.OrdinalIgnoreCase)) {
+            AddMatches(findings, PythonWriteSignalRegex, scriptContent, WorkspaceScriptSideEffectFindingKind.Write);
+            AddMatches(findings, PythonShellDelegationRegex, scriptContent, WorkspaceScriptSideEffectFindingKind.ShellDelegation);
             AddChildScriptMatches(findings, PythonChildScriptRegex, scriptContent);
-            return new ProcessScriptSideEffectAnalysis(findings);
+            return new WorkspaceScriptSideEffectAnalysis(findings);
         }
 
-        return new ProcessScriptSideEffectAnalysis([]);
+        return new WorkspaceScriptSideEffectAnalysis([]);
     }
 
-    public static bool IsDeclaredChildScript(string childScript, IReadOnlyList<string> declaredChildScripts)
-    {
+    public static bool IsDeclaredChildScript(string childScript, IReadOnlyList<string> declaredChildScripts) {
         var normalizedChildScript = NormalizeToolPath(childScript);
         return declaredChildScripts
             .Select(NormalizeToolPath)
@@ -98,59 +89,49 @@ internal static class ProcessScriptSideEffectAnalyzer
                 normalizedChildScript.EndsWith("/" + declaredChildScript, StringComparison.OrdinalIgnoreCase));
     }
 
-    public static bool HasInspectedChildScriptMarker(string inspectedScriptContent, string childScript)
-    {
+    public static bool HasInspectedChildScriptMarker(string inspectedScriptContent, string childScript) {
         var marker = BuildInspectedChildScriptMarker(childScript);
         return inspectedScriptContent.Contains(marker, StringComparison.OrdinalIgnoreCase);
     }
 
-    public static string BuildInspectedChildScriptMarker(string childScript)
-    {
+    public static string BuildInspectedChildScriptMarker(string childScript) {
         return $"# inspected-child-script: {NormalizeToolPath(childScript)}";
     }
 
     private static void AddMatches(
-        List<ProcessScriptSideEffectFinding> findings,
+        List<WorkspaceScriptSideEffectFinding> findings,
         Regex regex,
         string scriptContent,
-        ProcessScriptSideEffectFindingKind kind)
-    {
-        foreach (Match match in regex.Matches(scriptContent))
-        {
+        WorkspaceScriptSideEffectFindingKind kind) {
+        foreach (Match match in regex.Matches(scriptContent)) {
             var signal = CollapsePolicySignal(match.Value);
-            if (!string.IsNullOrWhiteSpace(signal))
-            {
-                findings.Add(new ProcessScriptSideEffectFinding(kind, signal));
+            if (!string.IsNullOrWhiteSpace(signal)) {
+                findings.Add(new WorkspaceScriptSideEffectFinding(kind, signal));
             }
         }
     }
 
     private static void AddChildScriptMatches(
-        List<ProcessScriptSideEffectFinding> findings,
+        List<WorkspaceScriptSideEffectFinding> findings,
         Regex regex,
-        string scriptContent)
-    {
-        foreach (Match match in regex.Matches(scriptContent))
-        {
+        string scriptContent) {
+        foreach (Match match in regex.Matches(scriptContent)) {
             var path = match.Groups["path"].Success
                 ? match.Groups["path"].Value
                 : match.Value;
             var signal = NormalizeToolPath(path);
-            if (!string.IsNullOrWhiteSpace(signal))
-            {
-                findings.Add(new ProcessScriptSideEffectFinding(ProcessScriptSideEffectFindingKind.ChildScript, signal));
+            if (!string.IsNullOrWhiteSpace(signal)) {
+                findings.Add(new WorkspaceScriptSideEffectFinding(WorkspaceScriptSideEffectFindingKind.ChildScript, signal));
             }
         }
     }
 
-    private static string CollapsePolicySignal(string signal)
-    {
+    private static string CollapsePolicySignal(string signal) {
         var collapsed = signal.ReplaceLineEndings(" ").Trim();
         return collapsed.Length <= 80 ? collapsed : collapsed[..80];
     }
 
-    private static string NormalizeToolPath(string? value)
-    {
+    private static string NormalizeToolPath(string? value) {
         return string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : value.Replace('\\', '/').Trim().Trim('`', '"', '\'').Trim('/');

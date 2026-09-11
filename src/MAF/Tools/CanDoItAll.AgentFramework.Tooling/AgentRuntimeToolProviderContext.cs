@@ -43,6 +43,8 @@ public sealed record AgentRuntimeToolProviderContext
 
     public AgentRuntimeContextIntent ContextIntent { get; init; }
 
+    public AgentWorkspaceToolAccessSettings? WorkspaceToolAccess { get; init; }
+
     public IReadOnlyDictionary<string, string> Tags { get; init; }
 
     public ImmutableArray<AgentChatContextAttachmentEnvelope> Attachments { get; init; }

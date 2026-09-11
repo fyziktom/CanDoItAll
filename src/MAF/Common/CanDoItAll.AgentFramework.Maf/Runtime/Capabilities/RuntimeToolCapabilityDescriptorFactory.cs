@@ -91,13 +91,8 @@ internal static class RuntimeToolCapabilityDescriptorFactory
             return ToClassificationSet(CapabilityOperationClassification.Read);
         }
 
-        var operationClassifications = metadata.OperationRequirements
-            .SelectMany(requirement => requirement.AnyOf)
-            .SelectMany(ProcessAllowedOperationsCapabilityPolicyCompiler.ResolveClassifications)
-            .ToHashSet();
-        if (operationClassifications.Count > 0)
-        {
-            return operationClassifications;
+        if (metadata.OperationClassifications.Count > 0) {
+            return metadata.OperationClassifications.ToHashSet();
         }
 
         return metadata.Classification switch

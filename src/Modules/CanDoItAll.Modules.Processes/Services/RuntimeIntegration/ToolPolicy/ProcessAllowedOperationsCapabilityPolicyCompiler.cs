@@ -1,25 +1,22 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.AgentFramework.Core;
+namespace CanDoItAll.Modules.Processes;
 
-public static class ProcessAllowedOperationsCapabilityPolicyCompiler
-{
+public static class ProcessAllowedOperationsCapabilityPolicyCompiler {
     public static ProcessAllowedOperationsCapabilityPolicyCompilationResult Compile(
         IReadOnlyList<string> allowedOperations,
         TemplatePath templatePath,
-        string fieldPath)
-    {
+        string fieldPath) {
         ArgumentNullException.ThrowIfNull(allowedOperations);
 
         var issues = new List<CapabilityValidationIssue>();
         var allowedClassifications = new HashSet<CapabilityOperationClassification>();
-        for (var index = 0; index < allowedOperations.Count; index++)
-        {
+        for (var index = 0; index < allowedOperations.Count; index++) {
             var operation = allowedOperations[index]?.Trim() ?? string.Empty;
             if (!ProcessOperationKey.TryCreate(operation, out _) ||
-                !ProcessOperationContractNames.IsOperationName(operation))
-            {
+                !ProcessOperationContractNames.IsOperationName(operation)) {
                 issues.Add(new CapabilityValidationIssue(
                     CapabilityDiagnosticCategory.AccessPolicy,
                     CapabilityValidationSeverity.Error,
@@ -32,15 +29,13 @@ public static class ProcessAllowedOperationsCapabilityPolicyCompiler
                 continue;
             }
 
-            foreach (var classification in ResolveClassifications(operation))
-            {
+            foreach (var classification in ResolveClassifications(operation)) {
                 allowedClassifications.Add(classification);
             }
         }
 
         var rules = new List<CapabilityAccessRule>();
-        foreach (var classification in allowedClassifications.OrderBy(item => item.ToString(), StringComparer.Ordinal))
-        {
+        foreach (var classification in allowedClassifications.OrderBy(item => item.ToString(), StringComparer.Ordinal)) {
             rules.Add(new CapabilityAccessRule(
                 CapabilityRuleId.Create($"allow-{ToKebab(classification.ToString())}"),
                 CapabilityAccessEffect.Allow,
@@ -49,8 +44,7 @@ public static class ProcessAllowedOperationsCapabilityPolicyCompiler
                 $"Compatibility rule produced from process allowed operations at {templatePath.Value}."));
         }
 
-        foreach (var classification in RestrictedClassifications.Where(classification => !allowedClassifications.Contains(classification)))
-        {
+        foreach (var classification in RestrictedClassifications.Where(classification => !allowedClassifications.Contains(classification))) {
             rules.Add(new CapabilityAccessRule(
                 CapabilityRuleId.Create($"deny-{ToKebab(classification.ToString())}"),
                 CapabilityAccessEffect.Deny,
@@ -64,10 +58,8 @@ public static class ProcessAllowedOperationsCapabilityPolicyCompiler
             new CapabilityValidationResult(issues));
     }
 
-    public static IReadOnlyList<CapabilityOperationClassification> ResolveClassifications(string operation)
-    {
-        return operation switch
-        {
+    public static IReadOnlyList<CapabilityOperationClassification> ResolveClassifications(string operation) {
+        return operation switch {
             ProcessOperationContractNames.ReadProcessContext => [CapabilityOperationClassification.Read],
             ProcessOperationContractNames.ReadProjectStructure => [CapabilityOperationClassification.Read, CapabilityOperationClassification.ProjectStructure],
             ProcessOperationContractNames.ReadUpstreamArtifacts => [CapabilityOperationClassification.Read],
@@ -99,8 +91,7 @@ public static class ProcessAllowedOperationsCapabilityPolicyCompiler
         CapabilityOperationClassification.ResourceCleanup
     ];
 
-    private static string ToKebab(string value)
-    {
+    private static string ToKebab(string value) {
         return string.Concat(value.Select((character, index) =>
             index > 0 && char.IsUpper(character)
                 ? "-" + char.ToLowerInvariant(character)

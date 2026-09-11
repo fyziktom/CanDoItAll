@@ -70,66 +70,66 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         AddToolIfAuthorized(
             tools,
             context,
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+            WorkflowToolPolicy.WorkflowsDefinitionsList,
             () => AIFunctionFactory.Create(
                 (CancellationToken token = default) => ExecuteAuthorizedAsync(
                     context.Agent.Id,
-                    AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+                    WorkflowToolPolicy.WorkflowsDefinitionsList,
                     ListActiveDefinitionsAsync,
                     token),
-                AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+                WorkflowToolPolicy.WorkflowsDefinitionsList,
                 "Lists the latest Active version of each saved workflow. Use the returned workflowId and versionId with workflows_run_start."));
         AddToolIfAuthorized(
             tools,
             context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+            WorkflowToolPolicy.WorkflowsRunStart,
             () => AIFunctionFactory.Create(
                 (WorkflowAgentStartInput request, CancellationToken token = default) =>
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
-                        AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                        WorkflowToolPolicy.WorkflowsRunStart,
                         authorizedToken => StartAsync(context, request, authorizedToken),
                         token),
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                WorkflowToolPolicy.WorkflowsRunStart,
                 "Starts an Active saved workflow in Production mode and waits until it stops or waits for external input. Select LatestActive or ExactSavedVersion explicitly. Supply a stable idempotencyKey for retries; it is required outside interactive chat. Runtime backend and launch origin are governed by the host."));
         AddToolIfAuthorized(
             tools,
             context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+            WorkflowToolPolicy.WorkflowsRunStatusGet,
             () => AIFunctionFactory.Create(
                 (WorkflowAgentRunInput request, CancellationToken token = default) =>
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
-                        AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+                        WorkflowToolPolicy.WorkflowsRunStatusGet,
                         authorizedToken => GetStatusAsync(request, authorizedToken),
                         token),
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+                WorkflowToolPolicy.WorkflowsRunStatusGet,
                 "Gets the current persisted status of one workflow run."));
         AddToolIfAuthorized(
             tools,
             context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+            WorkflowToolPolicy.WorkflowsRunCancel,
             () => AIFunctionFactory.Create(
                 (WorkflowAgentRunInput request, CancellationToken token = default) =>
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
-                        AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+                        WorkflowToolPolicy.WorkflowsRunCancel,
                         authorizedToken => RequestCancellationAsync(request, authorizedToken),
                         token),
-                AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+                WorkflowToolPolicy.WorkflowsRunCancel,
                 "Requests cancellation for an active workflow run and returns the authoritative capability outcome. A requested cancellation is not terminal until the backend observes it."));
         AddToolIfAuthorized(
             tools,
             context,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
             () => AIFunctionFactory.Create(
                 (WorkflowAgentExternalResponseInput request, CancellationToken token = default) =>
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
-                        AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+                        WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
                         authorizedToken => SubmitResponseAsync(context, request, authorizedToken),
                         token),
-                AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+                WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
                 "Submits one response to a pending workflow external request. Unsupported backend resume remains explicit and does not fabricate completion."));
 
         return ValueTask.FromResult<IReadOnlyList<AITool>>(tools);
@@ -147,23 +147,23 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         return new[]
         {
             CreateMetadata(
-                AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+                WorkflowToolPolicy.WorkflowsDefinitionsList,
                 AgentRuntimeToolOperationKind.Read,
                 requiresApprovalByDefault: false),
             CreateMetadata(
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                WorkflowToolPolicy.WorkflowsRunStart,
                 AgentRuntimeToolOperationKind.Mutation,
                 requiresApprovalByDefault: true),
             CreateMetadata(
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+                WorkflowToolPolicy.WorkflowsRunStatusGet,
                 AgentRuntimeToolOperationKind.Read,
                 requiresApprovalByDefault: false),
             CreateMetadata(
-                AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+                WorkflowToolPolicy.WorkflowsRunCancel,
                 AgentRuntimeToolOperationKind.Mutation,
                 requiresApprovalByDefault: true),
             CreateMetadata(
-                AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+                WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
                 AgentRuntimeToolOperationKind.Mutation,
                 requiresApprovalByDefault: true)
         }

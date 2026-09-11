@@ -108,7 +108,7 @@ public sealed class ProjectStructureAgentAuthorizationServiceTests
                 childProjectId,
                 currentParentProjectId,
                 CancellationToken.None),
-            AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink);
+            ProjectStructureToolPolicy.ProjectStructureSubprojectLink);
     }
 
     [Theory]
@@ -135,7 +135,7 @@ public sealed class ProjectStructureAgentAuthorizationServiceTests
                 childProjectId,
                 currentParentProjectId: null,
                 CancellationToken.None),
-            AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink);
+            ProjectStructureToolPolicy.ProjectStructureSubprojectLink);
     }
 
     [Theory]
@@ -222,7 +222,7 @@ public sealed class ProjectStructureAgentAuthorizationServiceTests
                 proxy.Agent.Id,
                 sourceProjectId,
                 CancellationToken.None),
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject);
+            ProjectStructureToolPolicy.ProjectStructureNodesToNewSubproject);
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public sealed class ProjectStructureAgentAuthorizationServiceTests
                 proxy.Agent.Id,
                 Guid.NewGuid(),
                 CancellationToken.None),
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject);
+            ProjectStructureToolPolicy.ProjectStructureNodesToNewSubproject);
     }
 
     [Theory]

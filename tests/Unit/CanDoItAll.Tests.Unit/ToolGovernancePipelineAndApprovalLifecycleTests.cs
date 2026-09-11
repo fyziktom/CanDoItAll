@@ -37,6 +37,7 @@ public sealed class ToolGovernancePipelineAndApprovalLifecycleTests
         Assert.NotNull(observedContext);
         Assert.Equal(auditScope.ProcessRunId, observedContext!.ProcessRunId);
         Assert.Equal(auditScope.ProcessStepId, observedContext.ProcessStepId);
+        Assert.Same(ProcessToolInvocationScopePolicy.Instance, observedContext.ScopePolicy);
         Assert.False(observedContext.ProcessAllowsProductMutation);
         Assert.Equal(auditScope.ProcessStepAllowedOperations, observedContext.ProcessStepAllowedOperations);
         Assert.Equal(auditScope.ProcessStepTargetScope, observedContext.ProcessStepTargetScope);

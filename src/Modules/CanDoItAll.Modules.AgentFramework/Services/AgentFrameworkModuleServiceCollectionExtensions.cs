@@ -1,3 +1,4 @@
+using CanDoItAll.Agents.Storage;
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
@@ -329,7 +330,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
         services.TryAddSingleton<AgentToolPolicyCatalog>();
-        foreach (var policy in PromptGalleryToolPolicy.Capabilities) {
+        foreach (var policy in PromptGalleryToolPolicy.Capabilities
+            .Concat(HrAgentToolPolicy.Capabilities)
+            .Concat(WorkflowToolPolicy.Capabilities)
+            .Concat(WorkflowCuratorToolPolicy.Capabilities)
+            .Concat(CapabilityCuratorToolPolicy.Capabilities)
+            .Concat(ImageGenerationToolPolicy.Capabilities)) {
             if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
                 services.AddSingleton(policy);
             }
@@ -358,6 +364,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
         services.TryAddScoped<IPluginStorageGateway, PluginStorageGateway>();
+        services.AddAgentStorageTools();
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.AddMafWorkflowAdapterServices(ServiceLifetime.Scoped);

@@ -21,19 +21,26 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
         IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments,
         AgentExecutionGovernanceSnapshot? governance = null,
         AgentToolSessionReference? admittedToolSession = null,
-        AgentToolAdmissionSupport toolAdmissionSupport = AgentToolAdmissionSupport.Recoverable)
+        AgentToolAdmissionSupport toolAdmissionSupport = AgentToolAdmissionSupport.Recoverable,
+        AgentRuntimeToolAttachmentPhase attachmentPhase = AgentRuntimeToolAttachmentPhase.RuntimeProviders)
     {
-        if (!contextIntent.RuntimeToolProvidersEnabled)
+        var configured = attachmentPhase == AgentRuntimeToolAttachmentPhase.ConfiguredWorkspace;
+        var registrations = composition.RuntimeToolProviders
+            .Where(registration => registration.Descriptor.AttachmentPhase == attachmentPhase).ToArray();
+        if (configured && registrations.Length == 0) {
+            return;
+        }
+        if (configured ? !contextIntent.WorkspaceToolsEnabled : !contextIntent.RuntimeToolProvidersEnabled)
         {
             composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                AgentRuntimeContextSourceCategories.RuntimeToolProvider,
-                "registered-runtime-tool-providers",
-                "registered runtime tool providers disabled by execution context"));
+                configured ? AgentRuntimeContextSourceCategories.WorkspaceTools : AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                configured ? "registered-configured-workspace-providers" : "registered-runtime-tool-providers",
+                configured ? "configured workspace providers disabled by execution context" : "registered runtime tool providers disabled by execution context"));
             return;
         }
 
         if (!agent.Permissions.CanUseTools ||
-            composition.RuntimeToolProviders.Count == 0)
+            registrations.Length == 0)
         {
             return;
         }
@@ -52,6 +59,9 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
             ResolveRuntimeToolProviderTags(contextWorkspaceScope),
             contextAttachments)
         {
+            WorkspaceToolAccess = configured
+                ? composition.ConfiguredWorkspaceToolAccess
+                : composition.WorkspaceToolAccess,
             AdmittedToolSession = admittedToolSession,
             ToolAdmissionSupport = toolAdmissionSupport,
             Governance = governance
@@ -60,13 +70,13 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
             new RuntimeToolProviderAttachmentRequest(
                 composition.State,
                 composition.CapabilityAccessPlan,
-                composition.RuntimeToolProviders,
+                registrations,
                 context,
                 suppressApprovalRequirements),
             cancellationToken);
         await progressCallback(
             ExecutionState.Preparing,
-            "Runtime tool providers",
+            configured ? "Workspace tools" : "Runtime tool providers",
             result.ProgressMessage);
     }
 

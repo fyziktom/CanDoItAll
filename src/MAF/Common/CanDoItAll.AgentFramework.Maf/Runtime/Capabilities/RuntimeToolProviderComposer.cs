@@ -52,10 +52,13 @@ internal sealed class RuntimeToolProviderComposer(
         foreach (var registration in request.RuntimeToolProviders)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var sourceCategory = registration.Descriptor.AttachmentPhase == AgentRuntimeToolAttachmentPhase.ConfiguredWorkspace
+                ? AgentRuntimeContextSourceCategories.WorkspaceTools
+                : AgentRuntimeContextSourceCategories.RuntimeToolProvider;
             if (!registration.Descriptor.SupportedPurposes.Contains(request.Context.Purpose))
             {
                 request.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                    AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                    sourceCategory,
                     registration.Descriptor.ProviderKey,
                     $"registered runtime tool provider does not support {request.Context.Purpose} execution"));
                 attachmentSummaries.Add(new RuntimeToolProviderAttachmentSummary(
@@ -102,7 +105,7 @@ internal sealed class RuntimeToolProviderComposer(
             if (tools.Count == 0)
             {
                 request.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                    AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                    sourceCategory,
                     registration.Descriptor.ProviderKey,
                     filtered.ExcludedToolCount > 0
                         ? $"registered runtime tool provider pruned {filtered.ExcludedToolCount} tool(s) that are outside this governed process step operation contract"
@@ -119,7 +122,7 @@ internal sealed class RuntimeToolProviderComposer(
             request.State.RuntimeToolMetadata.AddRange(toolMetadata);
             request.State.Tools.AddRange(tools);
             request.State.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
-                AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                sourceCategory,
                 registration.Descriptor.ProviderKey,
                 "registered runtime tool provider selected for this run",
                 tools.Count,
@@ -355,6 +358,10 @@ internal sealed class RuntimeToolProviderAccessFilter(AgentToolPolicyCatalog? to
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.Registration.Descriptor.AttachmentPhase == AgentRuntimeToolAttachmentPhase.ConfiguredWorkspace) {
+            return FilterConfiguredWorkspaceTools(request);
+        }
+
         var metadataByToolName = request.Metadata.ToDictionary(
             item => item.ToolName,
             StringComparer.OrdinalIgnoreCase);
@@ -414,6 +421,23 @@ internal sealed class RuntimeToolProviderAccessFilter(AgentToolPolicyCatalog? to
             includedTools,
             includedMetadata,
             request.Tools.Count - includedTools.Count);
+    }
+
+    private static FilteredRuntimeToolProviderTools FilterConfiguredWorkspaceTools(RuntimeToolProviderAccessFilterRequest request) {
+        var policy = request.Registration.ConfiguredWorkspacePolicy
+            ?? throw new InvalidOperationException("Configured runtime provider policy was not prepared before attachment.");
+        var declared = policy.Capabilities.ToDictionary(capability => capability.RuntimeToolName?.Value
+            ?? throw new InvalidOperationException("A configured tool descriptor must declare its runtime tool name."), StringComparer.OrdinalIgnoreCase);
+        var allowed = request.AccessPlan.InitialAllowedCapabilities
+            .Select(capability => capability.Identity).ToHashSet();
+        foreach (var tool in request.Tools) {
+            if (!declared.ContainsKey(tool.Name)) {
+                throw new InvalidOperationException($"Configured provider '{request.Registration.Descriptor.ProviderKey}' returned unplanned tool '{tool.Name}'.");
+            }
+        }
+        var tools = request.Tools.Where(tool => allowed.Contains(declared[tool.Name].Identity)).ToArray();
+        var names = tools.Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return new(tools, request.Metadata.Where(metadata => names.Contains(metadata.ToolName)).ToArray(), request.Tools.Count - tools.Length);
     }
 
     private IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(

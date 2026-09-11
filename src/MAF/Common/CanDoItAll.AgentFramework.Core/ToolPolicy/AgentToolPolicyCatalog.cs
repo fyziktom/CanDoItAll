@@ -16,12 +16,16 @@ public sealed class AgentToolPolicyCatalog {
             if (string.IsNullOrWhiteSpace(name) || capability.Classification == ToolInvocationClassification.Unknown) {
                 throw new ArgumentException("A tool policy requires a stable name and an explicit classification.", nameof(contributions));
             }
+            if (capability.OperationClassifications.Any(classification => !Enum.IsDefined(classification))) {
+                throw new ArgumentException($"Tool '{name}' has an unknown operation classification.", nameof(contributions));
+            }
             if (capability.BusinessArgumentRetentionScheme is { } scheme &&
                 (string.IsNullOrWhiteSpace(scheme) || !string.Equals(scheme, scheme.Trim(), StringComparison.Ordinal))) {
                 throw new ArgumentException($"Tool '{name}' has an invalid argument retention scheme.", nameof(contributions));
             }
             var immutable = capability with {
                 Name = name,
+                OperationClassifications = Array.AsReadOnly(capability.OperationClassifications.ToArray()),
                 OperationRequirements = Array.AsReadOnly(capability.OperationRequirements
                     .Select(requirement => new ToolCapabilityProcessOperationRequirement(Array.AsReadOnly(requirement.AnyOf.ToArray())))
                     .ToArray()),
@@ -32,6 +36,12 @@ public sealed class AgentToolPolicyCatalog {
             }
         }
         capabilities = records.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public IEnumerable<ToolCapabilityMetadata> Capabilities => capabilities.Values;
+
+    public bool ProtectsRuntimeStateOnExport(string? toolName) {
+        return TryResolve(toolName, out var metadata) && metadata.ProtectRuntimeStateOnExport;
     }
 
     public bool TryResolve(string? toolName, out ToolCapabilityMetadata metadata) {

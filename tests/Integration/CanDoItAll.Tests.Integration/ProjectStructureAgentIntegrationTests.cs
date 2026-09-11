@@ -857,7 +857,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             runtimeTools,
             tool => string.Equals(
                 tool.Name,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze,
+                ProjectStructureToolPolicy.ProjectStructureAssetImageAnalyze,
                 StringComparison.Ordinal)));
         object? analysisResult = await analyzeImage.InvokeAsync(new AIFunctionArguments
         {

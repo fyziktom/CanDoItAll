@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -6909,7 +6910,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
             var requiredTools = Enumerable.Range(0, 65)
                 .Select(index => $"runtime_tool_{index:D2}")
@@ -7079,7 +7081,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7151,7 +7154,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 runtimeOwnedStepExecutors: [runtimeExecutor]);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7221,7 +7225,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7269,7 +7274,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 runtimeOwnedStepExecutors: [runtimeExecutor]);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7335,7 +7341,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 runtimeOwnedStepExecutors: [runtimeExecutor]);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7402,7 +7409,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty));
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies));
             var requiredTools = Enumerable.Range(0, 65)
                 .Select(index => $"runtime_tool_{index:D2}")
                 .ToArray();
@@ -9311,7 +9319,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty));
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies));
 
             var result = await adapter.ExecuteAsync(
                 CreateAdapterRequest(

@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using CanDoItAll.AgentFramework.Core;
+using static CanDoItAll.AgentFramework.Core.ToolCapabilityMetadataFactory;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 
@@ -29,23 +30,41 @@ public sealed record HrSimpleChatToolOperation(
 }
 
 public static class HrSimpleChatToolPolicy {
+    public const string HrSimpleChatsSearch = "hr_simple_chats_search";
+    public const string HrSimpleChatCreationOptionsGet = "hr_simple_chat_creation_options_get";
+    public const string HrSimpleChatSettingsGet = "hr_simple_chat_settings_get";
+    public const string HrSimpleChatCreate = "hr_simple_chat_create";
+    public const string HrSimpleChatSettingsUpdate = "hr_simple_chat_settings_update";
+    public const string HrSimpleChatStatusChange = "hr_simple_chat_status_change";
+    public const string HrSimpleChatCreateReceiptGet = "hr_simple_chat_create_receipt_get";
+
+    public static IReadOnlyList<ToolCapabilityMetadata> Capabilities { get; } = Array.AsReadOnly<ToolCapabilityMetadata>([
+        Read(HrSimpleChatsSearch, ToolCapabilitySideEffectKind.InternalDataRead) with { BusinessArgumentRetentionScheme = "hr-approval-redacted-v1", ProtectRuntimeStateOnExport = true },
+        Read(HrSimpleChatCreationOptionsGet, ToolCapabilitySideEffectKind.InternalDataRead) with { BusinessArgumentRetentionScheme = "hr-approval-redacted-v1", ProtectRuntimeStateOnExport = true },
+        Read(HrSimpleChatSettingsGet, ToolCapabilitySideEffectKind.InternalDataRead) with { RequiresApprovalByDefault = true, BusinessArgumentRetentionScheme = "hr-approval-redacted-v1", ProtectRuntimeStateOnExport = true },
+        Mutation(HrSimpleChatCreate, ToolCapabilitySideEffectKind.InternalStateMutation) with { BusinessArgumentRetentionScheme = "hr-approval-redacted-v1", ProtectRuntimeStateOnExport = true },
+        Mutation(HrSimpleChatSettingsUpdate, ToolCapabilitySideEffectKind.InternalStateMutation) with { BusinessArgumentRetentionScheme = "hr-approval-redacted-v1", ProtectRuntimeStateOnExport = true },
+        Mutation(HrSimpleChatStatusChange, ToolCapabilitySideEffectKind.InternalStateMutation) with { BusinessArgumentRetentionScheme = "hr-approval-redacted-v1", ProtectRuntimeStateOnExport = true },
+        Read(HrSimpleChatCreateReceiptGet, ToolCapabilitySideEffectKind.InternalDataRead) with { BusinessArgumentRetentionScheme = "hr-approval-redacted-v1", ProtectRuntimeStateOnExport = true }
+    ]);
+
     public const string ProviderKey = "hr-agent.simple-chats-definitions";
     public const string CreateProducer = "agents.hr.simple-chats";
 
     public static IReadOnlyList<HrSimpleChatToolOperation> Operations { get; } = Array.AsReadOnly<HrSimpleChatToolOperation>([
-        new(HrSimpleChatOperation.Search, AgentToolInvocationPolicyMetadata.HrSimpleChatsSearch,
+        new(HrSimpleChatOperation.Search, HrSimpleChatsSearch,
             "hr-simple-chats-search", AgentToolProposalEffect.Read, AgentToolProposalRecovery.RevalidateAndRead),
-        new(HrSimpleChatOperation.Options, AgentToolInvocationPolicyMetadata.HrSimpleChatCreationOptionsGet,
+        new(HrSimpleChatOperation.Options, HrSimpleChatCreationOptionsGet,
             "hr-simple-chat-creation-options-get", AgentToolProposalEffect.Read, AgentToolProposalRecovery.RevalidateAndRead),
-        new(HrSimpleChatOperation.Settings, AgentToolInvocationPolicyMetadata.HrSimpleChatSettingsGet,
+        new(HrSimpleChatOperation.Settings, HrSimpleChatSettingsGet,
             "hr-simple-chat-settings-get", AgentToolProposalEffect.SensitiveDisclosure, AgentToolProposalRecovery.RevalidateAndRead),
-        new(HrSimpleChatOperation.Create, AgentToolInvocationPolicyMetadata.HrSimpleChatCreate,
+        new(HrSimpleChatOperation.Create, HrSimpleChatCreate,
             "hr-simple-chat-create", AgentToolProposalEffect.Mutation, AgentToolProposalRecovery.OwnerReceipt),
-        new(HrSimpleChatOperation.Update, AgentToolInvocationPolicyMetadata.HrSimpleChatSettingsUpdate,
+        new(HrSimpleChatOperation.Update, HrSimpleChatSettingsUpdate,
             "hr-simple-chat-settings-update", AgentToolProposalEffect.Mutation, AgentToolProposalRecovery.ReconcileBeforeRetry),
-        new(HrSimpleChatOperation.Status, AgentToolInvocationPolicyMetadata.HrSimpleChatStatusChange,
+        new(HrSimpleChatOperation.Status, HrSimpleChatStatusChange,
             "hr-simple-chat-status-change", AgentToolProposalEffect.Mutation, AgentToolProposalRecovery.ReconcileBeforeRetry),
-        new(HrSimpleChatOperation.Receipt, AgentToolInvocationPolicyMetadata.HrSimpleChatCreateReceiptGet,
+        new(HrSimpleChatOperation.Receipt, HrSimpleChatCreateReceiptGet,
             "hr-simple-chat-create-receipt-get", AgentToolProposalEffect.Read, AgentToolProposalRecovery.RevalidateAndRead)
     ]);
 

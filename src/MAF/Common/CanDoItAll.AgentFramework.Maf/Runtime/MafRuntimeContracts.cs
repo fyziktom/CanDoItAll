@@ -85,7 +85,9 @@ internal sealed record RuntimeCapabilityAccessPlan(
 
 internal sealed record RuntimeToolProviderRegistration(
     IAgentRuntimeToolProvider Provider,
-    AgentRuntimeToolProviderDescriptor Descriptor);
+    AgentRuntimeToolProviderDescriptor Descriptor) {
+    public AgentRuntimeConfiguredWorkspacePolicy? ConfiguredWorkspacePolicy { get; init; }
+}
 
 internal sealed record RuntimeToolProviderAttachmentRequest(
     RuntimeCapabilityState State,

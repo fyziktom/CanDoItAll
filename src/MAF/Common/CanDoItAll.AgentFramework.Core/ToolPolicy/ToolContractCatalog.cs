@@ -50,11 +50,6 @@ public static class ToolContractCatalog
 
     public const string ProviderHealth = "provider_health";
     public const string AgentPackageExport = "agent_package_export";
-    public const string StorageCatalogList = "storage_catalog_list";
-    public const string StorageBrowse = "storage_browse";
-    public const string StorageReadTextFile = "storage_read_text_file";
-    public const string StorageWriteTextFile = "storage_write_text_file";
-    public const string StorageDeleteObject = "storage_delete_object";
 
     public const string BrowserNavigate = "browser_navigate";
     public const string BrowserResize = "browser_resize";
@@ -71,24 +66,6 @@ public static class ToolContractCatalog
     public const string BrowserDrag = "browser_drag";
     public const string BrowserWaitFor = "browser_wait_for";
 
-    public const string WorkflowCuratorCatalogSearch = "workflow_curator_catalog_search";
-    public const string WorkflowCuratorDefinitionEditorGet = "workflow_curator_definition_editor_get";
-    public const string WorkflowCuratorAuthoringOptionsGet = "workflow_curator_authoring_options_get";
-    public const string WorkflowCuratorDraftCreate = "workflow_curator_draft_create";
-    public const string WorkflowCuratorDraftUpdate = "workflow_curator_draft_update";
-    public const string WorkflowCuratorNodeUpdate = "workflow_curator_node_update";
-    public const string WorkflowCuratorLifecycleChange = "workflow_curator_lifecycle_change";
-    public const string CapabilityCuratorCatalogSearch = "capability_curator_catalog_search";
-    public const string CapabilityCuratorEditorGet = "capability_curator_editor_get";
-    public const string CapabilityCuratorAssignmentEditorGet = "capability_curator_assignment_editor_get";
-    public const string CapabilityCuratorSave = "capability_curator_save";
-    public const string CapabilityCuratorToolSetupTest = "capability_curator_tool_setup_test";
-    public const string CapabilityCuratorMcpSetupTest = "capability_curator_mcp_setup_test";
-    public const string CapabilityCuratorAssignmentUpdate = "capability_curator_assignment_update";
-    public const string CapabilityCuratorVerify = "capability_curator_verify";
-    public const string SchedulerWorkflowTargetsSearch = "scheduler_workflow_targets_search";
-    public const string SchedulerWorkflowSchedulesSearch = "scheduler_workflow_schedules_search";
-    public const string SchedulerWorkflowScheduleCreate = "scheduler_workflow_schedule_create";
 
     public static IReadOnlyList<string> WorkspaceToolNames { get; } =
     [
@@ -163,14 +140,6 @@ public static class ToolContractCatalog
         AgentPackageExport
     ];
 
-    public static IReadOnlyList<string> StorageToolNames { get; } =
-    [
-        StorageCatalogList,
-        StorageBrowse,
-        StorageReadTextFile,
-        StorageWriteTextFile,
-        StorageDeleteObject
-    ];
 
     public static IReadOnlyList<string> BrowserEvidenceToolNames { get; } =
     [
@@ -217,133 +186,10 @@ public static class ToolContractCatalog
         .. WorkspaceToolNames,
         .. BrowserToolNames,
         .. RuntimeUtilityToolNames,
-        .. StorageToolNames,
         .. FinalizerToolNames,
         AgentToolInvocationPolicyMetadata.LoadSkill,
         AgentToolInvocationPolicyMetadata.ReadSkillResource,
         AgentToolInvocationPolicyMetadata.RunSkillScript,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
-        AgentToolInvocationPolicyMetadata.ProcessesRunStart,
-        AgentToolInvocationPolicyMetadata.ProcessesStepTransition,
-        AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
-        AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport,
-        AgentToolInvocationPolicyMetadata.ProcessesRunsList,
-        AgentToolInvocationPolicyMetadata.ProcessesRunDetailGet,
-        AgentToolInvocationPolicyMetadata.ProcessesAnalyticsGet,
-        AgentToolInvocationPolicyMetadata.ProcessesPartyOptionsList,
-        AgentToolInvocationPolicyMetadata.ProcessesExecutorOptionsList,
-        AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
-        AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
-        AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
-        AgentToolInvocationPolicyMetadata.ProcessesTemplateImport,
-        AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
-        AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList,
-        AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
-        AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
-        AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
-        AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
-        AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
-        AgentToolInvocationPolicyMetadata.WorkflowCuratorCatalogSearch,
-        AgentToolInvocationPolicyMetadata.WorkflowCuratorDefinitionEditorGet,
-        AgentToolInvocationPolicyMetadata.WorkflowCuratorAuthoringOptionsGet,
-        AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftCreate,
-        AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate,
-        AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate,
-        AgentToolInvocationPolicyMetadata.WorkflowCuratorLifecycleChange,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorSave,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate,
-        AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify,
-        AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch,
-        AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch,
-        AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
-        AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
-        AgentToolInvocationPolicyMetadata.HrAgentsSearch,
-        AgentToolInvocationPolicyMetadata.HrAgentSettingsGet,
-        AgentToolInvocationPolicyMetadata.HrAgentCreationOptionsGet,
-        AgentToolInvocationPolicyMetadata.HrAgentCreate,
-        AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
-        AgentToolInvocationPolicyMetadata.HrAgentAvatarGenerate,
-        AgentToolInvocationPolicyMetadata.HrAgentUsageGet,
-        AgentToolInvocationPolicyMetadata.HrAgentProcessHistoryGet,
-        AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest,
-        AgentToolInvocationPolicyMetadata.HrCrmSearch,
-        AgentToolInvocationPolicyMetadata.HrCrmItemSummaryGet,
-        AgentToolInvocationPolicyMetadata.HrCrmPartyCreate,
-        AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList,
-        AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert,
-        AgentToolInvocationPolicyMetadata.ProjectStructureProjectsList,
-        AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureProjectUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureHierarchyGet,
-        AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectCreate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject,
-        AgentToolInvocationPolicyMetadata.ProjectStructureRead,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeCatalog,
-        AgentToolInvocationPolicyMetadata.ProjectStructureChecklist,
-        AgentToolInvocationPolicyMetadata.ProjectStructureDependenciesQuery,
-        AgentToolInvocationPolicyMetadata.ProjectPlanSummaryGet,
-        AgentToolInvocationPolicyMetadata.ProjectTaskCreate,
-        AgentToolInvocationPolicyMetadata.ProjectTaskUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectTaskResourceAttach,
-        AgentToolInvocationPolicyMetadata.ProjectStructureDependencyLink,
-        AgentToolInvocationPolicyMetadata.ProjectStructureDependencyUnlink,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeTypeUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeMetadataUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodesStatusUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeStatusUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodesProgressUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeProgressUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodesMarkerUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeMarkerUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodesPriorityUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodePriorityUpdate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeMove,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeRecompose,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeReparent,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeDescendantsToProjectMove,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeCommandExecute,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessDefinitionLink,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
-        AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowAddOptions,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowDefinitionCreate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete,
-        AgentToolInvocationPolicyMetadata.ProjectStructureNodesDelete,
-        AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
-        AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureAssetGet,
-        AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet,
-        AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet,
-        AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze,
-        AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreateRevision,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLinkCreate,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLinkUnlink,
-        AgentToolInvocationPolicyMetadata.ProjectStructureImport,
-        AgentToolInvocationPolicyMetadata.ProjectStructureKnowledgeQuery,
-        AgentToolInvocationPolicyMetadata.ProjectStructureAnalyticsQuery,
-        AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire,
-        AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease
     ];
 
     public static bool IsKnownToolName(string? toolName)

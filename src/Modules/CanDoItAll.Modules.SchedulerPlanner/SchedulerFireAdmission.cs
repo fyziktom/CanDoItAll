@@ -314,7 +314,7 @@ public sealed class SchedulerWorkflowAuthorityPolicy(
     CoordinatedDatabaseTransaction transactions) : IWorkflowScheduledAuthorityPolicy {
     public bool AllowsScheduling(AgentExecutionGovernanceSnapshot authority)
         => authority.AllowedOperations.Count == 0 ||
-            authority.AllowedOperations.Contains(AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate);
+            authority.AllowedOperations.Contains(SchedulerToolPolicy.SchedulerWorkflowScheduleCreate);
 
     public async Task RequireCurrentAsync(WorkflowStructureSchedulerAuthority authority, CancellationToken cancellationToken = default) {
         await using var database = await factory.CreateDbContextAsync(cancellationToken);

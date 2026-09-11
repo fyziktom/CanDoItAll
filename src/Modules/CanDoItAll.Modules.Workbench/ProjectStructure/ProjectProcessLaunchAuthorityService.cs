@@ -63,9 +63,9 @@ public sealed class ProjectProcessLaunchAuthorityService(
         var authority = new ProcessLaunchAuthority(new ProcessLaunchPrincipal.AgentExecution(ceiling, operation),
             governance.DatabaseProfileId, expectedProject,
             governance.MutationAllowed && ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(access) &&
-                Allows(ceiling, AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate),
+                Allows(ceiling, ProjectStructureToolPolicy.ProjectStructureNodeCreate),
             governance.MutationAllowed && ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(access) &&
-                Allows(ceiling, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate), governance.PolicyFingerprint);
+                Allows(ceiling, ProjectStructureToolPolicy.ProjectStructureAssetCreate), governance.PolicyFingerprint);
         RequireSource(authority, authority, held);
         await projectAdmissions.RequireCurrentAsync(ToProject(expectedProject), cancellationToken);
         return authority;
@@ -140,10 +140,10 @@ public sealed class ProjectProcessLaunchAuthorityService(
                 !access.AllowAllProjects && (!access.AllowedProjectIds.Contains(project.ProjectId) ||
                     !access.AllowedProjectLifetimes.Contains(new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId))) ||
                 saved.CanCreateTasks && (!ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(access) ||
-                    !Allows(source.Ceiling, AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate) ||
-                    !Allows(current.Ceiling, AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate)) ||
-                saved.CanCreateAssets && (!Allows(source.Ceiling, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate) ||
-                    !Allows(current.Ceiling, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate))) {
+                    !Allows(source.Ceiling, ProjectStructureToolPolicy.ProjectStructureNodeCreate) ||
+                    !Allows(current.Ceiling, ProjectStructureToolPolicy.ProjectStructureNodeCreate)) ||
+                saved.CanCreateAssets && (!Allows(source.Ceiling, ProjectStructureToolPolicy.ProjectStructureAssetCreate) ||
+                    !Allows(current.Ceiling, ProjectStructureToolPolicy.ProjectStructureAssetCreate))) {
             throw Denied("Current Agent policy does not grant this exact project lifetime and Process operation.");
         }
     }
@@ -151,8 +151,8 @@ public sealed class ProjectProcessLaunchAuthorityService(
     private void RequireCeiling(ProcessLaunchPrincipal.AgentExecution source, ProcessProjectAdmission project) {
         var ceiling = source.Ceiling;
         var operation = source.Operation switch {
-            ProcessLaunchAgentOperation.StructureStart => AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
-            ProcessLaunchAgentOperation.SubprocessLaunch => AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
+            ProcessLaunchAgentOperation.StructureStart => ProjectStructureToolPolicy.ProjectStructureNodeProcessStart,
+            ProcessLaunchAgentOperation.SubprocessLaunch => ProjectStructureToolPolicy.ProjectStructureProcessSubprocessLaunch,
             _ => throw Denied("The process Agent source has an unsupported launch operation.")
         };
         if (!ceiling.ReadAllowed || !ceiling.MutationAllowed || ceiling.DatabaseProfileGeneration != generations.GetGeneration().Value ||

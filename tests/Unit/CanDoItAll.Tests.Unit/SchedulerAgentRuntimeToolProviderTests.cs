@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -30,9 +31,9 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             SchedulerAgentCapabilityKeys.ToolNameToCapabilityKey.Keys.OrderBy(item => item, StringComparer.Ordinal),
             tools.Select(item => item.Name).OrderBy(item => item, StringComparer.Ordinal));
         Assert.Equal(3, metadata.Count);
-        Assert.False(metadata.Single(item => item.ToolName == AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch).RequiresApprovalByDefault);
-        Assert.False(metadata.Single(item => item.ToolName == AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch).RequiresApprovalByDefault);
-        Assert.True(metadata.Single(item => item.ToolName == AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate).RequiresApprovalByDefault);
+        Assert.False(metadata.Single(item => item.ToolName == SchedulerToolPolicy.SchedulerWorkflowTargetsSearch).RequiresApprovalByDefault);
+        Assert.False(metadata.Single(item => item.ToolName == SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch).RequiresApprovalByDefault);
+        Assert.True(metadata.Single(item => item.ToolName == SchedulerToolPolicy.SchedulerWorkflowScheduleCreate).RequiresApprovalByDefault);
 
         var spoofedContext = harness.Context with
         {
@@ -55,7 +56,7 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
         Assert.Empty(harness.Provider.GetToolMetadata(schedulingDisabledContext));
 
         var targetSearch = Assert.IsAssignableFrom<AIFunction>(tools.Single(item =>
-            item.Name == AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch));
+            item.Name == SchedulerToolPolicy.SchedulerWorkflowTargetsSearch));
         harness.Workspace.Agents =
         [
             harness.Context.Agent with
@@ -73,13 +74,13 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
     [Fact]
     public void Scheduler_tool_policy_requires_approval_and_redacts_schedule_content()
     {
-        Assert.True(ToolCapabilityRegistry.TryResolve(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
+        Assert.True(ProductToolPolicies.TryResolve(
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
             out var metadata));
         Assert.True(metadata.IsStateChanging);
         Assert.Equal(ToolCapabilitySideEffectKind.InternalStateMutation, metadata.SideEffectKind);
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate));
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate, ProductToolPolicies));
 
         var workflowId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         const string scheduleName = "Confidential customer schedule";
@@ -91,16 +92,16 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             inputJson
         };
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
         [
             new KeyValuePair<string, object?>("request", request)
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
             redacted);
         var audit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
-            JsonSerializer.Serialize(new { request }));
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
+            JsonSerializer.Serialize(new { request }), ProductToolPolicies);
 
         Assert.Contains(workflowId.ToString("D"), signature, StringComparison.Ordinal);
         Assert.DoesNotContain(scheduleName, signature, StringComparison.Ordinal);
@@ -184,19 +185,19 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             .ToDictionary(item => item.Name, StringComparer.Ordinal);
 
         var targetSearch = await InvokeAsync<SchedulerWorkflowTargetSearchResult>(
-            tools[AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch],
+            tools[SchedulerToolPolicy.SchedulerWorkflowTargetsSearch],
             new SchedulerWorkflowTargetSearchInput("release"));
         var target = Assert.Single(targetSearch.Items);
         Assert.Equal(workflowId, target.WorkflowId);
 
         var scheduleSearch = await InvokeAsync<SchedulerWorkflowScheduleSearchResult>(
-            tools[AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch],
+            tools[SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch],
             new SchedulerWorkflowScheduleSearchInput("release"));
         var schedule = Assert.Single(scheduleSearch.Items);
         Assert.Equal(existingPlanId, schedule.PlanId);
 
         var created = await InvokeAsync<SchedulerWorkflowScheduleCreateResult>(
-            tools[AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate],
+            tools[SchedulerToolPolicy.SchedulerWorkflowScheduleCreate],
             new SchedulerWorkflowScheduleCreateInput(
                 workflowId,
                 "Afternoon release",

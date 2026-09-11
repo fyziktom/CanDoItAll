@@ -163,7 +163,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var tool = Assert.Single(tools);
         Assert.Equal(950, toolProvider.Order);
         Assert.Equal("image-generation.runtime-tools", toolProvider.Descriptor?.ProviderKey);
-        Assert.Equal(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, tool.Name);
+        Assert.Equal(ImageGenerationToolPolicy.ImageGenerationCreate, tool.Name);
     }
 
     [Fact]

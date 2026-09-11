@@ -39,7 +39,7 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
             detail.ToolReceipts,
             item => string.Equals(
                 item.ToolName,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 StringComparison.Ordinal));
 
         Assert.Equal(HttpStatusCode.OK, observation.StatusCode);
@@ -105,7 +105,7 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
         Assert.Equal(firstDetail.Run.ChatSessionId, secondDetail.Run.ChatSessionId);
         Assert.Equal(ExecutionState.Completed, secondDetail.Run.State);
         Assert.Contains(
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate,
             evidence,
             StringComparison.Ordinal);
         Assert.Contains("InvalidToolArguments", evidence, StringComparison.Ordinal);
@@ -141,7 +141,7 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
         return detail.ToolReceipts
             .Where(item => string.Equals(
                 item.ToolName,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 StringComparison.Ordinal))
             .OrderBy(item => item.StartedAtUtc)
             .ToArray();
@@ -557,7 +557,7 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
                 [
                     new FunctionCallContent(
                         callId,
-                        AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                        ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                         arguments)
                 ]));
     }
@@ -586,7 +586,7 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
     {
         if (options?.Tools?.Any(tool => string.Equals(
                 tool.Name,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 StringComparison.Ordinal)) != true)
         {
             throw new InvalidOperationException(

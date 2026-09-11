@@ -1,3 +1,5 @@
+using CanDoItAll.Tests.Support;
+using CanDoItAll.Agents.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -258,7 +260,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(ToolCapabilityBuilder),
             typeof(WorkspaceRuntimePlugin),
             typeof(WorkspaceImageAnalysisModelResolver),
-            typeof(StorageRuntimePlugin),
+            typeof(StorageAgentRuntimeToolProvider),
             typeof(WorkspaceSearchSupport),
             typeof(InputAttachmentPreparer),
             typeof(InputAttachmentSupport),
@@ -1186,7 +1188,9 @@ public sealed class MafRuntimeArchitectureServicesTests
     [Fact]
     public async Task RuntimeToolProviderComposer_attaches_tools_metadata_and_approval_wrappers()
     {
-        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
+        var composer = new RuntimeToolProviderComposer(
+            new RuntimeToolProviderAccessFilter(ProductToolPolicyTestRegistration.ProductToolPolicies),
+            ProductToolPolicyTestRegistration.ProductToolPolicies);
         var provider = new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.process"),
@@ -1219,15 +1223,17 @@ public sealed class MafRuntimeArchitectureServicesTests
     [Fact]
     public async Task RuntimeToolProviderComposer_allow_only_provider_key_policy_prunes_other_provider_tools()
     {
-        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
+        var composer = new RuntimeToolProviderComposer(
+            new RuntimeToolProviderAccessFilter(ProductToolPolicyTestRegistration.ProductToolPolicies),
+            ProductToolPolicyTestRegistration.ProductToolPolicies);
         var allowedProvider = new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.allowed-provider"),
-            AgentToolInvocationPolicyMetadata.ProcessesRunsList);
+            ProcessCompatibilityToolPolicy.ProcessesRunsList);
         var deniedProvider = new TestRuntimeToolProvider(
             20,
             CreateDescriptor("tests.denied-provider"),
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList);
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionsList);
         var registrations = composer.ComposeRegistrations([allowedProvider, deniedProvider]);
         var allowedProviderTag = RuntimeToolProviderCapabilityTags.CreateProviderKeyTag("tests.allowed-provider");
         var allowOnlyPolicy = new CapabilityAccessPolicy(
@@ -1254,13 +1260,13 @@ public sealed class MafRuntimeArchitectureServicesTests
             CancellationToken.None);
 
         Assert.Equal(1, result.AttachedToolCount);
-        Assert.Equal([AgentToolInvocationPolicyMetadata.ProcessesRunsList], state.Tools.Select(tool => tool.Name));
+        Assert.Equal([ProcessCompatibilityToolPolicy.ProcessesRunsList], state.Tools.Select(tool => tool.Name));
         Assert.Equal("tests.allowed-provider", Assert.Single(state.RuntimeToolProviderDescriptors).ProviderKey);
         Assert.Contains(state.EffectiveCapabilityDescriptors, descriptor =>
-            descriptor.RuntimeToolName?.Value == AgentToolInvocationPolicyMetadata.ProcessesRunsList &&
+            descriptor.RuntimeToolName?.Value == ProcessCompatibilityToolPolicy.ProcessesRunsList &&
             descriptor.Tags.Contains(allowedProviderTag));
         Assert.Contains(state.CapabilityAccessDiagnostics, diagnostic =>
-            diagnostic.Identity.Key.Value == AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList.Replace('_', '-') &&
+            diagnostic.Identity.Key.Value == ProcessCompatibilityToolPolicy.ProcessesDefinitionsList.Replace('_', '-') &&
             diagnostic.Category == CapabilityDiagnosticCategory.AccessPolicy);
     }
 

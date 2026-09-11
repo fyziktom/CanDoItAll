@@ -54,12 +54,12 @@ public sealed class HrAgentRuntimeToolProviderTests
         var tools = await provider.CreateToolsAsync(context, CancellationToken.None);
 
         var tool = Assert.Single(tools);
-        Assert.Equal(AgentToolInvocationPolicyMetadata.HrAgentsSearch, tool.Name);
+        Assert.Equal(HrAgentToolPolicy.HrAgentsSearch, tool.Name);
         Assert.DoesNotContain(
             tools,
             item => string.Equals(
                 item.Name,
-                AgentToolInvocationPolicyMetadata.HrAgentSettingsGet,
+                HrAgentToolPolicy.HrAgentSettingsGet,
                 StringComparison.Ordinal));
 
         var wrongCaseContext = CreateContext([HrAgentCapabilityKeys.AgentsSearch.ToUpperInvariant()]);

@@ -153,14 +153,14 @@ public sealed class ProcessCatalogAuthorityPersistenceTests {
         var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
         var principal = Assert.IsType<ProcessLaunchPrincipal.AgentExecution>(fixture.SavedAuthority.Principal);
         var restricted = fixture.SavedAuthority with { Principal = principal with {
-            Ceiling = principal.Ceiling with { AllowedOperations = [AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart] }
+            Ceiling = principal.Ceiling with { AllowedOperations = [ProjectStructureToolPolicy.ProjectStructureNodeProcessStart] }
         }, CanCreateTasks = false, CanCreateAssets = false };
         var changed = restricted with { Principal = change != AuthorityChange.Generation ?
             principal with { Operation = change == AuthorityChange.MissingOperation
                     ? ProcessLaunchAgentOperation.Unspecified : ProcessLaunchAgentOperation.SubprocessLaunch,
-                Ceiling = principal.Ceiling with { AllowedOperations = [AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart] } } :
+                Ceiling = principal.Ceiling with { AllowedOperations = [ProjectStructureToolPolicy.ProjectStructureNodeProcessStart] } } :
             principal with { Ceiling = principal.Ceiling with { DatabaseProfileGeneration = principal.Ceiling.DatabaseProfileGeneration + 1,
-                AllowedOperations = [AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart] } }
+                AllowedOperations = [ProjectStructureToolPolicy.ProjectStructureNodeProcessStart] } }
         };
         await using (var allowed = await fixture.Authority.AcquireAsync(restricted, restricted)) {
             Assert.NotNull(allowed);

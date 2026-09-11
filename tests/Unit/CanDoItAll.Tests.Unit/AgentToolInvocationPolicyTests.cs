@@ -1,3 +1,8 @@
+using CanDoItAll.Modules.Workbench.AgentContext;
+using CanDoItAll.Modules.Processes;
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.AgentFramework;
 using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -281,7 +286,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             AgentToolInvocationPolicyMetadata.LoadSkill,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.LoadSkill),
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.LoadSkill, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false);
@@ -290,7 +295,7 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationClassification.Read, context.Classification);
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(AgentToolInvocationPolicyMetadata.LoadSkill));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(AgentToolInvocationPolicyMetadata.LoadSkill, ProductToolPolicies));
     }
 
     [Fact]
@@ -299,7 +304,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             AgentToolInvocationPolicyMetadata.ReadSkillResource,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ReadSkillResource),
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ReadSkillResource, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false);
@@ -308,7 +313,7 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationClassification.Read, context.Classification);
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(AgentToolInvocationPolicyMetadata.ReadSkillResource));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(AgentToolInvocationPolicyMetadata.ReadSkillResource, ProductToolPolicies));
     }
 
     [Fact]
@@ -317,7 +322,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             AgentToolInvocationPolicyMetadata.RunSkillScript,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.RunSkillScript),
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.RunSkillScript, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: true,
@@ -327,8 +332,8 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationClassification.Mutation, context.Classification);
         Assert.Equal(ToolInvocationDecisionKind.RequireApproval, decision.Kind);
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(AgentToolInvocationPolicyMetadata.RunSkillScript));
-        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(AgentToolInvocationPolicyMetadata.RunSkillScript));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(AgentToolInvocationPolicyMetadata.RunSkillScript, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(AgentToolInvocationPolicyMetadata.RunSkillScript, ProductToolPolicies));
     }
 
     [Fact]
@@ -543,7 +548,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             toolName,
-            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -607,7 +612,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             toolName,
-            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -670,11 +675,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImage,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImage,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImage),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImage, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -709,11 +714,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceHashPath,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceHashPath,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceHashPath),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceHashPath, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -745,11 +750,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceDotNetNew,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceDotNetNew,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetNew),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetNew, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -939,11 +944,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -986,11 +991,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -1032,11 +1037,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -1072,11 +1077,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -1109,11 +1114,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -1148,11 +1153,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -1190,11 +1195,11 @@ public sealed class AgentToolInvocationPolicyTests
         ];
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            rawArguments);
+            rawArguments, ProductToolPolicies);
         var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
         var context = CreateContext(
             ToolContractCatalog.WorkspaceAnalyzeImages,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -2036,9 +2041,9 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ProcessScriptSideEffectAnalyzer_detects_writes_and_child_scripts_without_runtime()
+    public void WorkspaceScriptSideEffectAnalyzer_detects_writes_and_child_scripts_without_runtime()
     {
-        var analysis = ProcessScriptSideEffectAnalyzer.Analyze(
+        var analysis = WorkspaceScriptSideEffectAnalyzer.Analyze(
             AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
             "& './collect-evidence.ps1'\n'value' > 'artifacts/process-runs/process-run-001/evidence/report.txt'");
 
@@ -2064,7 +2069,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = ProcessToolOperationAuthorizer.Evaluate(
             context,
             signature,
-            [OperationRequirement.Any("RunValidation")]);
+            [ToolCapabilityProcessOperationRequirement.Any("RunValidation")]);
 
         Assert.NotNull(decision);
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
@@ -2099,7 +2104,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = ProcessToolOperationAuthorizer.Evaluate(
             context,
             signature,
-            [OperationRequirement.Any(requiredOperation)]);
+            [ToolCapabilityProcessOperationRequirement.Any(requiredOperation)]);
 
         Assert.NotNull(decision);
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
@@ -3002,7 +3007,7 @@ public sealed class AgentToolInvocationPolicyTests
             var policy = new DefaultAgentToolInvocationPolicy();
             var context = CreateContext(
                 toolName,
-                AgentToolInvocationPolicyMetadata.Classify(toolName),
+                AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
                 isKnownTool: true,
                 autoApprovalAllowed: true,
                 approvalWrapperAvailable: false,
@@ -3034,7 +3039,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var snapshotContext = CreateContext(
             ToolContractCatalog.BrowserSnapshot,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -3061,7 +3066,7 @@ public sealed class AgentToolInvocationPolicyTests
 
         var clickContext = CreateContext(
             ToolContractCatalog.BrowserClick,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserClick),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserClick, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -3091,7 +3096,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             ToolContractCatalog.WorkspaceDotNetTest,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetTest),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetTest, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -3277,7 +3282,7 @@ public sealed class AgentToolInvocationPolicyTests
         const string nestedApiToken = "nested-api-token-sentinel";
         const string topLevelApiToken = "top-level-api-token-sentinel";
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
         [
             new KeyValuePair<string, object?>("apiToken", topLevelApiToken),
             new KeyValuePair<string, object?>("request", new
@@ -3293,10 +3298,10 @@ public sealed class AgentToolInvocationPolicyTests
                     }
                 }
             })
-        ]);
+        ], ProductToolPolicies);
 
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
             redacted);
 
         Assert.DoesNotContain(leaseToken, signature, StringComparison.Ordinal);
@@ -3330,8 +3335,8 @@ public sealed class AgentToolInvocationPolicyTests
         });
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
-            argumentsJson);
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
+            argumentsJson, ProductToolPolicies);
 
         Assert.DoesNotContain(leaseToken, protectedArguments, StringComparison.Ordinal);
         Assert.DoesNotContain(apiToken, protectedArguments, StringComparison.Ordinal);
@@ -3385,8 +3390,8 @@ public sealed class AgentToolInvocationPolicyTests
         });
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
-            argumentsJson);
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
+            argumentsJson, ProductToolPolicies);
 
         foreach (var secret in secrets)
         {
@@ -3422,8 +3427,8 @@ public sealed class AgentToolInvocationPolicyTests
         });
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
-            argumentsJson);
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
+            argumentsJson, ProductToolPolicies);
 
         Assert.DoesNotContain(secret, protectedArguments, StringComparison.Ordinal);
         Assert.Contains("[REDACTED]", protectedArguments, StringComparison.Ordinal);
@@ -3446,8 +3451,8 @@ public sealed class AgentToolInvocationPolicyTests
             """;
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.HrAgentCreate,
-            spoofedEnvelope);
+            HrAgentToolPolicy.HrAgentCreate,
+            spoofedEnvelope, ProductToolPolicies);
 
         Assert.DoesNotContain(secret, protectedArguments, StringComparison.Ordinal);
         Assert.NotEqual(spoofedEnvelope, protectedArguments);
@@ -3469,8 +3474,8 @@ public sealed class AgentToolInvocationPolicyTests
             """;
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.HrAgentCreate,
-            spoofedEnvelope);
+            HrAgentToolPolicy.HrAgentCreate,
+            spoofedEnvelope, ProductToolPolicies);
 
         Assert.NotEqual(spoofedEnvelope, protectedArguments);
         using var document = JsonDocument.Parse(protectedArguments);
@@ -3496,8 +3501,8 @@ public sealed class AgentToolInvocationPolicyTests
             """;
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.HrAgentCreate,
-            spoofedEnvelope);
+            HrAgentToolPolicy.HrAgentCreate,
+            spoofedEnvelope, ProductToolPolicies);
 
         using var document = JsonDocument.Parse(protectedArguments);
         Assert.NotEqual(
@@ -3517,13 +3522,13 @@ public sealed class AgentToolInvocationPolicyTests
     public void Export_protection_preserves_trusted_previously_protected_approval_envelope()
     {
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.HrAgentCreate,
-            "{\"name\":\"private employee name\"}");
+            HrAgentToolPolicy.HrAgentCreate,
+            "{\"name\":\"private employee name\"}", ProductToolPolicies);
 
         var exportedArguments =
             AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
-                AgentToolInvocationPolicyMetadata.HrAgentCreate,
-                protectedArguments);
+                HrAgentToolPolicy.HrAgentCreate,
+                protectedArguments, ProductToolPolicies);
 
         Assert.Equal(protectedArguments, exportedArguments);
     }
@@ -3537,8 +3542,8 @@ public sealed class AgentToolInvocationPolicyTests
             """;
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
-            malformedArguments);
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
+            malformedArguments, ProductToolPolicies);
 
         Assert.DoesNotContain(secret, protectedArguments, StringComparison.Ordinal);
         Assert.DoesNotContain("project-42", protectedArguments, StringComparison.Ordinal);
@@ -3561,8 +3566,8 @@ public sealed class AgentToolInvocationPolicyTests
         string argumentsJson)
     {
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
-            argumentsJson);
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
+            argumentsJson, ProductToolPolicies);
 
         Assert.DoesNotContain("primitive-secret", protectedArguments, StringComparison.Ordinal);
         Assert.DoesNotContain("array-secret", protectedArguments, StringComparison.Ordinal);
@@ -3579,7 +3584,7 @@ public sealed class AgentToolInvocationPolicyTests
     public void RedactArguments_masks_HR_business_text_without_collapsing_distinct_targets()
     {
         var first = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            HrAgentToolPolicy.HrAgentSettingsUpdate,
         [
             new KeyValuePair<string, object?>("request", new
             {
@@ -3587,9 +3592,9 @@ public sealed class AgentToolInvocationPolicyTests
                 name = "Private Alpha Name",
                 instructions = "Confidential alpha instructions"
             })
-        ]);
+        ], ProductToolPolicies);
         var second = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            HrAgentToolPolicy.HrAgentSettingsUpdate,
         [
             new KeyValuePair<string, object?>("request", new
             {
@@ -3597,12 +3602,12 @@ public sealed class AgentToolInvocationPolicyTests
                 name = "Private Beta Name",
                 instructions = "Confidential beta instructions"
             })
-        ]);
+        ], ProductToolPolicies);
         var firstSignature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            HrAgentToolPolicy.HrAgentSettingsUpdate,
             first);
         var secondSignature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            HrAgentToolPolicy.HrAgentSettingsUpdate,
             second);
 
         Assert.DoesNotContain("Private Alpha Name", firstSignature, StringComparison.Ordinal);
@@ -4156,7 +4161,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             ToolContractCatalog.BrowserSnapshot,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -4188,7 +4193,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             ToolContractCatalog.BrowserSnapshot,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -4327,16 +4332,16 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(AgentToolInvocationPolicyMetadata.LoadSkill, ToolInvocationClassification.Read)]
     [InlineData(AgentToolInvocationPolicyMetadata.ReadSkillResource, ToolInvocationClassification.Read)]
     [InlineData(AgentToolInvocationPolicyMetadata.RunSkillScript, ToolInvocationClassification.Mutation)]
-    [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateImport, ToolInvocationClassification.Mutation)]
-    [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList, ToolInvocationClassification.Read)]
-    [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList, ToolInvocationClassification.Read)]
-    [InlineData(AgentToolInvocationPolicyMetadata.ProjectStructureRead, ToolInvocationClassification.Read)]
-    [InlineData(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate, ToolInvocationClassification.Mutation)]
+    [InlineData(ProcessCompatibilityToolPolicy.ProcessesTemplateImport, ToolInvocationClassification.Mutation)]
+    [InlineData(ProcessCompatibilityToolPolicy.ProcessesTemplateBaselineScenariosList, ToolInvocationClassification.Read)]
+    [InlineData(ProcessCompatibilityToolPolicy.ProcessesTemplateLiveRunProfilesList, ToolInvocationClassification.Read)]
+    [InlineData(ProjectStructureToolPolicy.ProjectStructureRead, ToolInvocationClassification.Read)]
+    [InlineData(ProjectStructureToolPolicy.ProjectStructureNodeCreate, ToolInvocationClassification.Mutation)]
     [InlineData("project_structure_unregistered_mutation", ToolInvocationClassification.Unknown)]
     [InlineData("processes_unregistered_mutation", ToolInvocationClassification.Unknown)]
     public void Classify_returns_expected_tool_classification(string toolName, ToolInvocationClassification expected)
     {
-        var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
+        var classification = AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies);
 
         Assert.Equal(expected, classification);
     }
@@ -4347,7 +4352,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("arbitrary_unregistered_tool")]
     public void Classify_does_not_fallback_unknown_tools_to_read(string toolName)
     {
-        var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
+        var classification = AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies);
 
         Assert.Equal(ToolInvocationClassification.Unknown, classification);
     }
@@ -4355,38 +4360,38 @@ public sealed class AgentToolInvocationPolicyTests
     [Fact]
     public void ToolPolicyMetadata_classifies_high_risk_catalog_tools_explicitly()
     {
-        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceCommandRun));
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceCommandRun));
-        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceCommandRun));
+        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceCommandRun, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceCommandRun, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceCommandRun, ProductToolPolicies));
 
-        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.LocalMcpLaunch));
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.LocalMcpLaunch));
-        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.LocalMcpLaunch));
+        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.LocalMcpLaunch, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.LocalMcpLaunch, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.LocalMcpLaunch, ProductToolPolicies));
 
-        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserClick));
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.BrowserClick));
-        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserClick));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserClick, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.BrowserClick, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserClick, ProductToolPolicies));
 
-        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserTakeScreenshot));
-        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserWaitFor));
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.BrowserWaitFor));
-        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserWaitFor));
-        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImage));
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceAnalyzeImage));
-        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceAnalyzeImage));
-        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages));
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceAnalyzeImages));
-        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceAnalyzeImages));
-        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceConvertDocument));
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceConvertDocument));
-        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceConvertDocument));
-        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceWriteSpreadsheet));
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceWriteSpreadsheet));
-        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceWriteSpreadsheet));
-        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog));
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog));
-        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetStop));
-        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserTakeScreenshot, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserWaitFor, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.BrowserWaitFor, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserWaitFor, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImage, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceAnalyzeImage, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceAnalyzeImage, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceAnalyzeImages, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceConvertDocument, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceConvertDocument, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceConvertDocument, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceWriteSpreadsheet, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceWriteSpreadsheet, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceWriteSpreadsheet, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetStop, ProductToolPolicies));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary, ProductToolPolicies));
     }
 
     [Fact]
@@ -4398,7 +4403,7 @@ public sealed class AgentToolInvocationPolicyTests
         {
             var context = CreateContext(
                 toolName,
-                AgentToolInvocationPolicyMetadata.Classify(toolName),
+                AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
                 isKnownTool: ToolContractCatalog.IsKnownToolName(toolName),
                 autoApprovalAllowed: false,
                 approvalWrapperAvailable: false,
@@ -4409,7 +4414,7 @@ public sealed class AgentToolInvocationPolicyTests
 
             Assert.Equal(ToolInvocationClassification.Read, context.Classification);
             Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
-            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
         }
     }
 
@@ -4419,7 +4424,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             ToolContractCatalog.WorkspaceCommandRun,
-            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceCommandRun),
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceCommandRun, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -4547,85 +4552,85 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var expectedReadTools = new[]
         {
-            AgentToolInvocationPolicyMetadata.ProjectStructureProjectsList,
-            AgentToolInvocationPolicyMetadata.ProjectStructureHierarchyGet,
-            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCatalog,
-            AgentToolInvocationPolicyMetadata.ProjectStructureChecklist,
-            AgentToolInvocationPolicyMetadata.ProjectStructureDependenciesQuery,
-            AgentToolInvocationPolicyMetadata.ProjectPlanSummaryGet,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetGet,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowAddOptions,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet,
-            AgentToolInvocationPolicyMetadata.ProjectStructureKnowledgeQuery,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAnalyticsQuery,
-            AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet
+            ProjectStructureToolPolicy.ProjectStructureProjectsList,
+            ProjectStructureToolPolicy.ProjectStructureHierarchyGet,
+            ProjectStructureToolPolicy.ProjectStructureRead,
+            ProjectStructureToolPolicy.ProjectStructureNodeCatalog,
+            ProjectStructureToolPolicy.ProjectStructureChecklist,
+            ProjectStructureToolPolicy.ProjectStructureDependenciesQuery,
+            ProjectStructureToolPolicy.ProjectPlanSummaryGet,
+            ProjectStructureToolPolicy.ProjectStructureAssetGet,
+            ProjectStructureToolPolicy.ProjectStructureAssetContentGet,
+            ProjectStructureToolPolicy.ProjectStructureAssetTextGet,
+            ProjectStructureToolPolicy.ProjectStructureAssetImageAnalyze,
+            ProjectStructureToolPolicy.ProjectStructureNodeWorkflowAddOptions,
+            ProjectStructureToolPolicy.ProjectStructureNodeWorkflowStatusGet,
+            ProjectStructureToolPolicy.ProjectStructureKnowledgeQuery,
+            ProjectStructureToolPolicy.ProjectStructureAnalyticsQuery,
+            ProjectStructureToolPolicy.ProjectStructureLeaseGet
         };
         var expectedMutationTools = new[]
         {
-            AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureProjectUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectCreate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject,
-            AgentToolInvocationPolicyMetadata.ProjectTaskCreate,
-            AgentToolInvocationPolicyMetadata.ProjectTaskUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectTaskResourceAttach,
-            AgentToolInvocationPolicyMetadata.ProjectStructureDependencyLink,
-            AgentToolInvocationPolicyMetadata.ProjectStructureDependencyUnlink,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeTypeUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeMetadataUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesStatusUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeStatusUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesProgressUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProgressUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesMarkerUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeMarkerUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesPriorityUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodePriorityUpdate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeMove,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeRecompose,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeReparent,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeDescendantsToProjectMove,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCommandExecute,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessDefinitionLink,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
-            AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowDefinitionCreate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete,
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesDelete,
-            AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreateRevision,
-            AgentToolInvocationPolicyMetadata.ProjectStructureLinkCreate,
-            AgentToolInvocationPolicyMetadata.ProjectStructureLinkUnlink,
-            AgentToolInvocationPolicyMetadata.ProjectStructureImport,
-            AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire,
-            AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire,
-            AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew,
-            AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease
+            ProjectStructureToolPolicy.ProjectStructureProjectCreate,
+            ProjectStructureToolPolicy.ProjectStructureProjectUpdate,
+            ProjectStructureToolPolicy.ProjectStructureSubprojectCreate,
+            ProjectStructureToolPolicy.ProjectStructureSubprojectLink,
+            ProjectStructureToolPolicy.ProjectStructureNodesToNewSubproject,
+            ProjectStructureToolPolicy.ProjectTaskCreate,
+            ProjectStructureToolPolicy.ProjectTaskUpdate,
+            ProjectStructureToolPolicy.ProjectTaskResourceAttach,
+            ProjectStructureToolPolicy.ProjectStructureDependencyLink,
+            ProjectStructureToolPolicy.ProjectStructureDependencyUnlink,
+            ProjectStructureToolPolicy.ProjectStructureNodeCreate,
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeTypeUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeMetadataUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodesStatusUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeStatusUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodesProgressUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeProgressUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodesMarkerUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeMarkerUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodesPriorityUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodePriorityUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeMove,
+            ProjectStructureToolPolicy.ProjectStructureNodeRecompose,
+            ProjectStructureToolPolicy.ProjectStructureNodeReparent,
+            ProjectStructureToolPolicy.ProjectStructureNodesCopy,
+            ProjectStructureToolPolicy.ProjectStructureNodeDescendantsToProjectMove,
+            ProjectStructureToolPolicy.ProjectStructureNodeCommandExecute,
+            ProjectStructureToolPolicy.ProjectStructureNodeProcessDefinitionLink,
+            ProjectStructureToolPolicy.ProjectStructureNodeProcessStart,
+            ProjectStructureToolPolicy.ProjectStructureProcessSubprocessLaunch,
+            ProjectStructureToolPolicy.ProjectStructureNodeWorkflowDefinitionCreate,
+            ProjectStructureToolPolicy.ProjectStructureNodeWorkflowStart,
+            ProjectStructureToolPolicy.ProjectStructureNodeDelete,
+            ProjectStructureToolPolicy.ProjectStructureNodesDelete,
+            ProjectStructureToolPolicy.ProjectStructureApprovalRequest,
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+            ProjectStructureToolPolicy.ProjectStructureAssetCreateRevision,
+            ProjectStructureToolPolicy.ProjectStructureLinkCreate,
+            ProjectStructureToolPolicy.ProjectStructureLinkUnlink,
+            ProjectStructureToolPolicy.ProjectStructureImport,
+            ProjectStructureToolPolicy.ProjectStructureProjectLeaseAcquire,
+            ProjectStructureToolPolicy.ProjectStructureRepoBranchLeaseAcquire,
+            ProjectStructureToolPolicy.ProjectStructureLeaseRenew,
+            ProjectStructureToolPolicy.ProjectStructureLeaseRelease
         };
 
-        Assert.Equal(expectedReadTools.Order(StringComparer.Ordinal), AgentToolInvocationPolicyMetadata.ProjectStructureReadTools.Order(StringComparer.Ordinal));
-        Assert.Equal(expectedMutationTools.Order(StringComparer.Ordinal), AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Order(StringComparer.Ordinal));
+        Assert.Equal(expectedReadTools.Order(StringComparer.Ordinal), ProjectStructureToolPolicy.ReadTools.Order(StringComparer.Ordinal));
+        Assert.Equal(expectedMutationTools.Order(StringComparer.Ordinal), ProjectStructureToolPolicy.MutationTools.Order(StringComparer.Ordinal));
         foreach (var toolName in expectedReadTools)
         {
-            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName));
-            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies));
+            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
         }
 
         foreach (var toolName in expectedMutationTools)
         {
-            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName));
-            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-            Assert.True(AgentToolInvocationPolicyMetadata.IsProjectStructureMutationTool(toolName));
+            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies));
+            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
+            Assert.True(ProjectStructureToolPolicy.IsMutation(toolName));
         }
     }
 
@@ -4634,29 +4639,29 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var expectedProcessTools = new[]
         {
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
-            AgentToolInvocationPolicyMetadata.ProcessesRunStart,
-            AgentToolInvocationPolicyMetadata.ProcessesStepTransition,
-            AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
-            AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateImport,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport,
-            AgentToolInvocationPolicyMetadata.ProcessesRunsList,
-            AgentToolInvocationPolicyMetadata.ProcessesRunDetailGet,
-            AgentToolInvocationPolicyMetadata.ProcessesAnalyticsGet,
-            AgentToolInvocationPolicyMetadata.ProcessesPartyOptionsList,
-            AgentToolInvocationPolicyMetadata.ProcessesExecutorOptionsList,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionSave,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionRoleAdd,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionPublish,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionDelete,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionImport,
+            ProcessCompatibilityToolPolicy.ProcessesRunStart,
+            ProcessCompatibilityToolPolicy.ProcessesStepTransition,
+            ProcessCompatibilityToolPolicy.ProcessesAssignmentResolve,
+            ProcessCompatibilityToolPolicy.ProcessesArtifactRecord,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateImport,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionsList,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionEditorGet,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionExport,
+            ProcessCompatibilityToolPolicy.ProcessesRunsList,
+            ProcessCompatibilityToolPolicy.ProcessesRunDetailGet,
+            ProcessCompatibilityToolPolicy.ProcessesAnalyticsGet,
+            ProcessCompatibilityToolPolicy.ProcessesPartyOptionsList,
+            ProcessCompatibilityToolPolicy.ProcessesExecutorOptionsList,
+            ProcessCompatibilityToolPolicy.ProcessesTemplatesList,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateGet,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateMermaidGet,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateBaselineScenariosList,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateLiveRunProfilesList
         };
 
         Assert.Equal(23, expectedProcessTools.Length);
@@ -4666,10 +4671,10 @@ public sealed class AgentToolInvocationPolicyTests
 
         foreach (var toolName in expectedProcessTools)
         {
-            Assert.Contains(toolName, ToolContractCatalog.KnownToolNames);
-            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var capability), toolName);
-            Assert.Equal(AgentToolInvocationPolicyMetadata.Classify(toolName), capability.Classification);
-            Assert.Equal(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName), capability.RequiresApprovalByDefault);
+            Assert.Contains(toolName, ProductToolPolicies.Capabilities.Select(policy => policy.Name));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out var capability), toolName);
+            Assert.Equal(AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies), capability.Classification);
+            Assert.Equal(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies), capability.RequiresApprovalByDefault);
         }
     }
 
@@ -4680,7 +4685,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             toolName,
-            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: true,
@@ -4690,8 +4695,8 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationClassification.Mutation, context.Classification);
         Assert.Equal(ToolInvocationDecisionKind.RequireApproval, decision.Kind);
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName, ProductToolPolicies));
     }
 
     [Theory]
@@ -4701,7 +4706,7 @@ public sealed class AgentToolInvocationPolicyTests
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             toolName,
-            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false);
@@ -4710,8 +4715,8 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationClassification.Read, context.Classification);
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
-        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName, ProductToolPolicies));
     }
 
     [Fact]
@@ -5203,8 +5208,8 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate),
+            ProjectStructureToolPolicy.ProjectStructureNodeCreate,
+            AgentToolInvocationPolicyMetadata.Classify(ProjectStructureToolPolicy.ProjectStructureNodeCreate, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -5229,8 +5234,8 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+            AgentToolInvocationPolicyMetadata.Classify(ProjectStructureToolPolicy.ProjectStructureAssetCreate, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -5253,8 +5258,8 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart),
+            ProjectStructureToolPolicy.ProjectStructureNodeProcessStart,
+            AgentToolInvocationPolicyMetadata.Classify(ProjectStructureToolPolicy.ProjectStructureNodeProcessStart, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -5278,8 +5283,8 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
-            AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch),
+            ProjectStructureToolPolicy.ProjectStructureProcessSubprocessLaunch,
+            AgentToolInvocationPolicyMetadata.Classify(ProjectStructureToolPolicy.ProjectStructureProcessSubprocessLaunch, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -5302,8 +5307,8 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
-            AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest),
+            ProjectStructureToolPolicy.ProjectStructureApprovalRequest,
+            AgentToolInvocationPolicyMetadata.Classify(ProjectStructureToolPolicy.ProjectStructureApprovalRequest, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -5325,8 +5330,8 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
-            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
-            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureRead),
+            ProjectStructureToolPolicy.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.Classify(ProjectStructureToolPolicy.ProjectStructureRead, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -5369,16 +5374,16 @@ public sealed class AgentToolInvocationPolicyTests
     {
         return new TheoryData<string>
         {
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
-            AgentToolInvocationPolicyMetadata.ProcessesRunStart,
-            AgentToolInvocationPolicyMetadata.ProcessesStepTransition,
-            AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
-            AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateImport
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionSave,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionRoleAdd,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionPublish,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionDelete,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionImport,
+            ProcessCompatibilityToolPolicy.ProcessesRunStart,
+            ProcessCompatibilityToolPolicy.ProcessesStepTransition,
+            ProcessCompatibilityToolPolicy.ProcessesAssignmentResolve,
+            ProcessCompatibilityToolPolicy.ProcessesArtifactRecord,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateImport
         };
     }
 
@@ -5386,19 +5391,19 @@ public sealed class AgentToolInvocationPolicyTests
     {
         return new TheoryData<string>
         {
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet,
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport,
-            AgentToolInvocationPolicyMetadata.ProcessesRunsList,
-            AgentToolInvocationPolicyMetadata.ProcessesRunDetailGet,
-            AgentToolInvocationPolicyMetadata.ProcessesAnalyticsGet,
-            AgentToolInvocationPolicyMetadata.ProcessesPartyOptionsList,
-            AgentToolInvocationPolicyMetadata.ProcessesExecutorOptionsList,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionsList,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionEditorGet,
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionExport,
+            ProcessCompatibilityToolPolicy.ProcessesRunsList,
+            ProcessCompatibilityToolPolicy.ProcessesRunDetailGet,
+            ProcessCompatibilityToolPolicy.ProcessesAnalyticsGet,
+            ProcessCompatibilityToolPolicy.ProcessesPartyOptionsList,
+            ProcessCompatibilityToolPolicy.ProcessesExecutorOptionsList,
+            ProcessCompatibilityToolPolicy.ProcessesTemplatesList,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateGet,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateMermaidGet,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateBaselineScenariosList,
+            ProcessCompatibilityToolPolicy.ProcessesTemplateLiveRunProfilesList
         };
     }
 
@@ -5408,7 +5413,7 @@ public sealed class AgentToolInvocationPolicyTests
     {
         return CreateContext(
             toolName,
-            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: false,
             approvalWrapperAvailable: false,
@@ -5458,7 +5463,7 @@ public sealed class AgentToolInvocationPolicyTests
                                          redactedArguments.Select(argument =>
                                              new KeyValuePair<string, object?>(argument.Key, argument.Value)));
 
-        return new ToolInvocationPolicyContext(
+        var context = new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
             AgentName: "Implementation Agent",
             ToolName: toolName,
@@ -5488,10 +5493,13 @@ public sealed class AgentToolInvocationPolicyTests
             ToolInvocationTraces: toolInvocationTraces,
             ProcessProductMutationRequiredBranchOutcomeKeys: processProductMutationRequiredBranchOutcomeKeys)
         {
+            ScopePolicy = ProcessToolInvocationScopePolicy.Instance,
             SourceId = sourceId,
             AllowedManagedArtifactReadRefs = allowedManagedArtifactReadRefs ?? [],
+            DeclaredCapability = ProductToolPolicies.TryResolve(toolName, out var declared) ? declared : null,
             PathArguments = resolvedPathArguments
         };
+        return new ProjectStructureRuntimeGuidanceContributor().Contribute(context, null);
     }
 
     private static string CreateSideEffectManifest(

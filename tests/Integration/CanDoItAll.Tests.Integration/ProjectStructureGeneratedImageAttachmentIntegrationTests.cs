@@ -64,7 +64,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
         try
         {
-            var imageTool = FindTool(imageTools, AgentToolInvocationPolicyMetadata.ImageGenerationCreate);
+            var imageTool = FindTool(imageTools, ImageGenerationToolPolicy.ImageGenerationCreate);
             var imageFunction = Assert.IsAssignableFrom<AIFunction>(imageTool);
             var targetSchema = imageFunction.JsonSchema
                 .GetProperty("properties")
@@ -114,7 +114,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             Assert.Contains("unchanged", generated.ProjectAssetStorageInstruction, StringComparison.OrdinalIgnoreCase);
 
             var assetNode = await InvokeAsync<ProjectStructureNodeSummary>(
-                FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                 new AIFunctionArguments
                 {
                     ["projectId"] = draft.ProjectId,
@@ -207,7 +207,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             Assert.StartsWith(scopedRoot + "/", source.RelativePath, StringComparison.Ordinal);
 
             var assetNode = await InvokeAsync<ProjectStructureNodeSummary>(
-                FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                 new AIFunctionArguments
                 {
                     ["projectId"] = projectId,
@@ -231,7 +231,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
                     ["nodeId"] = assetNode.Id
                 });
             var runtimeContent = await InvokeAsync<ProjectStructureAssetContentDescriptor>(
-                FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet),
+                FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetContentGet),
                 new AIFunctionArguments
                 {
                     ["projectId"] = projectId,
@@ -309,7 +309,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
             var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
                 () => InvokeAsync<ProjectStructureNodeSummary>(
-                    FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                    FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                     new AIFunctionArguments
                     {
                         ["projectId"] = projectId,
@@ -371,7 +371,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
             var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
                 () => InvokeAsync<ProjectStructureNodeSummary>(
-                    FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                    FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                     new AIFunctionArguments
                     {
                         ["projectId"] = projectId,
@@ -423,7 +423,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             () => InvokeAsync<ImageGenerationCreateResult>(
-                FindTool(tools, AgentToolInvocationPolicyMetadata.ImageGenerationCreate),
+                FindTool(tools, ImageGenerationToolPolicy.ImageGenerationCreate),
                 new AIFunctionArguments
                 {
                     ["request"] = new ImageGenerationCreateInput(
@@ -467,11 +467,11 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var imageTools = await imageToolProvider.CreateToolsAsync(context, CancellationToken.None);
         var projectTools = await projectToolProvider.CreateToolsAsync(context, CancellationToken.None);
 
-        Assert.Contains(imageTools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ImageGenerationCreate);
-        Assert.DoesNotContain(projectTools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate);
+        Assert.Contains(imageTools, tool => tool.Name == ImageGenerationToolPolicy.ImageGenerationCreate);
+        Assert.DoesNotContain(projectTools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureAssetCreate);
         Assert.DoesNotContain(
             projectTools,
-            tool => AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Contains(
+            tool => ProjectStructureToolPolicy.MutationTools.Contains(
                 tool.Name,
                 StringComparer.Ordinal));
     }
@@ -506,7 +506,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         try
         {
             var generated = await InvokeAsync<ImageGenerationCreateResult>(
-                FindTool(imageTools, AgentToolInvocationPolicyMetadata.ImageGenerationCreate),
+                FindTool(imageTools, ImageGenerationToolPolicy.ImageGenerationCreate),
                 new AIFunctionArguments
                 {
                     ["request"] = new ImageGenerationCreateInput(
@@ -530,7 +530,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
             var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
                 () => InvokeAsync<ProjectStructureNodeSummary>(
-                    FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                    FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                     new AIFunctionArguments
                     {
                         ["projectId"] = projectId,

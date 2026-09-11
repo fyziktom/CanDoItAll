@@ -23,6 +23,31 @@ tool input
 This is an adapter pattern. It is not a reason to expose `InvalidOperationException`
 or other arbitrary exception messages globally.
 
+## Durable pre-dispatch failures
+
+The runtime records a host-determined refusal before dispatch as trusted invocation
+failure evidence, separately from the model-visible tool result. A policy-denial string
+remains the same string; unavailable-tool and argument-validation results retain their
+existing JSON and correction guidance. Generic result classification must preserve the
+host's failure code, retryability and `NotCommitted` effect state on the first call and
+after journal restart. Tool-supplied JSON cannot create this trusted evidence.
+
+The existing file-journal owner checkpoints the result and its failure evidence in one
+mutation. Restoring that checkpoint also restores the trusted invocation capture, so the
+journal and durable tool trace agree. Ordinary successful results and legacy checkpoints
+keep their existing representation; absent evidence is omitted. Newly distinguished
+private result kinds make older readers explicitly reject these new failure checkpoints
+instead of silently treating their visible text or JSON as successful completion.
+Resuming such a checkpoint requires a reader that understands its kind. No SQL migration
+or claim of an external effect receipt is implied.
+
+A server tool can also return `AgentToolFailureResult`, or raise a reviewed exception
+that the existing failure mapper converts to that contract. These failures may occur
+after entering the tool body. Their separate typed result kind preserves the original
+`None` or `NotCommitted` evidence and correction guidance without adding pre-dispatch
+provenance. Legacy JSON and tool-controlled JSON remain untyped, even when they contain
+fields that imitate this failure contract.
+
 ## Incident evidence
 
 Execution run `e3a22e82-d3db-48af-abb7-22c35083d3f3` had the spreadsheet skill,

@@ -67,13 +67,13 @@ public sealed class ZipAgentPackageService : IAgentPackageService
         AgentDefinition agent,
         CancellationToken cancellationToken = default)
     {
-        var sensitiveHrApprovalRunIds = document.ExecutionApprovals
-            .Where(approval => AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName))
+        var protectedRuntimeRunIds = document.ExecutionApprovals
+            .Where(approval => toolPolicies.ProtectsRuntimeStateOnExport(approval.ToolName))
             .Select(approval => approval.ExecutionRunId)
             .ToHashSet();
         var exportedRuns = NormalizeExecutionRuns(
             document.ExecutionRuns.Where(item => item.AgentId == agent.Id).ToList(),
-            sensitiveHrApprovalRunIds);
+            protectedRuntimeRunIds);
         var latestRunBySessionId = BuildLatestRunBySessionId(exportedRuns);
         var managerReviewRunIds = exportedRuns
             .Where(IsManagerReviewRun)
@@ -517,16 +517,16 @@ public sealed class ZipAgentPackageService : IAgentPackageService
 
     private IReadOnlyList<ExecutionRunRecord> NormalizeExecutionRuns(
         IReadOnlyList<ExecutionRunRecord> runs,
-        IReadOnlySet<Guid>? sensitiveHrApprovalRunIds = null)
+        IReadOnlySet<Guid>? protectedRuntimeRunIds = null)
     {
-        var protectedRunIds = sensitiveHrApprovalRunIds ?? new HashSet<Guid>();
+        var protectedRunIds = protectedRuntimeRunIds ?? new HashSet<Guid>();
         return runs
             .Select(run =>
             {
                 var pendingApprovals = run.PendingApprovals ?? [];
-                var hasSensitiveHrApproval = protectedRunIds.Contains(run.Id) ||
+                var hasProtectedRuntimeState = protectedRunIds.Contains(run.Id) ||
                                              pendingApprovals.Any(approval =>
-                                                 AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName));
+                                                 toolPolicies.ProtectsRuntimeStateOnExport(approval.ToolName));
                 var isManagerReview = IsManagerReviewRun(run);
                 var hasAdmittedRuntime = run.ToolAdmission is not null;
                 return run with
@@ -535,10 +535,10 @@ public sealed class ZipAgentPackageService : IAgentPackageService
                     InputSummary = isManagerReview ? ManagerReviewInputExportSummary : run.InputSummary,
                     ResultSummary = isManagerReview ? ManagerReviewResultExportSummary : run.ResultSummary,
                     ToolAdmission = null,
-                    RuntimeSessionKey = isManagerReview || hasSensitiveHrApproval || hasAdmittedRuntime
+                    RuntimeSessionKey = isManagerReview || hasProtectedRuntimeState || hasAdmittedRuntime
                         ? string.Empty
                         : run.RuntimeSessionKey,
-                    SerializedSessionStateJson = isManagerReview || hasSensitiveHrApproval || hasAdmittedRuntime
+                    SerializedSessionStateJson = isManagerReview || hasProtectedRuntimeState || hasAdmittedRuntime
                         ? null
                         : run.SerializedSessionStateJson,
                     PendingApprovals = ProtectPendingApprovalsForExport(
@@ -559,11 +559,11 @@ public sealed class ZipAgentPackageService : IAgentPackageService
             return null;
         }
 
-        var hasSensitiveHrApproval = compatibility.PendingApprovals.Any(approval =>
-            AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName));
+        var hasProtectedRuntimeState = compatibility.PendingApprovals.Any(approval =>
+            toolPolicies.ProtectsRuntimeStateOnExport(approval.ToolName));
         return ChatSessionRuntimeCompatibilityRecord.Create(
-            hasSensitiveHrApproval ? string.Empty : compatibility.RuntimeSessionKey,
-            hasSensitiveHrApproval ? null : compatibility.SerializedSessionStateJson,
+            hasProtectedRuntimeState ? string.Empty : compatibility.RuntimeSessionKey,
+            hasProtectedRuntimeState ? null : compatibility.SerializedSessionStateJson,
             ProtectPendingApprovalsForExport(compatibility.PendingApprovals),
             compatibility.AutoApprovePendingToolCalls);
     }

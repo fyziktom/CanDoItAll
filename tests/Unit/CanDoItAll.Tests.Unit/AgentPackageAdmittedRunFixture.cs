@@ -1,3 +1,4 @@
+using CanDoItAll.Agents.SimpleChats;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -15,7 +16,7 @@ internal static class AgentPackageAdmittedRunFixture {
             new(Guid.NewGuid(), "original-profile-fingerprint", new(1)));
         var protocol = AgentToolProtocolEnvelope.Create("package-test-protocol", 1, "{}");
         var arguments = System.Text.Json.JsonSerializer.Serialize(new { settings = PrivateContent });
-        var payload = new AgentToolPreparedPayload(AgentToolInvocationPolicyMetadata.HrSimpleChatCreate, 1,
+        var payload = new AgentToolPreparedPayload(HrSimpleChatToolPolicy.HrSimpleChatCreate, 1,
             AgentToolProtocolEnvelope.ComputeDigest(arguments), arguments, AgentToolProposalEffect.Mutation, AgentToolProposalRecovery.OwnerReceipt);
         var proposal = new AgentToolProposalRecord(new(Guid.NewGuid()), 0, "original-call", payload, true,
             AgentToolProposalState.Completed, ExecutionApprovalStatus.Approved, payload.Digest,

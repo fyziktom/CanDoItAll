@@ -2,7 +2,7 @@ using System.Text;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 
-namespace CanDoItAll.AgentFramework.Maf;
+namespace CanDoItAll.Agents.Storage;
 
 internal sealed class StorageRuntimePlugin(
     IStorageCatalogService catalogService,

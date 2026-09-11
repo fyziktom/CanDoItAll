@@ -1,3 +1,5 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
@@ -20,7 +22,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
                 ["content"] = longValue
             });
 
-        var description = MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall);
+        var description = MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall, ProductToolPolicies);
 
         Assert.Contains("Invoking tool 'workspace_write_file'", description, StringComparison.Ordinal);
         Assert.Contains("path=\"artifacts/result.md\"", description, StringComparison.Ordinal);
@@ -44,7 +46,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
         const string topLevelApiToken = "progress-top-level-api-token-sentinel";
         var toolCall = new FunctionCallContent(
             "call-2",
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
             new Dictionary<string, object?>
             {
                 ["apiToken"] = topLevelApiToken,
@@ -60,7 +62,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
                 }
             });
 
-        var description = MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall);
+        var description = MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall, ProductToolPolicies);
 
         Assert.DoesNotContain(leaseToken, description, StringComparison.Ordinal);
         Assert.DoesNotContain(nestedApiToken, description, StringComparison.Ordinal);
@@ -76,7 +78,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
         const string leaseToken = "copy-nodes-lease-token-sentinel";
         var toolCall = new FunctionCallContent(
             "call-copy-nodes",
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy,
+            ProjectStructureToolPolicy.ProjectStructureNodesCopy,
             new Dictionary<string, object?>
             {
                 ["projectId"] = "project-42",
@@ -88,7 +90,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
                 }
             });
 
-        var description = MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall);
+        var description = MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall, ProductToolPolicies);
 
         Assert.Contains("project-42", description, StringComparison.Ordinal);
         Assert.Contains("source-node-1", description, StringComparison.Ordinal);
@@ -98,10 +100,10 @@ public sealed class MafToolInvocationArgumentFormatterTests
     }
 
     [Theory]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate)]
+    [InlineData(HrAgentToolPolicy.HrAgentSettingsUpdate)]
     [InlineData(PromptGalleryToolPolicy.PromptGalleryDraftUpdate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.CapabilityCuratorSave)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorDraftUpdate)]
+    [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorSave)]
     public void SummarizeArguments_retains_business_text_masking_for_managed_tools(string toolName)
     {
         var summary = MafToolInvocationArgumentFormatter.SummarizeArguments(
@@ -114,7 +116,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
                     name = "private-name-sentinel",
                     prompt = "private-prompt-sentinel"
                 }
-            }, new AgentToolPolicyCatalog(PromptGalleryToolPolicy.Capabilities));
+            }, ProductToolPolicies);
 
         Assert.DoesNotContain("private-name-sentinel", summary, StringComparison.Ordinal);
         Assert.DoesNotContain("private-prompt-sentinel", summary, StringComparison.Ordinal);
@@ -128,7 +130,7 @@ public sealed class MafToolInvocationArgumentFormatterTests
         const string secret = "unserializable-argument-secret";
 
         var summary = MafToolInvocationArgumentFormatter.SummarizeArguments(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
             new Dictionary<string, object?>
             {
                 ["request"] = new UnserializableArgument(secret)

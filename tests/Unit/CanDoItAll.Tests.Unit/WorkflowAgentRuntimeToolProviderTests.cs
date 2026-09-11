@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
@@ -42,48 +43,48 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         Assert.Equal(WorkflowAgentRuntimeToolProvider.ProviderKey, harness.Provider.Descriptor.ProviderKey);
         Assert.Equal(
             [
-                AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
-                AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
-                AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet
+                WorkflowToolPolicy.WorkflowsDefinitionsList,
+                WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
+                WorkflowToolPolicy.WorkflowsRunCancel,
+                WorkflowToolPolicy.WorkflowsRunStart,
+                WorkflowToolPolicy.WorkflowsRunStatusGet
             ],
             tools.Select(tool => tool.Name).OrderBy(name => name, StringComparer.Ordinal).ToArray());
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+            WorkflowToolPolicy.WorkflowsDefinitionsList,
             AgentRuntimeToolOperationKind.Read,
             requiresApproval: false);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+            WorkflowToolPolicy.WorkflowsRunStatusGet,
             AgentRuntimeToolOperationKind.Read,
             requiresApproval: false);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+            WorkflowToolPolicy.WorkflowsRunStart,
             AgentRuntimeToolOperationKind.Mutation,
             requiresApproval: true);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+            WorkflowToolPolicy.WorkflowsRunCancel,
             AgentRuntimeToolOperationKind.Mutation,
             requiresApproval: true);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
             AgentRuntimeToolOperationKind.Mutation,
             requiresApproval: true);
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList));
+            WorkflowToolPolicy.WorkflowsDefinitionsList, ProductToolPolicies));
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet));
+            WorkflowToolPolicy.WorkflowsRunStatusGet, ProductToolPolicies));
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart));
+            WorkflowToolPolicy.WorkflowsRunStart, ProductToolPolicies));
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel));
+            WorkflowToolPolicy.WorkflowsRunCancel, ProductToolPolicies));
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit));
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit, ProductToolPolicies));
     }
 
     [Fact]
@@ -116,19 +117,19 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
 
         Assert.IsNotType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList));
+            WorkflowToolPolicy.WorkflowsDefinitionsList));
         Assert.IsNotType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet));
+            WorkflowToolPolicy.WorkflowsRunStatusGet));
         Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart));
+            WorkflowToolPolicy.WorkflowsRunStart));
         Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel));
+            WorkflowToolPolicy.WorkflowsRunCancel));
         Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit));
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit));
         Assert.All(
             suppressed.Tools.Where(tool => tool.Name.StartsWith("workflows_", StringComparison.Ordinal)),
             tool => Assert.IsNotType<ApprovalRequiredAIFunction>(tool));
@@ -162,7 +163,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         var tool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList);
+            WorkflowToolPolicy.WorkflowsDefinitionsList);
 
         var result = await InvokeAsync<WorkflowAgentDefinitionListResult>(tool);
 
@@ -184,7 +185,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         var tool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart);
+            WorkflowToolPolicy.WorkflowsRunStart);
         var workflowId = Guid.NewGuid();
         var versionId = Guid.NewGuid();
         var exactRequest = new WorkflowAgentStartInput(
@@ -279,15 +280,15 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         var statusTool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet);
+            WorkflowToolPolicy.WorkflowsRunStatusGet);
         var cancelTool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel);
+            WorkflowToolPolicy.WorkflowsRunCancel);
         var responseTool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit);
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit);
 
         var status = await InvokeAsync<WorkflowAgentRunStatusResult>(
             statusTool,
@@ -403,11 +404,11 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     {
         var expected = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList] = WorkflowRuntimeCapabilityKeys.DefinitionsList,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunStart] = WorkflowRuntimeCapabilityKeys.RunStart,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet] = WorkflowRuntimeCapabilityKeys.RunStatusGet,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunCancel] = WorkflowRuntimeCapabilityKeys.RunCancel,
-            [AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit] = WorkflowRuntimeCapabilityKeys.ExternalResponseSubmit
+            [WorkflowToolPolicy.WorkflowsDefinitionsList] = WorkflowRuntimeCapabilityKeys.DefinitionsList,
+            [WorkflowToolPolicy.WorkflowsRunStart] = WorkflowRuntimeCapabilityKeys.RunStart,
+            [WorkflowToolPolicy.WorkflowsRunStatusGet] = WorkflowRuntimeCapabilityKeys.RunStatusGet,
+            [WorkflowToolPolicy.WorkflowsRunCancel] = WorkflowRuntimeCapabilityKeys.RunCancel,
+            [WorkflowToolPolicy.WorkflowsExternalResponseSubmit] = WorkflowRuntimeCapabilityKeys.ExternalResponseSubmit
         };
 
         Assert.Equal(expected.Count, WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.Count);

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Tooling;
 
 public sealed record AgentRuntimeToolProviderDescriptor
@@ -14,6 +16,16 @@ public sealed record AgentRuntimeToolProviderDescriptor
         Description = description?.Trim() ?? string.Empty;
         DomainTags = NormalizeDomainTags(domainTags);
         SupportedPurposes = NormalizeSupportedPurposes(supportedPurposes);
+    }
+
+    private AgentRuntimeToolAttachmentPhase attachmentPhase;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public AgentRuntimeToolAttachmentPhase AttachmentPhase {
+        get => attachmentPhase;
+        init => attachmentPhase = Enum.IsDefined(value)
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(value));
     }
 
     public string ProviderKey { get; }

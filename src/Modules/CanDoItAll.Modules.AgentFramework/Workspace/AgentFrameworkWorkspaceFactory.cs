@@ -164,7 +164,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var processMock = new ProcessMockAgentRuntime(
             workspaceBundle.FileService,
             workspaceRoot,
-            processMockAgentOptions);
+            processMockAgentOptions,
+            serviceProvider.GetRequiredService<AgentToolPolicyCatalog>());
         var scenarioExecution = new ScenarioHarnessExecutionDecorator(
             mafRuntime.ExecutionPort,
             mafRuntime.ContinuationPort,

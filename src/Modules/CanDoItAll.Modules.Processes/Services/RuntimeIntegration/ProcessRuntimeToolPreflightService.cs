@@ -1,3 +1,6 @@
+using CapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
+using CanDoItAll.AgentFramework.Capabilities.Access;
+using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -99,22 +102,26 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
     private readonly IReadOnlyList<IAgentRuntimeToolProvider> runtimeToolProviders;
     private readonly IReadOnlyList<IProcessRuntimeToolPlanGuard> toolPlanGuards;
     private readonly ProcessRuntimeToolPreflightContributionCatalog toolPreflightContributions;
+    private readonly AgentToolPolicyCatalog toolPolicies;
     private readonly IProcessHostCapabilitySnapshotProvider? hostCapabilitySnapshotProvider;
 
     public ProcessRuntimeToolPreflightService(
         IEnumerable<IAgentRuntimeToolProvider> runtimeToolProviders,
         IEnumerable<IProcessRuntimeToolPlanGuard>? toolPlanGuards,
         ProcessRuntimeToolPreflightContributionCatalog toolPreflightContributions,
+        AgentToolPolicyCatalog toolPolicies,
         IProcessHostCapabilitySnapshotProvider? hostCapabilitySnapshotProvider = null)
     {
         ArgumentNullException.ThrowIfNull(runtimeToolProviders);
         ArgumentNullException.ThrowIfNull(toolPreflightContributions);
+        ArgumentNullException.ThrowIfNull(toolPolicies);
 
         this.runtimeToolProviders = runtimeToolProviders
             .OrderBy(provider => provider.Order)
             .ToArray();
         this.toolPlanGuards = (toolPlanGuards ?? []).ToArray();
         this.toolPreflightContributions = toolPreflightContributions;
+        this.toolPolicies = toolPolicies;
         this.hostCapabilitySnapshotProvider = hostCapabilitySnapshotProvider;
     }
 
@@ -239,10 +246,24 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
 
             try
             {
+                HashSet<string>? configuredNames = null;
+                if (provider.Descriptor?.AttachmentPhase == AgentRuntimeToolAttachmentPhase.ConfiguredWorkspace) {
+                    if (!contextIntent.WorkspaceToolsEnabled ||
+                        !RuntimeToolProcessIntentPolicy.ShouldExposeConfiguredWorkspaceToolsForProcessIntent(contextIntent)) {
+                        continue;
+                    }
+                    var configured = provider.GetConfiguredWorkspacePolicy(context.WorkspaceToolAccess!, contextIntent);
+                    var policies = configured.AccessPolicies.Concat(contextIntent.CapabilityScopeOverride?.Policies ?? []).ToArray();
+                    var allowed = new CapabilityAccessPolicyEvaluator().Evaluate(new CapabilityAccessEvaluationContext(
+                        configured.Capabilities, [], policies, "process-configured-tool-preflight"));
+                    configuredNames = allowed.AllowedCapabilities.Where(capability => capability.RuntimeToolName.HasValue)
+                        .Select(capability => capability.RuntimeToolName!.Value.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                }
                 var tools = await provider.CreateToolsAsync(context, cancellationToken).ConfigureAwait(false);
                 foreach (var tool in tools)
                 {
                     if (!string.IsNullOrWhiteSpace(tool.Name) &&
+                        (configuredNames is null || configuredNames.Contains(tool.Name)) &&
                         IsProviderToolAllowedForProcessIntent(tool.Name, contextIntent))
                     {
                         composedToolNames.Add(tool.Name.Trim());
@@ -645,15 +666,17 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
             RuntimeSessionKey: string.Empty,
             contextIntent,
-            Tags: new Dictionary<string, string>(StringComparer.Ordinal));
+            Tags: new Dictionary<string, string>(StringComparer.Ordinal)) {
+            WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson)
+        };
     }
 
-    private static bool IsProviderToolAllowedForProcessIntent(
+    private bool IsProviderToolAllowedForProcessIntent(
         string toolName,
         AgentRuntimeContextIntent contextIntent)
     {
         var normalizedToolName = ToolContractCatalog.NormalizeToolName(toolName);
-        return !ToolCapabilityRegistry.TryResolve(normalizedToolName, out var capability) ||
+        return !toolPolicies.TryResolve(normalizedToolName, out var capability) ||
                RuntimeToolProcessIntentPolicy.IsToolCapabilityAllowedForProcessIntent(
                    capability,
                    contextIntent);

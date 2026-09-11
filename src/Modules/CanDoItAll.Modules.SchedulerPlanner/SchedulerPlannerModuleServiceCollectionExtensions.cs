@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.EntityFrameworkCore;
 using CanDoItAll.AgentFramework.Tooling;
@@ -57,6 +58,12 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchedulerFireRecoveryWorker>());
         }
 
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in SchedulerToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         return services;
     }
 }

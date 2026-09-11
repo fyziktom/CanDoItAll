@@ -48,9 +48,8 @@ public static class ProjectsAgentChatContextBuilder
         }
 
         var selectedProjectId = selectedProject?.Id;
-        var access = ContextualAgentAccessResolver.Resolve(
+        var access = ProjectAgentAccessPolicy.Resolve(
                 agents,
-                ContextualAgentWorkspaceKind.ProjectStructure,
                 selectedProjectId)
             .Select(item => new AgentChatContextAgentAccess(
                 item.Agent.Id,

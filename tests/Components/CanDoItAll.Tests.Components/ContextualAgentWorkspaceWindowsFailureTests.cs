@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Workbench.ProjectStructure;
+using CanDoItAll.Modules.Processes.AgentChat;
 using System.Reflection;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
@@ -659,6 +661,9 @@ public sealed class ContextualAgentWorkspaceWindowsFailureTests
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<AgentToolPolicyCatalog>();
+        context.Services.AddSingleton(new ContextualAgentWorkspacePolicyCatalog([
+            new ProjectStructureContextualWorkspacePolicy(), new ProcessContextualWorkspacePolicy()
+        ]));
         context.Services.AddSingleton(workspaceService);
         var referenceData = new StubReferenceDataProvider(agent);
         context.Services.AddSingleton<IAgentReferenceDataProvider>(referenceData);

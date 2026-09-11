@@ -16,6 +16,7 @@
   </Folder>
   <Folder Name="/src/Integration/">
     <Project Path="src/Integration/CanDoItAll.Agents.SimpleChats/CanDoItAll.Agents.SimpleChats.csproj" />
+    <Project Path="src/Integration/CanDoItAll.Agents.Storage/CanDoItAll.Agents.Storage.csproj" />
     <Project Path="src/Integration/CanDoItAll.FileTools.Integration.Abstractions/CanDoItAll.FileTools.Integration.Abstractions.csproj" />
     <Project Path="src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj" />
     <Project Path="src/Integration/CanDoItAll.SharedProviders.Abstractions/CanDoItAll.SharedProviders.Abstractions.csproj" />

@@ -19,14 +19,14 @@ public static class CapabilityCuratorAgentCapabilityKeys
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch] = CatalogSearch,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet] = EditorGet,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorSave] = Save,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest] = ToolSetupTest,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest] = McpSetupTest,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet] = AssignmentEditorGet,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate] = AssignmentUpdate,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify] = Verify
+            [CapabilityCuratorToolPolicy.CapabilityCuratorCatalogSearch] = CatalogSearch,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet] = EditorGet,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorSave] = Save,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest] = ToolSetupTest,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest] = McpSetupTest,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet] = AssignmentEditorGet,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate] = AssignmentUpdate,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorVerify] = Verify
         }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static IReadOnlySet<string> PrivilegedKeys { get; } = ToolNameToCapabilityKey.Values

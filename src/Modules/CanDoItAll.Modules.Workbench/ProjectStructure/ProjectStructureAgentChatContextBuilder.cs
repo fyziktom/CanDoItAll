@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
@@ -45,9 +46,8 @@ public static class ProjectStructureAgentChatContextBuilder
     {
         ArgumentNullException.ThrowIfNull(agents);
         ValidateProjectId(projectId);
-        var access = ContextualAgentAccessResolver.Resolve(
+        var access = ProjectAgentAccessPolicy.Resolve(
                 agents,
-                ContextualAgentWorkspaceKind.ProjectStructure,
                 projectId)
             .Select(item => new AgentChatContextAgentAccess(
                 item.Agent.Id,
@@ -117,13 +117,10 @@ public static class ProjectStructureAgentChatContextBuilder
     public static AgentChatContextFragment BuildBaseFragment(Guid projectId)
     {
         ValidateProjectId(projectId);
-        // Durable operational guidance moved to the registered runtime
-        // contributor ProjectStructureRuntimeGuidanceContributor; this UI
-        // fragment carries factual, time-varying context only.
         return new AgentChatContextFragment(
             new AgentChatContextContributorId(BaseContributorId),
             order: 100,
-            ContextualAgentWorkspaceContextBuilder.BuildProjectStructureBaseContext(projectId));
+            ProjectStructureContextualWorkspacePolicy.BuildProjectStructureBaseContext(projectId));
     }
 
     public static AgentChatContextFragment BuildSelectionFragment(

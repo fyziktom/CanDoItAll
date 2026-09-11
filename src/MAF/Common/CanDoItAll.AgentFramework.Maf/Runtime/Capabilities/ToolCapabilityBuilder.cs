@@ -15,7 +15,6 @@ internal sealed class ToolCapabilityBuilder(
     WorkspaceFilesystemRuntimePlugin filesystemPlugin,
     WorkspaceRuntimePlugin workspacePlugin,
     WorkspaceSpreadsheetRuntimePlugin spreadsheetPlugin,
-    StorageRuntimePlugin? storagePlugin,
     IWorkspaceCommandExecutionService workspaceCommandExecutionService,
     AgentWorkspaceToolAccessSettings workspaceToolAccess,
     IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies,
@@ -29,7 +28,6 @@ internal sealed class ToolCapabilityBuilder(
         filesystemPlugin,
         workspacePlugin,
         spreadsheetPlugin,
-        storagePlugin,
         capabilityAccessPlan);
 
         public IReadOnlyList<AITool> CreateTools(

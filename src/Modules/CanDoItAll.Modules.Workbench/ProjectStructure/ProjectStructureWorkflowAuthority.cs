@@ -177,7 +177,7 @@ public sealed class ProjectStructureWorkflowAuthorityService(
                 (!Guid.TryParse(governance.WorkspaceScope.Key, out var admittedProject) || admittedProject != authority.ProjectId) ||
              governance.WorkspaceScope.Kind is not (WorkspaceScopeKind.Project or WorkspaceScopeKind.Organization) ||
              kind.HasValue && governance.AllowedOperations.Count > 0 && !governance.AllowedOperations.Contains(
-                 kind == WorkflowStructureOutputKind.Task ? AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate : AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate))) {
+                 kind == WorkflowStructureOutputKind.Task ? ProjectStructureToolPolicy.ProjectStructureNodeCreate : ProjectStructureToolPolicy.ProjectStructureAssetCreate))) {
             throw Denied("The admitted execution ceiling does not permit this project output.");
         }
 

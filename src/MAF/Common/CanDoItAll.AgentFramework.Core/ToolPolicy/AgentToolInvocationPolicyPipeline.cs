@@ -95,7 +95,7 @@ public sealed class AgentToolInvocationPolicyPipeline
                 context.ProcessStepTargetScope,
                 auditScope.ProcessStepTargetScope,
                 StringComparison.Ordinal);
-        if (!hasExactIdentity || !hasExactRestrictions)
+        if (!hasExactIdentity || !hasExactRestrictions || context.ScopePolicy is null)
         {
             throw new InvalidOperationException(
                 "This governed process run requires its exact audit identity and typed restrictions in the effective tool-policy context.");

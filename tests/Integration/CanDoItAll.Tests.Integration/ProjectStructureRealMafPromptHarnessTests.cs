@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -537,10 +538,10 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
             toolNames =>
             {
                 Assert.Contains(ScriptedReadOnlyProjectStructureChatClient.StructureReadToolName, toolNames);
-                Assert.Contains(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, toolNames);
-                Assert.DoesNotContain(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate, toolNames);
+                Assert.Contains(ImageGenerationToolPolicy.ImageGenerationCreate, toolNames);
+                Assert.DoesNotContain(ProjectStructureToolPolicy.ProjectStructureAssetCreate, toolNames);
                 Assert.DoesNotContain(
-                    AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools,
+                    ProjectStructureToolPolicy.MutationTools,
                     toolNames.Contains);
             });
 
@@ -567,7 +568,7 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
         Assert.Equal("project-structure.runtime-tools", readReceipt.RuntimeToolProviderKey);
         Assert.DoesNotContain(
             receipts,
-            receipt => AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Contains(
+            receipt => ProjectStructureToolPolicy.MutationTools.Contains(
                 receipt.ToolName,
                 StringComparer.Ordinal));
 

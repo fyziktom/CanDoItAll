@@ -19,11 +19,11 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
 
     private static readonly string[] ExplicitLeaseToolNames =
     [
-        AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire,
-        AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew,
-        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease
+        ProjectStructureToolPolicy.ProjectStructureProjectLeaseAcquire,
+        ProjectStructureToolPolicy.ProjectStructureRepoBranchLeaseAcquire,
+        ProjectStructureToolPolicy.ProjectStructureLeaseGet,
+        ProjectStructureToolPolicy.ProjectStructureLeaseRenew,
+        ProjectStructureToolPolicy.ProjectStructureLeaseRelease
     ];
 
     [Fact]
@@ -41,7 +41,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             tools,
             tool => ExplicitLeaseToolNames.Contains(tool.Name, StringComparer.Ordinal));
         var asset = await InvokeAsync<ProjectStructureNodeSummary>(
-            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+            FindTool(tools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
             new AIFunctionArguments
             {
                 ["projectId"] = projectId,
@@ -84,7 +84,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             tools,
             tool => string.Equals(
                 tool.Name,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 StringComparison.Ordinal));
     }
 
@@ -101,7 +101,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var tool = FindTool(
             tools,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAnalyticsQuery);
+            ProjectStructureToolPolicy.ProjectStructureAnalyticsQuery);
         var function = Assert.IsAssignableFrom<AIFunction>(tool);
 
         var rawResult = await function.InvokeAsync(
@@ -247,9 +247,9 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         var projectId = await CreateProjectAsync(projects);
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var singleDelete = Assert.IsAssignableFrom<AIFunction>(
-            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete));
+            FindTool(tools, ProjectStructureToolPolicy.ProjectStructureNodeDelete));
         var batchDelete = Assert.IsAssignableFrom<AIFunction>(
-            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureNodesDelete));
+            FindTool(tools, ProjectStructureToolPolicy.ProjectStructureNodesDelete));
 
         AssertDeleteDispositionRequired(singleDelete);
         AssertDeleteDispositionRequired(batchDelete);
@@ -503,7 +503,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 "The game loop runs in the browser and persists state in IndexedDB.",
                 selectedNode.Id,
                 ObjectSubtype: "implementation"));
-        var agent = CreateAgent(projectId);
+        var agent = await CreateAgentAsync(scope.ServiceProvider, projectId);
         var tools = await provider.CreateToolsAsync(
             CreateContext(
                 agent,
@@ -579,7 +579,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             lease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
                 FindTool(
                     tools,
-                    AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire),
+                    ProjectStructureToolPolicy.ProjectStructureProjectLeaseAcquire),
                 new AIFunctionArguments
                 {
                     ["projectId"] = projectId,
@@ -592,7 +592,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             var activeLease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
                 FindTool(
                     tools,
-                    AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet),
+                    ProjectStructureToolPolicy.ProjectStructureLeaseGet),
                 new AIFunctionArguments
                 {
                     ["scope"] = projectLeaseScope
@@ -604,7 +604,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             var renewedLease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
                 FindTool(
                     tools,
-                    AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew),
+                    ProjectStructureToolPolicy.ProjectStructureLeaseRenew),
                 new AIFunctionArguments
                 {
                     ["scope"] = projectLeaseScope,
@@ -797,7 +797,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 releasedLease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
                     FindTool(
                         tools,
-                        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease),
+                        ProjectStructureToolPolicy.ProjectStructureLeaseRelease),
                     new AIFunctionArguments
                     {
                         ["scope"] = new ProjectStructureScopeInput(
@@ -860,7 +860,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Guid projectId,
         string title)
         => InvokeAsync<ProjectStructureNodeSummary>(
-            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+            FindTool(tools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
             new AIFunctionArguments
             {
                 ["projectId"] = projectId,
@@ -934,43 +934,30 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             ]);
     }
 
-    private static AgentDefinition CreateAgent(Guid projectId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var configurationJson = AgentProjectStructureAccessMetadata.Write(
-            "{}",
-            new AgentProjectStructureAccessSettings
-            {
+    private static async Task<AgentDefinition> CreateAgentAsync(IServiceProvider services, Guid projectId) {
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agentId = await workspace.SaveAgentAsync(new AgentEditorModel {
+            Name = "Project Structure Integration Agent",
+            RoleTitle = "Portfolio architect",
+            Summary = "Exercises the project-structure runtime tool boundary.",
+            Instructions = "Use selected project-structure context and store generated files as project assets.",
+            Status = AgentLifecycleStatus.Active,
+            Model = "gpt-5-mini",
+            ConfigurationJson = "{}",
+            Permissions = AgentPermissionsPolicy.Default,
+            ProjectStructureAccess = new() {
                 CanRead = true,
                 CanWrite = false,
                 CanWriteNonTaskStructure = true,
                 CanWriteTasks = false,
                 AllowAllProjects = false,
                 AllowedProjectIds = [projectId]
-            });
-
-        return new AgentDefinition(
-            Guid.NewGuid(),
-            "Project Structure Integration Agent",
-            "Portfolio architect",
-            "Exercises the project-structure runtime tool boundary.",
-            "Use selected project-structure context and store generated files as project assets.",
-            AgentLifecycleStatus.Active,
-            Guid.NewGuid(),
-            "gpt-5-mini",
-            AgentWorkloadKind.General,
-            AgentChatHistoryMode.ProviderDefault,
-            0.2,
-            RequirePerServiceCallChatHistoryPersistence: false,
-            EnableBackgroundResponses: false,
-            configurationJson,
-            IsTemplate: false,
-            TemplateKey: string.Empty,
-            AgentPermissionsPolicy.Default,
-            [],
-            [],
-            now,
-            now);
+            }
+        });
+        var agent = Assert.Single(await workspace.ListAgentsAsync(), item => item.Id == agentId);
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        Assert.Equal(projectId, Assert.Single(access.AllowedProjectLifetimes).ProjectId);
+        return agent;
     }
 
     private static AgentRuntimeToolProviderContext CreateContext(
@@ -979,7 +966,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat)
     {
         var provider = new ProviderProfile(
-            agent.ProviderProfileId!.Value,
+            Guid.NewGuid(),
             "Integration provider",
             ProviderKind.OpenAi,
             "https://api.openai.com",
@@ -1024,7 +1011,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             .Single();
 
         return await provider.CreateToolsAsync(
-            CreateContext(CreateAgent(projectId), projectId, purpose),
+            CreateContext(await CreateAgentAsync(services, projectId), projectId, purpose),
             CancellationToken.None);
     }
 

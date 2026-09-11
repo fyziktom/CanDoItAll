@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -45,7 +46,7 @@ internal static class ProcessesExecutionAuthority
                     "A process-run workspace scope has no canonical per-run authority rule; run process work through the governed process execution path.");
             }
 
-            return ValueTask.FromResult(ProjectScopedExecutionAuthority.Resolve(
+            return ValueTask.FromResult(ProjectAgentAccessPolicy.ResolveExecutionAuthority(
                 request.Agent,
                 projectId,
                 request.ObservedWorkspaceScope));

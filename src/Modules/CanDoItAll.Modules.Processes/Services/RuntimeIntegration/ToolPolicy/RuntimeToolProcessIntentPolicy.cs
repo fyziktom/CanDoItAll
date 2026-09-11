@@ -1,22 +1,19 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.AgentFramework.Core;
+namespace CanDoItAll.Modules.Processes;
 
-public static class RuntimeToolProcessIntentPolicy
-{
+public static class RuntimeToolProcessIntentPolicy {
     public static bool IsToolCapabilityAllowedForProcessIntent(
         ToolCapabilityMetadata capability,
-        AgentRuntimeContextIntent contextIntent)
-    {
+        AgentRuntimeContextIntent contextIntent) {
         ArgumentNullException.ThrowIfNull(capability);
 
-        if (capability.Classification == ToolInvocationClassification.Read)
-        {
+        if (capability.Classification == ToolInvocationClassification.Read) {
             return true;
         }
 
-        return capability.OperationRequirementKind switch
-        {
+        return capability.OperationRequirementKind switch {
             ToolCapabilityOperationRequirementKind.None => capability.Classification == ToolInvocationClassification.Validation &&
                                                            HasAnyOperation(
                                                                contextIntent,
@@ -44,10 +41,8 @@ public static class RuntimeToolProcessIntentPolicy
     }
 
     public static bool ShouldExposeConfiguredWorkspaceToolsForProcessIntent(
-        AgentRuntimeContextIntent contextIntent)
-    {
-        if (!contextIntent.IsGovernedProcessStep)
-        {
+        AgentRuntimeContextIntent contextIntent) {
+        if (!contextIntent.IsGovernedProcessStep) {
             return true;
         }
 
@@ -67,18 +62,15 @@ public static class RuntimeToolProcessIntentPolicy
 
     public static bool HasAnyOperation(
         AgentRuntimeContextIntent contextIntent,
-        params string[] operations)
-    {
+        params string[] operations) {
         return contextIntent.AllowedOperations.Any(operation =>
             operations.Contains(operation, StringComparer.OrdinalIgnoreCase));
     }
 
     private static bool AllStaticRequirementsSatisfied(
         ToolCapabilityMetadata capability,
-        AgentRuntimeContextIntent contextIntent)
-    {
-        if (capability.OperationRequirements.Count == 0)
-        {
+        AgentRuntimeContextIntent contextIntent) {
+        if (capability.OperationRequirements.Count == 0) {
             return false;
         }
 
@@ -90,11 +82,9 @@ public static class RuntimeToolProcessIntentPolicy
 
     private static bool IsWorkspaceFileMutationAllowedForProcessIntent(
         ToolCapabilityMetadata capability,
-        AgentRuntimeContextIntent contextIntent)
-    {
+        AgentRuntimeContextIntent contextIntent) {
         if (contextIntent.AllowsProductMutation &&
-            HasAnyOperation(contextIntent, ProcessOperationContractNames.MutateProductTarget))
-        {
+            HasAnyOperation(contextIntent, ProcessOperationContractNames.MutateProductTarget)) {
             return true;
         }
 
@@ -106,8 +96,7 @@ public static class RuntimeToolProcessIntentPolicy
                    ProcessOperationContractNames.RecoverArtifactsOnly);
     }
 
-    private static bool IsWorkspaceManagedArtifactWriteTool(string runtimeToolName)
-    {
+    private static bool IsWorkspaceManagedArtifactWriteTool(string runtimeToolName) {
         return string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceWriteFile, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceAppendFile, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceWriteSpreadsheet, StringComparison.OrdinalIgnoreCase);

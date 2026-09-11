@@ -440,7 +440,7 @@ internal sealed partial class ProcessMockAgentRuntime
         ];
     }
 
-    private static IReadOnlyList<AgentToolInvocationTrace> BuildProcessStepOutcomeToolInvocationTraces(
+    private IReadOnlyList<AgentToolInvocationTrace> BuildProcessStepOutcomeToolInvocationTraces(
         IReadOnlyList<string> requiredToolNames,
         AgentStructuredOutputContract? structuredOutput,
         AgentRuntimeExecutionOptions? executionOptions)
@@ -460,7 +460,7 @@ internal sealed partial class ProcessMockAgentRuntime
         {
             traces.Add(new AgentToolInvocationTrace(
                 toolName,
-                AgentToolInvocationPolicyMetadata.Classify(toolName),
+                toolPolicies.Classify(toolName),
                 Sequence: traces.Count + 1,
                 StartedAtUtc: timestamp,
                 CompletedAtUtc: timestamp,

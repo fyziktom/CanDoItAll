@@ -39,6 +39,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
             ProjectStructureExecutionAuthorityProvider>());
+        services.TryAddSingleton<ContextualAgentWorkspacePolicyCatalog>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IContextualAgentWorkspacePolicy, ProjectStructure.ProjectStructureContextualWorkspacePolicy>());
         services.AddFileInteractionComponents(builder => builder
             .AddBuiltIns()
             .AddZoomPanRenderers()
@@ -75,6 +77,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAssemblyService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentContextContributor,
+            AgentContext.ProjectStructureRuntimeGuidanceContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolInvocationPolicyContextContributor,
             AgentContext.ProjectStructureRuntimeGuidanceContributor>());
         services.AddScoped<ProjectStructureGanttMutationService>();
         services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
@@ -175,6 +179,12 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAssetContentReader>();
         services.AddScoped<ProjectStructureAgentService>();
         services.AddScoped<ProjectStructureAgentNodeCopyCoordinator>();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in ProjectStructureToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectStructureAgentRuntimeToolProvider>());
         services.AddScoped<WorkbenchProjectStructureRuntimeGateway>();
         services.AddScoped<IProjectStructureRuntimeGateway>(serviceProvider =>

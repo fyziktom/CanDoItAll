@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Processes;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -75,7 +76,7 @@ public sealed class PromptToolPolicyTests {
         services.AddAgentFrameworkModule(configuration);
         using var provider = services.BuildServiceProvider();
         var policies = provider.GetRequiredService<AgentToolPolicyCatalog>();
-        Assert.Equal(7, provider.GetServices<ToolCapabilityMetadata>().Count());
+        Assert.Equal(47, provider.GetServices<ToolCapabilityMetadata>().Count());
         Assert.All(PromptGalleryToolPolicy.Capabilities, policy => Assert.True(policies.TryResolve(policy.Name, out _)));
         Assert.Same(policies, provider.GetRequiredService<AgentToolPolicyCatalog>());
     }
@@ -106,6 +107,7 @@ public sealed class PromptToolPolicyTests {
             new Dictionary<string, string>(), ToolInvocationClassification.Read, IsKnownTool: true,
             AutoApprovalAllowed: false, ApprovalWrapperAvailable: false, "run-1", "process-step", "process-1", "step-1",
             ProcessStepAllowedOperations: []) {
+            ScopePolicy = ProcessToolInvocationScopePolicy.Instance,
             DeclaredCapability = contribution,
             PathArguments = ToolInvocationPathArgumentSet.Empty
         };

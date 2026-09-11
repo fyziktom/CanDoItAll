@@ -23,8 +23,13 @@ public sealed class ProcessToolInvocationPolicyContextContributor : IToolInvocat
             return context;
         }
 
+        if (context.ScopePolicy is not null && !ReferenceEquals(context.ScopePolicy, ProcessToolInvocationScopePolicy.Instance)) {
+            throw new InvalidOperationException("A governed Process run cannot replace another owner's invocation-scope policy.");
+        }
+
         return context with
         {
+            ScopePolicy = ProcessToolInvocationScopePolicy.Instance,
             ProcessRunId = auditScope.ProcessRunId,
             ProcessStepId = auditScope.ProcessStepId,
             ProcessAllowsProductMutation = auditScope.ProcessAllowsProductMutation,

@@ -15,7 +15,7 @@ internal sealed class ProjectsExecutionAuthorityProvider
         ArgumentNullException.ThrowIfNull(request);
         if (Guid.TryParse(request.SourceId.Value, out var projectId) && projectId != Guid.Empty)
         {
-            return ValueTask.FromResult(ProjectScopedExecutionAuthority.Resolve(
+            return ValueTask.FromResult(ProjectAgentAccessPolicy.ResolveExecutionAuthority(
                 request.Agent,
                 projectId,
                 request.ObservedWorkspaceScope));

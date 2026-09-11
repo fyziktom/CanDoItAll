@@ -89,7 +89,7 @@ public sealed class ProjectStructureAgentAuthorizationService(
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
         if (!access.CanCreateProjects)
         {
-            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate);
+            throw CreateDeniedException(ProjectStructureToolPolicy.ProjectStructureProjectCreate);
         }
     }
 
@@ -102,7 +102,7 @@ public sealed class ProjectStructureAgentAuthorizationService(
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
         if (!access.CanCreateSubprojects || !IsProjectAllowed(access, parentProjectId))
         {
-            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectCreate);
+            throw CreateDeniedException(ProjectStructureToolPolicy.ProjectStructureSubprojectCreate);
         }
     }
 
@@ -121,7 +121,7 @@ public sealed class ProjectStructureAgentAuthorizationService(
             !IsProjectAllowed(access, childProjectId) ||
             currentParentProjectId.HasValue && !IsProjectAllowed(access, currentParentProjectId.Value))
         {
-            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink);
+            throw CreateDeniedException(ProjectStructureToolPolicy.ProjectStructureSubprojectLink);
         }
     }
 
@@ -136,7 +136,7 @@ public sealed class ProjectStructureAgentAuthorizationService(
             !ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(access) ||
             !IsProjectAllowed(access, projectId))
         {
-            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject);
+            throw CreateDeniedException(ProjectStructureToolPolicy.ProjectStructureNodesToNewSubproject);
         }
 
         return new ProjectStructureNodesToSubprojectAuthorization(
@@ -211,7 +211,7 @@ public sealed class ProjectStructureAgentAuthorizationService(
             !IsProjectAllowed(access, projectId) ||
             !ProjectPlanAgentAuthorizationPolicy.IsPlanSummaryAuthorized(agent, capabilities))
         {
-            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectPlanSummaryGet);
+            throw CreateDeniedException(ProjectStructureToolPolicy.ProjectPlanSummaryGet);
         }
     }
 

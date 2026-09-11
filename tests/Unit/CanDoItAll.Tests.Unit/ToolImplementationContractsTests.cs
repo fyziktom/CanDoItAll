@@ -1,3 +1,5 @@
+using CanDoItAll.Agents.Storage;
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Net;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -455,7 +457,7 @@ public sealed class ToolImplementationContractsTests
     public void INV_PARITY_001_existing_tool_policy_metadata_maps_to_exposure_descriptors()
     {
         var failures = new List<string>();
-        foreach (var metadata in ToolCapabilityRegistry.Capabilities)
+        foreach (var metadata in ProductToolPolicies.Capabilities)
         {
             if (!RuntimeToolName.TryCreate(metadata.Name, out var runtimeName))
             {
@@ -514,15 +516,15 @@ public sealed class ToolImplementationContractsTests
     {
         AssertReadTool(ToolContractCatalog.ProviderHealth);
         AssertReadTool(ToolContractCatalog.AgentPackageExport);
-        AssertReadTool(ToolContractCatalog.StorageCatalogList);
-        AssertReadTool(ToolContractCatalog.StorageBrowse);
-        AssertReadTool(ToolContractCatalog.StorageReadTextFile);
-        AssertMutationTool(ToolContractCatalog.StorageWriteTextFile);
-        AssertMutationTool(ToolContractCatalog.StorageDeleteObject);
+        AssertReadTool(StorageToolPolicy.StorageCatalogList);
+        AssertReadTool(StorageToolPolicy.StorageBrowse);
+        AssertReadTool(StorageToolPolicy.StorageReadTextFile);
+        AssertMutationTool(StorageToolPolicy.StorageWriteTextFile);
+        AssertMutationTool(StorageToolPolicy.StorageDeleteObject);
 
         static void AssertReadTool(string toolName)
         {
-            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out var metadata));
             Assert.Equal(ToolInvocationClassification.Read, metadata.Classification);
             Assert.False(metadata.RequiresApprovalByDefault);
             Assert.False(metadata.IsStateChanging);
@@ -530,7 +532,7 @@ public sealed class ToolImplementationContractsTests
 
         static void AssertMutationTool(string toolName)
         {
-            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out var metadata));
             Assert.Equal(ToolInvocationClassification.Mutation, metadata.Classification);
             Assert.True(metadata.RequiresApprovalByDefault);
             Assert.True(metadata.IsStateChanging);

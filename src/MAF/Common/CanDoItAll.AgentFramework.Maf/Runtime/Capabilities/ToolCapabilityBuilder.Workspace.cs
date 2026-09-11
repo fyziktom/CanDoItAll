@@ -11,7 +11,6 @@ internal sealed class WorkspaceToolSet(
     WorkspaceFilesystemRuntimePlugin filesystemPlugin,
     WorkspaceRuntimePlugin workspacePlugin,
     WorkspaceSpreadsheetRuntimePlugin spreadsheetPlugin,
-    StorageRuntimePlugin? storagePlugin,
     RuntimeCapabilityAccessPlan capabilityAccessPlan)
 {
     private const string SpreadsheetWriteDescription = "Creates or updates a workspace .xlsx workbook and worksheet using typed cell and range writes. Cell values may be strings, numbers, booleans, or null; null writes a blank cell. Each rangeWrites values row must fit within the columns of its rangeAddress, and the number of values rows must fit within that range. String values beginning with = are stored as formulas. Creates missing workbooks and worksheets when requested.";
@@ -24,24 +23,10 @@ internal sealed class WorkspaceToolSet(
     {
         ArgumentNullException.ThrowIfNull(catalogCapabilities);
 
-        var access = workspaceToolAccess;
         var tools = CreateWorkspaceTools(
             catalogCapabilities,
             includeConfiguredTools: true,
             suppressApprovalRequirements);
-
-        if (storagePlugin is not null && (access.CanReadStorage || access.CanWriteStorage))
-        {
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageCatalogList, () => AIFunctionFactory.Create(storagePlugin.ListStorageCatalogs, ToolContractCatalog.StorageCatalogList, "Lists storage catalogs this agent is allowed to use."));
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageBrowse, () => AIFunctionFactory.Create(storagePlugin.BrowseStorage, ToolContractCatalog.StorageBrowse, "Lists one bounded page of direct child folders and objects in an allowed storage catalog. Use entryId as the read locator and a container entry id as containerKey to descend. When nextCursor is returned, pass it in the next call while repeating the same storageId, containerKey, pageSize, and includeMetadata values."));
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageReadTextFile, () => AIFunctionFactory.Create(storagePlugin.ReadStorageTextFile, ToolContractCatalog.StorageReadTextFile, "Reads a text object from an allowed storage catalog through the configured storage driver."));
-        }
-
-        if (storagePlugin is not null && access.CanWriteStorage)
-        {
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageWriteTextFile, () => WrapWithApproval(AIFunctionFactory.Create(storagePlugin.WriteStorageTextFile, ToolContractCatalog.StorageWriteTextFile, "Writes a text object to an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageDeleteObject, () => WrapWithApproval(AIFunctionFactory.Create(storagePlugin.DeleteStorageObject, ToolContractCatalog.StorageDeleteObject, "Deletes an object from an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
-        }
 
         return tools;
     }

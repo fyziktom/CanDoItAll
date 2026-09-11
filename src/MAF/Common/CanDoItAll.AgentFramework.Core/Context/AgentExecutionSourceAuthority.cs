@@ -47,39 +47,3 @@ public interface IAgentExecutionSourceAuthorityProvider
         AgentExecutionSourceAuthorityRequest request,
         CancellationToken cancellationToken = default);
 }
-
-public static class ProjectScopedExecutionAuthority
-{
-    public static AgentExecutionSourceAuthorityDecision Resolve(
-        AgentDefinition agent,
-        Guid projectId,
-        WorkspaceScopeDescriptor? observedScope)
-    {
-        ArgumentNullException.ThrowIfNull(agent);
-        if (projectId == Guid.Empty)
-        {
-            throw new ArgumentException("A project id is required.", nameof(projectId));
-        }
-
-        var canonicalScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
-        if (observedScope is not null && observedScope != canonicalScope)
-        {
-            throw new AgentExecutionAuthorityMismatchException(
-                $"The published workspace scope '{observedScope.DisplayName}' does not match the canonical project scope '{canonicalScope.DisplayName}'.");
-        }
-
-        var summary = ContextualAgentAccessResolver
-            .Resolve([agent], ContextualAgentWorkspaceKind.ProjectStructure, projectId)
-            .FirstOrDefault();
-        if (summary is null || !summary.CanRead)
-        {
-            throw new AgentChatContextAccessDeniedException(agent.Id, default);
-        }
-
-        return new AgentExecutionSourceAuthorityDecision(
-            canonicalScope,
-            ReadAllowed: true,
-            MutationAllowed: summary.CanMutate,
-            AgentExecutionAuthorityPolicyVersions.Canonical);
-    }
-}

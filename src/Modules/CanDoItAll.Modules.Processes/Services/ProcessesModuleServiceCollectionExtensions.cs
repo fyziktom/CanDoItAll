@@ -36,6 +36,15 @@ public static class ProcessesModuleServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         services.AddDataProtection();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in ProcessCompatibilityToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
+        services.TryAddSingleton<ContextualAgentWorkspacePolicyCatalog>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAgentRuntimeCapabilityPolicyContributor, ProcessRuntimeCapabilityPolicyContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IContextualAgentWorkspacePolicy, ProcessContextualWorkspacePolicy>());
         services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<

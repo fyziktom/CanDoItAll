@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Processes;
 using System.Text.Json;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
@@ -208,8 +209,8 @@ public sealed class AgentFinalizerPolicyTests
         {
             CreateToolTrace(policy.ToolName, ToolInvocationClassification.Read, 1, timestamp),
             CreateToolTrace(
-                AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
-                AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord),
+                ProcessCompatibilityToolPolicy.ProcessesArtifactRecord,
+                AgentToolInvocationPolicyMetadata.Classify(ProcessCompatibilityToolPolicy.ProcessesArtifactRecord, ProductToolPolicyTestRegistration.ProductToolPolicies),
                 2,
                 timestamp)
         };
@@ -221,7 +222,7 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Contains(result.Errors, error => error.Code == "agent.finalizer.not_last");
         Assert.Contains(
             result.ViolatingToolInvocations,
-            trace => trace.ToolName == AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord &&
+            trace => trace.ToolName == ProcessCompatibilityToolPolicy.ProcessesArtifactRecord &&
                      trace.Classification == ToolInvocationClassification.Mutation);
     }
 

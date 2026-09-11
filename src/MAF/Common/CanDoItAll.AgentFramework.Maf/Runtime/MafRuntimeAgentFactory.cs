@@ -622,9 +622,9 @@ internal sealed class MafRuntimeAgentFactory
                 async ValueTask<object?> InvokeCurrentToolAsync(CancellationToken token) {
                     var unavailable = capabilityState.RuntimeToolMetadata.SingleOrDefault(metadata => metadata.ToolName == functionName)?.Unavailability;
                     if (unavailable is not null) {
-                        return new AgentToolFailureResult(false, unavailable.Code, unavailable.Message, false) {
+                        return CapturePreDispatchFailure(new AgentToolFailureResult(false, unavailable.Code, unavailable.Message, false) {
                             EffectState = AgentToolEffectState.NotCommitted
-                        };
+                        });
                     }
 
                     if (AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
@@ -636,6 +636,7 @@ internal sealed class MafRuntimeAgentFactory
                         failureMessage = policyDeniedResult;
                         failureMessageSafeForPersistence = true;
                         failureCode = "ToolPolicyDenied";
+                        AgentToolInvocationEffectScope.RecordPreDispatchFailure(new(failureCode, policyDeniedResult));
                         outcome = AgentToolInvocationOutcome.Failed;
                         effectState = AgentToolEffectState.NotCommitted;
                         activity?.SetTag("agentframework.tool_policy_recoverable_denial", true);
@@ -670,7 +671,7 @@ internal sealed class MafRuntimeAgentFactory
                             "Returning sanitized pre-invocation argument failure for tool {ToolName} on agent {AgentId}.",
                             functionName,
                             agentDefinition.Id);
-                        return argumentFailure;
+                        return CapturePreDispatchFailure(argumentFailure);
                     }
                     return await next(context, token);
                 }
@@ -681,7 +682,8 @@ internal sealed class MafRuntimeAgentFactory
                 var assessment = MafRuntimeToolInvocationResultClassifier.Assess(
                     functionName,
                     classification,
-                    result);
+                    result,
+                    effectScope.PreDispatchFailure);
                 directReceiptExecutionRunId = assessment.DirectReceiptExecutionRunId;
                 succeeded = assessment.Succeeded;
                 outcome = assessment.Outcome;
@@ -814,6 +816,13 @@ internal sealed class MafRuntimeAgentFactory
             $"{AgentFrameworkTelemetry.SourceName}.Maf.{provider.Kind}",
             telemetry => telemetry.EnableSensitiveData = false);
         return builder.Build();
+    }
+
+    private static AgentToolFailureResult CapturePreDispatchFailure(AgentToolFailureResult failure) {
+        AgentToolInvocationEffectScope.RecordPreDispatchFailure(new(failure.ErrorCode, failure.Message) {
+            CanRetryWithCorrectedInput = failure.CanRetryWithCorrectedInput
+        });
+        return failure;
     }
 
     internal static void ApplyCommittedEffectCapture(

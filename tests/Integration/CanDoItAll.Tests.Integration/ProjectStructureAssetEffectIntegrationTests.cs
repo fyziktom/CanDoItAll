@@ -171,7 +171,7 @@ public sealed class ProjectStructureAssetEffectIntegrationTests
     public void Unverified_mutation_before_readback_is_unknown_and_not_retryable()
     {
         var assessment = MafRuntimeToolInvocationResultClassifier.Assess(
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate,
             ToolInvocationClassification.Mutation,
             result: null);
 
@@ -314,7 +314,7 @@ public sealed class ProjectStructureAssetEffectIntegrationTests
     {
         return Assert.Single(tools, tool => string.Equals(
             tool.Name,
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate,
             StringComparison.Ordinal));
     }
 

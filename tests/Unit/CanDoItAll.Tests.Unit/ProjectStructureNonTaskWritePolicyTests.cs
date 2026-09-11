@@ -120,13 +120,13 @@ public sealed class ProjectStructureNonTaskWritePolicyTests
     public void RequiresFullStructureWrite_reserves_import_for_broad_writer()
     {
         Assert.True(ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(
-            AgentToolInvocationPolicyMetadata.ProjectStructureImport));
+            ProjectStructureToolPolicy.ProjectStructureImport));
         Assert.True(ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(
-            AgentToolInvocationPolicyMetadata.ProjectStructureImport.ToUpperInvariant()));
+            ProjectStructureToolPolicy.ProjectStructureImport.ToUpperInvariant()));
         Assert.False(ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(
-            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate));
+            ProjectStructureToolPolicy.ProjectStructureNodeCreate));
         Assert.False(ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(
-            AgentToolInvocationPolicyMetadata.ProjectTaskCreate));
+            ProjectStructureToolPolicy.ProjectTaskCreate));
     }
 
     [Fact]

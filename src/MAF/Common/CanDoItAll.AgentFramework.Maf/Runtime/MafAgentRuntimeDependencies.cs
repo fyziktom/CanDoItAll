@@ -4,7 +4,6 @@ using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.FileSystem;
-using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.Configuration;
@@ -112,7 +111,6 @@ internal sealed record MafAgentRuntimeDependencies(
 internal sealed record MafRuntimeCapabilityDependencies(
     IReadOnlyList<IAgentContextContributor> ContextContributors,
     IReadOnlyList<IAgentRuntimeToolProvider> RuntimeToolProviders,
-    MafRuntimeStorageServices? StorageServices,
     IConfiguration? A2AConfiguration,
     ILoggerFactory LoggerFactory,
     CapabilityAccessPolicyEvaluatorContract CapabilityAccessPolicyEvaluator,
@@ -120,21 +118,17 @@ internal sealed record MafRuntimeCapabilityDependencies(
     ISecretRuntimeResolver? SecretRuntimeResolver,
     IRegisteredCapabilityServiceSource RegisteredCapabilityServices)
 {
+    public IReadOnlyList<IAgentRuntimeCapabilityPolicyContributor> ContextPolicyContributors { get; init; } = [];
+
+    public AgentToolPolicyCatalog ToolPolicies { get; init; } = AgentToolPolicyCatalog.BuiltIn;
+
     public static MafRuntimeCapabilityDependencies FromServices(IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
-        var catalogService = serviceProvider.GetService(typeof(IStorageCatalogService)) as IStorageCatalogService;
-        var driverRegistry = serviceProvider.GetService(typeof(IStorageDriverRegistry)) as IStorageDriverRegistry;
-        var browseDriverRegistry = serviceProvider.GetService(typeof(IStorageBrowseDriverRegistry)) as IStorageBrowseDriverRegistry;
-        var storageServices = catalogService is not null && driverRegistry is not null
-            ? new MafRuntimeStorageServices(catalogService, driverRegistry, browseDriverRegistry)
-            : null;
-
         return new MafRuntimeCapabilityDependencies(
             serviceProvider.GetServices<IAgentContextContributor>().ToList(),
             serviceProvider.GetServices<IAgentRuntimeToolProvider>().ToList(),
-            storageServices,
             serviceProvider.GetService(typeof(IConfiguration)) as IConfiguration,
             serviceProvider.GetService(typeof(ILoggerFactory)) as ILoggerFactory ?? NullLoggerFactory.Instance,
             serviceProvider.GetService(typeof(CapabilityAccessPolicyEvaluatorContract)) as CapabilityAccessPolicyEvaluatorContract
@@ -147,18 +141,13 @@ internal sealed record MafRuntimeCapabilityDependencies(
                 serviceProvider,
                 serviceProvider.GetServices<RegisteredCapabilityServiceDescriptor>()
                     .Select(descriptor => descriptor.ServiceType)
-                    .ToHashSet()));
+                    .ToHashSet())) {
+            ContextPolicyContributors = serviceProvider.GetServices<IAgentRuntimeCapabilityPolicyContributor>().ToArray(),
+            ToolPolicies = serviceProvider.GetService<AgentToolPolicyCatalog>()
+                ?? new AgentToolPolicyCatalog(serviceProvider.GetServices<ToolCapabilityMetadata>())
+        };
     }
 }
-
-/// <summary>
-/// Storage services that back the runtime storage tools. The bundle is present only when both the catalog service
-/// and the driver registry are available; the browse registry stays optional.
-/// </summary>
-internal sealed record MafRuntimeStorageServices(
-    IStorageCatalogService CatalogService,
-    IStorageDriverRegistry DriverRegistry,
-    IStorageBrowseDriverRegistry? BrowseDriverRegistry);
 
 /// <summary>
 /// Resolves data-driven registered skill/plugin service types declared in capability configuration JSON.

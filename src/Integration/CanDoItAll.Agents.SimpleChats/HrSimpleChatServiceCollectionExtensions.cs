@@ -12,6 +12,12 @@ public static class HrSimpleChatServiceCollectionExtensions {
             throw new InvalidOperationException("Register the durable tool-batch admission verifier before enabling HR Simple Chat administration.");
         }
 
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in HrSimpleChatToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         var codec = new HrSimpleChatProposalCodec();
         services.TryAddSingleton(codec);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAgentToolProposalPreparer>(codec));

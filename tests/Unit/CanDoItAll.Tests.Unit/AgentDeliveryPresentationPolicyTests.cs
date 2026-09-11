@@ -1,3 +1,6 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.AgentFramework;
 using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -164,8 +167,8 @@ public sealed class AgentDeliveryPresentationPolicyTests(ITestOutputHelper outpu
 
     [Theory]
     [InlineData("workspace_write_file")]
-    [InlineData(AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate)]
+    [InlineData(ProjectStructureToolPolicy.ProjectStructureNodeUpdate)]
+    [InlineData(HrAgentToolPolicy.HrAgentSettingsUpdate)]
     [InlineData("unknown_tool")]
     public void Approval_and_runtime_argument_displays_share_canonical_nested_sanitation(string toolName) {
         var json = JsonSerializer.Serialize(new {
@@ -174,8 +177,8 @@ public sealed class AgentDeliveryPresentationPolicyTests(ITestOutputHelper outpu
             items = new[] { new { nodeId = "node-7", password = "test-only-PRIVATE_ARRAY_482" } },
             other = new string('x', 10_000)
         });
-        var display = AgentToolArgumentDisplayFormatter.DescribeArguments(json, toolName);
-        Assert.Equal(MafToolInvocationArgumentFormatter.DescribeArguments(json, toolName), display);
+        var display = AgentToolArgumentDisplayFormatter.DescribeArguments(json, toolName, ProductToolPolicies);
+        Assert.Equal(MafToolInvocationArgumentFormatter.DescribeArguments(json, toolName, ProductToolPolicies), display);
         Assert.DoesNotContain("PRIVATE_", display, StringComparison.Ordinal);
         Assert.DoesNotContain(new string('x', 100), display, StringComparison.Ordinal);
         Assert.Contains("project-42", display, StringComparison.Ordinal);
@@ -189,7 +192,7 @@ public sealed class AgentDeliveryPresentationPolicyTests(ITestOutputHelper outpu
     [InlineData("{\"id\":1,\"id\":2}")]
     [InlineData("[\"test-only-PRIVATE_ARRAY_482\"]")]
     public void Malformed_approval_arguments_have_no_raw_fallback(string json) {
-        Assert.Empty(AgentToolArgumentDisplayFormatter.DescribeArguments(json, "workspace_write_file"));
+        Assert.Empty(AgentToolArgumentDisplayFormatter.DescribeArguments(json, "workspace_write_file", ProductToolPolicies));
     }
 
     [Fact]

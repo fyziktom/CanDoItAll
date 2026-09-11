@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -170,7 +171,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         var search = Assert.IsAssignableFrom<AIFunction>(Assert.Single(
             await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None)));
         Assert.Equal(
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch,
+            CapabilityCuratorToolPolicy.CapabilityCuratorCatalogSearch,
             Assert.Single(harness.Provider.GetToolMetadata(harness.Context)).ToolName);
 
         var wrongId = harness.Context with
@@ -256,11 +257,11 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             expectedToolNames,
             metadata.Select(item => item.ToolName).OrderBy(item => item, StringComparer.Ordinal));
         Assert.DoesNotContain(
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet,
+            CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet,
             tools.Select(tool => tool.Name),
             StringComparer.Ordinal);
         Assert.DoesNotContain(
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate,
+            CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate,
             tools.Select(tool => tool.Name),
             StringComparer.Ordinal);
     }
@@ -275,8 +276,8 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             ],
             useHrActor: true);
         var tools = await CreateToolDictionaryAsync(harness);
-        var save = tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave];
-        var verify = tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify];
+        var save = tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave];
+        var verify = tools[CapabilityCuratorToolPolicy.CapabilityCuratorVerify];
 
         var created = await InvokeAsync<CapabilityCuratorEditorResult>(
             save,
@@ -286,7 +287,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                 "Apply this narrowly scoped HR-authored skill."));
 
         Assert.Equal(HrAgentIdentity.AgentId, harness.Context.Agent.Id);
-        Assert.Equal(AgentToolInvocationPolicyMetadata.CapabilityCuratorSave, save.Name);
+        Assert.Equal(CapabilityCuratorToolPolicy.CapabilityCuratorSave, save.Name);
         Assert.Equal("hr-authored-inline-skill", created.Key);
         Assert.Equal("hr-authored-inline-skill", created.Configuration.Skill!.InlineName);
         Assert.Equal(
@@ -334,7 +335,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         var tools = await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None);
 
         var tool = Assert.Single(tools);
-        Assert.Equal(AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet, tool.Name);
+        Assert.Equal(CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet, tool.Name);
 
         var wrongCase = CreateHarness([CapabilityCuratorAgentCapabilityKeys.EditorGet.ToUpperInvariant()]);
         Assert.Empty(await wrongCase.Provider.CreateToolsAsync(wrongCase.Context, CancellationToken.None));
@@ -348,7 +349,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         var tools = await CreateToolDictionaryAsync(harness);
 
         var search = await InvokeAsync<CapabilityCuratorCatalogSearchResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorCatalogSearch],
             new CapabilityCuratorCatalogSearchInput(
                 text: "custom skill",
                 kind: ModelCapabilityKind.Skill,
@@ -361,7 +362,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.Equal(1, search.TotalPages);
 
         var editor = await InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet],
             new CapabilityCuratorEditorGetInput(harness.CustomCapabilityId));
 
         Assert.Equal(harness.CustomCapabilityId, editor.CapabilityId);
@@ -370,7 +371,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.Equal(CapabilityCuratorSkillSource.Inline, editor.Configuration.Skill!.Source);
         Assert.Equal("Use the custom skill.", editor.Configuration.Skill.InlineInstructions);
         await Assert.ThrowsAsync<KeyNotFoundException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet],
             new CapabilityCuratorEditorGetInput(Guid.NewGuid())));
         Assert.Throws<ArgumentOutOfRangeException>(() => new CapabilityCuratorCatalogSearchInput(pageSize: 51));
     }
@@ -383,7 +384,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         var create = CreateInlineSkillCandidate("new-custom-skill", "New custom skill", "Initial instructions.");
 
         var created = await InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             create);
 
         Assert.False(created.IsBuiltIn);
@@ -391,7 +392,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.Equal(1, harness.Workspace.SaveCapabilityCallCount);
 
         var updated = await InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             CreateInlineSkillCandidate(
                 created.Key,
                 created.Name,
@@ -403,7 +404,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.Equal(created.Fingerprint, harness.Workspace.LastSavedCapabilityEditor!.ExpectedFingerprint);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             CreateInlineSkillCandidate(
                 created.Key,
                 created.Name,
@@ -413,10 +414,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 
         var builtIn = harness.Context.Capabilities.First(item => item.IsBuiltIn);
         var builtInEditor = await InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet],
             new CapabilityCuratorEditorGetInput(builtIn.Id));
         await Assert.ThrowsAsync<InvalidOperationException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             CreateInlineSkillCandidate(
                 "cannot-edit-built-in",
                 "Cannot edit built in",
@@ -426,7 +427,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 
         var nullKey = create with { Key = null! };
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             nullKey));
         Assert.DoesNotContain("NullReferenceException", exception.ToString(), StringComparison.Ordinal);
     }
@@ -472,14 +473,14 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                 AllowedTools: ["ping"]));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             toolCandidate));
 
         var toolResult = await InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(toolCandidate, "{}", "tool-correlation"));
         var mcpResult = await InvokeAsync<CapabilityCuratorMcpSetupTestResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(mcpCandidate, CorrelationId: "mcp-correlation"));
 
         Assert.True(toolResult.SetupResult.IsSuccess);
@@ -495,25 +496,25 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.DoesNotContain("API_KEY_VALUE", mcpRequest.Capability.ConfigurationJson, StringComparison.Ordinal);
 
         var savedTool = await InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             toolCandidate with { SetupAttestationToken = toolResult.Attestation!.Token });
         Assert.Equal(ModelCapabilityKind.Tool, savedTool.Kind);
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             toolCandidate with { SetupAttestationToken = toolResult.Attestation.Token }));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             mcpCandidate with
             {
                 Name = "Changed after setup",
                 SetupAttestationToken = mcpResult.Attestation!.Token
             }));
         var refreshedMcpResult = await InvokeAsync<CapabilityCuratorMcpSetupTestResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(mcpCandidate, CorrelationId: "mcp-correlation-2"));
         var savedMcp = await InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             mcpCandidate with { SetupAttestationToken = refreshedMcpResult.Attestation!.Token });
         Assert.Equal(ModelCapabilityKind.McpServer, savedMcp.Kind);
         Assert.Equal(2, harness.Workspace.SaveCapabilityCallCount);
@@ -555,10 +556,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 
         using var auditScope = WorkspaceExecutionAuditContext.BeginScope(executionRun);
         var setupResult = await InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-            initialTools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+            initialTools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(candidate));
         var saved = await InvokeAsync<CapabilityCuratorEditorResult>(
-            continuationTools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            continuationTools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             candidate with { SetupAttestationToken = setupResult.Attestation!.Token });
 
         Assert.Equal(ModelCapabilityKind.Tool, saved.Kind);
@@ -594,7 +595,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                    now)))
         {
             setupResult = await InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+                tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
                 new CapabilityCuratorCapabilitySetupTestInput(candidate));
         }
 
@@ -604,7 +605,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                    now.AddMinutes(1))))
         {
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+                tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
                 candidate with { SetupAttestationToken = setupResult.Attestation!.Token }));
         }
 
@@ -633,14 +634,14 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                     new Dictionary<string, string> { ["Authorization"] = "BOUND_API_KEY" })));
 
         var validResult = await InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(validHttp));
         Assert.True(validResult.SetupResult.IsSuccess);
         Assert.NotNull(validResult.Attestation);
 
         harness.SetupFlow.ToolSetupSucceeds = false;
         var failedResult = await InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(validHttp));
         Assert.False(failedResult.SetupResult.IsSuccess);
         Assert.Null(failedResult.Attestation);
@@ -654,7 +655,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                  })
         {
             await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+                tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
                 new CapabilityCuratorCapabilitySetupTestInput(validHttp with
                 {
                     ToolConfiguration = validHttp.ToolConfiguration! with
@@ -686,7 +687,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                         AllowedExecutableNames: ["dotnet"]))
             };
             await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+                tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
                 new CapabilityCuratorCapabilitySetupTestInput(processCandidate)));
         }
 
@@ -704,7 +705,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                 Arguments: ["--api-key=literal-value"],
                 AllowedTools: ["ping"]));
         await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorMcpSetupTestResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(unsafeMcp)));
     }
 
@@ -772,12 +773,12 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         var harness = CreateHarness();
         var tools = await CreateToolDictionaryAsync(harness);
         var assignmentEditor = await InvokeAsync<CapabilityCuratorAssignmentEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet],
             new CapabilityCuratorAssignmentEditorGetInput(harness.TargetAgentId));
         var unrelated = Assert.Single(assignmentEditor.SelectedCapabilityIds);
 
         var attached = await InvokeAsync<CapabilityCuratorAssignmentUpdateResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate],
             new CapabilityCuratorAssignmentUpdateInput(
                 harness.TargetAgentId,
                 harness.CustomCapabilityId,
@@ -789,13 +790,13 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.Contains(harness.CustomCapabilityId, attached.SelectedCapabilityIds);
 
         var verified = await InvokeAsync<CapabilityCuratorVerifyResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorVerify],
             new CapabilityCuratorVerifyInput(harness.TargetAgentId, harness.CustomCapabilityId));
         Assert.Equal(CapabilityProofStatus.Verified, verified.ProofStatus);
 
         var privileged = harness.Context.Capabilities.First();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorAssignmentUpdateResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate],
             new CapabilityCuratorAssignmentUpdateInput(
                 harness.TargetAgentId,
                 privileged.Id,
@@ -805,17 +806,17 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         foreach (var privilegedAgentId in ManagedAgentPrivilegedAgentIds.All)
         {
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorAssignmentEditorResult>(
-                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet],
+                tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet],
                 new CapabilityCuratorAssignmentEditorGetInput(privilegedAgentId)));
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorAssignmentUpdateResult>(
-                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate],
+                tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate],
                 new CapabilityCuratorAssignmentUpdateInput(
                     privilegedAgentId,
                     harness.CustomCapabilityId,
                     CapabilityCuratorAssignmentAction.Attach,
                     harness.Context.Agent.UpdatedAtUtc)));
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorVerifyResult>(
-                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify],
+                tools[CapabilityCuratorToolPolicy.CapabilityCuratorVerify],
                 new CapabilityCuratorVerifyInput(privilegedAgentId, harness.CustomCapabilityId)));
         }
 
@@ -823,10 +824,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             .Select(agent => agent.Id == harness.TargetAgentId ? agent with { IsTemplate = true } : agent)
             .ToArray();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorAssignmentEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet],
             new CapabilityCuratorAssignmentEditorGetInput(harness.TargetAgentId)));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => InvokeAsync<CapabilityCuratorVerifyResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorVerify],
             new CapabilityCuratorVerifyInput(harness.TargetAgentId, harness.CustomCapabilityId)));
     }
 
@@ -836,7 +837,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         var harness = CreateHarness();
         var tools = await CreateToolDictionaryAsync(harness);
         var current = await InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet],
             new CapabilityCuratorEditorGetInput(harness.CustomCapabilityId));
         harness.Workspace.Agents = harness.Workspace.Agents
             .Select(agent => agent.Id == CapabilityCuratorAgentIdentity.AgentId
@@ -857,10 +858,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             current.Fingerprint);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             update));
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorToolSetupTestResult>(
-            tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(update with
             {
                 Kind = ModelCapabilityKind.Tool,
@@ -883,34 +884,34 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
     {
         var reads = new[]
         {
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch,
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet,
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet
+            CapabilityCuratorToolPolicy.CapabilityCuratorCatalogSearch,
+            CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet,
+            CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet
         };
         var mutations = new Dictionary<string, ToolCapabilitySideEffectKind>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorSave] = ToolCapabilitySideEffectKind.InternalStateMutation,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest] = ToolCapabilitySideEffectKind.ExternalAction,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest] = ToolCapabilitySideEffectKind.ExternalAction,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate] = ToolCapabilitySideEffectKind.InternalStateMutation,
-            [AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify] = ToolCapabilitySideEffectKind.ExternalAction
+            [CapabilityCuratorToolPolicy.CapabilityCuratorSave] = ToolCapabilitySideEffectKind.InternalStateMutation,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest] = ToolCapabilitySideEffectKind.ExternalAction,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest] = ToolCapabilitySideEffectKind.ExternalAction,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate] = ToolCapabilitySideEffectKind.InternalStateMutation,
+            [CapabilityCuratorToolPolicy.CapabilityCuratorVerify] = ToolCapabilitySideEffectKind.ExternalAction
         };
 
         Assert.Equal(8, reads.Length + mutations.Count);
         Assert.All(reads, toolName =>
         {
-            Assert.True(ToolContractCatalog.IsKnownToolName(toolName));
-            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName));
-            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out _));
+            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies));
+            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out var metadata));
             Assert.Equal(ToolCapabilitySideEffectKind.InternalDataRead, metadata.SideEffectKind);
         });
         Assert.All(mutations, expected =>
         {
-            Assert.True(ToolContractCatalog.IsKnownToolName(expected.Key));
-            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(expected.Key));
-            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(expected.Key));
-            Assert.True(ToolCapabilityRegistry.TryResolve(expected.Key, out var metadata));
+            Assert.True(ProductToolPolicies.TryResolve(expected.Key, out _));
+            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(expected.Key, ProductToolPolicies));
+            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(expected.Key, ProductToolPolicies));
+            Assert.True(ProductToolPolicies.TryResolve(expected.Key, out var metadata));
             Assert.Equal(expected.Value, metadata.SideEffectKind);
         });
 
@@ -946,16 +947,16 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             jsonInput
         };
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
+            CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest,
         [
             new KeyValuePair<string, object?>("request", request)
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
+            CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest,
             redacted);
         var audit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
-            JsonSerializer.Serialize(new { request }));
+            CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest,
+            JsonSerializer.Serialize(new { request }), ProductToolPolicies);
 
         Assert.Contains(capabilityId.ToString("D"), signature, StringComparison.Ordinal);
         Assert.Contains("capability-curator-approval-redacted-v1", audit, StringComparison.Ordinal);

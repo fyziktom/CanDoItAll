@@ -17,13 +17,13 @@ public static class WorkflowCuratorAgentCapabilityKeys
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.WorkflowCuratorCatalogSearch] = CatalogSearch,
-            [AgentToolInvocationPolicyMetadata.WorkflowCuratorDefinitionEditorGet] = DefinitionEditorGet,
-            [AgentToolInvocationPolicyMetadata.WorkflowCuratorAuthoringOptionsGet] = AuthoringOptionsGet,
-            [AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftCreate] = DraftCreate,
-            [AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate] = DraftUpdate,
-            [AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate] = NodeUpdate,
-            [AgentToolInvocationPolicyMetadata.WorkflowCuratorLifecycleChange] = LifecycleChange
+            [WorkflowCuratorToolPolicy.WorkflowCuratorCatalogSearch] = CatalogSearch,
+            [WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet] = DefinitionEditorGet,
+            [WorkflowCuratorToolPolicy.WorkflowCuratorAuthoringOptionsGet] = AuthoringOptionsGet,
+            [WorkflowCuratorToolPolicy.WorkflowCuratorDraftCreate] = DraftCreate,
+            [WorkflowCuratorToolPolicy.WorkflowCuratorDraftUpdate] = DraftUpdate,
+            [WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate] = NodeUpdate,
+            [WorkflowCuratorToolPolicy.WorkflowCuratorLifecycleChange] = LifecycleChange
         }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static IReadOnlySet<string> PrivilegedKeys { get; } = ToolNameToCapabilityKey.Values

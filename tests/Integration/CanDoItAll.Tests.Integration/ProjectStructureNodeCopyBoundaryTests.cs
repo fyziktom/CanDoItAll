@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -40,7 +41,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
         var before = await capture.CaptureAsync(projectId);
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var copyTool = Assert.IsAssignableFrom<AIFunction>(
-            Assert.Single(tools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy));
+            Assert.Single(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureNodesCopy));
         var requiredRequestProperties = copyTool.JsonSchema
             .GetProperty("properties")
             .GetProperty("request")
@@ -53,8 +54,8 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
         Assert.Contains("destinationParentNodeId", requiredRequestProperties);
         Assert.Equal(
             ToolInvocationClassification.Mutation,
-            AgentToolInvocationPolicyMetadata.Classify(copyTool.Name));
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(copyTool.Name));
+            AgentToolInvocationPolicyMetadata.Classify(copyTool.Name, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(copyTool.Name, ProductToolPolicies));
 
         var missingSource = await Assert.ThrowsAsync<ProjectStructureAgentException>(
             () => InvokeAsync<ProjectStructureNodesCopyResult>(
@@ -239,7 +240,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
         var before = await capture.CaptureAsync(projectId);
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var copyTool = Assert.IsAssignableFrom<AIFunction>(
-            Assert.Single(tools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy));
+            Assert.Single(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureNodesCopy));
 
         var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
             () => InvokeAsync<ProjectStructureNodesCopyResult>(

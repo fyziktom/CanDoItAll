@@ -97,7 +97,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             [
                 AIFunctionFactory.Create(
                     (ImageGenerationCreateInput request, CancellationToken cancellationToken = default) => ImageGenerationCreateAsync(agent, runtimeProvider, access, request, cancellationToken),
-                    AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
+                    ImageGenerationToolPolicy.ImageGenerationCreate,
                     "Generates one image through the agent's allowed image-generation provider and writes the generated binary to a managed workspace path. To prepare a canonical project-asset attachment, supply projectAssetTarget with the exact projectId and parentNodeKey. The result then contains a strongly typed projectAssetCreateDraft for a separate project_structure_asset_create call. Image generation never mutates project structure itself, and the asset tool must be independently attached and authorized.")
             ];
         }

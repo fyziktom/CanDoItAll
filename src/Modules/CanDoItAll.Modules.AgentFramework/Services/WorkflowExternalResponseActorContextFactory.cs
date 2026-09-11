@@ -65,7 +65,7 @@ internal sealed class WorkflowExternalResponseActorContextFactory(
 
         await agentAuthorizationService.EnsureToolInvocationAuthorizedAsync(
             context.Agent.Id,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
             cancellationToken);
 
         if (governance.AgentId != context.Agent.Id ||
