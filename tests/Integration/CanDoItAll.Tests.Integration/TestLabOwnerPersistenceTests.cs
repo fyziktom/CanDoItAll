@@ -60,6 +60,7 @@ public sealed class TestLabOwnerPersistenceTests {
                 new TestPlan {
                     Id = planId,
                     ProjectId = projectId,
+                    ProjectLifetimeId = (await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId))!.LifetimeId,
                     Title = "Historical acceptance plan",
                     Phase = "Verification",
                     CoverageGoal = "Preserve recorded delivery evidence.",

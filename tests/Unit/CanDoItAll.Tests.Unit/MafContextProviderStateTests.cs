@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
@@ -157,10 +158,12 @@ public sealed class MafContextProviderStateTests
 
         try
         {
+            var scope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
             var builder = new ContextCapabilityBuilder(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
-                TestWorkspaceServices.PhysicalPathPolicyFactory);
+                scope,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ProjectWorkspacePathContributor().ContributeWorkspacePaths(scope));
             var state = new RuntimeCapabilityState();
 
             var added = builder.AddRagProvider(

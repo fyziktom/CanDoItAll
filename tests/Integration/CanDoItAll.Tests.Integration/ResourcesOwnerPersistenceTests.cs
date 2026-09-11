@@ -43,10 +43,12 @@ public sealed class ResourcesOwnerPersistenceTests {
         await using (var original = await TestApplication.CreateAsync(options)) {
             await using var schema = await original.Services.GetRequiredService<IDbContextFactory<AppDbContext>>()
                 .CreateDbContextAsync();
-            schema.Add(new Project { Id = projectId, Name = "Resource ownership project" });
+            var project = new Project { Id = projectId, Name = "Resource ownership project" };
+            schema.Add(project);
             schema.Add(new ProjectResource {
                 Id = resourceId,
                 ProjectId = projectId,
+                ProjectLifetimeId = project.LifetimeId,
                 OwnerPartyId = responsibleId,
                 MaintainerPartyId = maintainerId,
                 ResourceKind = ResourceKind.WebLink,
@@ -122,8 +124,10 @@ public sealed class ResourcesOwnerPersistenceTests {
             "text/plain",
             12);
         var writer = scope.ServiceProvider.GetRequiredService<IStorageObjectResourceWriter>();
+        var missingProjectId = Guid.NewGuid();
+        var missingAdmission = new ProjectWriteAdmission(scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().DatabaseProfileId, missingProjectId, Guid.NewGuid());
         var denied = await Assert.ThrowsAsync<ResourcePromotionException>(() => writer.SaveAsync(
-            new StorageObjectResourceWriteRequest(Guid.NewGuid(), "Missing project", ResourceSensitivity.Normal, config)));
+            new StorageObjectResourceWriteRequest(missingProjectId, "Missing project", ResourceSensitivity.Normal, config, missingAdmission)));
         Assert.Equal(ResourcePromotionFailureCode.TargetUnavailable, denied.Code);
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>()
             .CreateDbContextAsync();

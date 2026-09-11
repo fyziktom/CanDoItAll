@@ -17,13 +17,16 @@ public sealed class SearchStorageDbContextTests {
     }
 
     [Fact]
-    public void Storage_model_contains_only_catalog_and_routing_records() {
+    public void Storage_model_contains_only_catalog_routing_and_retained_placement_records() {
         using var context = new StorageDbContext(new DbContextOptionsBuilder<StorageDbContext>()
             .UseInMemoryDatabase($"storage-model-{Guid.NewGuid():N}").Options);
-        Assert.Equal([typeof(StorageCatalogRecord), typeof(StorageRoutingRule)],
+        Assert.Equal([typeof(StorageCatalogRecord), typeof(StoragePlacementIntentRecord), typeof(StorageRoutingRule)],
             context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
         Assert.DoesNotContain(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()),
             property => property.IsConcurrencyToken);
         Assert.Throws<InvalidOperationException>(() => context.Set<SearchDocument>().ToList());
+        Assert.Null(context.Model.FindEntityType(typeof(StorageCatalogSnapshot)));
+        Assert.Null(context.Model.FindEntityType(typeof(StorageDriverInput)));
+        Assert.Null(context.Model.FindEntityType(typeof(StorageRoutingRuleSnapshot)));
     }
 }

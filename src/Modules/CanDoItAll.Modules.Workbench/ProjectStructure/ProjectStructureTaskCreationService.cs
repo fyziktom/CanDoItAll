@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +25,10 @@ public sealed class ProjectStructureTaskCreationService(
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(agent);
+        var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
+        if (agent.ExpectedProjectAdmission != expected) {
+            throw new InvalidOperationException("Task creation requires the captured native mutation context.");
+        }
         var normalizedRequest = ValidateAndNormalize(projectId, request);
 
         return rowOrderService.RunProjectMutationAsync(
@@ -117,7 +122,7 @@ public sealed class ProjectStructureTaskCreationService(
                 projectId,
                 task.Id,
                 request.AfterTaskNodeId,
-                cancellationToken);
+                cancellationToken, agent);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -224,13 +229,8 @@ public sealed class ProjectStructureTaskCreationService(
     {
         try
         {
-            var deletedCount = await agentService.DeleteNodeAsync(
-                projectId,
-                taskNodeId,
-                new ProjectStructureNodeDeleteInput(
-                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles),
-                agent,
-                CancellationToken.None);
+            var deletedCount = await projectWorkbenchService.DeleteObjectAsync(
+                projectId, taskNodeId, CancellationToken.None, agent);
             if (deletedCount == 0)
             {
                 return new InvalidOperationException(

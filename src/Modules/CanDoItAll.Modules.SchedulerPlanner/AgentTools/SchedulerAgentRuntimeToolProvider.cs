@@ -219,7 +219,7 @@ public sealed class SchedulerAgentRuntimeToolProvider(
                 StartAtUtc = request.StartAtUtc,
                 EndAtUtc = request.EndAtUtc,
                 StructureAuthority = context.Governance is { } governance
-                    ? structureAuthorityFactory.CaptureAgent(context.Agent, governance)
+                    ? await structureAuthorityFactory.CaptureAgentAsync(context.Agent, governance, cancellationToken)
                     : null
             },
             cancellationToken);

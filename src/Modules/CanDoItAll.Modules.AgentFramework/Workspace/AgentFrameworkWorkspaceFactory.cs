@@ -43,7 +43,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
     IDatabaseSwitchNotificationService databaseSwitchNotificationService,
     ILogger<CanDoItAllAgentWorkspaceFactory> logger,
-    IOptions<ProcessMockAgentOptions> processMockAgentOptions) :
+    IOptions<ProcessMockAgentOptions> processMockAgentOptions,
+    IEnumerable<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null) :
     ICanDoItAllAgentWorkspaceFactory,
     IDisposable
 {
@@ -126,7 +127,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId));
         var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
             new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
-                workspaceIdentity.DatabaseProfileGeneration), backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>());
+                workspaceIdentity.DatabaseProfileGeneration), backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
+                contextAttachmentCodecs: contextAttachmentCodecs);
         var lifecycleFactExtractors = serviceProvider
             .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
             .ToList();

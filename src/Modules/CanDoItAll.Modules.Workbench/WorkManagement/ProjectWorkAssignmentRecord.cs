@@ -7,6 +7,7 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectWorkAssignmentRecord {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
+    public Guid? ProjectLifetimeId { get; set; }
     public Guid PartyId { get; set; }
     public Guid? PartyOrganizationAffiliationId { get; set; }
     public string NodeKey { get; set; } = string.Empty;
@@ -20,12 +21,17 @@ public sealed class ProjectWorkAssignmentRecord {
     public string Notes { get; set; } = string.Empty;
 
     internal ProjectWorkAssignmentFact ToFact() => new(Id, ProjectId, PartyId, PartyOrganizationAffiliationId,
-        NodeKey, PhaseName, OpportunityId, AllocationPercent, StartsAtUtc, EndsAtUtc, IsPrimary, Source, Notes);
+        NodeKey, PhaseName, OpportunityId, AllocationPercent, StartsAtUtc, EndsAtUtc, IsPrimary, Source, Notes, ProjectLifetimeId);
 }
 
 public sealed class ProjectWorkAssignmentRecordConfiguration : IEntityTypeConfiguration<ProjectWorkAssignmentRecord> {
     public void Configure(EntityTypeBuilder<ProjectWorkAssignmentRecord> builder) {
-        builder.ToTable("Workbench_WorkAssignments");
+        builder.ToTable("Workbench_WorkAssignments", table => table.HasCheckConstraint(
+            "CK_Workbench_WorkAssignments_ProjectLifetime", """
+            "ProjectLifetimeId" IS NULL OR (
+                "ProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "ProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+            """));
         builder.HasKey(item => item.Id);
         builder.Property(item => item.NodeKey).HasMaxLength(160);
         builder.Property(item => item.PhaseName).HasMaxLength(160);

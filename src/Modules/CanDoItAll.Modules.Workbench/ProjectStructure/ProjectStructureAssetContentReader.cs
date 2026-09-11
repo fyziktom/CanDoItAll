@@ -41,7 +41,7 @@ public sealed class ProjectStructureAssetContentReader(
 
         ValidateManagedAssetBinding(reference, asset.MediaRelativePath, isProjectedProcessScreenshot);
 
-        StorageCatalogRecord storage = await ResolveStorageAsync(
+        StorageDriverInput storage = await ResolveStorageAsync(
             reference,
             isProjectedProcessScreenshot,
             cancellationToken);
@@ -203,7 +203,7 @@ public sealed class ProjectStructureAssetContentReader(
         }
     }
 
-    private async Task<StorageCatalogRecord> ResolveStorageAsync(
+    private async Task<StorageDriverInput> ResolveStorageAsync(
         StorageObjectReference reference,
         bool isProjectedProcessScreenshot,
         CancellationToken cancellationToken)
@@ -212,7 +212,7 @@ public sealed class ProjectStructureAssetContentReader(
         {
             if (!reference.StorageId.HasValue)
             {
-                StorageCatalogRecord authoritativeStorage = await storageCatalog
+                StorageDriverInput authoritativeStorage = await storageCatalog
                     .EnsureBootstrapFileSystemStorageAsync(cancellationToken);
                 if (!authoritativeStorage.IsSystemDefault ||
                     authoritativeStorage.ProviderKind != StorageProviderKind.FileSystem ||
@@ -228,7 +228,7 @@ public sealed class ProjectStructureAssetContentReader(
                 return authoritativeStorage;
             }
 
-            StorageCatalogRecord? storage = await storageCatalog.GetAsync(
+            StorageDriverInput? storage = await storageCatalog.GetDriverAsync(
                 reference.StorageId.Value,
                 cancellationToken);
             if (storage is null)
@@ -251,7 +251,7 @@ public sealed class ProjectStructureAssetContentReader(
                 return storage;
             }
 
-            StorageCatalogRecord bootstrap = await storageCatalog
+            StorageDriverInput bootstrap = await storageCatalog
                 .EnsureBootstrapFileSystemStorageAsync(cancellationToken);
             if (storage.Id != bootstrap.Id)
             {
@@ -281,7 +281,7 @@ public sealed class ProjectStructureAssetContentReader(
 
     private static void ValidateStorageBinding(
         StorageObjectReference reference,
-        StorageCatalogRecord storage)
+        StorageDriverInput storage)
     {
         if (!storage.IsEnabled)
         {
@@ -311,7 +311,7 @@ public sealed class ProjectStructureAssetContentReader(
     private void ValidateCurrentManagedStorage(
         StorageObjectReference reference,
         string mediaRelativePath,
-        StorageCatalogRecord storage)
+        StorageDriverInput storage)
     {
         if (!ProjectManagedStorageProvenancePolicy.HasManagedMarker(reference))
         {
@@ -342,7 +342,7 @@ public sealed class ProjectStructureAssetContentReader(
 
     private IStorageDriver ResolveDriver(
         StorageObjectReference reference,
-        StorageCatalogRecord storage)
+        StorageDriverInput storage)
     {
         if (!storageDrivers.TryResolve(reference.ProviderKind, out IStorageDriver driver) ||
             driver.ProviderKind != reference.ProviderKind ||

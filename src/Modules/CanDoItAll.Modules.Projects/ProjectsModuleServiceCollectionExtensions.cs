@@ -11,6 +11,8 @@ namespace CanDoItAll.Modules.Projects;
 public static class ProjectsModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddProjectsModule(this IServiceCollection services) {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IToolInvocationPolicyContextContributor, ProjectWorkspacePathContributor>());
         services.AddPooledDbContextFactory<ProjectsDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });
@@ -19,9 +21,12 @@ public static class ProjectsModuleServiceCollectionExtensions
             ProjectsExecutionAuthorityProvider>());
         services.AddScoped<ProjectsService>();
         services.AddScoped<ProjectWriteAdmissionService>();
+        services.AddScoped<ProjectWriteSelectionQuery>();
         services.AddScoped<ProjectRecordQueryService>();
+        services.AddScoped<ProjectsProfileTransferStore>();
         services.AddSingleton<ProjectIdentityQueryService>();
         services.AddScoped<ProjectStructureProjectionQueryService>();
+        services.AddScoped<IProjectTransferReferenceQuery, ProjectTransferReferenceQuery>();
         services.AddScoped<IProjectRecordQueryService>(provider => provider.GetRequiredService<ProjectRecordQueryService>());
         services.AddScoped<IRecentProjectActivityQueryService, RecentProjectActivityQueryService>();
         services.AddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();

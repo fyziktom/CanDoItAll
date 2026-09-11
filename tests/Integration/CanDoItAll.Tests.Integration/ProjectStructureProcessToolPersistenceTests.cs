@@ -56,9 +56,6 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
         var provider = Assert.Single(scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>().OfType<ProjectStructureAgentRuntimeToolProvider>());
-        var metadata = Assert.Single(provider.GetToolMetadata(fixture.Context));
-        Assert.Equal(fixture.Payload, metadata.PrepareAdmission!(JsonSerializer.SerializeToElement(fixture.Input,
-            ProjectStructureProcessProposalCodec.SerializerOptions)));
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
@@ -67,6 +64,10 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         using var dispatch = claim.Bind();
         var invocation = await fixture.RequireAndSeedAsync();
         var tools = await provider.CreateToolsAsync(fixture.Context, default);
+        var metadata = Assert.Single(provider.GetToolMetadata(fixture.Context),
+            item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart);
+        Assert.Equal(fixture.Payload, metadata.PrepareAdmission!(JsonSerializer.SerializeToElement(fixture.Input,
+            ProjectStructureProcessProposalCodec.SerializerOptions)));
         var tool = Assert.Single(tools.OfType<AIFunction>(), item => item.Name == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart);
         using var effect = AgentToolInvocationEffectScope.Begin();
         var transport = Assert.IsType<JsonElement>(await tool.InvokeAsync(new AIFunctionArguments {

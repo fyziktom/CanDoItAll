@@ -8,7 +8,8 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectStructureWorkItemAssignmentRevisionService(
     IClock clock,
     DbContextOptions<WorkbenchDbContext> contextOptions,
-    CoordinatedDatabaseTransaction coordinatedTransaction) : IProjectWorkItemAssignmentMutationBridge {
+    CoordinatedDatabaseTransaction coordinatedTransaction,
+    ProjectWriteAdmissionService admissions) : IProjectWorkItemAssignmentMutationBridge {
     public async Task<ProjectWorkItemDirectAssignmentMutationResult>
         StageMutationAsync(
         Guid projectId,
@@ -17,8 +18,11 @@ public sealed class ProjectStructureWorkItemAssignmentRevisionService(
             finalAssignments,
         ProjectWorkItemDirectAssignmentRevision?
             expectedCurrentRevision = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null)
     {
+        var expected = ProjectAssignmentAdmission.Require(projectId, expectedProjectAdmission);
+        await admissions.RequireForMutationAsync(expected, cancellationToken);
         ArgumentNullException.ThrowIfNull(finalAssignments);
         foreach (var assignment in finalAssignments)
         {

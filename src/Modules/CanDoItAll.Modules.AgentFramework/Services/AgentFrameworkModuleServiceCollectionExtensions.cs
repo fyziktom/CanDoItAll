@@ -7,6 +7,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
 using CanDoItAll.AgentFramework.Memory.DependencyInjection;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
@@ -303,6 +304,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<CanDoItAllAgentWorkspaceFactory>(serviceProvider =>
             (CanDoItAllAgentWorkspaceFactory)serviceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>());
         services.AddScoped<CurrentProfileAgentFrameworkWorkspaceService>();
+        services.AddScoped<AgentAssetCheckpointQuery>();
+        services.AddScoped<WorkflowAssetCheckpointQuery>();
         services.AddScoped<IAgentFrameworkWorkspaceService>(serviceProvider =>
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentExecutionReportReader>(serviceProvider =>
@@ -327,6 +330,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<WorkflowAgentRuntimeAuthorizationService>();
         services.TryAddScoped<CapabilityCuratorAgentRuntimeAuthorizationService>();
         services.TryAddSingleton<CapabilityCuratorSetupAttestationStore>();
+        services.TryAddScoped<ImageGenerationResultDisclosureService>();
+        services.TryAddScoped<IAgentWorkspaceToolResultSource, WorkspaceToolResultSource>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
         services.TryAddSingleton<AgentToolPolicyCatalog>();
@@ -368,6 +373,11 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.AddMafWorkflowAdapterServices(ServiceLifetime.Scoped);
+        services.AddScoped<WorkflowHttpSecretHeaderApplier>();
+        services.AddScoped<IWorkflowHttpSecretHeaderApplier>(provider => provider.GetRequiredService<WorkflowHttpSecretHeaderApplier>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowProviderDisclosurePolicy, WorkflowHttpProviderDisclosurePolicy>());
+        services.TryAddScoped<WorkflowRuntimeSourceObservation>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowProviderDisclosurePolicy, WorkflowFileProviderDisclosurePolicy>());
         services.Replace(ServiceDescriptor.Scoped<
             IWorkflowExternalRequestAuthorizer,
             WorkflowExternalRequestAuthorizer>());
@@ -386,6 +396,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<PersistentWorkflowStructureOutputStore>();
         services.AddScoped<IWorkflowStructureOutputStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowStructureOutputStore>());
+        services.TryAddScoped<IWorkflowProcessAssignmentRunQuery, PersistentWorkflowProcessAssignmentRunQuery>();
         services.TryAddScoped<PersistentWorkflowRunStore>();
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
@@ -418,7 +429,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
         services.TryAddSingleton<WorkflowHistoryProjection>();
         services.AddSingleton<WorkflowHistorySource>();
-        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistoryTransferParticipant, AgentHistoryTransferParticipant>();
+        services.AddScoped<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistoryTransferParticipant, AgentHistoryTransferParticipant>();
         services.AddSingleton<AgentHistoryPublicationStore>();
         services.AddSingleton<AgentFileHistorySource>();
         services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<AgentFileHistorySource>());

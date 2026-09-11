@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
@@ -11,10 +10,13 @@ public interface IProviderProfileDeletionGuard
         CancellationToken cancellationToken);
 }
 
-public interface IProviderDatabaseTransferGuard
-{
+public sealed record ProviderDatabaseTransferInspection(
+    bool SourceHasSharedProviderReferences,
+    bool TargetHasSharedProviderReferences,
+    bool TargetUsesTransferredSecret);
+
+public interface IProviderDatabaseTransferGuard {
     Task<string?> FindBlockReasonAsync(
-        DatabaseTransferContext context,
-        IReadOnlyCollection<Guid> transferredSecretIds,
+        ProviderDatabaseTransferInspection inspection,
         CancellationToken cancellationToken);
 }

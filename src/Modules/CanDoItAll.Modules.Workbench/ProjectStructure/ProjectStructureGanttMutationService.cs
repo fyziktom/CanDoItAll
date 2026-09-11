@@ -1,4 +1,3 @@
-using System.Data;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -12,6 +11,7 @@ public sealed class ProjectStructureGanttMutationService(
     IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     ProjectRecordQueryService projects,
     CoordinatedDatabaseTransaction transactions,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock,
     ILogger<ProjectStructureGanttMutationService> logger)
 {
@@ -21,7 +21,8 @@ public sealed class ProjectStructureGanttMutationService(
     public async Task<ProjectStructureGanttMutationResult> ApplyTitleAsync(
         Guid projectId,
         GanttTaskTitleChangeRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var result = await ExecuteAsync(
@@ -45,7 +46,7 @@ public sealed class ProjectStructureGanttMutationService(
                 task.UpdatedAtUtc = now;
                 return Task.FromResult(Result([request.TaskId]));
             },
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
         logger.LogInformation(
             "Applied Gantt title mutation for project {ProjectId} and task {TaskId}.",
@@ -57,7 +58,8 @@ public sealed class ProjectStructureGanttMutationService(
     public async Task<ProjectStructureGanttMutationResult> ApplyScheduleAsync(
         Guid projectId,
         ProjectStructureGanttScheduleMutationRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var scheduleChange = request.ScheduleChange;
@@ -68,7 +70,7 @@ public sealed class ProjectStructureGanttMutationService(
                 scheduleChange,
                 request.ExpectedTaskSchedules,
                 now)),
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
         logger.LogInformation(
             "Applied Gantt schedule mutation for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
@@ -84,6 +86,10 @@ public sealed class ProjectStructureGanttMutationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
+        if (request.MutationOwner?.ExpectedProjectAdmission != expected) {
+            throw new InvalidOperationException("Task details require the captured native mutation context.");
+        }
         var proposedTitle = request.ProposedTitle.Trim();
         if (proposedTitle.Length == 0 || proposedTitle.Length > MaximumTitleLength)
         {
@@ -192,7 +198,7 @@ public sealed class ProjectStructureGanttMutationService(
                 task.UpdatedAtUtc = now;
                 return Task.FromResult(Result(affectedTaskIds));
             },
-            cancellationToken);
+            cancellationToken, request.MutationOwner);
 
         logger.LogInformation(
             "Applied Gantt task detail mutation for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
@@ -205,7 +211,8 @@ public sealed class ProjectStructureGanttMutationService(
     public async Task<ProjectStructureGanttMutationResult> ApplyDependencyAsync(
         Guid projectId,
         GanttDependencyMutationRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var result = await ExecuteAsync(
@@ -217,7 +224,7 @@ public sealed class ProjectStructureGanttMutationService(
                 GanttDependencyMutationKind.Reconnect => Task.FromResult(ReconnectDependency(state, request, now)),
                 _ => throw new ArgumentOutOfRangeException(nameof(request), request.Mutation, "The dependency mutation is not supported.")
             },
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
         logger.LogInformation(
             "Applied Gantt dependency mutation {Mutation} for project {ProjectId}; added {AddedCount}, removed {RemovedCount}, affected {AffectedCount}.",
@@ -232,13 +239,14 @@ public sealed class ProjectStructureGanttMutationService(
     public async Task<ProjectStructureGanttMutationResult> ApplyInsertionAsync(
         Guid projectId,
         GanttTaskInsertionRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         var result = await ExecuteAsync(
             projectId,
             (context, state, now, token) => InsertTaskAsync(context, state, request, now, token),
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
         logger.LogInformation(
             "Applied Gantt insertion for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
@@ -251,7 +259,8 @@ public sealed class ProjectStructureGanttMutationService(
     private async Task<ProjectStructureGanttMutationResult> ExecuteAsync(
         Guid projectId,
         Func<WorkbenchDbContext, MutationState, DateTimeOffset, CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         if (projectId == Guid.Empty)
         {
@@ -262,13 +271,14 @@ public sealed class ProjectStructureGanttMutationService(
         {
             await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             await ProjectWorkbenchSchemaInitializer.EnsureAsync(context, cancellationToken);
-            await using var transaction = await context.Database.BeginTransactionAsync(
-                IsolationLevel.Serializable,
-                cancellationToken);
+            var expected = ProjectAssignmentAdmission.Require(projectId, mutationOwner?.ExpectedProjectAdmission);
+            await using var scope = await mutationScopes.BeginAsync(context,
+                ProjectMutationScopeKeys.ForProject(projectId), cancellationToken, [expected], mutationOwner?.ProcessMutationAdmission,
+                mutationOwner?.AgentMutationAdmission);
             var state = await LoadStateAsync(context, projectId, cancellationToken);
             var result = await mutation(context, state, clock.GetUtcNow(), cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            await scope.CommitAsync(cancellationToken);
             return result;
         }
         catch (ProjectStructureGanttMutationException exception)

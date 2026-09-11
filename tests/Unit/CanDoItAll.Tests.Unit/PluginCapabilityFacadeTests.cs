@@ -226,7 +226,7 @@ public sealed class PluginCapabilityFacadeTests
                 new WorkflowProjectStructureExecutorSettings
                 {
                     Operation = WorkflowProjectStructureOperation.ListProjects
-                }));
+                }, trustedRead: true));
 
         Assert.Contains("IProjectStructureRuntimeGateway", exception.Message, StringComparison.Ordinal);
     }
@@ -282,7 +282,8 @@ public sealed class PluginCapabilityFacadeTests
     private static async Task<WorkflowNodeExecutionResult> ExecuteProjectStructureAsync(
         IProjectStructureRuntimeGateway gateway,
         WorkflowProjectStructureExecutorSettings settings,
-        string inputJson = "{}")
+        string inputJson = "{}",
+        bool trustedRead = false)
     {
         var executor = new ProjectStructureWorkflowExecutor(gateway);
         var node = new WorkflowNode(
@@ -324,6 +325,10 @@ public sealed class PluginCapabilityFacadeTests
             executor.Descriptor,
             node.Settings.ExecutorSettingsJson,
             WorkflowExecutorExecutionPolicy.Default);
+        if (trustedRead) {
+            var runId = WorkflowRunId.New();
+            context = context with { RunId = runId, ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId).Advance(definition.VersionId, node.Id) };
+        }
 
         return await executor.ExecuteAsync(context, new WorkflowNodeInput(inputJson));
     }
@@ -514,7 +519,7 @@ public sealed class PluginCapabilityFacadeTests
                 []);
 
             return Task.FromResult(new StoragePlacementResult(
-                storage,
+                storage.ToDriverInput(),
                 recommendation,
                 new StorageWriteResult(reference, access),
                 access.PreviewUrl,

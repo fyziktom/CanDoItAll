@@ -204,8 +204,8 @@ public sealed class StorageCatalogServiceTests
                 sut.EnsureBootstrapFileSystemStorageAsync());
             Assert.Contains("not authoritative", unresolved.Message, StringComparison.OrdinalIgnoreCase);
 
-            StorageCatalogRecord rebound = await sut.RebindRootAsync(storageId, workspaceRoot);
-            StorageCatalogRecord bootstrap = await sut.EnsureBootstrapFileSystemStorageAsync();
+            StorageCatalogSnapshot rebound = await sut.RebindRootAsync(storageId, workspaceRoot);
+            StorageCatalogSnapshot bootstrap = await sut.EnsureBootstrapFileSystemStorageAsync();
 
             Assert.Equal(HostBoundPathState.Active, rebound.RootPathState);
             Assert.Equal(storageId, bootstrap.Id);
@@ -268,23 +268,14 @@ public sealed class StorageCatalogServiceTests
         {
             string databaseName = $"storage-catalog-{Guid.NewGuid():N}";
             StorageCatalogService sut = CreateSut(databaseName, workspaceRoot);
-            var record = new StorageCatalogRecord
-            {
-                Name = "Invalid cache",
-                ProviderKind = StorageProviderKind.Ftp,
-                ConfigJson = """
-                    {
-                      "browseCache": {
-                        "enabled": true,
-                        "mode": "disabled"
-                      }
-                    }
-                    """
+            var record = new StorageCatalogSaveRequest {
+                Name = "Invalid cache", ProviderKind = StorageProviderKind.Ftp,
+                Configuration = new() { BrowseCache = new() { Enabled = true, Mode = StorageBrowseCacheMode.Disabled } }
             };
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.SaveAsync(record));
-            IReadOnlyList<StorageCatalogRecord> persisted = await sut.ListAsync();
+            IReadOnlyList<StorageCatalogSnapshot> persisted = await sut.ListAsync();
 
             Assert.Equal(StorageBrowseErrorCode.InvalidConfiguration, exception.Error.Code);
             Assert.DoesNotContain(persisted, item => item.Id == record.Id);

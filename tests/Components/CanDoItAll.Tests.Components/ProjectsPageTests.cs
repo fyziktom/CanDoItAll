@@ -281,7 +281,7 @@ public sealed class ProjectsPageTests
         await workspace.Browser.InitializeAsync(source.Id);
         ProjectFilePortfolioRevision firstRevision = workspace.Revision;
         var storageCatalog = harness.Context.Services.GetRequiredService<IStorageCatalogService>();
-        StorageCatalogRecord storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
+        StorageCatalogSnapshot storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
         var changeSink = harness.Context.Services.GetRequiredService<IFileCatalogChangeSink>();
         var scope = new FileToolsSemanticScope(
             FileToolsSemanticScopeKind.Project,

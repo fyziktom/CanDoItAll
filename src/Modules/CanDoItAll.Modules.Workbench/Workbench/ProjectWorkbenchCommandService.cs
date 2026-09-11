@@ -20,7 +20,8 @@ public sealed class ProjectWorkbenchCommandService(
         Guid projectId,
         string nodeKey,
         ProjectStructureCommandKind commandKind,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
@@ -28,7 +29,8 @@ public sealed class ProjectWorkbenchCommandService(
             await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-                cancellationToken);
+                cancellationToken, mutationOwner?.ExpectedProjectAdmission is { } expected ? [expected] : null,
+                mutationOwner?.ProcessMutationAdmission, mutationOwner?.AgentMutationAdmission);
         var node = await projectStructureAssemblyService.FindNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
         if (node is null)
         {

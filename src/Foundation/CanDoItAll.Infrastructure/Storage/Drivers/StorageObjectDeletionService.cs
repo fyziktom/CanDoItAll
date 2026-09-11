@@ -58,6 +58,6 @@ public sealed class StorageObjectDeletionService(
                 });
             }
         }
-        await driver.DeleteAsync(storage, reference, cancellationToken);
+        await driver.DeleteAsync(storage.ToDriverInput(), reference, cancellationToken);
     }
 }

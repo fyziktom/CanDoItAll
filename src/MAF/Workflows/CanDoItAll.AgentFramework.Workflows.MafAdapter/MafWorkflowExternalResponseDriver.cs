@@ -46,13 +46,14 @@ internal sealed class MafWorkflowExternalResponseDriver(
 
         var components = FilterReferencedComponents(detail.Definition, resolvedComponents);
         var invocationContext = CreateInvocationContext(request);
+        var simulationPlan = MafWorkflowDisclosureRecovery.Restore(request, detail.Definition);
         MafWorkflowBuildResult build;
         try
         {
             build = workflowCompiler.Compile(
                 detail.Definition,
                 components,
-                WorkflowPreviewSimulationPlan.Empty,
+                simulationPlan,
                 invocationContext);
         }
         catch (WorkflowBackendResumeException)
@@ -81,7 +82,7 @@ internal sealed class MafWorkflowExternalResponseDriver(
         var progressObserver = resultMapper.CreateProgressObserver(
             request.Run.RunId,
             detail.Definition,
-            WorkflowPreviewSimulationPlan.Empty,
+            simulationPlan,
             request.Run.Origin);
         MafWorkflowStreamTurn turn;
         using (WorkflowExecutorExecutionAuditScope.Push(request.Run.RunId, request.Run.Origin))
@@ -139,7 +140,10 @@ internal sealed class MafWorkflowExternalResponseDriver(
 
         return new WorkflowExecutorInvocationContext
         {
+            CompilerContractVersion = request.ExternalRequest.Continuation?.CompilerContractVersion
+                ?? throw Failure(WorkflowBackendResumeFailureKind.RequestMismatch, "The saved external request has no original compiler contract."),
             ExternalResponseAuthorization = authorization,
+            ResponseLease = request.ResponseLease,
             CausationRequestId = request.ExternalRequest.Id,
             CausationRequestVersion = request.ExternalRequest.Version,
             CausationOperationId = operationId,

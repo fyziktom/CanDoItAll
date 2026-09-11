@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class StorageCatalogService(
+public sealed partial class StorageCatalogService(
     IDbContextFactory<StorageDbContext> dbContextFactory,
     IWorkspacePathResolver workspacePathResolver,
     IClock clock,
@@ -24,6 +24,54 @@ public sealed class StorageCatalogService(
     {
         WriteIndented = true
     };
+
+    public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+        (await FindRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+    public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+        (await FindRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+    public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+        var record = await FindRecordAsync(id, cancellationToken);
+        return record is null ? null : new(record.ToSnapshot(), StorageJson.ParseProviderConfiguration(record.ConfigJson));
+    }
+
+    public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+        (await EnsureBootstrapFileSystemStorageCoreAsync(cancellationToken)).ToDriverInput();
+
+    public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return (await SaveCoreAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken, request.Configuration is null)).ToSnapshot();
+    }
+
+    public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+        (await ListRoutingRuleRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+    public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return (await SaveRuleCoreAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken, request.AlternativeStorageIds is null)).ToSnapshot();
+    }
+
+    internal async Task SaveConnectionResultAsync(StorageDriverInput original, StorageConnectionTestResult result,
+        bool updateCapabilities, CancellationToken cancellationToken) {
+        var record = original.ToRecord();
+        record.LastTestedAtUtc = result.TestedAtUtc;
+        record.HealthStatus = result.HealthStatus;
+        record.LastHealthMessage = result.Message;
+        if (updateCapabilities) {
+            record.CapabilityMask = result.CapabilityMask;
+        }
+        await SaveCoreAsync(record, cancellationToken);
+    }
+
+    public async Task<bool> HasProjectRoutingForMutationAsync(Guid projectId, CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
+            throw new ArgumentException("A project identifier is required.", nameof(projectId));
+        }
+        await using var context = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new StorageDbContext(options), cancellationToken);
+        return await context.Set<StorageRoutingRule>().AnyAsync(rule => rule.ProjectId == projectId, cancellationToken);
+    }
 
     public async Task<int> DeleteProjectRoutingForMutationAsync(Guid projectId, CancellationToken cancellationToken = default) {
         if (projectId == Guid.Empty) {
@@ -62,7 +110,7 @@ public sealed class StorageCatalogService(
             storage, referencedIds.Contains(storage.Id))).ToArray();
     }
 
-    public async Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default)
     {
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 
@@ -72,10 +120,10 @@ public sealed class StorageCatalogService(
             .OrderBy(item => item.DisplayOrder)
             .ThenBy(item => item.Name)
             .ToListAsync(cancellationToken);
-        return storages;
+        return storages.Select(StorageCatalogMapping.ToSnapshot).ToArray();
     }
 
-    public async Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+    private async Task<StorageCatalogRecord?> FindRecordAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 
@@ -85,7 +133,7 @@ public sealed class StorageCatalogService(
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
     }
 
-    public async Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+    private async Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageCoreAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         List<StorageCatalogRecord> systemDefaults = await dbContext.Set<StorageCatalogRecord>()
@@ -256,7 +304,7 @@ public sealed class StorageCatalogService(
             string.Empty);
     }
 
-    public async Task<StorageCatalogRecord> RebindRootAsync(
+    public async Task<StorageCatalogSnapshot> RebindRootAsync(
         Guid storageId,
         string rootPath,
         CancellationToken cancellationToken = default)
@@ -292,10 +340,10 @@ public sealed class StorageCatalogService(
         storage.LastHealthMessage = "Storage root was explicitly rebound for the current host.";
         storage.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
-        return storage;
+        return storage.ToSnapshot();
     }
 
-    public async Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+    private async Task<StorageCatalogRecord> SaveCoreAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default, bool preserveConfiguration = false)
     {
         ArgumentNullException.ThrowIfNull(record);
         StorageJson.ParseProviderConfiguration(record.ConfigJson);
@@ -315,6 +363,11 @@ public sealed class StorageCatalogService(
             await dbContext.Set<StorageCatalogRecord>().AddAsync(entity, cancellationToken);
         }
 
+        if (preserveConfiguration) {
+            record.ConfigJson = entity.ConfigJson;
+            StorageJson.ParseProviderConfiguration(record.ConfigJson);
+        }
+
         entity.Name = string.IsNullOrWhiteSpace(record.Name) ? $"Storage {record.ProviderKind}" : record.Name.Trim();
         entity.ProviderKind = record.ProviderKind;
         entity.IsEnabled = record.IsEnabled;
@@ -323,7 +376,8 @@ public sealed class StorageCatalogService(
         entity.DisplayOrder = record.DisplayOrder;
         entity.ConnectionMode = record.ConnectionMode;
         entity.EndpointOrRoot = record.EndpointOrRoot?.Trim() ?? string.Empty;
-        entity.ConfigJson = string.IsNullOrWhiteSpace(record.ConfigJson) ? "{}" : record.ConfigJson;
+        entity.ConfigJson = preserveConfiguration ? record.ConfigJson
+            : string.IsNullOrWhiteSpace(record.ConfigJson) ? "{}" : record.ConfigJson;
         entity.CapabilityMask = record.CapabilityMask;
         entity.HealthStatus = record.HealthStatus;
         entity.LastTestedAtUtc = record.LastTestedAtUtc;
@@ -372,7 +426,7 @@ public sealed class StorageCatalogService(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+    internal async Task<IReadOnlyList<StorageRoutingRule>> ListRoutingRuleRecordsAsync(CancellationToken cancellationToken = default)
     {
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 
@@ -384,7 +438,7 @@ public sealed class StorageCatalogService(
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+    private async Task<StorageRoutingRule> SaveRuleCoreAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default, bool preserveAlternatives = false)
     {
         ArgumentNullException.ThrowIfNull(rule);
 
@@ -400,6 +454,10 @@ public sealed class StorageCatalogService(
                 CreatedAtUtc = clock.GetUtcNow()
             };
             await dbContext.Set<StorageRoutingRule>().AddAsync(entity, cancellationToken);
+        }
+
+        if (preserveAlternatives) {
+            rule.AlternativeStorageIdsJson = entity.AlternativeStorageIdsJson;
         }
 
         entity.Name = string.IsNullOrWhiteSpace(rule.Name) ? "Storage routing rule" : rule.Name.Trim();
@@ -418,7 +476,7 @@ public sealed class StorageCatalogService(
         entity.PublishIntent = rule.PublishIntent;
         entity.RequiredCapabilities = rule.RequiredCapabilities;
         entity.PreferredStorageId = rule.PreferredStorageId;
-        entity.AlternativeStorageIdsJson = string.IsNullOrWhiteSpace(rule.AlternativeStorageIdsJson)
+        entity.AlternativeStorageIdsJson = !preserveAlternatives && string.IsNullOrWhiteSpace(rule.AlternativeStorageIdsJson)
             ? "[]"
             : rule.AlternativeStorageIdsJson;
         entity.Reason = rule.Reason?.Trim() ?? string.Empty;

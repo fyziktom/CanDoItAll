@@ -37,32 +37,32 @@ public sealed record IpfsAddResult(string ContentId);
 public interface IIpfsStorageTransport
 {
     Task TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         CancellationToken cancellationToken);
 
     Task<IpfsAddResult> AddAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         string fileName,
         ReadOnlyMemory<byte> content,
         CancellationToken cancellationToken);
 
     Task PinAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         string contentId,
         CancellationToken cancellationToken);
 
     Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         string locator,
         string route,
         CancellationToken cancellationToken);
 
     Task<RemoteBrowseTransportPage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         IpfsBrowseAddress address,
         RemoteBrowseTransportRequest request,
@@ -72,31 +72,31 @@ public interface IIpfsStorageTransport
 public interface IFtpStorageTransport
 {
     Task<string?> TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         CancellationToken cancellationToken);
 
     Task UploadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         ReadOnlyMemory<byte> content,
         CancellationToken cancellationToken);
 
     Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         CancellationToken cancellationToken);
 
     Task DeleteAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         CancellationToken cancellationToken);
 
     Task<RemoteBrowseTransportPage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         RemoteBrowseTransportRequest request,
@@ -109,6 +109,6 @@ public enum IpfsStableAddMode {
 }
 
 public interface IIpfsStableStorageTransport {
-    Task<IpfsAddResult> AddStableAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+    Task<IpfsAddResult> AddStableAsync(StorageDriverInput storage, string? bearerToken, string fileName,
         ReadOnlyMemory<byte> content, IpfsStableAddMode mode, CancellationToken cancellationToken);
 }

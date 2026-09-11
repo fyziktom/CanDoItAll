@@ -1,9 +1,15 @@
+using CanDoItAll.Infrastructure.FileSystem;
 using System.Data.Common;
 using System.Text;
+using System.Security.Cryptography;
+using System.Text.Json;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -84,7 +90,7 @@ public sealed class StorageStablePlacementPersistenceTests {
         Assert.Equal("human edited bytes of a different length", await File.ReadAllTextAsync(first.Receipt.Location));
         var reference = first.Receipt.WriteResult.Reference with { ContentLength = 39 };
         Assert.True(await owner.MarkDeletionAsync(reference));
-        await driver.DeleteAsync(storage, reference);
+        await driver.DeleteAsync(storage.ToDriverInput(), reference);
         var replay = await Create(app, storage, driver).PlaceAsync(id, request);
         Assert.Equal(StorageStablePlacementState.Deleted, replay.State);
         Assert.Equal(first.Receipt, replay.Receipt);
@@ -179,6 +185,110 @@ public sealed class StorageStablePlacementPersistenceTests {
         Assert.Equal(receipt, (await Create(restarted, storage, driver).FindAsync(id))!.Receipt);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Package_ipfs_adoption_preserves_source_receipt_and_unrelated_target_intent_across_commit_or_rollback(bool commit) {
+        await using var environment = CanDoItAllTestEnvironment.Create("ipfs-package-adoption");
+        var sourceProfile = environment.CreatePostgreSqlProfile("source");
+        var targetProfile = environment.CreatePostgreSqlProfile("target");
+        await using var source = await TestApplication.CreateAsync(new() { TestEnvironment = environment, ActiveProfile = sourceProfile });
+        var sourceStorage = RemoteStorage(StorageProviderKind.Ipfs);
+        sourceStorage.ConfigJson = "{\"pinOnUpload\":true}";
+        var transport = new IpfsTransport();
+        var driver = new IpfsStorageDriver(NullLogger<IpfsStorageDriver>.Instance, new NoSecrets(), transport);
+        var intent = new StoragePlacementIntentId(Guid.NewGuid());
+        var sourceOwner = Create(source, sourceStorage, driver);
+        var placed = await sourceOwner.PlaceAsync(intent, Request(sourceStorage, intent));
+        Assert.Equal(StorageStablePlacementState.Completed, placed.State);
+        var reference = placed.Receipt!.WriteResult.Reference;
+        string sourceEvidence;
+        await using (var context = await Factory(source).CreateDbContextAsync()) {
+            sourceEvidence = JsonSerializer.Serialize(await context.Set<StoragePlacementIntentRecord>().AsNoTracking().SingleAsync());
+        }
+        var targetStorage = RemoteStorage(StorageProviderKind.Ipfs);
+        var project = new Project { Name = "Adopted immutable asset", CurrentPhase = "Execution" };
+        var node = new ProjectObjectRecord { ProjectId = project.Id, NodeKey = "node:immutable-import", Title = "Imported asset" };
+        var binding = new ProjectNodeBindingRecord { ProjectObjectId = node.Id, MediaContentType = reference.ContentType,
+            MediaOriginalFileName = reference.DisplayName, StorageObjectReferenceJson = StorageJson.SerializeReference(reference) };
+        var dataSet = new ProjectTransferDataSet { Projects = [new ProjectTransferProject { Id = project.Id, Name = project.Name, CurrentPhase = project.CurrentPhase }], Objects = [node], NodeBindings = [binding] };
+        var manifest = new ProjectPackageManifest {
+            PackageId = Guid.NewGuid(), SourceProfileId = source.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id,
+            ImmutableStorageReferences = [new() {
+                SourceStorageId = reference.StorageId, ProviderKind = reference.ProviderKind, LocatorKind = reference.LocatorKind,
+                Locator = reference.Locator, ContentType = reference.ContentType, OriginalFileName = reference.DisplayName,
+                Length = reference.ContentLength!.Value, Sha256 = Convert.ToHexStringLower(SHA256.HashData("original content"u8))
+            }]
+        };
+        string targetEvidence;
+        await using (var target = await TestApplication.CreateAsync(new() { TestEnvironment = environment, ActiveProfile = targetProfile })) {
+            await using (var context = await Factory(target).CreateDbContextAsync()) {
+                context.Add(new StoragePlacementIntentRecord { Id = intent.Value, StorageId = targetStorage.Id,
+                    State = StorageStablePlacementState.Prepared, RequestFingerprint = new string('A', 64),
+                    PlanJson = "{\"unrelated\":true}", CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow });
+                await context.SaveChangesAsync();
+                targetEvidence = JsonSerializer.Serialize(await context.Set<StoragePlacementIntentRecord>().AsNoTracking().SingleAsync());
+            }
+            var identity = new ProjectManagedStoragePhysicalIdentityPolicy(new(new Paths(target.RootPath)), target.Services.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>());
+            var filesystem = FileStorage(target.RootPath);
+            await using (var catalog = await Factory(target).CreateDbContextAsync()) {
+                catalog.AddRange(targetStorage, filesystem);
+                await catalog.SaveChangesAsync();
+            }
+            var storageTransfers = new StorageProfileTransferService(DatabaseTransferTestSupport.Create(),
+                new StorageDriverRegistry([driver, new FileSystemStorageDriver(new(new Paths(target.RootPath)))]), new ProjectStorageTransferProvenancePolicy(identity),
+                new FileSystemStoragePathPolicy(new Paths(target.RootPath)), new SystemClock(), NullLogger<StoragePlacementService>.Instance);
+            var importer = new ProjectPackageStorageImporter(storageTransfers, target.Services.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(), NullLogger<ProjectPackageService>.Instance);
+            var preflight = await importer.PreflightImportAsync(target.RootPath, manifest, dataSet, default);
+            var staged = importer.CreateStagingJournal();
+            await storageTransfers.WithTargetAsync(target.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile, async (session, token) => {
+                Assert.Equal(0, await importer.RewriteStorageBindingsAsync(target.RootPath, manifest, dataSet, preflight, session, staged, token));
+                return true;
+            });
+            Assert.Empty(staged);
+            var adopted = Assert.IsType<StorageObjectReference>(StorageJson.ParseReference(binding.StorageObjectReferenceJson));
+            Assert.True(ProjectManagedStorageProvenancePolicy.TryValidate(adopted, null, out var error), error);
+            Assert.Null(adopted.PlacementIntentId);
+            Assert.Equal(reference, adopted.ImportedHistory!.SourceReference);
+            Assert.True(await Create(target, targetStorage, driver).MarkDeletionAsync(adopted));
+            await using var database = await target.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
+            await using var transaction = await database.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            database.AddRange(project, node, binding);
+            await database.SaveChangesAsync();
+            if (commit) {
+                await transaction.CommitAsync();
+            } else {
+                await transaction.RollbackAsync();
+            }
+        }
+        await using var restarted = await TestApplication.CreateAsync(new() { TestEnvironment = environment, ActiveProfile = targetProfile });
+        await using (var database = await restarted.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
+            var saved = await database.Set<ProjectNodeBindingRecord>().AsNoTracking().SingleOrDefaultAsync(row => row.Id == binding.Id);
+            if (commit) {
+                Assert.NotNull(saved);
+                var adopted = Assert.IsType<StorageObjectReference>(StorageJson.ParseReference(saved.StorageObjectReferenceJson));
+                Assert.Equal(targetStorage.Id, adopted.StorageId);
+                Assert.Null(adopted.PlacementIntentId);
+                Assert.Equal(reference, adopted.ImportedHistory!.SourceReference);
+                Assert.True(await Create(restarted, targetStorage, driver).MarkDeletionAsync(adopted));
+                await using var bytes = await driver.OpenReadAsync(targetStorage.ToDriverInput(), adopted);
+                using var reader = new StreamReader(bytes);
+                Assert.Equal("original content", await reader.ReadToEndAsync());
+            } else {
+                Assert.Null(saved);
+                Assert.False(await database.Set<Project>().AnyAsync(row => row.Id == project.Id));
+            }
+        }
+        await using (var context = await Factory(restarted).CreateDbContextAsync()) {
+            Assert.Equal(targetEvidence, JsonSerializer.Serialize(await context.Set<StoragePlacementIntentRecord>().AsNoTracking().SingleAsync()));
+        }
+        await using (var context = await Factory(source).CreateDbContextAsync()) {
+            Assert.Equal(sourceEvidence, JsonSerializer.Serialize(await context.Set<StoragePlacementIntentRecord>().AsNoTracking().SingleAsync()));
+        }
+        Assert.Equal(new[] { IpfsStableAddMode.ComputeOnly, IpfsStableAddMode.Store }, transport.Adds);
+        Assert.Equal(1, transport.Pins);
+    }
+
     private static StorageStablePlacementService Create(TestApplication app, StorageCatalogRecord storage, IStorageDriver driver,
         IInterceptor? interceptor = null, IStoragePlacementReceiptObserver? observer = null)
         => new(Factory(app, interceptor), new Catalog(storage), new NoRouting(), new Registry(driver), new Access(),
@@ -201,7 +311,7 @@ public sealed class StorageStablePlacementPersistenceTests {
     }
 
     private static StorageCatalogRecord RemoteStorage(StorageProviderKind kind) => new() {
-        Id = Guid.NewGuid(), Name = "Isolated placement fixture", ProviderKind = kind, IsEnabled = true,
+        Id = Guid.NewGuid(), Name = $"Isolated {kind} placement fixture", ProviderKind = kind, IsEnabled = true,
         EndpointOrRoot = "https://storage.example.test/api/v0/", HealthStatus = StorageHealthStatus.Healthy,
         CapabilityMask = StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete | StorageCapability.Download | StorageCapability.InlinePreview
     };
@@ -252,20 +362,20 @@ public sealed class StorageStablePlacementPersistenceTests {
         public StorageProviderKind ProviderKind => inner.ProviderKind;
         public StorageCapability SupportedCapabilities => inner.SupportedCapabilities;
         public bool CanRecoverWithoutWriteAcknowledgement => true;
-        public Task<StorageConnectionTestResult> TestConnectionAsync(StorageCatalogRecord storage, string? secretValue, CancellationToken cancellationToken = default)
+        public Task<StorageConnectionTestResult> TestConnectionAsync(StorageDriverInput storage, string? secretValue, CancellationToken cancellationToken = default)
             => inner.TestConnectionAsync(storage, secretValue, cancellationToken);
-        public Task<StorageWriteResult> SaveAsync(StorageCatalogRecord storage, StorageWriteRequest request, CancellationToken cancellationToken = default)
+        public Task<StorageWriteResult> SaveAsync(StorageDriverInput storage, StorageWriteRequest request, CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Stable placement called ordinary Save.");
-        public Task<Stream> OpenReadAsync(StorageCatalogRecord storage, StorageObjectReference reference, CancellationToken cancellationToken = default)
+        public Task<Stream> OpenReadAsync(StorageDriverInput storage, StorageObjectReference reference, CancellationToken cancellationToken = default)
             => inner.OpenReadAsync(storage, reference, cancellationToken);
-        public async Task DeleteAsync(StorageCatalogRecord storage, StorageObjectReference reference, CancellationToken cancellationToken = default) {
+        public async Task DeleteAsync(StorageDriverInput storage, StorageObjectReference reference, CancellationToken cancellationToken = default) {
             Deletes++;
             await inner.DeleteAsync(storage, reference, cancellationToken);
         }
-        public Task<StorageObjectReference> PrepareStableTargetAsync(StorageCatalogRecord storage, StoragePlacementIntentId id,
+        public Task<StorageObjectReference> PrepareStableTargetAsync(StorageDriverInput storage, StoragePlacementIntentId id,
             StorageWriteRequest request, CancellationToken cancellationToken)
             => ((IStorageStablePlacementDriver)inner).PrepareStableTargetAsync(storage, id, request, cancellationToken);
-        public async Task<StorageWriteResult> WriteStableTargetAsync(StorageCatalogRecord storage, StorageObjectReference target,
+        public async Task<StorageWriteResult> WriteStableTargetAsync(StorageDriverInput storage, StorageObjectReference target,
             StorageWriteRequest request, CancellationToken cancellationToken) {
             Writes++;
             Entered.TrySetResult();
@@ -278,7 +388,7 @@ public sealed class StorageStablePlacementPersistenceTests {
             }
             return result;
         }
-        public Task CompleteStableTargetAsync(StorageCatalogRecord storage, StorageObjectReference target, CancellationToken cancellationToken)
+        public Task CompleteStableTargetAsync(StorageDriverInput storage, StorageObjectReference target, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
@@ -287,8 +397,8 @@ public sealed class StorageStablePlacementPersistenceTests {
         public int Uploads { get; private set; }
         public int Reads { get; private set; }
         public byte[] Bytes { get; set; } = [];
-        public Task<string?> TestConnectionAsync(StorageCatalogRecord storage, string? password, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
-        public Task UploadAsync(StorageCatalogRecord storage, string? password, string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken) {
+        public Task<string?> TestConnectionAsync(StorageDriverInput storage, string? password, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
+        public Task UploadAsync(StorageDriverInput storage, string? password, string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken) {
             Uploads++;
             Bytes = content.ToArray();
             if (FailAfterUpload) {
@@ -296,12 +406,12 @@ public sealed class StorageStablePlacementPersistenceTests {
             }
             return Task.CompletedTask;
         }
-        public Task<Stream> OpenReadAsync(StorageCatalogRecord storage, string? password, string path, CancellationToken cancellationToken) {
+        public Task<Stream> OpenReadAsync(StorageDriverInput storage, string? password, string path, CancellationToken cancellationToken) {
             Reads++;
             return Task.FromResult<Stream>(new MemoryStream(Bytes, writable: false));
         }
-        public Task DeleteAsync(StorageCatalogRecord storage, string? password, string path, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task<RemoteBrowseTransportPage> BrowseAsync(StorageCatalogRecord storage, string? password, string path,
+        public Task DeleteAsync(StorageDriverInput storage, string? password, string path, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<RemoteBrowseTransportPage> BrowseAsync(StorageDriverInput storage, string? password, string path,
             RemoteBrowseTransportRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
@@ -310,10 +420,10 @@ public sealed class StorageStablePlacementPersistenceTests {
         public List<IpfsStableAddMode> Adds { get; } = [];
         public int Pins { get; private set; }
         private byte[] bytes = [];
-        public Task TestConnectionAsync(StorageCatalogRecord storage, string? token, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task<IpfsAddResult> AddAsync(StorageCatalogRecord storage, string? token, string name, ReadOnlyMemory<byte> content,
+        public Task TestConnectionAsync(StorageDriverInput storage, string? token, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<IpfsAddResult> AddAsync(StorageDriverInput storage, string? token, string name, ReadOnlyMemory<byte> content,
             CancellationToken cancellationToken) => throw new InvalidOperationException("Stable placement used ordinary IPFS add.");
-        public Task<IpfsAddResult> AddStableAsync(StorageCatalogRecord storage, string? token, string name, ReadOnlyMemory<byte> content,
+        public Task<IpfsAddResult> AddStableAsync(StorageDriverInput storage, string? token, string name, ReadOnlyMemory<byte> content,
             IpfsStableAddMode mode, CancellationToken cancellationToken) {
             Adds.Add(mode);
             if (mode == IpfsStableAddMode.Store) {
@@ -322,16 +432,16 @@ public sealed class StorageStablePlacementPersistenceTests {
             }
             return Task.FromResult(new IpfsAddResult("bafy-fixed-test-cid"));
         }
-        public Task PinAsync(StorageCatalogRecord storage, string? token, string id, CancellationToken cancellationToken) {
+        public Task PinAsync(StorageDriverInput storage, string? token, string id, CancellationToken cancellationToken) {
             Assert.Equal("bafy-fixed-test-cid", id);
             Pins++;
             return Task.CompletedTask;
         }
-        public Task<Stream> OpenReadAsync(StorageCatalogRecord storage, string? token, string locator, string route, CancellationToken cancellationToken) {
+        public Task<Stream> OpenReadAsync(StorageDriverInput storage, string? token, string locator, string route, CancellationToken cancellationToken) {
             Assert.Equal("bafy-fixed-test-cid", locator);
             return Task.FromResult<Stream>(new MemoryStream(bytes, writable: false));
         }
-        public Task<RemoteBrowseTransportPage> BrowseAsync(StorageCatalogRecord storage, string? token, IpfsBrowseAddress address,
+        public Task<RemoteBrowseTransportPage> BrowseAsync(StorageDriverInput storage, string? token, IpfsBrowseAddress address,
             RemoteBrowseTransportRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
@@ -342,13 +452,42 @@ public sealed class StorageStablePlacementPersistenceTests {
         }
     }
     private sealed class Catalog(StorageCatalogRecord storage) : IStorageCatalogService {
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([storage]);
-        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(id == storage.Id ? storage : null);
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        private Task<IReadOnlyList<StorageCatalogRecord>> ReadRecordsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([storage]);
+        private Task<StorageCatalogRecord?> ReadRecordAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(id == storage.Id ? storage : null);
+        private Task<StorageCatalogRecord> ReadBootstrapRecordAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        private Task<StorageCatalogRecord> SaveRecordAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
-        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        internal Task<IReadOnlyList<StorageRoutingRule>> ReadRoutingRecordsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
+        private Task<StorageRoutingRule> SaveRoutingRecordAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+        public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+        public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+            var row = await ReadRecordAsync(id, cancellationToken);
+            return row is null ? null : new(row.ToSnapshot(), StorageJson.ParseProviderConfiguration(row.ConfigJson));
+        }
+
+        public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+            (await ReadBootstrapRecordAsync(cancellationToken)).ToDriverInput();
+
+        public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRoutingRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRoutingRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
     }
     private sealed class NoRouting : IStorageRoutingService {
         public Task<StorageRecommendation> RecommendAsync(StorageSelectionContext context, CancellationToken cancellationToken = default) => throw new InvalidOperationException("The fixture must use its explicit isolated storage.");

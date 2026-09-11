@@ -3,13 +3,27 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects;
 
-public sealed class ProjectPackageManifest
-{
-    public const string CurrentFormat = "candoitall.projects.v2";
+public enum ProjectPackageHistoryDisposition {
+    PreserveAsHistory = 1
+}
+
+public sealed class ProjectPackageManifest {
+    public const string LegacyFormat = "candoitall.projects.v2";
+    public const string CurrentFormat = "candoitall.projects.v3";
+
+    public const int CurrentWorkAssignmentHistoryVersion = 1;
+
+    public int? WorkAssignmentHistoryVersion { get; set; }
+
+    public const int CurrentProcessAssetHistoryVersion = 1;
+
+    public int? ProcessAssetHistoryVersion { get; set; }
 
     public Guid PackageId { get; set; }
 
     public string Format { get; set; } = CurrentFormat;
+
+    public ProjectPackageHistoryDisposition? HistoryDisposition { get; set; }
 
     public Guid SourceProfileId { get; set; }
 
@@ -28,8 +42,7 @@ public sealed class ProjectPackageManifest
     public List<string> Warnings { get; set; } = [];
 }
 
-public sealed class ProjectPackageTableManifest
-{
+public sealed class ProjectPackageTableManifest {
     public string Name { get; set; } = string.Empty;
 
     public string FilePath { get; set; } = string.Empty;
@@ -41,8 +54,7 @@ public sealed class ProjectPackageTableManifest
     public string Sha256 { get; set; } = string.Empty;
 }
 
-public sealed class ProjectPackageStorageFileManifest
-{
+public sealed class ProjectPackageStorageFileManifest {
     public Guid? SourceStorageId { get; set; }
 
     public StorageProviderKind ProviderKind { get; set; }
@@ -64,8 +76,7 @@ public sealed class ProjectPackageStorageFileManifest
     public string Sha256 { get; set; } = string.Empty;
 }
 
-public sealed class ProjectPackageImmutableStorageReferenceManifest
-{
+public sealed class ProjectPackageImmutableStorageReferenceManifest {
     public Guid? SourceStorageId { get; set; }
 
     public StorageProviderKind ProviderKind { get; set; }
@@ -83,15 +94,13 @@ public sealed class ProjectPackageImmutableStorageReferenceManifest
     public string Sha256 { get; set; } = string.Empty;
 }
 
-public sealed class ProjectPackageExportRequest
-{
+public sealed class ProjectPackageExportRequest {
     public Guid? SourceProfileId { get; set; }
 
     public string? PackagePath { get; set; }
 }
 
-public sealed class ProjectPackageImportRequest
-{
+public sealed class ProjectPackageImportRequest {
     public string PackagePath { get; set; } = string.Empty;
 
     public Guid? TargetProfileId { get; set; }
@@ -108,8 +117,7 @@ public sealed record ProjectPackageImportResult(
     int RecordsImported,
     int StorageFilesImported);
 
-public interface IProjectPackageService
-{
+public interface IProjectPackageService {
     Task<Result<ProjectPackageExportResult>> ExportAllAsync(
         ProjectPackageExportRequest request,
         CancellationToken cancellationToken = default);

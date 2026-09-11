@@ -16,10 +16,16 @@ public sealed class ProjectScheduledWorkflowSourceAuthorityPolicy(
     IAgentExecutionProfileGenerationSource generations,
     IWorkflowScheduledAuthorityPolicy schedules,
     IOptionsMonitor<ApiAccessOptions> apiOptions,
-    TimeProvider clock) : IWorkflowScheduledSourceAuthorityPolicy {
+    TimeProvider clock,
+    IWorkflowStructureSourceAuthorityPolicy? structureSources = null) : IWorkflowScheduledSourceAuthorityPolicy {
     public async Task<IWorkflowScheduledSourceAuthorityLease> AcquireAsync(WorkflowStructureAuthority authority,
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(authority);
+        if (authority.ProjectScope is not null) {
+            var heldSource = await (structureSources ?? throw new InvalidOperationException("Scoped Scheduler authority requires the Workflow source policy."))
+                .AcquireAsync(authority, WorkflowStructureAuthorityUse.Schedule, cancellationToken: cancellationToken);
+            return new ScopedSourceLease(heldSource);
+        }
         IAgentCatalogReadLease? held = null;
         try {
             if (authority.Channel == WorkflowStructureAuthorityChannel.AgentExecution) {
@@ -115,6 +121,11 @@ public sealed class ProjectScheduledWorkflowSourceAuthorityPolicy(
     }
 
     private static WorkflowScheduledSourceAuthorityException Denied(string message) => new(message);
+
+    private sealed class ScopedSourceLease(IWorkflowStructureSourceAuthorityLease inner) : IWorkflowScheduledSourceAuthorityLease {
+        public Task RequireForMutationAsync(CancellationToken cancellationToken = default) => inner.RequireForMutationAsync(cancellationToken);
+        public ValueTask DisposeAsync() => inner.DisposeAsync();
+    }
 
     private sealed class SourceLease(ProjectScheduledWorkflowSourceAuthorityPolicy owner, WorkflowStructureAuthority authority,
         IAgentCatalogReadLease? held) : IWorkflowScheduledSourceAuthorityLease {

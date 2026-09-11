@@ -274,7 +274,9 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
             new ProjectCrossModuleMutationCoordinator(clock),
             CreateProcessor(services, clock),
             services.GetRequiredService<ProjectManagedStorageDeletionPlanner>(),
-            services.GetRequiredService<ProjectStructureAssemblyService>());
+            services.GetRequiredService<ProjectStructureAssemblyService>(),
+            services.GetRequiredService<ProjectWriteAdmissionService>(),
+            services.GetRequiredService<CoordinatedDatabaseTransaction>());
     }
 
     private static ProjectWorkbenchDeletionParticipant CreateDeletionParticipant(
@@ -289,7 +291,8 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
             clock,
             services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(),
             services.GetRequiredService<DbContextOptions<WorkbenchDbContext>>(),
-            services.GetRequiredService<CoordinatedDatabaseTransaction>());
+            services.GetRequiredService<CoordinatedDatabaseTransaction>(),
+            services.GetRequiredService<ProjectWriteAdmissionService>());
     }
 
     private static async Task<bool> ClaimWhenReleasedAsync(

@@ -138,10 +138,6 @@ public sealed record AgentToolInvocationSegment(
     AgentToolProtocolEnvelope? ApprovalCheckpoint = null,
     ImmutableArray<PendingToolApprovalRecord> PendingApprovals = default);
 
-public sealed record AgentToolAdmittedRuntimeContext(string Content, WorkspaceScopeDescriptor? WorkspaceScope) {
-    public AgentRuntimeTransientContext ToTransientContext() => new(Content, WorkspaceScope);
-}
-
 public sealed record AgentToolJournalRecord(
     int SchemaVersion,
     long Revision,
@@ -158,6 +154,7 @@ public sealed record AgentToolJournalRecord(
     public const int CurrentSchemaVersion = 1;
     public const int BackgroundSchemaVersion = 2;
     public const int ProviderDispatchSchemaVersion = 3;
+    public const int TypedContextSchemaVersion = 4;
     public const int MaximumBatches = 64;
     public const int MaximumCallsPerBatch = 64;
     public const int MaximumSegments = 32;
@@ -174,7 +171,7 @@ public sealed record AgentToolJournalRecord(
         ProviderDispatches.Any(dispatch => dispatch.State != AgentToolProviderDispatchState.ResponseAdmitted);
 
     public void Validate() {
-        if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion) || Revision < 1 || !Enum.IsDefined(Support) ||
+        if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion) || Revision < 1 || !Enum.IsDefined(Support) ||
             Batches.IsDefault || Segments.IsDefault || Batches.Length > MaximumBatches || Segments.Length > MaximumSegments ||
             Support != AgentToolAdmissionSupport.Recoverable && (Batches.Length != 0 || Segments.Length != 0) || Batches.Length != 0 && Segments.Length == 0) {
             throw new InvalidDataException("The tool admission journal version, revision or batch count is unsupported.");
@@ -183,7 +180,7 @@ public sealed record AgentToolJournalRecord(
         ArgumentNullException.ThrowIfNull(Session);
         ArgumentNullException.ThrowIfNull(Session.Reference);
         ArgumentNullException.ThrowIfNull(Session.Profile);
-        if (Session.Reference.BackgroundSource is null ? SchemaVersion is not (CurrentSchemaVersion or ProviderDispatchSchemaVersion) || BackgroundInput is not null :
+        if (Session.Reference.BackgroundSource is null ? SchemaVersion is not (CurrentSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion) || BackgroundInput is not null :
                 SchemaVersion is not (BackgroundSchemaVersion or ProviderDispatchSchemaVersion) || Session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation || OriginalInput is not null ||
                 BackgroundInput is null || string.IsNullOrWhiteSpace(BackgroundInput.Content) ||
                 Encoding.UTF8.GetByteCount(BackgroundInput.Content) > AgentToolProtocolEnvelope.MaximumUtf8Bytes) {
@@ -194,7 +191,11 @@ public sealed record AgentToolJournalRecord(
             throw new InvalidDataException("The admitted original input or typed context attachments cannot be recovered safely.");
         }
 
-        _ = RuntimeContext?.ToTransientContext();
+        if ((SchemaVersion == TypedContextSchemaVersion) != (RuntimeContext is { Attachments.IsDefaultOrEmpty: false }) ||
+            SchemaVersion == TypedContextSchemaVersion && Support != AgentToolAdmissionSupport.Recoverable) {
+            throw new InvalidDataException("Saved typed context requires its supported recoverable journal version.");
+        }
+        RuntimeContext?.Validate();
         AgentToolProviderJournalValidation.Validate(this);
 
         var bytes = 0L;

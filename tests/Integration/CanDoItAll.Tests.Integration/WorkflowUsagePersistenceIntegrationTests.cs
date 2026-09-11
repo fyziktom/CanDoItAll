@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
-public sealed class WorkflowUsagePersistenceIntegrationTests
+public sealed partial class WorkflowUsagePersistenceIntegrationTests
 {
     private static readonly DateTimeOffset RecordedAtUtc = new(2026, 7, 12, 20, 0, 0, TimeSpan.Zero);
 
@@ -86,7 +86,10 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
             Origin = origin
         };
 
-        await runStore.SaveRunAsync(run);
+        await using (var legacy = await WorkflowOwnerPersistenceTestFactory.FromCanonical(factory).CreateDbContextAsync()) {
+            legacy.Add(WorkflowRunRecordEntity.FromSnapshot(run));
+            await legacy.SaveChangesAsync();
+        }
         await usageStore.AppendRangeAsync([known, unknown, known]);
         await usageStore.AppendAsync(known);
 

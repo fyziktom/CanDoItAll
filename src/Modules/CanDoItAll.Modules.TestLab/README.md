@@ -20,13 +20,28 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
-`TestLabService` uses a short-lived `TestLabDbContext` containing only `TestPlan`, `TestCaseRecord`, `TestEvidenceRecord`, and `TestRunRecord`. Its pooled factory is configured from the immutable `ICanonicalRuntimeDatabase.Profile`. The complete application schema reuses the same four mapping configurations and remains the sole migration authority; this context introduces no separate schema, migrations, or data copy. These records have no application-managed concurrency tokens.
+`TestLabService` uses a short-lived `TestLabDbContext` containing only `TestPlan`, `TestCaseRecord`, `TestEvidenceRecord`, and `TestRunRecord`. Its pooled factory is configured from the immutable `ICanonicalRuntimeDatabase.Profile`. The complete application schema reuses the same four mapping configurations and remains the sole migration authority. The nullable project-lifetime reference is added by that canonical migration; TestLab has no separate migration stream. These records have no application-managed concurrency tokens.
 
 Saving a plan commits its cases, evidence metadata, and runs together, then updates search and records activity. These post-commit calls retain their existing behavior: a search or activity failure can surface after the plan is already saved. Project and responsible-party IDs remain references; TestLab does not own those records, and a recorded test result does not automatically accept a task.
 
 The project-transfer target-state participant temporarily retains its existing complete-schema maintenance read under the transfer coordinator. Workbench's test-plan projection and node-scope bridge obtain typed facts from TestLabService. These queries preserve project membership, plan ordering, and timestamps without exposing TestLab entities or changing evidence/runner behavior.
 
 Ordinary projection reads use the independent owner factory. Explicit mutation projection reads enlist through the shared transaction coordinator and retain the caller's relational snapshot and transaction read set; the caller owns commit.
+
+The project picker captures Projects' profile and lifetime with the displayed selection.
+A project-bound save validates that exact admission under the existing project lock in
+the TestLab transaction. A global plan explicitly uses no project and no admission.
+Loading a plan preserves its stored nullable reference binding; it never reconstructs
+authority from today's project with the same ID. Cases, evidence and recorded runs stay
+with the retained plan when the project is retired. An explicit new project selection
+can rebind an editable historical plan.
+
+Global plan/detail reads retain orphan and retired references, while current project
+filters and Workbench projection/scope facts require the current lifetime. Search still
+runs after the plan commit; project-bound Search staging validates the captured lifetime
+again in its own short owner transaction. Retirement between those commits can surface a
+failure after the plan was saved. Activity remains historical audit context. These
+reference facts do not replace current actor permissions or supply launch authority.
 
 ## Focused Validation
 

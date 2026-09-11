@@ -140,7 +140,7 @@ public sealed class ProjectAssetStorageServiceTests
                 []);
 
             return Task.FromResult(new StoragePlacementResult(
-                storage,
+                storage.ToDriverInput(),
                 recommendation,
                 new StorageWriteResult(reference, access),
                 access.PreviewUrl,

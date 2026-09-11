@@ -15,11 +15,13 @@ internal sealed class MafToolRunContext {
     private readonly AgentToolPolicyCatalog toolPolicies;
     private readonly AgentToolRunLease lease;
     private readonly IReadOnlyDictionary<string, AgentRuntimeToolMetadata> metadata;
-    private readonly IReadOnlyDictionary<string, AITool> tools;
+    private readonly Dictionary<string, AITool> tools;
+    private readonly MafContextToolRegistration[] contextToolRegistrations;
     private readonly IReadOnlyList<AITool> nativeTools;
     private readonly HashSet<AgentToolBusinessIntentId> completedInCurrentInvocation = [];
     private int responseCursor;
     private AgentToolBatchId? dispatchBatch;
+    private AgentToolJournalRecord? recoveryState;
 
     private MafToolRunContext(AgentToolAdmissionJournal journal, AgentToolRunLease lease,
         AgentToolInvocationSegment segment, RuntimeCapabilityState? capabilities) {
@@ -30,6 +32,12 @@ internal sealed class MafToolRunContext {
         responseCursor = segment.FirstBatchOrdinal;
         metadata = (capabilities?.RuntimeToolMetadata ?? []).ToDictionary(item => item.ToolName, StringComparer.Ordinal);
         tools = (capabilities?.Tools ?? []).Where(tool => tool is AIFunction).ToDictionary(tool => tool.Name, StringComparer.Ordinal);
+        contextToolRegistrations = (capabilities?.ContextToolRegistrations ?? []).ToArray();
+        var contextNames = contextToolRegistrations.SelectMany(registration => registration.ToolNames).ToArray();
+        if (contextNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != contextNames.Length ||
+                contextNames.Any(name => tools.Keys.Contains(name, StringComparer.OrdinalIgnoreCase))) {
+            throw Denied("Context tool registrations must not shadow another composed tool.");
+        }
         nativeTools = (capabilities?.Tools ?? []).Where(tool => tool is not AIFunctionDeclaration).ToArray();
     }
 
@@ -100,7 +108,9 @@ internal sealed class MafToolRunContext {
             input = checkpoint.Input;
         } else {
             var serialized = await persistence.TrySerializePersistableRuntimeSessionAsync(runtimeAgent, session,
-                provider, model, options, chat.Compatibility?.PendingApprovals ?? [], progress, cancellationToken)
+                provider, model, options, chat.Compatibility?.PendingApprovals ?? [],
+                (state, phase, message) => progress(state == ExecutionState.Persisting ? ExecutionState.Preparing : state, phase, message),
+                cancellationToken)
                 ?? throw Denied("This invocation has no persistable SDK checkpoint; admitted tools cannot execute.");
             var checkpoint = new RestartCheckpoint(serialized, input, isApprovalContinuation,
                 chat.Compatibility?.PendingApprovals.ToArray() ?? []);
@@ -114,8 +124,23 @@ internal sealed class MafToolRunContext {
         return (context, session, input);
     }
 
-    internal AgentToolPreparedPayload Prepare(string name, IDictionary<string, object?>? arguments) {
-        if (!tools.ContainsKey(name)) {
+    internal void RegisterContextTools(MafContextToolRegistration registration, IEnumerable<AITool> supplied) {
+        if (!contextToolRegistrations.Contains(registration)) {
+            throw Denied("The context provider is not part of this admitted runtime.");
+        }
+        var functions = registration.RequireTools(supplied);
+        foreach (var name in registration.ToolNames) {
+            tools.Remove(name);
+        }
+        foreach (var function in functions) {
+            tools.Add(function.Name, function);
+        }
+    }
+
+    internal AgentToolPreparedPayload Prepare(string name, IDictionary<string, object?>? arguments,
+        bool allowDeferredContextTool = false, AgentToolProtocolEnvelope? persistedSource = null) {
+        if (!tools.ContainsKey(name) && !(allowDeferredContextTool && contextToolRegistrations.Any(registration =>
+                registration.ToolNames.Contains(name, StringComparer.Ordinal)))) {
             throw Denied("The proposed tool is outside the current admitted toolset.");
         }
 
@@ -131,8 +156,52 @@ internal sealed class MafToolRunContext {
         var classification = toolPolicies.Classify(name);
         var json = MafToolProtocolCodec.Canonicalize(element);
         var effect = classification == ToolInvocationClassification.Read ? AgentToolProposalEffect.Read : AgentToolProposalEffect.Mutation;
-        return new(name, 1, MafToolProtocolCodec.Digest(new { Name = name, Arguments = element }), json, effect,
-            effect == AgentToolProposalEffect.Read ? AgentToolProposalRecovery.RevalidateAndRead : AgentToolProposalRecovery.ReconcileBeforeRetry);
+        var recovery = effect == AgentToolProposalEffect.Read &&
+                descriptor?.RecoveryPolicy != AgentRuntimeToolRecoveryPolicy.ReconcileBeforeRetry
+            ? AgentToolProposalRecovery.RevalidateAndRead
+            : AgentToolProposalRecovery.ReconcileBeforeRetry;
+        var original = new AgentToolPreparedPayload(name, 1, MafToolProtocolCodec.Digest(new { Name = name, Arguments = element }), json, effect,
+            recovery);
+        var preparation = contextToolRegistrations.SingleOrDefault(registration =>
+            registration.ToolNames.Contains(name, StringComparer.Ordinal))?.SourcePreparation;
+        if (preparation is null && persistedSource is not null) {
+            throw MafContextToolSourceContract.MissingSource();
+        }
+        var source = preparation is null ? null : allowDeferredContextTool
+            ? persistedSource ?? throw MafContextToolSourceContract.MissingSource()
+            : preparation.Prepare(name, element);
+        return MafContextToolSourceContract.Bind(original, source);
+    }
+
+    private AgentToolPreparedPayload PrepareInvocation(FunctionCallContent call) {
+        if (recoveryState is not { } saved || !contextToolRegistrations.Any(registration =>
+                registration.ToolNames.Contains(call.Name, StringComparer.Ordinal))) {
+            return Prepare(call.Name, call.Arguments);
+        }
+        var original = FindCompletedContextProposal(saved, Segment, dispatchBatch, call);
+        if (original?.Payload.SourcePreparation is not { } source) {
+            return Prepare(call.Name, call.Arguments);
+        }
+        var payload = Prepare(call.Name, call.Arguments, allowDeferredContextTool: true, persistedSource: source);
+        if (payload != original.Payload) {
+            throw Denied("The replayed context call differs from its exact completed proposal.");
+        }
+        return payload;
+    }
+
+    internal static AgentToolProposalRecord? FindCompletedContextProposal(AgentToolJournalRecord saved,
+        AgentToolInvocationSegment segment, AgentToolBatchId? batchId, FunctionCallContent call) {
+        AgentToolProposalRecord? proposal;
+        if (batchId is { } activeBatch) {
+            proposal = saved.Batches.SingleOrDefault(batch => batch.Id == activeBatch)?.Proposals
+                .SingleOrDefault(item => item.CallId == call.CallId && item.Payload.ToolName == call.Name);
+        } else {
+            var previous = saved.Segments.SingleOrDefault(item => item.Id == segment.ContinuesSegmentId);
+            var binding = previous?.PendingApprovals.SingleOrDefault(item =>
+                item.CallId == call.CallId && item.ToolName == call.Name)?.ToolAdmission;
+            proposal = binding is null ? null : AgentToolJournalTransitions.RequireProposal(saved, binding);
+        }
+        return proposal?.State == AgentToolProposalState.Completed ? proposal : null;
     }
 
     internal async Task<AgentToolProtocolEnvelope?> ReplayResponseAsync(AgentToolSemanticDigest requestDigest,
@@ -252,7 +321,7 @@ internal sealed class MafToolRunContext {
 
     internal async ValueTask<object?> InvokeAsync(FunctionCallContent call, Func<CancellationToken, ValueTask<object?>> invoke,
         AgentToolInvocationEffectScope effectScope, CancellationToken cancellationToken) {
-        var payload = Prepare(call.Name, call.Arguments);
+        var payload = PrepareInvocation(call);
         var batch = dispatchBatch ?? FindContinuationBatch(await journal.ReadAsync(lease, cancellationToken), call, payload);
         var claim = await journal.ClaimInvocationAsync(lease, batch, call.CallId, payload, cancellationToken);
         using var dispatch = claim.Bind();
@@ -347,6 +416,7 @@ internal sealed class MafToolRunContext {
 
     private async Task CheckRecoveryAsync(CancellationToken cancellationToken) {
         var saved = await journal.ReadAsync(lease, cancellationToken);
+        recoveryState = saved;
         if (saved.HasUnresolvedProviderDispatch) {
             throw new AgentToolAdmissionException("tool-admission.reconciliation-required",
                 "A provider request may already have executed a hosted tool. Its missing response requires reconciliation before any provider replay.");
@@ -370,8 +440,16 @@ internal sealed class MafToolRunContext {
 
             using var arguments = JsonDocument.Parse(proposal.Payload.ArgumentsJson);
             var values = arguments.RootElement.Deserialize<Dictionary<string, object?>>(MafToolProtocolCodec.SerializationOptions);
-            if (Prepare(proposal.Payload.ToolName, values) != proposal.Payload) {
+            if (Prepare(proposal.Payload.ToolName, values, allowDeferredContextTool: true,
+                    persistedSource: proposal.Payload.SourcePreparation) != proposal.Payload) {
                 throw Denied("The installed provider preparation policy no longer matches the admitted payload.");
+            }
+            if (proposal.State != AgentToolProposalState.Completed && proposal.Payload.SourcePreparation is { } source &&
+                    !(metadata.TryGetValue(proposal.Payload.ToolName, out var descriptor) && descriptor.PrepareAdmission is not null)) {
+                var preparation = contextToolRegistrations.SingleOrDefault(registration =>
+                    registration.ToolNames.Contains(proposal.Payload.ToolName, StringComparer.Ordinal))?.SourcePreparation
+                    ?? throw MafContextToolSourceContract.MissingSource();
+                await preparation.ValidateAsync(source, cancellationToken);
             }
 
             await using var authorization = proposal.State == AgentToolProposalState.Completed
@@ -385,8 +463,11 @@ internal sealed class MafToolRunContext {
         if (allowFreshResult && completedInCurrentInvocation.Contains(proposal.IntentId)) {
             return ValueTask.FromResult<IAsyncDisposable?>(null);
         }
-        if (metadata.TryGetValue(proposal.Payload.ToolName, out var descriptor) &&
-            descriptor.AuthorizeResultDisclosureAsync is { } authorize) {
+        var authorize = metadata.TryGetValue(proposal.Payload.ToolName, out var descriptor)
+            ? descriptor.AuthorizeResultDisclosureAsync : null;
+        authorize ??= contextToolRegistrations.SingleOrDefault(registration =>
+            registration.ToolNames.Contains(proposal.Payload.ToolName, StringComparer.Ordinal))?.AuthorizeResultDisclosureAsync;
+        if (authorize is not null) {
             var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(proposal.Result
                 ?? throw Denied("The completed invocation has no saved result."));
             return authorize(new(proposal.IntentId, proposal.Payload, proposal.EffectState, result.Value,

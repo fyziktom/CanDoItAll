@@ -205,7 +205,7 @@ public sealed class ProjectDeletionIntegrationTests
                 var historicalReference = ProjectManagedStorageProvenancePolicy.Stamp(
                     reference with { MetadataJson = "{}" },
                     reference.Locator,
-                    historicalStorage,
+                    historicalStorage.ToDriverInput(),
                     historicalIdentityPolicy);
                 binding.StorageObjectReferenceJson = StorageJson.SerializeReference(historicalReference);
                 await dbContext.SaveChangesAsync();
@@ -1400,25 +1400,25 @@ public sealed class ProjectDeletionIntegrationTests
         public StorageCapability SupportedCapabilities => inner.SupportedCapabilities;
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => inner.TestConnectionAsync(storage, secretValue, cancellationToken);
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => inner.SaveAsync(storage, request, cancellationToken);
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => inner.OpenReadAsync(storage, reference, cancellationToken);
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
         {

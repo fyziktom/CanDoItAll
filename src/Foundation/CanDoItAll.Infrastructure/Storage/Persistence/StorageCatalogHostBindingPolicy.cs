@@ -2,7 +2,7 @@ namespace CanDoItAll.Infrastructure.Storage;
 
 public static class StorageCatalogHostBindingPolicy
 {
-    public static void BindCurrent(
+    internal static void BindCurrent(
         StorageCatalogRecord storage,
         string rootPath,
         DateTimeOffset validatedAtUtc)
@@ -12,7 +12,7 @@ public static class StorageCatalogHostBindingPolicy
         Apply(storage, binding);
     }
 
-    public static void ImportLegacy(
+    internal static void ImportLegacy(
         StorageCatalogRecord storage,
         string fallbackRoot)
     {
@@ -32,8 +32,14 @@ public static class StorageCatalogHostBindingPolicy
         }
     }
 
+    internal static bool TryResolve(StorageCatalogRecord storage, string fallbackRoot, out string rootPath, out string diagnostic) =>
+        TryResolve(storage.ToSnapshot(), fallbackRoot, out rootPath, out diagnostic);
+
+    internal static string ResolveRequired(StorageCatalogRecord storage, string fallbackRoot) =>
+        ResolveRequired(storage.ToSnapshot(), fallbackRoot);
+
     public static bool TryResolve(
-        StorageCatalogRecord storage, string fallbackRoot, out string rootPath, out string diagnostic) {
+        StorageCatalogSnapshot storage, string fallbackRoot, out string rootPath, out string diagnostic) {
         ArgumentNullException.ThrowIfNull(storage);
         return TryResolveCore(storage.ProviderKind, ToRecord(storage), fallbackRoot, out rootPath, out diagnostic);
     }
@@ -73,7 +79,7 @@ public static class StorageCatalogHostBindingPolicy
         return HostBoundPathPolicy.TryResolve(binding, HostPathContext.CaptureCurrent(), out rootPath, out diagnostic);
     }
 
-    public static string ResolveRequired(StorageCatalogRecord storage, string fallbackRoot)
+    public static string ResolveRequired(StorageCatalogSnapshot storage, string fallbackRoot)
     {
         if (TryResolve(storage, fallbackRoot, out string rootPath, out string diagnostic))
         {
@@ -83,7 +89,7 @@ public static class StorageCatalogHostBindingPolicy
         throw new InvalidOperationException($"The filesystem storage root is unavailable. {diagnostic}");
     }
 
-    private static HostBoundPathRecord ToRecord(StorageCatalogRecord storage)
+    private static HostBoundPathRecord ToRecord(StorageCatalogSnapshot storage)
     {
         return new HostBoundPathRecord
         {

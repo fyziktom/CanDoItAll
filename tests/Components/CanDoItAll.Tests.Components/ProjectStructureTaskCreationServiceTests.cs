@@ -21,7 +21,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt task creation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt task creation");
+        var projectId = admission.ProjectId;
 
         var first = await creationService.CreateAsync(
             projectId,
@@ -33,16 +34,16 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     1m,
                     ProjectWorkItemEffortUnit.ManDays,
                     800m,
-                    "usd")),
-            CreateAgent(projectId));
+                    "usd")) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
         var second = await creationService.CreateAsync(
             projectId,
             new ProjectStructureTaskCreateRequest(
                 "Second task",
                 StartUtc.AddHours(8),
                 StartUtc.AddHours(12),
-                first.TaskNodeId),
-            CreateAgent(projectId));
+                first.TaskNodeId) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var surface = await workbenchService.GetStructureAsync(projectId);
         var backlogs = surface.Nodes.Where(node =>
@@ -79,16 +80,17 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Concurrent Gantt task creation");
+        var admission = await CreateProjectAsync(projectsService, "Concurrent Gantt task creation");
+        var projectId = admission.ProjectId;
 
         var createFirst = creationService.CreateAsync(
             projectId,
-            new ProjectStructureTaskCreateRequest("Parallel first", StartUtc, StartUtc.AddHours(4)),
-            CreateAgent(projectId, "first"));
+            new ProjectStructureTaskCreateRequest("Parallel first", StartUtc, StartUtc.AddHours(4)) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission, "first"));
         var createSecond = creationService.CreateAsync(
             projectId,
-            new ProjectStructureTaskCreateRequest("Parallel second", StartUtc.AddHours(4), StartUtc.AddHours(8)),
-            CreateAgent(projectId, "second"));
+            new ProjectStructureTaskCreateRequest("Parallel second", StartUtc.AddHours(4), StartUtc.AddHours(8)) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission, "second"));
 
         var createdTasks = await Task.WhenAll(createFirst, createSecond);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -114,7 +116,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt resource compensation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt resource compensation");
+        var projectId = admission.ProjectId;
 
         var exception = await Assert.ThrowsAsync<ProjectStructureTaskCreationException>(() =>
             creationService.CreateAsync(
@@ -125,8 +128,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     StartUtc.AddHours(1),
                     Resource: new ProjectStructureTaskResourceSelection(
                         ProjectStructureTaskResourceKind.Person,
-                        Guid.NewGuid())),
-                CreateAgent(projectId)));
+                        Guid.NewGuid())) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
 
         var surface = await workbenchService.GetStructureAsync(projectId);
 
@@ -144,7 +147,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt row compensation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt row compensation");
+        var projectId = admission.ProjectId;
 
         var exception = await Assert.ThrowsAsync<ProjectStructureTaskCreationException>(() =>
             creationService.CreateAsync(
@@ -153,8 +157,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     "Task with missing anchor",
                     StartUtc,
                     StartUtc.AddHours(1),
-                    "missing-anchor"),
-                CreateAgent(projectId)));
+                    "missing-anchor") { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
 
         var surface = await workbenchService.GetStructureAsync(projectId);
 
@@ -177,7 +181,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var partyBridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt person assignment");
+        var admission = await CreateProjectAsync(projectsService, "Gantt person assignment");
+        var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(partyDirectoryService, "Gantt Owner");
 
         var result = await creationService.CreateAsync(
@@ -188,8 +193,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                 StartUtc.AddHours(4),
                 Resource: new ProjectStructureTaskResourceSelection(
                     ProjectStructureTaskResourceKind.Person,
-                    partyId)),
-            CreateAgent(projectId));
+                    partyId)) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var assignments = await partyBridge.ListAssignmentsDetailedAsync(projectId);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -213,7 +218,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var partyDirectoryService = services.GetRequiredService<PartyDirectoryService>();
         var partyBridge = services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Authoritative task creation price");
+        var admission = await CreateProjectAsync(projectsService, "Authoritative task creation price");
+        var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(partyDirectoryService, "Priced owner");
         var resource = new ProjectStructureTaskResourceSelection(
             ProjectStructureTaskResourceKind.Person,
@@ -241,8 +247,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     8m,
                     ProjectWorkItemEffortUnit.Hours,
                     999m,
-                    "EUR")),
-            CreateAgent(projectId));
+                    "EUR")) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var task = (await workbenchService.GetStructureAsync(projectId))
             .Nodes
@@ -272,7 +278,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var partyDirectoryService = services.GetRequiredService<PartyDirectoryService>();
         var partyBridge = services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Missing authoritative task price");
+        var admission = await CreateProjectAsync(projectsService, "Missing authoritative task price");
+        var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(partyDirectoryService, "Unpriced owner");
         var pricingStrategy = new FixedQuoteStrategy(
             ProjectStructureTaskResourceKind.Person,
@@ -296,8 +303,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     8m,
                     ProjectWorkItemEffortUnit.Hours,
                     999m,
-                    "EUR")),
-            CreateAgent(projectId));
+                    "EUR")) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var task = (await workbenchService.GetStructureAsync(projectId))
             .Nodes
@@ -326,7 +333,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var partyBridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt agent assignment");
+        var admission = await CreateProjectAsync(projectsService, "Gantt agent assignment");
+        var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(partyDirectoryService, "Planning agent", PartyType.AiAgent);
 
         var result = await creationService.CreateAsync(
@@ -337,8 +345,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                 StartUtc.AddHours(4),
                 Resource: new ProjectStructureTaskResourceSelection(
                     ProjectStructureTaskResourceKind.Agent,
-                    partyId)),
-            CreateAgent(projectId));
+                    partyId)) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var assignments = await partyBridge.ListAssignmentsDetailedAsync(projectId);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -362,7 +370,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
         var resourceService = harness.Context.Services.GetRequiredService<ProjectStructureTaskResourceService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt resource privacy");
+        var admission = await CreateProjectAsync(projectsService, "Gantt resource privacy");
+        var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(
             partyDirectoryService,
             "Restricted Gantt Owner",
@@ -391,12 +400,13 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var partyDirectoryService = services.GetRequiredService<PartyDirectoryService>();
         var partyBridge = services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt cancellation compensation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt cancellation compensation");
+        var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(partyDirectoryService, "Canceled Gantt Owner");
         using var cancellationSource = new CancellationTokenSource();
-        var creationService = CreateTaskCreationService(
-            services,
-            new CancelAfterAssignmentProjectPartyIntegrationBridge(partyBridge, cancellationSource));
+        var cancelAfterAssignment = new CancelAfterAssignmentProjectPartyIntegrationBridge(
+            partyBridge, partyId, cancellationSource);
+        var creationService = CreateTaskCreationService(services, cancelAfterAssignment);
 
         var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             creationService.CreateAsync(
@@ -407,14 +417,16 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     StartUtc.AddHours(4),
                     Resource: new ProjectStructureTaskResourceSelection(
                         ProjectStructureTaskResourceKind.Person,
-                        partyId)),
-                CreateAgent(projectId),
+                        partyId)) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission),
                 cancellationSource.Token));
 
         var assignments = await partyBridge.ListAssignmentsDetailedAsync(projectId);
         var surface = await workbenchService.GetStructureAsync(projectId);
 
         Assert.True(cancellationSource.IsCancellationRequested);
+        Assert.NotNull(cancelAfterAssignment.ObservedCommittedAssignmentId);
+        Assert.DoesNotContain(assignments, assignment => assignment.Id == cancelAfterAssignment.ObservedCommittedAssignmentId);
         Assert.Equal(cancellationSource.Token, exception.CancellationToken);
         Assert.DoesNotContain(assignments, assignment => assignment.PartyId == partyId);
         Assert.DoesNotContain(surface.Nodes, node => node.Title == "Canceled assigned task");
@@ -428,7 +440,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var workflowCatalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt workflow resource");
+        var admission = await CreateProjectAsync(projectsService, "Gantt workflow resource");
+        var projectId = admission.ProjectId;
         var workflow = await CreateWorkflowAsync(workflowCatalogService, "Gantt workflow");
 
         var result = await creationService.CreateAsync(
@@ -440,8 +453,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                 Resource: new ProjectStructureTaskResourceSelection(
                     ProjectStructureTaskResourceKind.Workflow,
                     workflow.Id.Value,
-                    workflow.VersionId.Value)),
-            CreateAgent(projectId));
+                    workflow.VersionId.Value)) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var surface = await workbenchService.GetStructureAsync(projectId);
         var workflowNode = Assert.Single(surface.Nodes, node =>
@@ -462,7 +475,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var resourceService = harness.Context.Services.GetRequiredService<ProjectStructureTaskResourceService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt process resource");
+        var admission = await CreateProjectAsync(projectsService, "Gantt process resource");
+        var projectId = admission.ProjectId;
         var process = (await resourceService.ListOptionsAsync(projectId))
             .First(option => option.Kind == ProjectStructureTaskResourceKind.Process);
 
@@ -474,8 +488,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                 StartUtc.AddHours(8),
                 Resource: new ProjectStructureTaskResourceSelection(
                     ProjectStructureTaskResourceKind.Process,
-                    process.ResourceId)),
-            CreateAgent(projectId));
+                    process.ResourceId)) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var surface = await workbenchService.GetStructureAsync(projectId);
         var link = Assert.Single(surface.Links, link =>
@@ -495,7 +509,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var partyBridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt assigned row compensation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt assigned row compensation");
+        var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(partyDirectoryService, "Compensated agent", PartyType.AiAgent);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureTaskCreationException>(() =>
@@ -508,8 +523,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     AfterTaskNodeId: "missing-anchor",
                     Resource: new ProjectStructureTaskResourceSelection(
                         ProjectStructureTaskResourceKind.Agent,
-                        partyId)),
-                CreateAgent(projectId)));
+                        partyId)) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
 
         var assignments = await partyBridge.ListAssignmentsDetailedAsync(projectId);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -528,7 +543,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var workflowCatalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt workflow row compensation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt workflow row compensation");
+        var projectId = admission.ProjectId;
         var workflow = await CreateWorkflowAsync(workflowCatalogService, "Compensated workflow");
 
         var exception = await Assert.ThrowsAsync<ProjectStructureTaskCreationException>(() =>
@@ -542,8 +558,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     Resource: new ProjectStructureTaskResourceSelection(
                         ProjectStructureTaskResourceKind.Workflow,
                         workflow.Id.Value,
-                        workflow.VersionId.Value)),
-                CreateAgent(projectId)));
+                        workflow.VersionId.Value)) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
 
         var surface = await workbenchService.GetStructureAsync(projectId);
 
@@ -565,7 +581,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var resourceService = harness.Context.Services.GetRequiredService<ProjectStructureTaskResourceService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt process row compensation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt process row compensation");
+        var projectId = admission.ProjectId;
         var process = (await resourceService.ListOptionsAsync(projectId))
             .First(option => option.Kind == ProjectStructureTaskResourceKind.Process);
 
@@ -579,8 +596,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     AfterTaskNodeId: "missing-anchor",
                     Resource: new ProjectStructureTaskResourceSelection(
                         ProjectStructureTaskResourceKind.Process,
-                        process.ResourceId)),
-                CreateAgent(projectId)));
+                        process.ResourceId)) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
 
         var surface = await workbenchService.GetStructureAsync(projectId);
         var retainedProcess = Assert.Single(
@@ -605,18 +622,19 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var creationService = harness.Context.Services.GetRequiredService<ProjectStructureTaskCreationService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt date validation");
+        var admission = await CreateProjectAsync(projectsService, "Gantt date validation");
+        var projectId = admission.ProjectId;
 
         var dateException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             creationService.CreateAsync(
                 projectId,
-                new ProjectStructureTaskCreateRequest("Invalid task", StartUtc, StartUtc),
-                CreateAgent(projectId)));
+                new ProjectStructureTaskCreateRequest("Invalid task", StartUtc, StartUtc) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
         var titleException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             creationService.CreateAsync(
                 projectId,
-                new ProjectStructureTaskCreateRequest(new string('x', 201), StartUtc, StartUtc.AddHours(1)),
-                CreateAgent(projectId)));
+                new ProjectStructureTaskCreateRequest(new string('x', 201), StartUtc, StartUtc.AddHours(1)) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
         var estimateException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             creationService.CreateAsync(
                 projectId,
@@ -628,8 +646,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
                         8m,
                         ProjectWorkItemEffortUnit.Hours,
                         -1m,
-                        "USD")),
-                CreateAgent(projectId)));
+                        "USD")) { ExpectedProjectAdmission = admission },
+                CreateAgent(admission)));
         var surface = await workbenchService.GetStructureAsync(projectId);
 
         Assert.Equal("TaskDateRangeInvalid", dateException.ErrorCode);
@@ -641,9 +659,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
             string.Equals(node.Title, "Main", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
-    {
-        var result = await projectsService.SaveAsync(new ProjectEditorModel
+    private static async Task<ProjectWriteAdmission> CreateProjectAsync(ProjectsService projectsService, string name) {
+        var result = await projectsService.CreateWithAdmissionAsync(new ProjectEditorModel
         {
             Name = name,
             Description = $"{name} description",
@@ -652,7 +669,7 @@ public sealed class ProjectStructureTaskCreationServiceTests
         });
 
         Assert.True(result.IsSuccess);
-        return result.Value;
+        return Assert.IsType<ProjectWriteAdmission>(result.Value);
     }
 
     private static async Task<Guid> CreatePartyAsync(
@@ -711,7 +728,10 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             partyIntegrationBridge,
             workbenchService,
-                    new ProjectWorkAssignmentTestCommands(partyIntegrationBridge));
+                    services.GetRequiredService<IProjectWorkAssignmentCommands>(),
+                    services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<WorkbenchDbContext>>(),
+                    services.GetRequiredService<ProjectStructureMutationScopeFactory>(),
+                    services.GetRequiredService<CanDoItAll.Infrastructure.Persistence.CoordinatedDatabaseTransaction>());
         var resourceService = new ProjectStructureTaskResourceService(
             assigneeService,
             services.GetRequiredService<IWorkflowCatalogService>(),
@@ -802,22 +822,23 @@ public sealed class ProjectStructureTaskCreationServiceTests
                 ResultShape: WorkflowValueShape.Text));
     }
 
-    private static ProjectStructureAgentContext CreateAgent(Guid projectId, string owner = "default")
-    {
+    private static ProjectStructureAgentContext CreateAgent(ProjectWriteAdmission admission, string owner = "default") {
         return new ProjectStructureAgentContext(
             $"component-tests-{owner}",
             "Component tests",
             Environment.MachineName,
             AppContext.BaseDirectory,
             string.Empty,
-            $"{projectId:D}-{owner}");
+            $"{admission.ProjectId:D}-{owner}") { ExpectedProjectAdmission = admission };
     }
 
     private sealed class CancelAfterAssignmentProjectPartyIntegrationBridge(
         IProjectPartyIntegrationBridge inner,
+        Guid expectedPartyId,
         CancellationTokenSource cancellationSource)
-        : IProjectPartyIntegrationBridge
-    {
+        : IProjectPartyIntegrationBridge {
+        public Guid? ObservedCommittedAssignmentId { get; private set; }
+
         public Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(
             IReadOnlyCollection<Guid> projectIds,
             CancellationToken cancellationToken = default)
@@ -846,12 +867,19 @@ public sealed class ProjectStructureTaskCreationServiceTests
             return inner.ListAssignmentsDetailedAsync(projectId, cancellationToken);
         }
 
-        public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+        public async Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
             Guid projectId,
             IReadOnlyCollection<ProjectPartyAssignmentRole> roles,
-            CancellationToken cancellationToken = default)
-        {
-            return inner.ListAssignmentsDetailedAsync(projectId, roles, cancellationToken);
+            CancellationToken cancellationToken = default) {
+            var assignments = await inner.ListAssignmentsDetailedAsync(projectId, roles, cancellationToken);
+            if (ObservedCommittedAssignmentId is null && assignments.Any(assignment =>
+                    assignment.PartyId == expectedPartyId && assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee)) {
+                ObservedCommittedAssignmentId = Assert.Single(assignments, assignment =>
+                    assignment.PartyId == expectedPartyId && assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee).Id;
+                cancellationSource.Cancel();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            return assignments;
         }
 
         public Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
@@ -868,47 +896,39 @@ public sealed class ProjectStructureTaskCreationServiceTests
             return inner.SaveAssignmentAsync(request, cancellationToken);
         }
 
-        public async Task<Result> ReplaceNodeAssignmentsAsync(
+        public Task<Result> ReplaceNodeAssignmentsAsync(
             Guid projectId,
             ProjectNodeReference nodeReference,
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
-            CancellationToken cancellationToken = default)
-        {
-            var result = await inner.ReplaceNodeAssignmentsAsync(
-                projectId,
-                nodeReference,
-                desiredAssignments,
-                targetRoles,
-                cancellationToken);
-            if (result.IsSuccess)
-            {
-                cancellationSource.Cancel();
-            }
-
-            return result;
-        }
+            CancellationToken cancellationToken = default,
+            ProjectWriteAdmission? expectedProjectAdmission = null)
+            => inner.ReplaceNodeAssignmentsAsync(projectId, nodeReference, desiredAssignments, targetRoles,
+                cancellationToken, expectedProjectAdmission);
 
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
         {
-            return inner.DeleteAssignmentAsync(assignmentId, cancellationToken);
+            return inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference);
         }
 
         public Task DeleteAssignmentsForNodesAsync(
             Guid projectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
         {
-            return inner.DeleteAssignmentsForNodesAsync(projectId, nodeReferences, cancellationToken);
+            return inner.DeleteAssignmentsForNodesAsync(projectId, nodeReferences, cancellationToken, expectedReference);
         }
 
         public Task DeleteAssignmentsForProjectAsync(
             Guid projectId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
         {
-            return inner.DeleteAssignmentsForProjectAsync(projectId, cancellationToken);
+            return inner.DeleteAssignmentsForProjectAsync(projectId, cancellationToken, expectedReference);
         }
 
         public Task MoveAssignmentsToProjectAsync(
@@ -916,14 +936,16 @@ public sealed class ProjectStructureTaskCreationServiceTests
             Guid sourceProjectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
             Guid targetProjectId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? sourceReference = null,
+        ProjectWriteAdmission? expectedTargetAdmission = null)
         {
             return inner.MoveAssignmentsToProjectAsync(
                 operationId,
                 sourceProjectId,
                 nodeReferences,
                 targetProjectId,
-                cancellationToken);
+                cancellationToken, sourceReference, expectedTargetAdmission);
         }
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(

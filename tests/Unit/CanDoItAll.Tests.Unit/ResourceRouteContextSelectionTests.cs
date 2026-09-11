@@ -43,17 +43,37 @@ public sealed class ResourceRouteContextSelectionTests
     {
         var resourceId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
-        var resource = CreateResource(resourceId, projectId);
+        var lifetimeId = Guid.NewGuid();
+        var resource = CreateResource(resourceId, projectId) with { ProjectLifetimeId = lifetimeId };
 
         var result = ResourceRouteContextSelection.Resolve(
             resourceId,
             projectId,
             [resource],
-            [CreateProject(projectId)]);
+            [CreateProject(projectId, lifetimeId)]);
 
         Assert.True(result.IsResolved);
         Assert.Equal(ResourceRouteContextSelectionStatus.Resolved, result.Status);
         Assert.Same(resource, result.Resource);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Retained_or_unbound_resource_does_not_resolve_as_the_recreated_projects_context(bool unbound) {
+        var projectId = Guid.NewGuid();
+        var resource = CreateResource(Guid.NewGuid(), projectId) with {
+            ProjectLifetimeId = unbound ? null : Guid.NewGuid()
+        };
+        var current = CreateProject(projectId);
+
+        var scoped = ResourceRouteContextSelection.Resolve(resource.Id, projectId, [resource], [current]);
+        var historical = ResourceRouteContextSelection.Resolve(resource.Id, null, [resource], [current]);
+
+        Assert.False(scoped.IsResolved);
+        Assert.Equal(ResourceRouteContextSelectionStatus.ResourceProjectMismatch, scoped.Status);
+        Assert.True(historical.IsResolved);
+        Assert.Same(resource, historical.Resource);
     }
 
     private static ResourceSummary CreateResource(Guid resourceId, Guid projectId)
@@ -69,14 +89,6 @@ public sealed class ResourceRouteContextSelectionTests
             ResourceValidationStatus.Valid,
             ResourceSensitivity.Normal);
 
-    private static ProjectSummary CreateProject(Guid projectId)
-        => new(
-            projectId,
-            "Project",
-            ProjectStatus.Active,
-            "Delivery",
-            1,
-            0,
-            0,
-            DateTimeOffset.UtcNow);
+    private static ProjectWriteSelection CreateProject(Guid projectId, Guid? lifetimeId = null)
+        => new(projectId, "Project", new(Guid.NewGuid(), projectId, lifetimeId ?? Guid.NewGuid()));
 }

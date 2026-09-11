@@ -18,7 +18,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.Persistence;
 
-public sealed class MigrationAuthorityIntegrationTests {
+public sealed partial class MigrationAuthorityIntegrationTests {
+    private const string StartingMigration = "20260830104752_AddProviderHistoryExternalReference";
     private const string ApplicationName = "CanDoItAll.Tests.Integration";
     private const string LegacyGrantIndex = "IX_Plugins_CapabilityGrants_PluginId_Capability_RecipeId_ScopeK";
     private static readonly DateTimeOffset SavedAt = new(2026, 9, 10, 12, 0, 0, TimeSpan.Zero);
@@ -109,7 +110,7 @@ public sealed class MigrationAuthorityIntegrationTests {
         Assert.Equal(2, observedFactory.Profiles.Count);
         Assert.All(observedFactory.Profiles, observed => Assert.Same(canonical, observed));
         Assert.True(observer.CommandCount > 0);
-        Assert.Equal(2, observer.CrmLookupReads);
+        Assert.Equal(0, observer.CrmLookupReads);
         Assert.Empty(observer.OwnerDdl);
         await using var finalContext = await contextFactory.CreateDbContextAsync();
         Assert.Equal(firstReadback, JsonSerializer.Serialize(await finalContext.Set<CrmHrLookupOption>()
@@ -118,20 +119,28 @@ public sealed class MigrationAuthorityIntegrationTests {
     }
 
     [Fact]
-    public async Task Populated_baseline_upgrades_and_restarts_without_rewriting_records_or_legacy_schema_extras() {
+    public async Task Populated_task_start_schema_upgrades_and_restarts_without_rewriting_records_or_legacy_schema_extras() {
         await using var environment = CanDoItAllTestEnvironment.Create("migration-authority-upgrade");
         var profile = environment.CreatePostgreSqlProfile("upgrade");
         var services = new ServiceCollection();
         TestApplicationBootstrap.ConfigureDefaultServices(services, TestApplicationBootstrap.BuildConfiguration(profile),
             new TestHostEnvironment(profile.EnvironmentRootPath, ApplicationName));
         FixtureIds ids;
+        RetainedGraph graph;
+        string[] savedGraphRows;
         string[] savedRecords;
         SchemaSnapshot legacySchema;
         await using (var original = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true })) {
             await using var context = await original.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-            await context.Database.GetService<IMigrator>().MigrateAsync(PostgreSqlMigrationBaseline.CurrentMigrationId);
-            Assert.Equal([PostgreSqlMigrationBaseline.CurrentMigrationId], await context.Database.GetAppliedMigrationsAsync());
-            ids = await SeedRecordsAsync(context);
+            await context.Database.GetService<IMigrator>().MigrateAsync(StartingMigration);
+            var applied = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
+            Assert.Equal(StartingMigration, applied[^1]);
+            Assert.Equal(context.Database.GetMigrations().Take(applied.Length), applied);
+            await using var seedScope = original.CreateAsyncScope();
+            graph = await SeedRetainedGraphAsync(seedScope.ServiceProvider, context, profile);
+            ids = await SeedRecordsAsync(context, graph);
+            savedGraphRows = await ReadRetainedGraphRowsAsync(context, graph);
+            Assert.Equal(13, savedGraphRows.Length);
             await context.Database.ExecuteSqlRawAsync("""
                 CREATE UNIQUE INDEX "IX_Plugins_CapabilityGrants_PluginId_Capability_RecipeId_ScopeK"
                     ON "Plugins_CapabilityGrants" ("PluginId", "Capability", "RecipeId", "ScopeKind", "ScopeKey");
@@ -145,13 +154,16 @@ public sealed class MigrationAuthorityIntegrationTests {
             Assert.Equal("0", Assert.Single(legacySchema.Columns, column => column.Table == "SchedulerPlanner_Runs" && column.Name == "RetryCategory").DefaultSql);
         }
 
+        Guid? projectLifetime = null;
         for (var restart = 0; restart < 2; restart++) {
             await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
                 profile, ApplicationName, TestSchemaBootstrapModules.Full);
             await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
             await AssertCurrentMigrationsAsync(context);
             Assert.Equal(savedRecords, await ReadRecordsAsync(context, ids));
-            AssertSchemaEqual(legacySchema, await ReadSchemaAsync(context));
+            AssertRetainedSchema(legacySchema, await ReadSchemaAsync(context));
+            Assert.Equal(savedGraphRows, await ReadRetainedGraphRowsAsync(context, graph));
+            projectLifetime = await AssertRetainedGraphAsync(provider, profile, graph, projectLifetime);
         }
     }
 
@@ -268,14 +280,24 @@ public sealed class MigrationAuthorityIntegrationTests {
         Assert.Equal(expected.ForeignKeys, actual.ForeignKeys);
     }
 
+    private static void AssertRetainedSchema(SchemaSnapshot legacy, SchemaSnapshot current) {
+        var addition = Assert.Single(current.Columns.Where(column => !legacy.Columns.Contains(column)));
+        Assert.Equal(new ColumnDefinition("SchedulerPlanner_Plans", "StructureAuthorityJson", "text", true, null, string.Empty, string.Empty), addition);
+        Assert.Equal(legacy.Columns, current.Columns.Where(column => column != addition));
+        Assert.Equal(legacy.Indexes, current.Indexes);
+        Assert.Equal(legacy.ForeignKeys, current.ForeignKeys);
+    }
+
     private static async Task AssertCurrentMigrationsAsync(AppDbContext context) {
         var known = context.Database.GetMigrations().ToArray();
         Assert.NotEmpty(known);
         Assert.Equal(PostgreSqlMigrationBaseline.CurrentMigrationId, known[0]);
         Assert.Equal(known, await context.Database.GetAppliedMigrationsAsync());
+        Assert.False(context.Database.HasPendingModelChanges());
+        Assert.Equal(161, context.Model.GetEntityTypes().Count());
     }
 
-    private static async Task<FixtureIds> SeedRecordsAsync(AppDbContext context) {
+    private static async Task<FixtureIds> SeedRecordsAsync(AppDbContext context, RetainedGraph graph) {
         const string pluginId = "fixture.migration-authority";
         var installation = new PluginInstallationRecord {
             PluginId = pluginId, PackageId = "fixture.package", DisplayNameSnapshot = "Stored installation", Version = "1.2.3",
@@ -312,7 +334,7 @@ public sealed class MigrationAuthorityIntegrationTests {
         };
         var plan = new SchedulerPlan {
             Name = "Stored plan", Description = "Preserve migration fixture", TargetKind = SchedulerPlanTargetKind.Workflow,
-            TargetId = Guid.NewGuid(), TargetVersionId = Guid.NewGuid(), TargetNameSnapshot = "Fixture workflow",
+            TargetId = graph.WorkflowId, TargetVersionId = graph.WorkflowVersionId, TargetNameSnapshot = "Fixture workflow",
             CronExpression = "0 0 12 * * ?", CronDescription = "Daily fixture", TimeZoneId = "UTC", MisfirePolicy = SchedulerPlanMisfirePolicy.DoNothing,
             IsEnabled = false, StartAtUtc = SavedAt, EndAtUtc = SavedAt.AddDays(2), InputJson = "{\"fixture\":true}",
             SchedulerTriggerId = Guid.NewGuid(), SchedulerTriggerKey = "fixture-trigger", NextPlannedFireAtUtc = SavedAt.AddDays(1),
@@ -320,12 +342,21 @@ public sealed class MigrationAuthorityIntegrationTests {
         };
         var run = new SchedulerPlanRun {
             PlanId = plan.Id, DedupeKey = "fixture-run-dedupe", SchedulerFireId = Guid.NewGuid(), CorrelationId = Guid.NewGuid(), FiredAtUtc = SavedAt,
-            Status = SchedulerPlanRunDispatchStatus.WaitingForApproval, AttemptCount = 2, TargetRunId = Guid.NewGuid(), TargetRunKind = "Workflow",
+            Status = SchedulerPlanRunDispatchStatus.WaitingForApproval, AttemptCount = 2, TargetRunId = graph.WorkflowRunId, TargetRunKind = "Workflow",
             Summary = "Stored summary", ErrorMessage = "Stored dispatch message", Route = SchedulerPlanRunRoutes.WaitingForApproval,
             RetryCategory = SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval, DispatchedAtUtc = SavedAt.AddSeconds(1),
             CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt.AddSeconds(1)
         };
-        context.AddRange(installation, grant, connection, oauthConnection, oauthSession, log, plan, run);
+        await context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "SchedulerPlanner_Plans" ("Id", "Name", "Description", "TargetKind", "TargetId", "TargetVersionId",
+                "TargetNameSnapshot", "CronExpression", "CronDescription", "TimeZoneId", "MisfirePolicy", "IsEnabled", "StartAtUtc", "EndAtUtc",
+                "InputJson", "AutomationTriggerId", "AutomationTriggerKey", "NextPlannedFireAtUtc", "LastFiredAtUtc", "LastError", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({plan.Id}, {plan.Name}, {plan.Description}, {(int)plan.TargetKind}, {plan.TargetId}, {plan.TargetVersionId},
+                {plan.TargetNameSnapshot}, {plan.CronExpression}, {plan.CronDescription}, {plan.TimeZoneId}, {(int)plan.MisfirePolicy},
+                {plan.IsEnabled}, {plan.StartAtUtc}, {plan.EndAtUtc}, {plan.InputJson}, {plan.SchedulerTriggerId}, {plan.SchedulerTriggerKey},
+                {plan.NextPlannedFireAtUtc}, {plan.LastFiredAtUtc}, {plan.LastError}, {plan.CreatedAtUtc}, {plan.UpdatedAtUtc});
+            """);
+        context.AddRange(installation, grant, connection, oauthConnection, oauthSession, log, run);
         await context.SaveChangesAsync();
         return new(installation.Id, grant.Id, connection.Id, oauthConnection.Id, oauthSession.Id, log.Id, plan.Id, run.Id);
     }
@@ -337,7 +368,10 @@ public sealed class MigrationAuthorityIntegrationTests {
         JsonSerializer.Serialize(await context.Set<PluginOAuthConnectionRecord>().AsNoTracking().SingleAsync(row => row.Id == ids.OAuthConnection)),
         JsonSerializer.Serialize(await context.Set<PluginOAuthSessionRecord>().AsNoTracking().SingleAsync(row => row.Id == ids.OAuthSession)),
         JsonSerializer.Serialize(await context.Set<PluginLogRecord>().AsNoTracking().SingleAsync(row => row.Id == ids.Log)),
-        JsonSerializer.Serialize(await context.Set<SchedulerPlan>().AsNoTracking().SingleAsync(row => row.Id == ids.Plan)),
+        await context.Database.SqlQuery<string>($"""
+            SELECT (to_jsonb(row) - 'StructureAuthorityJson')::text AS "Value"
+            FROM "SchedulerPlanner_Plans" row WHERE "Id" = {ids.Plan}
+            """).SingleAsync(),
         JsonSerializer.Serialize(await context.Set<SchedulerPlanRun>().AsNoTracking().SingleAsync(row => row.Id == ids.Run))
     ];
 

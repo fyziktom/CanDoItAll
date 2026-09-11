@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
@@ -87,11 +88,13 @@ public sealed class ProviderDatabaseTransferTests
             typeof(WorkspaceModuleAssemblyMarker).Assembly,
             typeof(SecretService).Assembly
         ]);
+        var sourceName = $"workspace-provider-preference-source-{Guid.NewGuid():N}";
+        var targetName = $"workspace-provider-preference-target-{Guid.NewGuid():N}";
         var sourceOptions = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"workspace-provider-preference-source-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(sourceName)
             .Options;
         var targetOptions = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"workspace-provider-preference-target-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(targetName)
             .Options;
         await using var source = new AppDbContext(sourceOptions);
         await using var target = new AppDbContext(targetOptions);
@@ -104,13 +107,12 @@ public sealed class ProviderDatabaseTransferTests
         });
         await source.SaveChangesAsync();
 
-        var context = new DatabaseTransferContext(
-            CreateProfile("source"),
-            CreateProfile("target"),
-            source,
-            target,
+        var context = new DatabaseTransferOperation(
+            CreateInMemoryProfile(sourceName),
+            CreateInMemoryProfile(targetName),
             ReplaceExisting: true);
-        var handler = new WorkspaceDefaultProviderDatabaseTransferHandler();
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        var handler = new WorkspaceDefaultProviderDatabaseTransferHandler(DatabaseTransferTestSupport.For(context, source, target, sessions), sessions);
         var preview = await handler.PreviewAsync(context);
         var result = await handler.TransferAsync(context);
 
@@ -134,11 +136,13 @@ public sealed class ProviderDatabaseTransferTests
             typeof(WorkspaceModuleAssemblyMarker).Assembly,
             typeof(SecretService).Assembly
         ]);
+        var sourceName = $"provider-transfer-source-{Guid.NewGuid():N}";
+        var targetName = $"provider-transfer-target-{Guid.NewGuid():N}";
         var sourceOptions = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"provider-transfer-source-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(sourceName)
             .Options;
         var targetOptions = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"provider-transfer-target-{Guid.NewGuid():N}")
+            .UseInMemoryDatabase(targetName)
             .Options;
         await using var source = new AppDbContext(sourceOptions);
         await using var target = new AppDbContext(targetOptions);
@@ -179,13 +183,12 @@ public sealed class ProviderDatabaseTransferTests
         await source.SaveChangesAsync();
         await target.SaveChangesAsync();
 
-        var context = new DatabaseTransferContext(
-            CreateProfile("source"),
-            CreateProfile("target"),
-            source,
-            target,
+        var context = new DatabaseTransferOperation(
+            CreateInMemoryProfile(sourceName),
+            CreateInMemoryProfile(targetName),
             ReplaceExisting: true);
-        var result = await new AiProvidersDatabaseTransferHandler()
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        var result = await new AiProvidersDatabaseTransferHandler(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.For(context, source, target, sessions))
             .TransferAsync(context);
 
         Assert.True(result.Success);
@@ -200,14 +203,28 @@ public sealed class ProviderDatabaseTransferTests
                 .SingleAsync());
     }
 
-    private static ResolvedDatabaseProfile CreateProfile(string name)
-    {
-        return new ResolvedDatabaseProfile(
-            new DatabaseProfileRecord
-            {
-                DisplayName = name
-            },
-            DatabaseProfileResolutionSource.ExplicitOverride,
-            $"test-{name}");
+    [Fact]
+    public async Task Provider_transfer_rejects_different_logical_profiles_for_the_same_InMemory_store() {
+        AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProviderManagementModuleAssemblyMarker).Assembly, typeof(SecretService).Assembly]);
+        var name = $"provider-transfer-alias-{Guid.NewGuid():N}";
+        var options = AppDbContextTestOptionsBuilder.Create().UseInMemoryDatabase(name).Options;
+        await using var source = new AppDbContext(options);
+        await using var target = new AppDbContext(options);
+        var provider = new ProviderProfile { Name = "Keep original provider", ConnectorPluginKey = ProviderConnectorKeys.OpenAi, ConfigSchemaVersion = "1.0" };
+        source.Add(provider);
+        await source.SaveChangesAsync();
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        var transfer = new DatabaseTransferOperation(CreateInMemoryProfile(name), CreateInMemoryProfile(name), true);
+        var handler = new AiProvidersDatabaseTransferHandler(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.For(transfer, source, target, sessions));
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(transfer));
+
+        Assert.Contains("same InMemory store", failure.Message);
+        Assert.Equal(provider.Id, (await target.Set<ProviderProfile>().SingleAsync()).Id);
     }
+
+    private static ResolvedDatabaseProfile CreateInMemoryProfile(string name) => new(
+        new DatabaseProfileRecord { DisplayName = name, ProviderKind = DatabaseProviderKind.InMemory },
+        DatabaseProfileResolutionSource.ExplicitOverride, name);
+
 }

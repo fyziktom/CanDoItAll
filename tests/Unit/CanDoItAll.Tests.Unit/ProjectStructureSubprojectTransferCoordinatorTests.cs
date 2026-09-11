@@ -57,7 +57,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
         Assert.Equal(targetProjectId, exception.RemovedProjectId);
         var failure = Assert.IsType<ProjectStructureTransferRejectedException>(exception.TransferFailure);
         Assert.Equal(ProjectStructureTransferRejectionReason.DescendantsUnavailable, failure.Reason);
-        Assert.Equal(["create", "move-descendants", "read-target", "delete", "exists"], harness.Events);
+        Assert.Equal(["create", "move-descendants", "compensate"], harness.Events);
         Assert.False(harness.TargetExists);
     }
 
@@ -92,7 +92,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
         Assert.Equal(sourceProjectId, rejection.SourceProjectId);
         Assert.Equal(targetProjectId, rejection.TargetProjectId);
         Assert.Equal(actualTargetProjectId, rejection.ActualTargetProjectId);
-        Assert.Equal(["create", "move-nodes", "read-target", "delete", "exists"], harness.Events);
+        Assert.Equal(["create", "move-nodes", "compensate"], harness.Events);
         Assert.False(harness.TargetExists);
     }
 
@@ -142,18 +142,56 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
         };
         var coordinator = new ProjectStructureSubprojectTransferCoordinator(harness.CreateOperations());
 
-        var exception = await Assert.ThrowsAsync<AggregateException>(() =>
+        var warning = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             coordinator.MoveDescendantsToNewSubprojectAsync(
                 sourceProjectId,
                 targetProjectId,
                 CreateEditor(),
                 "anchor"));
 
+        Assert.True(Assert.IsType<ProjectCreationPartialCompletion>(warning.Details).CreationObserved);
+        var exception = Assert.IsType<AggregateException>(warning.InnerException);
         var transferFailure = Assert.IsType<ProjectStructureTransferRejectedException>(exception.InnerExceptions[0]);
         Assert.Equal(ProjectStructureTransferRejectionReason.DescendantsUnavailable, transferFailure.Reason);
         Assert.Same(cleanupFailure, exception.InnerExceptions[1]);
-        Assert.Equal(["create", "move-descendants", "read-target", "delete"], harness.Events);
+        Assert.Equal(["create", "move-descendants", "compensate"], harness.Events);
         Assert.True(harness.TargetExists);
+    }
+
+    [Fact]
+    public async Task Lost_creation_acknowledgement_retains_target_and_never_requests_compensation_without_the_owner_receipt() {
+        var sourceId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var failure = new ArgumentException("Creation reply was lost after the owner committed.");
+        var harness = new OperationHarness(sourceId, targetId) { CreationFailure = failure };
+        var coordinator = new ProjectStructureSubprojectTransferCoordinator(harness.CreateOperations());
+        var observed = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => coordinator.MoveNodesToNewSubprojectAsync(
+            sourceId, targetId, CreateEditor(), ["node-a"], false));
+        Assert.Same(failure, observed.InnerException);
+        Assert.False(Assert.IsType<ProjectCreationPartialCompletion>(observed.Details).CreationObserved);
+        Assert.Contains("may already exist", observed.Message, StringComparison.Ordinal);
+        Assert.Equal(["create"], harness.Events);
+        Assert.True(harness.TargetExists);
+    }
+
+    [Fact]
+    public async Task Refused_creation_compensation_preserves_original_failure_and_later_native_content() {
+        var sourceId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var failure = new ArgumentException("Transfer failed before its native commit.");
+        var harness = new OperationHarness(sourceId, targetId) {
+            MoveNodesFailure = failure, TargetSurface = CreateSurface(targetId, CreateEditableNode())
+        };
+        var coordinator = new ProjectStructureSubprojectTransferCoordinator(harness.CreateOperations());
+        var observed = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => coordinator.MoveNodesToNewSubprojectAsync(
+            sourceId, targetId, CreateEditor(), ["node-a"], false));
+        Assert.Same(failure, observed.InnerException);
+        var retained = Assert.IsType<ProjectCreationPartialCompletion>(observed.Details);
+        Assert.True(retained.CreationObserved);
+        Assert.False(retained.RequestedOperationCompleted);
+        Assert.Equal(["create", "move-nodes", "compensate"], harness.Events);
+        Assert.True(harness.TargetExists);
+        Assert.Single(harness.TargetSurface.Nodes);
     }
 
     private static ProjectEditorModel CreateEditor()
@@ -238,6 +276,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
 
         public ProjectStructureSubprojectTransferResult MoveNodesTransfer { get; set; }
 
+        public Exception? CreationFailure { get; set; }
+
         public Exception? MoveNodesFailure { get; set; }
 
         public Exception? DeleteFailure { get; set; }
@@ -256,16 +296,16 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
                 CreateSubprojectAsync,
                 MoveDescendantsAsync,
                 MoveNodesAsync,
-                GetStructureAsync,
-                DeleteProjectAsync,
-                ProjectExistsAsync);
+                TryCompensateAsync);
         }
 
-        private Task<Result<Guid>> CreateSubprojectAsync(
+        private Task<Result<ProjectCreationReceipt>> CreateSubprojectAsync(
             Guid receivedSourceProjectId,
             Guid receivedTargetProjectId,
+            ProjectCreationReservation? reservation,
             ProjectEditorModel editor,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            ProjectMutationAuthorization? authorization)
         {
             Assert.Equal(sourceProjectId, receivedSourceProjectId);
             Assert.Equal(targetProjectId, receivedTargetProjectId);
@@ -273,14 +313,18 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
             Assert.False(cancellationToken.IsCancellationRequested);
             Events.Add("create");
             TargetExists = true;
-            return Task.FromResult(Result<Guid>.Success(targetProjectId));
+            var receipt = new ProjectCreationReceipt(new(Guid.NewGuid(), targetProjectId, Guid.NewGuid()), null, "test-owner-receipt");
+            CreatedReceipt = receipt;
+            return CreationFailure is null ? Task.FromResult(Result<ProjectCreationReceipt>.Success(receipt)) :
+                Task.FromException<Result<ProjectCreationReceipt>>(CreationFailure);
         }
 
         private Task<ProjectStructureSubprojectTransferResult?> MoveDescendantsAsync(
             Guid receivedSourceProjectId,
             string sourceNodeId,
             Guid receivedTargetProjectId,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            ProjectStructureAgentContext? owner)
         {
             Assert.Equal(sourceProjectId, receivedSourceProjectId);
             Assert.Equal(targetProjectId, receivedTargetProjectId);
@@ -295,7 +339,8 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
             IReadOnlyCollection<string> sourceNodeIds,
             Guid receivedTargetProjectId,
             bool includeDescendants,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            ProjectStructureAgentContext? owner)
         {
             Assert.Equal(sourceProjectId, receivedSourceProjectId);
             Assert.Equal(targetProjectId, receivedTargetProjectId);
@@ -308,36 +353,21 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
                 : Task.FromException<ProjectStructureSubprojectTransferResult?>(MoveNodesFailure);
         }
 
-        private Task<ProjectStructureSurface> GetStructureAsync(
-            Guid receivedTargetProjectId,
-            CancellationToken cancellationToken)
-        {
-            Assert.Equal(targetProjectId, receivedTargetProjectId);
-            Assert.False(cancellationToken.IsCancellationRequested);
-            Events.Add("read-target");
-            return Task.FromResult(TargetSurface);
-        }
+        private ProjectCreationReceipt? CreatedReceipt { get; set; }
 
-        private Task DeleteProjectAsync(Guid receivedTargetProjectId, CancellationToken cancellationToken)
-        {
-            Assert.Equal(targetProjectId, receivedTargetProjectId);
+        private Task<bool> TryCompensateAsync(ProjectCreationReceipt receipt, CancellationToken cancellationToken) {
+            Assert.Same(CreatedReceipt, receipt);
+            Assert.Equal(targetProjectId, receipt.Project.ProjectId);
             Assert.False(cancellationToken.IsCancellationRequested);
-            Events.Add("delete");
-            if (DeleteFailure is not null)
-            {
-                return Task.FromException(DeleteFailure);
+            Events.Add("compensate");
+            if (TargetSurface.Nodes.Any(node => !node.IsSystemManaged && node.ObjectType != ProjectObjectType.ProjectRoot)) {
+                return Task.FromResult(false);
             }
-
+            if (DeleteFailure is not null) {
+                return Task.FromException<bool>(DeleteFailure);
+            }
             TargetExists = false;
-            return Task.CompletedTask;
-        }
-
-        private Task<bool> ProjectExistsAsync(Guid receivedTargetProjectId, CancellationToken cancellationToken)
-        {
-            Assert.Equal(targetProjectId, receivedTargetProjectId);
-            Assert.False(cancellationToken.IsCancellationRequested);
-            Events.Add("exists");
-            return Task.FromResult(TargetExists);
+            return Task.FromResult(true);
         }
     }
 }

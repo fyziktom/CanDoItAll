@@ -73,13 +73,14 @@ internal sealed class WorkflowAwareProcessRuntimeUsageTelemetryReader(
 
         foreach (var observation in workflowPage.Items)
         {
-            if (observation.Origin is not WorkflowLaunchOrigin.ProcessAssignment processOrigin)
-            {
-                throw new InvalidOperationException(
-                    $"Workflow usage observation '{observation.Id}' was returned for a process-origin query without typed process-assignment origin.");
-            }
-
-            AddOrValidate(merged, Map(observation, processOrigin));
+            var (runId, stepId) = observation.Origin switch {
+                WorkflowLaunchOrigin.ProcessAssignment process => (process.ProcessRun.Value, process.Assignment.Value),
+                WorkflowLaunchOrigin.ProcessToolInvocation tool => (tool.Invocation.ProcessRun.Value, tool.Invocation.StepInstance.Value),
+                WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => (mapped.Dispatch.ProcessRun.Value, mapped.Dispatch.Assignment.Value),
+                _ => throw new InvalidOperationException(
+                    $"Workflow usage observation '{observation.Id}' was returned for a process-origin query without typed Process lineage.")
+            };
+            AddOrValidate(merged, Map(observation, runId, stepId));
         }
 
         var observationsByRun = merged.Values
@@ -102,7 +103,7 @@ internal sealed class WorkflowAwareProcessRuntimeUsageTelemetryReader(
 
     private static ProcessRuntimeUsageObservation Map(
         WorkflowUsageObservation observation,
-        WorkflowLaunchOrigin.ProcessAssignment processOrigin)
+        Guid processRunId, Guid processStepId)
     {
         WorkflowUsageObservationValidator.ThrowIfInvalid(observation);
         var executionRunId = observation.RunId?.Value ?? throw new InvalidOperationException(
@@ -115,8 +116,8 @@ internal sealed class WorkflowAwareProcessRuntimeUsageTelemetryReader(
         return new ProcessRuntimeUsageObservation(
             observation.Id.Value,
             executionRunId,
-            new ProcessRunId(processOrigin.ProcessRun.Value),
-            new ProcessStepInstanceId(processOrigin.Assignment.Value),
+            new ProcessRunId(processRunId),
+            new ProcessStepInstanceId(processStepId),
             observation.RecordedAtUtc,
             observation.ProviderName,
             observation.Model,

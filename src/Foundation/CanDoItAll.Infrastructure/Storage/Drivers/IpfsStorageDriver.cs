@@ -20,7 +20,7 @@ public sealed partial class IpfsStorageDriver(
         StorageCapability.ConnectionTest;
 
     public async Task<StorageConnectionTestResult> TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
@@ -52,7 +52,7 @@ public sealed partial class IpfsStorageDriver(
     }
 
     public async Task<StorageWriteResult> SaveAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageWriteRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -72,7 +72,7 @@ public sealed partial class IpfsStorageDriver(
                 request.Content,
                 cancellationToken);
 
-            StorageProviderConfiguration configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+            StorageProviderConfiguration configuration = storage.ReadConfiguration();
             if (configuration.PinOnUpload)
             {
                 await transport.PinAsync(storage, secretValue, add.ContentId, cancellationToken);
@@ -114,7 +114,7 @@ public sealed partial class IpfsStorageDriver(
     }
 
     public async Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
     {
@@ -144,14 +144,14 @@ public sealed partial class IpfsStorageDriver(
     }
 
     public Task DeleteAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("IPFS delete is not supported by this storage driver.");
 
-    internal static string ResolveDirectUrl(StorageCatalogRecord storage, string contentId)
+    internal static string ResolveDirectUrl(StorageDriverInput storage, string contentId)
     {
-        StorageProviderConfiguration configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+        StorageProviderConfiguration configuration = storage.ReadConfiguration();
         string gatewayBaseUrl = !string.IsNullOrWhiteSpace(configuration.GatewayBaseUrl)
             ? configuration.GatewayBaseUrl
             : DeriveGatewayBaseUrl(storage.EndpointOrRoot);
@@ -180,7 +180,7 @@ public sealed partial class IpfsStorageDriver(
     }
 
     private InvalidOperationException CreateFailure(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string operation,
         Exception exception)
     {

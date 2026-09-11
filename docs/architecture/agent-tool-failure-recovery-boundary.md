@@ -77,6 +77,41 @@ SDK string-enum and canonical numeric results read compatibly; canonical proposa
 fingerprints retain their original representation. New private journal evidence requires
 an aware reader and is not covered by SQL downgrade alone.
 
+Saved source revalidation retains the original source reference and governance. The
+canonical resolver distinguishes that saved authority from a new UI scope claim, derives
+current grants from the owning source, and rejects actor, profile, generation or scope
+changes. An Agents source can revalidate its originally resolved Sandbox without
+publishing Sandbox as a new UI claim. This does not refresh or widen the original grant.
+
+Registered workspace list and search tools capture their typed owner's exact physical
+selection before SDK JSON marshalling. The private result evidence retains the original
+root and selected children; current containment, existence and reparse checks precede
+restoration. Public display paths never locate a physical child. List shorthand such as
+`sources/**` uses the same Core parser as the file owner while retaining the original SDK
+arguments and approval digest. Human content edits do not cause a directory relist or
+repeat the read; loss of the original target denies disclosure.
+
+Collection evidence uses version2. A new reader refuses an old collection result that
+lacks exact child evidence; it preserves the saved result for explicit resolution and
+does not rerun the tool. Older readers reject version2. Noncollection result evidence
+retains its original version1 bytes and semantics. This private result-evidence version
+is separate from the attachment journal schema below and has no SQL migration.
+
+## Captured context across restart
+
+Recoverable interactive runs persist supported context attachments through explicit owner
+codecs. Workbench owns Structure snapshots and Gantt observations; Core owns captured
+external-read bindings. The saved envelope retains the original source, scope, publication,
+fingerprints, profile generation, capture time and expiry. Restoration validates the owner
+payload and original runtime digest. It does not recapture current UI selection, refresh an
+expired snapshot, grant a new external root, or replace current receiving-owner authority.
+
+Typed attachments use journal schema 4. Attachment-free versions 1–3 retain their original
+encoding; old readers reject schema 4. Unknown new attachment kinds and unsaved byte/image
+inputs remain request-scoped. Unsupported or corrupt saved attachments fail explicitly.
+The complete serialized journal size bound also covers these payloads. No SQL migration
+is needed, but rollback to an older binary cannot resume schema-4 runs.
+
 ## Incident evidence
 
 Execution run `e3a22e82-d3db-48af-abb7-22c35083d3f3` had the spreadsheet skill,

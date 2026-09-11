@@ -9,7 +9,7 @@ public sealed class StorageFileBrowserProvider :
     IFileToolsBrowseSourceActionCapabilities
 {
     private const string PartialWarningCode = "storage-page-partial";
-    private readonly StorageCatalogRecord _storage;
+    private readonly StorageDriverInput _storage;
     private readonly IStorageBrowseDriver _driver;
     private readonly FileToolsBrowseWorkLimits _limits;
     private readonly FileToolsStorageRoot _root;
@@ -20,7 +20,7 @@ public sealed class StorageFileBrowserProvider :
     public StorageFileBrowserProvider(
         FileToolsSemanticScope scope,
         FileToolsStorageBinding binding,
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         IStorageBrowseDriver driver)
         : this(scope, binding, storage, driver, driver, default)
     {
@@ -29,7 +29,7 @@ public sealed class StorageFileBrowserProvider :
     internal StorageFileBrowserProvider(
         FileToolsSemanticScope scope,
         FileToolsStorageBinding binding,
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         IStorageBrowseDriver listingDriver,
         IStorageBrowseDriver authorityDriver,
         FileToolsBrowseSourceActionAvailability actionAvailability = default)

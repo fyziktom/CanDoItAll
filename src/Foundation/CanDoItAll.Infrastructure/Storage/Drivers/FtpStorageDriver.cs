@@ -20,7 +20,7 @@ public sealed partial class FtpStorageDriver(
         StorageCapability.ConnectionTest;
 
     public async Task<StorageConnectionTestResult> TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
@@ -51,7 +51,7 @@ public sealed partial class FtpStorageDriver(
     }
 
     public async Task<StorageWriteResult> SaveAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageWriteRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -98,7 +98,7 @@ public sealed partial class FtpStorageDriver(
     }
 
     public async Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
     {
@@ -126,7 +126,7 @@ public sealed partial class FtpStorageDriver(
     }
 
     public async Task DeleteAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
     {
@@ -160,7 +160,7 @@ public sealed partial class FtpStorageDriver(
     }
 
     private InvalidOperationException CreateFailure(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string operation,
         Exception exception)
     {

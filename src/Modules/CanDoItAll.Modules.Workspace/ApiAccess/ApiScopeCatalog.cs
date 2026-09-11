@@ -16,6 +16,9 @@ public static class ApiScopeCatalog {
         new(ApiAccessScopeNames.RespondWorkflows, "Respond to workflows", "Submit human responses to workflow requests."),
         new(ApiAccessScopeNames.ReadSharedProviderCatalog, "Discover shared providers", "Read the shared provider catalog."),
         new(ApiAccessScopeNames.InvokeSharedProviders, "Use shared providers", "Invoke published providers for chat and images."),
+        new(ApiAccessScopeNames.ReadStoragePlacementRecovery, "Read Storage recovery", "Read safe placement status with current project read permission; does not expose content or storage addresses."),
+        new(ApiAccessScopeNames.ReconcileStoragePlacement, "Reconcile Storage placements", "Verify the original prepared target with current project write permission; never starts another upload or native effect."),
+        new(ApiAccessScopeNames.VerifyStorageExternalTermination, "Verify external dispatch termination", "Attest that an unresolved FTP dispatch has stopped before exact readback; grant only to responsible operators."),
         new(ApiAccessScopeNames.ReadProviderHistory, "Read provider history", "Search request metadata in this database; does not grant content access."),
         new(ApiAccessScopeNames.ReadProviderHistoryContent, "Read provider history content", "Read retained request content with metadata and canonical-owner permission."),
         new(ApiAccessScopeNames.ManageProviderHistory, "Manage provider history", "Read and apply this database's history retention and capture policy.")

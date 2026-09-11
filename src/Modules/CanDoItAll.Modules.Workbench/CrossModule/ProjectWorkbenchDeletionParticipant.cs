@@ -14,7 +14,8 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
     IClock clock,
     IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     DbContextOptions<WorkbenchDbContext> contextOptions,
-    CoordinatedDatabaseTransaction coordinatedTransaction) : IProjectDeletionParticipant
+    CoordinatedDatabaseTransaction coordinatedTransaction,
+    ProjectWriteAdmissionService admissions) : IProjectDeletionParticipant
 {
     private const string ProjectDeletionScopeNodeKey = "project";
     private const int CompletionLockStripeCount = 64;
@@ -45,11 +46,33 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
         Guid projectId,
         CancellationToken cancellationToken = default)
     {
+        var active = await admissions.CaptureForMutationAsync(projectId, cancellationToken);
+        if (active is not null) {
+            await admissions.RequireForMutationAsync(active, cancellationToken);
+        }
         var sourceProjectMutations = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .Where(record => record.ProjectId == projectId)
             .ToListAsync(cancellationToken);
-        var projectMutations = sourceProjectMutations
-            .Where(record => record.MutationKind == ProjectCrossModuleMutationKind.DeleteProject)
+        var projectObjects = await LoadProjectObjectsAsync(dbContext, projectId, cancellationToken);
+        var allProjectMutations = sourceProjectMutations
+            .Where(record => record.MutationKind == ProjectCrossModuleMutationKind.DeleteProject).ToArray();
+        var reference = active is not null ? ProjectAssignmentReference.From(active)
+            : allProjectMutations.Where(record => record.Status != ProjectCrossModuleMutationStatus.Completed)
+                .OrderByDescending(record => record.CreatedAtUtc)
+                .Select(record => DeserializeProjectPayload(record.PayloadJson).SourceReference)
+                .FirstOrDefault(candidate => candidate?.LifetimeId is not null);
+        if (reference is null) {
+            if (projectObjects.Count > 0 || allProjectMutations.Any(record => record.Status != ProjectCrossModuleMutationStatus.Completed)) {
+                throw new InvalidOperationException("Project deletion has unbound retained state and requires reconciliation by its original mutation identity.");
+            }
+            return null;
+        }
+        reference.RequireProfile(admissions.DatabaseProfileId, projectId);
+        if (active is null && projectObjects.Count > 0) {
+            throw new InvalidOperationException("Orphan native rows cannot be attributed to a retired project lifetime during cleanup replay.");
+        }
+        var projectMutations = allProjectMutations
+            .Where(record => DeserializeProjectPayload(record.PayloadJson).SourceReference == reference)
             .ToList();
         var existingMutation = projectMutations
             .Where(record => record.Status != ProjectCrossModuleMutationStatus.Completed)
@@ -73,10 +96,6 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
             .Order()
             .ToArray();
 
-        var projectObjects = await LoadProjectObjectsAsync(
-            dbContext,
-            projectId,
-            cancellationToken);
         var objectIds = projectObjects.Select(record => record.Id).ToArray();
         var storagePlan = await storageDeletionPlanner.PlanAsync(
             dbContext,
@@ -151,7 +170,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
                 managedStorageObjects,
                 managedStorageOutcomes,
                 outstandingMutationIds,
-                managedStorageCandidates),
+                managedStorageCandidates, reference),
             JsonOptions);
 
         var durableMutation = existingMutation;

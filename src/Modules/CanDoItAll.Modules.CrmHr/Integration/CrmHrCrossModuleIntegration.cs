@@ -151,6 +151,7 @@ public sealed partial class PartyDirectoryService
                 """ + ProjectAssignmentReporting.AllAssignmentsSql + """
                 ) AS assignment
                 LEFT JOIN "Projects_Projects" AS project ON assignment."ProjectId" = project."Id"
+                    AND assignment."ProjectLifetimeId" = project."LifetimeId"
                 WHERE assignment."PartyId" = {1}
                 """, unknownProject, query.PartyId)
             .OrderBy(item => item.ProjectName)

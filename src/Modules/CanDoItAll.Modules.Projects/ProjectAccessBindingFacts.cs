@@ -24,7 +24,7 @@ public sealed partial class ProjectWriteAdmissionService {
             .Select(project => new ProjectAccessLifetimeFact(project.Id, project.LifetimeId, project.LegacyAgentAccessBindingEligible))
             .ToArrayAsync(cancellationToken);
         var reservations = await context.Set<ProjectCreationReservationRecord>().AsNoTracking().Where(record =>
-            ids.Contains(record.ProjectId) && record.State == ProjectCreationReservationState.Reserved &&
+            ids.Contains(record.ProjectId) && record.State == ProjectCreationReservationState.Reserved && record.ImportedHistory == null &&
             (record.ParentProjectId == null || context.Set<Project>().Any(parent => parent.Id == record.ParentProjectId &&
                 parent.LifetimeId == record.ParentLifetimeId)))
             .Select(record => new { record.DatabaseProfileId, record.ProjectId, record.LifetimeId, record.RequesterId })

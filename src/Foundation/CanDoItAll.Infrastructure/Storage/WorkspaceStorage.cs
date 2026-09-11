@@ -333,7 +333,7 @@ public sealed class LocalFileStore(
         return resolution.FullPath;
     }
 
-    private async Task<(StorageCatalogRecord Storage, IStorageDriver Driver)> ResolveFileSystemDriverAsync(CancellationToken cancellationToken)
+    private async Task<(StorageDriverInput Storage, IStorageDriver Driver)> ResolveFileSystemDriverAsync(CancellationToken cancellationToken)
     {
         var storage = await catalogService.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
         return (storage, driverRegistry.Resolve(StorageProviderKind.FileSystem));

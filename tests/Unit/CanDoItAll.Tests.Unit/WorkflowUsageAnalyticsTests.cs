@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class WorkflowUsageAnalyticsTests
+public sealed partial class WorkflowUsageAnalyticsTests
 {
     private static readonly DateTimeOffset FixedUtcNow = new(2026, 7, 12, 18, 0, 0, TimeSpan.Zero);
 

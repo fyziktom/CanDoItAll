@@ -1,6 +1,7 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ internal sealed record ResourceStorageObjectPromotionCommand(
     FileBrowserItemKey ItemKey,
     Guid TargetProjectId,
     string ResourceName,
+    ProjectWriteAdmission ExpectedProjectAdmission,
     ResourceSensitivity Sensitivity = ResourceSensitivity.Normal);
 
 internal sealed record ResourceStorageObjectPromotionResult(
@@ -48,7 +50,8 @@ internal sealed record StorageObjectResourceWriteRequest(
     Guid ProjectId,
     string Name,
     ResourceSensitivity Sensitivity,
-    StorageObjectResourceConfig Config);
+    StorageObjectResourceConfig Config,
+    ProjectWriteAdmission ExpectedProjectAdmission);
 
 internal sealed record StorageObjectResourceWriteResult(Guid ResourceId, bool Created);
 
@@ -61,72 +64,67 @@ internal interface IStorageObjectResourceWriter
 
 internal sealed class StorageObjectResourceWriter(
     IDbContextFactory<ResourcesDbContext> dbContextFactory,
-    IProjectRecordQueryService projectQueries,
-    IClock clock) : IStorageObjectResourceWriter
-{
-    public async Task<StorageObjectResourceWriteResult> SaveAsync(
-        StorageObjectResourceWriteRequest request,
-        CancellationToken cancellationToken = default)
-    {
+    ProjectWriteAdmissionService writeAdmissions,
+    CoordinatedDatabaseTransaction coordinatedTransaction,
+    IClock clock) : IStorageObjectResourceWriter {
+    public async Task<StorageObjectResourceWriteResult> SaveAsync(StorageObjectResourceWriteRequest request,
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.ProjectId == Guid.Empty || string.IsNullOrWhiteSpace(request.Name))
-        {
-            throw new ResourcePromotionException(
-                ResourcePromotionFailureCode.InvalidRequest,
+        if (request.ProjectId == Guid.Empty || string.IsNullOrWhiteSpace(request.Name)) {
+            throw new ResourcePromotionException(ResourcePromotionFailureCode.InvalidRequest,
                 "Select a target project and provide a resource name.");
         }
-
-        string name = request.Name.Trim();
-        if (name.Length > 200)
-        {
-            throw new ResourcePromotionException(
-                ResourcePromotionFailureCode.InvalidRequest,
-                "The resource name is longer than 200 characters.");
+        if (request.ExpectedProjectAdmission is null || request.ExpectedProjectAdmission.ProjectId != request.ProjectId) {
+            throw new ResourcePromotionException(ResourcePromotionFailureCode.TargetUnavailable,
+                "The selected project admission is unavailable. Refresh Resources before promoting.");
         }
-
-        string configJson = StorageObjectResourceConnectorPlugin.Serialize(request.Config);
-        await using ResourcesDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        bool projectExists = await projectQueries.GetAsync(request.ProjectId, cancellationToken) is not null;
-        if (!projectExists)
-        {
-            throw new ResourcePromotionException(
-                ResourcePromotionFailureCode.TargetUnavailable,
-                "The target project no longer exists.");
+        var name = request.Name.Trim();
+        if (name.Length > 200) {
+            throw new ResourcePromotionException(ResourcePromotionFailureCode.InvalidRequest, "The resource name is longer than 200 characters.");
         }
-
-        ProjectResource? existing = await dbContext.Set<ProjectResource>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(
-                resource => resource.ProjectId == request.ProjectId &&
-                            resource.ConnectorPluginKey == StorageObjectResourceConnectorPlugin.PluginKey &&
-                            resource.ConfigJson == configJson,
-                cancellationToken);
-        if (existing is not null)
-        {
-            return new StorageObjectResourceWriteResult(existing.Id, false);
+        var configJson = StorageObjectResourceConnectorPlugin.Serialize(request.Config);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext,
+            ProjectMutationScopeKeys.ForProject(request.ProjectId), cancellationToken);
+        StorageObjectResourceWriteResult result;
+        using (coordinatedTransaction.Enter(dbContext)) {
+            try {
+                await writeAdmissions.RequireForMutationAsync(request.ExpectedProjectAdmission, cancellationToken);
+            } catch (ProjectWriteAdmissionRejectedException exception) {
+                throw new ResourcePromotionException(ResourcePromotionFailureCode.TargetUnavailable,
+                    "The target project lifetime is no longer available. Refresh Resources before promoting.", exception);
+            }
+            var existing = await dbContext.Set<ProjectResource>().AsNoTracking().SingleOrDefaultAsync(resource =>
+                resource.ProjectId == request.ProjectId && resource.ProjectLifetimeId == request.ExpectedProjectAdmission.LifetimeId &&
+                resource.ConnectorPluginKey == StorageObjectResourceConnectorPlugin.PluginKey && resource.ConfigJson == configJson, cancellationToken);
+            if (existing is not null) {
+                result = new(existing.Id, false);
+            } else {
+                var now = clock.GetUtcNow();
+                var entity = new ProjectResource {
+                    ProjectId = request.ProjectId,
+                    ProjectLifetimeId = request.ExpectedProjectAdmission.LifetimeId,
+                    ResourceKind = null,
+                    Name = name,
+                    ConnectorPluginKey = StorageObjectResourceConnectorPlugin.PluginKey,
+                    ConfigSchemaVersion = StorageObjectResourceConnectorPlugin.SchemaVersion,
+                    LocationOrIdentifier = StorageObjectResourceConnectorPlugin.BuildStableLocation(request.Config),
+                    ConfigJson = configJson,
+                    LinkedSecretIdsJson = "[]",
+                    ValidationStatus = ResourceValidationStatus.Valid,
+                    Sensitivity = request.Sensitivity,
+                    SupportsPreview = true,
+                    SupportsIndexing = false,
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                };
+                dbContext.Add(entity);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                result = new(entity.Id, true);
+            }
         }
-
-        DateTimeOffset now = clock.GetUtcNow();
-        var entity = new ProjectResource
-        {
-            ProjectId = request.ProjectId,
-            ResourceKind = null,
-            Name = name,
-            ConnectorPluginKey = StorageObjectResourceConnectorPlugin.PluginKey,
-            ConfigSchemaVersion = StorageObjectResourceConnectorPlugin.SchemaVersion,
-            LocationOrIdentifier = StorageObjectResourceConnectorPlugin.BuildStableLocation(request.Config),
-            ConfigJson = configJson,
-            LinkedSecretIdsJson = "[]",
-            ValidationStatus = ResourceValidationStatus.Valid,
-            Sensitivity = request.Sensitivity,
-            SupportsPreview = true,
-            SupportsIndexing = false,
-            CreatedAtUtc = now,
-            UpdatedAtUtc = now
-        };
-        await dbContext.Set<ProjectResource>().AddAsync(entity, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return new StorageObjectResourceWriteResult(entity.Id, true);
+        await mutation.CommitAsync(cancellationToken);
+        return result;
     }
 }
 
@@ -221,7 +219,8 @@ internal sealed class ResourceStorageObjectPromotionService(
                         command.TargetProjectId,
                         command.ResourceName,
                         command.Sensitivity,
-                        config),
+                        config,
+                        command.ExpectedProjectAdmission),
                     cancellationToken);
             }
             catch (ResourcePromotionException)
@@ -274,6 +273,7 @@ internal sealed class ResourceStorageObjectPromotionService(
     {
         if (string.IsNullOrWhiteSpace(command.SourceKey.Value) ||
             command.TargetProjectId == Guid.Empty ||
+            command.ExpectedProjectAdmission is null || command.ExpectedProjectAdmission.ProjectId != command.TargetProjectId ||
             string.IsNullOrWhiteSpace(command.ResourceName) ||
             !Enum.IsDefined(command.Sensitivity))
         {

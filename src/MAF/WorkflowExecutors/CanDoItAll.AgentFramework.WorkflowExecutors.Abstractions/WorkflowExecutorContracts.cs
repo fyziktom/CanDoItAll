@@ -132,11 +132,19 @@ public sealed record WorkflowExecutorApprovalAuthorization(
 
 public sealed record WorkflowExecutorInvocationContext
 {
+    public WorkflowCompilerContractVersion? CompilerContractVersion { get; init; }
+
     public static WorkflowExecutorInvocationContext Empty { get; } = new();
 
     public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
 
     public WorkflowExecutorApprovalAuthorization? ApprovalAuthorization { get; init; }
+
+    [JsonIgnore]
+    public WorkflowExecutorApprovalAdmission? ApprovalAdmission { get; init; }
+
+    [JsonIgnore]
+    public WorkflowExternalResponseLease? ResponseLease { get; init; }
 
     public WorkflowExternalResponseAuthorization? ExternalResponseAuthorization { get; init; }
 
@@ -187,6 +195,9 @@ public sealed record WorkflowExecutorExecutionContext(
     WorkflowExecutorExecutionPolicy Policy)
 {
     public WorkflowRunId? RunId { get; init; }
+
+    [JsonIgnore]
+    public WorkflowExecutorApprovalAdmission? ApprovalAdmission { get; init; }
 
     public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
 

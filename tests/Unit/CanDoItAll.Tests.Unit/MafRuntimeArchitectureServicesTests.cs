@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Agents.Storage;
 using CanDoItAll.Modules.AgentFramework;

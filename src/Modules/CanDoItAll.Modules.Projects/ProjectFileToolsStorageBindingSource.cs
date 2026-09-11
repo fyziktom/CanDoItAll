@@ -46,7 +46,7 @@ internal sealed class ProjectFileToolsStorageBindingSource(
                 "The project file scope no longer exists.");
         }
 
-        StorageCatalogRecord storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
+        StorageCatalogSnapshot storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
         var root = new FileToolsStorageRoot($"managed-files/project-media/files/{projectId:N}");
         EnsureProjectDirectory(root);
         return

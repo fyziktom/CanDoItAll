@@ -16,7 +16,8 @@ internal sealed record DeleteSubtreeMutationPayload(
     IReadOnlyList<ProjectManagedStorageDeletionOutcome>? ManagedStorageOutcomes = null,
     IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null,
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition =
-        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles);
+        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+    ProjectAssignmentReference? SourceReference = null);
 
 internal sealed record ProjectCrossModuleMutationProcessingResult(
     ProjectCrossModuleMutationStatus Status,
@@ -27,14 +28,17 @@ internal sealed record DeleteProjectMutationPayload(
     IReadOnlyList<StorageObjectReference> ManagedStorageObjects,
     IReadOnlyList<ProjectManagedStorageDeletionOutcome>? ManagedStorageOutcomes = null,
     IReadOnlyList<Guid>? OutstandingMutationIds = null,
-    IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null);
+    IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null,
+    ProjectAssignmentReference? SourceReference = null);
 
 internal sealed record MoveDescendantsMutationPayload(
     Guid SourceProjectId,
     Guid TargetProjectId,
     string SourceNodeKey,
     IReadOnlyList<string> MovedNodeKeys,
-    IReadOnlyList<string> MovedRootKeys);
+    IReadOnlyList<string> MovedRootKeys,
+    ProjectAssignmentReference? SourceReference = null,
+    ProjectWriteAdmission? ExpectedTargetAdmission = null);
 
 public sealed record ProjectCrossModuleMutationProcessingOptions(
     TimeSpan LeaseDuration,
@@ -309,7 +313,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
         DeleteSubtreeMutationPayload payload,
         CancellationToken cancellationToken)
     {
-        await DeleteAssignmentsAsync(mutation.ProjectId, payload.DeletedNodeKeys, cancellationToken);
+        await DeleteAssignmentsAsync(mutation.ProjectId, payload.DeletedNodeKeys, cancellationToken, RequireSource(payload.SourceReference, mutation.ProjectId));
         await DeleteStorageObjectsAsync(
             dbContext,
             mutation,
@@ -333,7 +337,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     {
         await projectPartyIntegrationBridge.DeleteAssignmentsForProjectAsync(
             mutation.ProjectId,
-            cancellationToken);
+            cancellationToken, RequireSource(payload.SourceReference, mutation.ProjectId));
         await DeleteStorageObjectsAsync(
             dbContext,
             mutation,
@@ -421,15 +425,22 @@ public sealed class ProjectCrossModuleMutationProcessor(
             .ToArray();
     }
 
+    private static ProjectAssignmentReference RequireSource(ProjectAssignmentReference? reference, Guid projectId) {
+        if (reference is null || reference.ProjectId != projectId || reference.LifetimeId is null) {
+            throw new InvalidOperationException("This retained mutation has no captured source lifetime and requires reconciliation before cleanup.");
+        }
+        return reference;
+    }
+
     private Task DeleteAssignmentsAsync(
         Guid projectId,
         IReadOnlyList<string> deletedNodeKeys,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, ProjectAssignmentReference sourceReference)
     {
         return projectPartyIntegrationBridge.DeleteAssignmentsForNodesAsync(
             projectId,
             BuildNodeReferences(deletedNodeKeys),
-            cancellationToken);
+            cancellationToken, sourceReference);
     }
 
     private Task MoveAssignmentsAsync(
@@ -442,7 +453,8 @@ public sealed class ProjectCrossModuleMutationProcessor(
             payload.SourceProjectId,
             BuildNodeReferences(payload.MovedNodeKeys),
             payload.TargetProjectId,
-            cancellationToken);
+            cancellationToken, RequireSource(payload.SourceReference, payload.SourceProjectId),
+            ProjectAssignmentAdmission.Require(payload.TargetProjectId, payload.ExpectedTargetAdmission));
     }
 
     private async Task RenewClaimAsync(

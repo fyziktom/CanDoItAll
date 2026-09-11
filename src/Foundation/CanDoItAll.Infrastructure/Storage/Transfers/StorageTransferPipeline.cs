@@ -120,8 +120,8 @@ public sealed class StorageTransferPipeline(
 
     private async Task<StorageTransferItemResult> TransferItemAsync(
         StorageTransferItem item,
-        StorageCatalogRecord sourceStorage,
-        StorageCatalogRecord targetStorage,
+        StorageDriverInput sourceStorage,
+        StorageDriverInput targetStorage,
         IStorageDriver sourceDriver,
         IStorageDriver targetDriver,
         StorageTransferOptions options,
@@ -169,8 +169,8 @@ public sealed class StorageTransferPipeline(
 
     private async Task<StorageTransferItemResult> TransferItemCoreAsync(
         StorageTransferItem item,
-        StorageCatalogRecord sourceStorage,
-        StorageCatalogRecord targetStorage,
+        StorageDriverInput sourceStorage,
+        StorageDriverInput targetStorage,
         IStorageDriver sourceDriver,
         IStorageDriver targetDriver,
         StorageTransferOptions options,
@@ -221,7 +221,7 @@ public sealed class StorageTransferPipeline(
 
     private async Task<string> VerifyTransferAsync(
         StorageTransferItem item,
-        StorageCatalogRecord targetStorage,
+        StorageDriverInput targetStorage,
         IStorageDriver targetDriver,
         StorageObjectReference reference,
         byte[] sourceBytes,
@@ -270,7 +270,7 @@ public sealed class StorageTransferPipeline(
             : verificationResult.Message;
     }
 
-    private async Task<StorageCatalogRecord> ResolveStorageAsync(
+    private async Task<StorageDriverInput> ResolveStorageAsync(
         Guid? storageId,
         string role,
         CancellationToken cancellationToken)
@@ -280,7 +280,7 @@ public sealed class StorageTransferPipeline(
             throw new InvalidOperationException($"The transfer {role} storage was not supplied.");
         }
 
-        return await catalogService.GetAsync(storageId.Value, cancellationToken)
+        return await catalogService.GetDriverAsync(storageId.Value, cancellationToken)
             ?? throw new InvalidOperationException($"The transfer {role} storage '{storageId.Value}' was not found.");
     }
 

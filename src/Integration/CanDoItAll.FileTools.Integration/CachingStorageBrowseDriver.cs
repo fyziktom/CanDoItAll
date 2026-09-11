@@ -18,7 +18,7 @@ internal sealed class CachingStorageBrowseDriver(
     public StorageBrowseWorkBudget MaximumBudget => inner.MaximumBudget;
 
     public async Task<StorageBrowsePage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         CancellationToken cancellationToken = default)
     {

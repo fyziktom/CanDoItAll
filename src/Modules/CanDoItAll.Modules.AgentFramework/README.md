@@ -142,3 +142,34 @@ the runtime model cannot construct, track or write a Project. The canonical migr
 model remains the sole mapping/schema authority. Locator scope, evidence identity,
 source version, tombstones and historical missing-project behavior are unchanged;
 this path does not infer or grant a current Project lifetime.
+
+Governed Process Workflow tools use the active background journal's approved proposal
+as their admission identity. The owner validates the exact Workflow selection and
+proposal before creating the run and Started event under the actual Process claim
+and source fence. A saved proposal retains one child Workflow; a distinct proposal
+is an intentional new launch. Receipt reconciliation and cached-result disclosure
+read that exact child and require current original-source read access without
+starting it again. Direct mapped Process Workflow assignments retain their separate
+outcome-only contract.
+
+Process-tool origins and independent saved output authorities have explicit versioned
+JSON markers. Older binaries must reject these records; unchanged SQL columns do not
+make a binary rollback safe. Existing interactive and legacy null-field serialization
+remains unchanged. Legacy Process claims without saved project authority can launch a
+plain Workflow, while Structure effects require original saved project authority.
+
+Direct mapped Process Workflow launches have a separate versioned
+`process-dispatch-assignment-v1` origin. Its immutable receipt binds the original
+Process root/run/step, dispatch claim, prepared assignment fingerprint, outcome
+contract, selected Workflow/version and canonical input. Claim renewal does not create
+a second business intent. The Workflow owner checks vacancy by the exact projected
+Process run/assignment pair under the coordinated Process fence and Serializable
+transaction, then saves the run and Started event together. Save, transition and
+resume updates cannot strip this receipt or historical mapped-origin evidence.
+
+The nullable assignment projection and its pair index are migration-owned. Historical
+`process-assignment` JSON remains readable and is factually projected without adding
+authority; it blocks replacement admission for the same assignment. New mapped
+admissions require the real Process dispatch policy. Older binaries cannot read the
+new origin discriminator, and downgrade must retain or refuse all such evidence,
+including pending launch-idempotency records and usage/completion history.

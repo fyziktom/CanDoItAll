@@ -10,6 +10,10 @@ public partial class ProjectStructurePage
 {
     private sealed class ProjectStructurePartyEditorState
     {
+        public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+        public ProjectStructureNode? OpenedNode { get; init; }
+
         public Guid? SelectedPartyId { get; set; }
 
         public HashSet<Guid> SelectedMeetingPartyIds { get; } = [];
@@ -197,16 +201,24 @@ public partial class ProjectStructurePage
             return;
         }
 
+        var openedNode = selectedNode;
+        var expected = surface?.ExpectedProjectAdmission
+            ?? throw new InvalidOperationException("Reload the project before opening its party editor.");
         isPartyEditorLoading = true;
         ResetPartyEditor();
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            partyEditorOptions = await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(ProjectId);
-            projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(ProjectId);
+            partyEditorOptions = await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(expected.ProjectId);
+            projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(expected.ProjectId);
+            if (selectedNode?.Id != openedNode.Id || surface?.ExpectedProjectAdmission != expected) {
+                return;
+            }
             partyEditor = new ProjectStructurePartyEditorState
             {
+                ExpectedProjectAdmission = expected,
+                OpenedNode = openedNode,
                 QuickCreate = new ProjectPartyQuickCreateRequest
                 {
                     ProjectId = ProjectId,
@@ -214,14 +226,14 @@ public partial class ProjectStructurePage
                 }
             };
 
-            switch (selectedNode.ObjectType)
+            switch (openedNode.ObjectType)
             {
                 case ProjectObjectType.Participant:
-                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, GetNodeAssignmentRoles(selectedNode))?.PartyId;
+                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(openedNode.Id, GetNodeAssignmentRoles(openedNode))?.PartyId;
                     partyEditor.KeepProjectLocalOnly = !partyEditor.SelectedPartyId.HasValue;
                     break;
                 case ProjectObjectType.Meeting:
-                    foreach (var item in ResolveNodeAssignments(selectedNode.Id, GetNodeAssignmentRoles(selectedNode)))
+                    foreach (var item in ResolveNodeAssignments(openedNode.Id, GetNodeAssignmentRoles(openedNode)))
                     {
                         partyEditor.SelectedMeetingPartyIds.Add(item.PartyId);
                     }
@@ -296,30 +308,32 @@ public partial class ProjectStructurePage
 
     private async Task SaveParticipantPartyAsync()
     {
-        if (selectedNode is null)
-        {
+        var edit = partyEditor;
+        var node = edit.OpenedNode;
+        var expected = edit.ExpectedProjectAdmission;
+        if (node is null || expected is null) {
             return;
         }
 
         isPartyEditorBusy = true;
         try
         {
-            var metadata = ProjectObjectMetadataSerializer.Parse(selectedNode.MetadataJson);
+            var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
             metadata.Participant ??= new ProjectParticipantMetadata();
-            if (partyEditor.KeepProjectLocalOnly || !partyEditor.SelectedPartyId.HasValue)
+            if (edit.KeepProjectLocalOnly || !edit.SelectedPartyId.HasValue)
             {
-                if (!await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], GetNodeAssignmentRoles(selectedNode)))
+                if (!await ReplaceNodeAssignmentsAsync(expected, node.Id, [], GetNodeAssignmentRoles(node)))
                 {
                     return;
                 }
 
                 metadata.Participant.LinkedPartyDisplayName = string.Empty;
-                await SaveNodeMetadataAsync(selectedNode, metadata);
+                await SaveNodeMetadataAsync(expected, node, metadata);
                 SetPartyEditorMessage("Participant kept project-local only.", "neutral");
                 return;
             }
 
-            var option = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(partyEditor.SelectedPartyId.Value);
+            var option = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(edit.SelectedPartyId.Value);
             if (option is null)
             {
                 SetPartyEditorMessage("The selected party could not be loaded.", "danger");
@@ -337,35 +351,36 @@ public partial class ProjectStructurePage
             }
 
             if (!await ReplaceNodeAssignmentsAsync(
-                    selectedNode.Id,
+                    expected, node.Id,
                     [
                         new ProjectPartyAssignmentUpsertRequest
                         {
-                            ProjectId = ProjectId,
+                            ProjectId = expected.ProjectId,
+                            ExpectedProjectAdmission = expected,
                             PartyId = option.PartyId,
                             PartyAffiliationId =
                                 option.Affiliation?.AffiliationId,
-                            Role = GetPreferredNodeAssignmentRole(selectedNode),
-                            NodeKey = selectedNode.Id,
+                            Role = GetPreferredNodeAssignmentRole(node),
+                            NodeKey = node.Id,
                             IsPrimary = true,
                             Source = "project-structure"
                         }
                     ],
-                    GetNodeAssignmentRoles(selectedNode)))
+                    GetNodeAssignmentRoles(node)))
             {
                 return;
             }
 
             var updatedNode = await ProjectWorkbenchService.UpdateObjectAsync(
-                ProjectId,
-                selectedNode.Id,
+                expected.ProjectId,
+                node.Id,
                 new ProjectObjectEditRequest(
                     option.DisplayName,
-                    selectedNode.Subtitle,
-                    selectedNode.Notes,
-                    selectedNode.StartUtc,
-                    selectedNode.EndUtc,
-                    ProjectObjectMetadataSerializer.Serialize(metadata)));
+                    node.Subtitle,
+                    node.Notes,
+                    node.StartUtc,
+                    node.EndUtc,
+                    ProjectObjectMetadataSerializer.Serialize(metadata)) { ExpectedProjectAdmission = expected });
             if (updatedNode is not null)
             {
                 await ApplySurfaceNodeUpdatesAsync([updatedNode]);
@@ -381,31 +396,34 @@ public partial class ProjectStructurePage
 
     private async Task SaveMeetingPartiesAsync()
     {
-        if (selectedNode is null)
-        {
+        var edit = partyEditor;
+        var node = edit.OpenedNode;
+        var expected = edit.ExpectedProjectAdmission;
+        if (node is null || expected is null) {
             return;
         }
 
         isPartyEditorBusy = true;
         try
         {
-            var metadata = ProjectObjectMetadataSerializer.Parse(selectedNode.MetadataJson);
+            var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
             metadata.Meeting ??= new ProjectMeetingMetadata();
-            var assignmentRoles = GetNodeAssignmentRoles(selectedNode);
-            var preferredRole = GetPreferredNodeAssignmentRole(selectedNode);
+            var assignmentRoles = GetNodeAssignmentRoles(node);
+            var preferredRole = GetPreferredNodeAssignmentRole(node);
             var selectedOptions = partyEditorOptions
-                .Where(option => partyEditor.SelectedMeetingPartyIds.Contains(option.PartyId))
+                .Where(option => edit.SelectedMeetingPartyIds.Contains(option.PartyId))
                 .ToList();
             if (!await ReplaceNodeAssignmentsAsync(
-                    selectedNode.Id,
+                    expected, node.Id,
                     selectedOptions.Select((option, index) => new ProjectPartyAssignmentUpsertRequest
                     {
-                        ProjectId = ProjectId,
+                        ProjectId = expected.ProjectId,
+                            ExpectedProjectAdmission = expected,
                         PartyId = option.PartyId,
                         PartyAffiliationId =
                             option.Affiliation?.AffiliationId,
                         Role = preferredRole,
-                        NodeKey = selectedNode.Id,
+                        NodeKey = node.Id,
                         IsPrimary = index == 0,
                         Source = "project-structure"
                     }).ToList(),
@@ -415,7 +433,7 @@ public partial class ProjectStructurePage
             }
 
             metadata.Meeting.RelatedPartySummary = string.Join(", ", selectedOptions.Select(option => option.DisplayName));
-            await SaveNodeMetadataAsync(selectedNode, metadata);
+            await SaveNodeMetadataAsync(expected, node, metadata);
             SetPartyEditorMessage("Meeting parties saved.", "mint");
         }
         finally
@@ -424,13 +442,13 @@ public partial class ProjectStructurePage
         }
     }
 
-    private async Task SaveNodeMetadataAsync(ProjectStructureNode node, ProjectObjectMetadataEnvelope metadata)
+    private async Task SaveNodeMetadataAsync(ProjectWriteAdmission expected, ProjectStructureNode node, ProjectObjectMetadataEnvelope metadata)
     {
         var updatedNode = await ProjectWorkbenchService.UpdateObjectMetadataAsync(
-            ProjectId,
+            expected.ProjectId,
             node.Id,
             ProjectObjectMetadataSerializer.Serialize(metadata),
-            node.Notes);
+            node.Notes, expectedProjectAdmission: expected);
         if (updatedNode is not null)
         {
             await ApplySurfaceNodeUpdatesAsync([updatedNode]);
@@ -438,15 +456,15 @@ public partial class ProjectStructurePage
     }
 
     private async Task<bool> ReplaceNodeAssignmentsAsync(
-        string nodeKey,
+        ProjectWriteAdmission expected, string nodeKey,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles)
     {
         var result = await ProjectPartyIntegrationBridge.ReplaceNodeAssignmentsAsync(
-            ProjectId,
+            expected.ProjectId,
             new ProjectNodeReference(nodeKey),
             desiredAssignments,
-            targetRoles);
+            targetRoles, expectedProjectAdmission: expected);
         if (result.IsFailure)
         {
             SetPartyEditorMessage(
@@ -455,7 +473,9 @@ public partial class ProjectStructurePage
             return false;
         }
 
-        projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(ProjectId);
+        if (surface?.ExpectedProjectAdmission == expected) {
+            projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(expected.ProjectId);
+        }
         return true;
     }
 

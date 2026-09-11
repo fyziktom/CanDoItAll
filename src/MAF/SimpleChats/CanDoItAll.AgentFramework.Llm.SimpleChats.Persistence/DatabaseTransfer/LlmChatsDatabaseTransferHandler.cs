@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
 
-public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions options, TimeProvider clock) : IDatabaseTransferHandler {
+public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions options, TimeProvider clock,
+    DatabaseTransferOperationRunner operations, DatabaseTransferOwnerSessionRunner sessions) : IDatabaseTransferHandler {
     public DatabaseTransferItemDescriptor Descriptor { get; } = new(
         "llm-chats",
         "LLM chats",
@@ -13,12 +14,11 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
         SortOrder: 30);
 
     public async Task<DatabaseTransferItemPreview> PreviewAsync(
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var source = await LlmChatsTransferDocument.LoadAsync(context.SourceDbContext, options, cancellationToken)
+        DatabaseTransferOperation context,
+        CancellationToken cancellationToken = default) {
+        var source = await LoadAsync(context.SourceProfile, cancellationToken)
             .ConfigureAwait(false);
-        var target = await LlmChatsTransferDocument.LoadAsync(context.TargetDbContext, options, cancellationToken)
+        var target = await LoadAsync(context.TargetProfile, cancellationToken)
             .ConfigureAwait(false);
         return new DatabaseTransferItemPreview(
             Descriptor,
@@ -30,15 +30,18 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
             target.RecordCount);
     }
 
-    public async Task<DatabaseTransferItemResult> TransferAsync(
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var document = await LlmChatsTransferDocument.LoadAsync(context.SourceDbContext, options, cancellationToken)
-            .ConfigureAwait(false);
+    public Task<DatabaseTransferItemResult> TransferAsync(DatabaseTransferOperation context, CancellationToken cancellationToken = default)
+        => operations.RunTransferAsync(context, (transfer, token) => TransferCoreAsync(context, transfer, token), cancellationToken: cancellationToken);
+
+    private async Task<DatabaseTransferItemResult> TransferCoreAsync(DatabaseTransferOperation context,
+        DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken) {
+        await using var sourceOwner = await sessions.CreateSourceAsync<SimpleChatsDbContext>(transfer, static value => new SimpleChatsDbContext(value), cancellationToken);
+        await using var targetOwner = await sessions.CreateTargetAsync<SimpleChatsDbContext>(transfer, static value => new SimpleChatsDbContext(value), cancellationToken);
+        await sessions.AcquireTargetTableLocksAsync(transfer,
+            targetOwner.Model.GetEntityTypes().Select(DatabaseTransferTable.From).ToArray(), cancellationToken);
+        var document = await LlmChatsTransferDocument.LoadAsync(sourceOwner, options, cancellationToken);
         document.ValidateForImport();
-        if (document.RecordCount == 0)
-        {
+        if (document.RecordCount == 0) {
             return new DatabaseTransferItemResult(
                 Descriptor.Key,
                 Descriptor.Label,
@@ -47,10 +50,9 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
                 0);
         }
 
-        var target = await LlmChatsTransferDocument.LoadAsync(context.TargetDbContext, options, cancellationToken)
+        var target = await LlmChatsTransferDocument.LoadAsync(targetOwner, options, cancellationToken)
             .ConfigureAwait(false);
-        if (target.RecordCount > 0 && !context.ReplaceExisting)
-        {
+        if (target.RecordCount > 0 && !context.ReplaceExisting) {
             return new DatabaseTransferItemResult(
                 Descriptor.Key,
                 Descriptor.Label,
@@ -59,20 +61,15 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
                 0);
         }
 
-        await using var transaction = await context.TargetDbContext.Database
-            .BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
         var history = new HistoryTargetWriteSession(context.TargetProfile, clock);
-        using var coordination = history.Transactions.Enter(context.TargetDbContext);
+        using var coordination = history.Transactions.Enter(targetOwner);
         var partition = await LlmChatHistoryTransfer.ValidateAsync(history, target.RecordCount > 0, cancellationToken);
         await LlmChatHistoryTransfer.StageAsync(document.InvocationRecords, partition, history.Outbox, cancellationToken);
-        if (target.RecordCount > 0)
-        {
-            await LlmChatsTransferDocument.ClearAsync(context.TargetDbContext, cancellationToken).ConfigureAwait(false);
+        if (target.RecordCount > 0) {
+            await LlmChatsTransferDocument.ClearAsync(targetOwner, cancellationToken).ConfigureAwait(false);
         }
 
-        await document.SaveAsync(context.TargetDbContext, cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        await document.SaveAsync(targetOwner, cancellationToken).ConfigureAwait(false);
         return new DatabaseTransferItemResult(
             Descriptor.Key,
             Descriptor.Label,
@@ -80,4 +77,9 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
             $"Copied {document.Definitions.Count} definition(s), {document.Conversations.Count} conversation(s), and their versioned transcript/operation audit graph.",
             document.RecordCount);
     }
+    private Task<LlmChatsTransferDocument> LoadAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken)
+        => operations.RunIndependentAsync(profile, async (session, token) => {
+            await using var owner = await operations.CreateOwnerAsync<SimpleChatsDbContext>(session, static value => new SimpleChatsDbContext(value), token);
+            return await LlmChatsTransferDocument.LoadAsync(owner, options, token);
+        }, cancellationToken);
 }

@@ -26,7 +26,7 @@ public sealed class ResourceStorageObjectIntegrationTests
         var revisions = scope.ServiceProvider.GetRequiredService<IFileCatalogRevisionReader>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         Guid projectId = await CreateProjectAsync(projects);
-        StorageCatalogRecord storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
+        StorageCatalogSnapshot storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
         string fileName = $"governed-resource-{Guid.NewGuid():N}.txt";
         string fullPath = Path.Combine(storage.EndpointOrRoot, fileName);
         const string expectedContent = "Governed storage-object integration proof";
@@ -50,7 +50,8 @@ public sealed class ResourceStorageObjectIntegrationTests
                     source.Key,
                     item.Key,
                     projectId,
-                    "Governed integration resource"));
+                    "Governed integration resource",
+                    sources.Projects.Single(project => project.Id == projectId).Admission));
 
             Assert.True(result.Created);
             Assert.Equal(before.Scope + 1, result.Revision.Scope);

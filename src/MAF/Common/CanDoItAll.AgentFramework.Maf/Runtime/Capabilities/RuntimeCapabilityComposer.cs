@@ -251,6 +251,9 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     capabilityAccessPlan,
                     runtimeToolProviders));
             pendingState = composition.State;
+            var admittedContext = CreateAdmittedToolProviderContext(composition, agent, provider, effectiveCapabilities,
+                workspaceRuntimeServices, contextIntent, suppressApprovalRequirements, runtimeSessionKey,
+                governance, admittedToolSession, toolAdmissionSupport);
 
             Task AttachProvidersAsync(AgentRuntimeToolAttachmentPhase phase) => registeredToolProviderAttacher.AttachAsync(
                 composition, agent, provider, effectiveCapabilities, progressCallback, cancellationToken,
@@ -277,7 +280,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     contextIntent));
             await TrackAsync(
                 "capability.skills",
-                () => AttachSkillsAsync(composition, effectiveCapabilities, progressCallback, suppressApprovalRequirements));
+                () => AttachSkillsAsync(composition, effectiveCapabilities, progressCallback, suppressApprovalRequirements,
+                    admittedContext));
             await TrackAsync(
                 "capability.configured-workspace-tools",
                 async () => {
@@ -310,6 +314,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     suppressApprovalRequirements,
                     contextIntent));
 
+            AttachWorkspaceResultDisclosure(composition, workspaceRuntimeServices, admittedContext);
             TrackAction("capability.deduplicate-tools", () => ValidateComposedToolNames(composition.State.Tools));
             TrackAction(
                 "capability.effective-external-target-context",
@@ -482,7 +487,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         var contextBuilder = new ContextCapabilityBuilder(
             workspaceRoot,
             effectiveWorkspaceScope,
-            physicalPathPolicyFactory);
+            physicalPathPolicyFactory,
+            WorkspacePathScopeContribution.Resolve(effectiveWorkspaceScope, capabilityDependencies.WorkspacePathContributors));
         var contextContributors = capabilityDependencies.ContextContributors;
         var mcpBuilder = new McpCapabilityBuilder(
             capabilityDependencies.McpClientFactory,
@@ -541,6 +547,67 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 }
                 : registration)
             .ToArray();
+    }
+
+    private AgentRuntimeToolProviderContext? CreateAdmittedToolProviderContext(RuntimeCapabilityComposition composition, AgentDefinition agent,
+        ProviderProfile provider, IReadOnlyList<CapabilityCatalogItem> capabilities, WorkspaceRuntimeServices workspace,
+        AgentRuntimeContextIntent contextIntent, bool suppressApprovalRequirements, string runtimeSessionKey,
+        AgentExecutionGovernanceSnapshot? governance, AgentToolSessionReference? admittedToolSession,
+        AgentToolAdmissionSupport admissionSupport) {
+        if (admittedToolSession is null || admissionSupport != AgentToolAdmissionSupport.Recoverable) {
+            return null;
+        }
+        var purpose = ResolveContextPolicyKind(agent, suppressApprovalRequirements, contextIntent) switch {
+            AgentRuntimeContextPolicyKind.InteractiveChat => AgentRuntimeToolProviderPurpose.InteractiveChat,
+            AgentRuntimeContextPolicyKind.GovernedProcessAutomation => AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
+            AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive => AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive,
+            AgentRuntimeContextPolicyKind.A2AEndpoint => AgentRuntimeToolProviderPurpose.A2AEndpoint,
+            _ => throw new InvalidOperationException("The admitted workspace purpose is unsupported.")
+        };
+        return new AgentRuntimeToolProviderContext(agent, provider, capabilities, suppressApprovalRequirements,
+            purpose, runtimeSessionKey, contextIntent with { WorkspaceScope = workspace.Scope.Scope },
+            new Dictionary<string, string>()) {
+            WorkspaceToolAccess = composition.WorkspaceToolAccess,
+            Governance = governance,
+            AdmittedToolSession = admittedToolSession,
+            ToolAdmissionSupport = admissionSupport
+        };
+    }
+
+    private void AttachWorkspaceResultDisclosure(RuntimeCapabilityComposition composition, WorkspaceRuntimeServices workspace,
+        AgentRuntimeToolProviderContext? context) {
+        if (context is null) {
+            return;
+        }
+        var disclosure = new WorkspaceToolResultDisclosure(capabilityDependencies.WorkspaceToolResultSource, context, workspace,
+            physicalPathPolicyFactory, (held, toolName) => {
+                var configured = AgentWorkspaceToolAccessMetadata.Read(held.Agent.ConfigurationJson);
+                var currentAccess = ResolveWorkspaceToolAccessForRuntime(configured);
+                var assigned = held.Agent.Capabilities.Select(item => item.CapabilityId).ToHashSet();
+                var currentCapabilities = held.Capabilities.Where(item => assigned.Contains(item.Id))
+                    .Where(item => !AgentCapabilityRequirementEvaluator.IsRetiredCapability(item))
+                    .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+                var plan = capabilityAccessPlanner.CreateRuntimeCapabilityAccessPlan(held.Agent, currentCapabilities,
+                    currentAccess, context.ContextIntent, PrepareRuntimeToolProviders(configured, context.ContextIntent));
+                return composition.ToolBuilder.CreateWorkspaceToolsForDisclosure(currentAccess, plan, currentCapabilities)
+                    .Any(tool => tool.Name == toolName) ? currentAccess : null;
+            });
+        for (var index = 0; index < composition.State.Tools.Count; index++) {
+            if (composition.State.Tools[index] is not AIFunction function ||
+                    !ToolContractCatalog.WorkspaceToolNames.Contains(function.Name)) {
+                continue;
+            }
+            var metadataIndex = composition.State.RuntimeToolMetadata.FindIndex(item => item.ToolName == function.Name);
+            var metadata = metadataIndex >= 0 ? composition.State.RuntimeToolMetadata[metadataIndex]
+                : WorkspaceToolSet.CreateResultMetadata(function, composition.State.ToolPolicies);
+            metadata = metadata with { AuthorizeResultDisclosureAsync = disclosure.AuthorizeAsync };
+            if (metadataIndex >= 0) {
+                composition.State.RuntimeToolMetadata[metadataIndex] = metadata;
+            } else {
+                composition.State.RuntimeToolMetadata.Add(metadata);
+            }
+            composition.State.Tools[index] = disclosure.Wrap(function);
+        }
     }
 
     private void RecordCompositionMetric(string stage, TimeSpan elapsed)
@@ -652,11 +719,41 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         RuntimeCapabilityComposition composition,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         Func<ExecutionState, string, string, Task> progressCallback,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        AgentRuntimeToolProviderContext? admittedContext)
     {
         var skillRoots = composition.SkillBuilder.ResolveSkillRoots(capabilities, composition.AgentConfiguration);
-        var inlineSkills = composition.SkillBuilder.ResolveInlineSkills(capabilities);
-        var serviceSkills = composition.SkillBuilder.ResolveRegisteredSkills(capabilities);
+        var originalSkillIds = capabilities.Where(item => item.Kind == CapabilityKind.Skill).Select(item => item.Id).ToHashSet();
+        AgentToolSemanticDigest CurrentConfiguration(IAgentWorkspaceToolResultReadLease held, bool readOnly) {
+            var configured = AgentWorkspaceToolAccessMetadata.Read(held.Agent.ConfigurationJson);
+            var access = ResolveWorkspaceToolAccessForRuntime(configured);
+            var assigned = held.Agent.Capabilities.Select(item => item.CapabilityId).ToHashSet();
+            var currentCapabilities = held.Capabilities.Where(item => assigned.Contains(item.Id))
+                .Where(item => !AgentCapabilityRequirementEvaluator.IsRetiredCapability(item))
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+            var plan = capabilityAccessPlanner.CreateRuntimeCapabilityAccessPlan(held.Agent, currentCapabilities,
+                access, admittedContext!.ContextIntent, PrepareRuntimeToolProviders(configured, admittedContext!.ContextIntent));
+            var configuration = MafRuntimeJson.DeserializeConfiguration<AgentRuntimeConfiguration>(held.Agent.ConfigurationJson)
+                ?? new AgentRuntimeConfiguration();
+            var retained = plan.AllowedCatalogCapabilities.Where(item => originalSkillIds.Contains(item.Id)).ToArray();
+            var roots = composition.SkillBuilder.ResolveSkillRoots(retained, configuration);
+            return readOnly ? MafSkillResultDisclosure.ConfigurationDigest(configuration, retained, roots, access)
+                : MafSkillSourcePreparation.ConfigurationDigest(configuration, retained, roots, access);
+        }
+        MafSkillResultDisclosure? resultDisclosure = admittedContext is null ? null : new(
+            capabilityDependencies.WorkspaceToolResultSource, admittedContext, workspaceRoot,
+            admittedContext.ContextIntent.WorkspaceScope ?? throw MafContextToolSourceContract.MissingSource(),
+            MafSkillResultDisclosure.ConfigurationDigest(composition.AgentConfiguration, capabilities, skillRoots, composition.WorkspaceToolAccess),
+            held => CurrentConfiguration(held, readOnly: true), physicalPathPolicyFactory);
+        MafSkillSourcePreparation? sourcePreparation = admittedContext is null ? null : new(
+            capabilityDependencies.WorkspaceToolResultSource, admittedContext, workspaceRoot,
+            admittedContext.ContextIntent.WorkspaceScope ?? throw MafContextToolSourceContract.MissingSource(),
+            MafSkillSourcePreparation.ConfigurationDigest(composition.AgentConfiguration, capabilities, skillRoots, composition.WorkspaceToolAccess),
+            held => CurrentConfiguration(held, readOnly: false)) { ResultDisclosure = resultDisclosure };
+        var inlineSkills = composition.SkillBuilder.ResolveInlineSkills(capabilities, sourcePreparation is null
+            ? null : (skill, capability) => MafPreparedSkill.Inline(skill, capability, sourcePreparation));
+        var serviceSkills = composition.SkillBuilder.ResolveRegisteredSkills(capabilities, sourcePreparation is null
+            ? null : (skill, capability) => MafPreparedSkill.Registered(skill, capability, sourcePreparation));
 
         if (skillRoots.Count == 0 && inlineSkills.Count == 0 && serviceSkills.Count == 0)
         {
@@ -678,7 +775,12 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 
         foreach (var skillRoot in skillRoots)
         {
-            skillsBuilder.UseFileSkill(skillRoot);
+            if (sourcePreparation is null) {
+                skillsBuilder.UseFileSkill(skillRoot);
+            } else {
+                skillsBuilder.UseSource(new MafPreparedSkillsSource(
+                    new AgentFileSkillsSource(skillRoot, composition.ToolBuilder.RunSkillScriptAsync), skillRoot, sourcePreparation));
+            }
         }
 
         if (inlineSkills.Count > 0)
@@ -702,7 +804,23 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             "agent capabilities or configuration resolved skills for this run",
             skillRoots.Count + inlineSkills.Count + serviceSkills.Count,
             skillRoots.Sum(path => path.Length)));
-        composition.State.ContextProviders.Add(skillsBuilder.Build());
+        if (sourcePreparation is not null) {
+            skillsBuilder.UseFilter((skill, _) => sourcePreparation.Observe(skill));
+        }
+        var skillsProvider = skillsBuilder.Build();
+        if (admittedContext is not null) {
+            var registration = new MafContextToolRegistration([
+                new(AgentSkillsProvider.LoadSkillToolName, false),
+                new(AgentSkillsProvider.ReadSkillResourceToolName, false),
+                new(AgentSkillsProvider.RunSkillScriptToolName, requiresSkillScriptApproval)
+            ], sourcePreparation, resultDisclosure!.AuthorizeAsync);
+            composition.State.ContextToolRegistrations.Add(registration);
+            var provider = new MafSkillsContextProvider(skillsProvider, registration);
+            composition.State.ContextProviders.Add(provider);
+            composition.State.Disposables.Add(provider);
+        } else {
+            composition.State.ContextProviders.Add(skillsProvider);
+        }
         composition.State.FrameworkToolNames.Add(AgentToolInvocationPolicyMetadata.LoadSkill);
         composition.State.FrameworkToolNames.Add(AgentToolInvocationPolicyMetadata.ReadSkillResource);
         composition.State.FrameworkToolNames.Add(AgentToolInvocationPolicyMetadata.RunSkillScript);
@@ -772,6 +890,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         }
 
         composition.State.Tools.AddRange(tools);
+        composition.State.RuntimeToolMetadata.AddRange(WorkspaceToolSet.CreateRecoveryMetadata(tools));
         composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
             AgentRuntimeContextSourceCategories.WorkspaceTools,
             "configured-workspace-tools",
@@ -866,6 +985,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     composition.State.Tools.Add(tool);
                 }
 
+                composition.State.RuntimeToolMetadata.AddRange(WorkspaceToolSet.CreateRecoveryMetadata(tools));
                 RecordCatalogCapabilitySource(composition.State, capability, tools.Count, MafContextManifestBuilder.EstimateToolSchemaChars(tools));
                 composition.State.HasApprovalTools |= composition.ToolBuilder.CapabilityHasApprovalTools(capability, suppressApprovalRequirements);
                 break;

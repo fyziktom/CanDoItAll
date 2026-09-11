@@ -21,7 +21,7 @@ internal sealed class ProjectsExecutionAuthorityProvider
                 request.ObservedWorkspaceScope));
         }
 
-        if (request.ObservedWorkspaceScope is not null)
+        if (request.ObservedWorkspaceScope is not null && !request.IsCapturedSandboxRevalidation)
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"The projects source '{request.SourceId.Value}' published workspace scope '{request.ObservedWorkspaceScope.DisplayName}' without a selected project.");

@@ -14,6 +14,14 @@ public sealed class EfProcessExecutionMutationGuard(
         if (expected.RootRunId.Value == Guid.Empty || expected.SourceAuthority?.ProjectAdmission is null || expected.ProjectReference is null) {
             throw new ProcessExecutionAuthorityMismatchException("Native Process effects require the exact saved project launch authority.");
         }
+        await RequireDispatchAsync(expected, cancellationToken);
+    }
+
+    public async Task RequireDispatchAsync(ProcessExecutionDispatchAuthority expected, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(expected);
+        if (expected.RootRunId.Value == Guid.Empty) {
+            throw new ProcessExecutionAuthorityMismatchException("Process dispatch requires its exact saved root identity.");
+        }
         await using var context = await transactions.CreateEnlistedAsync(options, static configured => new ProcessPersistenceDbContext(configured), cancellationToken);
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Process native mutation fencing requires the PostgreSQL owner transaction.");
@@ -34,7 +42,7 @@ public sealed class EfProcessExecutionMutationGuard(
         var result = await EfProcessExecutionAuthorityQuery.ReadCoreAsync(context, evidence, clock.GetUtcNow(), cancellationToken);
         if (result.Snapshot is not { ObservedCurrentDispatch: true } current || current.OwnerFingerprint != expected.OwnerFingerprint ||
                 current.ProjectReference != expected.ProjectReference || current.RootRunId != expected.RootRunId ||
-                current.SourceAuthority?.ProjectAdmission != expected.SourceAuthority.ProjectAdmission) {
+                current.SourceAuthority?.ProjectAdmission != expected.SourceAuthority?.ProjectAdmission) {
             throw new ProcessExecutionAuthorityMismatchException("The Process claim, readiness, source or lifetime no longer permits this native effect.");
         }
     }

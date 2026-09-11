@@ -26,6 +26,8 @@ internal sealed class WorkflowSourceFileResolver
         this.fileEnumerator = fileEnumerator ?? EnumerateFiles;
     }
 
+    public WorkspaceExecutionScope ExecutionScope => paths.ExecutionScope;
+
     public IEnumerable<WorkflowSourceIngestionFile> ResolveCandidateFiles(
         WorkflowSourceCandidate candidate,
         WorkflowSourceIngestionExecutorSettings settings,
@@ -62,7 +64,8 @@ internal sealed class WorkflowSourceFileResolver
                 yield return new WorkflowSourceIngestionFile(
                     file,
                     ToDisplayPath(file, directory, directoryPathPolicy),
-                    Path.GetFileName(file));
+                    Path.GetFileName(file), directory.FullPath,
+                    ResolveOrigin(directory, candidate.Value, settings));
                 count++;
                 if (count >= take)
                 {
@@ -83,8 +86,15 @@ internal sealed class WorkflowSourceFileResolver
         yield return new WorkflowSourceIngestionFile(
             resolvedFile.FullPath,
             resolvedFile.RelativePath,
-            Path.GetFileName(resolvedFile.FullPath));
+            Path.GetFileName(resolvedFile.FullPath), resolvedFile.FullPath,
+            ResolveOrigin(resolvedFile, candidate.Value, settings));
     }
+
+    private static WorkflowWorkspaceReadPathOrigin ResolveOrigin(WorkspaceResolvedPath path, string requested,
+        WorkflowSourceIngestionExecutorSettings settings) => path.IsWorkspacePath
+        ? WorkflowWorkspaceReadPathOrigin.Workspace
+        : settings.AllowAbsoluteInputPaths && IsNativeAbsolutePath(NormalizeInputPath(requested))
+            ? WorkflowWorkspaceReadPathOrigin.ExplicitAbsolute : WorkflowWorkspaceReadPathOrigin.RegisteredAlias;
 
     private WorkspaceResolvedPath ResolveFile(
         string value,

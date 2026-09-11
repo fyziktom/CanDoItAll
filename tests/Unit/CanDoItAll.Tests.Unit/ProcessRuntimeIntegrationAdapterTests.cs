@@ -6855,17 +6855,20 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 workspaceFiles,
                 workflowStepExecutor: workflowExecutor);
 
-            var result = await adapter.ExecuteAsync(CreateAdapterRequest(
+            var request = CreateAdapterRequest(
                 assignment,
                 ProcessExecutionAdapterKind.Workflow,
                 new ProcessExecutionAdapterOperationKey("execute"),
                 Binding,
                 [],
                 [],
-                ProcessStepExecutionContract.Empty));
+                ProcessStepExecutionContract.Empty);
+            var result = await adapter.ExecuteAsync(request);
 
             Assert.Equal(expected, result);
             Assert.Equal(assignment, workflowExecutor.Assignment);
+            Assert.NotEqual(Guid.Empty, request.DispatchClaimIdentity.Value);
+            Assert.Equal(request.DispatchClaimIdentity, workflowExecutor.Claim);
             Assert.NotNull(workflowExecutor.StepContract);
             Assert.False(workspace.ExecuteRunCalled);
         }
@@ -12936,7 +12939,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ProcessRuntimeStepAssignment assignment,
             ProcessStepExecutionContract stepContract,
             CancellationToken cancellationToken = default,
-            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null)
+            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null,
+            ProcessDispatchClaimIdentity dispatchClaimIdentity = default)
             => throw new InvalidOperationException(
                 $"Agent integration test unexpectedly dispatched workflow assignment '{assignment.StepKey}'.");
     }
@@ -12949,15 +12953,18 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         public ProcessStepExecutionContract? StepContract { get; private set; }
 
         public int ExecutionCount { get; private set; }
+        public ProcessDispatchClaimIdentity Claim { get; private set; }
 
         public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
             ProcessRuntimeStepAssignment assignment,
             ProcessStepExecutionContract stepContract,
             CancellationToken cancellationToken = default,
-            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null)
+            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null,
+            ProcessDispatchClaimIdentity dispatchClaimIdentity = default)
         {
             Assignment = assignment;
             StepContract = stepContract;
+            Claim = dispatchClaimIdentity;
             if (beforeLaunch is not null &&
                 await beforeLaunch(cancellationToken) is { } blocked)
             {

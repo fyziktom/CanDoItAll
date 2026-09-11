@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Projects;
+using static CanDoItAll.Modules.Projects.ProjectWorkspaceScopePolicy;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;

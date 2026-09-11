@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.ProviderRuntime;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,8 @@ public static class WorkflowLlmServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddProviderBackedLlmInvocationPort();
+        services.TryAdd(ServiceDescriptor.Describe(typeof(IWorkflowProviderInputAdmission),
+            typeof(WorkflowProviderInputAdmission), invokerLifetime));
         services.TryAdd(ServiceDescriptor.Describe(
             typeof(IWorkflowLlmComponentInvoker),
             typeof(WorkflowLlmComponentInvoker),

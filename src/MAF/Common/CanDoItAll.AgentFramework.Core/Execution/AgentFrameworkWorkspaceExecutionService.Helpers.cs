@@ -248,7 +248,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return run;
         }
 
-        var canRecover = inputAttachments.Count == 0 && (runtimeContext?.Attachments.IsEmpty ?? true);
+        var canRecover = inputAttachments.Count == 0 && toolAdmissionJournal.CanRecoverRuntimeContext(runtimeContext);
         return run with { ToolAdmission = toolAdmissionJournal.CreateForNewRun(run, session,
             canRecover ? AgentToolAdmissionSupport.Recoverable : AgentToolAdmissionSupport.RequestScopedInput,
             new(input.Id, input.Content), canRecover ? runtimeContext : null) };

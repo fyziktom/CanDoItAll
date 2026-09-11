@@ -25,16 +25,17 @@ public sealed class ProjectStructurePageProcessLinkTests
     {
         await using var harness = await CreateHarnessAsync();
         var services = harness.Context.Services;
-        var projectId = await CreateProjectAsync(
+        var admission = await CreateProjectAsync(
             services.GetRequiredService<ProjectsService>(),
             "Canonical task process link");
+        var projectId = admission.ProjectId;
         var task = await services.GetRequiredService<ProjectStructureTaskCreationService>().CreateAsync(
             projectId,
             new ProjectStructureTaskCreateRequest(
                 "Main App",
                 DateTimeOffset.Parse("2026-07-25T12:00:00Z"),
-                DateTimeOffset.Parse("2026-07-25T20:00:00Z")),
-            CreateAgent(projectId));
+                DateTimeOffset.Parse("2026-07-25T20:00:00Z")) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
@@ -70,9 +71,10 @@ public sealed class ProjectStructurePageProcessLinkTests
     {
         await using var harness = await CreateHarnessAsync();
         var services = harness.Context.Services;
-        var projectId = await CreateProjectAsync(
+        var admission = await CreateProjectAsync(
             services.GetRequiredService<ProjectsService>(),
             "Project block process link");
+        var projectId = admission.ProjectId;
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
         var block = await workbenchService.CreateObjectAsync(
             projectId,
@@ -120,11 +122,9 @@ public sealed class ProjectStructurePageProcessLinkTests
         return Assert.IsAssignableFrom<IRenderedComponent<CanvasWorkbench>>(canvasWorkbench);
     }
 
-    private static async Task<Guid> CreateProjectAsync(
-        ProjectsService projectsService,
-        string name)
-    {
-        var result = await projectsService.SaveAsync(new ProjectEditorModel
+    private static async Task<ProjectWriteAdmission> CreateProjectAsync(
+        ProjectsService projectsService, string name) {
+        var result = await projectsService.CreateWithAdmissionAsync(new ProjectEditorModel
         {
             Name = $"{name} {Guid.NewGuid():N}",
             Description = "Project structure process-link component regression proof.",
@@ -132,19 +132,19 @@ public sealed class ProjectStructurePageProcessLinkTests
             CurrentPhase = "Delivery"
         });
         Assert.True(result.IsSuccess);
-        return result.Value;
+        return Assert.IsType<ProjectWriteAdmission>(result.Value);
     }
 
     private static Task<ComponentTestHarness> CreateHarnessAsync()
         => ComponentTestHarness.CreateAsync(services =>
             services.Replace(ServiceDescriptor.Singleton<ISecretVault>(new InMemorySecretVault())));
 
-    private static ProjectStructureAgentContext CreateAgent(Guid projectId)
+    private static ProjectStructureAgentContext CreateAgent(ProjectWriteAdmission admission)
         => new(
             "component-tests-process-link",
             "Component tests",
             Environment.MachineName,
             AppContext.BaseDirectory,
-            JsonSerializer.Serialize(new { ProjectId = projectId }),
-            $"{projectId:D}-process-link");
+            JsonSerializer.Serialize(new { admission.ProjectId }),
+            $"{admission.ProjectId:D}-process-link") { ExpectedProjectAdmission = admission };
 }

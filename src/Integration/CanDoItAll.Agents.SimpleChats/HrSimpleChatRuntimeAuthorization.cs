@@ -45,8 +45,7 @@ public sealed class HrSimpleChatRuntimeAuthorization(
         var resolver = executionAuthorityResolver ?? throw new InvalidOperationException("Receipt reconciliation requires the canonical current authority resolver.");
         AgentExecutionAuthorityRecord current;
         try {
-            current = await resolver.ResolveAsync(new(session.AgentId, source.SourceKind, source.SourceId,
-                original.WorkspaceScope, session.Profile.Generation, UiAccessHint: null), cancellationToken);
+            current = await resolver.ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(source, original), cancellationToken);
         } catch (AgentExecutionAuthorityMismatchException) {
             throw Denied("Current source authority does not permit receipt reconciliation.");
         }
@@ -151,9 +150,7 @@ public sealed class HrSimpleChatRuntimeAuthorization(
             "HR Simple Chat administration requires the canonical current source authority resolver.");
         AgentExecutionAuthorityRecord current;
         try {
-            current = await resolver.ResolveAsync(new(admission.AgentId, source.SourceKind, source.SourceId,
-                governance.WorkspaceScope, admission.Profile.Generation,
-                UiAccessHint: null), cancellationToken);
+            current = await resolver.ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(source, governance), cancellationToken);
         } catch (AgentExecutionAuthorityMismatchException) {
             throw Denied("The current source authority no longer permits this HR execution.");
         }

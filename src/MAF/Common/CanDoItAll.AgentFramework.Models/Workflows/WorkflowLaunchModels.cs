@@ -187,7 +187,9 @@ public enum WorkflowLaunchOriginKind
     SchedulerPlanRun = 2,
     ProjectStructureNode = 3,
     AgentRuntimeInvocation = 4,
-    ProcessAssignment = 5
+    ProcessAssignment = 5,
+    ProcessToolInvocation = 6,
+    ProcessDispatchAssignment = 7
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$origin")]
@@ -197,6 +199,8 @@ public enum WorkflowLaunchOriginKind
 [JsonDerivedType(typeof(WorkflowLaunchOrigin.ProjectStructureNode), "project-structure-node")]
 [JsonDerivedType(typeof(WorkflowLaunchOrigin.AgentRuntimeInvocation), "agent-runtime-invocation")]
 [JsonDerivedType(typeof(WorkflowLaunchOrigin.ProcessAssignment), "process-assignment")]
+[JsonDerivedType(typeof(WorkflowLaunchOrigin.ProcessToolInvocation), "process-tool-invocation-v1")]
+[JsonDerivedType(typeof(WorkflowLaunchOrigin.ProcessDispatchAssignment), "process-dispatch-assignment-v1")]
 public abstract record WorkflowLaunchOrigin
 {
     private WorkflowLaunchOrigin(WorkflowLaunchOriginKind kind, WorkflowLaunchCorrelationId correlationId)
@@ -373,6 +377,30 @@ public abstract record WorkflowLaunchOrigin
         public WorkflowLaunchSessionId RuntimeSessionId { get; }
 
         public string Purpose { get; }
+    }
+
+    public sealed record ProcessToolInvocation : WorkflowLaunchOrigin {
+        [JsonConstructor]
+        public ProcessToolInvocation(WorkflowProcessToolBinding invocation, WorkflowLaunchCorrelationId correlationId)
+            : base(WorkflowLaunchOriginKind.ProcessToolInvocation, correlationId) {
+            ArgumentNullException.ThrowIfNull(invocation);
+            invocation.Validate();
+            Invocation = invocation;
+        }
+
+        public WorkflowProcessToolBinding Invocation { get; }
+    }
+
+    public sealed record ProcessDispatchAssignment : WorkflowLaunchOrigin {
+        [JsonConstructor]
+        public ProcessDispatchAssignment(WorkflowProcessDispatchBinding dispatch, WorkflowLaunchCorrelationId correlationId)
+            : base(WorkflowLaunchOriginKind.ProcessDispatchAssignment, correlationId) {
+            ArgumentNullException.ThrowIfNull(dispatch);
+            dispatch.Validate();
+            Dispatch = dispatch;
+        }
+
+        public WorkflowProcessDispatchBinding Dispatch { get; }
     }
 
     public sealed record ProcessAssignment : WorkflowLaunchOrigin

@@ -3,9 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workspace;
 
-internal sealed class WorkspaceProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+internal sealed class WorkspaceProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.Workspace;
 
@@ -15,23 +14,23 @@ internal sealed class WorkspaceProjectTransferTargetStateParticipant
         typeof(ConnectorCommandRecord)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken)
-    {
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<WorkspaceConnectorCommandDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
+
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        WorkspaceConnectorCommandDbContext dbContext, CancellationToken cancellationToken) {
         var residues = new List<ProjectTransferTargetStateResidue>();
         if (await dbContext.Set<ConnectorCommandRecord>()
                 .AsNoTracking()
-                .AnyAsync(cancellationToken))
-        {
+                .AnyAsync(cancellationToken)) {
             residues.Add(new("workspace connector commands linked to projects"));
         }
 
         if (await dbContext.Set<ConnectorCommandAuditRecord>()
                 .AsNoTracking()
-                .AnyAsync(cancellationToken))
-        {
+                .AnyAsync(cancellationToken)) {
             residues.Add(new("workspace connector command audits linked to projects"));
         }
 

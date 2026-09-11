@@ -128,7 +128,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             FileToolsSemanticScope semanticScope,
             Guid projectId,
             string nodeKey,
-            StorageCatalogRecord storage,
+            StorageCatalogSnapshot storage,
             string fullPath)
         {
             this.application = application;
@@ -155,7 +155,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
 
         public string NodeKey { get; }
 
-        public StorageCatalogRecord Storage { get; }
+        public StorageCatalogSnapshot Storage { get; }
 
         public string FullPath { get; }
 
@@ -187,7 +187,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             });
             Assert.True(projectResult.IsSuccess, string.Join(" ", projectResult.Errors.Select(error => error.Message)));
             Guid projectId = projectResult.Value;
-            StorageCatalogRecord storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
+            StorageCatalogSnapshot storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
             (string extension, string objectSubtype, string mediaType) = fileKind switch
             {
                 FixtureFileKind.Markdown => (".md", "markdown", "text/plain"),

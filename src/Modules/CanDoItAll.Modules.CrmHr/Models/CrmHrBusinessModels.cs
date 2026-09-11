@@ -355,6 +355,7 @@ public sealed class StaffingRequest
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid? ProjectId { get; set; }
+    public Guid? ProjectLifetimeId { get; set; }
     public Guid? RequestedByPartyId { get; set; }
     public Guid? DeliveryUnitPartyId { get; set; }
     public string Title { get; set; } = string.Empty;
@@ -428,6 +429,7 @@ public sealed class ProjectPartyAssignment
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
+    public Guid? ProjectLifetimeId { get; set; }
     public Guid PartyId { get; set; }
     public Guid? PartyOrganizationAffiliationId { get; set; }
     public ProjectPartyAssignmentKind AssignmentKind { get; set; }
@@ -446,6 +448,9 @@ public sealed class ProjectPartyAssignmentMoveReceipt
 {
     public Guid OperationId { get; set; }
     public Guid SourceProjectId { get; set; }
+    public Guid? DatabaseProfileId { get; set; }
+    public Guid? SourceProjectLifetimeId { get; set; }
+    public Guid? TargetProjectLifetimeId { get; set; }
     public Guid TargetProjectId { get; set; }
     public string NodeSetFingerprint { get; set; } = string.Empty;
     public DateTimeOffset CompletedAtUtc { get; set; }
@@ -654,7 +659,13 @@ internal sealed class StaffingRequestConfiguration : IEntityTypeConfiguration<St
 {
     public void Configure(EntityTypeBuilder<StaffingRequest> builder)
     {
-        builder.ToTable("CrmHr_StaffingRequests");
+        builder.ToTable("CrmHr_StaffingRequests", table => table.HasCheckConstraint(
+            "CK_CrmHr_StaffingRequests_ProjectLifetime", """
+            "ProjectLifetimeId" IS NULL OR (
+                "ProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "ProjectId" IS NOT NULL
+                AND "ProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+            """));
         builder.HasKey(request => request.Id);
         builder.Property(request => request.Title).HasMaxLength(200).IsRequired();
         builder.Property(request => request.NeededRole).HasMaxLength(160);
@@ -730,8 +741,14 @@ internal sealed class ProjectPartyAssignmentConfiguration : IEntityTypeConfigura
 {
     public void Configure(EntityTypeBuilder<ProjectPartyAssignment> builder)
     {
-        builder.ToTable("CrmHr_ProjectPartyAssignments", table => table.HasCheckConstraint(
-            "CK_CrmHr_ProjectPartyAssignments_ParticipationRole", "\"AssignmentKind\" <> 'WorkItemAssignee'"));
+        builder.ToTable("CrmHr_ProjectPartyAssignments", table => {
+            table.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ParticipationRole", "\"AssignmentKind\" <> 'WorkItemAssignee'");
+            table.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ProjectLifetime", """
+                "ProjectLifetimeId" IS NULL OR (
+                    "ProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                    AND "ProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+                """);
+        });
         builder.HasKey(assignment => assignment.Id);
         builder.Property(assignment => assignment.AssignmentKind).HasConversion<string>().HasMaxLength(48);
         builder.Property(assignment => assignment.NodeKey).HasMaxLength(160);
@@ -756,7 +773,16 @@ internal sealed class ProjectPartyAssignmentMoveReceiptConfiguration
 {
     public void Configure(EntityTypeBuilder<ProjectPartyAssignmentMoveReceipt> builder)
     {
-        builder.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts");
+        builder.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts", table => table.HasCheckConstraint(
+            "CK_CrmHr_ProjectPartyAssignmentMoveReceipts_Lifetimes", """
+            ("DatabaseProfileId" IS NULL AND "SourceProjectLifetimeId" IS NULL AND "TargetProjectLifetimeId" IS NULL)
+            OR ("DatabaseProfileId" IS NOT NULL AND "SourceProjectLifetimeId" IS NOT NULL AND "TargetProjectLifetimeId" IS NOT NULL
+                AND "DatabaseProfileId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "SourceProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "TargetProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "SourceProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "TargetProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+            """));
         builder.HasKey(receipt => receipt.OperationId);
         builder.Property(receipt => receipt.NodeSetFingerprint)
             .HasMaxLength(64)

@@ -64,7 +64,7 @@ internal readonly record struct ResourceFileSourceKey
     }
 }
 
-internal sealed record ResourcePromotionProject(Guid Id, string Name);
+internal sealed record ResourcePromotionProject(Guid Id, string Name, ProjectWriteAdmission Admission);
 
 internal sealed record ResourceFileSourceDescriptor(
     ResourceFileSourceKey Key,
@@ -92,7 +92,7 @@ internal interface IResourceFileSourceCatalog
 }
 
 internal sealed class ResourceFileSourceCatalog(
-    ProjectRecordQueryService projectQueries,
+    ProjectWriteSelectionQuery projectQueries,
     IStorageCatalogService storageCatalog,
     IStorageBrowseDriverRegistry browseDrivers) : IResourceFileSourceCatalog
 {
@@ -100,9 +100,9 @@ internal sealed class ResourceFileSourceCatalog(
 
     public async Task<ResourceFileSourceCatalogSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
-        ResourcePromotionProject[] projects = (await projectQueries.ListReferencesAsync(
+        ResourcePromotionProject[] projects = (await projectQueries.ListAsync(
                 MaximumSourceCount + 1, cancellationToken))
-            .Select(project => new ResourcePromotionProject(project.Id, project.Name))
+            .Select(project => new ResourcePromotionProject(project.Id, project.Name, project.Admission))
             .ToArray();
         if (projects.Length > MaximumSourceCount)
         {
@@ -110,7 +110,7 @@ internal sealed class ResourceFileSourceCatalog(
                 $"The Resources browse catalog contains more than {MaximumSourceCount} project sources.");
         }
 
-        IReadOnlyList<StorageCatalogRecord> storages = await storageCatalog.ListAsync(cancellationToken);
+        IReadOnlyList<StorageCatalogSnapshot> storages = await storageCatalog.ListAsync(cancellationToken);
         var registeredKinds = browseDrivers.RegisteredKinds.ToHashSet();
 
         var sources = new List<ResourceFileSourceDescriptor>(projects.Length + storages.Count);
@@ -158,7 +158,7 @@ internal sealed class ResourceFileSourceCatalog(
             null);
     }
 
-    private static ResourceFileSourceDescriptor CreateStorageSource(StorageCatalogRecord storage)
+    private static ResourceFileSourceDescriptor CreateStorageSource(StorageCatalogSnapshot storage)
     {
         string fingerprint = ResourceStorageSourceScopeKey.BuildFingerprint(storage);
         var scope = new FileToolsSemanticScope(
@@ -178,7 +178,7 @@ internal sealed class ResourceFileSourceCatalog(
     }
 
     private static bool IsBrowsable(
-        StorageCatalogRecord storage,
+        StorageCatalogSnapshot storage,
         IReadOnlySet<StorageProviderKind> registeredKinds)
         => storage.IsEnabled &&
            storage.CapabilityMask.HasFlag(StorageCapability.Read) &&
@@ -193,7 +193,7 @@ internal sealed class ResourceFileSourceCatalog(
             _ => throw new ArgumentOutOfRangeException(nameof(providerKind))
         };
 
-    private static string BuildDetail(StorageCatalogRecord storage)
+    private static string BuildDetail(StorageCatalogSnapshot storage)
     {
         string access = storage.IsReadOnly ? "Read only" : "Read enabled";
         return $"{storage.ProviderKind} · {access} · {storage.HealthStatus}";
@@ -248,21 +248,9 @@ internal static class ResourceStorageSourceScopeKey
         return IsFingerprint(fingerprint);
     }
 
-    public static string BuildFingerprint(StorageCatalogRecord storage)
-    {
+    public static string BuildFingerprint(StorageCatalogSnapshot storage) {
         ArgumentNullException.ThrowIfNull(storage);
-        string canonical = string.Join(
-            '|',
-            storage.Id.ToString("N"),
-            storage.ProviderKind,
-            storage.IsEnabled,
-            storage.IsReadOnly,
-            (int)storage.CapabilityMask,
-            storage.ConnectionMode,
-            storage.EndpointOrRoot,
-            storage.ConfigJson,
-            storage.CredentialSecretId?.ToString("N") ?? string.Empty);
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+        return storage.SourceFingerprint;
     }
 
     private static bool IsFingerprint(string? value)

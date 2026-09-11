@@ -1,10 +1,10 @@
 namespace CanDoItAll.Infrastructure.Storage;
 
 public static class FtpStorageAddressPolicy {
-    public static Uri ResolveObjectUri(StorageCatalogRecord storage, string remotePath) {
+    public static Uri ResolveObjectUri(StorageDriverInput storage, string remotePath) {
         ArgumentNullException.ThrowIfNull(storage);
         return ResolveObjectUri(storage.EndpointOrRoot, remotePath, () => {
-            var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+            var configuration = storage.ReadConfiguration();
             return new(configuration.Port, configuration.BasePath);
         });
     }

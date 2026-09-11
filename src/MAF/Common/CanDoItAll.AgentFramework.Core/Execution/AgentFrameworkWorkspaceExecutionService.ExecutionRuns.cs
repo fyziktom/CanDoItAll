@@ -299,9 +299,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ?? throw new AgentToolAdmissionException("tool-admission.context-missing", "The original execution source was not found.");
         var resolver = executionAuthorityResolver ?? throw new InvalidOperationException("Receipt reconciliation requires current source authority.");
         try {
-            var current = await resolver.ResolveAsync(new(run.AgentId, source.SourceKind, source.SourceId,
-                original.WorkspaceScope, activityWorkspaceIdentity.DatabaseProfileGeneration,
-                UiAccessHint: null), cancellationToken);
+            var current = await resolver.ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(source, original), cancellationToken);
             if (current.DatabaseProfileId != original.DatabaseProfileId || current.DatabaseProfileGeneration != original.DatabaseProfileGeneration) {
                 throw new AgentToolAdmissionException("tool-admission.profile-changed", "The current profile cannot reconcile another profile's cancelled effect.");
             }
@@ -897,6 +895,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     failureProvider,
                     exception,
                     out failureDisplay!);
+            }
+            if (!wasCancelled && failureDisplay is null) {
+                LogUnexpectedRunFailure(run.Id, agent.Id, run.ChatSessionId, exception);
             }
             var resultSummary = cancellationKind switch
             {
@@ -1762,6 +1763,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     exception,
                     out failureDisplay!);
             }
+            if (!wasCancelled && failureDisplay is null) {
+                LogUnexpectedRunFailure(run.Id, agent.Id, run.ChatSessionId, exception);
+            }
             var resultSummary = cancellationKind switch
             {
                 ExecutionCancellationKind.ProcessRegistry => "Execution run cancelled because the owning process run was cancelled.",
@@ -2164,6 +2168,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return exception is AgentExecutionGovernanceException governanceException
             ? governanceException.SanitizedDisplayMessage
             : UnclassifiedRunFailureMessage;
+    }
+
+    private void LogUnexpectedRunFailure(Guid executionRunId, Guid agentId, Guid? chatSessionId, Exception exception) {
+        const int maximumFailureDepth = 8;
+        Exception? current = exception;
+        for (var depth = 0; current is not null && depth < maximumFailureDepth; depth++, current = current.InnerException) {
+            logger.LogError(
+                "Unexpected agent runtime failure. ExecutionRunId={ExecutionRunId} AgentId={AgentId} ChatSessionId={ChatSessionId} FailureDepth={FailureDepth} FailureType={FailureType} MethodStack={MethodStack}.",
+                executionRunId,
+                agentId,
+                chatSessionId,
+                depth,
+                current.GetType().FullName,
+                new StackTrace(current, fNeedFileInfo: false).ToString());
+        }
     }
 
     private void LogTerminalFailurePersistenceFailure(

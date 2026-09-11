@@ -3165,6 +3165,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<int?>("OriginKind")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("OriginProcessAssignmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("OriginProcessRunId")
                         .HasColumnType("uuid");
 
@@ -3198,6 +3201,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasIndex("UpdatedAtUtc");
 
                     b.HasIndex("WorkflowId");
+
+                    b.HasIndex("OriginProcessRunId", "OriginProcessAssignmentId")
+                        .HasDatabaseName("IX_WorkflowRuns_ProcessAssignment");
 
                     b.HasIndex("State", "UpdatedAtUtc", "RunId")
                         .IsDescending(false, true, true);
@@ -3240,6 +3246,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<bool>("AssetDispatchStarted")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsComplete")
                         .HasColumnType("boolean");
 
@@ -3250,6 +3259,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ReceiptJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -3258,6 +3273,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("uuid");
 
                     b.HasKey("RunId", "OccurrencePath", "Slot");
+
+                    b.HasIndex("RunId", "ProjectId");
 
                     b.HasIndex("IsComplete", "NextInspectionAtUtc", "RunId", "OccurrencePath", "Slot");
 
@@ -4852,6 +4869,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -4876,6 +4896,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.ToTable("CrmHr_ProjectPartyAssignments", null, t => {
                             t.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ParticipationRole", "\"AssignmentKind\" <> 'WorkItemAssignee'");
+
+                            t.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ProjectLifetime", "\"ProjectLifetimeId\" IS NULL OR (\n    \"ProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
                         });
                 });
 
@@ -4887,6 +4909,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<DateTimeOffset>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("NodeSetFingerprint")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -4895,14 +4920,22 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("SourceProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceProjectLifetimeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("TargetProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TargetProjectLifetimeId")
                         .HasColumnType("uuid");
 
                     b.HasKey("OperationId");
 
                     b.HasIndex("SourceProjectId", "TargetProjectId", "CompletedAtUtc");
 
-                    b.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts", (string)null);
+                    b.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts", null, t => {
+                            t.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignmentMoveReceipts_Lifetimes", "(\"DatabaseProfileId\" IS NULL AND \"SourceProjectLifetimeId\" IS NULL AND \"TargetProjectLifetimeId\" IS NULL)\nOR (\"DatabaseProfileId\" IS NOT NULL AND \"SourceProjectLifetimeId\" IS NOT NULL AND \"TargetProjectLifetimeId\" IS NOT NULL\n    AND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"SourceProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"TargetProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"SourceProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"TargetProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.RecruitmentApplication", b => {
@@ -5061,6 +5094,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("RequestedByPartyId")
                         .HasColumnType("uuid");
 
@@ -5083,7 +5119,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("CrmHr_StaffingRequests", (string)null);
+                    b.ToTable("CrmHr_StaffingRequests", null, t => {
+                            t.HasCheckConstraint("CK_CrmHr_StaffingRequests_ProjectLifetime", "\"ProjectLifetimeId\" IS NULL OR (\n    \"ProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectId\" IS NOT NULL\n    AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.WorkforceProfile", b => {
@@ -5681,6 +5719,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("DatabaseProfileId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ImportedHistory")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("LifetimeId")
                         .HasColumnType("uuid");
 
@@ -5706,7 +5747,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId")
                         .IsUnique()
-                        .HasFilter("\"State\" = 1");
+                        .HasFilter("\"State\" = 1 AND \"ImportedHistory\" IS NULL");
 
                     b.HasIndex("ParentProjectId", "State");
 
@@ -5808,6 +5849,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("LifetimeId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ImportedHistory")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
@@ -6244,6 +6288,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
                     b.Property<int?>("ResourceKind")
                         .HasColumnType("integer");
 
@@ -6668,6 +6715,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ResponsiblePartyId")
                         .HasColumnType("uuid");
 
@@ -7053,6 +7103,76 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectObjects", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectProcessAssetContributionRecord", b => {
+                    b.Property<Guid>("IntentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImportedHistory")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterializedFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MaterializedRequestJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("NativeObjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NodeJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlanFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PlanJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("PreparedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReceiptJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SourceExecutionRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StorageIntentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("IntentId");
+
+                    b.HasIndex("NativeObjectId")
+                        .IsUnique();
+
+                    b.HasIndex("SourceExecutionRunId");
+
+                    b.HasIndex("StorageIntentId")
+                        .IsUnique();
+
+                    b.HasIndex("DatabaseProfileId", "ProjectId", "ProjectLifetimeId");
+
+                    b.ToTable("Workbench_ProcessAssetContributions", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureLeaseRecord", b => {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -7244,6 +7364,42 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectProjectionLayouts", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentHistoryRecord", b => {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImportedHistory")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.HasIndex("ProjectId", "NodeKey");
+
+                    b.ToTable("Workbench_WorkAssignmentHistory", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentRecord", b => {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -7284,6 +7440,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -7306,7 +7465,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId", "PartyId", "NodeKey");
 
-                    b.ToTable("Workbench_WorkAssignments", (string)null);
+                    b.ToTable("Workbench_WorkAssignments", null, t => {
+                            t.HasCheckConstraint("CK_Workbench_WorkAssignments_ProjectLifetime", "\"ProjectLifetimeId\" IS NULL OR (\n    \"ProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkbenchViewStateRecord", b => {
@@ -7346,11 +7507,17 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Delivery")
                         .HasColumnType("integer");
 
                     b.Property<bool>("DeliveryFinished")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ImportedHistory")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("NativeNodeId")
                         .HasColumnType("uuid");
@@ -7367,6 +7534,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectLifetimeId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("RunId")
@@ -7403,6 +7573,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<int>("Slot")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImportedHistory")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("NativeObjectId")
                         .HasColumnType("uuid");
 
@@ -7418,6 +7594,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectLifetimeId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ReceiptJson")

@@ -44,6 +44,49 @@ even an empty-catalog cursor blocks destructive rollback.
 
 The Web host exposes the supported HTTP slice at `/api/crm-hr`. Web owns route binding and status mapping; this module's application services continue to own validation, persistence, audit, search-index, activity, and lifecycle side effects. Do not add direct `DbContext` writes or scenario-specific seed behavior to the Web adapter.
 
+Development Agent diagnostics use `AiAgentService` for the original AI-party identity
+list and binding facts. These explicit diagnostic reads include archived parties and
+all binding states, preserve database name ordering, and use the CRM owner context.
+They return only the fields already exposed by the development routes; they do not
+repair or refresh the technical catalog. Web retains its development/local-or-authorized
+access gate, synchronization sequence, response envelopes and status mapping.
+
+## Ordinary planning reads
+
+The CRM-owned `CrmPlanningAgentRuntimeToolProvider` exposes `crm_planning_search`
+and `crm_planning_summary_get` to admitted interactive Project Structure, Gantt and
+Projects chats. Both use the existing bounded, privacy-filtered
+`ICrmHrAgentQueryService` DTOs. They return identity, safe summaries and availability;
+they do not reserve capacity, assign work or expose confidential records. Business
+text remains marked as untrusted data. The Tooling project reference provides the
+neutral provider/metadata contract; CRM does not depend on the AgentFramework
+product module or MAF SDK implementation.
+
+To enable an ordinary planner, open its existing Agents catalog editor, enable
+tool use and the required Project Structure read scope, then assign **CRM Planning
+Search** and/or **CRM Planning Summary** in **Capabilities**. In **Memory**, explicitly
+enable **Allow CRM source reads**, and save. Capability assignment and CRM source
+permission are independent prerequisites. The latter preserves the existing
+`memory.allowedSourceScopes` representation and does not enable a memory provider,
+change invocation mode, grant HR administration or assign any tools automatically.
+Start a new authorized chat turn after changing grants; a resumed invocation cannot
+gain newly enabled tools.
+
+Each proposal binds the original capability ID, provider, admitted session and exact
+project source/lifetime in its versioned preparation. Dispatch and saved-result
+disclosure recheck current authority against that source. The catalog lease spans
+the CRM read; project/profile checks complete before returning data. Saved search
+disclosure uses one current bounded owner search, so changed visibility or a record
+falling outside the original search result window denies that saved disclosure.
+It never substitutes new data for the original checkpoint. Missing legacy source
+evidence requires a new authorized turn. Managed HR identities and purposes remain
+separate; Process, Scheduler and automatic callers receive no grant from this adapter.
+
+This implements the missing authorized CRM read attachment in Foundation FEAT-120
+and SURF-008 using CON-057. Existing Resource projections and bounded native/Storage
+content reads remain the Resource planning path; MAT-011 is not a blanket permission
+manifest.
+
 ## Assignment staging boundary
 
 Work-item assignees live in Workbench's `Workbench_WorkAssignments` table. CRM
@@ -80,3 +123,9 @@ and canonical participation semantics remain separate required work.
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`
 - CRM-HR HTTP API: `docs/crm-hr-api.md`
+
+### Assignment and staffing lifetime binding
+
+Participation, Work assignments and project-linked Staffing requests retain nullable project-lifetime provenance. New assignment saves and replacements, including an empty replacement, require the caller's captured `ProjectWriteAdmission`. Existing editors retain the displayed selection through asynchronous work; legacy selections without a binding require refresh. Opportunity conversion uses the selected project snapshot or the exact new-project commit receipt for both its assignment commit and compensation.
+
+Global and orphan history remains readable. Current project/allocation reports filter another incarnation before SQL paging; historical Party reports retain old rows and do not label them with a replacement project's name. Reference backfill is limited to unambiguous current projects and never creates actor permission. Assignment move receipts bind both source and target lifetimes. Recorded-source cleanup does not require the source project to remain live.

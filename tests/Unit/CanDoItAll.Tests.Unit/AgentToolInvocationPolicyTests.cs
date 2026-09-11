@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench.AgentContext;
 using CanDoItAll.Modules.Processes;
 using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
@@ -5499,6 +5500,7 @@ public sealed class AgentToolInvocationPolicyTests
             DeclaredCapability = ProductToolPolicies.TryResolve(toolName, out var declared) ? declared : null,
             PathArguments = resolvedPathArguments
         };
+        context = new ProjectWorkspacePathContributor().Contribute(context, null);
         return new ProjectStructureRuntimeGuidanceContributor().Contribute(context, null);
     }
 

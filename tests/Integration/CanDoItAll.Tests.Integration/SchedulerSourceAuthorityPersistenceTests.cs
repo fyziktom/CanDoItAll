@@ -23,7 +23,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class SchedulerSourceAuthorityPersistenceTests {
+public sealed partial class SchedulerSourceAuthorityPersistenceTests {
     [Fact]
     public async Task Scheduled_Workflow_admission_holds_source_and_plan_until_commit_on_the_exact_shared_transaction() {
         await using var app = await TestApplication.CreateAsync(Harness());

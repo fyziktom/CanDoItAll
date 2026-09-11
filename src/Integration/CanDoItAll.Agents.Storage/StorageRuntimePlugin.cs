@@ -215,7 +215,7 @@ internal sealed class StorageRuntimePlugin(
         return new AgentStorageDeleteToolResult(storage.Id, storage.Name, reference.Locator, true);
     }
 
-    private async Task<StorageCatalogRecord> ResolveStorageAsync(
+    private async Task<StorageDriverInput> ResolveStorageAsync(
         Guid storageId,
         bool requireWrite,
         CancellationToken cancellationToken)
@@ -225,7 +225,7 @@ internal sealed class StorageRuntimePlugin(
             throw new InvalidOperationException("A storage catalog id is required.");
         }
 
-        var storage = await catalogService.GetAsync(storageId, cancellationToken).ConfigureAwait(false)
+        var storage = await catalogService.GetDriverAsync(storageId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Storage catalog '{storageId:D}' was not found.");
 
         if (!storage.IsEnabled)
@@ -246,7 +246,7 @@ internal sealed class StorageRuntimePlugin(
         return storage;
     }
 
-    private IStorageDriver ResolveDriver(StorageCatalogRecord storage, StorageCapability requiredCapability)
+    private IStorageDriver ResolveDriver(StorageDriverInput storage, StorageCapability requiredCapability)
         => ResolveDriver(storage.ProviderKind, storage.CapabilityMask, storage.Name, requiredCapability);
 
     private IStorageDriver ResolveDriver(StorageProviderKind providerKind, StorageCapability capabilityMask,
@@ -262,7 +262,7 @@ internal sealed class StorageRuntimePlugin(
         return driver;
     }
 
-    private bool IsStorageCatalogAllowed(StorageCatalogRecord storage)
+    private bool IsStorageCatalogAllowed(StorageCatalogSnapshot storage)
         => IsStorageCatalogAllowed(storage.Id);
 
     private bool IsStorageCatalogAllowed(Guid storageId) {
@@ -286,7 +286,7 @@ internal sealed class StorageRuntimePlugin(
         }
     }
 
-    private static StorageObjectReference BuildReference(StorageCatalogRecord storage, string locator)
+    private static StorageObjectReference BuildReference(StorageDriverInput storage, string locator)
     {
         var entryId = new StorageBrowseEntryId(locator).Value;
         var (locatorKind, normalizedLocator) = ResolveStorageLocator(storage.ProviderKind, entryId);
@@ -430,7 +430,7 @@ internal sealed class StorageRuntimePlugin(
 
     private AgentStorageBrowseEntryCapability MapBrowseEntryCapabilities(
         StorageBrowseEntryCapability capabilities,
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         IStorageDriver contentDriver)
     {
         var result = AgentStorageBrowseEntryCapability.None;

@@ -22,6 +22,7 @@ public static class SecurityModuleServiceCollectionExtensions
             AppDbContextOptionsConfigurator.Configure(options, database.Profile);
         });
         services.AddSingleton<SecretReferenceQuery>();
+        services.AddSingleton<EnvironmentSecretBootstrapService>();
         var optionsBuilder = services.AddOptions<SecretVaultOptions>();
         if (configuration is not null)
         {
@@ -45,6 +46,7 @@ public static class SecurityModuleServiceCollectionExtensions
         services.TryAddSingleton<ISecretMigrationCoordinatorFactory, SecretMigrationCoordinatorFactory>();
         services.AddScoped<IPluginSecretBroker, PluginSecretBroker>();
         services.AddScoped<SecretService>();
+        services.AddScoped<ISecretDatabaseTransferParticipant, SecretDatabaseTransferParticipant>();
         return services;
     }
 }

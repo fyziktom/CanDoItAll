@@ -1,4 +1,5 @@
 using System.Text;
+using CanDoItAll.Infrastructure.Storage;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -7,6 +8,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -47,6 +49,12 @@ public static class ApiServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Scoped<IApiTokenAdministrationAccess, WebApiTokenAdministrationAccess>());
         services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<MemoryProviderApiService>();
+        services.TryAddScoped<WebCurrentPrincipalResolver>();
+        services.TryAddScoped<IStoragePlacementRecoveryAccess, WebStoragePlacementRecoveryAccess>();
+        services.TryAddScoped<StoragePlacementRecoveryService>();
+        services.TryAddScoped<IStoragePlacementRecovery>(provider => provider.GetRequiredService<StoragePlacementRecoveryService>());
+        services.AddScoped<ProjectWorkflowAssetContinuationService>();
+        services.TryAddScoped<IStoragePlacementOwnerContinuation, StoragePlacementOwnerContinuationService>();
         services.TryAddSingleton(
             typeof(ProfileBoundedReplayEventStream<>),
             typeof(ProfileBoundedReplayEventStream<>));
@@ -69,6 +77,18 @@ public static class ApiServiceCollectionExtensions
             options.AddPolicy(ApiAuthorizationPolicies.GeneralApi, policy => {
                 policy.RequireAuthenticatedUser();
                 policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.Api));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ReadStoragePlacementRecovery, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.ReadStoragePlacementRecovery));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ReconcileStoragePlacement, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.ReconcileStoragePlacement));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.VerifyStorageExternalTermination, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.VerifyStorageExternalTermination));
             });
             options.AddPolicy(ApiAuthorizationPolicies.IssueTokens, policy =>
             {

@@ -83,8 +83,32 @@ public sealed class ProjectAssetStorageService(
     internal async Task<(SavedMediaDescriptor Media, Exception? ObservationException)> SaveStableAsync(
         StoragePlacementIntentId intentId, Guid projectId, ProjectObjectType objectType, string objectSubtype,
         ProjectObjectMediaPayload media, CancellationToken cancellationToken) {
-        var service = stablePlacementService
-            ?? throw new InvalidOperationException("Stable workflow asset placement requires the registered Storage owner service.");
+        var service = RequireStablePlacements();
+        var prepared = PrepareStableMedia(intentId, projectId, objectType, objectSubtype, media, cancellationToken);
+        var outcome = await service.PlaceAsync(intentId, prepared.Request, cancellationToken);
+        if (outcome.State != StorageStablePlacementState.Completed || outcome.Receipt is null) {
+            throw new StorageStablePlacementPendingException(outcome);
+        }
+        return (MapStableMedia(objectType, prepared, outcome.Receipt), outcome.ObservationException);
+    }
+
+    internal async Task<(SavedMediaDescriptor Media, StorageStablePlacementReceipt Receipt)> ReadCompletedStableAsync(
+        StoragePlacementIntentId intentId, Guid projectId, ProjectObjectType objectType, string objectSubtype,
+        ProjectObjectMediaPayload media, CancellationToken cancellationToken) {
+        var service = RequireStablePlacements();
+        var prepared = PrepareStableMedia(intentId, projectId, objectType, objectSubtype, media, cancellationToken);
+        var receipt = await service.ReadCompletedForNativeContinuationAsync(intentId, prepared.Request, cancellationToken);
+        return (MapStableMedia(objectType, prepared, receipt), receipt);
+    }
+
+    internal Task RequireCompletedStableForMutationAsync(StorageStablePlacementReceipt receipt, CancellationToken cancellationToken)
+        => RequireStablePlacements().RequireCompletedForNativeMutationAsync(receipt, cancellationToken);
+
+    private StorageStablePlacementService RequireStablePlacements() => stablePlacementService
+        ?? throw new InvalidOperationException("Stable managed asset placement requires the registered Storage owner service.");
+
+    private PreparedStableMedia PrepareStableMedia(StoragePlacementIntentId intentId, Guid projectId, ProjectObjectType objectType,
+        string objectSubtype, ProjectObjectMediaPayload media, CancellationToken cancellationToken) {
         var content = NormalizeTypedTextContent(objectType, objectSubtype, Decode(media), cancellationToken);
         var diagramKind = ResolveMermaidDiagramKind(objectType, objectSubtype, content.Content, cancellationToken);
         var extension = Path.GetExtension(content.FileName);
@@ -97,18 +121,20 @@ public sealed class ProjectAssetStorageService(
         };
         var relativePath = $"managed-files/project-media/{category}/{projectId:N}/{safeFileName}";
         var contentKind = StorageContentClassifier.Resolve(content.ContentType, content.FileName);
-        var outcome = await service.PlaceAsync(intentId, new(content.FileName, content.ContentType, content.Content.ToArray(),
-            StorageUsagePurpose.ProjectAsset, contentKind, projectId, RelativePathHint: relativePath,
-            PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)), cancellationToken);
-        if (outcome.State != StorageStablePlacementState.Completed || outcome.Receipt is null) {
-            throw new StorageStablePlacementPendingException(outcome);
-        }
-        var receipt = outcome.Receipt;
-        var reference = ProjectManagedStorageProvenancePolicy.StampStable(receipt.WriteResult.Reference, relativePath,
-            receipt.Storage, physicalIdentityPolicy, intentId);
-        return (new(receipt.RelativePath, receipt.Route, reference.ContentType, content.FileName, objectType.ToString(),
-            StorageJson.SerializeReference(reference), diagramKind), outcome.ObservationException);
+        return new(new(content.FileName, content.ContentType, content.Content.ToArray(), StorageUsagePurpose.ProjectAsset,
+            contentKind, projectId, RelativePathHint: relativePath,
+            PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)), relativePath, diagramKind);
     }
+
+    private SavedMediaDescriptor MapStableMedia(ProjectObjectType objectType, PreparedStableMedia prepared,
+        StorageStablePlacementReceipt receipt) {
+        var reference = ProjectManagedStorageProvenancePolicy.StampStable(receipt.WriteResult.Reference, prepared.RelativePath,
+            receipt.Storage, physicalIdentityPolicy, receipt.IntentId);
+        return new(receipt.RelativePath, receipt.Route, reference.ContentType, prepared.Request.FileName, objectType.ToString(),
+            StorageJson.SerializeReference(reference), prepared.DiagramKind);
+    }
+
+    private sealed record PreparedStableMedia(StoragePlacementRequest Request, string RelativePath, MermaidDiagramKind DiagramKind);
 
     private static ProjectAssetContent Decode(ProjectObjectMediaPayload media)
     {

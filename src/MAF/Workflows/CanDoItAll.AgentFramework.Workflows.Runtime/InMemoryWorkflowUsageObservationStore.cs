@@ -181,8 +181,12 @@ public sealed class InMemoryWorkflowUsageObservationStore : IWorkflowUsageObserv
         {
             var processRunIds = query.OriginProcessRunIds.ToHashSet();
             filtered = filtered.Where(observation =>
-                observation.Origin is WorkflowLaunchOrigin.ProcessAssignment processOrigin &&
-                processRunIds.Contains(processOrigin.ProcessRun));
+                observation.Origin switch {
+                    WorkflowLaunchOrigin.ProcessAssignment process => processRunIds.Contains(process.ProcessRun),
+                    WorkflowLaunchOrigin.ProcessToolInvocation tool => processRunIds.Contains(tool.Invocation.ProcessRun),
+                    WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => processRunIds.Contains(mapped.Dispatch.ProcessRun),
+                    _ => false
+                });
         }
 
         if (query.WorkflowId is { } workflowId)
@@ -238,7 +242,7 @@ public sealed class InMemoryWorkflowUsageObservationStore : IWorkflowUsageObserv
         WorkflowUsageObservation stored,
         WorkflowUsageObservation candidate)
     {
-        if (stored != candidate)
+        if (!stored.HasSameContent(candidate))
         {
             throw new WorkflowUsageObservationConflictException(candidate.Id);
         }

@@ -17,6 +17,7 @@ internal static class MafToolsetFingerprint
     // ASCII Unit Separator (0x1F): a control character effectively never present in a tool
     // name, used to keep e.g. ["ab","c"] and ["a","bc"] from hashing to the same digest.
     private const char NameSeparator = (char)0x1F;
+    private const string DeferredContextContractMarker = "deferred-context";
 
     /// <summary>
     /// Stable SHA-256 hex digest of the ordered, deduplicated tool name set. Always produces a
@@ -48,7 +49,8 @@ internal static class MafToolsetFingerprint
     /// tool name produces a different fingerprint, so stale state cannot be
     /// restored across a tool-contract change (schema v2 dimension).
     /// </summary>
-    public static string ComputeContractFingerprint(IEnumerable<AITool> tools, AgentToolPolicyCatalog? toolPolicies = null) {
+    public static string ComputeContractFingerprint(IEnumerable<AITool> tools, AgentToolPolicyCatalog? toolPolicies = null,
+        IEnumerable<MafContextToolDeclaration>? contextTools = null) {
         ArgumentNullException.ThrowIfNull(tools);
 
         var entries = tools
@@ -67,6 +69,9 @@ internal static class MafToolsetFingerprint
                     approvalWrapped ? "approval" : "direct",
                     schemaText);
             })
+            .Concat((contextTools ?? []).Select(tool => string.Join(NameSeparator,
+                tool.Name, (toolPolicies ?? AgentToolPolicyCatalog.BuiltIn).Classify(tool.Name).ToString(),
+                tool.RequiresApproval ? "approval" : "direct", DeferredContextContractMarker)))
             .Distinct(StringComparer.Ordinal)
             .OrderBy(entry => entry, StringComparer.Ordinal)
             .ToArray();

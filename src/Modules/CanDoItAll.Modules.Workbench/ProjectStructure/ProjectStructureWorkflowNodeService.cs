@@ -100,7 +100,7 @@ public sealed class ProjectStructureWorkflowNodeService(
                 parentNodeId,
                 request,
                 allowCanonicalTaskParent: false,
-                cancellationToken),
+                cancellationToken, agent),
             cancellationToken);
     }
 
@@ -121,7 +121,7 @@ public sealed class ProjectStructureWorkflowNodeService(
                 parentTaskNodeId,
                 request,
                 allowCanonicalTaskParent: true,
-                cancellationToken),
+                cancellationToken, agent),
             cancellationToken);
     }
 
@@ -139,11 +139,11 @@ public sealed class ProjectStructureWorkflowNodeService(
         } catch (Exception exception) when (exception is not ProjectStructureAgentException { StatusCode: 403 or 409 }) {
             var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, CancellationToken.None);
             if (admission is null || admission.ProjectId != projectId || admission.NodeId != nodeId ||
-                agent.WorkflowAuthority is not { } source || admission.Binding.Authority.Channel != source.Channel ||
-                admission.Binding.Authority.Principal != source.Principal) {
+                !workflowAuthority.MatchesNodeProducer(admission.Binding.Authority, agent)) {
                 throw;
             }
 
+            await workflowAuthority.EnsureCurrentAsync(admission.Binding.Authority, null, CancellationToken.None);
             logger.LogWarning(exception, "Workflow admission {IntentId} reserved run {RunId}; later execution or delivery acknowledgement failed.",
                 intentId, admission.Binding.RunId);
             WorkflowRunSnapshot? run = null;
@@ -241,7 +241,8 @@ public sealed class ProjectStructureWorkflowNodeService(
         string parentNodeId,
         ProjectStructureWorkflowNodeCreateInput request,
         bool allowCanonicalTaskParent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectStructureAgentContext mutationOwner)
     {
         if (request.WorkflowId.Value == Guid.Empty)
         {
@@ -333,7 +334,11 @@ public sealed class ProjectStructureWorkflowNodeService(
                     BuildWorkflowRoute(projectId, detail.Definition.Id),
                     "workflow-definition",
                     detail.Definition.Id.Value),
-                PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent);
+                PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent) {
+            ExpectedProjectAdmission = mutationOwner.ExpectedProjectAdmission,
+            ProcessMutationAdmission = mutationOwner.ProcessMutationAdmission,
+            AgentMutationAdmission = mutationOwner.AgentMutationAdmission
+        };
         var createdNode = allowCanonicalTaskParent
             ? await projectWorkbenchService.CreateCanonicalTaskResourceObjectAsync(
                 projectId,
@@ -359,19 +364,23 @@ public sealed class ProjectStructureWorkflowNodeService(
             throw new ProjectStructureAgentException(400, "NodeRequired", "A project-structure node id is required.");
         }
 
-        var authority = await workflowAuthority.CaptureAsync(projectId, agent.WorkflowAuthority, cancellationToken);
         var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, cancellationToken);
         if (admission is not null) {
+            if (!workflowAuthority.MatchesNodeProducer(admission.Binding.Authority, agent)) {
+                throw new ProjectStructureAgentException(409, "WorkflowAdmissionConflict", "The saved Workflow intent belongs to a different original source or project lifetime.");
+            }
             var simulation = ProjectStructureWorkflowPreviewSimulationSupport.BuildPlan(admission.Definition, request.SimulatedNodeIds);
-            await projectWorkbenchService.ValidateWorkflowAdmissionReplayAsync(admission, projectId, nodeId, authority,
+            await projectWorkbenchService.ValidateWorkflowAdmissionReplayAsync(admission, projectId, nodeId, admission.Binding.Authority,
                 request.RequestedBackend, simulation, cancellationToken);
             await workflowAuthority.EnsureCurrentAsync(admission.Binding.Authority, null, cancellationToken);
         } else {
+            var authority = await workflowAuthority.CaptureForNodeAsync(projectId, agent, cancellationToken);
             var context = await LoadNodeContextAsync(projectId, nodeId, cancellationToken);
             var metadata = ResolveWorkflowMetadata(context.Node);
             var detail = await LoadDefinitionAsync(metadata, cancellationToken);
             EnsureActiveDefinition(detail.Definition);
             EnsureValidDefinition(detail);
+            authority = await workflowAuthority.PrepareLaunchAsync(authority, detail.Definition, cancellationToken);
             var inputSettings = ProjectStructureWorkflowInputSettingsNormalizer.Normalize(metadata.InputSettings);
             var simulation = ProjectStructureWorkflowPreviewSimulationSupport.BuildPlan(detail.Definition, request.SimulatedNodeIds);
             var preview = BuildPreview(context.Project, context.ParentNode, context.Surface, context.NodesById,
@@ -678,6 +687,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         var parentSubtreeNodes = inputSettings.IncludeParentSubtree
             ? ResolveDescendants(surface.Nodes, parentNode.Id)
             : [];
+        ProjectStructureResultEvidenceScope.RecordWorkflowPreview(selectedNodes.Concat(parentSubtreeNodes).Append(parentNode));
         var payload = new ProjectStructureWorkflowInputPayload(
             project.Id.ToString("D"),
             workflowNode?.Id ?? parentNode.Id,

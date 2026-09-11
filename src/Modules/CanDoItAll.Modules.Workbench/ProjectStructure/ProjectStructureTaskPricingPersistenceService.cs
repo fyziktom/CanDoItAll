@@ -27,7 +27,9 @@ public sealed class ProjectStructureTaskPricingPersistenceService(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(
                     plan.ProjectId),
-            cancellationToken);
+            cancellationToken,
+            plan.MutationOwner?.ExpectedProjectAdmission is { } expected ? [expected] : null, plan.MutationOwner?.ProcessMutationAdmission,
+            plan.MutationOwner?.AgentMutationAdmission);
         var task = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(
                 item =>

@@ -22,6 +22,8 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
     private readonly WorkflowExternalResponseLeaseHeartbeat heartbeat;
     private readonly WorkflowExternalResponseResultMapper resultMapper = new();
     private readonly WorkflowExternalResponseRecoveryHook? recoveryHook;
+    private readonly IWorkflowRunStore? runStore;
+    private readonly IWorkflowUsageObservationStore? usageStore;
 
     public WorkflowExternalResponseContinuation(
         IEnumerable<IWorkflowExecutionBackend> backends,
@@ -32,7 +34,9 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
         IWorkflowEventSink eventSink,
         ILogger<WorkflowExternalResponseContinuation> logger,
         TimeProvider timeProvider,
-        WorkflowExternalResponseRecoveryHook? recoveryHook = null)
+        WorkflowExternalResponseRecoveryHook? recoveryHook = null,
+        IWorkflowRunStore? runStore = null,
+        IWorkflowUsageObservationStore? usageStore = null)
     {
         ArgumentNullException.ThrowIfNull(backends);
         ArgumentNullException.ThrowIfNull(operationStore);
@@ -52,6 +56,8 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
         this.logger = logger;
         this.timeProvider = timeProvider;
         this.recoveryHook = recoveryHook;
+        this.runStore = runStore;
+        this.usageStore = usageStore;
         heartbeat = new WorkflowExternalResponseLeaseHeartbeat(
             operationStore,
             timeProvider,
@@ -280,6 +286,16 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
         {
             try
             {
+                WorkflowRunDisclosureDeclaration? disclosure = null;
+                if (context.Request.Continuation?.CompilerContractVersion == WorkflowProviderDisclosureProtocol.Current) {
+                    if (runStore is null) {
+                        throw new WorkflowBackendResumeException(WorkflowBackendResumeFailureKind.CompilerContractMismatch,
+                            "The admitted Workflow recovery requires its original private run declaration.");
+                    }
+                    disclosure = (await runStore.ReadProviderDisclosureAsync(context.Run.RunId, activeRun.Token)).Declaration;
+                }
+                using var progress = runStore is null ? null : WorkflowNodeExecutionProgressScope.Push(
+                    new StoreBackedWorkflowNodeExecutionProgressObserver(context.Run, runStore, usageStore, eventSink));
                 backendResult = await resumeBackend.ResumeAsync(
                     new WorkflowBackendResumeRequest(
                         context.Run,
@@ -287,7 +303,10 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
                         response,
                         operation.Id,
                         context.Boundary.RequestVersion.Value,
-                        authorization.Authorization),
+                        authorization.Authorization) {
+                        ResponseLease = operation.Lease,
+                        DisclosureDeclaration = disclosure
+                    },
                     activeRun.Token);
             }
             catch (OperationCanceledException) when (leaseHeartbeat.Failure is not null)

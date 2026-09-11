@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed class ProcessesProjectTransferTargetStateParticipant
+internal sealed class ProcessesProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
     : IProjectTransferTargetStateParticipant {
     private static readonly string ProjectIdJsonPropertyToken =
         $"\"{ProcessRuntimeLaunchVariables.ProjectId}\"";
@@ -25,18 +25,21 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant
         typeof(ProcessPreparedLaunchEntity)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken) {
-        var residues = new List<ProjectTransferTargetStateResidue>();
-        if (await dbContext.Set<ProcessPreparedLaunchEntity>().AsNoTracking().AnyAsync(cancellationToken) ||
-            await dbContext.Set<ProcessRuntimeStateEntity>().AsNoTracking().AnyAsync(item =>
-                item.LaunchAdmissionId != null || item.ProjectAdmissionDatabaseProfileId != null ||
-                item.ProjectAdmissionProjectId != null || item.ProjectAdmissionLifetimeId != null, cancellationToken)) {
-            residues.Add(new("retained process launch or project admission evidence"));
-        }
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<ProcessPersistenceDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
 
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        ProcessPersistenceDbContext dbContext, CancellationToken cancellationToken) {
+        var residues = new List<ProjectTransferTargetStateResidue>();
+        await foreach (var launch in dbContext.Set<ProcessPreparedLaunchEntity>().AsNoTracking()
+                .AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+            if (launch.ReferencesProject()) {
+                residues.Add(new("retained process prepared launches linked to projects"));
+                break;
+            }
+        }
         if (await dbContext.Set<ProcessRunRecordEntity>()
                 .AsNoTracking()
                 .AnyAsync(item => item.ProjectId.HasValue, cancellationToken)) {
@@ -111,6 +114,16 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant
                 "process step assignments with malformed project launch state"));
         }
 
+        if (await dbContext.Set<ProcessRuntimeStateEntity>().AsNoTracking().AnyAsync(runtime =>
+                runtime.LaunchAdmissionId.HasValue && !dbContext.Set<ProcessPreparedLaunchEntity>().Any(launch =>
+                    launch.Id == runtime.LaunchAdmissionId.Value && launch.RunId == runtime.RunId), cancellationToken)) {
+            residues.Add(new("process runtime state with missing or mismatched launch admission evidence"));
+        }
+        if (await dbContext.Set<ProcessRuntimeStateEntity>().AsNoTracking().AnyAsync(item =>
+                item.ProjectAdmissionDatabaseProfileId.HasValue || item.ProjectAdmissionProjectId.HasValue ||
+                item.ProjectAdmissionLifetimeId.HasValue, cancellationToken)) {
+            residues.Add(new("retained process project admissions"));
+        }
         return residues;
     }
 }

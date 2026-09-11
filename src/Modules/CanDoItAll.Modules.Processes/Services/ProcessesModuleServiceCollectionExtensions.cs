@@ -106,6 +106,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessExecutionProjectAuthorityReader>(provider => provider.GetRequiredService<ProcessExecutionProjectAuthorityReader>());
         services.TryAddScoped<IProcessExecutionDispatchAuthorityReader>(provider => provider.GetRequiredService<ProcessExecutionProjectAuthorityReader>());
         services.TryAddScoped<IProcessExecutionMutationGuard, EfProcessExecutionMutationGuard>();
+        services.TryAddScoped<EfProcessWorkflowDispatchAuthority>();
+        services.TryAddScoped<IProcessWorkflowDispatchAuthorityReader>(provider => provider.GetRequiredService<EfProcessWorkflowDispatchAuthority>());
+        services.TryAddScoped<IProcessWorkflowDispatchMutationGuard>(provider => provider.GetRequiredService<EfProcessWorkflowDispatchAuthority>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentToolBackgroundSourcePolicy, ProcessToolBackgroundSourcePolicy>());
         services.TryAddScoped<EfProcessPreparedLaunchStore>();
         services.TryAddScoped<IProcessPreparedLaunchStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());

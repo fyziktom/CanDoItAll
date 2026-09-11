@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
@@ -6,7 +7,9 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed record ProjectStructureTaskResourceAttachRequest(
     [property: JsonRequired] ProjectStructureTaskResourceSelection Resource,
     [property: JsonRequired] ProjectTaskExecutionSnapshot CurrentExecution,
-    ProjectStructureWorkflowInputSettings? WorkflowInputSettings = null);
+    ProjectStructureWorkflowInputSettings? WorkflowInputSettings = null) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+}
 
 public sealed record ProjectStructureTaskResourceAttachResult(
     ProjectStructureTaskResourceSelection Resource,
@@ -36,6 +39,10 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
                 "A task resource attachment request is required.");
         }
 
+        var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
+        if (agent.ExpectedProjectAdmission != expected) {
+            throw new InvalidOperationException("Task attachment requires its captured native mutation context.");
+        }
         ValidateRequiredRequestValues(request.Resource, request.CurrentExecution);
         return AttachCoreAsync(
             projectId,
@@ -109,7 +116,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
             resource,
             previousExecution,
             expectedCurrentExecution,
-            cancellationToken);
+            cancellationToken, agent);
         ProjectStructureTaskResourceAttachment? attachment = null;
         try
         {

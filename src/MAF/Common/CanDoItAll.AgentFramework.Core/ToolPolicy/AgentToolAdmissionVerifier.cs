@@ -7,6 +7,10 @@ public sealed class AgentToolAdmissionVerifier : IAgentToolAdmissionVerifier {
         CancellationToken cancellationToken = default)
         => RequireOwner().RequireSessionAsync(session, cancellationToken);
 
+    public ValueTask<AgentToolSessionObservation> RequireSessionObservationAsync(AgentToolSessionReference session,
+        CancellationToken cancellationToken = default)
+        => RequireOwner().RequireSessionObservationAsync(session, cancellationToken);
+
     public ValueTask<AgentToolAdmittedInvocation> RequireInvocationAsync(AgentToolSessionReference session,
         string toolName, AgentToolSemanticDigest digest, CancellationToken cancellationToken = default)
         => RequireOwner().RequireInvocationAsync(session, toolName, digest, cancellationToken);

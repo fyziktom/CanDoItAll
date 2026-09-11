@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.SchedulerPlanner;
 
-internal sealed class SchedulerPlannerProjectTransferTargetStateParticipant
+internal sealed class SchedulerPlannerProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
     : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.SchedulerPlanner;
@@ -15,10 +15,13 @@ internal sealed class SchedulerPlannerProjectTransferTargetStateParticipant
         typeof(SchedulerFireAdmissionRecord)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken) {
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<SchedulerPlannerDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
+
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        SchedulerPlannerDbContext dbContext, CancellationToken cancellationToken) {
         var hasResidue =
             await dbContext.Set<SchedulerPlan>()
                 .AsNoTracking()
@@ -29,8 +32,14 @@ internal sealed class SchedulerPlannerProjectTransferTargetStateParticipant
             await dbContext.Set<SchedulerPlanRun>()
                 .AsNoTracking()
                 .AnyAsync(cancellationToken);
-        return hasResidue
-            ? [new("scheduler plans or runs with unclassifiable project input")]
-            : [];
+        var retainedAdmissions = await dbContext.Set<SchedulerFireAdmissionRecord>().AsNoTracking().AnyAsync(cancellationToken);
+        var residues = new List<ProjectTransferTargetStateResidue>();
+        if (retainedAdmissions) {
+            residues.Add(new("retained scheduler fire admissions"));
+        }
+        if (hasResidue) {
+            residues.Add(new("scheduler plans or runs with unclassifiable project input"));
+        }
+        return residues;
     }
 }

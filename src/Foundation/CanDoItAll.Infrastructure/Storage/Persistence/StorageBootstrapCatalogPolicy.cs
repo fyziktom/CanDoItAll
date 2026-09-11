@@ -8,10 +8,16 @@ public static class StorageBootstrapCatalogPolicy
     private static readonly IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory =
         new PhysicalFileSystemPathPolicyFactory();
 
-    public static StorageCatalogRecord? ResolveAuthoritativeFileSystemStorage(
+    internal static StorageCatalogRecord? ResolveAuthoritativeFileSystemStorage(
         IEnumerable<StorageCatalogRecord> storages, string currentWorkspaceRoot) {
         return ResolveAuthoritativeStorage(storages, currentWorkspaceRoot,
             static storage => StorageCatalogPlanningFact.FromCatalogRecord(storage, includeFtpAddressing: false));
+    }
+
+    public static StorageCatalogSnapshot? ResolveAuthoritativeFileSystemStorage(
+        IEnumerable<StorageCatalogSnapshot> storages, string currentWorkspaceRoot) {
+        return ResolveAuthoritativeStorage(storages, currentWorkspaceRoot,
+            static storage => StorageCatalogPlanningFact.FromSnapshot(storage));
     }
 
     public static StorageCatalogPlanningFact? ResolveAuthoritativeFileSystemStorageFact(

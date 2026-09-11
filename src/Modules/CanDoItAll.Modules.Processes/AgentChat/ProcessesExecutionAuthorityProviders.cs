@@ -52,7 +52,7 @@ internal static class ProcessesExecutionAuthority
                 request.ObservedWorkspaceScope));
         }
 
-        if (request.ObservedWorkspaceScope is not null)
+        if (request.ObservedWorkspaceScope is not null && !request.IsCapturedSandboxRevalidation)
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"The processes source '{sourceId}' published workspace scope '{request.ObservedWorkspaceScope.DisplayName}', which has no canonical authority rule for a global processes surface.");

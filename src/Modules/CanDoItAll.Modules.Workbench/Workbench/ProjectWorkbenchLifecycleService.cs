@@ -24,7 +24,7 @@ public sealed class ProjectWorkbenchLifecycleService(
             await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-            cancellationToken, request.ExpectedProjectAdmission is { } expected ? [expected] : null, request.ProcessMutationAdmission);
+            cancellationToken, request.ExpectedProjectAdmission is { } expected ? [expected] : null, request.ProcessMutationAdmission, request.AgentMutationAdmission);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)

@@ -29,12 +29,14 @@ public sealed class ProjectRetirementRecord {
     public Guid LifetimeId { get; set; }
     public Guid ProjectId { get; set; }
     public DateTimeOffset RetiredAtUtc { get; set; }
+    public RetainedEvidenceImport? ImportedHistory { get; set; }
 }
 
 internal sealed class ProjectRetirementRecordConfiguration : IEntityTypeConfiguration<ProjectRetirementRecord> {
     public void Configure(EntityTypeBuilder<ProjectRetirementRecord> builder) {
         builder.ToTable("Projects_ProjectRetirements");
         builder.HasKey(record => record.LifetimeId);
+        builder.Property(record => record.ImportedHistory).HasRetainedEvidenceImportConversion();
         builder.HasIndex(record => new { record.ProjectId, record.RetiredAtUtc });
     }
 }
@@ -72,6 +74,29 @@ public sealed partial class ProjectWriteAdmissionService(
         ArgumentNullException.ThrowIfNull(admission);
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await RequireAsync(context, admission, cancellationToken);
+    }
+
+    public async Task RequireManyCurrentAsync(IReadOnlyCollection<ProjectWriteAdmission> admissions,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(admissions);
+        if (admissions.Count == 0) {
+            return;
+        }
+        var expected = admissions.ToArray();
+        foreach (var admission in expected) {
+            ArgumentNullException.ThrowIfNull(admission);
+            if (admission.DatabaseProfileId != DatabaseProfileId) {
+                throw new ProjectWriteAdmissionRejectedException(admission);
+            }
+        }
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var active = await ReadActiveLifetimesAsync(context,
+            expected.Select(admission => admission.ProjectId).Distinct().ToArray(), cancellationToken);
+        foreach (var admission in expected) {
+            if (!active.TryGetValue(admission.ProjectId, out var lifetimeId) || lifetimeId != admission.LifetimeId) {
+                throw new ProjectWriteAdmissionRejectedException(admission);
+            }
+        }
     }
 
     public async Task RequireForMutationAsync(ProjectWriteAdmission admission, CancellationToken cancellationToken = default) {

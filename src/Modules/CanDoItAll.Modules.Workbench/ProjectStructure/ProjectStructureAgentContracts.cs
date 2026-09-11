@@ -33,10 +33,19 @@ public sealed record ProjectStructureAgentContext(
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 
     [JsonIgnore]
+    public System.Collections.Immutable.ImmutableArray<ProjectWriteAdmission> ExpectedProjectAdmissions { get; init; } = [];
+
+    [JsonIgnore]
     public ProjectProcessMutationAdmission? ProcessMutationAdmission { get; init; }
 
     [JsonIgnore]
+    public ProjectAgentMutationAdmission? AgentMutationAdmission { get; init; }
+
+    [JsonIgnore]
     public ProjectStructureProcessLaunchInvocation? ProcessLaunchInvocation { get; init; }
+
+    [JsonIgnore]
+    public ProjectProcessAssetInvocation? ProcessAssetInvocation { get; init; }
 }
 
 [JsonConverter(typeof(FlexibleProjectStructureLeaseScopeKindJsonConverter))]
@@ -237,6 +246,9 @@ public sealed record ProjectStructureNodeSummary(
     string IAgentToolInvocationResultEvidence.SafeMessage => string.Empty;
 
     bool IAgentToolInvocationResultEvidence.CanRetryWithCorrectedInput => false;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectProcessAssetReceiptObservation? ProcessAssetReceipt { get; init; }
 }
 
 public sealed record ProjectStructureLinkSummary(
@@ -250,7 +262,10 @@ public sealed record ProjectStructureReadResponse(
     string ProjectName,
     IReadOnlyList<ProjectStructureNodeSummary> Nodes,
     IReadOnlyList<ProjectStructureLinkSummary> Links,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+}
 
 public sealed record ProjectStructureNodeCatalogResponse(
     IReadOnlyList<ProjectStructureNodeCatalogItem> Items,
@@ -748,7 +763,10 @@ public sealed record ProjectStructureAssetDescriptor(
     string MediaOriginalFileName,
     string MetadataJson,
     bool IsReadonly,
-    string? RevisionParentNodeId);
+    string? RevisionParentNodeId) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectProcessAssetReceiptObservation? ProcessAssetReceipt { get; init; }
+}
 
 public sealed record ProjectStructureAssetContentDescriptor(
     ProjectStructureAssetDescriptor Asset,

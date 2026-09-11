@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -106,6 +107,12 @@ public sealed record WorkflowBackendResumeRequest
     public long InvocationGeneration { get; init; }
 
     public WorkflowExternalResponseAuthorization? Authorization { get; init; }
+
+    [JsonIgnore]
+    public WorkflowExternalResponseLease? ResponseLease { get; init; }
+
+    [JsonIgnore]
+    public WorkflowRunDisclosureDeclaration? DisclosureDeclaration { get; init; }
 }
 
 public enum WorkflowRunCancellationOutcome
@@ -209,6 +216,10 @@ public interface IWorkflowCheckpointFactory
 
 public interface IWorkflowRunStore : IWorkflowCheckpointStore
 {
+    Task<WorkflowProviderDisclosureHistory> ReadProviderDisclosureAsync(
+        WorkflowRunId runId, CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException("This Workflow owner store cannot verify retained provider-disclosure evidence.");
+
     Task CreateRunWithStartedEventAsync(
         WorkflowRunSnapshot run,
         WorkflowEventRecord startedEvent,

@@ -35,7 +35,6 @@ using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
@@ -362,32 +361,13 @@ if (app.Environment.IsDevelopment())
     app.MapPost("/_dev/agentframework/diagnostics", async (
         AiAgentService aiAgentService,
         IAiTechnicalAgentBridge technicalAgentBridge,
-        ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-        IDbContextFactory<AppDbContext> dbContextFactory) =>
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
     {
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync();
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var parties = await dbContext.Set<Party>()
-            .Where(item => item.PartyType == PartyType.AiAgent)
-            .OrderBy(item => item.DisplayName)
-            .Select(item => new
-            {
-                item.Id,
-                item.DisplayName
-            })
-            .ToListAsync();
+        var parties = await aiAgentService.ListDiagnosticPartiesAsync();
         var partyIds = parties.Select(item => item.Id).ToList();
-        var bindings = await dbContext.Set<AiResourceBinding>()
-            .Where(item => partyIds.Contains(item.PartyId))
-            .Select(item => new
-            {
-                item.PartyId,
-                item.TechnicalAgentId,
-                item.BindingStatus,
-                item.BindingReason
-            })
-            .ToListAsync();
+        var bindings = await aiAgentService.ListDiagnosticBindingsAsync(partyIds);
         var summaries = await technicalAgentBridge.GetDirectorySummariesAsync(partyIds);
         var roster = await aiAgentService.ListAgentDirectoryAsync();
         var workspaceAgents = await workspaceFactory.GetOrganizationWorkspaceService().ListAgentsAsync(includeTemplates: false);
@@ -773,8 +753,7 @@ if (app.Environment.IsDevelopment())
         AiAgentService aiAgentService,
         IAiTechnicalAgentBridge technicalAgentBridge,
         IAgentFrameworkOrganizationCatalogRepairService organizationCatalogRepairService,
-        ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-        IDbContextFactory<AppDbContext> dbContextFactory) =>
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
     {
         var stopwatch = Stopwatch.StartNew();
         switch (step.Trim().ToLowerInvariant())
@@ -813,16 +792,7 @@ if (app.Environment.IsDevelopment())
             }
             case "parties":
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-                var parties = await dbContext.Set<Party>()
-                    .Where(item => item.PartyType == PartyType.AiAgent)
-                    .OrderBy(item => item.DisplayName)
-                    .Select(item => new
-                    {
-                        item.Id,
-                        item.DisplayName
-                    })
-                    .ToListAsync();
+                var parties = await aiAgentService.ListDiagnosticPartiesAsync();
                 stopwatch.Stop();
                 return Results.Ok(new
                 {
@@ -834,12 +804,7 @@ if (app.Environment.IsDevelopment())
             }
             case "summaries":
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-                var partyIds = await dbContext.Set<Party>()
-                    .Where(item => item.PartyType == PartyType.AiAgent)
-                    .OrderBy(item => item.DisplayName)
-                    .Select(item => item.Id)
-                    .ToListAsync();
+                var partyIds = (await aiAgentService.ListDiagnosticPartiesAsync()).Select(item => item.Id).ToList();
                 var summaries = await technicalAgentBridge.GetDirectorySummariesAsync(partyIds);
                 stopwatch.Stop();
                 return Results.Ok(new

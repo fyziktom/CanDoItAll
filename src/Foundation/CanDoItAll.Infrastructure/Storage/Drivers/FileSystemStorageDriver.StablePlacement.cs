@@ -5,7 +5,7 @@ namespace CanDoItAll.Infrastructure.Storage;
 public sealed partial class FileSystemStorageDriver : IStorageStablePlacementDriver {
     bool IStorageStablePlacementDriver.CanRecoverWithoutWriteAcknowledgement => true;
 
-    Task<StorageObjectReference> IStorageStablePlacementDriver.PrepareStableTargetAsync(StorageCatalogRecord storage,
+    Task<StorageObjectReference> IStorageStablePlacementDriver.PrepareStableTargetAsync(StorageDriverInput storage,
         StoragePlacementIntentId intentId, StorageWriteRequest request, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         var relativePath = FileSystemStorageKeyCodec.Canonicalize(string.IsNullOrWhiteSpace(request.RelativePathHint)
@@ -17,7 +17,7 @@ public sealed partial class FileSystemStorageDriver : IStorageStablePlacementDri
             request.Content.LongLength, BuildLegacyRoute(relativePath)) { PlacementIntentId = intentId.Value });
     }
 
-    async Task<StorageWriteResult> IStorageStablePlacementDriver.WriteStableTargetAsync(StorageCatalogRecord storage,
+    async Task<StorageWriteResult> IStorageStablePlacementDriver.WriteStableTargetAsync(StorageDriverInput storage,
         StorageObjectReference target, StorageWriteRequest request, CancellationToken cancellationToken) {
         if (target.ProviderKind != ProviderKind || target.StorageId != storage.Id || target.LocatorKind != StorageLocatorKind.RelativePath) {
             throw new InvalidOperationException("The prepared filesystem target does not match this storage.");
@@ -30,6 +30,6 @@ public sealed partial class FileSystemStorageDriver : IStorageStablePlacementDri
             true, true, IsTrustedForLocalOpen(storage), target.DisplayName, target.ContentType, target.ContentLength, string.Empty));
     }
 
-    Task IStorageStablePlacementDriver.CompleteStableTargetAsync(StorageCatalogRecord storage,
+    Task IStorageStablePlacementDriver.CompleteStableTargetAsync(StorageDriverInput storage,
         StorageObjectReference target, CancellationToken cancellationToken) => Task.CompletedTask;
 }

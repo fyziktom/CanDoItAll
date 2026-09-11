@@ -25,10 +25,10 @@ public sealed class FileSystemStoragePathPolicy
     public string ResolveWorkspaceRootPath()
         => ResolveWorkspaceRoot();
 
-    public string ResolveRootPath(StorageCatalogRecord storage)
+    public string ResolveRootPath(StorageCatalogSnapshot storage)
         => ResolveRootPolicy(storage).RootPath;
 
-    private string ResolveConfiguredRootPath(StorageCatalogRecord storage)
+    private string ResolveConfiguredRootPath(StorageCatalogSnapshot storage)
     {
         ArgumentNullException.ThrowIfNull(storage);
         return StorageCatalogHostBindingPolicy.ResolveRequired(
@@ -36,7 +36,7 @@ public sealed class FileSystemStoragePathPolicy
             workspacePathResolver.ResolveWorkspaceRoot());
     }
 
-    public string ResolveFullPath(StorageCatalogRecord storage, string relativePath)
+    public string ResolveFullPath(StorageCatalogSnapshot storage, string relativePath)
     {
         ArgumentNullException.ThrowIfNull(relativePath);
         IPhysicalFileSystemPathPolicy rootPolicy = ResolveRootPolicy(storage);
@@ -92,7 +92,7 @@ public sealed class FileSystemStoragePathPolicy
         return TranslateValidation(() => rootPolicy.ResolveContainedPath(fullPath));
     }
 
-    public string ResolveTrustedLocalOpenPath(StorageCatalogRecord storage, string relativePath)
+    public string ResolveTrustedLocalOpenPath(StorageCatalogSnapshot storage, string relativePath)
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(relativePath);
@@ -105,7 +105,7 @@ public sealed class FileSystemStoragePathPolicy
         return fullPath;
     }
 
-    public string ResolveDirectory(StorageCatalogRecord storage, StorageBrowseContainer container)
+    public string ResolveDirectory(StorageCatalogSnapshot storage, StorageBrowseContainer container)
     {
         ArgumentNullException.ThrowIfNull(container);
         string fullPath = ResolveFullPath(storage, container.Key);
@@ -119,7 +119,7 @@ public sealed class FileSystemStoragePathPolicy
         return fullPath;
     }
 
-    public bool IsTrustedForLocalOpen(StorageCatalogRecord storage)
+    public bool IsTrustedForLocalOpen(StorageCatalogSnapshot storage)
     {
         try
         {
@@ -179,10 +179,10 @@ public sealed class FileSystemStoragePathPolicy
         return Path.GetFullPath(root);
     }
 
-    internal IPhysicalFileSystemPathPolicy ResolveRootPolicy(StorageCatalogRecord storage)
+    internal IPhysicalFileSystemPathPolicy ResolveRootPolicy(StorageCatalogSnapshot storage)
         => TranslateValidation(() => physicalPathPolicyFactory.Create(ResolveConfiguredRootPath(storage)));
 
-    internal void RevalidateMutationTarget(StorageCatalogRecord storage, string fullPath)
+    internal void RevalidateMutationTarget(StorageCatalogSnapshot storage, string fullPath)
         => TranslateValidation(() => ResolveRootPolicy(storage).RevalidateMutationTarget(fullPath));
 
     private IPhysicalFileSystemPathPolicy ResolveWorkspacePolicy()

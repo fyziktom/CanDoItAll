@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
-public sealed class ProjectStructureAgentChatContextProviderTests
+public sealed partial class ProjectStructureAgentChatContextProviderTests
 {
     private static readonly DateTimeOffset InitialUtc =
         new(2026, 7, 27, 12, 0, 0, TimeSpan.Zero);

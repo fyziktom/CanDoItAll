@@ -48,7 +48,7 @@ public sealed class IpfsStorageBrowseDriver : IStorageBrowseDriver
         maximumDuration: TimeSpan.FromSeconds(30));
 
     public async Task<StorageBrowsePage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -154,12 +154,12 @@ public sealed class IpfsStorageBrowseDriver : IStorageBrowseDriver
     }
 
     private static IpfsBrowseAddress ParseAddress(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseContainer container)
     {
         if (container.IsRoot)
         {
-            StorageProviderConfiguration configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+            StorageProviderConfiguration configuration = storage.ReadConfiguration();
             string root = string.IsNullOrWhiteSpace(configuration.BasePath) ? "/" : configuration.BasePath;
             return new IpfsBrowseAddress(IpfsBrowseAddressKind.MutableFileSystem, NormalizeMfsPath(root));
         }
@@ -186,7 +186,7 @@ public sealed class IpfsStorageBrowseDriver : IStorageBrowseDriver
     }
 
     private RemoteStorageBrowseCursorState? ResolveCursor(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request)
     {
         if (request.Cursor is null)
@@ -251,7 +251,7 @@ public sealed class IpfsStorageBrowseDriver : IStorageBrowseDriver
         return "/" + normalized.Trim('/');
     }
 
-    private void Validate(StorageCatalogRecord storage, StorageBrowseRequest request)
+    private void Validate(StorageDriverInput storage, StorageBrowseRequest request)
     {
         if (storage.ProviderKind != ProviderKind)
         {

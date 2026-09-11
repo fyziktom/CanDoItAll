@@ -20,7 +20,7 @@ internal sealed record ResourceRouteContextSelection(
         Guid? resourceId,
         Guid? projectId,
         IReadOnlyList<ResourceSummary> resources,
-        IReadOnlyList<ProjectSummary> projects)
+        IReadOnlyList<ProjectWriteSelection> projects)
     {
         ArgumentNullException.ThrowIfNull(resources);
         ArgumentNullException.ThrowIfNull(projects);
@@ -44,7 +44,8 @@ internal sealed record ResourceRouteContextSelection(
 
         if (resource is not null &&
             projectId.HasValue &&
-            resource.ProjectId != projectId.Value)
+            (resource.ProjectId != projectId.Value || resource.ProjectLifetimeId is null ||
+                projects.Single(candidate => candidate.Id == projectId.Value).Admission.LifetimeId != resource.ProjectLifetimeId))
         {
             return new ResourceRouteContextSelection(
                 ResourceRouteContextSelectionStatus.ResourceProjectMismatch,

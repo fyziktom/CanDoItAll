@@ -24,13 +24,15 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
     private readonly IWorkspacePathResolutionService workspacePaths;
     private readonly ILogger<ImageGenerationAgentRuntimeToolProvider>? logger;
     private readonly ImageGenerationToolBuilder toolBuilder;
+    private readonly ImageGenerationResultDisclosureService? resultDisclosure;
 
     public ImageGenerationAgentRuntimeToolProvider(
         IProviderRuntimeProfileSource providerSource,
         IWorkspacePathResolutionService workspacePaths,
         IAgentImageGenerationService imageGenerationService,
         IServiceProvider services,
-        ILogger<ImageGenerationAgentRuntimeToolProvider>? logger = null)
+        ILogger<ImageGenerationAgentRuntimeToolProvider>? logger = null,
+        ImageGenerationResultDisclosureService? resultDisclosure = null)
     {
         ArgumentNullException.ThrowIfNull(providerSource);
         ArgumentNullException.ThrowIfNull(workspacePaths);
@@ -40,6 +42,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         this.imageGenerationService = imageGenerationService;
         this.workspacePaths = workspacePaths;
         this.logger = logger;
+        this.resultDisclosure = resultDisclosure;
 
         toolBuilder = new ImageGenerationToolBuilder(
             this,
@@ -67,8 +70,25 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        return ValueTask.FromResult(toolBuilder.CreateTools(context.Agent, context.Provider));
+        var tools = toolBuilder.CreateTools(context.Agent, context.Provider);
+        return ValueTask.FromResult(tools.Count > 0 && ImageGenerationResultDisclosureService.UsesJournal(context)
+            ? RequireResultDisclosure().Wrap(context, tools) : tools);
     }
+
+    public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(AgentRuntimeToolProviderContext context) {
+        ArgumentNullException.ThrowIfNull(context);
+        if (!context.Agent.Permissions.CanUseTools || !AgentImageGenerationAccessMetadata.Read(context.Agent.ConfigurationJson).CanGenerateImages) {
+            return [];
+        }
+        return [new(Descriptor.ProviderKey, ImageGenerationToolPolicy.ImageGenerationCreate,
+            AgentRuntimeToolOperationKind.Mutation, true, Descriptor.DomainTags) {
+            AuthorizeResultDisclosureAsync = (disclosure, token) => RequireResultDisclosure().AuthorizeAsync(context, disclosure, token)
+        }];
+    }
+
+    private ImageGenerationResultDisclosureService RequireResultDisclosure()
+        => resultDisclosure ?? throw new AgentToolAdmissionException("image-generation.result-authority-unavailable",
+            "Image generation requires its registered owner result-authority service for durable tool admission.");
 
     private sealed class ImageGenerationToolBuilder(
         ImageGenerationAgentRuntimeToolProvider owner,

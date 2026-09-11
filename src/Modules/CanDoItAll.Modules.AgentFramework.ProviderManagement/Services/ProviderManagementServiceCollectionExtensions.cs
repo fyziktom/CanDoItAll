@@ -22,6 +22,7 @@ public static class ProviderManagementServiceCollectionExtensions
         });
 
         services.AddHttpClient();
+        services.AddSingleton<ProviderDefaultsBootstrapService>();
         services.AddScoped<IProviderAdministrationConnector, OpenAiProviderAdministrationConnector>();
         services.AddScoped<IProviderAdministrationConnector, ScenarioHarnessProviderAdministrationConnector>();
         services.AddScoped<IProviderAdministrationConnector, ProcessMockProviderAdministrationConnector>();

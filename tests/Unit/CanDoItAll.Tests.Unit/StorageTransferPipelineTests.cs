@@ -36,8 +36,8 @@ public sealed class StorageTransferPipelineTests
                         StorageUsagePurpose.ProjectAsset,
                         StorageContentKind.Text)
                 ],
-                CreateStorage(sourceRoot, canWrite: false),
-                CreateStorage(targetRoot, canWrite: true),
+                CreateStorage(sourceRoot, canWrite: false).ToDriverInput(),
+                CreateStorage(targetRoot, canWrite: true).ToDriverInput(),
                 new StorageTransferOptions(
                     VerifyTargetContent: true,
                     ProgressCallback: (progress, _) =>
@@ -86,22 +86,22 @@ public sealed class StorageTransferPipelineTests
                     "text/plain",
                     StorageUsagePurpose.ProjectAsset)
             ],
-            new StorageCatalogRecord
+            (new StorageCatalogRecord
             {
                 Id = Guid.NewGuid(),
                 Name = "Source",
                 ProviderKind = StorageProviderKind.FileSystem,
                 EndpointOrRoot = "source",
                 CapabilityMask = StorageCapability.Read | StorageCapability.BatchTransfer
-            },
-            new StorageCatalogRecord
+            }).ToDriverInput(),
+            (new StorageCatalogRecord
             {
                 Id = Guid.NewGuid(),
                 Name = "Target",
                 ProviderKind = StorageProviderKind.Ftp,
                 EndpointOrRoot = "target",
                 CapabilityMask = StorageCapability.Write
-            }));
+            }).ToDriverInput()));
 
         Assert.Equal(1, result.TotalCount);
         Assert.Equal(0, result.SuccessCount);
@@ -135,8 +135,8 @@ public sealed class StorageTransferPipelineTests
                 new StorageTransferItem("reports/foo.txt", "imports/foo.txt", "text/plain", StorageUsagePurpose.ProjectAsset),
                 new StorageTransferItem("reports/Foo.txt", "imports/Foo.txt", "text/plain", StorageUsagePurpose.ProjectAsset)
             ],
-            sourceStorage,
-            targetStorage,
+            sourceStorage.ToDriverInput(),
+            targetStorage.ToDriverInput(),
             new StorageTransferOptions(MaxConcurrency: 2)));
 
         Assert.Equal(["reports/Foo.txt", "reports/foo.txt"], result.Items.Select(item => item.SourcePath));
@@ -176,26 +176,55 @@ public sealed class StorageTransferPipelineTests
 
     private sealed class TestStorageCatalogService : IStorageCatalogService
     {
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+        private Task<IReadOnlyList<StorageCatalogRecord>> ReadRecordsAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord?> ReadRecordAsync(Guid id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> ReadBootstrapRecordAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> SaveRecordAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+        internal Task<IReadOnlyList<StorageRoutingRule>> ReadRoutingRecordsAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+        private Task<StorageRoutingRule> SaveRoutingRecordAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+        public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+        public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+        public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+            var row = await ReadRecordAsync(id, cancellationToken);
+            return row is null ? null : new(row.ToSnapshot(), StorageJson.ParseProviderConfiguration(row.ConfigJson));
+        }
+
+        public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+            (await ReadBootstrapRecordAsync(cancellationToken)).ToDriverInput();
+
+        public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRoutingRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRoutingRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
     }
 
     private sealed class TestStorageDriverRegistry(params IStorageDriver[] drivers) : IStorageDriverRegistry
@@ -218,25 +247,25 @@ public sealed class StorageTransferPipelineTests
         public StorageCapability SupportedCapabilities => supportedCapabilities;
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -252,13 +281,13 @@ public sealed class StorageTransferPipelineTests
             StorageCapability.BatchTransfer;
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -286,13 +315,13 @@ public sealed class StorageTransferPipelineTests
         }
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => Task.FromResult<Stream>(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(reference.Locator)));
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

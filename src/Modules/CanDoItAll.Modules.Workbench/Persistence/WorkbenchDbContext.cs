@@ -18,6 +18,8 @@ public sealed class WorkbenchDbContext(DbContextOptions<WorkbenchDbContext> opti
         modelBuilder.ApplyConfiguration(new ProjectWorkflowContributionRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectWorkflowAdmissionRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectWorkAssignmentRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new ProjectProcessAssetContributionRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new ProjectWorkAssignmentHistoryRecordConfiguration());
         base.OnModelCreating(modelBuilder);
     }
 

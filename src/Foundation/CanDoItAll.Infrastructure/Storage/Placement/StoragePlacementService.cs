@@ -17,7 +17,7 @@ public sealed class StoragePlacementService(
         var recommendation = await ResolveRecommendationAsync(request, cancellationToken);
         var primaryCandidate = recommendation.PrimaryCandidate
             ?? throw new InvalidOperationException(recommendation.Reason);
-        var storage = await catalogService.GetAsync(primaryCandidate.StorageId, cancellationToken)
+        var storage = await catalogService.GetDriverAsync(primaryCandidate.StorageId, cancellationToken)
             ?? throw new InvalidOperationException($"Storage '{primaryCandidate.StorageName}' no longer exists.");
 
         ValidateStorage(storage, request);
@@ -101,7 +101,7 @@ public sealed class StoragePlacementService(
             []);
     }
 
-    private static void ValidateStorage(StorageCatalogRecord storage, StoragePlacementRequest request)
+    private static void ValidateStorage(StorageCatalogSnapshot storage, StoragePlacementRequest request)
     {
         if (!storage.IsEnabled)
         {
@@ -150,7 +150,7 @@ public sealed class StoragePlacementService(
     }
 
     private static string ResolveLocation(
-        StorageCatalogRecord storage,
+        StorageCatalogSnapshot storage,
         StorageObjectReference reference,
         string route)
     {

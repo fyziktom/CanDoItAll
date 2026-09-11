@@ -80,6 +80,9 @@ public sealed record ToolInvocationPolicyContext(
     public IToolInvocationScopePolicy? ScopePolicy { get; init; }
 
     [System.Text.Json.Serialization.JsonIgnore]
+    public WorkspacePathScopeContribution? WorkspacePaths { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
     public string? ExternalWorkspaceReadRecoveryContinuation { get; init; }
 
     public string SourceId { get; init; } = string.Empty;
@@ -196,8 +199,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 {
     public const int MaxRepeatedMutationOrValidationInvocations = 3;
 
-    private static readonly ProjectWorkspaceScopePolicy projectWorkspaceScopePolicy = new();
-
     private readonly RepeatInvocationGuard repeatInvocationGuard = new();
 
     public ValueTask<ToolInvocationPolicyDecision> EvaluateAsync(
@@ -237,12 +238,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(pathArgumentDecision);
         }
 
-        var projectWorkspaceScopeDecision = projectWorkspaceScopePolicy.EvaluateProjectScope(
+        var workspacePathDecision = WorkspacePathScopeContribution.Evaluate(
             context,
             signature);
-        if (projectWorkspaceScopeDecision is not null)
-        {
-            return ValueTask.FromResult(projectWorkspaceScopeDecision);
+        if (workspacePathDecision is not null) {
+            return ValueTask.FromResult(workspacePathDecision);
         }
 
         var scopePolicy = context.ScopePolicy;

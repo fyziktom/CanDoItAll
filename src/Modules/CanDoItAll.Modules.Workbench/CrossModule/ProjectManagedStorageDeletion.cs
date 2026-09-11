@@ -219,16 +219,16 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
     internal string ResolveWorkspaceRootPath()
         => fileSystemStoragePathPolicy.ResolveWorkspaceRootPath();
 
-    internal string ResolveObjectFingerprint(StorageObjectReference reference, StorageCatalogRecord? storage,
+    internal string ResolveObjectFingerprint(StorageObjectReference reference, StorageDriverInput? storage,
         Guid? authoritativeBootstrapStorageId = null) {
         return ResolveObjectFingerprintFromFacts(reference, storage is null ? null :
-            StorageCatalogPlanningFact.FromCatalogRecord(storage, reference.ProviderKind == StorageProviderKind.Ftp), authoritativeBootstrapStorageId);
+            StorageCatalogPlanningFact.FromDriverInput(storage, reference.ProviderKind == StorageProviderKind.Ftp), authoritativeBootstrapStorageId);
     }
 
-    internal string ResolveConservativeLivenessKey(StorageObjectReference reference, StorageCatalogRecord? storage,
+    internal string ResolveConservativeLivenessKey(StorageObjectReference reference, StorageDriverInput? storage,
         Guid? authoritativeBootstrapStorageId = null) {
         return ResolveConservativeLivenessKeyFromFacts(reference, storage is null ? null :
-            StorageCatalogPlanningFact.FromCatalogRecord(storage, reference.ProviderKind == StorageProviderKind.Ftp), authoritativeBootstrapStorageId);
+            StorageCatalogPlanningFact.FromDriverInput(storage, reference.ProviderKind == StorageProviderKind.Ftp), authoritativeBootstrapStorageId);
     }
 
     internal string ResolveObjectFingerprintFromFacts(
@@ -367,12 +367,19 @@ internal static class ProjectManagedStorageProvenancePolicy
     private const string ManagedProjectMediaPrefix = "managed-files/project-media/";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    internal static StorageObjectReference Stamp(
+    internal static StorageObjectReference Stamp(StorageObjectReference reference, string requestedManagedPath,
+        StorageDriverInput storage, ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy) {
+        ArgumentNullException.ThrowIfNull(reference);
+        ArgumentNullException.ThrowIfNull(storage);
+        return StampFromFacts(reference, requestedManagedPath,
+            StorageCatalogPlanningFact.FromDriverInput(storage, reference.ProviderKind == StorageProviderKind.Ftp), physicalIdentityPolicy);
+    }
+
+    internal static StorageObjectReference StampFromFacts(
         StorageObjectReference reference,
         string requestedManagedPath,
-        StorageCatalogRecord storage,
-        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy)
-    {
+        StorageCatalogPlanningFact storage,
+        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy) {
         ArgumentNullException.ThrowIfNull(reference);
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(physicalIdentityPolicy);
@@ -387,10 +394,9 @@ internal static class ProjectManagedStorageProvenancePolicy
             key.ProviderKind,
             key.LocatorKind,
             key.Locator,
-            physicalIdentityPolicy.ResolveObjectFingerprint(reference, storage),
+            physicalIdentityPolicy.ResolveObjectFingerprintFromFacts(reference, storage),
             string.IsNullOrWhiteSpace(reference.MetadataJson) ? "{}" : reference.MetadataJson);
-        return reference with
-        {
+        return reference with {
             MetadataJson = JsonSerializer.Serialize(provenance, JsonOptions)
         };
     }
@@ -516,12 +522,12 @@ internal static class ProjectManagedStorageProvenancePolicy
         return true;
     }
 
-    internal static bool TryValidateCurrentStorage(StorageObjectReference reference, StorageCatalogRecord? storage,
+    internal static bool TryValidateCurrentStorage(StorageObjectReference reference, StorageDriverInput? storage,
         ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy, out string error) {
         return TryValidateCurrentStorageCore(reference, () => physicalIdentityPolicy.ResolveObjectFingerprint(reference, storage), out error);
     }
 
-    internal static bool TryValidateCurrentStorageForDeletion(StorageObjectReference reference, StorageCatalogRecord? storage,
+    internal static bool TryValidateCurrentStorageForDeletion(StorageObjectReference reference, StorageDriverInput? storage,
         ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy, Guid authoritativeBootstrapStorageId, out string error) {
         return TryValidateCurrentStorageCore(reference,
             () => physicalIdentityPolicy.ResolveObjectFingerprint(reference, storage, authoritativeBootstrapStorageId), out error);

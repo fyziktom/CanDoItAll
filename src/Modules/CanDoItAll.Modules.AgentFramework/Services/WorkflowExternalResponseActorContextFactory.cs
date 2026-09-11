@@ -247,6 +247,11 @@ internal sealed class WorkflowLaunchAuthorizationScopeResolver(
                 ResolveExactScope(
                     origin.AuthorizationScope,
                     WorkspaceScopeDescriptor.Project(project.ProjectId.ToString("D"))),
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped =>
+                ResolveExactScope(origin.AuthorizationScope, WorkspaceScopeDescriptor.Process(mapped.Dispatch.ProcessRun.Value.ToString("D"))),
+            WorkflowLaunchOrigin.ProcessToolInvocation tool =>
+                ResolveExactScope(origin.AuthorizationScope,
+                    WorkspaceScopeDescriptor.Process(tool.Invocation.ProcessRun.Value.ToString("D"))),
             WorkflowLaunchOrigin.ProcessAssignment process =>
                 ResolveExactScope(
                     origin.AuthorizationScope,

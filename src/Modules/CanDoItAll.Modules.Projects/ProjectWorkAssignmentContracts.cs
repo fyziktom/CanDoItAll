@@ -15,11 +15,12 @@ public sealed record ProjectWorkAssignmentFact(
     DateTimeOffset? EndsAtUtc,
     bool IsPrimary,
     string Source,
-    string Notes) {
+    string Notes,
+    Guid? ProjectLifetimeId = null) {
     public ProjectPartyAssignmentRole Role => ProjectPartyAssignmentRole.WorkItemAssignee;
 }
 
-public sealed record ProjectWorkAssignmentCarryOver(Guid Id, string PhaseName, Guid? OpportunityId);
+public sealed record ProjectWorkAssignmentCarryOver(Guid Id, string PhaseName, Guid? OpportunityId, Guid? ProjectLifetimeId);
 
 public sealed record ProjectWorkAssignmentPartyFact(Guid PartyId, ProjectPartyType PartyType, string DisplayName);
 
@@ -74,26 +75,34 @@ public interface IProjectWorkAssignmentCommands : IProjectWorkAssignmentQueries 
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
         ProjectWorkItemDirectAssignmentRevision? expectedRevision = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null);
 
     Task<Result> StageReplaceAsync(Guid projectId, ProjectNodeReference node,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<Guid> newAssignmentIds,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
         ProjectWorkItemDirectAssignmentRevision? expectedRevision = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null);
 
-    Task DeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null);
 
-    Task StageDeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default);
+    Task StageDeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null);
 
     Task StageDeleteForNodesAsync(Guid projectId, IReadOnlyCollection<ProjectNodeReference> nodes,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null);
 
-    Task StageDeleteForProjectAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task StageDeleteForProjectAsync(Guid projectId, CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null);
 
     Task StageMoveAsync(Guid sourceProjectId, Guid targetProjectId, IReadOnlyCollection<ProjectNodeReference> nodes,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? sourceReference = null,
+        ProjectWriteAdmission? expectedTargetAdmission = null);
 
     Task StagePartyMergeAsync(ProjectWorkAssignmentPartyMerge merge, CancellationToken cancellationToken = default);
 }

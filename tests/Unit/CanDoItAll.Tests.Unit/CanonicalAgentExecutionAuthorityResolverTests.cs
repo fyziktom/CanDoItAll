@@ -16,7 +16,7 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 /// Canonical authority resolution: durable agent configuration decides
 /// project-structure rights; UI hints and payloads cannot grant or widen them.
 /// </summary>
-public sealed class CanonicalAgentExecutionAuthorityResolverTests
+public sealed partial class CanonicalAgentExecutionAuthorityResolverTests
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid ProfileId = Guid.NewGuid();

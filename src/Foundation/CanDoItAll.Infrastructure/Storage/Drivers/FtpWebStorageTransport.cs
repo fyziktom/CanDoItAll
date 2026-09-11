@@ -7,7 +7,7 @@ public sealed class FtpWebStorageTransport : IFtpStorageTransport
     private const long MaximumContentBytes = 256L * 1024 * 1024;
 
     public async Task<string?> TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         CancellationToken cancellationToken)
     {
@@ -23,7 +23,7 @@ public sealed class FtpWebStorageTransport : IFtpStorageTransport
     }
 
     public async Task UploadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         ReadOnlyMemory<byte> content,
@@ -56,7 +56,7 @@ public sealed class FtpWebStorageTransport : IFtpStorageTransport
     }
 
     public async Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         CancellationToken cancellationToken)
@@ -88,7 +88,7 @@ public sealed class FtpWebStorageTransport : IFtpStorageTransport
     }
 
     public async Task DeleteAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         CancellationToken cancellationToken)
@@ -112,7 +112,7 @@ public sealed class FtpWebStorageTransport : IFtpStorageTransport
     }
 
     public async Task<RemoteBrowseTransportPage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         RemoteBrowseTransportRequest browseRequest,

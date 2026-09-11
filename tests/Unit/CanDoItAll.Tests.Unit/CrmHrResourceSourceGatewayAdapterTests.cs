@@ -2,6 +2,8 @@ using CanDoItAll.Memory.SourceGateway;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Resources;
@@ -353,6 +355,12 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
             AppDbContextTestOptionsBuilder.ConfigureModelCacheKey(options);
             options.UseInMemoryDatabase(databaseName, databaseRoot);
         });
+        var profile = new ResolvedDatabaseProfile(new() { ProviderKind = DatabaseProviderKind.InMemory },
+            DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+        var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>().UseInMemoryDatabase(databaseName, databaseRoot).Options;
+        var projectFactory = new PooledDbContextFactory<ProjectsDbContext>(projectOptions);
+        services.AddScoped(_ => new ProjectWriteAdmissionService(projectFactory, projectOptions,
+            CoordinatedDatabaseTransaction.ForProfile(profile), new CanonicalDatabase(profile)));
         services.AddCrmHrModule();
         services.AddSingleton<IDbContextFactory<CrmHrDbContext>>(new PooledDbContextFactory<CrmHrDbContext>(
             new DbContextOptionsBuilder<CrmHrDbContext>()
@@ -369,6 +377,11 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
                 adapters.Select(adapter => adapter.Descriptor.SourceKind).Distinct().ToArray());
         });
         return services.BuildServiceProvider(validateScopes: true);
+    }
+
+    private sealed class CanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 1;
     }
 
     private static async Task SeedCrmHrAsync(IServiceProvider serviceProvider)

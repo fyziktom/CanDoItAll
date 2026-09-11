@@ -81,21 +81,25 @@ public sealed class SearchStorageOwnerPersistenceTests {
         var searchService = scope.ServiceProvider.GetRequiredService<SearchIndexService>();
         var reloaded = await storageService.GetAsync(catalog.Id);
         Assert.NotNull(reloaded);
-        Assert.Equal(JsonSerializer.Serialize(catalog), JsonSerializer.Serialize(reloaded));
-        Assert.Equal(JsonSerializer.Serialize(rule), JsonSerializer.Serialize(
+        Assert.Equal(JsonSerializer.Serialize(catalog.ToSnapshot()), JsonSerializer.Serialize(reloaded));
+        Assert.Equal(JsonSerializer.Serialize(rule.ToSnapshot()), JsonSerializer.Serialize(
             Assert.Single(await storageService.ListRulesAsync(), item => item.Id == rule.Id)));
         Assert.Equal(document.Id, Assert.Single(await searchService.SearchAsync(prefix)).Id);
         await using (var search = await restarted.Services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync()) {
             Assert.Equal(JsonSerializer.Serialize(document), JsonSerializer.Serialize(
                 await search.Set<SearchDocument>().SingleAsync(item => item.Id == document.Id)));
         }
+        await using (var raw = await restarted.Services.GetRequiredService<IDbContextFactory<StorageDbContext>>().CreateDbContextAsync()) {
+            Assert.Equal(JsonSerializer.Serialize(catalog), JsonSerializer.Serialize(await raw.Set<StorageCatalogRecord>().SingleAsync(row => row.Id == catalog.Id)));
+            Assert.Equal(JsonSerializer.Serialize(rule), JsonSerializer.Serialize(await raw.Set<StorageRoutingRule>().SingleAsync(row => row.Id == rule.Id)));
+        }
         await searchService.UpsertAsync(new(document.SourceType, document.SourceKey, document.Category,
             "Updated through Search", document.Summary, document.Body, document.Route, document.ProjectId));
-        reloaded.Name = prefix + "-updated";
-        await storageService.SaveAsync(reloaded);
+        var edit = StorageCatalogSaveRequest.FromSnapshot(reloaded) with { Name = prefix + "-updated" };
+        await storageService.SaveAsync(edit);
         await using (var schema = await restarted.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
             var savedStorage = await schema.Set<StorageCatalogRecord>().SingleAsync(item => item.Id == catalog.Id);
-            Assert.Equal(reloaded.Name, savedStorage.Name);
+            Assert.Equal(edit.Name, savedStorage.Name);
             Assert.Equal(catalog.CreatedAtUtc, savedStorage.CreatedAtUtc);
             Assert.Equal(catalog.ConfigJson, savedStorage.ConfigJson);
             Assert.Equal(catalog.CredentialSecretId, savedStorage.CredentialSecretId);

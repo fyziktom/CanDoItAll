@@ -106,6 +106,12 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.Origin is WorkflowLaunchOrigin.ProcessDispatchAssignment mapped &&
+                (mapped.StructureAuthority is not null || mapped.Dispatch.WorkflowId != definition.Id ||
+                    mapped.Dispatch.RequestedVersionId is { } version && version != definition.VersionId ||
+                    WorkflowMappedProcessInputFingerprint.Compute(request.InputJson) != mapped.Dispatch.InputFingerprint)) {
+            throw new InvalidOperationException("Mapped Workflow input or selected executor differs from its original Process owner admission.");
+        }
         var requestedBackend = request.RequestedBackend ?? definition.RuntimePolicy.PreferredBackend;
         ValidateBackendPolicy(definition, requestedBackend);
         var backend = GetRequiredBackend(definition, requestedBackend);
@@ -130,7 +136,14 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         {
             Origin = request.Origin
         };
-        var startedEvent = CreateStartedEvent(definition, running, now);
+        var startedEvent = CreateStartedEvent(definition, running, now) with {
+            DisclosureDeclaration = new(running.RunId, definition.Id, definition.VersionId,
+                WorkflowProviderDisclosureContent.Definition(definition), WorkflowProviderDisclosureContent.Source(running.Origin),
+                WorkflowProviderDisclosureProtocol.Current) {
+                    Simulations = [.. request.PreviewSimulationPlan.Steps.Select(step =>
+                        new WorkflowNodeSimulationAdmission(step.NodeId, WorkflowProviderDisclosureContent.Simulation(step)) { Step = step })]
+                }
+        };
         if (!activeRuns.TryRegister(
                 runId,
                 backend.Descriptor.SupportsActiveCancellation,

@@ -610,7 +610,7 @@ public sealed class ProjectStructureAssetContentReaderTests
         return ProjectManagedStorageProvenancePolicy.Stamp(
             reference,
             ManagedPath,
-            storage,
+            storage.ToDriverInput(),
             identityPolicy);
     }
 
@@ -711,22 +711,22 @@ public sealed class ProjectStructureAssetContentReaderTests
     {
         private readonly IReadOnlyList<StorageCatalogRecord> items = storages;
 
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(
+        private Task<IReadOnlyList<StorageCatalogRecord>> ReadRecordsAsync(
             CancellationToken cancellationToken = default)
             => Task.FromResult(items);
 
-        public Task<StorageCatalogRecord?> GetAsync(
+        private Task<StorageCatalogRecord?> ReadRecordAsync(
             Guid id,
             CancellationToken cancellationToken = default)
             => Task.FromResult(items.SingleOrDefault(storage => storage.Id == id));
 
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(
+        private Task<StorageCatalogRecord> ReadBootstrapRecordAsync(
             CancellationToken cancellationToken = default)
             => Task.FromResult(items.Single(storage =>
                 storage.ProviderKind == StorageProviderKind.FileSystem &&
                 storage.IsSystemDefault));
 
-        public Task<StorageCatalogRecord> SaveAsync(
+        private Task<StorageCatalogRecord> SaveRecordAsync(
             StorageCatalogRecord record,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -734,14 +734,43 @@ public sealed class ProjectStructureAssetContentReaderTests
         public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(
+        internal Task<IReadOnlyList<StorageRoutingRule>> ReadRoutingRecordsAsync(
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
 
-        public Task<StorageRoutingRule> SaveRuleAsync(
+        private Task<StorageRoutingRule> SaveRoutingRecordAsync(
             StorageRoutingRule rule,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+        public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+        public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+        public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+            var row = await ReadRecordAsync(id, cancellationToken);
+            return row is null ? null : new(row.ToSnapshot(), StorageJson.ParseProviderConfiguration(row.ConfigJson));
+        }
+
+        public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+            (await ReadBootstrapRecordAsync(cancellationToken)).ToDriverInput();
+
+        public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRoutingRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRoutingRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
     }
 
     private sealed class RecordingStorageDriver(
@@ -755,24 +784,24 @@ public sealed class ProjectStructureAssetContentReaderTests
 
         public int OpenCount { get; private set; }
 
-        public StorageCatalogRecord? LastStorage { get; private set; }
+        public StorageDriverInput? LastStorage { get; private set; }
 
         public StorageObjectReference? LastReference { get; private set; }
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
         {
@@ -783,7 +812,7 @@ public sealed class ProjectStructureAssetContentReaderTests
         }
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

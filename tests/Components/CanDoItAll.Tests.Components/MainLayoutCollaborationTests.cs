@@ -44,18 +44,9 @@ public sealed class MainLayoutCollaborationTests
         });
     }
 
-    private static async Task<ComponentTestHarness> CreateHarnessAsync()
-    {
-        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-layout-collaboration-tests");
-        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
-
-        return await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
-        {
-            TestEnvironment = testEnvironment,
-            ActiveProfile = activeProfile,
-            ConfigurationOverrides = new Dictionary<string, string?>
-            {
-                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath,
+    private static Task<ComponentTestHarness> CreateHarnessAsync() {
+        return ComponentTestHarness.CreateAsync(options: new TestHarnessOptions {
+            ConfigurationOverrides = new Dictionary<string, string?> {
                 ["Database:Provider"] = null,
                 ["Database:ConnectionString"] = null
             }

@@ -1,5 +1,6 @@
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Infrastructure.Persistence;
@@ -35,10 +36,18 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<AiAgentService>();
         services.AddScoped<IAiAgentDirectoryQueryService, AiAgentDirectoryQueryService>();
         services.AddScoped<ICrmHrAgentQueryService, CrmHrAgentQueryService>();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, CrmPlanningAgentRuntimeToolProvider>());
+        foreach (var policy in CrmPlanningToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         services.AddScoped<ProjectPartyAssignmentNodePolicy>();
         services.AddScoped<ProjectPartyAffiliationContextService>();
         services.AddScoped<IProjectWorkAssignmentPartyFacts, ProjectWorkAssignmentPartyFacts>();
         services.AddScoped<ProjectPartyIntegrationService>();
+        services.AddScoped<IProjectPartyDeletionStateQuery>(provider => provider.GetRequiredService<ProjectPartyIntegrationService>());
         services.AddScoped<ICrmHrSourceSnapshotProvider, CrmHrSourceSnapshotProvider>();
         services.AddMemorySourceGatewayAdapter<CrmHrMemorySourceGatewayAdapter>();
         services.AddScoped<IAutomationSignalSource, CrmHrAutomationSignalProvider>();

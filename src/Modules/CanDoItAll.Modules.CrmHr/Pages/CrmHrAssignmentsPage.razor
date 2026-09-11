@@ -1,3 +1,5 @@
+@using CanDoItAll.SharedKernel
+@inject ProjectWriteAdmissionService ProjectWriteAdmissions
 @page "/crm-hr/assignments"
 @implements IAsyncDisposable
 @using CanDoItAll.Components.BaseLib
@@ -249,6 +251,7 @@
     private int staffingCandidateTotalCount;
     private StaffingDashboardModel staffingDashboard = new(0, 0m, 0, 0);
     private Guid? selectedProjectId;
+    private ProjectWriteAdmission? selectedProjectAdmission;
     private AssignmentWorkspaceTab selectedWorkspaceTab;
     private AssignmentSelectionData loadedSelectionData;
     private AssignmentSelectionData loadingSelectionData;
@@ -387,6 +390,7 @@
                 ?? requestedProjectId;
             SetSelectedProject(targetProjectId);
             selectedProject = projectCatalog.SelectedProject;
+            BindSelectedProjectAdmission();
             if (requestedProjectId.HasValue &&
                 projectCatalog.SelectedProject is null)
             {
@@ -477,6 +481,7 @@
             }
 
             selectedProject = resolvedProject;
+            BindSelectedProjectAdmission();
             var requestedData = AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab);
             var snapshot = await LoadSelectionSnapshotAsync(
                 new AssignmentSelectionLoadRequest(
@@ -930,6 +935,7 @@
 
         selectedProjectId = projectId;
         selectedProject = null;
+        selectedProjectAdmission = null;
         scheduleAssignments = [];
         relationshipAssignments = [];
         allocationAssignments = [];
@@ -1006,10 +1012,13 @@
             return false;
         }
 
-        draftAssignment.ProjectId = projectId;
-        var result = await ProjectPartyIntegrationService.SaveAssignmentAsync(
+        if (draftAssignment.ProjectId != projectId || draftAssignment.ExpectedProjectAdmission is null) {
+            NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
+            return false;
+        }
+        var result = await SaveForCapturedProjectAsync(() => ProjectPartyIntegrationService.SaveAssignmentAsync(
             draftAssignment,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None);
+            selectionLifetimeCancellation?.Token ?? CancellationToken.None));
         if (!result.IsSuccess)
         {
             NotificationService.Error("Assignment save failed", result.Errors.FirstOrDefault()?.Message ?? "Unable to save the assignment.");
@@ -1040,11 +1049,14 @@
             return false;
         }
 
-        allocationDraft.ProjectId = projectId;
+        if (allocationDraft.ProjectId != projectId || allocationDraft.ExpectedProjectAdmission is null) {
+            NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
+            return false;
+        }
         allocationDraft.Source = "crm-hr-ui";
-        var result = await ProjectPartyIntegrationService.SaveAssignmentAsync(
+        var result = await SaveForCapturedProjectAsync(() => ProjectPartyIntegrationService.SaveAssignmentAsync(
             allocationDraft,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None);
+            selectionLifetimeCancellation?.Token ?? CancellationToken.None));
         if (!result.IsSuccess)
         {
             NotificationService.Error("Allocation save failed", result.Errors.FirstOrDefault()?.Message ?? "Unable to save the allocation.");
@@ -1076,10 +1088,13 @@
             return false;
         }
 
-        staffingRequestDraft.ProjectId = projectId;
-        var result = await HrService.SaveStaffingRequestAsync(
+        if (staffingRequestDraft.ProjectId != projectId || staffingRequestDraft.ExpectedProjectAdmission is null) {
+            NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
+            return false;
+        }
+        var result = await SaveForCapturedProjectAsync(() => HrService.SaveStaffingRequestAsync(
             staffingRequestDraft,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None);
+            selectionLifetimeCancellation?.Token ?? CancellationToken.None));
         if (result.IsFailure)
         {
             NotificationService.Error("Staffing request save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -1365,10 +1380,11 @@
 
     private async Task DeleteAssignmentAsync(Guid assignmentId)
     {
+        var expectedReference = RequireDisplayedAssignmentReference(assignmentId);
         var projectId = selectedProjectId;
         await ProjectPartyIntegrationService.DeleteAssignmentAsync(
             assignmentId,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None);
+            selectionLifetimeCancellation?.Token ?? CancellationToken.None, expectedReference);
         NotificationService.Warning("Assignment deleted", "Project assignment deleted.");
         if (selectedProjectId == projectId)
         {
@@ -1383,10 +1399,11 @@
 
     private async Task DeleteAllocationAsync(Guid assignmentId)
     {
+        var expectedReference = RequireDisplayedAssignmentReference(assignmentId);
         var projectId = selectedProjectId;
         await ProjectPartyIntegrationService.DeleteAssignmentAsync(
             assignmentId,
-            selectionLifetimeCancellation?.Token ?? CancellationToken.None);
+            selectionLifetimeCancellation?.Token ?? CancellationToken.None, expectedReference);
         NotificationService.Warning("Allocation deleted", "Project allocation deleted.");
         if (selectedProjectId == projectId)
         {
@@ -1531,19 +1548,46 @@
             ? OpenGantt(projectId)
             : Task.CompletedTask;
 
+    private void BindSelectedProjectAdmission() {
+        selectedProjectAdmission = selectedProject?.LifetimeId is { } lifetimeId
+            ? new ProjectWriteAdmission(ProjectWriteAdmissions.DatabaseProfileId, selectedProject.Id, lifetimeId)
+            : null;
+        ResetDraft();
+        ResetAllocationDraft();
+        ResetStaffingRequestDraft();
+    }
+
+    private static async Task<Result<Guid>> SaveForCapturedProjectAsync(Func<Task<Result<Guid>>> save) {
+        try {
+            return await save();
+        } catch (ProjectWriteAdmissionRejectedException) {
+            return Result<Guid>.Failure(Error.Validation("The selected project lifetime changed. Reload the project and reopen this editor before saving.",
+                ProjectAssignmentAdmission.RefreshRequiredErrorCode));
+        }
+    }
+
+    private ProjectAssignmentReference RequireDisplayedAssignmentReference(Guid assignmentId) {
+        var assignment = relationshipAssignments.Concat(allocationAssignments).Where(item => item.Id == assignmentId).DistinctBy(item => (item.Id, item.ProjectLifetimeId)).SingleOrDefault()
+            ?? throw new InvalidOperationException("Reload the assignment list before deleting this row.");
+        return new(ProjectWriteAdmissions.DatabaseProfileId, assignment.ProjectId, assignment.ProjectLifetimeId);
+    }
+
     private void ResetDraft()
     {
         draftAssignment = CreateProjectAssignmentDraft(selectedProjectId);
+        draftAssignment.ExpectedProjectAdmission = selectedProjectAdmission;
     }
 
     private void ResetAllocationDraft()
     {
         allocationDraft = CreateAllocationDraft(selectedProjectId);
+        allocationDraft.ExpectedProjectAdmission = selectedProjectAdmission;
     }
 
     private void ResetStaffingRequestDraft()
     {
         staffingRequestDraft = CreateStaffingRequestDraft(selectedProjectId);
+        staffingRequestDraft.ExpectedProjectAdmission = selectedProjectAdmission;
     }
 
     private void InvalidateAssignmentViews()

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.Infrastructure.Persistence;
@@ -74,7 +75,7 @@ public sealed class WorkflowHistorySource(
             return new(entryId, HistoryDetailState.Unavailable);
         }
         var events = await db.Set<WorkflowEventRecordEntity>().AsNoTracking()
-            .Where(row => row.RunId == runId && row.NodeId == observation.NodeId)
+            .Where(row => row.RunId == runId && row.NodeId == observation.NodeId && row.Kind != WorkflowEventKind.ProviderReadEvidence)
             .OrderByDescending(row => row.CreatedAtUtc).ThenByDescending(row => row.Id)
             .Select(row => new { row.CreatedAtUtc, row.Kind, Message = row.Message.Substring(0, 4096), Length = row.Message.Length })
             .Take(50).ToArrayAsync(cancellationToken);

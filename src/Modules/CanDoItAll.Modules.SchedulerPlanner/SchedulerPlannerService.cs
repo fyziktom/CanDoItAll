@@ -139,7 +139,9 @@ public sealed class SchedulerPlannerService(
     ISchedulerWorkflowInputSchemaService workflowInputSchemaService,
     IClock clock,
     ILogger<SchedulerPlannerService> logger,
-    IWorkflowScheduledSourceAuthorityPolicy? sourceAuthority = null) : ISchedulerPlannerService
+    IWorkflowScheduledSourceAuthorityPolicy? sourceAuthority = null,
+    IWorkflowStructureLaunchPreparation? structurePreparation = null,
+    CoordinatedDatabaseTransaction? transactions = null) : ISchedulerPlannerService
 {
     public async Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
         SchedulerHistoryQuery? historyQuery = null,
@@ -207,6 +209,15 @@ public sealed class SchedulerPlannerService(
 
         var target = await ResolveTargetAsync(editor.TargetKind, editor.TargetId, editor.TargetVersionId, cancellationToken);
         var normalizedInputJson = await ResolveValidatedInputJsonAsync(editor, target, cancellationToken);
+        var preparedAuthority = editor.StructureAuthority;
+        if (preparedAuthority?.ProjectScope is not null && editor.TargetKind == SchedulerPlanTargetKind.Workflow) {
+            var definition = await workflowCatalogService.GetDefinitionAsync(new(editor.TargetId),
+                target.VersionId is { } version ? new(version) : null, cancellationToken)
+                ?? throw new InvalidOperationException("The schedule's exact Workflow definition no longer exists.");
+            preparedAuthority = await (structurePreparation ?? throw new InvalidOperationException(
+                "A scoped schedule requires the Workflow owner target preparation service."))
+                .PrepareLaunchAsync(preparedAuthority, definition.Definition, cancellationToken);
+        }
         var now = clock.GetUtcNow();
         var cronDescription = cronDescriptionService.Describe(editor.CronExpression, editor.TimeZoneId);
 
@@ -248,18 +259,29 @@ public sealed class SchedulerPlannerService(
         plan.StartAtUtc = editor.StartAtUtc;
         plan.EndAtUtc = editor.EndAtUtc;
         plan.InputJson = normalizedInputJson;
-        plan.StructureAuthorityJson = SchedulerFireSnapshot.SerializeAuthority(editor.StructureAuthority);
+        plan.StructureAuthorityJson = SchedulerFireSnapshot.SerializeAuthority(preparedAuthority);
         plan.LastError = string.Empty;
         plan.UpdatedAtUtc = now;
 
-        await using (var source = editor.StructureAuthority is { } authority
+        await using (var source = preparedAuthority is { } authority
             ? await (sourceAuthority ?? throw new InvalidOperationException("A schedule with a saved source authority requires its current source policy."))
                 .AcquireAsync(authority, cancellationToken)
             : null) {
+            await using var transaction = preparedAuthority?.ProjectScope is not null && dbContext.Database.IsRelational()
+                ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
+            using var coordination = preparedAuthority?.ProjectScope is not null
+                ? (transactions ?? throw new InvalidOperationException("Scoped schedule writes require the shared transaction coordinator.")).Enter(dbContext) : null;
             if (source is not null) {
                 await source.RequireForMutationAsync(cancellationToken);
             }
             await dbContext.SaveChangesAsync(cancellationToken);
+            if (source is not null && preparedAuthority?.ProjectScope is not null) {
+                await source.RequireForMutationAsync(cancellationToken);
+            }
+            if (transaction is not null) {
+                await transaction.CommitAsync(cancellationToken);
+            }
+            coordination?.Dispose();
         }
         await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
         await dbContext.Entry(plan).ReloadAsync(cancellationToken);

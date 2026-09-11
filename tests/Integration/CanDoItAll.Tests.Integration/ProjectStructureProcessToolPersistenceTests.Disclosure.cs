@@ -22,6 +22,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
@@ -31,7 +32,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         var result = ReadResult(disclosure);
         var before = await context.PreparedLaunches.AsNoTracking().SingleAsync(row => row.Id == result.Observation!.AdmissionId.Value);
         var events = await context.RuntimeEvents.CountAsync(row => row.RunId == result.RunId);
-        await using (var held = await DisclosureCallback(scope.ServiceProvider, fixture)(disclosure, default)) {
+        await using (var held = await callback(disclosure, default)) {
             Assert.NotNull(held);
         }
         var after = await context.PreparedLaunches.AsNoTracking().SingleAsync(row => row.Id == before.Id);
@@ -54,6 +55,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
@@ -67,7 +69,6 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             4 => original with { Observation = original.Observation! with { AdmissionId = new(Guid.NewGuid()) } },
             _ => original with { RunId = Guid.NewGuid() }
         };
-        var callback = DisclosureCallback(scope.ServiceProvider, fixture);
         var denied = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => callback(disclosure with {
             Result = JsonSerializer.SerializeToElement(changed, ProjectStructureProcessProposalCodec.SerializerOptions)
         }, default).AsTask());
@@ -88,6 +89,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
@@ -98,7 +100,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             _ => agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, new()) }
         });
         await Assert.ThrowsAsync<ProcessLaunchAuthorityRejectedException>(() =>
-            DisclosureCallback(scope.ServiceProvider, fixture)(disclosure, default).AsTask());
+            callback(disclosure, default).AsTask());
         var saved = Assert.IsType<ProcessPreparedLaunchSnapshot>(await scope.ServiceProvider.GetRequiredService<IProcessPreparedLaunchStore>()
             .FindByIntentAsync(new(disclosure.IntentId.Value)));
         Assert.Equal(ReadResult(disclosure).Observation!.AdmissionId, saved.Preparation.AdmissionId);
@@ -110,6 +112,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
@@ -119,12 +122,12 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         var disclosure = new AgentToolResultDisclosure(claim.Proposal.IntentId, fixture.Payload, AgentToolEffectState.NotCommitted,
             JsonSerializer.SerializeToElement(new { success = false, code = "ProcessDefinitionRequired" }));
         await fixture.ChangeSourceAsync(ReadOnlySource);
-        await using (var allowed = await DisclosureCallback(scope.ServiceProvider, fixture)(disclosure, default)) {
+        await using (var allowed = await callback(disclosure, default)) {
             Assert.NotNull(allowed);
         }
         await fixture.RevokeAsync();
         await Assert.ThrowsAsync<ProcessLaunchAuthorityRejectedException>(() =>
-            DisclosureCallback(scope.ServiceProvider, fixture)(disclosure, default).AsTask());
+            callback(disclosure, default).AsTask());
         Assert.Null(await scope.ServiceProvider.GetRequiredService<IProcessPreparedLaunchStore>().FindByIntentAsync(new(disclosure.IntentId.Value)));
     }
 
@@ -133,11 +136,11 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
         var disclosure = await CompleteForDisclosureAsync(fixture, journal, lease);
-        var callback = DisclosureCallback(scope.ServiceProvider, fixture);
         await using var held = await callback(disclosure, default);
         Assert.NotNull(held);
         using (var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(200))) {
@@ -157,6 +160,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         await using var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
+        var callback = await DisclosureCallbackAsync(scope.ServiceProvider, fixture);
         var journal = fixture.Journal.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Journal.Session, default);
         using var current = lease.Bind();
@@ -174,7 +178,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             Assert.True(await scope.ServiceProvider.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(fixture.Input.ProjectId,
                 fixture.Input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId!.Value), ProjectObjectLinkKind.Uses));
         }
-        await using (var held = await DisclosureCallback(scope.ServiceProvider, fixture)(disclosure, default)) {
+        await using (var held = await callback(disclosure, default)) {
             Assert.NotNull(held);
         }
         await using var workbench = new WorkbenchDbContext(OwnerOptions<WorkbenchDbContext>(scope.ServiceProvider));
@@ -200,10 +204,13 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         return agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, access) };
     }
 
-    private static Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>> DisclosureCallback(
-        IServiceProvider services, Fixture fixture) => Assert.Single(services.GetServices<IAgentRuntimeToolProvider>()
-            .OfType<ProjectStructureAgentRuntimeToolProvider>()).GetToolMetadata(fixture.Context)
-            .Single(metadata => metadata.ToolName == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart).AuthorizeResultDisclosureAsync!;
+    private static async Task<Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>> DisclosureCallbackAsync(
+        IServiceProvider services, Fixture fixture) {
+        var provider = Assert.Single(services.GetServices<IAgentRuntimeToolProvider>().OfType<ProjectStructureAgentRuntimeToolProvider>());
+        await provider.CreateToolsAsync(fixture.Context, default);
+        return Assert.Single(provider.GetToolMetadata(fixture.Context),
+            metadata => metadata.ToolName == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart).AuthorizeResultDisclosureAsync!;
+    }
 
     private static ProjectStructureProcessNodeStartResult ReadResult(AgentToolResultDisclosure disclosure)
         => disclosure.Result.Deserialize<ProjectStructureProcessNodeStartResult>(ProjectStructureProcessProposalCodec.SerializerOptions)!;

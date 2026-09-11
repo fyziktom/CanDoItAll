@@ -13,6 +13,10 @@ internal sealed class RuntimeCapabilityState
 
     public List<AITool> Tools { get; } = [];
 
+    public List<MafContextToolRegistration> ContextToolRegistrations { get; } = [];
+
+    public bool HasToolContracts => Tools.Count > 0 || ContextToolRegistrations.Count > 0;
+
     public List<AgentRuntimeToolProviderDescriptor> RuntimeToolProviderDescriptors { get; } = [];
 
     public List<AgentRuntimeToolMetadata> RuntimeToolMetadata { get; } = [];

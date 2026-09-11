@@ -338,8 +338,9 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         }
     }
 
-    private static async Task<ExecutionRunRecord> CreateClaimedExecutionAsync(IServiceProvider services, Fixture fixture, NativeClock clock, bool persistExecution = true) {
-        var preparation = ProcessPreparedLaunchFixture.Create(fixture.SavedAuthority, new(Guid.NewGuid()));
+    private static async Task<ExecutionRunRecord> CreateClaimedExecutionAsync(IServiceProvider services, Fixture fixture, NativeClock clock,
+        bool persistExecution = true, ProcessLaunchAuthority? authority = null) {
+        var preparation = ProcessPreparedLaunchFixture.Create(authority ?? fixture.SavedAuthority, new(Guid.NewGuid()));
         var initial = preparation.InitialCommit;
         var assignment = Assert.Single(initial.InitialAssignments!) with {
             AllowedOperations = [ProcessOperationContractNames.ReadProjectStructure, ProcessOperationContractNames.ExecuteExternalAction],

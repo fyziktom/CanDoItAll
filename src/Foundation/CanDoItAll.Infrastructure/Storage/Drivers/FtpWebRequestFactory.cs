@@ -5,12 +5,12 @@ namespace CanDoItAll.Infrastructure.Storage;
 internal static class FtpWebRequestFactory
 {
     public static FtpWebRequest Create(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         string method)
     {
-        StorageProviderConfiguration configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+        StorageProviderConfiguration configuration = storage.ReadConfiguration();
         Uri requestUri = FtpStorageAddressPolicy.ResolveObjectUri(storage, remotePath);
 #pragma warning disable SYSLIB0014
         var request = (FtpWebRequest)WebRequest.Create(requestUri);
@@ -37,7 +37,7 @@ internal static class FtpWebRequestFactory
     }
 
     public static async Task EnsureParentDirectoriesAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? password,
         string remotePath,
         CancellationToken cancellationToken)

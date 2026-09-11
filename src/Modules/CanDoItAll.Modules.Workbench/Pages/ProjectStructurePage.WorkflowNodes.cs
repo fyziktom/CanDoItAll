@@ -18,6 +18,9 @@ public partial class ProjectStructurePage
 
     private async Task OpenAddWorkflowDialogAsync(ProjectStructureNode node)
     {
+        var openedSurface = surface ?? throw new InvalidOperationException("Reload the project before opening this editor.");
+        var mutationOwner = CreateProjectStructureUiAgentContext() with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
+
         CloseQuickActionDialog();
 
         var inputSettings = ProjectStructureWorkflowInputSettings.Default();
@@ -29,7 +32,7 @@ public partial class ProjectStructurePage
         try
         {
             var options = await WorkflowNodeService.GetAddOptionsAsync(
-                ProjectId,
+                openedSurface.ProjectId,
                 node.Id,
                 new ProjectStructureWorkflowAddOptionsInput(InputSettings: inputSettings));
             workflowAddDialogRefreshVersion++;
@@ -41,16 +44,16 @@ public partial class ProjectStructurePage
                 options.SelectedVersionId,
                 options.InputSettings,
                 options.Preview,
-                string.Join(" ", options.Warnings));
+                string.Join(" ", options.Warnings)) { OpenedSurface = openedSurface, MutationOwner = mutationOwner };
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
             workflowAddDialogRefreshVersion++;
-            workflowAddDialog = BuildWorkflowAddErrorDialog(node, inputSettings, FormatWorkflowUiException(exception));
+            workflowAddDialog = BuildWorkflowAddErrorDialog(node, inputSettings, FormatWorkflowUiException(exception)) with { OpenedSurface = openedSurface, MutationOwner = mutationOwner };
             Logger.LogWarning(
                 exception,
                 "Project structure workflow add dialog failed to load. ProjectId={ProjectId} ParentNodeId={ParentNodeId}",
-                ProjectId,
+                openedSurface.ProjectId,
                 node.Id);
         }
 
@@ -121,6 +124,8 @@ public partial class ProjectStructurePage
         }
 
         var dialog = workflowAddDialog;
+        var openedSurface = dialog.OpenedSurface ?? throw new InvalidOperationException("Reopen this editor to capture its project.");
+        var mutationOwner = dialog.MutationOwner ?? throw new InvalidOperationException("Reopen this editor to capture its project.");
         if (!dialog.SelectedWorkflowId.HasValue)
         {
             workflowAddDialog = workflowAddDialog with { Error = "Select a workflow before continuing." };
@@ -130,7 +135,7 @@ public partial class ProjectStructurePage
 
         try
         {
-            var parentNode = ResolveNode(dialog.ParentNodeId)
+            var parentNode = openedSurface.Nodes.FirstOrDefault(node => node.Id == dialog.ParentNodeId)
                 ?? throw new InvalidOperationException("The selected project-structure node is no longer available.");
             string addedNodeTitle;
             string createdWorkflowNodeId;
@@ -145,7 +150,7 @@ public partial class ProjectStructurePage
                         "The selected workflow version is no longer available.");
                 var execution = ProjectStructureTaskEditStatePolicy.Read(parentNode).Execution;
                 var attached = await TaskResourceAttachmentService.AttachAsync(
-                    ProjectId,
+                    openedSurface.ProjectId,
                     parentNode.Id,
                     new ProjectStructureTaskResourceAttachRequest(
                         new ProjectStructureTaskResourceSelection(
@@ -153,8 +158,8 @@ public partial class ProjectStructurePage
                             selectedWorkflowId.Value,
                             selectedVersionId.Value),
                         execution,
-                        dialog.InputSettings),
-                    CreateProjectStructureUiAgentContext());
+                        dialog.InputSettings) { ExpectedProjectAdmission = mutationOwner.ExpectedProjectAdmission },
+                    mutationOwner);
                 if (string.IsNullOrWhiteSpace(attached.CreatedNodeId))
                 {
                     throw new InvalidOperationException(
@@ -167,7 +172,7 @@ public partial class ProjectStructurePage
             else
             {
                 var created = await WorkflowNodeService.CreateAsync(
-                    ProjectId,
+                    openedSurface.ProjectId,
                     dialog.ParentNodeId,
                     new ProjectStructureWorkflowNodeCreateInput(
                         dialog.SelectedWorkflowId.Value,
@@ -175,7 +180,7 @@ public partial class ProjectStructurePage
                         InputSettings: dialog.InputSettings,
                         X: parentNode.X + 320,
                         Y: parentNode.Y + 120),
-                    CreateProjectStructureUiAgentContext());
+                    mutationOwner);
                 addedNodeTitle = created.Node.Title;
                 createdWorkflowNodeId = created.Node.Id;
             }
@@ -203,8 +208,10 @@ public partial class ProjectStructurePage
 
     private async Task OpenStartWorkflowDialogAsync(ProjectStructureNode node)
     {
-        CloseQuickActionDialog();
+        var openedSurface = surface ?? throw new InvalidOperationException("Reload the project before starting a Workflow.");
         var projectId = ProjectId;
+        var mutationOwner = CreateProjectStructureUiAgentContext(projectId) with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
+        CloseQuickActionDialog();
 
         if (node.ObjectType != ProjectObjectType.WorkflowDefinition)
         {
@@ -243,7 +250,8 @@ public partial class ProjectStructurePage
             false,
             error) {
             ProjectId = projectId,
-            IntentId = Guid.NewGuid()
+            IntentId = Guid.NewGuid(),
+            MutationOwner = mutationOwner
         };
 
         await InvokeAsync(StateHasChanged);
@@ -279,7 +287,7 @@ public partial class ProjectStructurePage
                     RequestedBy: "project-structure-ui",
                     SimulatedNodeIds: dialog.SimulatedNodeIds,
                     IntentId: dialog.IntentId),
-                CreateProjectStructureUiAgentContext(dialog.ProjectId));
+                dialog.MutationOwner ?? throw new InvalidOperationException("Reopen this Workflow editor to capture its original project."));
             if (ProjectId != dialog.ProjectId) {
                 return;
             }

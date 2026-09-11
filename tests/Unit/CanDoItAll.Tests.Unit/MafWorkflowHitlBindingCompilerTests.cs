@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -505,19 +506,45 @@ public sealed class MafWorkflowHitlBindingCompilerTests
         Assert.Equal(0, executor.InvocationCount);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NativeHttpApprovalCarriesOpaqueOriginalAdmissionWithoutChangingPersistedContext(bool hasOccurrence) {
+        var executor = new RecordingExecutor(BuiltInWorkflowExecutorDescriptors.HttpFetch);
+        var result = await RunExplicitApprovalAsync(executor, approved: true,
+            executorId: WorkflowExecutorIds.HttpFetch, hasOccurrence: hasOccurrence);
+
+        Assert.DoesNotContain(result.Events, item => item is WorkflowErrorEvent);
+        Assert.Equal(1, executor.InvocationCount);
+        var context = Assert.IsType<WorkflowExecutorExecutionContext>(executor.LastContext);
+        var input = Assert.IsType<WorkflowNodeInput>(executor.LastInput);
+        var admission = Assert.IsType<WorkflowExecutorApprovalAdmission>(context.ApprovalAdmission);
+        admission.RequireMatches(context, input);
+        Assert.NotNull(admission.ResponseLease);
+        Assert.Equal(hasOccurrence, input.ExecutionOccurrence is not null);
+        Assert.Equal(input.ExecutionOccurrence?.Advance(context.Definition.VersionId, context.Node.Id), context.ExecutionOccurrence);
+        var serialized = JsonSerializer.Serialize(context);
+        Assert.DoesNotContain("ApprovalAdmission", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResponseLease", serialized, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(() => admission.RequireMatches(context,
+            input with { PayloadJson = "{\"changed\":true}" }));
+    }
+
     private static async Task<ApprovalRunResult> RunExplicitApprovalAsync(
         RecordingExecutor executor,
         bool approved,
         Func<MafWorkflowApprovalContinuation, MafWorkflowApprovalContinuation>? mutate = null,
         Func<WorkflowExternalResponseAuthorization, WorkflowExternalResponseAuthorization>?
-            mutateAuthorization = null)
+            mutateAuthorization = null,
+        WorkflowExecutorId? executorId = null,
+        bool hasOccurrence = false)
     {
         var catalog = new WorkflowExecutorCatalog([executor]);
         var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
         var definition = CreateDefinition(
             [
                 CreateNode("start", WorkflowNodeKind.Start),
-                CreateExecutorNode("approval", WorkflowExecutorIds.ApprovalRequest),
+                CreateExecutorNode("approval", executorId ?? WorkflowExecutorIds.ApprovalRequest),
                 CreateNode("end", WorkflowNodeKind.End)
             ],
             [
@@ -530,7 +557,10 @@ public sealed class MafWorkflowHitlBindingCompilerTests
             runId,
             approved);
         authorization = mutateAuthorization?.Invoke(authorization) ?? authorization;
-        var invocationContext = CreateRecoveryInvocationContext(authorization);
+        var invocationContext = CreateRecoveryInvocationContext(authorization) with {
+            ResponseLease = new WorkflowExternalResponseLease(new WorkflowExternalResponseLeaseOwnerId("native-test-host"),
+                new WorkflowExternalResponseLeaseEpoch(1), authorization.AuthorizedAtUtc, authorization.ExpiresAtUtc)
+        };
         var compiler = new MafWorkflowCompiler(
             new WorkflowDefinitionValidator(catalog),
             invoker,
@@ -545,7 +575,9 @@ public sealed class MafWorkflowHitlBindingCompilerTests
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         await using var run = await InProcessExecution.RunStreamingAsync(
             workflow,
-            new WorkflowNodeInput("{\"immutable\":true}"),
+            new WorkflowNodeInput("{\"immutable\":true}") {
+                ExecutionOccurrence = hasOccurrence ? WorkflowExecutionOccurrence.Start(runId) : null
+            },
             cancellationToken: cancellationSource.Token);
         var events = new List<WorkflowEvent>();
         ExternalRequest? externalRequest = null;
@@ -733,6 +765,8 @@ public sealed class MafWorkflowHitlBindingCompilerTests
 
         public WorkflowNodeInput? LastInput { get; private set; }
 
+        public WorkflowExecutorExecutionContext? LastContext { get; private set; }
+
         public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
             WorkflowExecutorExecutionContext context,
             WorkflowNodeInput input,
@@ -740,6 +774,7 @@ public sealed class MafWorkflowHitlBindingCompilerTests
         {
             InvocationCount++;
             LastInput = input;
+            LastContext = context;
             return ValueTask.FromResult(new WorkflowNodeExecutionResult(
                 context.Node.Id,
                 input.PayloadJson,

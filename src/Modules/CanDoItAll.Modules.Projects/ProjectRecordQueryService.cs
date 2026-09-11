@@ -32,7 +32,10 @@ public sealed record ProjectRecordQueryItem(
     ProjectStatus Status,
     string CurrentPhase,
     string Description,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc) {
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Guid? LifetimeId { get; init; }
+}
 
 public sealed record ProjectRecordPage(
     IReadOnlyList<ProjectRecordQueryItem> Items,
@@ -60,7 +63,7 @@ public interface IProjectRecordQueryService
         CancellationToken cancellationToken = default);
 }
 
-public sealed record ProjectNameMatch(Guid Id, string Name, bool Matches);
+public sealed record ProjectNameMatch(Guid Id, string Name, bool Matches, Guid? LifetimeId = null);
 
 public sealed class ProjectRecordQueryService(
     IDbContextFactory<ProjectsDbContext> dbContextFactory,
@@ -78,7 +81,7 @@ public sealed class ProjectRecordQueryService(
         var search = searchText.ToUpperInvariant();
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await context.Set<Project>().AsNoTracking().Where(project => project.Id == projectId)
-            .Select(project => new ProjectNameMatch(project.Id, project.Name, project.Name.ToUpper().Contains(search)))
+            .Select(project => new ProjectNameMatch(project.Id, project.Name, project.Name.ToUpper().Contains(search), project.LifetimeId))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -158,7 +161,7 @@ public sealed class ProjectRecordQueryService(
                 project.Status,
                 project.CurrentPhase,
                 project.Description,
-                project.UpdatedAtUtc))
+                project.UpdatedAtUtc) { LifetimeId = project.LifetimeId })
             .ToListAsync(cancellationToken);
     }
 
@@ -195,7 +198,7 @@ public sealed class ProjectRecordQueryService(
                 project.Status,
                 project.CurrentPhase,
                 project.Description,
-                project.UpdatedAtUtc))
+                project.UpdatedAtUtc) { LifetimeId = project.LifetimeId })
             .ToListAsync(cancellationToken);
 
         return new ProjectRecordPage(

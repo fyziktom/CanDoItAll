@@ -29,7 +29,8 @@ public sealed class WorkflowRuntimeEvidenceSourceProvider(
                     MapRun),
                 CreateSource(
                     MemorySourceEntityKind.WorkflowEvent,
-                    FilterByRunId(dbContext.Set<WorkflowEventRecordEntity>().AsNoTracking(), runId),
+                    FilterByRunId(dbContext.Set<WorkflowEventRecordEntity>().AsNoTracking()
+                        .Where(row => row.Kind != WorkflowEventKind.ProviderReadEvidence), runId),
                     item => item.Id,
                     MapEvent),
                 CreateSource(

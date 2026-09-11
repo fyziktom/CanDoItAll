@@ -18,24 +18,26 @@ public sealed class ProjectStructureBatchDeletionCoordinator
     public Task<ProjectStructureDeletionResult> DeleteNodesAsync(
         Guid projectId,
         IReadOnlyList<string>? nodeIds,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
         => DeleteNodesAsync(
             projectId,
             nodeIds,
             ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
     public Task<ProjectStructureDeletionResult> DeleteNodesAsync(
         Guid projectId,
         IReadOnlyList<string>? nodeIds,
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         return DeleteNodesAsync(
             projectId,
             NormalizeSelection(nodeIds),
             managedStorageDisposition,
-            cancellationToken);
+            cancellationToken, mutationOwner);
     }
 
     internal ProjectStructureBatchDeletionSelection NormalizeSelection(
@@ -57,7 +59,8 @@ public sealed class ProjectStructureBatchDeletionCoordinator
         Guid projectId,
         ProjectStructureBatchDeletionSelection selection,
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         ArgumentNullException.ThrowIfNull(selection);
         ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(managedStorageDisposition);
@@ -104,7 +107,7 @@ public sealed class ProjectStructureBatchDeletionCoordinator
             recoveries,
             branchFailures,
             managedStorageDisposition,
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
         if (recoveries.Count > 0 || branchFailures.Count > 0)
         {
@@ -199,18 +202,18 @@ public sealed class ProjectStructureBatchDeletionCoordinator
         List<ProjectStructureDeletionRecovery> recoveries,
         List<ProjectStructureDeletionBranchFailure> branchFailures,
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectStructureAgentContext? mutationOwner)
     {
         var replaylessDeletedNodeCount = 0;
         foreach (var nodeId in deleteRootIds)
         {
             try
             {
-                var deletion = await operations.DeleteObjectDetailedAsync(
-                    projectId,
-                    nodeId,
-                    managedStorageDisposition,
-                    cancellationToken);
+                var deletion = mutationOwner is null
+                    ? await operations.DeleteObjectDetailedAsync(projectId, nodeId, managedStorageDisposition, cancellationToken)
+                    : await (operations.DeleteOwnedObjectDetailedAsync ?? throw new InvalidOperationException("Explicit native deletion authority is not configured."))(
+                        projectId, nodeId, managedStorageDisposition, cancellationToken, mutationOwner);
                 deletionWarnings.AddRange(deletion.DeletionWarnings);
                 if (deletion.DeletedNodeCount > 0)
                 {
@@ -431,7 +434,8 @@ internal sealed record ProjectStructureBatchDeletionSelection(
 internal sealed record ProjectStructureBatchDeletionOperations(
     Func<Guid, CancellationToken, Task<ProjectStructureSurface>> GetStructureAsync,
     Func<Guid, string, ProjectStructureManagedStorageDisposition, CancellationToken, Task<ProjectStructureDeletionReplayResult?>> ReplayDeletionAsync,
-    Func<Guid, string, ProjectStructureManagedStorageDisposition, CancellationToken, Task<ProjectStructureDeletionResult>> DeleteObjectDetailedAsync)
+    Func<Guid, string, ProjectStructureManagedStorageDisposition, CancellationToken, Task<ProjectStructureDeletionResult>> DeleteObjectDetailedAsync,
+    Func<Guid, string, ProjectStructureManagedStorageDisposition, CancellationToken, ProjectStructureAgentContext, Task<ProjectStructureDeletionResult>>? DeleteOwnedObjectDetailedAsync = null)
 {
     public static ProjectStructureBatchDeletionOperations Create(
         ProjectWorkbenchService projectWorkbenchService)
@@ -441,6 +445,7 @@ internal sealed record ProjectStructureBatchDeletionOperations(
         return new ProjectStructureBatchDeletionOperations(
             projectWorkbenchService.GetStructureAsync,
             projectWorkbenchService.ReplayDeletionAsync,
-            projectWorkbenchService.DeleteObjectDetailedAsync);
+            (projectId, nodeKey, disposition, cancellationToken) => projectWorkbenchService.DeleteObjectDetailedAsync(projectId, nodeKey, disposition, cancellationToken),
+            (projectId, nodeKey, disposition, cancellationToken, owner) => projectWorkbenchService.DeleteObjectDetailedAsync(projectId, nodeKey, disposition, cancellationToken, owner));
     }
 }

@@ -33,3 +33,13 @@ dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release
 ```
 
 See [shared providers](../../../docs/shared-providers.md), [request history](../../../docs/provider-request-history.md), [architecture](../../../docs/architecture/overview.md), and [testing](../../../docs/testing.md).
+
+The selected `ai-providers` database transfer reads Provider records through the owner
+context and asks Security to stage referenced encrypted values by ID. PostgreSQL copies
+use one source RepeatableRead snapshot and one target Serializable transaction. Ordered
+target table locks cover Provider profiles, shared-reference guards and selected Secret
+records before the final guard and every intermediate save. Protected values, IDs,
+reference warnings and unrelated target state retain their existing semantics. Same
+physical source/target databases and mixed database providers are rejected; the explicit
+two-InMemory fixture path has no relational atomicity guarantee. Canonical contexts
+remain only in the technical profile/transaction/lock adapter.

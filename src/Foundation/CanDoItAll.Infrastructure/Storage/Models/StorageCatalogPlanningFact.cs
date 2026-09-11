@@ -22,13 +22,21 @@ public sealed record StorageCatalogPlanningFact(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc,
     StorageFtpAddressingFact? FtpAddressing) {
-    public static StorageCatalogPlanningFact FromCatalogRecord(StorageCatalogRecord storage, bool includeFtpAddressing) {
+    internal static StorageCatalogPlanningFact FromCatalogRecord(StorageCatalogRecord storage, bool includeFtpAddressing) =>
+        FromDriverInput(storage.ToDriverInput(), includeFtpAddressing);
+
+    public static StorageCatalogPlanningFact FromDriverInput(StorageDriverInput storage, bool includeFtpAddressing) {
         ArgumentNullException.ThrowIfNull(storage);
         StorageFtpAddressingFact? ftpAddressing = null;
         if (storage.ProviderKind == StorageProviderKind.Ftp && includeFtpAddressing) {
-            var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+            var configuration = storage.ReadConfiguration();
             ftpAddressing = new(configuration.Port, configuration.BasePath);
         }
+        return FromSnapshot(storage, ftpAddressing);
+    }
+
+    public static StorageCatalogPlanningFact FromSnapshot(StorageCatalogSnapshot storage, StorageFtpAddressingFact? ftpAddressing = null) {
+        ArgumentNullException.ThrowIfNull(storage);
         return new(
             storage.Id, storage.Name, storage.ProviderKind, storage.IsEnabled, storage.IsSystemDefault,
             storage.IsReadOnly, storage.DisplayOrder, storage.ConnectionMode, storage.EndpointOrRoot,

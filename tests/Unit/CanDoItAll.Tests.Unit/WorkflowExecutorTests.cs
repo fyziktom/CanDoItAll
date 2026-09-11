@@ -14,7 +14,6 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard;
-using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
@@ -911,7 +910,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonObjectShape);
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
@@ -951,7 +950,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
         {
             Instructions = "A later Gallery edit must not affect this workflow version."
@@ -985,7 +984,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([componentProvider, nodeProvider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
         {
             ProviderProfileId = componentProvider.Id,
@@ -1027,7 +1026,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
         {
             Instructions = "Mutable component instructions must never be used as an execution fallback."
@@ -1060,7 +1059,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
         var node = CreateLlmNode("legacy-prompt-placeholder", component.Id) with
         {
@@ -1099,7 +1098,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
@@ -1135,7 +1134,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
@@ -1168,7 +1167,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
@@ -1222,7 +1221,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
@@ -1257,7 +1256,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
@@ -1297,7 +1296,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
@@ -1322,7 +1321,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
@@ -1351,7 +1350,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
@@ -1398,7 +1397,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
@@ -1427,7 +1426,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
@@ -1453,7 +1452,7 @@ public sealed class WorkflowExecutorTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
@@ -2075,7 +2074,7 @@ public sealed class WorkflowExecutorTests
             var secretId = Guid.NewGuid();
             await using var server = SingleResponseHttpServer.Json(200, "{\"ok\":true}");
             var result = await ExecuteDirectAsync(
-                new HttpFetchWorkflowExecutor(new StaticSecretRuntimeResolver(secretId, "secret-token")),
+                new HttpFetchWorkflowExecutor(new StaticWorkflowSecretHeaderApplier(secretId, "secret-token")),
                 new WorkflowHttpExecutorSettings
                 {
                     Method = WorkflowHttpMethodKind.Get,
@@ -2094,7 +2093,7 @@ public sealed class WorkflowExecutorTests
             Assert.DoesNotContain("secret-token", result.PayloadJson, StringComparison.Ordinal);
         });
 
-        await RecordAsync("http secret header requires runtime resolver", async () =>
+        await RecordAsync("http secret header requires owner header applier", async () =>
         {
             await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(new HttpFetchWorkflowExecutor(), new WorkflowHttpExecutorSettings
             {
@@ -2836,15 +2835,13 @@ public sealed class WorkflowExecutorTests
         }
     }
 
-    private sealed class StaticSecretRuntimeResolver(Guid expectedSecretId, string value) : ISecretRuntimeResolver
-    {
-        public Task<string?> ResolveValueAsync(
-            SecretRuntimeRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            Assert.Equal(expectedSecretId, request.SecretId);
-            Assert.Contains(expectedSecretId, request.AllowedSecretIds ?? []);
-            return Task.FromResult<string?>(value);
+    private sealed class StaticWorkflowSecretHeaderApplier(Guid expectedSecretId, string value) : IWorkflowHttpSecretHeaderApplier {
+        public Task<WorkflowHttpSecretUse> ApplyAsync(WorkflowExecutorExecutionContext context, WorkflowNodeInput input,
+            HttpRequestMessage request, CancellationToken cancellationToken = default) {
+            var settings = WorkflowExecutorJson.Deserialize<WorkflowHttpExecutorSettings>(context.SettingsJson);
+            Assert.Equal(expectedSecretId, settings.SecretHeader.SecretId);
+            Assert.True(request.Headers.TryAddWithoutValidation(settings.SecretHeader.HeaderName, $"Bearer {value}"));
+            return Task.FromResult(new WorkflowHttpSecretUse(value, settings.SecretHeader.HeaderName, $"Bearer {value}"));
         }
     }
 

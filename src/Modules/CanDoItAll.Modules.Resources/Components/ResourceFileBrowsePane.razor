@@ -478,7 +478,7 @@
             workspace.Source.DisplayName,
             workspace.Source.Key.TryGetProjectId(out Guid sourceProjectId) ? sourceProjectId : null,
             args.Item,
-            (catalog?.Projects ?? []).ToDictionary(project => project.Id, project => project.Name));
+            (catalog?.Projects ?? []).ToDictionary(project => project.Id, project => new CanDoItAll.Modules.Projects.ProjectWriteSelection(project.Id, project.Name, project.Admission)));
     }
 
     private async Task HandleActionRequestedAsync(FileBrowserItemActionEventArgs args)

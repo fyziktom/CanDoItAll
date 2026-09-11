@@ -72,6 +72,13 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
         var currentProfile = databaseProfileRuntimeAccessor
             .ResolveCurrentProfile()
             .Profile;
+        if (request.Revalidation is { } captured &&
+                (captured.Source.SourceKind != request.SourceKind || captured.Source.SourceId != request.SourceId ||
+                captured.Authority.AgentId != request.AgentId || captured.Authority.DatabaseProfileId != currentProfile.Id ||
+                captured.Authority.DatabaseProfileGeneration != request.ExpectedDatabaseProfileGeneration ||
+                captured.Authority.WorkspaceScope != request.ObservedWorkspaceScope || request.UiAccessHint is not null)) {
+            throw new AgentExecutionAuthorityMismatchException("The captured execution source does not match this authority revalidation.");
+        }
         var agent = await ResolveActiveAgentAsync(request.AgentId, cancellationToken)
             .ConfigureAwait(false);
         EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
@@ -83,6 +90,10 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
             cancellationToken)
             .ConfigureAwait(false);
         EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
+
+        if (request.Revalidation is { } original && workspaceScope != original.Authority.WorkspaceScope) {
+            throw new AgentExecutionAuthorityMismatchException("Current source authority does not match the captured workspace scope.");
+        }
 
         return new AgentExecutionAuthorityRecord(
             AgentExecutionAuthorityId.Create(),
@@ -152,7 +163,7 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
                         request.SourceKind,
                         request.SourceId,
                         request.ObservedWorkspaceScope,
-                        currentProfileId),
+                        currentProfileId) { Revalidation = request.Revalidation },
                     cancellationToken)
                 .ConfigureAwait(false);
             // Fence the database profile generation again after the provider's
@@ -166,7 +177,8 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
         // source without a canonical rule is denied outright — it can never be
         // adopted or silently downgraded; without a claim the turn receives a
         // bounded read-only sandbox.
-        if (request.ObservedWorkspaceScope is { } observedScope)
+        if (request.ObservedWorkspaceScope is { } observedScope &&
+                !(request.Revalidation is { } captured && captured.Authority.WorkspaceScope == WorkspaceScopeDescriptor.Sandbox))
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"The source kind '{request.SourceKind.Value}' has no canonical authority rule for the published workspace scope '{observedScope.DisplayName}'.");

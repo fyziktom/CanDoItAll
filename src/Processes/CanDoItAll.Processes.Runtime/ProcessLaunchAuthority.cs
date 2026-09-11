@@ -69,14 +69,34 @@ public sealed record ProcessLaunchAgentCeiling(
     IReadOnlyList<string> ReadOnlyExternalTargetAliases,
     IReadOnlyList<string> AllowedManagedArtifactReadRefs);
 
+public sealed record ProcessProjectMutationCeiling(bool CanCreateProjects, bool CanCreateSubprojects,
+    bool CanChangeHierarchy, bool CanMoveNodesToSubproject, int SchemaVersion = 1) {
+    public const int CurrentSchemaVersion = 1;
+
+    [JsonIgnore]
+    public bool AllowsAny => CanCreateProjects || CanCreateSubprojects || CanChangeHierarchy || CanMoveNodesToSubproject;
+
+    public void Validate() {
+        if (SchemaVersion != CurrentSchemaVersion) {
+            throw new InvalidOperationException("The saved Process project-mutation ceiling has an unsupported version.");
+        }
+    }
+
+    public bool IsWithin(ProcessProjectMutationCeiling current)
+        => (!CanCreateProjects || current.CanCreateProjects) && (!CanCreateSubprojects || current.CanCreateSubprojects) &&
+            (!CanChangeHierarchy || current.CanChangeHierarchy) && (!CanMoveNodesToSubproject || current.CanMoveNodesToSubproject);
+}
+
 public sealed record ProcessLaunchAuthority(
     ProcessLaunchPrincipal Principal,
     Guid DatabaseProfileId,
     ProcessProjectAdmission? ProjectAdmission,
     bool CanCreateTasks,
     bool CanCreateAssets,
-    string PolicyFingerprint) {
+    string PolicyFingerprint,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessProjectMutationCeiling? ProjectMutations = null) {
     public void Validate() {
+        ProjectMutations?.Validate();
         if (DatabaseProfileId == Guid.Empty || string.IsNullOrWhiteSpace(PolicyFingerprint) || PolicyFingerprint.Length > 256 ||
                 ProjectAdmission is { } admission && admission.DatabaseProfileId != DatabaseProfileId) {
             throw new InvalidOperationException("The saved process launch authority has an invalid profile or policy binding.");
@@ -96,7 +116,8 @@ public sealed record ProcessLaunchAuthority(
                         !ValidEntries(ceiling.AllowedOperations) || !ValidEntries(ceiling.AllowedCapabilityKeys) ||
                         !ValidEntries(ceiling.WritableExternalTargetAliases) || !ValidEntries(ceiling.ReadOnlyExternalTargetAliases) ||
                         ceiling.AllowedManagedArtifactReadRefs is null || ceiling.AllowedManagedArtifactReadRefs.Any(string.IsNullOrWhiteSpace) ||
-                        (CanCreateTasks || CanCreateAssets) && !ceiling.MutationAllowed ||
+                        (CanCreateTasks || CanCreateAssets || ProjectMutations?.AllowsAny == true) && !ceiling.MutationAllowed ||
+                        ProjectMutations?.CanCreateProjects == true && ceiling.WorkspaceScopeKind != ProcessLaunchSourceScopeKind.Organization ||
                         ceiling.WorkspaceScopeKind == ProcessLaunchSourceScopeKind.Project &&
                             (ProjectAdmission is null || !Guid.TryParse(ceiling.WorkspaceScopeKey, out var sourceProject) ||
                                 sourceProject != ProjectAdmission.ProjectId)) {

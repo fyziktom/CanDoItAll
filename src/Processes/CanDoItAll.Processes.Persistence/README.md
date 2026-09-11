@@ -36,3 +36,14 @@ source/lifetime checks; this admission boundary does not authorize later effects
 ```powershell
 dotnet build .\src\Processes\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj
 ```
+
+Mapped Workflow admission uses a separate Process-owned direct-dispatch reader and
+transaction guard. It reads only the selected run, step, assignment, claim, plan and
+accepted preparation; no Agent execution run is fabricated for a Workflow executor.
+The guard uses the existing root advisory key and locks the exact runtime, assignment,
+step and claim rows inside the caller's coordinated transaction. It rechecks current
+claim ownership and the immutable assignment fingerprint before and after the
+Workflow flush. Any original source catalog and Project lifetime checks remain with
+their owning policies. Normal reader factories stay independent, and this guard
+explicitly requires PostgreSQL. Dispatch-only Workflow admission does not grant the
+project mutation authority required by later native effects.

@@ -5,6 +5,15 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public interface IProjectStructureRuntimeGateway
 {
+    Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListWorkflowProjectsAsync(WorkflowStructureReadContext context,
+        CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException("This host has no source-authorized IProjectStructureRuntimeGateway for Workflow reads.");
+
+    Task<ProjectStructureRuntimeReadResponse> ReadWorkflowStructureAsync(Guid projectId,
+        ProjectStructureRuntimeReadRequest request, WorkflowStructureReadContext context,
+        CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException("This host has no source-authorized IProjectStructureRuntimeGateway for Workflow reads.");
+
     Task<ProjectStructureRuntimeNodeSummary> CreateWorkflowTaskAsync(Guid projectId,
         ProjectStructureRuntimeNodeCreateRequest request, WorkflowStructureEffectContext effect,
         CancellationToken cancellationToken = default)

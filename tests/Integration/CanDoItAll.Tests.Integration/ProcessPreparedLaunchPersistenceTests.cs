@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Text.Json;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
@@ -18,6 +19,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed class ProcessPreparedLaunchPersistenceTests {
+    [Fact]
+    public Task Target_inspection_rejects_terminal_runtime_pointing_to_another_runs_valid_preparation()
+        => AssertTerminalTargetInspectionAsync(mismatchedPointer: true);
+
+    [Fact]
+    public Task Target_inspection_allows_coherent_terminal_non_project_history_after_restart()
+        => AssertTerminalTargetInspectionAsync(mismatchedPointer: false);
+
     [Fact]
     public async Task Concurrent_same_intent_preparations_use_one_exact_review_run_and_admission_sequence() {
         await using var app = await TestApplication.CreateAsync(Harness());
@@ -357,6 +366,121 @@ public sealed class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(claimed.Snapshot.Preparation.InitialCommit.Mutation.State.RunId, reclaimed.Snapshot.Preparation.InitialCommit.Mutation.State.RunId);
         Assert.False(await store.RenewContinuationAsync(claimed));
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.CompleteContinuationAsync(claimed, ProcessLaunchContinuationState.Started, null));
+    }
+
+    private static async Task AssertTerminalTargetInspectionAsync(bool mismatchedPointer) {
+        await using var environment = CanDoItAllTestEnvironment.Create("process-target-history");
+        var profile = environment.CreatePostgreSqlProfile("terminal-history");
+        var harness = Harness(environment, profile);
+        ProcessPreparedLaunchSnapshot[] launches;
+        string expected;
+        await using (var app = await TestApplication.CreateAsync(harness)) {
+            var first = await CreateAcceptedTerminalNonProjectLaunchAsync(app.Services);
+            launches = mismatchedPointer
+                ? [first, await CreateAcceptedTerminalNonProjectLaunchAsync(app.Services)]
+                : [first];
+            if (mismatchedPointer) {
+                var firstRunId = first.Preparation.InitialCommit.Mutation.State.RunId.Value;
+                var other = launches[1];
+                Assert.NotEqual(firstRunId, other.Preparation.InitialCommit.Mutation.State.RunId.Value);
+                Assert.NotEqual(first.Preparation.AdmissionId, other.Preparation.AdmissionId);
+                await using var context = new ProcessPersistenceDbContext(ProcessOptions(app.Services));
+                var runtime = await context.RuntimeStates.SingleAsync(item => item.RunId == firstRunId);
+                Assert.Equal(ProcessRuntimeStatus.Cancelled, runtime.Status);
+                Assert.Equal(first.Preparation.AdmissionId.Value, runtime.LaunchAdmissionId);
+                runtime.LaunchAdmissionId = other.Preparation.AdmissionId.Value;
+                await context.SaveChangesAsync();
+            }
+            expected = await ReadTargetInspectionEvidenceAsync(app.Services, launches);
+            await AssertTargetInspectionAsync(app.Services, mismatchedPointer);
+            Assert.Equal(expected, await ReadTargetInspectionEvidenceAsync(app.Services, launches));
+        }
+        await using var restarted = await TestApplication.CreateAsync(harness);
+        foreach (var original in launches) {
+            var retained = Assert.IsType<ProcessPreparedLaunchSnapshot>(await Store(restarted.Services).GetAsync(original.Preparation.AdmissionId));
+            Assert.Equal(original.PreparationFingerprint, retained.PreparationFingerprint);
+            Assert.Equal(original.Preparation.InitialCommit.Mutation.State.RunId, retained.Preparation.InitialCommit.Mutation.State.RunId);
+            Assert.Equal(original.AcceptedAtUtc, retained.AcceptedAtUtc);
+            Assert.Equal(original.AdmissionSequence, retained.AdmissionSequence);
+        }
+        Assert.Equal(expected, await ReadTargetInspectionEvidenceAsync(restarted.Services, launches));
+        await AssertTargetInspectionAsync(restarted.Services, mismatchedPointer);
+        Assert.Equal(expected, await ReadTargetInspectionEvidenceAsync(restarted.Services, launches));
+    }
+
+    private static async Task<ProcessPreparedLaunchSnapshot> CreateAcceptedTerminalNonProjectLaunchAsync(IServiceProvider services) {
+        var store = Store(services);
+        var saved = await store.PrepareAsync(ProcessPreparedLaunchFixture.Create());
+        Assert.Null(saved.Preparation.Request.ProjectId);
+        Assert.Null(saved.Preparation.Request.ProjectNodeId);
+        Assert.Null(saved.Preparation.LinkTarget);
+        Assert.Null(saved.Preparation.Authority);
+        await using var context = new ProcessPersistenceDbContext(ProcessOptions(services));
+        Assert.True(context.Database.IsNpgsql());
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(context, coordinatedTransaction: Coordinator(services));
+        var request = ProcessPreparedLaunchFixture.Commit(saved);
+        var accepted = await unitOfWork.CommitAsync(request);
+        Assert.True(accepted.Succeeded);
+        await AssertInitialRowsAsync(context, request, 1);
+        var cancelled = await unitOfWork.CommitAsync(ProcessProjectAdmissionFixture.Cancel(accepted.State));
+        Assert.True(cancelled.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, cancelled.State.Status);
+        Assert.Null(cancelled.State.ProjectAdmission);
+        Assert.Equal(saved.Preparation.AdmissionId, cancelled.State.LaunchAdmissionId);
+        var retained = Assert.IsType<ProcessPreparedLaunchSnapshot>(await store.GetAsync(saved.Preparation.AdmissionId));
+        Assert.NotNull(retained.AcceptedAtUtc);
+        Assert.Equal(ProcessLaunchContinuationState.Accepted, retained.State);
+        Assert.Equal(ProcessLaunchLinkDeliveryState.NotRequested, retained.LinkDeliveryState);
+        return retained;
+    }
+
+    private static async Task AssertTargetInspectionAsync(IServiceProvider services, bool mismatchedPointer) {
+        await using var scope = services.CreateAsyncScope();
+        var participant = scope.ServiceProvider.GetServices<IProjectTransferTargetStateParticipant>()
+            .Single(item => item.Area == ProjectTransferTargetStateArea.Processes);
+        Assert.Contains(typeof(ProcessRuntimeStateEntity), participant.EntityTypesToLock);
+        Assert.Contains(typeof(ProcessPreparedLaunchEntity), participant.EntityTypesToLock);
+        var operations = scope.ServiceProvider.GetRequiredService<DatabaseTransferOperationRunner>();
+        Task<IReadOnlyList<ProjectTransferTargetStateResidue>> InspectAsync(DatabaseTransferProfileSession session, CancellationToken token)
+            => operations.InspectTargetAsync(session, participant.FindResiduesAsync, token);
+        var independent = await operations.RunIndependentAsync(Profile(services), InspectAsync);
+        var locked = await operations.RunExclusiveImportAsync(Profile(services),
+            [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], participant.EntityTypesToLock, InspectAsync);
+        foreach (var residues in new[] { independent, locked }) {
+            if (mismatchedPointer) {
+                Assert.Equal("process runtime state with missing or mismatched launch admission evidence", Assert.Single(residues).Description);
+            } else {
+                Assert.Empty(residues);
+            }
+        }
+    }
+
+    private static async Task<string> ReadTargetInspectionEvidenceAsync(IServiceProvider services, ProcessPreparedLaunchSnapshot[] launches) {
+        var admissionIds = launches.Select(item => item.Preparation.AdmissionId.Value).ToArray();
+        var runIds = launches.Select(item => item.Preparation.InitialCommit.Mutation.State.RunId.Value).ToArray();
+        var planIds = launches.Select(item => item.Preparation.Review.PlanId.Value).ToArray();
+        await using var context = new ProcessPersistenceDbContext(ProcessOptions(services));
+        Assert.True(context.Database.IsNpgsql());
+        var preparations = await context.PreparedLaunches.AsNoTracking().Where(item => admissionIds.Contains(item.Id)).OrderBy(item => item.Id).ToArrayAsync();
+        var runtimes = await context.RuntimeStates.AsNoTracking().Where(item => runIds.Contains(item.RunId)).OrderBy(item => item.RunId).ToArrayAsync();
+        var events = await context.RuntimeEvents.AsNoTracking().Where(item => runIds.Contains(item.RunId)).OrderBy(item => item.EventId).ToArrayAsync();
+        var eventIds = events.Select(item => item.EventId).ToArray();
+        Assert.Equal(launches.Length, preparations.Length);
+        Assert.Equal(launches.Length, runtimes.Length);
+        Assert.Equal(launches.Length * 2, events.Length);
+        Assert.All(preparations, preparation => Assert.False(preparation.ReferencesProject()));
+        Assert.All(runtimes, runtime => Assert.Equal(ProcessRuntimeStatus.Cancelled, runtime.Status));
+        return JsonSerializer.Serialize(new {
+            Preparations = preparations,
+            Runtimes = runtimes,
+            Plans = await context.InstancePlans.AsNoTracking().Where(item => planIds.Contains(item.PlanId)).OrderBy(item => item.PlanId).ToArrayAsync(),
+            Assignments = await context.RuntimeStepAssignments.AsNoTracking().Where(item => runIds.Contains(item.RunId)).OrderBy(item => item.RunId).ThenBy(item => item.StepInstanceId).ToArrayAsync(),
+            Steps = await context.RuntimeSteps.AsNoTracking().Where(item => runIds.Contains(item.RunId)).OrderBy(item => item.RunId).ThenBy(item => item.StepInstanceId).ToArrayAsync(),
+            Events = events,
+            CommandReceipts = await context.IdempotencyKeys.AsNoTracking().Where(item => runIds.Contains(item.RunId)).OrderBy(item => item.RunId).ThenBy(item => item.CommandId).ToArrayAsync(),
+            Outbox = await context.OutboxMessages.AsNoTracking().Where(item => eventIds.Contains(item.EventId)).OrderBy(item => item.MessageId).ToArrayAsync(),
+            ArtifactLedger = await context.ArtifactLedgerEvents.AsNoTracking().Where(item => eventIds.Contains(item.EventId)).OrderBy(item => item.LedgerEventId).ToArrayAsync()
+        });
     }
 
     private static TestHarnessOptions Harness(CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null)

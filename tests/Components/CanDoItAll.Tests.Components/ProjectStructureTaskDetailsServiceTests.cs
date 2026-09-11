@@ -20,7 +20,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         var assigneeService = harness.Context.Services.GetRequiredService<ProjectStructureWorkItemAssigneeService>();
         var detailsService = harness.Context.Services.GetRequiredService<ProjectStructureTaskDetailsService>();
         var bridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
-        var projectId = await CreateProjectAsync(projectsService);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var joeId = await CreatePersonAsync(partyDirectoryService, "Joe Doe");
         var janeId = await CreatePersonAsync(partyDirectoryService, "Jane Doe");
         var startUtc = new DateTimeOffset(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
@@ -52,7 +53,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             projectId,
             task.Id,
             new ProjectStructureTaskResourceSelection(ProjectStructureTaskResourceKind.Person, joeId),
-            "task-details-tests");
+            "task-details-tests", mutationOwner: MutationOwner(admission));
         var assignmentStartsOn = new DateOnly(2026, 7, 14);
         var assignmentEndsOn = new DateOnly(2026, 7, 25);
         var exactAssignmentResult = await bridge.ReplaceNodeAssignmentsAsync(
@@ -62,6 +63,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                 new ProjectPartyAssignmentUpsertRequest
                 {
                     ProjectId = projectId,
+                    ExpectedProjectAdmission = admission,
                     PartyId = joeId,
                     Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                     NodeKey = task.Id,
@@ -73,7 +75,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                     Notes = "Joe is reserved at a negotiated allocation."
                 }
             ],
-            [ProjectPartyAssignmentRole.WorkItemAssignee]);
+            [ProjectPartyAssignmentRole.WorkItemAssignee], expectedProjectAdmission: admission);
         Assert.True(exactAssignmentResult.IsSuccess);
         var currentTask = (await workbenchService.GetStructureAsync(
                 projectId))
@@ -98,7 +100,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             ProposedExecution: currentState.Execution,
             CurrentCostBasis: currentState.CostBasis,
             CurrentDirectAssignmentRevision:
-                currentState.DirectAssignmentRevision);
+                currentState.DirectAssignmentRevision) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) };
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
             detailsService.UpdateAsync(projectId, request));
@@ -130,11 +132,14 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         var assigneeService = harness.Context.Services.GetRequiredService<ProjectStructureWorkItemAssigneeService>();
         var mutationService = harness.Context.Services.GetRequiredService<ProjectStructureGanttMutationService>();
         var innerBridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
-        var failingBridge = new CompensationFailingBridge(innerBridge);
+        var failingCommands = new CompensationFailingCommands(
+            harness.Context.Services.GetRequiredService<IProjectWorkAssignmentCommands>());
         var detailsService = CreateDetailsService(
             harness.Context.Services,
-            failingBridge);
-        var projectId = await CreateProjectAsync(projectsService);
+            innerBridge,
+            workAssignments: failingCommands);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var joeId = await CreatePersonAsync(partyDirectoryService, "Joe Doe");
         var janeId = await CreatePersonAsync(partyDirectoryService, "Jane Doe");
         var startUtc = new DateTimeOffset(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
@@ -155,7 +160,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             projectId,
             task.Id,
             new ProjectStructureTaskResourceSelection(ProjectStructureTaskResourceKind.Person, joeId),
-            "task-details-tests");
+            "task-details-tests", mutationOwner: MutationOwner(admission));
         var directAssignmentRevision =
             await ReadDirectAssignmentRevisionAsync(
                 workbenchService,
@@ -179,13 +184,14 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             ProposedExecution: ProjectTaskExecutionSnapshot.NotStarted,
             CurrentCostBasis: null,
             CurrentDirectAssignmentRevision:
-                directAssignmentRevision);
-        failingBridge.FailReplacement = true;
+                directAssignmentRevision) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) };
+        failingCommands.FailReplacement = true;
 
         var exception = await Assert.ThrowsAsync<ProjectStructureTaskDetailsException>(() =>
             detailsService.UpdateAsync(projectId, request));
 
         Assert.Equal(ProjectStructureTaskDetailsErrorCode.AssignmentCompensationFailed, exception.Code);
+        Assert.Equal(2, failingCommands.ConditionalReplacementCount);
         var applicationException =
             Assert.IsType<ProjectStructureTaskApplicationException>(
                 exception.InnerException);
@@ -208,7 +214,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         var partyDirectoryService = services.GetRequiredService<PartyDirectoryService>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
         var innerBridge = services.GetRequiredService<IProjectPartyIntegrationBridge>();
-        var projectId = await CreateProjectAsync(projectsService);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var currentPersonId = await CreatePartyAsync(partyDirectoryService, "Current owner", PartyType.Person);
         var proposedPersonId = await CreatePartyAsync(partyDirectoryService, "Proposed owner", PartyType.Person);
         var concurrentAgentId = await CreatePartyAsync(partyDirectoryService, "Concurrent agent", PartyType.AiAgent);
@@ -230,7 +237,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             new ProjectStructureTaskResourceSelection(
                 ProjectStructureTaskResourceKind.Person,
                 currentPersonId),
-            "task-details-tests");
+            "task-details-tests", mutationOwner: MutationOwner(admission));
         var directAssignmentRevision =
             await ReadDirectAssignmentRevisionAsync(
                 workbenchService,
@@ -241,6 +248,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                    ExpectedProjectAdmission = admission,
                 PartyId = concurrentAgentId,
                 Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                 NodeKey = task.Id,
@@ -269,7 +277,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             ProposedExecution: execution,
             CurrentCostBasis: null,
             CurrentDirectAssignmentRevision:
-                directAssignmentRevision);
+                directAssignmentRevision) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) };
 
         var exception = await Assert.ThrowsAsync<ProjectStructureTaskDetailsException>(() =>
             detailsService.UpdateAsync(projectId, request));
@@ -277,6 +285,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         Assert.Equal(
             ProjectStructureTaskDetailsErrorCode.AssignmentConflict,
             exception.Code);
+        Assert.True(guardedBridge.AssignmentInjected);
         var assignments = (await innerBridge.ListAssignmentsDetailedAsync(
                 projectId,
                 [ProjectPartyAssignmentRole.WorkItemAssignee]))
@@ -299,7 +308,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         var bridge = services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var detailsService =
             services.GetRequiredService<ProjectStructureTaskDetailsService>();
-        var projectId = await CreateProjectAsync(projectsService);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var currentPersonId = await CreatePartyAsync(
             partyDirectoryService,
             "Commit owner",
@@ -322,7 +332,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             new ProjectStructureTaskResourceSelection(
                 ProjectStructureTaskResourceKind.Person,
                 currentPersonId),
-            "task-details-tests");
+            "task-details-tests", mutationOwner: MutationOwner(admission));
         var currentTask = (await workbenchService.GetStructureAsync(
                 projectId))
             .Nodes
@@ -349,7 +359,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                     ProposedExecution: currentState.Execution,
                     CurrentCostBasis: currentState.CostBasis,
                     CurrentDirectAssignmentRevision:
-                        currentState.DirectAssignmentRevision - 1)));
+                        currentState.DirectAssignmentRevision - 1) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) }));
 
         Assert.Equal(
             ProjectStructureTaskDetailsErrorCode.ConcurrencyConflict,
@@ -374,7 +384,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         var projectsService = services.GetRequiredService<ProjectsService>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
         var detailsService = services.GetRequiredService<ProjectStructureTaskDetailsService>();
-        var projectId = await CreateProjectAsync(projectsService);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var currentEstimate = new ProjectTaskEstimate(
             8m,
             ProjectWorkItemEffortUnit.Hours,
@@ -418,7 +429,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             CurrentExecution: ProjectTaskExecutionSnapshot.NotStarted,
             ProposedExecution: ProjectTaskExecutionSnapshot.NotStarted,
             CurrentCostBasis: null,
-            CurrentDirectAssignmentRevision: 0);
+            CurrentDirectAssignmentRevision: 0) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) };
         var staleRequests = new[]
         {
             baseRequest with
@@ -487,7 +498,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             bridge,
             new ProjectStructureTaskEstimateRefreshService(
                 new ProjectStructureTaskResourceCostService([pricingStrategy])));
-        var projectId = await CreateProjectAsync(projectsService);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var personId = await CreatePartyAsync(partyDirectoryService, "Primary owner", PartyType.Person);
         var agentId = await CreatePartyAsync(partyDirectoryService, "Supporting agent", PartyType.AiAgent);
         var startUtc = new DateTimeOffset(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
@@ -528,6 +540,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                 new ProjectPartyAssignmentUpsertRequest
                 {
                     ProjectId = projectId,
+                    ExpectedProjectAdmission = admission,
                     PartyId = personId,
                     Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                     NodeKey = task.Id,
@@ -537,6 +550,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                 new ProjectPartyAssignmentUpsertRequest
                 {
                     ProjectId = projectId,
+                    ExpectedProjectAdmission = admission,
                     PartyId = agentId,
                     Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                     NodeKey = task.Id,
@@ -544,7 +558,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                     Source = "mixed-assignment-test"
                 }
             ],
-            [ProjectPartyAssignmentRole.WorkItemAssignee]);
+            [ProjectPartyAssignmentRole.WorkItemAssignee], expectedProjectAdmission: admission);
         Assert.True(assignmentResult.IsSuccess);
         var currentTask = (await workbenchService.GetStructureAsync(
                 projectId))
@@ -580,7 +594,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                 ProposedExecution: execution,
                 CurrentCostBasis: currentState.CostBasis,
                 CurrentDirectAssignmentRevision:
-                    currentState.DirectAssignmentRevision));
+                    currentState.DirectAssignmentRevision) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) });
 
         var refreshedTask = (await workbenchService.GetStructureAsync(projectId))
             .Nodes
@@ -617,7 +631,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         var projectsService = services.GetRequiredService<ProjectsService>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
         var detailsService = services.GetRequiredService<ProjectStructureTaskDetailsService>();
-        var projectId = await CreateProjectAsync(projectsService);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var estimate = new ProjectTaskEstimate(
             8m,
             ProjectWorkItemEffortUnit.Hours,
@@ -674,7 +689,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                 CurrentExecution: ProjectTaskExecutionSnapshot.NotStarted,
                 ProposedExecution: ProjectTaskExecutionSnapshot.NotStarted,
                 CurrentCostBasis: costBasis,
-                CurrentDirectAssignmentRevision: 0));
+                CurrentDirectAssignmentRevision: 0) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) });
 
         Assert.Equal(ProjectStructureTaskEstimateRefreshStatus.Cleared, update.Pricing.Status);
         Assert.Equal(
@@ -699,7 +714,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
         var projectsService = services.GetRequiredService<ProjectsService>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
         var detailsService = services.GetRequiredService<ProjectStructureTaskDetailsService>();
-        var projectId = await CreateProjectAsync(projectsService);
+        var admission = await CreateProjectAsync(projectsService);
+        var projectId = admission.ProjectId;
         var startedAtUtc = new DateTimeOffset(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
         var snapshots = new[]
         {
@@ -785,7 +801,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                     CurrentExecution: snapshot,
                     ProposedExecution: snapshot,
                     CurrentCostBasis: null,
-                    CurrentDirectAssignmentRevision: 0));
+                    CurrentDirectAssignmentRevision: 0) { ExpectedProjectAdmission = admission, MutationOwner = MutationOwner(admission) });
 
             var refreshedTask = (await workbenchService.GetStructureAsync(projectId))
                 .Nodes
@@ -802,8 +818,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
     private static ProjectStructureTaskDetailsService CreateDetailsService(
         IServiceProvider services,
         IProjectPartyIntegrationBridge bridge,
-        ProjectStructureTaskEstimateRefreshService? estimateRefreshService = null)
-    {
+        ProjectStructureTaskEstimateRefreshService? estimateRefreshService = null,
+        IProjectWorkAssignmentCommands? workAssignments = null) {
         var workbenchService =
             services.GetRequiredService<ProjectWorkbenchService>();
         var taskApplicationService =
@@ -811,7 +827,10 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                 new ProjectStructureWorkItemAssigneeService(
                     bridge,
                     workbenchService,
-                    new ProjectWorkAssignmentTestCommands(bridge)),
+                    workAssignments ?? services.GetRequiredService<IProjectWorkAssignmentCommands>(),
+                    services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<WorkbenchDbContext>>(),
+                    services.GetRequiredService<ProjectStructureMutationScopeFactory>(),
+                    services.GetRequiredService<CanDoItAll.Infrastructure.Persistence.CoordinatedDatabaseTransaction>()),
                 estimateRefreshService ??
                     services.GetRequiredService<
                         ProjectStructureTaskEstimateRefreshService>(),
@@ -838,9 +857,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             .DirectAssignmentRevision ?? 0;
     }
 
-    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService)
-    {
-        var result = await projectsService.SaveAsync(new ProjectEditorModel
+    private static async Task<ProjectWriteAdmission> CreateProjectAsync(ProjectsService projectsService) {
+        var result = await projectsService.CreateWithAdmissionAsync(new ProjectEditorModel
         {
             Name = $"Task details compensation {Guid.NewGuid():N}",
             Description = "Task detail assignment compensation proof.",
@@ -848,8 +866,12 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             CurrentPhase = "Delivery"
         });
         Assert.True(result.IsSuccess);
-        return result.Value;
+        return Assert.IsType<ProjectWriteAdmission>(result.Value);
     }
+
+    private static ProjectStructureAgentContext MutationOwner(ProjectWriteAdmission admission)
+        => new("task-details-tests", "Component tests", Environment.MachineName, AppContext.BaseDirectory,
+            string.Empty, $"{admission.ProjectId:D}-task-details") { ExpectedProjectAdmission = admission };
 
     private static Task<Guid> CreatePersonAsync(
         PartyDirectoryService partyDirectoryService,
@@ -893,89 +915,44 @@ public sealed class ProjectStructureTaskDetailsServiceTests
     private static DateOnly? ToDateOnly(DateTimeOffset? value)
         => value.HasValue ? DateOnly.FromDateTime(value.Value.UtcDateTime) : null;
 
-    private sealed class CompensationFailingBridge(IProjectPartyIntegrationBridge inner)
-        : DelegatingProjectPartyIntegrationBridge(inner)
-    {
-        private int conditionalReplacementCount;
-
+    private sealed class CompensationFailingCommands(IProjectWorkAssignmentCommands inner)
+        : ProjectWorkAssignmentTestCommands(inner) {
+        public int ConditionalReplacementCount { get; private set; }
         public bool FailReplacement { get; set; }
 
-        public override Task<Result> ReplaceNodeAssignmentsAsync(
-            Guid projectId,
-            ProjectNodeReference nodeReference,
+        public override Task<Result> StageReplaceAsync(Guid projectId, ProjectNodeReference node,
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
-            IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
-            CancellationToken cancellationToken = default)
-            => base.ReplaceNodeAssignmentsAsync(
-                projectId,
-                nodeReference,
-                desiredAssignments,
-                targetRoles,
-                cancellationToken);
-
-        public override Task<Result> ReplaceNodeAssignmentsIfCurrentAsync(
-            Guid projectId,
-            ProjectNodeReference nodeReference,
-            IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
-            IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
-            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot> expectedAssignments,
-            ProjectWorkItemDirectAssignmentRevision? expectedDirectAssignmentRevision,
-            CancellationToken cancellationToken = default)
-        {
-            conditionalReplacementCount++;
-            if (FailReplacement &&
-                conditionalReplacementCount > 1)
-            {
+            IReadOnlyList<Guid> newAssignmentIds,
+            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
+            ProjectWorkItemDirectAssignmentRevision? expectedRevision = null, CancellationToken cancellationToken = default,
+            ProjectWriteAdmission? expectedProjectAdmission = null) {
+            if (expectedAssignments is not null) {
+                ConditionalReplacementCount++;
+            }
+            if (FailReplacement && ConditionalReplacementCount > 1) {
                 return Task.FromResult(Result.Failure(Error.Failure(
                     "Injected assignment compensation failure.",
                     "test.assignment-compensation-failure")));
             }
-
-            return base.ReplaceNodeAssignmentsIfCurrentAsync(
-                projectId,
-                nodeReference,
-                desiredAssignments,
-                targetRoles,
-                expectedAssignments,
-                expectedDirectAssignmentRevision,
-                cancellationToken);
+            return base.StageReplaceAsync(projectId, node, desiredAssignments, newAssignmentIds,
+                expectedAssignments, expectedRevision, cancellationToken, expectedProjectAdmission);
         }
     }
 
     private sealed class ConcurrentAssignmentBridge(
         IProjectPartyIntegrationBridge inner,
         ProjectPartyAssignmentUpsertRequest concurrentAssignment)
-        : DelegatingProjectPartyIntegrationBridge(inner)
-    {
-        private bool assignmentInjected;
+        : DelegatingProjectPartyIntegrationBridge(inner) {
+        public bool AssignmentInjected { get; private set; }
 
-        public override async Task<Result> ReplaceNodeAssignmentsIfCurrentAsync(
-            Guid projectId,
-            ProjectNodeReference nodeReference,
-            IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
-            IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
-            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot> expectedAssignments,
-            ProjectWorkItemDirectAssignmentRevision? expectedDirectAssignmentRevision,
-            CancellationToken cancellationToken = default)
-        {
-            if (!assignmentInjected)
-            {
-                assignmentInjected = true;
+        public override async Task<ProjectPartyOption?> GetPartyOptionAsync(
+            Guid partyId, CancellationToken cancellationToken = default) {
+            if (!AssignmentInjected) {
                 var saveResult = await Inner.SaveAssignmentAsync(concurrentAssignment, cancellationToken);
-                if (saveResult.IsFailure)
-                {
-                    return Result.Failure(saveResult.Errors);
-                }
+                Assert.True(saveResult.IsSuccess);
+                AssignmentInjected = true;
             }
-
-            return await base.ReplaceNodeAssignmentsIfCurrentAsync(
-                projectId,
-                nodeReference,
-                desiredAssignments,
-                targetRoles,
-                expectedAssignments,
-                expectedDirectAssignmentRevision,
-                cancellationToken);
+            return await base.GetPartyOptionAsync(partyId, cancellationToken);
         }
     }
 
@@ -995,7 +972,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             CancellationToken cancellationToken = default)
             => Inner.ListPartyOptionsAsync(projectId, cancellationToken);
 
-        public Task<ProjectPartyOption?> GetPartyOptionAsync(
+        public virtual Task<ProjectPartyOption?> GetPartyOptionAsync(
             Guid partyId,
             CancellationToken cancellationToken = default)
             => Inner.GetPartyOptionAsync(partyId, cancellationToken);
@@ -1026,13 +1003,14 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             ProjectNodeReference nodeReference,
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null)
             => Inner.ReplaceNodeAssignmentsAsync(
                 projectId,
                 nodeReference,
                 desiredAssignments,
                 targetRoles,
-                cancellationToken);
+                cancellationToken, expectedProjectAdmission);
 
         public virtual Task<Result> ReplaceNodeAssignmentsIfCurrentAsync(
             Guid projectId,
@@ -1041,7 +1019,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
             IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot> expectedAssignments,
             ProjectWorkItemDirectAssignmentRevision? expectedDirectAssignmentRevision,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null)
             => Inner.ReplaceNodeAssignmentsIfCurrentAsync(
                 projectId,
                 nodeReference,
@@ -1049,36 +1028,41 @@ public sealed class ProjectStructureTaskDetailsServiceTests
                 targetRoles,
                 expectedAssignments,
                 expectedDirectAssignmentRevision,
-                cancellationToken);
+                cancellationToken, expectedProjectAdmission);
 
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
-            CancellationToken cancellationToken = default)
-            => Inner.DeleteAssignmentAsync(assignmentId, cancellationToken);
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
+            => Inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference);
 
         public Task DeleteAssignmentsForNodesAsync(
             Guid projectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
-            CancellationToken cancellationToken = default)
-            => Inner.DeleteAssignmentsForNodesAsync(projectId, nodeReferences, cancellationToken);
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
+            => Inner.DeleteAssignmentsForNodesAsync(projectId, nodeReferences, cancellationToken, expectedReference);
 
         public Task DeleteAssignmentsForProjectAsync(
             Guid projectId,
-            CancellationToken cancellationToken = default)
-            => Inner.DeleteAssignmentsForProjectAsync(projectId, cancellationToken);
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
+            => Inner.DeleteAssignmentsForProjectAsync(projectId, cancellationToken, expectedReference);
 
         public Task MoveAssignmentsToProjectAsync(
             ProjectPartyAssignmentMoveOperationId operationId,
             Guid sourceProjectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
             Guid targetProjectId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? sourceReference = null,
+        ProjectWriteAdmission? expectedTargetAdmission = null)
             => Inner.MoveAssignmentsToProjectAsync(
                 operationId,
                 sourceProjectId,
                 nodeReferences,
                 targetProjectId,
-                cancellationToken);
+                cancellationToken, sourceReference, expectedTargetAdmission);
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
             ProjectPartyQuickCreateRequest request,

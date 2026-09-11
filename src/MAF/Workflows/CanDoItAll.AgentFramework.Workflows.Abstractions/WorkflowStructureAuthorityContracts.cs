@@ -8,4 +8,6 @@ public interface IWorkflowStructureAuthorityFactory {
     Task<WorkflowStructureAuthority> CaptureAuthenticatedOperatorAsync(string subject, DateTimeOffset expiresAtUtc,
         CancellationToken cancellationToken = default);
     WorkflowStructureAuthority CaptureAgent(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance);
+    Task<WorkflowStructureAuthority> CaptureAgentAsync(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance,
+        CancellationToken cancellationToken = default) => Task.FromResult(CaptureAgent(agent, governance));
 }

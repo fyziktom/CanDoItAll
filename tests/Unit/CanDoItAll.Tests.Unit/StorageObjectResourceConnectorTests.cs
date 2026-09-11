@@ -104,7 +104,9 @@ public sealed class StorageObjectResourceConnectorTests
             CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
                 new() { ProviderKind = DatabaseProviderKind.InMemory },
                 DatabaseProfileResolutionSource.ExplicitOverride,
-                nameof(General_resource_save_rejects_governed_storage_object_connector))));
+                nameof(General_resource_save_rejects_governed_storage_object_connector))),
+            new ProjectWriteAdmissionService(new ThrowingProjectDbContextFactory(), projectOptions,
+                CoordinatedDatabaseTransaction.ForProfile(projectProfile), new CanonicalDatabase(projectProfile)));
         var model = new ResourceEditorModel
         {
             ProjectId = Guid.NewGuid(),
@@ -141,12 +143,13 @@ public sealed class StorageObjectResourceConnectorTests
             "file.txt",
             "text/plain",
             42);
-        var writer = new StorageObjectResourceWriter(fixture.OwnerFactory, fixture.Projects, new FixedClock());
+        var writer = new StorageObjectResourceWriter(fixture.OwnerFactory, fixture.Admissions, fixture.Coordinator, new FixedClock());
         var request = new StorageObjectResourceWriteRequest(
             fixture.ProjectId,
             "Stored file",
             ResourceSensitivity.Sensitive,
-            config);
+            config,
+            (await fixture.Admissions.CaptureAsync(fixture.ProjectId))!);
 
         StorageObjectResourceWriteResult created = await writer.SaveAsync(request);
         StorageObjectResourceWriteResult repeated = await writer.SaveAsync(request);
@@ -251,7 +254,7 @@ public sealed class StorageObjectResourceConnectorTests
             FileToolsSemanticScopeKind.ResourceSource,
             ResourceStorageSourceScopeKey.Create(
                 storageId,
-                ResourceStorageSourceScopeKey.BuildFingerprint(storage)),
+                ResourceStorageSourceScopeKey.BuildFingerprint(storage.ToSnapshot())),
             storage.Name);
         return new ResourceFileSourceDescriptor(
             sourceKey,
@@ -267,11 +270,12 @@ public sealed class StorageObjectResourceConnectorTests
 
     private sealed class ResourcePersistenceFixture : IAsyncDisposable
     {
-        private ResourcePersistenceFixture(TestDbContextFactory factory, IDbContextFactory<ResourcesDbContext> ownerFactory, ProjectRecordQueryService projects, Guid projectId)
+        private ResourcePersistenceFixture(TestDbContextFactory factory, IDbContextFactory<ResourcesDbContext> ownerFactory, ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction coordinator, Guid projectId)
         {
             Factory = factory;
             OwnerFactory = ownerFactory;
-            Projects = projects;
+            Admissions = admissions;
+            Coordinator = coordinator;
             ProjectId = projectId;
         }
 
@@ -279,7 +283,9 @@ public sealed class StorageObjectResourceConnectorTests
 
         public IDbContextFactory<ResourcesDbContext> OwnerFactory { get; }
 
-        public ProjectRecordQueryService Projects { get; }
+        public ProjectWriteAdmissionService Admissions { get; }
+
+        public CoordinatedDatabaseTransaction Coordinator { get; }
 
         public Guid ProjectId { get; }
 
@@ -304,9 +310,10 @@ public sealed class StorageObjectResourceConnectorTests
                 .UseInMemoryDatabase(databaseName, databaseRoot).Options;
             var projectProfile = new ResolvedDatabaseProfile(new() { ProviderKind = DatabaseProviderKind.InMemory },
                 DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
-            var projects = new ProjectRecordQueryService(new PooledDbContextFactory<ProjectsDbContext>(projectOptions),
-                projectOptions, CoordinatedDatabaseTransaction.ForProfile(projectProfile));
-            return new ResourcePersistenceFixture(factory, ownerFactory, projects, projectId);
+            var coordinator = CoordinatedDatabaseTransaction.ForProfile(projectProfile);
+            var admissions = new ProjectWriteAdmissionService(new PooledDbContextFactory<ProjectsDbContext>(projectOptions),
+                projectOptions, coordinator, new CanonicalDatabase(projectProfile));
+            return new ResourcePersistenceFixture(factory, ownerFactory, admissions, coordinator, projectId);
         }
 
         public async Task<Guid> AddResourceAsync(StorageObjectResourceConfig config)
@@ -317,6 +324,7 @@ public sealed class StorageObjectResourceConnectorTests
             {
                 Id = resourceId,
                 ProjectId = ProjectId,
+                ProjectLifetimeId = (await Admissions.CaptureAsync(ProjectId))!.LifetimeId,
                 Name = config.DisplayName,
                 ConnectorPluginKey = StorageObjectResourceConnectorPlugin.PluginKey,
                 ConfigSchemaVersion = StorageObjectResourceConnectorPlugin.SchemaVersion,
@@ -328,6 +336,11 @@ public sealed class StorageObjectResourceConnectorTests
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class CanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 1;
     }
 
     private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>

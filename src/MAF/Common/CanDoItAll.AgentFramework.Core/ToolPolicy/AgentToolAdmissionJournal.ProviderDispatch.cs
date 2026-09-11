@@ -52,7 +52,8 @@ public sealed partial class AgentToolAdmissionJournal {
 
             selected = dispatch;
             return journal with {
-                SchemaVersion = AgentToolJournalRecord.ProviderDispatchSchemaVersion,
+                SchemaVersion = journal.SchemaVersion == AgentToolJournalRecord.TypedContextSchemaVersion
+                    ? AgentToolJournalRecord.TypedContextSchemaVersion : AgentToolJournalRecord.ProviderDispatchSchemaVersion,
                 Revision = checked(journal.Revision + 1), Batches = batches, ProviderDispatches = dispatches.Add(dispatch)
             };
         }, cancellationToken);

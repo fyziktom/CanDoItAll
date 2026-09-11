@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
@@ -49,7 +50,7 @@ public sealed class CrmHrAgentQueryIntegrationTests
             await dbContext.SaveChangesAsync();
         }
 
-        var service = new CrmHrAgentQueryService(factory, new FixedClock(Now), new ProjectWorkAssignmentQueryService(factory));
+        var service = new CrmHrAgentQueryService(factory, new FixedClock(Now), new ProjectWorkAssignmentQueryService(factory), new ProjectRecordQueryService(factory, factory.ProjectsOptions, null!));
 
         var typedResult = await service.SearchAsync(new CrmHrAgentSearchQuery(
             "Development CRM Search Organization",
@@ -80,8 +81,12 @@ public sealed class CrmHrAgentQueryIntegrationTests
     }
 
     private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>, IDbContextFactory<CrmHrDbContext>, IDbContextFactory<WorkbenchDbContext>
+        : IDbContextFactory<AppDbContext>, IDbContextFactory<CrmHrDbContext>, IDbContextFactory<WorkbenchDbContext>, IDbContextFactory<ProjectsDbContext>
     {
+        public DbContextOptions<ProjectsDbContext> ProjectsOptions => new(options.Extensions.ToDictionary(extension => extension.GetType()));
+
+        ProjectsDbContext IDbContextFactory<ProjectsDbContext>.CreateDbContext() => new(ProjectsOptions);
+
         CrmHrDbContext IDbContextFactory<CrmHrDbContext>.CreateDbContext()
             => new(new DbContextOptions<CrmHrDbContext>(options.Extensions.ToDictionary(extension => extension.GetType())));
 

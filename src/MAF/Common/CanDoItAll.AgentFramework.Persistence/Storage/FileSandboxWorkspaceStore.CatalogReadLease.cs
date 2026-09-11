@@ -5,25 +5,37 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.Persistence;
 
 public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseStore {
-    public async Task<IAgentCatalogReadLease> AcquireAgentReadLeaseAsync(Guid agentId, CancellationToken cancellationToken = default) {
+    private const int MaximumSelectedLeaseAgents = 2;
+
+    public Task<IAgentCatalogReadLease> AcquireAgentReadLeaseAsync(Guid agentId, CancellationToken cancellationToken = default) {
         if (agentId == Guid.Empty) {
             throw new ArgumentException("An agent identifier is required for a catalog read lease.", nameof(agentId));
         }
+        return AcquireAgentsReadLeaseAsync([agentId], cancellationToken);
+    }
+
+    public async Task<IAgentCatalogReadLease> AcquireAgentsReadLeaseAsync(IReadOnlyList<Guid> agentIds,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(agentIds);
+        if (agentIds.Count is < 1 or > MaximumSelectedLeaseAgents || agentIds.Contains(Guid.Empty) || agentIds.Distinct().Count() != agentIds.Count) {
+            throw new ArgumentException("A catalog read lease requires one or two distinct nonempty Agent identifiers.", nameof(agentIds));
+        }
+        var selectedIds = agentIds.ToImmutableArray();
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         IAsyncDisposable? workspaceLock = null;
         try {
             workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken).ConfigureAwait(false);
             await EnsureCatalogReadCoreAsync(cancellationToken).ConfigureAwait(false);
             var catalog = await LoadNormalizedCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
-            var agent = catalog.Agents.SingleOrDefault(item => item.Id == agentId);
-            if (agent is not null) {
-                agent = agent with {
+            var agents = selectedIds.Select(id => catalog.Agents.SingleOrDefault(item => item.Id == id))
+                .OfType<AgentDefinition>().Select(agent => agent with {
                     Permissions = agent.Permissions with { AllowedSecrets = agent.Permissions.NormalizedAllowedSecrets.ToImmutableArray() },
                     Capabilities = agent.Capabilities.ToImmutableArray(),
                     Tags = agent.Tags.ToImmutableArray()
-                };
-            }
-            return new AgentCatalogReadLease(gate, workspaceLock, layout.Scope, catalog.CatalogDataRevision, agent);
+                }).ToImmutableArray();
+            return new AgentCatalogReadLease(gate, workspaceLock, layout.Scope, catalog.CatalogDataRevision,
+                agents.SingleOrDefault(agent => agent.Id == selectedIds[0]), agents,
+                catalog.Capabilities.Select(item => item with { Tags = item.Tags.ToImmutableArray() }).ToImmutableArray());
         } catch {
             try {
                 if (workspaceLock is not null) {
@@ -37,7 +49,8 @@ public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseSt
     }
 
     private sealed class AgentCatalogReadLease(SemaphoreSlim gate, IAsyncDisposable workspaceLock,
-        WorkspaceScopeDescriptor scope, CatalogDataRevision revision, AgentDefinition? agent) : IAgentCatalogReadLease {
+        WorkspaceScopeDescriptor scope, CatalogDataRevision revision, AgentDefinition? agent,
+        ImmutableArray<AgentDefinition> agents, ImmutableArray<CapabilityCatalogItem> capabilities) : IAgentCatalogReadLease {
         private IAsyncDisposable? heldLock = workspaceLock;
 
         public WorkspaceScopeDescriptor Scope {
@@ -58,6 +71,20 @@ public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseSt
             get {
                 RequireActive();
                 return agent;
+            }
+        }
+
+        public ImmutableArray<AgentDefinition> Agents {
+            get {
+                RequireActive();
+                return agents;
+            }
+        }
+
+        public ImmutableArray<CapabilityCatalogItem> Capabilities {
+            get {
+                RequireActive();
+                return capabilities;
             }
         }
 

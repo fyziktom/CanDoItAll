@@ -33,6 +33,10 @@ internal static class ApiAuthorizationPolicies
     public const string ReadProviderHistoryContent = "Api.ProviderHistory.Content.Read";
     public const string ManageProviderHistory = "Api.ProviderHistory.Manage";
 
+    public const string ReadStoragePlacementRecovery = "Api.StoragePlacementRecovery.Read";
+    public const string ReconcileStoragePlacement = "Api.StoragePlacementRecovery.Reconcile";
+    public const string VerifyStorageExternalTermination = "Api.StoragePlacementRecovery.VerifyExternalTermination";
+
     public static IEnumerable<string> ScopeValues(ClaimsPrincipal principal) =>
         principal.Claims.Where(claim => IsScopeClaimType(claim.Type)).Select(claim => claim.Value);
 

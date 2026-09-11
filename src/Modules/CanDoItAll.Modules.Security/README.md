@@ -34,3 +34,12 @@ Deletion retains its serializable mutation scope and advisory keys. Reference po
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`
+
+Selected Provider transfer uses `ISecretDatabaseTransferParticipant`: callers supply only
+an active transfer handle and selected secret IDs. Security reads and stages its own
+records on the exact source snapshot and target transaction supplied by Infrastructure.
+Encrypted payloads and all saved metadata remain inside the Security owner; no vault,
+provider, or file operation runs in the database transaction. Existing references and
+unselected secrets remain intact. Missing selected source secrets retain the shipped
+replacement behavior. PostgreSQL intermediate saves roll back with the Provider stage;
+the explicit two-InMemory test path does not claim transaction atomicity.

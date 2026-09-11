@@ -380,7 +380,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return transientContextRegistry.Resolve(run);
         }
 
-        var context = saved.ToTransientContext();
+        var context = (toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."))
+            .RestoreRuntimeContext(saved);
         if (AgentChatContextDigest.Compute(context) != ExecutionInvocationMetadata.ResolveTransientContextDigest(run)) {
             throw new AgentToolAdmissionException("tool-admission.context-mismatch", "The saved runtime context does not match its original admitted digest.");
         }
@@ -411,8 +412,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ?? throw new InvalidOperationException("Completed result disclosure requires the canonical current authority resolver.");
         AgentExecutionAuthorityRecord current;
         try {
-            current = await resolver.ResolveAsync(new(run.AgentId, reference.SourceKind, reference.SourceId,
-                original.WorkspaceScope, activityWorkspaceIdentity.DatabaseProfileGeneration, UiAccessHint: null), cancellationToken);
+            current = await resolver.ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(reference, original), cancellationToken);
         } catch (AgentExecutionAuthorityMismatchException) {
             throw new AgentToolAdmissionException("tool-admission.result-read-denied", "Current authorization does not permit reading this completed execution result.");
         }
@@ -449,9 +449,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var reference = AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson)
             ?? throw new AgentToolAdmissionException("tool-admission.context-missing", "The admitted run has no original source identity.");
         var current = await (executionAuthorityResolver ?? throw new InvalidOperationException("Durable recovery requires the canonical current authority resolver."))
-            .ResolveAsync(new(run.AgentId, reference.SourceKind, reference.SourceId,
-                authority.WorkspaceScope, activityWorkspaceIdentity.DatabaseProfileGeneration,
-                UiAccessHint: null), cancellationToken);
+            .ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(reference, authority), cancellationToken);
         if (current.AgentId != authority.AgentId || current.DatabaseProfileId != authority.DatabaseProfileId ||
             current.DatabaseProfileGeneration != authority.DatabaseProfileGeneration || current.WorkspaceScope != authority.WorkspaceScope ||
             !current.ReadAllowed || authority.MutationAllowed && !current.MutationAllowed ||

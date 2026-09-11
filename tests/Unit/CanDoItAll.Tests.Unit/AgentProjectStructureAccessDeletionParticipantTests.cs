@@ -34,7 +34,7 @@ public sealed class AgentProjectStructureAccessDeletionParticipantTests
     [Fact]
     public void Agent_framework_target_state_participant_locks_the_durable_revocation_table()
     {
-        var participant = new AgentFrameworkProjectTransferTargetStateParticipant();
+        var participant = new AgentFrameworkProjectTransferTargetStateParticipant(new ProjectTransferTargetInspectionRunner());
 
         Assert.Contains(
             typeof(AgentProjectStructureAccessRevocationRecord),

@@ -6,7 +6,9 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.Extensions.Options;
 
@@ -56,14 +58,26 @@ public sealed class ProjectStructureWorkflowAuthoritySource {
             tasks, assets, governance, projectId, processRunId, processStepId);
 }
 
-public sealed class ProjectStructureWorkflowAuthorityService(
+public sealed partial class ProjectStructureWorkflowAuthorityService(
     ICanonicalRuntimeDatabase canonicalDatabase,
     IOptionsMonitor<ApiAccessOptions> apiOptions,
     IAgentFrameworkWorkspaceService workspace,
     IProcessRuntimeStateStore processStates,
     IProcessRuntimeStepAssignmentStore processAssignments,
     TimeProvider timeProvider,
-    IWorkflowScheduledAuthorityPolicy scheduledAuthority) : IWorkflowStructureAuthorityFactory {
+    IWorkflowScheduledAuthorityPolicy scheduledAuthority,
+    IAgentCatalogReadLeaseStore? catalog = null,
+    IAgentExecutionProfileGenerationSource? generations = null,
+    ProjectWriteAdmissionService? projectAdmissions = null,
+    IProcessExecutionDispatchAuthorityReader? processReader = null,
+    IProcessExecutionMutationGuard? processGuard = null,
+    IProcessSourceAuthorityObservationPolicy? processObservation = null,
+    IAgentToolAdmissionVerifier? toolAdmissions = null,
+    IProcessWorkflowDispatchAuthorityReader? mappedProcessReader = null,
+    IProcessWorkflowDispatchMutationGuard? mappedProcessGuard = null,
+    ProjectWriteSelectionQuery? projectSelections = null,
+    IWorkflowProcessAssignmentRunQuery? mappedWorkflowChildren = null) : IWorkflowStructureAuthorityFactory,
+    IWorkflowStructureLaunchPreparation, IWorkflowStructureSourceAuthorityPolicy, IWorkflowProcessToolSourceAuthority, IWorkflowMappedProcessSourceAuthority {
     public Task<WorkflowStructureAuthority> CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface surface,
         CancellationToken cancellationToken = default)
         => CaptureAsync(Guid.Empty, ProjectStructureWorkflowAuthoritySource.LocalOperator(surface), cancellationToken);
@@ -87,7 +101,8 @@ public sealed class ProjectStructureWorkflowAuthorityService(
             null, governance.PolicyFingerprint) {
             AgentGovernance = governance,
             AllProjects = projectId == Guid.Empty && access.AllowAllProjects,
-            ProjectIds = projectId == Guid.Empty ? access.AllowedProjectIds.ToArray() : [projectId]
+            ProjectIds = projectId == Guid.Empty ? access.AllowedProjectIds.Order().ToArray() : [projectId],
+            ProjectScope = CaptureAgentProjectScope(access, governance, projectId)
         };
     }
 
@@ -115,8 +130,28 @@ public sealed class ProjectStructureWorkflowAuthorityService(
             OperatorSurface = source.Surface,
             AgentGovernance = source.Governance,
             ProcessAuthority = processAuthority,
-            AllProjects = projectId == Guid.Empty && source.Channel != WorkflowStructureAuthorityChannel.AgentExecution
+            AllProjects = projectId == Guid.Empty && source.Channel != WorkflowStructureAuthorityChannel.AgentExecution,
+            ProjectScope = projectId == Guid.Empty ? new([]) : new([ToWorkflowLifetime(
+                await RequireProjectAdmissions().CaptureAsync(projectId, cancellationToken)
+                    ?? throw Denied("The selected Workflow project no longer exists."))], [projectId])
         };
+        if (source.Channel == WorkflowStructureAuthorityChannel.AgentExecution) {
+            if (processAuthority is not null) {
+                throw new WorkflowStructureLegacyLineageException();
+            }
+            await using var held = await RequireCatalog().AcquireAgentReadLeaseAsync(source.Governance?.AgentId
+                ?? throw Denied("The Workflow source has no saved Agent governance."), cancellationToken);
+            var agent = held.Agent ?? throw Denied("The Workflow source Agent no longer exists.");
+            var ceiling = CaptureAgent(agent, source.Governance!);
+            authority = authority with {
+                ProjectScope = ceiling.ProjectScope?.Find(projectId) is { } original
+                    ? new([original], [projectId]) : authority.ProjectScope,
+                CanCreateTasks = authority.CanCreateTasks && ceiling.CanCreateTasks,
+                CanCreateAssets = authority.CanCreateAssets && ceiling.CanCreateAssets
+            };
+            RequireCurrentSource(authority, WorkflowStructureAuthorityUse.Admission, null, held);
+            return authority;
+        }
         await EnsureCurrentAsync(authority, null, cancellationToken);
         return authority;
     }
@@ -129,6 +164,23 @@ public sealed class ProjectStructureWorkflowAuthorityService(
 
     private async Task EnsureCurrentCoreAsync(WorkflowStructureAuthority authority, WorkflowStructureOutputKind? kind,
         bool forMutation, CancellationToken cancellationToken) {
+        if (authority.ProjectScope is not null) {
+            var use = kind switch {
+                WorkflowStructureOutputKind.Task => WorkflowStructureAuthorityUse.TaskOutput,
+                WorkflowStructureOutputKind.Asset => WorkflowStructureAuthorityUse.AssetOutput,
+                _ when forMutation => WorkflowStructureAuthorityUse.Admission,
+                _ => WorkflowStructureAuthorityUse.Disclosure
+            };
+            var target = authority.ProjectScope.Find(authority.ProjectId);
+            await using var source = await AcquireAsync(authority, use, target, cancellationToken);
+            if (forMutation) {
+                await source.RequireForMutationAsync(cancellationToken);
+            }
+            return;
+        }
+        if (kind.HasValue) {
+            throw new WorkflowStructureLegacyLineageException();
+        }
         if (!Enum.IsDefined(authority.Channel) || !Enum.IsDefined(authority.OperatorSurface) ||
             string.IsNullOrWhiteSpace(authority.PolicyFingerprint) ||
             authority.DatabaseProfileId != canonicalDatabase.Profile.Profile.Id ||

@@ -23,7 +23,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
     public async Task<ProcessLaunchAuthority> CaptureLocalAsync(Guid? projectId, ProcessLaunchOperatorSurface surface,
         CancellationToken cancellationToken = default) {
         var authority = new ProcessLaunchAuthority(new ProcessLaunchPrincipal.LocalOperator(surface), database.Profile.Profile.Id,
-            await CaptureProjectAsync(projectId, cancellationToken), true, true, OperatorFingerprint(surface));
+            await CaptureProjectAsync(projectId, cancellationToken), true, true, OperatorFingerprint(surface), new(true, true, true, true));
         await RequireCurrentAsync(authority, cancellationToken);
         return authority;
     }
@@ -32,7 +32,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         DateTimeOffset expiresAtUtc, CancellationToken cancellationToken = default) {
         var authority = new ProcessLaunchAuthority(new ProcessLaunchPrincipal.AuthenticatedOperator(subjectId, expiresAtUtc.ToUniversalTime()),
             database.Profile.Profile.Id, await CaptureProjectAsync(projectId, cancellationToken), true, true,
-            OperatorFingerprint(ProcessLaunchOperatorSurface.Api));
+            OperatorFingerprint(ProcessLaunchOperatorSurface.Api), new(true, true, true, true));
         await RequireCurrentAsync(authority, cancellationToken);
         return authority;
     }
@@ -55,7 +55,8 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
             governance.MutationAllowed && ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(access) &&
                 Allows(ceiling, ProjectStructureToolPolicy.ProjectStructureNodeCreate),
             governance.MutationAllowed && ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(access) &&
-                Allows(ceiling, ProjectStructureToolPolicy.ProjectStructureAssetCreate), governance.PolicyFingerprint);
+                Allows(ceiling, ProjectStructureToolPolicy.ProjectStructureAssetCreate), governance.PolicyFingerprint,
+            CaptureProjectMutationCeiling(access, ceiling));
         RequireSource(authority, authority, held);
         await projectAdmissions.RequireCurrentAsync(ToProject(expectedProject), cancellationToken);
         return authority;
@@ -114,7 +115,8 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         if (saved.DatabaseProfileId != database.Profile.Profile.Id || caller.DatabaseProfileId != saved.DatabaseProfileId ||
                 caller.ProjectAdmission != saved.ProjectAdmission ||
                 ProcessLaunchIntentFingerprint.CallerFingerprint(saved) != ProcessLaunchIntentFingerprint.CallerFingerprint(caller) ||
-                saved.CanCreateTasks && !caller.CanCreateTasks || saved.CanCreateAssets && !caller.CanCreateAssets) {
+                saved.CanCreateTasks && !caller.CanCreateTasks || saved.CanCreateAssets && !caller.CanCreateAssets ||
+                saved.ProjectMutations is { } mutations && (caller.ProjectMutations is null || !mutations.IsWithin(caller.ProjectMutations))) {
             throw Denied("The saved process source or grant ceiling no longer matches this caller.");
         }
     }

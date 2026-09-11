@@ -10,7 +10,8 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
 {
     public async Task<ProjectStructureImportResult> ImportAsync(
         ProjectStructureImportRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         if (string.IsNullOrWhiteSpace(request.Title))
         {
@@ -36,7 +37,11 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 null,
                 request.ContainerBlockSubtype,
                 null,
-                null),
+                null) {
+                ExpectedProjectAdmission = mutationOwner?.ExpectedProjectAdmission,
+                ProcessMutationAdmission = mutationOwner?.ProcessMutationAdmission,
+                AgentMutationAdmission = mutationOwner?.AgentMutationAdmission
+            },
             cancellationToken);
 
         string? sourceNodeId = null;
@@ -57,7 +62,11 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                     null,
                     ResolveSourceAssetSubtype(request.SourceKind, request.SourceAsset),
                     request.SourceAsset,
-                    null),
+                    null) {
+                    ExpectedProjectAdmission = mutationOwner?.ExpectedProjectAdmission,
+                    ProcessMutationAdmission = mutationOwner?.ProcessMutationAdmission,
+                    AgentMutationAdmission = mutationOwner?.AgentMutationAdmission
+                },
                 cancellationToken);
             sourceNodeId = sourceAssetNode.Id;
         }
@@ -78,7 +87,7 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 container.Id,
                 createdNodeIds,
                 mappedNodeIds,
-                cancellationToken);
+                cancellationToken, mutationOwner);
         }
 
         foreach (var link in plan.Links)
@@ -95,12 +104,12 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 sourceId,
                 targetId,
                 link.Kind,
-                cancellationToken);
+                cancellationToken, mutationOwner?.ExpectedProjectAdmission, mutationOwner?.ProcessMutationAdmission, mutationOwner?.AgentMutationAdmission);
         }
 
         if (createdNodeIds.Count > 1)
         {
-            var recompositionResult = await projectWorkbenchService.RecomposeSubtreeAsync(request.ProjectId, container.Id, cancellationToken);
+            var recompositionResult = await projectWorkbenchService.RecomposeSubtreeAsync(request.ProjectId, container.Id, cancellationToken, mutationOwner);
             if (recompositionResult is null)
             {
                 warnings.Add("Imported nodes were created, but the initial layout could not be recomposed automatically.");
@@ -116,7 +125,8 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
         string parentNodeId,
         ICollection<string> createdNodeIds,
         IDictionary<string, string> mappedNodeIds,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectStructureAgentContext? mutationOwner)
     {
         var hasChildren = draft.Children.Count > 0;
         var createdNode = await projectWorkbenchService.CreateObjectAsync(
@@ -133,7 +143,11 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 null,
                 hasChildren ? request.ContainerBlockSubtype : request.LeafWorkItemSubtype,
                 null,
-                null),
+                null) {
+                ExpectedProjectAdmission = mutationOwner?.ExpectedProjectAdmission,
+                ProcessMutationAdmission = mutationOwner?.ProcessMutationAdmission,
+                AgentMutationAdmission = mutationOwner?.AgentMutationAdmission
+            },
             cancellationToken);
 
         createdNodeIds.Add(createdNode.Id);
@@ -147,7 +161,7 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 createdNode.Id,
                 createdNodeIds,
                 mappedNodeIds,
-                cancellationToken);
+                cancellationToken, mutationOwner);
         }
     }
 

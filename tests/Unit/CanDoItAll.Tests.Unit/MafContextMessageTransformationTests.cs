@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -153,10 +154,12 @@ public sealed class MafContextMessageTransformationTests
 
         try
         {
+            var scope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
             var contextBuilder = new ContextCapabilityBuilder(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
-                TestWorkspaceServices.PhysicalPathPolicyFactory);
+                scope,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ProjectWorkspacePathContributor().ContributeWorkspacePaths(scope));
             var state = new RuntimeCapabilityState();
             var providerAdded = contextBuilder.AddRagProvider(
                 state,
@@ -198,10 +201,12 @@ public sealed class MafContextMessageTransformationTests
 
         try
         {
+            var scope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
             var contextBuilder = new ContextCapabilityBuilder(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
-                TestWorkspaceServices.PhysicalPathPolicyFactory);
+                scope,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ProjectWorkspacePathContributor().ContributeWorkspacePaths(scope));
             var state = new RuntimeCapabilityState();
             var providerAdded = contextBuilder.AddRagProvider(
                 state,

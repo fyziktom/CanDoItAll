@@ -1,4 +1,4 @@
-﻿using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Api;
@@ -44,6 +44,7 @@ public static class ApiEndpointRouteBuilderExtensions
             return endpoints;
         }
 
+        endpoints.MapStoragePlacementRecoveryApi();
         var group = endpoints.MapGroup("/api")
             .WithTags("API")
             .DisableAntiforgery();

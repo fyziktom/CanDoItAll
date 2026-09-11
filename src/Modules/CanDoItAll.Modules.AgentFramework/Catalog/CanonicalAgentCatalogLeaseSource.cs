@@ -24,6 +24,9 @@ public sealed class CanonicalAgentCatalogLeaseSource : IAgentCatalogReadLeaseSto
     public Task<IAgentCatalogReadLease> AcquireAgentReadLeaseAsync(Guid agentId, CancellationToken cancellationToken = default)
         => store.AcquireAgentReadLeaseAsync(agentId, cancellationToken);
 
+    public Task<IAgentCatalogReadLease> AcquireAgentsReadLeaseAsync(IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
+        => store.AcquireAgentsReadLeaseAsync(agentIds, cancellationToken);
+
     private sealed class BoundProfile(ResolvedDatabaseProfile profile) : IActiveDatabaseProfileResolver {
         public ResolvedDatabaseProfile ResolveCurrentProfile() => profile;
     }

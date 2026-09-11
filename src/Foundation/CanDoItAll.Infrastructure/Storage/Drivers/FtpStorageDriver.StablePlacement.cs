@@ -3,7 +3,7 @@ namespace CanDoItAll.Infrastructure.Storage;
 public sealed partial class FtpStorageDriver : IStorageStablePlacementDriver {
     bool IStorageStablePlacementDriver.CanRecoverWithoutWriteAcknowledgement => false;
 
-    Task<StorageObjectReference> IStorageStablePlacementDriver.PrepareStableTargetAsync(StorageCatalogRecord storage,
+    Task<StorageObjectReference> IStorageStablePlacementDriver.PrepareStableTargetAsync(StorageDriverInput storage,
         StoragePlacementIntentId intentId, StorageWriteRequest request, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         var relativePath = string.IsNullOrWhiteSpace(request.RelativePathHint)
@@ -15,7 +15,7 @@ public sealed partial class FtpStorageDriver : IStorageStablePlacementDriver {
             request.Content.LongLength) { PlacementIntentId = intentId.Value });
     }
 
-    async Task<StorageWriteResult> IStorageStablePlacementDriver.WriteStableTargetAsync(StorageCatalogRecord storage,
+    async Task<StorageWriteResult> IStorageStablePlacementDriver.WriteStableTargetAsync(StorageDriverInput storage,
         StorageObjectReference target, StorageWriteRequest request, CancellationToken cancellationToken) {
         if (target.ProviderKind != ProviderKind || target.StorageId != storage.Id || target.LocatorKind != StorageLocatorKind.RemotePath) {
             throw new InvalidOperationException("The prepared FTP target does not match this storage.");
@@ -24,6 +24,6 @@ public sealed partial class FtpStorageDriver : IStorageStablePlacementDriver {
         return result with { Reference = result.Reference with { PlacementIntentId = target.PlacementIntentId } };
     }
 
-    Task IStorageStablePlacementDriver.CompleteStableTargetAsync(StorageCatalogRecord storage,
+    Task IStorageStablePlacementDriver.CompleteStableTargetAsync(StorageDriverInput storage,
         StorageObjectReference target, CancellationToken cancellationToken) => Task.CompletedTask;
 }

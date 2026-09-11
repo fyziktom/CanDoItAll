@@ -6,10 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbContext> factory,
+public sealed partial class StorageStablePlacementService(IDbContextFactory<StorageDbContext> factory,
     IStorageCatalogService catalog, IStorageRoutingService routing, IStorageDriverRegistry drivers,
     IStorageAccessService access, FileSystemStoragePathPolicy paths, TimeProvider clock,
-    IEnumerable<IStoragePlacementReceiptObserver> receiptObservers) {
+    IEnumerable<IStoragePlacementReceiptObserver> receiptObservers,
+    CoordinatedDatabaseTransaction? transactions = null, DbContextOptions<StorageDbContext>? contextOptions = null) {
     private const int MaximumContentBytes = 256 * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -66,8 +67,11 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
         return row is null ? null : Outcome(row);
     }
 
-    public async Task<StorageStablePlacementOutcome> ReconcileAsync(StoragePlacementIntentId intentId,
-        CancellationToken cancellationToken = default) {
+    public Task<StorageStablePlacementOutcome> ReconcileAsync(StoragePlacementIntentId intentId,
+        CancellationToken cancellationToken = default) => ReconcileCoreAsync(intentId, null, cancellationToken);
+
+    private async Task<StorageStablePlacementOutcome> ReconcileCoreAsync(StoragePlacementIntentId intentId,
+        StorageRecoveryMutationGuard? recovery, CancellationToken cancellationToken) {
         var saved = await FindRecordAsync(intentId, cancellationToken)
             ?? throw new InvalidOperationException("The storage placement was not prepared.");
         if (saved.State is StorageStablePlacementState.Completed or StorageStablePlacementState.Deleted or StorageStablePlacementState.Conflict) {
@@ -84,7 +88,7 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
             if (!driver.CanRecoverWithoutWriteAcknowledgement && !saved.WriteAcknowledged && !saved.ExternalDispatchConfirmedStopped) {
                 return await RecordUncertainAsync(intentId, StorageStablePlacementState.Uncertain,
                     "The FTP write has no completion acknowledgment. An operator must verify that its server-side dispatch stopped before exact readback can complete recovery.",
-                    null, cancellationToken);
+                    null, cancellationToken, recovery);
             }
             await using var content = await drivers.Resolve(storage.ProviderKind).OpenReadAsync(storage, plan.Reference, cancellationToken);
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -95,15 +99,18 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
                 length += read;
                 if (length > plan.ContentLength) {
                     return await RecordUncertainAsync(intentId, StorageStablePlacementState.Conflict,
-                        "The prepared storage target contains different content. It was preserved.", null, cancellationToken);
+                        "The prepared storage target contains different content. It was preserved.", null, cancellationToken, recovery);
                 }
                 hash.AppendData(buffer, 0, read);
             }
             if (length != plan.ContentLength || Convert.ToHexString(hash.GetHashAndReset()) != plan.ContentSha256) {
                 return await RecordUncertainAsync(intentId, StorageStablePlacementState.Conflict,
-                    "The prepared storage target contains different content. It was preserved.", null, cancellationToken);
+                    "The prepared storage target contains different content. It was preserved.", null, cancellationToken, recovery);
             }
 
+            if (recovery is not null) {
+                await recovery.BeforeProviderFinalizationAsync(cancellationToken);
+            }
             await driver.CompleteStableTargetAsync(storage, plan.Reference, cancellationToken);
             var descriptor = await access.DescribeAsync(plan.Reference, cancellationToken);
             var write = new StorageWriteResult(plan.Reference, descriptor);
@@ -116,12 +123,14 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
             var appliedAt = clock.GetUtcNow().ToUniversalTime();
             appliedAt = new(appliedAt.Ticks - appliedAt.Ticks % TimeSpan.TicksPerMicrosecond, TimeSpan.Zero);
             var receipt = new StorageStablePlacementReceipt(intentId, saved.RequestFingerprint,
-                StorageCatalogPlanningFact.FromCatalogRecord(storage, includeFtpAddressing: true), write, route, location, relativePath, appliedAt);
-            var completed = await CompleteAsync(intentId, receipt, cancellationToken);
+                StorageCatalogPlanningFact.FromDriverInput(storage, includeFtpAddressing: true), write, route, location, relativePath, appliedAt);
+            var completed = await CompleteAsync(intentId, receipt, cancellationToken, recovery);
             return await ObserveAsync(completed, cancellationToken);
+        } catch (StoragePlacementRecoveryException) {
+            throw;
         } catch (Exception exception) {
             return await RecordUncertainAsync(intentId, StorageStablePlacementState.Uncertain,
-                "The previous placement could not be verified. Its exact target is retained; no second write or filename was allocated.", exception, CancellationToken.None);
+                "The previous placement could not be verified. Its exact target is retained; no second write or filename was allocated.", exception, CancellationToken.None, recovery);
         }
     }
 
@@ -141,8 +150,12 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
         return rows.Select(Outcome).ToArray();
     }
 
-    public async Task<StorageStablePlacementOutcome> RecordOperatorVerifiedExternalDispatchTerminationAsync(
-        StoragePlacementIntentId intentId, CancellationToken cancellationToken = default) {
+    public Task<StorageStablePlacementOutcome> RecordOperatorVerifiedExternalDispatchTerminationAsync(
+        StoragePlacementIntentId intentId, CancellationToken cancellationToken = default)
+        => RecordExternalTerminationCoreAsync(intentId, null, cancellationToken);
+
+    private async Task<StorageStablePlacementOutcome> RecordExternalTerminationCoreAsync(
+        StoragePlacementIntentId intentId, StorageRecoveryMutationGuard? recovery, CancellationToken cancellationToken) {
         await using (var database = await factory.CreateDbContextAsync(cancellationToken)) {
             await using var transaction = await SerializableMutationScope.BeginAsync(database, Scope(intentId.Value), cancellationToken);
             var row = await database.Set<StoragePlacementIntentRecord>().SingleAsync(row => row.Id == intentId.Value, cancellationToken);
@@ -150,12 +163,15 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
                 row.State is not (StorageStablePlacementState.Dispatching or StorageStablePlacementState.Uncertain)) {
                 throw new InvalidOperationException("Only an unresolved FTP dispatch accepts explicit external termination verification.");
             }
+            if (recovery is not null) {
+                await recovery.BeforeSaveAsync(database, row, cancellationToken);
+            }
             row.ExternalDispatchConfirmedStopped = true;
             row.UpdatedAtUtc = clock.GetUtcNow();
             await database.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
-        return await ReconcileAsync(intentId, cancellationToken);
+        return await ReconcileCoreAsync(intentId, recovery, cancellationToken);
     }
 
     public async Task<bool> MarkDeletionAsync(StorageObjectReference reference, CancellationToken cancellationToken = default) {
@@ -203,7 +219,7 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
             selectedId = recommendation.PrimaryCandidate?.StorageId
                 ?? throw new InvalidOperationException(recommendation.Reason);
         }
-        var storage = await catalog.GetAsync(selectedId.Value, cancellationToken)
+        var storage = await catalog.GetDriverAsync(selectedId.Value, cancellationToken)
             ?? throw new InvalidOperationException("The selected storage no longer exists.");
         ValidateCurrentCapabilities(storage, request.PreviewRequired);
         var target = await RequireStableDriver(storage.ProviderKind).PrepareStableTargetAsync(storage, id, WriteRequest(request), cancellationToken);
@@ -252,12 +268,15 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
     }
 
     private async Task<StorageStablePlacementOutcome> CompleteAsync(StoragePlacementIntentId id,
-        StorageStablePlacementReceipt receipt, CancellationToken cancellationToken) {
+        StorageStablePlacementReceipt receipt, CancellationToken cancellationToken, StorageRecoveryMutationGuard? recovery = null) {
         await using var database = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await SerializableMutationScope.BeginAsync(database, Scope(id.Value), cancellationToken);
         var row = await database.Set<StoragePlacementIntentRecord>().SingleAsync(row => row.Id == id.Value, cancellationToken);
         if (row.ReceiptJson.Length > 0 || row.State is StorageStablePlacementState.Deleted or StorageStablePlacementState.Conflict) {
             return Outcome(row);
+        }
+        if (recovery is not null) {
+            await recovery.BeforeSaveAsync(database, row, cancellationToken);
         }
         row.ReceiptJson = JsonSerializer.Serialize(receipt, JsonOptions);
         row.State = StorageStablePlacementState.Completed;
@@ -268,11 +287,15 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
     }
 
     private async Task<StorageStablePlacementOutcome> RecordUncertainAsync(StoragePlacementIntentId id,
-        StorageStablePlacementState state, string message, Exception? exception, CancellationToken cancellationToken) {
+        StorageStablePlacementState state, string message, Exception? exception, CancellationToken cancellationToken,
+        StorageRecoveryMutationGuard? recovery = null) {
         await using var database = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await SerializableMutationScope.BeginAsync(database, Scope(id.Value), cancellationToken);
         var row = await database.Set<StoragePlacementIntentRecord>().SingleAsync(row => row.Id == id.Value, cancellationToken);
         if (row.State is not (StorageStablePlacementState.Completed or StorageStablePlacementState.Deleted or StorageStablePlacementState.Conflict)) {
+            if (recovery is not null) {
+                await recovery.BeforeSaveAsync(database, row, cancellationToken);
+            }
             row.State = state;
             row.UpdatedAtUtc = clock.GetUtcNow();
             await database.SaveChangesAsync(cancellationToken);
@@ -285,8 +308,8 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
         };
     }
 
-    private async Task<StorageCatalogRecord> LoadCurrentStorageAsync(PlacementPlan plan, CancellationToken cancellationToken) {
-        var storage = await catalog.GetAsync(plan.Reference.StorageId!.Value, cancellationToken)
+    private async Task<StorageDriverInput> LoadCurrentStorageAsync(PlacementPlan plan, CancellationToken cancellationToken) {
+        var storage = await catalog.GetDriverAsync(plan.Reference.StorageId!.Value, cancellationToken)
             ?? throw new InvalidOperationException("The prepared storage is no longer available.");
         if (TargetFingerprint(storage) != plan.TargetFingerprint) {
             throw new InvalidOperationException("The prepared storage endpoint or host binding changed. Rebinding is required before recovery.");
@@ -295,7 +318,7 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
         return storage;
     }
 
-    private static void ValidateCurrentCapabilities(StorageCatalogRecord storage, bool preview) {
+    private static void ValidateCurrentCapabilities(StorageCatalogSnapshot storage, bool preview) {
         var required = StorageCapability.Read | StorageCapability.Write | (preview ? StorageCapability.InlinePreview : StorageCapability.None);
         if (!storage.IsEnabled || storage.IsReadOnly || storage.HealthStatus == StorageHealthStatus.Unavailable ||
             (storage.CapabilityMask & required) != required) {
@@ -350,9 +373,9 @@ public sealed class StorageStablePlacementService(IDbContextFactory<StorageDbCon
         request.NodeKey, request.RelativePathHint, request.PreviewRequired, request.PublishIntent, request.PreferredStorageId,
         ContentLength = request.Content.LongLength, ContentSha256 = Convert.ToHexString(SHA256.HashData(request.Content))
     }));
-    private static string TargetFingerprint(StorageCatalogRecord storage) => Hash(JsonSerializer.Serialize(new {
+    private static string TargetFingerprint(StorageDriverInput storage) => Hash(JsonSerializer.Serialize(new {
         storage.Id, storage.ProviderKind, storage.ConnectionMode, storage.EndpointOrRoot, storage.RootBindingFormatVersion,
-        storage.RootPlatformFamily, storage.RootPathSyntax, storage.RootHostBindingId, storage.RootPathState, storage.ConfigJson
+        storage.RootPlatformFamily, storage.RootPathSyntax, storage.RootHostBindingId, storage.RootPathState, ConfigJson = storage.OriginalConfigurationJson
     }));
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     private static bool SameTarget(StorageObjectReference left, StorageObjectReference right)

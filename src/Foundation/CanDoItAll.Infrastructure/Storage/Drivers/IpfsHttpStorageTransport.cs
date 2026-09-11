@@ -11,7 +11,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     public async Task TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         CancellationToken cancellationToken)
     {
@@ -24,11 +24,11 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
         response.EnsureSuccessStatusCode();
     }
 
-    public Task<IpfsAddResult> AddAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+    public Task<IpfsAddResult> AddAsync(StorageDriverInput storage, string? bearerToken, string fileName,
         ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
         => AddCoreAsync(storage, bearerToken, fileName, content, BuildApiUri(storage, "add"), cancellationToken);
 
-    public Task<IpfsAddResult> AddStableAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+    public Task<IpfsAddResult> AddStableAsync(StorageDriverInput storage, string? bearerToken, string fileName,
         ReadOnlyMemory<byte> content, IpfsStableAddMode mode, CancellationToken cancellationToken) {
         if (!Enum.IsDefined(mode)) {
             throw new ArgumentOutOfRangeException(nameof(mode));
@@ -40,7 +40,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
         return AddCoreAsync(storage, bearerToken, fileName, content, uri.Uri, cancellationToken);
     }
 
-    private async Task<IpfsAddResult> AddCoreAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+    private async Task<IpfsAddResult> AddCoreAsync(StorageDriverInput storage, string? bearerToken, string fileName,
         ReadOnlyMemory<byte> content, Uri uri, CancellationToken cancellationToken) {
         if (content.Length > MaximumContentBytes)
         {
@@ -76,7 +76,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
     }
 
     public async Task PinAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         string contentId,
         CancellationToken cancellationToken)
@@ -91,7 +91,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
     }
 
     public async Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         string locator,
         string route,
@@ -125,7 +125,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
     }
 
     private static (HttpMethod Method, Uri Uri) ResolveReadRequest(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string locator,
         string route)
     {
@@ -161,7 +161,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
     }
 
     public async Task<RemoteBrowseTransportPage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         IpfsBrowseAddress address,
         RemoteBrowseTransportRequest request,
@@ -262,7 +262,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
     }
 
     private async Task<(string Revision, long ResponseBytes)> ReadMfsRevisionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? bearerToken,
         string path,
         long maximumBytes,
@@ -332,7 +332,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
     }
 
     private static Uri BuildApiUri(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string action,
         string? argument = null,
         bool includeLongFacts = false)

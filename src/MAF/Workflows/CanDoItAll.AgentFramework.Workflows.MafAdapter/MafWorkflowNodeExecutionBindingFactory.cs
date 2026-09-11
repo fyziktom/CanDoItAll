@@ -70,12 +70,16 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
         }
 
         invocationContext = invocationContext with { ExecutionOccurrence = occurrence };
+        using var invocationScope = WorkflowExecutorExecutionAuditScope.PushInvocation(definition, node, input, occurrence,
+            invocationContext.CompilerContractVersion ?? WorkflowProviderDisclosureProtocol.Current);
 
         var progressObserver = WorkflowNodeExecutionProgressScope.Current;
         var startedAtUtc = clock.GetUtcNow();
         var invocationId = Guid.NewGuid();
         WorkflowUsageMetrics? usage = null;
         IReadOnlyList<WorkflowUsageObservation> usageObservations = [];
+        IReadOnlyList<WorkflowProviderReadEvidence> readEvidence = [];
+        WorkflowExecutionContentHash? simulationHash = null;
         await RecordProgressAsync(
             progressObserver,
             definition,
@@ -87,6 +91,12 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
         try
         {
             var output = await ExecuteCoreAsync(input, cancellationToken);
+            var proof = occurrence is null || WorkflowExecutorExecutionAuditScope.CurrentInvocation!.CompilerVersion == WorkflowProviderDisclosureProtocol.Legacy
+                ? null : WorkflowExecutorExecutionAuditScope.CurrentInvocation.Complete(invocationId, output.PayloadJson)
+                with { SimulationHash = simulationHash };
+            if (readEvidence.Count > 0 && (proof is null || progressObserver?.ReadEvidenceDurability != WorkflowReadEvidenceDurability.Persisted)) {
+                throw new InvalidOperationException("Protected Workflow output requires its actual completion proof and durable progress observer.");
+            }
             await RecordProgressAsync(
                 progressObserver,
                 definition,
@@ -96,7 +106,9 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
                 payloadJson: output.PayloadJson,
                 usage: usage,
                 usageObservations: usageObservations,
-                occurredAtUtc: clock.GetUtcNow());
+                occurredAtUtc: clock.GetUtcNow(),
+                completionProof: proof,
+                readEvidence: readEvidence);
             return output with { ExecutionOccurrence = occurrence };
         }
         catch (Exception exception)
@@ -142,6 +154,7 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
                         $"Preview simulation for workflow node '{node.Id}' targets executor '{requestedExecutorId}', but the node uses executor '{actualExecutorId}'.");
                 }
 
+                simulationHash = WorkflowProviderDisclosureContent.Simulation(simulationStep);
                 return new WorkflowNodeInput(WorkflowPreviewSimulationRenderer.Render(
                     simulationStep,
                     definition,
@@ -228,6 +241,7 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
                 nodeInput,
                 invocationContext,
                 nodeCancellationToken);
+            readEvidence = result.ProviderReadEvidence;
             usage = result.Usage;
             usageObservations = result.UsageObservations;
             if (usageObservations.Count == 0 && usage is not null)
@@ -268,7 +282,9 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
         string errorMessage = "",
         WorkflowUsageMetrics? usage = null,
         IReadOnlyList<WorkflowUsageObservation>? usageObservations = null,
-        DateTimeOffset? occurredAtUtc = null)
+        DateTimeOffset? occurredAtUtc = null,
+        WorkflowNodeCompletionProof? completionProof = null,
+        IReadOnlyList<WorkflowProviderReadEvidence>? readEvidence = null)
     {
         return observer is null
             ? ValueTask.CompletedTask
@@ -285,7 +301,9 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
                     PayloadJson = payloadJson,
                     ErrorMessage = errorMessage,
                     Usage = usage,
-                    UsageObservations = usageObservations ?? []
+                    UsageObservations = usageObservations ?? [],
+                    CompletionProof = completionProof,
+                    ProviderReadEvidence = readEvidence ?? []
                 },
                 cancellationToken);
     }

@@ -1,7 +1,6 @@
 namespace CanDoItAll.Infrastructure.Persistence;
 
-public enum ProjectTransferTargetStateArea
-{
+public enum ProjectTransferTargetStateArea {
     Infrastructure,
     AgentFramework,
     Collaboration,
@@ -18,13 +17,19 @@ public enum ProjectTransferTargetStateArea
 
 public sealed record ProjectTransferTargetStateResidue(string Description);
 
-public interface IProjectTransferTargetStateParticipant
-{
+public enum ProjectTransferTargetInspectionMode {
+    Independent,
+    Locked
+}
+
+public sealed record ProjectTransferTargetInspection(Guid Id, Guid TargetProfileId, ProjectTransferTargetInspectionMode Mode);
+
+public interface IProjectTransferTargetStateParticipant {
     ProjectTransferTargetStateArea Area { get; }
 
     IReadOnlyCollection<Type> EntityTypesToLock { get; }
 
     Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
-        AppDbContext dbContext,
+        ProjectTransferTargetInspection request,
         CancellationToken cancellationToken);
 }

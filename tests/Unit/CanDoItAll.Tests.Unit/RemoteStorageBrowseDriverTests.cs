@@ -17,10 +17,10 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         StorageCatalogRecord storage = CreateStorage(StorageProviderKind.Ipfs);
 
         StorageBrowsePage cidPage = await driver.BrowseAsync(
-            storage,
+            storage.ToDriverInput(),
             new StorageBrowseRequest(new StorageBrowseContainer("cid:bafy-root"), pageSize: 2));
         StorageBrowsePage mfsPage = await driver.BrowseAsync(
-            storage,
+            storage.ToDriverInput(),
             new StorageBrowseRequest(new StorageBrowseContainer("mfs:/projects"), pageSize: 2));
 
         Assert.Equal(IpfsBrowseAddressKind.ContentAddress, transport.Addresses[0].Kind);
@@ -40,12 +40,12 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         var request = new StorageBrowseRequest(
             new StorageBrowseContainer("mfs:/projects"),
             pageSize: 1);
-        StorageBrowsePage first = await driver.BrowseAsync(storage, request);
+        StorageBrowsePage first = await driver.BrowseAsync(storage.ToDriverInput(), request);
         transport.SourceRevision = "mfs-revision-2";
 
         StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
             driver.BrowseAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageBrowseRequest(
                     request.Container,
                     pageSize: 1,
@@ -62,7 +62,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
 
         StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
             driver.BrowseAsync(
-                CreateStorage(StorageProviderKind.Ipfs),
+                CreateStorage(StorageProviderKind.Ipfs).ToDriverInput(),
                 new StorageBrowseRequest(new StorageBrowseContainer("cid:bafy-root"))));
 
         Assert.Equal(StorageBrowseErrorCode.ProviderUnavailable, exception.Error.Code);
@@ -78,7 +78,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             driver.BrowseAsync(
-                CreateStorage(StorageProviderKind.Ipfs),
+                CreateStorage(StorageProviderKind.Ipfs).ToDriverInput(),
                 new StorageBrowseRequest(new StorageBrowseContainer("cid:bafy-root")),
                 cancellation.Token));
 
@@ -102,7 +102,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
                 maximumConcurrentMetadataProbes: 1));
 
         StorageBrowsePage page = await driver.BrowseAsync(
-            CreateStorage(StorageProviderKind.Ftp),
+            CreateStorage(StorageProviderKind.Ftp).ToDriverInput(),
             request);
 
         Assert.Equal(2, page.Entries.Count);
@@ -121,7 +121,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
 
         StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
             driver.BrowseAsync(
-                CreateStorage(StorageProviderKind.Ftp),
+                CreateStorage(StorageProviderKind.Ftp).ToDriverInput(),
                 new StorageBrowseRequest(StorageBrowseContainer.Root)));
 
         Assert.Equal(StorageBrowseErrorCode.UnsupportedOperation, exception.Error.Code);
@@ -184,10 +184,10 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
             NullLogger<FtpStorageDriver>.Instance);
 
         await using Stream ipfsStream = await ipfsDriver.OpenReadAsync(
-            CreateStorage(StorageProviderKind.Ipfs),
+            CreateStorage(StorageProviderKind.Ipfs).ToDriverInput(),
             CreateReference(StorageProviderKind.Ipfs));
         await using Stream ftpStream = await ftpDriver.OpenReadAsync(
-            CreateStorage(StorageProviderKind.Ftp),
+            CreateStorage(StorageProviderKind.Ftp).ToDriverInput(),
             CreateReference(StorageProviderKind.Ftp));
 
         Assert.Same(ipfsTransport.ContentStream, ipfsStream);
@@ -220,7 +220,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
 
         StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
             driver.BrowseAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageBrowseRequest(new StorageBrowseContainer("cid:bafy-root"))));
 
         Assert.Equal(StorageBrowseErrorCode.ProviderUnavailable, exception.Error.Code);
@@ -253,10 +253,10 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         var transport = new IpfsHttpStorageTransport(client);
         StorageCatalogRecord storage = CreateStorage(StorageProviderKind.Ipfs);
 
-        await transport.TestConnectionAsync(storage, "token-one", CancellationToken.None);
-        await transport.TestConnectionAsync(storage, "token-two", CancellationToken.None);
+        await transport.TestConnectionAsync(storage.ToDriverInput(), "token-one", CancellationToken.None);
+        await transport.TestConnectionAsync(storage.ToDriverInput(), "token-two", CancellationToken.None);
         await using Stream stream = await transport.OpenReadAsync(
-            storage,
+            storage.ToDriverInput(),
             "token-three",
             "bafy-content",
             route: string.Empty,
@@ -289,7 +289,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         var transport = new IpfsHttpStorageTransport(client);
 
         await using Stream stream = await transport.OpenReadAsync(
-            CreateStorage(StorageProviderKind.Ipfs),
+            CreateStorage(StorageProviderKind.Ipfs).ToDriverInput(),
             bearerToken: null,
             "mfs:/projects/readme.txt",
             route: string.Empty,
@@ -318,7 +318,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         var transport = new IpfsHttpStorageTransport(client);
 
         RemoteBrowseTransportPage page = await transport.BrowseAsync(
-            CreateStorage(StorageProviderKind.Ipfs),
+            CreateStorage(StorageProviderKind.Ipfs).ToDriverInput(),
             bearerToken: null,
             new IpfsBrowseAddress(IpfsBrowseAddressKind.MutableFileSystem, "/projects"),
             new RemoteBrowseTransportRequest(
@@ -365,7 +365,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         var transport = new IpfsHttpStorageTransport(client);
 
         RemoteBrowseTransportPage page = await transport.BrowseAsync(
-            CreateStorage(StorageProviderKind.Ipfs),
+            CreateStorage(StorageProviderKind.Ipfs).ToDriverInput(),
             bearerToken: null,
             new IpfsBrowseAddress(IpfsBrowseAddressKind.ContentAddress, "bafy-root"),
             new RemoteBrowseTransportRequest(
@@ -405,7 +405,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
 
         StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
             transport.OpenReadAsync(
-                CreateStorage(StorageProviderKind.Ipfs),
+                CreateStorage(StorageProviderKind.Ipfs).ToDriverInput(),
                 bearerToken: null,
                 "bafy-content",
                 route: string.Empty,
@@ -474,32 +474,32 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         public Exception? Failure { get; set; }
 
         public Task TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? bearerToken,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task<IpfsAddResult> AddAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? bearerToken,
             string fileName,
             ReadOnlyMemory<byte> content,
             CancellationToken cancellationToken) => Task.FromResult(new IpfsAddResult("bafy-added"));
 
         public Task PinAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? bearerToken,
             string contentId,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? bearerToken,
             string locator,
             string route,
             CancellationToken cancellationToken) => Task.FromResult<Stream>(ContentStream);
 
         public async Task<RemoteBrowseTransportPage> BrowseAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? bearerToken,
             IpfsBrowseAddress address,
             RemoteBrowseTransportRequest request,
@@ -545,31 +545,31 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         public bool ClassificationReliable { get; set; } = true;
 
         public Task<string?> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? password,
             CancellationToken cancellationToken) => Task.FromResult<string?>("FTP ready.");
 
         public Task UploadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? password,
             string remotePath,
             ReadOnlyMemory<byte> content,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? password,
             string remotePath,
             CancellationToken cancellationToken) => Task.FromResult<Stream>(ContentStream);
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? password,
             string remotePath,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task<RemoteBrowseTransportPage> BrowseAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? password,
             string remotePath,
             RemoteBrowseTransportRequest request,

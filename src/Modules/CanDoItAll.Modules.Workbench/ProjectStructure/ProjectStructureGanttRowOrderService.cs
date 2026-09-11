@@ -28,7 +28,7 @@ public sealed class ProjectStructureGanttRowOrderService(
                 projectId,
                 taskNodeId,
                 afterTaskNodeId,
-                token),
+                token, agent),
             cancellationToken);
     }
 
@@ -47,7 +47,7 @@ public sealed class ProjectStructureGanttRowOrderService(
             token => projectWorkbenchService.MoveGanttTaskInRowOrderAsync(
                 projectId,
                 request,
-                token),
+                token, agent),
             cancellationToken);
     }
 
@@ -88,12 +88,13 @@ public sealed class ProjectStructureGanttRowOrderService(
         Guid projectId,
         string taskNodeId,
         string? afterTaskNodeId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectStructureAgentContext? mutationOwner = null)
         => projectWorkbenchService.InsertGanttTaskIntoRowOrderAsync(
             projectId,
             taskNodeId,
             afterTaskNodeId,
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
     private static SemaphoreSlim ResolveMutationGate(Guid projectId)
     {

@@ -23,8 +23,8 @@ public sealed class ProjectsOwnerPersistenceTests {
         await using var canonical = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         await using var projects = await application.Services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         await using var workbench = await application.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
-        AssertModel(canonical, projects, 5);
-        AssertModel(canonical, workbench, 12);
+        AssertModel(canonical, projects, 6);
+        AssertModel(canonical, workbench, 15);
         Assert.Throws<InvalidOperationException>(() => projects.Set<ProjectObjectRecord>().ToQueryString());
         Assert.Throws<InvalidOperationException>(() => workbench.Set<Project>().ToQueryString());
         var crmLink = Assert.IsAssignableFrom<IEntityType>(canonical.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(CrmAccountConnectionProjectLink)));
@@ -35,6 +35,23 @@ public sealed class ProjectsOwnerPersistenceTests {
         Assert.Equal(DeleteBehavior.Cascade, relationship.DeleteBehavior);
         Assert.Null(projects.Model.FindEntityType(typeof(CrmAccountConnectionProjectLink)));
         Assert.Null(workbench.Model.FindEntityType(typeof(CrmAccountConnectionProjectLink)));
+        var assignment = Assert.IsAssignableFrom<IEntityType>(canonical.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(ProjectWorkAssignmentRecord)));
+        Assert.Equal("Workbench_WorkAssignments", assignment.GetTableName());
+        var affiliation = Assert.Single(assignment.GetForeignKeys());
+        Assert.Equal(typeof(PartyOrganizationAffiliation), affiliation.PrincipalEntityType.ClrType);
+        Assert.Equal("CrmHr_PartyOrganizationAffiliations", affiliation.PrincipalEntityType.GetTableName());
+        Assert.Same(affiliation.PrincipalEntityType.FindPrimaryKey(), affiliation.PrincipalKey);
+        Assert.Equal(nameof(PartyOrganizationAffiliation.Id), Assert.Single(affiliation.PrincipalKey.Properties).Name);
+        var reference = Assert.Single(affiliation.Properties);
+        Assert.Equal(nameof(ProjectWorkAssignmentRecord.PartyOrganizationAffiliationId), reference.Name);
+        Assert.Equal(typeof(Guid?), reference.ClrType);
+        Assert.True(reference.IsNullable);
+        Assert.False(affiliation.IsRequired);
+        Assert.False(affiliation.IsUnique);
+        Assert.Equal(DeleteBehavior.Restrict, affiliation.DeleteBehavior);
+        Assert.Null(projects.Model.FindEntityType(typeof(PartyOrganizationAffiliation)));
+        Assert.Null(workbench.Model.FindEntityType(typeof(PartyOrganizationAffiliation)));
+        Assert.Throws<InvalidOperationException>(() => workbench.Set<PartyOrganizationAffiliation>().ToQueryString());
     }
 
     [Fact]
@@ -150,9 +167,46 @@ public sealed class ProjectsOwnerPersistenceTests {
         Assert.Equal(count, entities.Length);
         foreach (var entity in entities) {
             var full = Assert.IsAssignableFrom<IEntityType>(canonical.GetService<IDesignTimeModel>().Model.FindEntityType(entity.ClrType));
-            Assert.Equal(full.ToDebugString(MetadataDebugStringOptions.LongDefault), entity.ToDebugString(MetadataDebugStringOptions.LongDefault));
+            if (entity.ClrType != typeof(ProjectWorkAssignmentRecord)) {
+                Assert.Equal(full.ToDebugString(MetadataDebugStringOptions.LongDefault), entity.ToDebugString(MetadataDebugStringOptions.LongDefault));
+                continue;
+            }
+            Assert.Equal(full.GetTableName(), entity.GetTableName());
+            Assert.Equal(full.GetSchema(), entity.GetSchema());
+            Assert.Equal(full.GetProperties().Select(property => DescribeProperty(property, full)),
+                entity.GetProperties().Select(property => DescribeProperty(property, entity)));
+            Assert.Equal(full.GetKeys().Select(key => (key.GetName(), Properties: string.Join(",", key.Properties.Select(property => property.Name)),
+                    Primary: ReferenceEquals(key, full.FindPrimaryKey()))),
+                entity.GetKeys().Select(key => (key.GetName(), Properties: string.Join(",", key.Properties.Select(property => property.Name)),
+                    Primary: ReferenceEquals(key, entity.FindPrimaryKey()))));
+            Assert.Equal(full.GetIndexes().Select(DescribeIndex), entity.GetIndexes().Select(DescribeIndex));
+            Assert.Equal(full.GetCheckConstraints().Select(check => (check.Name, check.Sql)),
+                entity.GetCheckConstraints().Select(check => (check.Name, check.Sql)));
+            Assert.Empty(entity.GetForeignKeys());
+            Assert.Empty(entity.GetNavigations());
+            Assert.Empty(entity.GetSkipNavigations());
         }
     }
+
+    private static object DescribeProperty(IProperty property, IEntityType entity) {
+        var table = StoreObjectIdentifier.Table(entity.GetTableName()!, entity.GetSchema());
+        var converter = property.GetValueConverter();
+        return new {
+            property.Name, property.ClrType, property.IsNullable, property.IsConcurrencyToken, property.ValueGenerated,
+            Column = property.GetColumnName(table), StoreType = property.GetColumnType(), Length = property.GetMaxLength(),
+            Precision = property.GetPrecision(), Scale = property.GetScale(), Unicode = property.IsUnicode(),
+            DefaultValue = property.GetDefaultValue(), DefaultSql = property.GetDefaultValueSql(),
+            ComputedSql = property.GetComputedColumnSql(), Stored = property.GetIsStored(), Collation = property.GetCollation(),
+            BeforeSave = property.GetBeforeSaveBehavior(), AfterSave = property.GetAfterSaveBehavior(),
+            ConverterType = converter?.GetType(), ConverterModel = converter?.ModelClrType, ConverterProvider = converter?.ProviderClrType
+        };
+    }
+
+    private static object DescribeIndex(IIndex index) => new {
+        index.Name, DatabaseName = index.GetDatabaseName(), index.IsUnique, Filter = index.GetFilter(),
+        Properties = string.Join(",", index.Properties.Select(property => property.Name)),
+        Descending = index.IsDescending is { } descending ? string.Join(",", descending) : null
+    };
 
     private sealed class Factory(DbContextOptions<ProjectsDbContext> options) : IDbContextFactory<ProjectsDbContext> {
         public ProjectsDbContext CreateDbContext() => new(options);

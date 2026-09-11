@@ -482,7 +482,7 @@ internal sealed class ProjectStructureFileScopeResolver(
 
     private async ValueTask<Guid> ResolveWorkspaceStorageIdAsync(CancellationToken cancellationToken)
     {
-        StorageCatalogRecord workspaceStorage = await storageCatalog
+        StorageCatalogSnapshot workspaceStorage = await storageCatalog
             .EnsureBootstrapFileSystemStorageAsync(cancellationToken);
         if (workspaceStorage.Id == Guid.Empty ||
             !workspaceStorage.IsEnabled ||

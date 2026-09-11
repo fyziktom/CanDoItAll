@@ -32,6 +32,43 @@ public sealed class CoordinatedDatabaseTransaction {
 
     public static CoordinatedDatabaseTransaction ForProfile(ResolvedDatabaseProfile profile) => new(profile);
 
+    public static void RequireDistinctPhysicalDatabases(ResolvedDatabaseProfile source, ResolvedDatabaseProfile target) {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+        if (source.Profile.ProviderKind != DatabaseProviderKind.PostgreSql || target.Profile.ProviderKind != DatabaseProviderKind.PostgreSql) {
+            throw new InvalidOperationException("Database transfer requires two PostgreSQL profiles.");
+        }
+        var sourceBinding = PostgreSqlBinding.From(source.ConnectionString);
+        var targetBinding = PostgreSqlBinding.From(target.ConnectionString);
+        if (sourceBinding.Host == targetBinding.Host && sourceBinding.Port == targetBinding.Port && sourceBinding.Database == targetBinding.Database) {
+            throw new InvalidOperationException("Database transfer cannot use the same physical database as both source and target.");
+        }
+    }
+
+    public static void RequireDistinctInMemoryTestStores(DbContext source, DbContext target) {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+        if (!source.Database.IsInMemory() || !target.Database.IsInMemory()) {
+            throw new InvalidOperationException("The explicit test transfer path requires two InMemory stores.");
+        }
+        if (ReferenceEquals(ReadInMemoryBinding(source).Store, ReadInMemoryBinding(target).Store)) {
+            throw new InvalidOperationException("A test transfer cannot use the same InMemory store as source and target.");
+        }
+    }
+
+    public void RequireOwnerProfile(DbContext owner) {
+        ArgumentNullException.ThrowIfNull(owner);
+        if (provider == DatabaseProviderKind.PostgreSql && owner.Database.IsNpgsql()) {
+            RequireBinding(owner.Database.GetDbConnection().ConnectionString);
+            return;
+        }
+        if (provider == DatabaseProviderKind.InMemory && owner.Database.ProviderName == InMemoryProvider &&
+            ReadInMemoryBinding(owner).Name == inMemoryName) {
+            return;
+        }
+        throw new InvalidOperationException("The owner does not use the configured database profile.");
+    }
+
     public IDisposable Enter(DbContext owner) {
         ArgumentNullException.ThrowIfNull(owner);
         var previous = current.Value;

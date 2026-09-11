@@ -23,8 +23,7 @@ internal sealed record LlmChatsTransferDocument(
     IReadOnlyList<LlmChatOperationRow> Operations,
     IReadOnlyList<LlmChatInvocationRecordRow> InvocationRecords,
     IReadOnlyList<LlmChatOperationEventRow> OperationEvents,
-    IReadOnlyList<LlmChatDefinitionCreateReceiptRow> DefinitionCreateReceipts)
-{
+    IReadOnlyList<LlmChatDefinitionCreateReceiptRow> DefinitionCreateReceipts) {
     public const int CurrentSchemaVersion = 9;
     internal const string RetainedCreationReceiptReplacementError =
         "Chat replacement would invalidate retained creation receipts. Use an empty target database.";
@@ -34,17 +33,15 @@ internal sealed record LlmChatsTransferDocument(
         Messages.Count + Operations.Count + InvocationRecords.Count + OperationEvents.Count + DefinitionCreateReceipts.Count;
 
     public static async Task<LlmChatsTransferDocument> LoadAsync(
-        DbContext dbContext,
+        SimpleChatsDbContext dbContext,
         LlmChatTransferOptions options,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
         var ambientTransaction = dbContext.Database.CurrentTransaction;
         if (dbContext.Database.IsRelational() &&
             ambientTransaction is not null &&
-            !ProvidesRepeatableReads(ambientTransaction.GetDbTransaction().IsolationLevel))
-        {
+            !ProvidesRepeatableReads(ambientTransaction.GetDbTransaction().IsolationLevel)) {
             throw new InvalidOperationException(
                 "Loading an LLM Chats transfer inside an existing relational transaction requires repeatable-read or serializable isolation.");
         }
@@ -53,8 +50,7 @@ internal sealed record LlmChatsTransferDocument(
             ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
                 .ConfigureAwait(false)
             : null;
-        var counts = new (string Name, long Count)[]
-        {
+        var counts = new (string Name, long Count)[] {
             ("definitions", await dbContext.Set<LlmChatDefinitionRow>().LongCountAsync(cancellationToken).ConfigureAwait(false)),
             ("definition revisions", await dbContext.Set<LlmChatDefinitionRevisionRow>().LongCountAsync(cancellationToken).ConfigureAwait(false)),
             ("definition tags", await dbContext.Set<LlmChatDefinitionTagRow>().LongCountAsync(cancellationToken).ConfigureAwait(false)),
@@ -67,15 +63,13 @@ internal sealed record LlmChatsTransferDocument(
             ("definition create receipts", await dbContext.Set<LlmChatDefinitionCreateReceiptRow>().LongCountAsync(cancellationToken).ConfigureAwait(false))
         };
         var overBound = counts.FirstOrDefault(item => item.Count > options.MaximumRecordsPerCollection);
-        if (overBound.Count > options.MaximumRecordsPerCollection)
-        {
+        if (overBound.Count > options.MaximumRecordsPerCollection) {
             throw new InvalidDataException(
                 $"The LLM Chats transfer contains {overBound.Count} {overBound.Name}, exceeding the configured collection limit of {options.MaximumRecordsPerCollection}.");
         }
 
         var total = counts.Sum(item => item.Count);
-        if (total > options.MaximumTotalRecords)
-        {
+        if (total > options.MaximumTotalRecords) {
             throw new InvalidDataException(
                 $"The LLM Chats transfer contains {total} records, exceeding the configured total limit of {options.MaximumTotalRecords}.");
         }
@@ -93,29 +87,25 @@ internal sealed record LlmChatsTransferDocument(
             await LoadBoundedAsync(dbContext.Set<LlmChatInvocationRecordRow>(), "invocation records").ConfigureAwait(false),
             await LoadBoundedAsync(dbContext.Set<LlmChatOperationEventRow>(), "operation events").ConfigureAwait(false),
             await LoadBoundedAsync(dbContext.Set<LlmChatDefinitionCreateReceiptRow>(), "definition create receipts").ConfigureAwait(false));
-        if (snapshot is not null)
-        {
+        if (snapshot is not null) {
             await snapshot.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return document;
 
-        async Task<T[]> LoadBoundedAsync<T>(IQueryable<T> query, string name) where T : class
-        {
+        async Task<T[]> LoadBoundedAsync<T>(IQueryable<T> query, string name) where T : class {
             var maximumLoadedRecords = Math.Min(options.MaximumRecordsPerCollection, remainingTotalRecords);
             var rows = await query
                 .AsNoTracking()
                 .Take(maximumLoadedRecords + 1)
                 .ToArrayAsync(cancellationToken)
                 .ConfigureAwait(false);
-            if (rows.Length > options.MaximumRecordsPerCollection)
-            {
+            if (rows.Length > options.MaximumRecordsPerCollection) {
                 throw new InvalidDataException(
                     $"The LLM Chats transfer contains at least {rows.Length} {name}, exceeding the configured collection limit of {options.MaximumRecordsPerCollection}.");
             }
 
-            if (rows.Length > remainingTotalRecords)
-            {
+            if (rows.Length > remainingTotalRecords) {
                 var loadedRecords = options.MaximumTotalRecords - remainingTotalRecords + rows.Length;
                 throw new InvalidDataException(
                     $"The LLM Chats transfer contains at least {loadedRecords} records, exceeding the configured total limit of {options.MaximumTotalRecords}.");
@@ -129,10 +119,8 @@ internal sealed record LlmChatsTransferDocument(
     private static bool ProvidesRepeatableReads(IsolationLevel isolationLevel)
         => isolationLevel is IsolationLevel.RepeatableRead or IsolationLevel.Snapshot or IsolationLevel.Serializable;
 
-    public void ValidateForImport()
-    {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
+    public void ValidateForImport() {
+        if (SchemaVersion != CurrentSchemaVersion) {
             throw new InvalidDataException($"Unsupported LLM Chats transfer schema version {SchemaVersion}.");
         }
 
@@ -155,8 +143,7 @@ internal sealed record LlmChatsTransferDocument(
         var conversationIds = Conversations.Select(row => row.Id).ToHashSet();
         var operationIds = Operations.Select(row => row.Id).ToHashSet();
         if (Revisions.Any(row => !definitionIds.Contains(row.DefinitionId)) ||
-            Tags.Any(row => !definitionIds.Contains(row.DefinitionId)))
-        {
+            Tags.Any(row => !definitionIds.Contains(row.DefinitionId))) {
             throw new InvalidDataException("An LLM Chat revision or tag references a missing definition.");
         }
 
@@ -164,40 +151,34 @@ internal sealed record LlmChatsTransferDocument(
             throw new InvalidDataException("An LLM Chat creation receipt references a missing original definition revision.");
         }
 
-        if (Definitions.Any(row => !revisionIds.Contains((row.Id, row.CurrentRevision))))
-        {
+        if (Definitions.Any(row => !revisionIds.Contains((row.Id, row.CurrentRevision)))) {
             throw new InvalidDataException("An LLM Chat definition references a missing current revision.");
         }
 
         if (Conversations.Any(row =>
-                !transcriptIds.Contains(row.Id) || !revisionIds.Contains((row.DefinitionId, row.DefinitionRevision))))
-        {
+                !transcriptIds.Contains(row.Id) || !revisionIds.Contains((row.DefinitionId, row.DefinitionRevision)))) {
             throw new InvalidDataException("An LLM Chat conversation references a missing transcript or definition revision.");
         }
 
         if (Transcripts.Any(row => !conversationIds.Contains(row.ConversationId)) ||
-            Messages.Any(row => !transcriptIds.Contains(row.ConversationId)))
-        {
+            Messages.Any(row => !transcriptIds.Contains(row.ConversationId))) {
             throw new InvalidDataException("An LLM Chat transcript or message is detached from its product conversation.");
         }
 
-        foreach (var transcript in Transcripts)
-        {
+        foreach (var transcript in Transcripts) {
             var messages = Messages
                 .Where(row => row.ConversationId == transcript.ConversationId)
                 .OrderBy(row => row.Sequence)
                 .ToArray();
             if (messages.Length != transcript.EntryCount ||
-                messages.Where((message, index) => message.Sequence != index + 1).Any())
-            {
+                messages.Where((message, index) => message.Sequence != index + 1).Any()) {
                 throw new InvalidDataException("An LLM Chat transcript contains a non-contiguous message sequence.");
             }
         }
 
         if (Operations.Any(row => !conversationIds.Contains(row.ConversationId)) ||
             InvocationRecords.Any(row => !operationIds.Contains(row.OperationId)) ||
-            OperationEvents.Any(row => !operationIds.Contains(row.OperationId)))
-        {
+            OperationEvents.Any(row => !operationIds.Contains(row.OperationId))) {
             throw new InvalidDataException("An LLM Chat operation or invocation record is detached from its parent.");
         }
 
@@ -215,8 +196,7 @@ internal sealed record LlmChatsTransferDocument(
             Messages.Any(row =>
                 row.Role != LlmMessageRole.System &&
                 (!operationById.TryGetValue(row.TurnId, out var operation) ||
-                 operation.ConversationId != row.ConversationId)))
-        {
+                 operation.ConversationId != row.ConversationId))) {
             throw new InvalidDataException("An LLM Chat operation graph contains an invalid active-turn or message relationship.");
         }
 
@@ -228,8 +208,7 @@ internal sealed record LlmChatsTransferDocument(
                  message.Role != LlmMessageRole.Assistant)) ||
             Operations.Where(row => !IsTerminal(row.Status) && row.Status != LlmChatOperationStatus.RecoveryRequired)
                 .GroupBy(row => row.ConversationId)
-                .Any(group => group.Count() > 1))
-        {
+                .Any(group => group.Count() > 1)) {
             throw new InvalidDataException("An LLM Chat operation graph contains inconsistent conversation or result relationships.");
         }
 
@@ -268,8 +247,7 @@ internal sealed record LlmChatsTransferDocument(
             InvocationRecords.GroupBy(row => row.OperationId).Any(group =>
                 group.OrderBy(row => row.Ordinal)
                     .Select((row, index) => row.Ordinal != index + 1)
-                    .Any(invalid => invalid)))
-        {
+                    .Any(invalid => invalid))) {
             throw new InvalidDataException("An LLM Chat invocation record contains invalid completion evidence.");
         }
 
@@ -277,8 +255,7 @@ internal sealed record LlmChatsTransferDocument(
             OperationEvents.GroupBy(row => row.OperationId).Any(group =>
                 group.OrderBy(row => row.Sequence)
                     .Zip(group.OrderBy(row => row.Sequence).Skip(1), (left, right) => right.Sequence <= left.Sequence)
-                    .Any(invalid => invalid)))
-        {
+                    .Any(invalid => invalid))) {
             throw new InvalidDataException("An LLM Chat operation contains an invalid event journal.");
         }
 
@@ -295,14 +272,12 @@ internal sealed record LlmChatsTransferDocument(
                 (row.ExecutionOwnerId is null) != (row.ClaimedAtUtc is null) ||
                 (row.ExecutionOwnerId is null) != (row.HeartbeatAtUtc is null) ||
                 (row.ExecutionOwnerId is null) != (row.LeaseExpiresAtUtc is null) ||
-                !IsValidOperationState(row)))
-        {
+                !IsValidOperationState(row))) {
             throw new InvalidDataException("An LLM Chat operation contains an invalid execution lease.");
         }
     }
 
-    public async Task SaveAsync(DbContext dbContext, CancellationToken cancellationToken)
-    {
+    public async Task SaveAsync(SimpleChatsDbContext dbContext, CancellationToken cancellationToken) {
         await dbContext.AddRangeAsync(Definitions, cancellationToken).ConfigureAwait(false);
         await dbContext.AddRangeAsync(Revisions, cancellationToken).ConfigureAwait(false);
         await dbContext.AddRangeAsync(Tags, cancellationToken).ConfigureAwait(false);
@@ -316,8 +291,7 @@ internal sealed record LlmChatsTransferDocument(
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task ClearAsync(DbContext dbContext, CancellationToken cancellationToken)
-    {
+    public static async Task ClearAsync(SimpleChatsDbContext dbContext, CancellationToken cancellationToken) {
         if (await dbContext.Set<LlmChatDefinitionCreateReceiptRow>().AnyAsync(cancellationToken).ConfigureAwait(false)) {
             throw new InvalidOperationException(RetainedCreationReceiptReplacementError);
         }
@@ -333,11 +307,9 @@ internal sealed record LlmChatsTransferDocument(
         await dbContext.Set<LlmChatDefinitionRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static void EnsureUnique<T>(IEnumerable<T> values, string label) where T : notnull
-    {
+    private static void EnsureUnique<T>(IEnumerable<T> values, string label) where T : notnull {
         var unique = new HashSet<T>();
-        if (values.Any(value => !unique.Add(value)))
-        {
+        if (values.Any(value => !unique.Add(value))) {
             throw new InvalidDataException($"The LLM Chats transfer contains a duplicate {label}.");
         }
     }
@@ -388,8 +360,7 @@ internal sealed record LlmChatsTransferDocument(
                 row.Sequence < 1 ||
                 !Enum.IsDefined(row.Role) ||
                 row.Text.Length > LlmConversationTranscriptEntry.MaximumTextLength ||
-                !IsValidUsage(row.InputTokens, row.OutputTokens, row.CachedInputTokens)))
-        {
+                !IsValidUsage(row.InputTokens, row.OutputTokens, row.CachedInputTokens))) {
             throw new InvalidDataException("The LLM Chats transfer contains an invalid definition or conversation graph value.");
         }
     }
@@ -398,8 +369,7 @@ internal sealed record LlmChatsTransferDocument(
         => !string.IsNullOrWhiteSpace(identity) && identity.Length <= LlmChatDefinitionCreateScope.MaximumIdentityLength &&
            string.Equals(identity, identity.Trim(), StringComparison.Ordinal);
 
-    private static bool IsValidOperationState(LlmChatOperationRow row)
-    {
+    private static bool IsValidOperationState(LlmChatOperationRow row) {
         if (row.Id == Guid.Empty ||
             row.ConversationId == Guid.Empty ||
             !HasValidAttributionScope(row) ||
@@ -412,20 +382,17 @@ internal sealed record LlmChatsTransferDocument(
             row.ProviderDispatchReturnedAtUtc is { } dispatchReturnedAtUtc &&
             row.ProviderDispatchStartedAtUtc is { } startedAtUtc && dispatchReturnedAtUtc < startedAtUtc ||
             row.TranscriptCompletedAtUtc is { } transcriptCompletedAtUtc &&
-            row.ProviderDispatchStartedAtUtc is { } providerStartedAtUtc && transcriptCompletedAtUtc < providerStartedAtUtc)
-        {
+            row.ProviderDispatchStartedAtUtc is { } providerStartedAtUtc && transcriptCompletedAtUtc < providerStartedAtUtc) {
             return false;
         }
 
         var hasOwner = row.ExecutionOwnerId is not null;
         var isTerminal = IsTerminal(row.Status);
-        if ((isTerminal || row.Status == LlmChatOperationStatus.RecoveryRequired) && hasOwner)
-        {
+        if ((isTerminal || row.Status == LlmChatOperationStatus.RecoveryRequired) && hasOwner) {
             return false;
         }
 
-        var hasConsistentDispatchEvidence = row.DispatchPhase switch
-        {
+        var hasConsistentDispatchEvidence = row.DispatchPhase switch {
             LlmChatDispatchPhase.Queued =>
                 row.TurnAdmittedAtUtc is not null &&
                 row.ProviderDispatchStartedAtUtc is null &&
@@ -444,13 +411,11 @@ internal sealed record LlmChatsTransferDocument(
                 row.ProviderDispatchReturnedAtUtc is not null,
             _ => false
         };
-        if (!hasConsistentDispatchEvidence)
-        {
+        if (!hasConsistentDispatchEvidence) {
             return false;
         }
 
-        return row.Status switch
-        {
+        return row.Status switch {
             LlmChatOperationStatus.Succeeded =>
                 row.CompletedAtUtc is not null &&
                 row.ResultingTranscriptRevision > row.ExpectedTranscriptRevision &&
@@ -474,36 +439,28 @@ internal sealed record LlmChatsTransferDocument(
         };
     }
 
-    private static bool HasValidAttributionScope(LlmChatOperationRow row)
-    {
-        if (row.AttributionScopeKind is null)
-        {
+    private static bool HasValidAttributionScope(LlmChatOperationRow row) {
+        if (row.AttributionScopeKind is null) {
             return row.AttributionScopeKey.Length == 0;
         }
 
         if (!Enum.IsDefined(row.AttributionScopeKind.Value) ||
-            row.AttributionScopeKey.Length > LlmChatOperation.MaximumAttributionScopeKeyLength)
-        {
+            row.AttributionScopeKey.Length > LlmChatOperation.MaximumAttributionScopeKeyLength) {
             return false;
         }
 
-        try
-        {
+        try {
             _ = new WorkspaceScopeDescriptor(
                 row.AttributionScopeKind.Value,
                 row.AttributionScopeKey);
             return true;
-        }
-        catch (ArgumentException)
-        {
+        } catch (ArgumentException) {
             return false;
         }
     }
 
-    private static bool IsValidUsage(int? inputTokens, int? outputTokens, int? cachedInputTokens)
-    {
-        if (inputTokens is null && outputTokens is null && cachedInputTokens is null)
-        {
+    private static bool IsValidUsage(int? inputTokens, int? outputTokens, int? cachedInputTokens) {
+        if (inputTokens is null && outputTokens is null && cachedInputTokens is null) {
             return true;
         }
 
@@ -519,8 +476,7 @@ internal sealed record LlmChatsTransferDocument(
             LlmChatOperationStatus.Failed or
             LlmChatOperationStatus.Cancelled;
 
-    private static bool IsValidEvent(LlmChatOperationEventRow row)
-    {
+    private static bool IsValidEvent(LlmChatOperationEventRow row) {
         if (!Enum.IsDefined(row.Kind) ||
             row.Status is { } candidateStatus && !Enum.IsDefined(candidateStatus) ||
             row.InvocationOutcome is { } candidateOutcome && !Enum.IsDefined(candidateOutcome) ||
@@ -528,15 +484,13 @@ internal sealed record LlmChatsTransferDocument(
             row.FinishReason.Length > LlmChatInvocationRecord.MaximumFinishReasonLength ||
             Encoding.UTF8.GetByteCount(row.Text) > LlmChatStreamingLimits.MaximumPersistedEventTextBytes ||
             (!string.IsNullOrEmpty(row.FailureCode) &&
-             !row.FailureCode.StartsWith(LlmChatErrorCodes.Prefix, StringComparison.Ordinal)))
-        {
+             !row.FailureCode.StartsWith(LlmChatErrorCodes.Prefix, StringComparison.Ordinal))) {
             return false;
         }
 
         var hasUsage = IsValidUsage(row.InputTokens, row.OutputTokens, row.CachedInputTokens) &&
                        row.InputTokens is not null;
-        return row.Kind switch
-        {
+        return row.Kind switch {
             LlmChatOperationEventKind.StateChanged =>
                 row.Status is { } status &&
                 row.AttemptOrdinal is null &&

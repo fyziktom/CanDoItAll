@@ -30,5 +30,9 @@ public static class ApiAccessScopeNames
 
     public const string ReadProviderHistoryContent = "api.provider-history.content.read";
 
+    public const string ReadStoragePlacementRecovery = "api.storage-placement-recovery.read";
+    public const string ReconcileStoragePlacement = "api.storage-placement-recovery.reconcile";
+    public const string VerifyStorageExternalTermination = "api.storage-placement-recovery.verify-external-termination";
+
     public const string ManageProviderHistory = "api.provider-history.manage";
 }

@@ -2,6 +2,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.SchedulerPlanner;
@@ -15,10 +16,15 @@ namespace CanDoItAll.Tests.Unit.Projects;
 public sealed class ProjectTransferTargetStateArchitectureTests {
     private static readonly SemanticProjectStateRegistration[] SemanticProjectStateRegistry =
     [
+        Residue<ProcessPreparedLaunchEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedOrigin),
         Residue<StoragePlacementIntentRecord>(ProjectTransferTargetStateArea.Infrastructure, SemanticProjectStateKind.TypedScope),
         Residue<WorkflowStructureOutputRecord>(ProjectTransferTargetStateArea.AgentFramework, SemanticProjectStateKind.JsonRuntimeAggregate),
         Residue<ProjectWorkflowContributionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
         Residue<ProjectWorkflowAdmissionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
+        Residue<ProjectProcessAssetContributionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
+        Residue<ProjectWorkAssignmentHistoryRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
+        Residue<SchedulerFireAdmissionRecord>(ProjectTransferTargetStateArea.SchedulerPlanner, SemanticProjectStateKind.DynamicInput),
+        Residue<ProjectCreationReservationRecord>(ProjectTransferTargetStateArea.Projects, SemanticProjectStateKind.RootAggregate),
         Residue<ProjectWorkAssignmentRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedScope),
         Residue<Project>(
             ProjectTransferTargetStateArea.Projects,
@@ -65,7 +71,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests {
     public void Conventionally_project_related_entities_have_one_lock_owner() {
         using var dbContext = CreateDbContext();
         var participants = CreateParticipants();
-        _ = new ProjectTransferTargetStateGuard(participants);
+        _ = new ProjectTransferTargetStateGuard(participants, DatabaseTransferTestSupport.Create());
         var lockOwners = BuildLockOwners(participants);
 
         var projectEntities = dbContext.Model.GetEntityTypes()
@@ -177,7 +183,9 @@ public sealed class ProjectTransferTargetStateArchitectureTests {
                 !type.IsAbstract &&
                 !type.IsInterface &&
                 typeof(IProjectTransferTargetStateParticipant).IsAssignableFrom(type))
-            .Select(type => Activator.CreateInstance(type, nonPublic: true))
+            .Select(type => Activator.CreateInstance(type,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+                binder: null, args: [new ProjectTransferTargetInspectionRunner()], culture: null))
             .Select(instance => Assert.IsAssignableFrom<IProjectTransferTargetStateParticipant>(instance))
             .OrderBy(participant => participant.Area)
             .ToArray();

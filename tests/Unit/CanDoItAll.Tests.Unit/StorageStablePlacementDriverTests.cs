@@ -14,7 +14,7 @@ public sealed class StorageStablePlacementDriverTests {
         using var http = new HttpClient(handler);
         var transport = new IpfsHttpStorageTransport(http);
         var storage = new StorageCatalogRecord { EndpointOrRoot = "https://ipfs.example.test/api/v0/" };
-        var result = await transport.AddStableAsync(storage, null, "proof.txt", "bounded content"u8.ToArray(), mode, CancellationToken.None);
+        var result = await transport.AddStableAsync(storage.ToDriverInput(), null, "proof.txt", "bounded content"u8.ToArray(), mode, CancellationToken.None);
         Assert.Equal("bafy-test-content", result.ContentId);
         Assert.NotNull(handler.Uri);
         Assert.Equal("/api/v0/add", handler.Uri.AbsolutePath);
@@ -40,7 +40,7 @@ public sealed class StorageStablePlacementDriverTests {
         using var handler = new CaptureHandler();
         using var http = new HttpClient(handler);
         var transport = new IpfsHttpStorageTransport(http);
-        await transport.AddAsync(new() { EndpointOrRoot = "https://ipfs.example.test/" }, null, "ordinary.txt",
+        await transport.AddAsync((new StorageCatalogRecord() { EndpointOrRoot = "https://ipfs.example.test/" }).ToDriverInput(), null, "ordinary.txt",
             "ordinary"u8.ToArray(), CancellationToken.None);
         Assert.Equal("/api/v0/add", handler.Uri!.AbsolutePath);
         Assert.Empty(handler.Uri.Query);
@@ -60,14 +60,14 @@ public sealed class StorageStablePlacementDriverTests {
             var intent = new StoragePlacementIntentId(Guid.NewGuid());
             var request = new StorageWriteRequest("artifact.txt", "text/plain", "new content"u8.ToArray(),
                 StorageUsagePurpose.ProjectAsset, RelativePathHint: "artifact.txt");
-            var target = await driver.PrepareStableTargetAsync(storage, intent, request, CancellationToken.None);
+            var target = await driver.PrepareStableTargetAsync(storage.ToDriverInput(), intent, request, CancellationToken.None);
             var original = matchingContent ? "new content" : "human content";
             await File.WriteAllTextAsync(Path.Combine(root, "artifact.txt"), original);
-            await Assert.ThrowsAnyAsync<IOException>(() => driver.WriteStableTargetAsync(storage, target, request, CancellationToken.None));
+            await Assert.ThrowsAnyAsync<IOException>(() => driver.WriteStableTargetAsync(storage.ToDriverInput(), target, request, CancellationToken.None));
             Assert.Equal(original, await File.ReadAllTextAsync(Path.Combine(root, "artifact.txt")));
             Assert.Equal(["artifact.txt", "artifact.txt.candoitall.lock"],
                 Directory.GetFiles(root).Select(Path.GetFileName).Order(StringComparer.Ordinal));
-            await Assert.ThrowsAsync<ArgumentException>(() => driver.PrepareStableTargetAsync(storage, intent,
+            await Assert.ThrowsAsync<ArgumentException>(() => driver.PrepareStableTargetAsync(storage.ToDriverInput(), intent,
                 request with { RelativePathHint = "../outside.txt" }, CancellationToken.None));
         } finally {
             Directory.Delete(root, recursive: true);

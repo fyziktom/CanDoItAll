@@ -1,6 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
-using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -16,8 +16,13 @@ internal sealed record ProjectTransferRecordCounts(
     int NodeReferences,
     int NodeLifecycleEvents,
     int CrossModuleMutations,
-    int ViewStates)
-{
+    int ViewStates,
+    int Retirements = 0,
+    int CreationReservations = 0,
+    int WorkflowContributions = 0,
+    int WorkflowAdmissions = 0,
+    int WorkAssignmentHistory = 0,
+    int ProcessAssetContributions = 0) {
     public int Total =>
         Projects +
         Phases +
@@ -30,18 +35,17 @@ internal sealed record ProjectTransferRecordCounts(
         NodeReferences +
         NodeLifecycleEvents +
         CrossModuleMutations +
-        ViewStates;
+        ViewStates + Retirements + CreationReservations + WorkflowContributions + WorkflowAdmissions + WorkAssignmentHistory + ProcessAssetContributions;
 }
 
-internal sealed class ProjectTransferDataSet
-{
-    public List<Project> Projects { get; set; } = [];
+internal sealed class ProjectTransferDataSet {
+    public List<ProjectTransferProject> Projects { get; set; } = [];
 
-    public List<ProjectPhase> Phases { get; set; } = [];
+    public List<ProjectTransferPhase> Phases { get; set; } = [];
 
-    public List<ProjectOptionSelection> Options { get; set; } = [];
+    public List<ProjectTransferOption> Options { get; set; } = [];
 
-    public List<ProjectHierarchyLink> HierarchyLinks { get; set; } = [];
+    public List<ProjectTransferHierarchy> HierarchyLinks { get; set; } = [];
 
     public List<ProjectObjectRecord> Objects { get; set; } = [];
 
@@ -59,6 +63,18 @@ internal sealed class ProjectTransferDataSet
 
     public List<ProjectWorkbenchViewStateRecord> ViewStates { get; set; } = [];
 
+    public List<ProjectTransferRetirement> Retirements { get; set; } = [];
+
+    public List<ProjectTransferReservation> CreationReservations { get; set; } = [];
+
+    public List<ProjectWorkflowContributionRecord> WorkflowContributions { get; set; } = [];
+
+    public List<ProjectWorkflowAdmissionRecord> WorkflowAdmissions { get; set; } = [];
+
+    public List<ProjectWorkAssignmentTransferItem> WorkAssignmentHistory { get; set; } = [];
+
+    public List<ProjectProcessAssetContributionRecord> ProcessAssetContributions { get; set; } = [];
+
     public ProjectTransferRecordCounts Counts => new(
         Projects.Count,
         Phases.Count,
@@ -71,7 +87,39 @@ internal sealed class ProjectTransferDataSet
         NodeReferences.Count,
         NodeLifecycleEvents.Count,
         CrossModuleMutations.Count,
-        ViewStates.Count);
+        ViewStates.Count,
+        Retirements.Count,
+        CreationReservations.Count,
+        WorkflowContributions.Count,
+        WorkflowAdmissions.Count,
+        WorkAssignmentHistory.Count,
+        ProcessAssetContributions.Count);
+
+    public void PrepareForTargetImport(Guid sourceProfileId, Guid transferId) {
+        var provenance = new RetainedEvidenceImport(sourceProfileId, transferId);
+        Projects = JsonSerializer.Deserialize<List<ProjectTransferProject>>(JsonSerializer.SerializeToUtf8Bytes(Projects))
+            ?? throw new InvalidDataException("The project transfer payload is invalid.");
+        foreach (var row in Retirements) {
+            row.ImportedHistory = Imported(row.ImportedHistory);
+        }
+        foreach (var row in CreationReservations) {
+            row.ImportedHistory = Imported(row.ImportedHistory);
+        }
+        foreach (var row in WorkflowContributions) {
+            row.ImportedHistory = Imported(row.ImportedHistory);
+        }
+        foreach (var row in WorkflowAdmissions) {
+            row.ImportedHistory = Imported(row.ImportedHistory);
+        }
+
+        WorkAssignmentHistory = WorkAssignmentHistory.Select(item => item with { ImportedHistory = Imported(item.ImportedHistory) }).ToList();
+        foreach (var row in ProcessAssetContributions) {
+            row.ImportedHistory = Imported(row.ImportedHistory);
+        }
+
+        RetainedEvidenceImport Imported(RetainedEvidenceImport? previous) => previous is null
+            ? provenance : new(sourceProfileId, transferId, previous);
+    }
 
     public bool HasStorageBindings => NodeBindings.Any(binding =>
         !string.IsNullOrWhiteSpace(binding.MediaRelativePath) ||
@@ -79,11 +127,9 @@ internal sealed class ProjectTransferDataSet
 
     public bool HasCrossModuleMutations => CrossModuleMutations.Count > 0;
 
-    public void PrepareForPackageExport()
-    {
+    public void PrepareForPackageExport() {
         if (CrossModuleMutations.Any(mutation =>
-                mutation.Status != ProjectCrossModuleMutationStatus.Completed))
-        {
+                mutation.Status != ProjectCrossModuleMutationStatus.Completed)) {
             throw new InvalidDataException(
                 "Project package export cannot capture pending or failed cross-module recovery work. Complete or resolve it before exporting.");
         }
@@ -91,17 +137,14 @@ internal sealed class ProjectTransferDataSet
         CrossModuleMutations.Clear();
     }
 
-    public void ValidatePackageImportSafety()
-    {
-        if (CrossModuleMutations.Count > 0)
-        {
+    public void ValidatePackageImportSafety() {
+        if (CrossModuleMutations.Count > 0) {
             throw new InvalidDataException(
                 "Project package v2 cannot import executable cross-module mutation records.");
         }
     }
 
-    public void ValidateForImport()
-    {
+    public void ValidateForImport() {
         ValidateUniqueIds(Projects, item => item.Id, "project");
         ValidateUniqueIds(Phases, item => item.Id, "project phase");
         ValidateUniqueIds(Options, item => item.Id, "project option");
@@ -114,6 +157,19 @@ internal sealed class ProjectTransferDataSet
         ValidateUniqueIds(NodeLifecycleEvents, item => item.Id, "project node lifecycle event");
         ValidateUniqueIds(CrossModuleMutations, item => item.Id, "project cross-module mutation");
         ValidateUniqueIds(ViewStates, item => item.Id, "project view state");
+        ValidateUniqueIds(Retirements, item => item.LifetimeId, "project retirement lifetime");
+        ValidateUniqueIds(CreationReservations, item => item.Id, "project creation reservation");
+        ValidateUniqueIds(CreationReservations, item => item.LifetimeId, "reserved project lifetime");
+        ValidateUniqueIds(WorkflowAdmissions, item => item.IntentId, "workflow admission intent");
+        ValidateUniqueIds(WorkflowAdmissions, item => item.RunId, "workflow admission run");
+        ValidateUniqueIds(WorkAssignmentHistory, item => item.EvidenceId, "Work assignment history evidence");
+        ValidateUniqueIds(ProcessAssetContributions, item => item.IntentId, "Process asset contribution intent");
+        ValidateUniqueIds(ProcessAssetContributions, item => item.NativeObjectId, "Process asset native identity");
+        ValidateUniqueIds(ProcessAssetContributions, item => item.StorageIntentId, "Process asset Storage intent");
+        foreach (var item in WorkAssignmentHistory) {
+            _ = ProjectWorkAssignmentHistoryRecord.Validate(item);
+        }
+        ValidateRetainedHistory();
 
         var projectIds = Projects.Select(item => item.Id).ToHashSet();
         ValidateProjectReferences(Phases, item => item.ProjectId, projectIds, "project phase");
@@ -126,15 +182,13 @@ internal sealed class ProjectTransferDataSet
         ValidateProjectReferences(ViewStates, item => item.ProjectId, projectIds, "project view state");
 
         var hierarchyEdges = new HashSet<(Guid ParentId, Guid ChildId)>();
-        foreach (var hierarchyLink in HierarchyLinks)
-        {
+        foreach (var hierarchyLink in HierarchyLinks) {
             if (!projectIds.Contains(hierarchyLink.ParentProjectId) ||
                 !projectIds.Contains(hierarchyLink.ChildProjectId) ||
                 hierarchyLink.ParentProjectId == hierarchyLink.ChildProjectId ||
                 !hierarchyEdges.Add((
                     hierarchyLink.ParentProjectId,
-                    hierarchyLink.ChildProjectId)))
-            {
+                    hierarchyLink.ChildProjectId))) {
                 throw InvalidReference("project hierarchy link", hierarchyLink.Id);
             }
         }
@@ -142,32 +196,27 @@ internal sealed class ProjectTransferDataSet
 
         var objectsById = Objects.ToDictionary(item => item.Id);
         var objectKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var projectObject in Objects)
-        {
+        foreach (var projectObject in Objects) {
             if (string.IsNullOrWhiteSpace(projectObject.NodeKey) ||
                 !objectKeys.Add(ToNodeIdentity(
                     projectObject.ProjectId,
-                    projectObject.NodeKey)))
-            {
+                    projectObject.NodeKey))) {
                 throw new InvalidDataException(
                     $"Project package object '{projectObject.Id:D}' has an empty or duplicate node key.");
             }
         }
 
-        foreach (var projectObject in Objects.Where(item => !string.IsNullOrWhiteSpace(item.ParentNodeKey)))
-        {
+        foreach (var projectObject in Objects.Where(item => !string.IsNullOrWhiteSpace(item.ParentNodeKey))) {
             if (!IsCanonicalProjectRoot(projectObject.ProjectId, projectObject.ParentNodeKey!) &&
                 !objectKeys.Contains(ToNodeIdentity(
                     projectObject.ProjectId,
-                    projectObject.ParentNodeKey!)))
-            {
+                    projectObject.ParentNodeKey!))) {
                 throw InvalidReference("project object parent", projectObject.Id);
             }
         }
         ValidateNodeHierarchyIsAcyclic();
 
-        foreach (var objectLink in ObjectLinks)
-        {
+        foreach (var objectLink in ObjectLinks) {
             if (!objectKeys.Contains(ToNodeIdentity(
                     objectLink.ProjectId,
                     objectLink.SourceNodeKey)) ||
@@ -177,18 +226,15 @@ internal sealed class ProjectTransferDataSet
                 string.Equals(
                     objectLink.SourceNodeKey,
                     objectLink.TargetNodeKey,
-                    StringComparison.OrdinalIgnoreCase))
-            {
+                    StringComparison.OrdinalIgnoreCase)) {
                 throw InvalidReference("project object link", objectLink.Id);
             }
         }
 
-        foreach (var layout in ProjectionLayouts)
-        {
+        foreach (var layout in ProjectionLayouts) {
             if (!objectKeys.Contains(ToNodeIdentity(
                     layout.ProjectId,
-                    layout.NodeKey)))
-            {
+                    layout.NodeKey))) {
                 throw InvalidReference("project projection layout", layout.Id);
             }
         }
@@ -197,157 +243,41 @@ internal sealed class ProjectTransferDataSet
         ValidateObjectReferences(NodeReferences, item => item.ProjectObjectId, objectsById, "project node reference");
         ValidateObjectReferences(NodeLifecycleEvents, item => item.ProjectObjectId, objectsById, "project node lifecycle event");
 
-        if (NodeBindings.Select(item => item.ProjectObjectId).Distinct().Count() != NodeBindings.Count)
-        {
+        if (NodeBindings.Select(item => item.ProjectObjectId).Distinct().Count() != NodeBindings.Count) {
             throw new InvalidDataException("Project package contains duplicate node bindings for one project object.");
         }
     }
 
-    public static async Task EnsureSchemasAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        await ProjectsSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-    }
-
-    public static async Task<ProjectTransferRecordCounts> CountAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        await EnsureSchemasAsync(dbContext, cancellationToken);
-
-        return new ProjectTransferRecordCounts(
-            await dbContext.Set<Project>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectPhase>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectOptionSelection>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectHierarchyLink>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectObjectRecord>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectObjectLinkRecord>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectStructureProjectionLayoutRecord>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectNodeBindingRecord>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectNodeReferenceRecord>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectNodeLifecycleEventRecord>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectCrossModuleMutationRecord>().CountAsync(cancellationToken),
-            await dbContext.Set<ProjectWorkbenchViewStateRecord>().CountAsync(cancellationToken));
-    }
-
-    public static async Task<ProjectTransferDataSet> LoadAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        await EnsureSchemasAsync(dbContext, cancellationToken);
-
-        return new ProjectTransferDataSet
-        {
-            Projects = await LoadTableAsync<Project>(dbContext, cancellationToken),
-            Phases = await LoadTableAsync<ProjectPhase>(dbContext, cancellationToken),
-            Options = await LoadTableAsync<ProjectOptionSelection>(dbContext, cancellationToken),
-            HierarchyLinks = await LoadTableAsync<ProjectHierarchyLink>(dbContext, cancellationToken),
-            Objects = await LoadTableAsync<ProjectObjectRecord>(dbContext, cancellationToken),
-            ObjectLinks = await LoadTableAsync<ProjectObjectLinkRecord>(dbContext, cancellationToken),
-            ProjectionLayouts = await LoadTableAsync<ProjectStructureProjectionLayoutRecord>(dbContext, cancellationToken),
-            NodeBindings = await LoadTableAsync<ProjectNodeBindingRecord>(dbContext, cancellationToken),
-            NodeReferences = await LoadTableAsync<ProjectNodeReferenceRecord>(dbContext, cancellationToken),
-            NodeLifecycleEvents = await LoadTableAsync<ProjectNodeLifecycleEventRecord>(dbContext, cancellationToken),
-            CrossModuleMutations = await LoadTableAsync<ProjectCrossModuleMutationRecord>(dbContext, cancellationToken),
-            ViewStates = await LoadTableAsync<ProjectWorkbenchViewStateRecord>(dbContext, cancellationToken)
-        };
-    }
-
-    public static async Task ClearAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        await EnsureSchemasAsync(dbContext, cancellationToken);
-
-        await RemoveAndSaveAsync<ProjectNodeReferenceRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectNodeBindingRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectNodeLifecycleEventRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectObjectLinkRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectStructureProjectionLayoutRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectCrossModuleMutationRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectWorkbenchViewStateRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectObjectRecord>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectHierarchyLink>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectOptionSelection>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<ProjectPhase>(dbContext, cancellationToken);
-        await RemoveAndSaveAsync<Project>(dbContext, cancellationToken);
-    }
-
-    public static async Task SaveAsync(
-        AppDbContext dbContext,
-        ProjectTransferDataSet dataSet,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(dataSet);
-
-        await EnsureSchemasAsync(dbContext, cancellationToken);
-
-        await AddAndSaveAsync(dbContext, dataSet.Projects, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.Phases, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.Options, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.HierarchyLinks, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.Objects, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.ObjectLinks, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.ProjectionLayouts, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.NodeBindings, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.NodeReferences, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.NodeLifecycleEvents, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.CrossModuleMutations, cancellationToken);
-        await AddAndSaveAsync(dbContext, dataSet.ViewStates, cancellationToken);
-    }
-
-    private static Task<List<T>> LoadTableAsync<T>(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-        where T : class
-    {
-        return dbContext.Set<T>()
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-    }
-
-    private static async Task AddAndSaveAsync<T>(
-        AppDbContext dbContext,
-        IReadOnlyCollection<T> entities,
-        CancellationToken cancellationToken)
-        where T : class
-    {
-        if (entities.Count == 0)
-        {
-            return;
+    private void ValidateRetainedHistory() {
+        if (ProcessAssetContributions.Any(row => row.DatabaseProfileId == Guid.Empty || row.ProjectId == Guid.Empty ||
+                row.ProjectLifetimeId == Guid.Empty || row.SourceExecutionRunId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(row.PlanJson) || string.IsNullOrWhiteSpace(row.PlanFingerprint) ||
+                row.PlanFingerprint.Length > 64 || row.MaterializedRequestJson is null || row.MaterializedFingerprint is null ||
+                row.MaterializedFingerprint.Length > 64 || row.NodeJson is null || row.ReceiptJson is null) ||
+            Retirements.Any(row => row.ProjectId == Guid.Empty) ||
+            CreationReservations.Any(row => row.DatabaseProfileId == Guid.Empty || row.ProjectId == Guid.Empty ||
+                row.RequesterId == Guid.Empty || row.ParentProjectId.HasValue != row.ParentLifetimeId.HasValue ||
+                row.ParentProjectId == Guid.Empty || row.ParentLifetimeId == Guid.Empty) ||
+            WorkflowContributions.Any(row => row.RunId == Guid.Empty || row.ProjectId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(row.OccurrencePath) || row.Slot < 0) ||
+            WorkflowAdmissions.Any(row => row.ProjectId == Guid.Empty || row.NativeNodeId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(row.NodeId) || row.Sequence <= 0)) {
+            throw new InvalidDataException("The project package contains invalid retained history identities.");
         }
-
-        await dbContext.Set<T>().AddRangeAsync(entities, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private static async Task RemoveAndSaveAsync<T>(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-        where T : class
-    {
-        var entities = await dbContext.Set<T>().ToListAsync(cancellationToken);
-        if (entities.Count == 0)
-        {
-            return;
+        if (WorkflowContributions.Select(row => (row.RunId, row.OccurrencePath, row.Slot)).Distinct().Count() != WorkflowContributions.Count ||
+            WorkflowAdmissions.Select(row => (row.ProjectId, row.NodeId, row.Sequence)).Distinct().Count() != WorkflowAdmissions.Count) {
+            throw new InvalidDataException("The project package contains duplicate retained history identities.");
         }
-
-        dbContext.RemoveRange(entities);
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static void ValidateUniqueIds<T>(
         IReadOnlyCollection<T> rows,
         Func<T, Guid> idSelector,
-        string label)
-    {
+        string label) {
         var ids = new HashSet<Guid>();
-        foreach (var row in rows)
-        {
+        foreach (var row in rows) {
             var id = idSelector(row);
-            if (id == Guid.Empty || !ids.Add(id))
-            {
+            if (id == Guid.Empty || !ids.Add(id)) {
                 throw new InvalidDataException(
                     $"Project package contains an empty or duplicate {label} id.");
             }
@@ -358,13 +288,10 @@ internal sealed class ProjectTransferDataSet
         IReadOnlyCollection<T> rows,
         Func<T, Guid> projectIdSelector,
         IReadOnlySet<Guid> projectIds,
-        string label)
-    {
-        foreach (var row in rows)
-        {
+        string label) {
+        foreach (var row in rows) {
             var projectId = projectIdSelector(row);
-            if (!projectIds.Contains(projectId))
-            {
+            if (!projectIds.Contains(projectId)) {
                 throw new InvalidDataException(
                     $"Project package {label} references missing project '{projectId:D}'.");
             }
@@ -375,13 +302,10 @@ internal sealed class ProjectTransferDataSet
         IReadOnlyCollection<T> rows,
         Func<T, Guid> objectIdSelector,
         IReadOnlyDictionary<Guid, ProjectObjectRecord> objectsById,
-        string label)
-    {
-        foreach (var row in rows)
-        {
+        string label) {
+        foreach (var row in rows) {
             var objectId = objectIdSelector(row);
-            if (!objectsById.ContainsKey(objectId))
-            {
+            if (!objectsById.ContainsKey(objectId)) {
                 throw new InvalidDataException(
                     $"Project package {label} references missing project object '{objectId:D}'.");
             }
@@ -400,16 +324,14 @@ internal sealed class ProjectTransferDataSet
             ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
             StringComparison.OrdinalIgnoreCase);
 
-    private void ValidateProjectHierarchyIsAcyclic(IReadOnlySet<Guid> projectIds)
-    {
+    private void ValidateProjectHierarchyIsAcyclic(IReadOnlySet<Guid> projectIds) {
         var childrenByParent = projectIds.ToDictionary(
             projectId => projectId,
             _ => new List<Guid>());
         var incomingEdges = projectIds.ToDictionary(
             projectId => projectId,
             _ => 0);
-        foreach (var link in HierarchyLinks)
-        {
+        foreach (var link in HierarchyLinks) {
             childrenByParent[link.ParentProjectId].Add(link.ChildProjectId);
             incomingEdges[link.ChildProjectId]++;
         }
@@ -418,39 +340,31 @@ internal sealed class ProjectTransferDataSet
             .Where(item => item.Value == 0)
             .Select(item => item.Key));
         var visited = 0;
-        while (ready.TryDequeue(out var projectId))
-        {
+        while (ready.TryDequeue(out var projectId)) {
             visited++;
-            foreach (var childProjectId in childrenByParent[projectId])
-            {
+            foreach (var childProjectId in childrenByParent[projectId]) {
                 incomingEdges[childProjectId]--;
-                if (incomingEdges[childProjectId] == 0)
-                {
+                if (incomingEdges[childProjectId] == 0) {
                     ready.Enqueue(childProjectId);
                 }
             }
         }
 
-        if (visited != projectIds.Count)
-        {
+        if (visited != projectIds.Count) {
             throw new InvalidDataException(
                 "Project package hierarchy contains a cycle.");
         }
     }
 
-    private void ValidateNodeHierarchyIsAcyclic()
-    {
-        foreach (var projectObjects in Objects.GroupBy(item => item.ProjectId))
-        {
+    private void ValidateNodeHierarchyIsAcyclic() {
+        foreach (var projectObjects in Objects.GroupBy(item => item.ProjectId)) {
             var parentByNode = projectObjects.ToDictionary(
                 item => item.NodeKey,
                 item => item.ParentNodeKey,
                 StringComparer.OrdinalIgnoreCase);
             var completed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var nodeKey in parentByNode.Keys)
-            {
-                if (completed.Contains(nodeKey))
-                {
+            foreach (var nodeKey in parentByNode.Keys) {
+                if (completed.Contains(nodeKey)) {
                     continue;
                 }
 
@@ -459,10 +373,8 @@ internal sealed class ProjectTransferDataSet
                 string? currentNodeKey = nodeKey;
                 while (!string.IsNullOrWhiteSpace(currentNodeKey) &&
                        !IsCanonicalProjectRoot(projectObjects.Key, currentNodeKey) &&
-                       !completed.Contains(currentNodeKey))
-                {
-                    if (!currentPath.Add(currentNodeKey))
-                    {
+                       !completed.Contains(currentNodeKey)) {
+                    if (!currentPath.Add(currentNodeKey)) {
                         throw new InvalidDataException(
                             "Project package node parent graph contains a cycle.");
                     }

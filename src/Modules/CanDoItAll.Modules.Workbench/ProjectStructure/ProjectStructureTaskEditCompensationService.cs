@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +15,10 @@ public sealed class ProjectStructureTaskEditCompensationService(
         string taskNodeId,
         ProjectStructureTaskEditState expectedCurrentState,
         ProjectStructureTaskEditState stateToRestore,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
+        var expected = ProjectAssignmentAdmission.Require(projectId, mutationOwner?.ExpectedProjectAdmission);
         ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
         ArgumentNullException.ThrowIfNull(expectedCurrentState);
         ArgumentNullException.ThrowIfNull(stateToRestore);
@@ -29,7 +32,7 @@ public sealed class ProjectStructureTaskEditCompensationService(
             await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-                cancellationToken);
+                cancellationToken, [expected], mutationOwner?.ProcessMutationAdmission, mutationOwner?.AgentMutationAdmission);
         var task = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(
                 item =>

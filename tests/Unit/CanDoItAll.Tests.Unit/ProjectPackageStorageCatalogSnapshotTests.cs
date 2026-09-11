@@ -1,12 +1,11 @@
 using CanDoItAll.Infrastructure.Storage;
-using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectPackageStorageCatalogSnapshotTests
 {
     [Fact]
-    public async Task Snapshot_exposes_exact_storage_and_rule_instances()
+    public async Task Snapshot_exposes_detached_exact_metadata_and_retains_owner_configuration()
     {
         var storage = CreateStorage(isSystemDefault: false);
         var rule = new StorageRoutingRule
@@ -14,7 +13,7 @@ public sealed class ProjectPackageStorageCatalogSnapshotTests
             Id = Guid.NewGuid(),
             PreferredStorageId = storage.Id
         };
-        var snapshot = new ProjectPackageStorageCatalogSnapshot(
+        var snapshot = new StorageProfileTransferCatalogSnapshot(
             [storage],
             [rule]);
 
@@ -22,9 +21,11 @@ public sealed class ProjectPackageStorageCatalogSnapshotTests
         var listedRules = await snapshot.ListRulesAsync();
         var resolved = await snapshot.GetAsync(storage.Id);
 
-        Assert.Same(storage, Assert.Single(listedStorages));
-        Assert.Same(rule, Assert.Single(listedRules));
-        Assert.Same(storage, resolved);
+        Assert.Equal(storage.ToSnapshot(), Assert.Single(listedStorages));
+        Assert.Equal(rule.ToSnapshot(), Assert.Single(listedRules));
+        Assert.Equal(storage.ToSnapshot(), resolved);
+        Assert.Equal(storage.ConfigJson, (await snapshot.GetDriverAsync(storage.Id))!.OriginalConfigurationJson);
+        Assert.Same(rule, Assert.Single(await snapshot.ListRoutingRuleRecordsAsync()));
         Assert.Null(await snapshot.GetAsync(Guid.NewGuid()));
     }
 
@@ -33,13 +34,13 @@ public sealed class ProjectPackageStorageCatalogSnapshotTests
     {
         var nonDefaultFileSystem = CreateStorage(isSystemDefault: false);
         var systemDefaultFileSystem = CreateStorage(isSystemDefault: true);
-        var snapshot = new ProjectPackageStorageCatalogSnapshot(
+        var snapshot = new StorageProfileTransferCatalogSnapshot(
             [nonDefaultFileSystem, systemDefaultFileSystem],
             []);
 
         var resolved = await snapshot.EnsureBootstrapFileSystemStorageAsync();
 
-        Assert.Same(systemDefaultFileSystem, resolved);
+        Assert.Equal(systemDefaultFileSystem.ToDriverInput(), resolved);
     }
 
     [Fact]
@@ -51,16 +52,16 @@ public sealed class ProjectPackageStorageCatalogSnapshotTests
             Id = Guid.NewGuid(),
             PreferredStorageId = storage.Id
         };
-        var snapshot = new ProjectPackageStorageCatalogSnapshot(
+        var snapshot = new StorageProfileTransferCatalogSnapshot(
             [storage],
             [rule]);
 
         var saveStorage = await Assert.ThrowsAsync<NotSupportedException>(
-            () => snapshot.SaveAsync(storage));
+            () => snapshot.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(storage.ToSnapshot())));
         var deleteStorage = await Assert.ThrowsAsync<NotSupportedException>(
             () => snapshot.DeleteAsync(storage.Id));
         var saveRule = await Assert.ThrowsAsync<NotSupportedException>(
-            () => snapshot.SaveRuleAsync(rule));
+            () => snapshot.SaveRuleAsync(StorageRoutingRuleSaveRequest.FromSnapshot(rule.ToSnapshot())));
 
         Assert.Contains("read-only", saveStorage.Message, StringComparison.Ordinal);
         Assert.Equal(saveStorage.Message, deleteStorage.Message);

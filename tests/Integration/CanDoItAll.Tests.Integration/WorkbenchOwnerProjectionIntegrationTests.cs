@@ -26,16 +26,16 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var project = new Project { Name = "Projection owner" };
         var foreignProject = new Project { Name = "Foreign projection owner" };
-        var link = CreateResource(project.Id, "A legacy link");
-        var webhook = CreateResource(project.Id, "B webhook", WebhookResourceConnectorPlugin.PluginKey);
-        var hidden = CreateResource(project.Id, "C hidden");
-        var newerPlan = CreatePlan(project.Id, "Newer plan", CreatedAt.AddHours(2));
-        var olderPlan = CreatePlan(project.Id, "Older plan", CreatedAt.AddHours(1));
+        var link = CreateResource(project, "A legacy link");
+        var webhook = CreateResource(project, "B webhook", WebhookResourceConnectorPlugin.PluginKey);
+        var hidden = CreateResource(project, "C hidden");
+        var newerPlan = CreatePlan(project, "Newer plan", CreatedAt.AddHours(2));
+        var olderPlan = CreatePlan(project, "Older plan", CreatedAt.AddHours(1));
         await using (var schema = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>()
             .CreateDbContextAsync()) {
             schema.AddRange(project, foreignProject, link, webhook, hidden, newerPlan, olderPlan,
-                CreateResource(foreignProject.Id, "0 Foreign resource"),
-                CreatePlan(foreignProject.Id, "Foreign plan", CreatedAt.AddHours(3)),
+                CreateResource(foreignProject, "0 Foreign resource"),
+                CreatePlan(foreignProject, "Foreign plan", CreatedAt.AddHours(3)),
                 CreatePlan(null, "Unassigned plan", CreatedAt.AddHours(4)));
             await schema.SaveChangesAsync();
         }
@@ -126,11 +126,11 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var project = new Project { Name = "Scope owner" };
         var foreignProject = new Project { Name = "Other scope owner" };
-        var resource = CreateResource(project.Id, "Scoped webhook", WebhookResourceConnectorPlugin.PluginKey);
-        var legacy = CreateResource(project.Id, "Scoped legacy link");
-        var plan = CreatePlan(project.Id, "Scoped plan", CreatedAt);
+        var resource = CreateResource(project, "Scoped webhook", WebhookResourceConnectorPlugin.PluginKey);
+        var legacy = CreateResource(project, "Scoped legacy link");
+        var plan = CreatePlan(project, "Scoped plan", CreatedAt);
         var unassigned = CreatePlan(null, "Unassigned plan", CreatedAt);
-        var shadowed = CreateResource(foreignProject.Id, "Canonical shadow");
+        var shadowed = CreateResource(foreignProject, "Canonical shadow");
         var canonical = new ProjectObjectRecord {
             ProjectId = project.Id,
             NodeKey = $"resource:{shadowed.Id}",
@@ -183,7 +183,7 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         await using (var schema = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>()
             .CreateDbContextAsync()) {
             schema.AddRange(projects);
-            schema.AddRange(projects.Select((project, index) => CreateResource(project.Id, $"Catalog resource {index:D4}")));
+            schema.AddRange(projects.Select((project, index) => CreateResource(project, $"Catalog resource {index:D4}")));
             schema.AddRange(CreateResource(missingProjectId, "Missing project resource"),
                 CreateResource(Guid.Empty, "Unassigned resource"));
             await schema.SaveChangesAsync();
@@ -217,8 +217,8 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
             [new ProjectResourceProjectionContributor(resources), new TestPlanProjectionContributor(testPlans)],
             new SystemClock(), coordination);
         var project = new Project { Name = "Serializable projection owner" };
-        var resource = CreateResource(project.Id, "Original resource");
-        var plan = CreatePlan(project.Id, "Original plan", CreatedAt);
+        var resource = CreateResource(project, "Original resource");
+        var plan = CreatePlan(project, "Original plan", CreatedAt);
         await using (var schema = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>()
             .CreateDbContextAsync()) {
             schema.AddRange(project, resource, plan);
@@ -235,8 +235,8 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         await Assert.ThrowsAsync<InvalidOperationException>(() => resources.ListProjectProjectionFactsForMutationAsync(project.Id));
         await Assert.ThrowsAsync<InvalidOperationException>(() => testPlans.ListProjectProjectionFactsForMutationAsync(project.Id));
 
-        var laterResource = CreateResource(project.Id, "Inserted after snapshot");
-        var laterPlan = CreatePlan(project.Id, "Plan inserted after snapshot", CreatedAt.AddHours(1));
+        var laterResource = CreateResource(project, "Inserted after snapshot");
+        var laterPlan = CreatePlan(project, "Plan inserted after snapshot", CreatedAt.AddHours(1));
         await using (var independent = await application.Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>()
             .CreateDbContextAsync()) {
             (await independent.Set<ProjectResource>().SingleAsync(item => item.Id == resource.Id)).Name = "Committed resource edit";
@@ -305,8 +305,12 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         });
     }
 
-    private static ProjectResource CreateResource(Guid projectId, string name, string connectorKey = "") => new() {
+    private static ProjectResource CreateResource(Project project, string name, string connectorKey = "")
+        => CreateResource(project.Id, name, connectorKey, project.LifetimeId);
+
+    private static ProjectResource CreateResource(Guid projectId, string name, string connectorKey = "", Guid? lifetimeId = null) => new() {
         ProjectId = projectId,
+        ProjectLifetimeId = lifetimeId,
         Name = name,
         ResourceKind = connectorKey.Length == 0 ? ResourceKind.WebLink : null,
         ConnectorPluginKey = connectorKey,
@@ -319,8 +323,9 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         UpdatedAtUtc = CreatedAt.AddMinutes(1)
     };
 
-    private static TestPlan CreatePlan(Guid? projectId, string title, DateTimeOffset updatedAt) => new() {
-        ProjectId = projectId,
+    private static TestPlan CreatePlan(Project? project, string title, DateTimeOffset updatedAt) => new() {
+        ProjectId = project?.Id,
+        ProjectLifetimeId = project?.LifetimeId,
         Title = title,
         Phase = "Verification",
         CoverageGoal = "Preserve owner projection behavior",

@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class ImageGenerationAgentRuntimeToolProviderTests
+public sealed partial class ImageGenerationAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = new(JsonSerializerDefaults.Web);
 

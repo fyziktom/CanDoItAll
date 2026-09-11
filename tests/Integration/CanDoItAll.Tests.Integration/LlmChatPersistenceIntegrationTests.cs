@@ -2208,12 +2208,10 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(row => row.AttributionScopeKind, WorkspaceScopeKind.Project)
                 .SetProperty(row => row.AttributionScopeKey, attributedProjectId.ToString("D")));
-        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
-        var context = new DatabaseTransferContext(
+        var handler = CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
+        var context = new DatabaseTransferOperation(
             CreateProfile(source.ConnectionString),
             CreateProfile(target.ConnectionString),
-            sourceContext,
-            targetContext,
             ReplaceExisting: true);
 
         var result = await handler.TransferAsync(context);
@@ -2276,10 +2274,9 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         row.HistoryAttemptsJson = System.Text.Json.JsonSerializer.Serialize(new[] { HistoryAttemptEvidence.Create(foreign.Start(), foreign.Completion()) });
         await sourceContext.SaveChangesAsync();
         await using var targetContext = target.CreateDbContext();
-        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
+        var handler = CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
         await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(new(
-            CreateProfile(source.ConnectionString), CreateProfile(target.ConnectionString),
-            sourceContext, targetContext, true)));
+            CreateProfile(source.ConnectionString), CreateProfile(target.ConnectionString), true)));
         await using var verification = target.CreateDbContext();
         Assert.Empty(await verification.Set<LlmChatConversationRow>().ToListAsync());
         Assert.Empty(await verification.Set<HistoryOutboxRow>().ToListAsync());
@@ -2294,11 +2291,9 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var result = await new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), TimeProvider.System).TransferAsync(new DatabaseTransferContext(
+        var result = await CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System).TransferAsync(new DatabaseTransferOperation(
             CreateProfile(source.ConnectionString),
             CreateProfile(target.ConnectionString),
-            sourceContext,
-            targetContext,
             ReplaceExisting: true));
 
         Assert.True(result.Success, result.Message);
@@ -2331,12 +2326,10 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
-        var transfer = new DatabaseTransferContext(
+        var handler = CreateTransferHandler(new LlmChatTransferOptions(), TimeProvider.System);
+        var transfer = new DatabaseTransferOperation(
             CreateProfile(source.ConnectionString),
             CreateProfile(target.ConnectionString),
-            sourceContext,
-            targetContext,
             ReplaceExisting: true);
 
         await sourceContext.Set<LlmChatOperationRow>()
@@ -2408,18 +2401,16 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         _ = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions
+        var handler = CreateTransferHandler(new LlmChatTransferOptions
         {
             MaximumRecordsPerCollection = 1,
             MaximumTotalRecords = 9
         }, TimeProvider.System);
 
         var exception = await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(
-            new DatabaseTransferContext(
+            new DatabaseTransferOperation(
                 CreateProfile(source.ConnectionString),
                 CreateProfile(target.ConnectionString),
-                sourceContext,
-                targetContext,
                 ReplaceExisting: true)));
 
         Assert.Contains("definition revisions", exception.Message, StringComparison.Ordinal);
@@ -2459,18 +2450,13 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         });
         await using var sourceContext = source.CreateDbContext(interceptor);
         await using var targetContext = target.CreateDbContext();
-        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions
-        {
+        var transfer = new DatabaseTransferOperation(CreateProfile(source.ConnectionString), CreateProfile(target.ConnectionString), true);
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions {
             MaximumRecordsPerCollection = 2,
             MaximumTotalRecords = 12
-        }, TimeProvider.System);
-
-        var result = await handler.TransferAsync(new DatabaseTransferContext(
-            CreateProfile(source.ConnectionString),
-            CreateProfile(target.ConnectionString),
-            sourceContext,
-            targetContext,
-            ReplaceExisting: true));
+        }, TimeProvider.System, DatabaseTransferTestSupport.For(transfer, sourceContext, targetContext, sessions), sessions);
+        var result = await handler.TransferAsync(transfer);
 
         Assert.True(result.Success, result.Message);
         Assert.Equal(12, result.RecordsCopied);
@@ -2480,14 +2466,9 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         Assert.False(await targetContext.Set<LlmChatDefinitionRow>().AnyAsync(row => row.Id == concurrentDefinitionId));
 
         await using var weakAmbientTransaction = await sourceContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-        var ambientException = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(
-            new DatabaseTransferContext(
-                CreateProfile(source.ConnectionString),
-                CreateProfile(target.ConnectionString),
-                sourceContext,
-                targetContext,
-                ReplaceExisting: true)));
-        Assert.Contains("repeatable-read or serializable isolation", ambientException.Message, StringComparison.Ordinal);
+        await using var targetTransaction = await targetContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var ambientException = Assert.Throws<InvalidOperationException>(() => sessions.Begin(transfer, sourceContext, targetContext, out _));
+        Assert.Contains("source snapshot", ambientException.Message, StringComparison.Ordinal);
     }
 
     private static async Task<SeededGraph> SeedCompleteGraphAsync(LlmChatsPostgreSqlTestDatabase database)
@@ -2674,6 +2655,11 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         }
     }
 
+    private static LlmChatsDatabaseTransferHandler CreateTransferHandler(LlmChatTransferOptions options, TimeProvider clock) {
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        return new(options, clock, DatabaseTransferTestSupport.Create(sessions), sessions);
+    }
+
     private sealed record SeededGraph(Guid DefinitionId, Guid ConversationId, Guid OperationId);
 }
 
@@ -2812,5 +2798,6 @@ internal sealed class LlmChatsPostgreSqlTestDatabase : IAsyncDisposable
             TranscriptRevision = 1,
             EntryCount = 1
         };
+
 
 }

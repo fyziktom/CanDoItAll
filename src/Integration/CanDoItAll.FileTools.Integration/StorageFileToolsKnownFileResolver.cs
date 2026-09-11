@@ -3,7 +3,7 @@ using CanDoItAll.Infrastructure.Storage;
 namespace CanDoItAll.FileTools.Integration;
 
 internal sealed record ResolvedStorageKnownFile(
-    StorageCatalogRecord Storage,
+    StorageDriverInput Storage,
     StorageObjectReference Reference,
     string GrantOccurrenceId);
 
@@ -15,7 +15,7 @@ internal sealed class StorageFileToolsKnownFileResolver(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(occurrence);
-        StorageCatalogRecord? storage = await storageCatalog.GetAsync(
+        StorageDriverInput? storage = await storageCatalog.GetDriverAsync(
             occurrence.StorageId,
             cancellationToken);
         if (storage is null || !storage.IsEnabled)

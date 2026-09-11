@@ -48,11 +48,6 @@ public static class ToolInvocationWorkspacePathFacts {
 
     public static bool IsWorkspaceBoundaryTool(string toolName) => ExternalTargetManagedWorkspaceIsolationTools.Contains(toolName);
 
-    public static bool IsManagedProjectMediaPathForCurrentProject(string path, ToolInvocationPolicyContext context)
-        => string.Equals(context.ContextWorkspaceScopeKind, WorkspaceScopeKind.Project.ToString(), StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(context.ContextWorkspaceScopeKey)
-            && ManagedProjectMediaPath.IsForProject(path, context.ContextWorkspaceScopeKey);
-
     private static readonly Regex ExternalTargetAliasRegex = new(
         @"\bexternal-target/(?:v1/[0-9a-f]{24}|[A-Za-z])(?:/[^\s,;`""'\]\)}]+)?",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);

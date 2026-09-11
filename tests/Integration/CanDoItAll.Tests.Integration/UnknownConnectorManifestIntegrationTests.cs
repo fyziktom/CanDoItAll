@@ -74,6 +74,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
         var saveResourceResult = await resources.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
             Name = "Round trip resource",
             ConnectorPluginKey = UnknownManifestResourceConnectorPlugin.PluginKey,
             ConfigSchemaVersion = "1.0",

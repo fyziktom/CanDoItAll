@@ -100,6 +100,9 @@ public static class WorkflowLaunchIdempotencyRequestFactory
                 agent.Agent.Kind,
                 agent.Agent.SubjectId,
                 agent.RuntimeSessionId.Value),
+            WorkflowLaunchOrigin.ProcessToolInvocation tool => tool.Invocation,
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => new ProcessOriginScopePayload(
+                mapped.Dispatch.ProcessRun.Value, mapped.Dispatch.Assignment.Value),
             WorkflowLaunchOrigin.ProcessAssignment process => new ProcessOriginScopePayload(
                 process.ProcessRunId,
                 process.AssignmentId),

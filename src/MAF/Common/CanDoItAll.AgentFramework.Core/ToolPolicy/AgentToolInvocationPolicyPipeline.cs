@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.AgentFramework.Core;
 
 /// <summary>
@@ -14,6 +16,8 @@ public interface IToolInvocationPolicyContextContributor
     ToolInvocationPolicyContext Contribute(
         ToolInvocationPolicyContext context,
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope);
+
+    WorkspacePathScopeContribution? ContributeWorkspacePaths(WorkspaceScopeDescriptor scope) => null;
 }
 
 public sealed record ToolInvocationPolicyEvaluationResult(
@@ -51,13 +55,22 @@ public sealed class AgentToolInvocationPolicyPipeline
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var composedContext = context;
+        context.WorkspacePaths?.RequireScope(WorkspacePathScopeContribution.GetContextScope(context));
+        var composedContext = context with { WorkspacePaths = null };
         foreach (var contributor in contributors)
         {
+            var previousPaths = composedContext.WorkspacePaths;
             composedContext = contributor.Contribute(composedContext, auditScope)
                 ?? throw new InvalidOperationException(
                     $"Policy context contributor '{contributor.GetType().Name}' returned no context.");
+            composedContext.WorkspacePaths?.RequireScope(WorkspacePathScopeContribution.GetContextScope(composedContext));
+            if (previousPaths is not null && !ReferenceEquals(previousPaths, composedContext.WorkspacePaths)) {
+                throw new InvalidOperationException("A context contributor replaced an existing workspace path restriction.");
+            }
         }
+
+        WorkspacePathScopeContribution.RequireAvailable(
+            WorkspacePathScopeContribution.GetContextScope(composedContext), composedContext.WorkspacePaths);
 
         if (!string.IsNullOrWhiteSpace(auditScope?.ProcessRunId))
         {

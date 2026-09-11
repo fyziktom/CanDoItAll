@@ -80,11 +80,11 @@ containment and reparse inspection remains validation; destructive byte effects 
 
 after the authoritative commit under the separate managed-binding gate.
 
-The twelve-owner transfer context contract and other modules' direct project queries
+The twelve-owner target inspection uses data-only requests and actual owner contexts.
 
-remain dependent work. Canonical task identity and existing Agent recovery IDs are
+Other modules' remaining direct project queries are dependent work. Canonical task
 
-retained. Agent revocation fences lease transitions by the durable attempt generation;
+identity and existing Agent recovery IDs are retained. Agent revocation fences lease transitions by the durable attempt generation;
 
 this admission layer does not change that behavior.
 
@@ -96,8 +96,8 @@ without a cascading foreign key. Same-ID creation gets a new lifetime; saved v2 
 
 JSON omits the local lifetime field and preserves every existing payload property.
 
-Fresh inactive-profile import remains supported. Row transfer can preserve source
-fields because the admission also binds the target profile explicitly.
+Fresh inactive-profile import remains supported. Both row transfer and package
+import create fresh target lifetimes and keep legacy Agent binding eligibility false.
 
 LegacyAgentAccessBindingEligible records migration provenance for later Agent grant
 binding. Only projects present during the first lifetime upgrade are marked eligible;
@@ -171,8 +171,62 @@ remain Workbench ProjectObjects and their binding/reference records; this module
 
 not create a separate task table or identity.
 
+Ordinary managed Agent writers pass a Projects-owned source authorization containing
+exact captured project lifetimes. Its held source lease starts before the serializable
+owner transaction and is rechecked before commit, then released before callbacks.
+The adapter remains in Workbench; Projects does not interpret Agent configuration.
+Normal profile-bound factories remain independent.
+
+Creation uses the existing writer and can return an owner-issued runtime receipt.
+Compensation compares the original exact profile/project/lifetime/reservation and a
+versioned fingerprint of flushed Projects state, then asks the enlisted native owner
+for bounded evidence. Changed state, retained effects, an absent original receipt,
+or a recreated public ID prevents automatic deletion. No new table, serialized
+receipt admission or replay guarantee is introduced by the creation receipt.
+
+Governed Process writers use a separate Workbench implementation of the same
+Projects-owned source port. It retains the original Process project lifetime and
+validates its actual claim inside the owner transaction before ordered project
+locks; source and target lifetimes are checked again before commit. Root/child
+creation and hierarchy effects require saved source permissions and exact server
+reservations. Additional targets are limited to those created in the current tool
+session. The saved Process ceiling has a versioned preparation hash domain: legacy
+null payloads remain readable, but older binaries cannot safely read new records.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 
 - Current architecture: `docs/architecture/overview.md`
+
+### Assignment reference lifetimes
+
+`ProjectWriteAdmission` is the caller's captured database-profile/project/lifetime tuple. Assignment writers validate it through an explicit enlisted Projects read in their mutation transaction. `ProjectAssignmentReference` records nullable historical reference provenance for exact-row cleanup; it is not an actor grant. Batch cleanup requires bound source evidence and can finish after that incarnation retires. `CreateWithAdmissionAsync` returns the exact committed lifetime for opportunity conversion; compensation retains that receipt instead of looking up the public ID again.
+
+## Retained project transfer history
+
+Project packages now export v3 with an explicit PreserveAsHistory disposition and
+continue accepting v2. Retirements, creation reservations and Workbench Workflow
+contribution/admission records retain all original states and payloads, including
+evidence whose project or node has been deleted. Each imported row records typed
+source/transfer provenance; repeated import retains the prior provenance.
+
+Imported reservations cannot admit grants, be consumed or cancelled by native
+operations, or reserve a public ID in the target. A fresh target reservation uses a
+new operation and lifetime. Target replacement refuses retained history. The complete
+canonical migration adds nullable provenance fields and narrows the native active
+reservation index; owner contexts do not create schema.
+
+Versioned owner contributions for other modules and the existing cross-module
+recovery transfer policy remain dependent work. This project/Workbench history layer
+does not make source execution authority valid in the target profile.
+
+
+The profile-transfer contract now carries data-only operation and session identities.
+`ProjectsProfileTransferStore` alone maps the six Projects collections to their
+compatible package DTOs and writes them through `ProjectsDbContext`. Import ignores
+source live-lifetime fields and allocates a fresh target lifetime; retirement and
+reservation payloads remain explicitly imported history. The Workbench coordinator
+owns its native collections and uses the same actual target transaction. Preflight
+and final inspections remain separate; final checks run under all existing owner
+locks before any replacement.

@@ -6,7 +6,7 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class AgentCatalogReadLeaseTests {
+public sealed partial class AgentCatalogReadLeaseTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -98,6 +98,52 @@ public sealed class AgentCatalogReadLeaseTests {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.AcquireAgentReadLeaseAsync(agent.Id, cancelled.Token));
             await using var held = await store.AcquireAgentReadLeaseAsync(agent.Id);
             Assert.Equal(agent.Id, held.Agent!.Id);
+        } finally {
+            TestFileSystem.DeleteDirectoryWithRetry(root);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Capabilities_and_actor_share_one_immutable_locked_catalog_snapshot(bool independentWriter) {
+        var root = TestFileSystem.CreateTemporaryRoot("agent-capability-read-lease");
+        try {
+            var store = new FileSandboxWorkspaceStore(root);
+            var agent = await AddAgentAsync(store);
+            var item = new CapabilityCatalogItem(Guid.NewGuid(), CapabilityKind.Tool, "lease-proof", "Original capability",
+                "Original disclosure policy", string.Empty, "{}", CapabilityProofStatus.Verified, string.Empty, DateTimeOffset.UtcNow, false) {
+                Tags = new List<string> { "original" }
+            };
+            var written = await store.UpdateCatalogAsync(current => current with {
+                Capabilities = [.. current.Capabilities, item],
+                Agents = current.Agents.Select(actor => actor.Id == agent.Id ? actor with {
+                    Capabilities = [new(item.Id, item.Key, item.Kind, item.ProofStatus, item.LastVerifiedAtUtc, item.ProofNotes)]
+                } : actor).ToArray()
+            });
+            var writer = independentWriter ? new FileSandboxWorkspaceStore(root) : store;
+            await using var held = await store.AcquireAgentReadLeaseAsync(agent.Id);
+            Assert.Equal(written.CatalogDataRevision, held.Revision);
+            Assert.IsType<ImmutableArray<string>>(Assert.Single(held.Capabilities, capability => capability.Id == item.Id).Tags);
+            Assert.Equal(item.Id, Assert.Single(held.Agent!.Capabilities).CapabilityId);
+            using (var cancelled = new CancellationTokenSource(TimeSpan.FromMilliseconds(150))) {
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => writer.UpdateCatalogAsync(Change, cancelled.Token));
+            }
+            Assert.Equal("Original disclosure policy", Assert.Single(held.Capabilities, capability => capability.Id == item.Id).Description);
+            Assert.Single(held.Agent.Capabilities);
+            await held.DisposeAsync();
+            Assert.Throws<ObjectDisposedException>(() => held.Capabilities);
+            var changed = await writer.UpdateCatalogAsync(Change);
+            await using var next = await new FileSandboxWorkspaceStore(root).AcquireAgentReadLeaseAsync(agent.Id);
+            Assert.Equal(changed.CatalogDataRevision, next.Revision);
+            Assert.Empty(next.Agent!.Capabilities);
+            Assert.Equal("Revoked disclosure policy", Assert.Single(next.Capabilities, capability => capability.Id == item.Id).Description);
+
+            SandboxWorkspaceCatalog Change(SandboxWorkspaceCatalog current) => current with {
+                Agents = current.Agents.Select(actor => actor.Id == agent.Id ? actor with { Capabilities = [] } : actor).ToArray(),
+                Capabilities = current.Capabilities.Select(capability => capability.Id == item.Id
+                    ? capability with { Description = "Revoked disclosure policy", Tags = ["revoked"] } : capability).ToArray()
+            };
         } finally {
             TestFileSystem.DeleteDirectoryWithRetry(root);
         }

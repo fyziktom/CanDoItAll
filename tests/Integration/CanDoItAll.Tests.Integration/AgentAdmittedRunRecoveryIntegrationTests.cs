@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
-public sealed class AgentAdmittedRunRecoveryIntegrationTests {
+public sealed partial class AgentAdmittedRunRecoveryIntegrationTests {
     [Fact]
     public async Task Owner_recovery_reuses_original_run_input_context_and_activity_then_returns_the_saved_completion() {
         var context = new AgentRuntimeTransientContext("Original admitted context.",

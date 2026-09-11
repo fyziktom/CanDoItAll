@@ -202,7 +202,7 @@ internal sealed class MafRuntimeAgentFactory
                 runtimeOptions.FinalizerMode,
                 MafRuntimeSessionBuilder.ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
             chatOptions.AllowMultipleToolCalls = MafFinalizerDriver.ResolveAllowMultipleToolCalls(
-                capabilityState.Tools.Count > 0,
+                capabilityState.HasToolContracts,
                 ProviderFeatureService
                     .ResolveFeatureMatrixForModel(effectiveProvider, model)
                     .SupportsParallelFunctionTools,
@@ -238,7 +238,7 @@ internal sealed class MafRuntimeAgentFactory
             options.AIContextProviders = capabilityState.ContextProviders;
             var hasDurableToolProtocol = runtimeOptions.RequireDurableToolProtocol ||
                 runtimeOptions.AdmittedToolSession is not null &&
-                runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable && capabilityState.Tools.Count > 0;
+                runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable && capabilityState.HasToolContracts;
             options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider(hasDurableToolProtocol) : null;
             options.RequirePerServiceCallChatHistoryPersistence =
                 MafChatClientAgentOptionsFactory.ResolvePerServiceCallHistoryPersistence(
@@ -494,6 +494,9 @@ internal sealed class MafRuntimeAgentFactory
             .Select(tool => tool.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        approvalWrappedToolNames.UnionWith(capabilityState.ContextToolRegistrations
+            .SelectMany(registration => registration.Declarations)
+            .Where(declaration => declaration.RequiresApproval).Select(declaration => declaration.Name));
         var runtimeToolOwnershipByToolName = CreateRuntimeToolOwnershipByToolName(capabilityState);
         var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
         var logger = loggerFactory.CreateLogger<MafAgentRuntime>();

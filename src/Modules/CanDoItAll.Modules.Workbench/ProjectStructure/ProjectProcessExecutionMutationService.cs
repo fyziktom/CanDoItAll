@@ -1,4 +1,5 @@
 using System.Data;
+using System.Collections.Immutable;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -14,14 +15,28 @@ public sealed record ProjectProcessMutationAdmission {
     }
 
     public ProcessExecutionDispatchAuthority Dispatch { get; }
+    internal ImmutableArray<ProjectCreationReservation> CreatedProjects { get; private init; } = [];
     public ProjectWriteAdmission ProjectAdmission => Dispatch.SourceAuthority?.ProjectAdmission is { } project
         ? new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId)
         : throw new ProcessExecutionAuthorityMismatchException("The Process source has no original project lifetime.");
+
+    internal ProjectCreationReservation? FindCreatedProject(ProjectWriteAdmission project)
+        => CreatedProjects.SingleOrDefault(reservation => reservation.DatabaseProfileId == project.DatabaseProfileId &&
+            reservation.ProjectId == project.ProjectId && reservation.LifetimeId == project.LifetimeId);
+
+    internal ProjectProcessMutationAdmission WithCreatedProject(ProjectCreationReservation reservation) {
+        if (reservation.RequesterId != Dispatch.Evidence.ExecutorAgentId || reservation.DatabaseProfileId != ProjectAdmission.DatabaseProfileId ||
+                reservation.Id == Guid.Empty || reservation.ProjectId == Guid.Empty || reservation.LifetimeId == Guid.Empty ||
+                CreatedProjects.Any(saved => saved.ProjectId == reservation.ProjectId && saved != reservation)) {
+            throw new ProcessExecutionAuthorityMismatchException("The retained reservation does not belong to this Process executor and exact target.");
+        }
+        return CreatedProjects.Contains(reservation) ? this : this with { CreatedProjects = CreatedProjects.Add(reservation) };
+    }
 }
 
 public sealed record ProjectProcessExecutionAccess(ProcessExecutionDispatchAuthority Dispatch, bool CanRead, bool CanWrite);
 
-public sealed class ProjectProcessExecutionMutationService(
+public sealed partial class ProjectProcessExecutionMutationService(
     IProcessExecutionDispatchAuthorityReader reader,
     IProcessExecutionMutationGuard processGuard,
     ProjectProcessLaunchAuthorityService authorities,
@@ -58,30 +73,27 @@ public sealed class ProjectProcessExecutionMutationService(
         if (!admission.Dispatch.AllowedOperations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase)) {
             throw new ProcessExecutionAuthorityMismatchException("The admitted Process step does not permit native external effects.");
         }
-        if (expectedAdmissions is not { Count: 1 } || expectedAdmissions.Single() != admission.ProjectAdmission ||
-                !scopeKeys.Contains(ProjectStructureSerializableMutationScope.ForProject(admission.ProjectAdmission.ProjectId), StringComparer.Ordinal)) {
-            throw new ProcessExecutionAuthorityMismatchException("A Process native mutation must retain its single original project lifetime.");
+        if (expectedAdmissions is not { Count: > 0 } || expectedAdmissions.Any(project =>
+                !scopeKeys.Contains(ProjectStructureSerializableMutationScope.ForProject(project.ProjectId), StringComparer.Ordinal))) {
+            throw new ProcessExecutionAuthorityMismatchException("A Process native mutation must retain every intended target lifetime and mutation gate.");
         }
         if (!context.Database.IsNpgsql() || context.Database.CurrentTransaction is not null) {
             throw new NotSupportedException("A Process native mutation requires a new PostgreSQL Workbench owner transaction.");
         }
-        var current = await ObserveAsync(admission.Dispatch.Evidence.ExecutionRunId, cancellationToken);
-        if (current is null || !current.Dispatch.ObservedCurrentDispatch ||
-                current.Dispatch.OwnerFingerprint != admission.Dispatch.OwnerFingerprint ||
-                current.Dispatch.ProjectReference != admission.Dispatch.ProjectReference ||
-                current.Dispatch.Evidence != admission.Dispatch.Evidence) {
-            throw new ProcessExecutionAuthorityMismatchException("The saved Process execution no longer owns this native mutation.");
-        }
-        var source = admission.Dispatch.SourceAuthority!;
-        var heldSource = await authorities.AcquireAsync(source, source, cancellationToken);
+        var targets = expectedAdmissions.Distinct().ToImmutableArray();
+        var heldSource = await AcquireOwnerSourceAsync(admission,
+            new(ProjectMutationPurpose.ExistingWrite, targets[0].ProjectId, targets), ProjectProcessProjectOperation.Native, cancellationToken);
+        var required = targets.Concat(heldSource.SourceProjects).Distinct().ToImmutableArray();
         IDbContextTransaction? transaction = null;
         try {
             transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
             using var coordination = transactions.Enter(context);
-            await processGuard.RequireForMutationAsync(admission.Dispatch, cancellationToken);
-            await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, scopeKeys, cancellationToken);
-            await heldSource.RequireForMutationAsync(null, cancellationToken);
-            return new(context, transaction, heldSource, admission.Dispatch, processGuard, transactions);
+            await heldSource.RequireForMutationAsync(cancellationToken);
+            var keys = scopeKeys.Concat(required.Select(project => ProjectStructureSerializableMutationScope.ForProject(project.ProjectId)))
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+            await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, keys, cancellationToken);
+            await authorities.RequireProjectLifetimesForMutationAsync(required, cancellationToken);
+            return new(context, transaction, heldSource, required, authorities, transactions);
         } catch {
             if (transaction is not null) {
                 await transaction.DisposeAsync();
@@ -95,9 +107,9 @@ public sealed class ProjectProcessExecutionMutationService(
 internal sealed class ProjectProcessNativeMutationScope(
     WorkbenchDbContext context,
     IDbContextTransaction transaction,
-    IProcessLaunchAuthorityLease source,
-    ProcessExecutionDispatchAuthority dispatch,
-    IProcessExecutionMutationGuard processGuard,
+    IProjectMutationSourceLease source,
+    ImmutableArray<ProjectWriteAdmission> requiredProjects,
+    ProjectProcessLaunchAuthorityService authorities,
     CoordinatedDatabaseTransaction transactions) : IAsyncDisposable {
     private int disposed;
     private bool committed;
@@ -108,8 +120,8 @@ internal sealed class ProjectProcessNativeMutationScope(
             throw new InvalidOperationException("The Process native mutation has already committed.");
         }
         using (transactions.Enter(context)) {
-            await processGuard.RequireForMutationAsync(dispatch, cancellationToken);
-            await source.RequireForMutationAsync(null, cancellationToken);
+            await source.RequireForMutationAsync(cancellationToken);
+            await authorities.RequireProjectLifetimesForMutationAsync(requiredProjects, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             committed = true;
         }

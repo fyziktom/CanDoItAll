@@ -24,8 +24,8 @@ public sealed class StorageBrowseCacheTests
             new ProcessLocalFileCatalogRevisionService(),
             new MutableRuntimeState());
 
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
 
         Assert.Equal(2, inner.CallCount);
     }
@@ -37,14 +37,14 @@ public sealed class StorageBrowseCacheTests
         var inner = new RecordingBrowseDriver { Block = true };
         CachingStorageBrowseDriver driver = CreateDriver(inner, cache);
 
-        Task<StorageBrowsePage> first = driver.BrowseAsync(CreateStorage(), CreateRequest());
+        Task<StorageBrowsePage> first = driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
         await inner.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        Task<StorageBrowsePage> second = driver.BrowseAsync(CreateStorage(), CreateRequest());
+        Task<StorageBrowsePage> second = driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
         await Task.Delay(50);
         Assert.Equal(1, inner.CallCount);
         inner.Release.TrySetResult();
         await Task.WhenAll(first, second);
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
 
         Assert.Equal(1, inner.CallCount);
         StorageBrowseCacheMetricsSnapshot metrics = cache.Metrics.GetSnapshot();
@@ -65,14 +65,14 @@ public sealed class StorageBrowseCacheTests
         CachingStorageBrowseDriver first = CreateDriver(inner, cache, runtime, revisions, firstScope);
         CachingStorageBrowseDriver second = CreateDriver(inner, cache, runtime, revisions, secondScope);
 
-        await first.BrowseAsync(CreateStorage(), CreateRequest("one"));
-        await first.BrowseAsync(CreateStorage(), CreateRequest("one"));
-        await first.BrowseAsync(CreateStorage(), CreateRequest("two"));
-        await second.BrowseAsync(CreateStorage(), CreateRequest("one"));
+        await first.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
+        await first.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
+        await first.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("two"));
+        await second.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
         runtime.Generation = 2;
-        await second.BrowseAsync(CreateStorage(), CreateRequest("one"));
+        await second.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
         revisions.PublishScopeChanged(secondScope, StorageId);
-        await second.BrowseAsync(CreateStorage(), CreateRequest("one"));
+        await second.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
         StorageBrowseCacheContext changedSource = CreateContext(secondScope) with
         {
             SourceSetFingerprint = "changed-source-set"
@@ -84,7 +84,7 @@ public sealed class StorageBrowseCacheTests
             cache.Store,
             revisions,
             runtime);
-        await sourceChanged.BrowseAsync(CreateStorage(), CreateRequest("one"));
+        await sourceChanged.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
 
         Assert.Equal(6, inner.CallCount);
     }
@@ -97,12 +97,12 @@ public sealed class StorageBrowseCacheTests
         var inner = new RecordingBrowseDriver();
         CachingStorageBrowseDriver driver = CreateDriver(inner, cache, settings: settings);
 
-        await driver.BrowseAsync(CreateStorage(), CreateRequest("one"));
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
         cache.Time.Advance(TimeSpan.FromSeconds(1));
-        await driver.BrowseAsync(CreateStorage(), CreateRequest("two"));
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("two"));
         cache.Time.Advance(TimeSpan.FromSeconds(1));
-        await driver.BrowseAsync(CreateStorage(), CreateRequest("three"));
-        await driver.BrowseAsync(CreateStorage(), CreateRequest("one"));
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("three"));
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest("one"));
 
         StorageBrowseCacheMetricsSnapshot metrics = cache.Metrics.GetSnapshot();
         Assert.Equal(4, inner.CallCount);
@@ -120,7 +120,7 @@ public sealed class StorageBrowseCacheTests
         CachingStorageBrowseDriver driver = CreateDriver(inner, cache);
         using var cancellation = new CancellationTokenSource();
         Task<StorageBrowsePage> cancelled = driver.BrowseAsync(
-            CreateStorage(),
+            CreateStorage().ToDriverInput(),
             CreateRequest(),
             cancellation.Token);
         await inner.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -130,9 +130,9 @@ public sealed class StorageBrowseCacheTests
 
         inner.Block = false;
         inner.Failure = new IOException("provider failed");
-        await Assert.ThrowsAsync<IOException>(() => driver.BrowseAsync(CreateStorage(), CreateRequest()));
+        await Assert.ThrowsAsync<IOException>(() => driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest()));
         inner.Failure = null;
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
 
         Assert.Equal(3, inner.CallCount);
         Assert.Equal(1, cache.Metrics.GetSnapshot().RetainedEntries);
@@ -155,7 +155,7 @@ public sealed class StorageBrowseCacheTests
         };
 
         StorageBrowseException exception = Assert.Throws<StorageBrowseException>(() =>
-            StorageBrowseCachePolicy.Resolve(storage, binding, driver));
+            StorageBrowseCachePolicy.Resolve(storage.ToDriverInput(), binding, driver));
 
         Assert.Equal(StorageBrowseErrorCode.InvalidConfiguration, exception.Error.Code);
     }
@@ -169,7 +169,7 @@ public sealed class StorageBrowseCacheTests
         StorageCatalogRecord storage = CreateStorage();
         FileToolsStorageBinding binding = CreateContext(scope).Binding;
         var listing = CreateDriver(inner, cache, scope: scope);
-        var provider = new StorageFileBrowserProvider(scope, binding, storage, listing, inner);
+        var provider = new StorageFileBrowserProvider(scope, binding, storage.ToDriverInput(), listing, inner);
         FileBrowserItem root = await provider.GetRootAsync(FileBrowserMetadataRequest.Standard);
         FileBrowserPage page = await provider.BrowseAsync(new FileBrowserBrowseRequest(
             root.Key,
@@ -206,9 +206,9 @@ public sealed class StorageBrowseCacheTests
         var inner = new RecordingBrowseDriver();
         CachingStorageBrowseDriver driver = CreateDriver(inner, cache, settings: settings);
 
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
         await Task.Delay(TimeSpan.FromMilliseconds(1_200));
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
 
         Assert.Equal(2, inner.CallCount);
     }
@@ -222,11 +222,11 @@ public sealed class StorageBrowseCacheTests
         FileToolsSemanticScope scope = CreateScope("aggregate");
         CachingStorageBrowseDriver driver = CreateDriver(inner, cache, revisions: revisions, scope: scope);
 
-        StorageBrowsePage before = await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        StorageBrowsePage before = await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
         inner.EntryName = "after.txt";
-        StorageBrowsePage stillCached = await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        StorageBrowsePage stillCached = await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
         revisions.PublishScopeChanged(scope, StorageId);
-        StorageBrowsePage after = await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        StorageBrowsePage after = await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
 
         Assert.Equal("before.txt", Assert.Single(before.Entries).Name);
         Assert.Equal("before.txt", Assert.Single(stillCached.Entries).Name);
@@ -246,8 +246,8 @@ public sealed class StorageBrowseCacheTests
         };
         CachingStorageBrowseDriver driver = CreateDriver(inner, cache, settings: settings);
 
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
 
         Assert.Equal(2, inner.CallCount);
         Assert.Equal(2, cache.Metrics.GetSnapshot().Bypasses);
@@ -263,8 +263,8 @@ public sealed class StorageBrowseCacheTests
         var inner = new RecordingBrowseDriver { IncludeContinuation = true };
         CachingStorageBrowseDriver driver = CreateDriver(inner, cache, settings: settings);
 
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
-        await driver.BrowseAsync(CreateStorage(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
+        await driver.BrowseAsync(CreateStorage().ToDriverInput(), CreateRequest());
 
         Assert.Equal(2, inner.CallCount);
         Assert.Equal(2, cache.Metrics.GetSnapshot().Bypasses);
@@ -298,9 +298,9 @@ public sealed class StorageBrowseCacheTests
         return new StorageBrowseCacheContext(
             scope ?? CreateScope("project-a"),
             binding,
-            CreateStorage(),
+            CreateStorage().ToDriverInput(),
             StorageBrowseCacheKeyBuilder.BuildSourceSetFingerprint([binding]),
-            StorageBrowseCacheKeyBuilder.BuildStorageFingerprint(CreateStorage(), binding));
+            StorageBrowseCacheKeyBuilder.BuildStorageFingerprint(CreateStorage().ToDriverInput(), binding));
     }
 
     private static FileToolsSemanticScope CreateScope(string id)
@@ -406,7 +406,7 @@ public sealed class StorageBrowseCacheTests
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public async Task<StorageBrowsePage> BrowseAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseRequest request,
             CancellationToken cancellationToken = default)
         {

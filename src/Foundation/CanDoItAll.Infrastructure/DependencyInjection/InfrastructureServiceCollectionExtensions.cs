@@ -114,6 +114,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IControlPlaneSecretContinuityVerifier>(serviceProvider =>
             serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
         services.AddScoped<IDatabaseTransferService, DatabaseTransferService>();
+        services.AddScoped<DatabaseTransferOwnerSessionRunner>();
+        services.AddScoped<ProjectTransferTargetInspectionRunner>();
+        services.AddScoped<DatabaseTransferOperationRunner>();
+        services.AddScoped<StorageProfileTransferService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             InfrastructureProjectTransferTargetStateParticipant>());
@@ -135,6 +139,10 @@ public static class InfrastructureServiceCollectionExtensions
         {
             var canonicalRuntimeDatabase = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
             AppDbContextOptionsConfigurator.Configure(optionsBuilder, canonicalRuntimeDatabase.Profile);
+        });
+        services.AddPooledDbContextFactory<BackgroundJobsDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
         });
         services.AddPooledDbContextFactory<SearchDbContext>((serviceProvider, optionsBuilder) => {
             var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();

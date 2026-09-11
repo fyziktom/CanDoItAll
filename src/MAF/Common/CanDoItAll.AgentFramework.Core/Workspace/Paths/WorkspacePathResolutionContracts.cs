@@ -12,6 +12,12 @@ public sealed record WorkspaceResolvedPath(
 
 public interface IWorkspacePathResolutionService
 {
+    WorkspaceExecutionScope ExecutionScope => throw new NotSupportedException(
+        "This workspace path owner does not expose its immutable execution scope.");
+
+    WorkspaceResolvedPath ResolvePath(string path) => throw new NotSupportedException(
+        "This workspace path owner does not expose its actual generic path resolution.");
+
     WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing);
 
     WorkspaceResolvedPath ResolveDirectoryPath(string path, bool allowMissing);
@@ -46,6 +52,15 @@ public sealed class WorkspacePathResolutionService : IWorkspacePathResolutionSer
             physicalPathPolicyFactory,
             workspaceScope,
             externalTargetRegistry);
+        ExecutionScope = new WorkspaceExecutionScope(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope,
+            rootCaseSensitivity: physicalPathPolicyFactory.Create(pathPolicy.WorkspaceRoot).CaseSensitivity);
+    }
+
+    public WorkspaceExecutionScope ExecutionScope { get; }
+
+    public WorkspaceResolvedPath ResolvePath(string path) {
+        var resolution = pathPolicy.ResolveAccessiblePath(path);
+        return new(resolution.FullPath, resolution.RelativePath, resolution.IsWorkspacePath);
     }
 
     public WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing)

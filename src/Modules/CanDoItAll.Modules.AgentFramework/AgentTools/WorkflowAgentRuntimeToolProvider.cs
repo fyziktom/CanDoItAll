@@ -21,6 +21,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
     private readonly IWorkflowExternalResponseActorContextFactory actorContextFactory;
     private readonly WorkflowAgentRuntimeAuthorizationService authorizationService;
     private readonly IWorkflowStructureAuthorityFactory structureAuthority;
+    private readonly WorkflowProcessToolAdmission? processTools;
 
     public WorkflowAgentRuntimeToolProvider(
         IWorkflowCatalogService catalog,
@@ -29,7 +30,8 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         IWorkflowExternalResponseService externalResponseService,
         IWorkflowExternalResponseActorContextFactory actorContextFactory,
         WorkflowAgentRuntimeAuthorizationService authorizationService,
-        IWorkflowStructureAuthorityFactory structureAuthority)
+        IWorkflowStructureAuthorityFactory structureAuthority,
+        WorkflowProcessToolAdmission? processTools = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(launchService);
@@ -44,6 +46,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         this.actorContextFactory = actorContextFactory;
         this.authorizationService = authorizationService;
         this.structureAuthority = structureAuthority;
+        this.processTools = processTools;
     }
 
     public int Order => ProviderOrder;
@@ -91,7 +94,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                         authorizedToken => StartAsync(context, request, authorizedToken),
                         token),
                 WorkflowToolPolicy.WorkflowsRunStart,
-                "Starts an Active saved workflow in Production mode and waits until it stops or waits for external input. Select LatestActive or ExactSavedVersion explicitly. Supply a stable idempotencyKey for retries; it is required outside interactive chat. Runtime backend and launch origin are governed by the host."));
+                "Starts an Active saved workflow in Production mode and waits until it stops or waits for external input. Select LatestActive or ExactSavedVersion explicitly. A governed Process journal preserves the approved proposal identity for retries. Other background callers must supply a stable idempotencyKey. Runtime backend and launch origin are governed by the host."));
         AddToolIfAuthorized(
             tools,
             context,
@@ -171,9 +174,11 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                 context.Agent,
                 context.Capabilities,
                 item.ToolName))
-            .Select(item => item with {
-                AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item.ToolName, disclosure, token)
-            })
+            .Select(item => item.ToolName == WorkflowToolPolicy.WorkflowsRunStart && WorkflowProcessToolAdmission.UsesJournal(context)
+                ? RequireProcessTools().BindMetadata(context, item)
+                : item with {
+                    AuthorizeResultDisclosureAsync = (disclosure, token) => AuthorizeResultDisclosureAsync(context, item.ToolName, disclosure, token)
+                })
             .ToArray();
     }
 
@@ -265,7 +270,9 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var origin = CreateOrigin(context);
+        WorkflowLaunchOrigin origin = WorkflowProcessToolAdmission.UsesJournal(context)
+            ? await RequireProcessTools().CaptureAsync(context, request, cancellationToken)
+            : await CreateOriginAsync(context, cancellationToken);
         WorkflowDefinitionSelection selection = request.SelectionMode switch
         {
             WorkflowAgentDefinitionSelectionMode.LatestActive =>
@@ -285,8 +292,13 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             origin,
             request.InputJson,
             WorkflowLaunchCompletionPolicy.WaitForStopped,
-            ResolveIdempotency(context, request));
+            origin is WorkflowLaunchOrigin.ProcessToolInvocation tool
+                ? new WorkflowLaunchIdempotency.CallerSupplied(new(tool.Invocation.IntentId.Value.ToString("D")))
+                : ResolveIdempotency(context, request));
         var result = await launchService.LaunchAsync(intent, cancellationToken);
+        if (origin is WorkflowLaunchOrigin.ProcessToolInvocation process) {
+            WorkflowProcessToolAdmission.RecordCommitted(result, process);
+        }
 
         return new WorkflowAgentStartResult(
             MapRun(result.Run),
@@ -296,6 +308,9 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             result.Observation == WorkflowLaunchObservation.Confirmed ? "Workflow launch was admitted through the governed launch service."
                 : "Workflow launch was admitted; subsequent acknowledgement requires observation.") { Observation = result.Observation };
     }
+
+    private WorkflowProcessToolAdmission RequireProcessTools() => processTools
+        ?? throw new InvalidOperationException("The governed Process Workflow tool requires its owner journal admission adapter.");
 
     private async Task<WorkflowAgentRunStatusResult> GetStatusAsync(
         WorkflowAgentRunInput request,
@@ -356,8 +371,8 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             result.SafeMessage);
     }
 
-    private WorkflowLaunchOrigin.AgentRuntimeInvocation CreateOrigin(
-        AgentRuntimeToolProviderContext context)
+    private async Task<WorkflowLaunchOrigin.AgentRuntimeInvocation> CreateOriginAsync(
+        AgentRuntimeToolProviderContext context, CancellationToken cancellationToken)
     {
         if (context.Agent.Id == Guid.Empty)
         {
@@ -380,6 +395,13 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                 "Workflow launch governance does not match the current agent.");
         }
 
+        var capturedAuthority = await structureAuthority.CaptureAgentAsync(context.Agent, governance, cancellationToken);
+        var startCapability = context.Agent.Capabilities.Single(item => item.Kind == CapabilityKind.Tool &&
+            item.CapabilityKey == WorkflowAgentCapabilityKeys.RunStart);
+        if (capturedAuthority.ProjectScope is { } projectScope) {
+            capturedAuthority = capturedAuthority with { ProjectScope = new(projectScope.Projects, projectScope.AdmissionProjectIds,
+                workflowStartCapabilityId: startCapability.CapabilityId) };
+        }
         return new WorkflowLaunchOrigin.AgentRuntimeInvocation(
             new WorkflowLaunchActor(
                 WorkflowLaunchActorKind.Agent,
@@ -390,7 +412,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         {
             AuthorizationScope = governance.WorkspaceScope,
             AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
-            StructureAuthority = structureAuthority.CaptureAgent(context.Agent, governance)
+            StructureAuthority = capturedAuthority
         };
     }
 

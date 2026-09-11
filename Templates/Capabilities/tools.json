@@ -826,6 +826,32 @@
     },
     {
       "kind": "tool",
+      "key": "crm-planning-search",
+      "displayName": "CRM Planning Search",
+      "description": "Explicitly granted privacy-filtered identity and availability lookup for floating project Structure and Gantt planning. This read grants no HR administration or work assignment.",
+      "stableId": "tool:crm-planning-search:v1",
+      "stableGuidKey": "capabilities/crm-planning-search",
+      "endpointOrPath": "sandbox://crm-planning-search",
+      "runtimeToolName": "crm_planning_search",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "crm-planning-summary-get",
+      "displayName": "CRM Planning Summary",
+      "description": "Explicitly granted safe CRM planning summary for one exact typed identity; confidential details, mutation and capacity reservation remain separate.",
+      "stableId": "tool:crm-planning-summary-get:v1",
+      "stableGuidKey": "capabilities/crm-planning-summary-get",
+      "endpointOrPath": "sandbox://crm-planning-summary-get",
+      "runtimeToolName": "crm_planning_summary_get",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
       "key": "hr-crm-search",
       "displayName": "HR CRM Search",
       "description": "Searches bounded CRM/HR records through a privacy-safe redacted projection.",

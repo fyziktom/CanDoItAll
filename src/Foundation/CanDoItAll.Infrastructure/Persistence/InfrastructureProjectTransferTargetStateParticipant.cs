@@ -4,49 +4,38 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Infrastructure.Persistence;
 
-internal sealed class InfrastructureProjectTransferTargetStateParticipant
+internal sealed class InfrastructureProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
     : IProjectTransferTargetStateParticipant {
-    public ProjectTransferTargetStateArea Area =>
-        ProjectTransferTargetStateArea.Infrastructure;
+    public ProjectTransferTargetStateArea Area => ProjectTransferTargetStateArea.Infrastructure;
 
-    public IReadOnlyCollection<Type> EntityTypesToLock { get; } =
-    [
-        typeof(SearchDocument),
-        typeof(StorageCatalogRecord),
-        typeof(StorageRoutingRule),
-        typeof(StoragePlacementIntentRecord)
+    public IReadOnlyCollection<Type> EntityTypesToLock { get; } = [
+        typeof(SearchDocument), typeof(StorageCatalogRecord), typeof(StorageRoutingRule), typeof(StoragePlacementIntentRecord)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken) {
+    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken) {
         var residues = new List<ProjectTransferTargetStateResidue>();
-        if (await dbContext.Set<SearchDocument>()
-                .AsNoTracking()
-                .AnyAsync(
-                    document =>
-                        document.ProjectId.HasValue ||
-                        document.SourceType == SearchDocument.ProjectSourceType,
-                    cancellationToken)) {
+        if (await inspections.ReadOwnerAsync<SearchDbContext, bool>(request, static options => new(options),
+                static (db, token) => db.Set<SearchDocument>().AsNoTracking().AnyAsync(document =>
+                    document.ProjectId.HasValue || document.SourceType == SearchDocument.ProjectSourceType, token), cancellationToken)) {
             residues.Add(new("project search documents"));
         }
+        residues.AddRange(await inspections.ReadOwnerAsync<StorageDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadStorageResiduesAsync, cancellationToken));
+        return residues;
+    }
 
-        if (await dbContext.Set<StorageRoutingRule>()
-                .AsNoTracking()
-                .AnyAsync(
-                    rule =>
-                        rule.ProjectId.HasValue ||
-                        rule.ScopeKind == StorageRoutingScopeKind.Project ||
-                        rule.ScopeKind == StorageRoutingScopeKind.Node,
-                    cancellationToken)) {
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadStorageResiduesAsync(
+        StorageDbContext db, CancellationToken cancellationToken) {
+        var residues = new List<ProjectTransferTargetStateResidue>();
+        if (await db.Set<StorageRoutingRule>().AsNoTracking().AnyAsync(rule =>
+                rule.ProjectId.HasValue || rule.ScopeKind == StorageRoutingScopeKind.Project || rule.ScopeKind == StorageRoutingScopeKind.Node,
+                cancellationToken)) {
             residues.Add(new("project storage routing rules"));
         }
-
-        if (await dbContext.Set<StoragePlacementIntentRecord>().AsNoTracking().AnyAsync(item => item.ProjectId.HasValue, cancellationToken)) {
-            residues.Add(new("project storage placement intents"));
+        if (await db.Set<StoragePlacementIntentRecord>().AsNoTracking().AnyAsync(intent => intent.ProjectId.HasValue, cancellationToken)) {
+            residues.Add(new("retained project storage placement intents"));
         }
-
         return residues;
     }
 }

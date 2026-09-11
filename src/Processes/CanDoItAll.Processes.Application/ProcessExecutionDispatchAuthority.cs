@@ -35,4 +35,6 @@ public interface IProcessExecutionDispatchAuthorityReader {
 
 public interface IProcessExecutionMutationGuard {
     Task RequireForMutationAsync(ProcessExecutionDispatchAuthority expected, CancellationToken cancellationToken = default);
+    Task RequireDispatchAsync(ProcessExecutionDispatchAuthority expected, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This Process owner does not provide dispatch-only transaction fencing.");
 }

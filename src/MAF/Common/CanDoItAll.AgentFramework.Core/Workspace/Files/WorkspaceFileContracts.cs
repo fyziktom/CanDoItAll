@@ -26,6 +26,9 @@ public interface IWorkspaceFileInspectionService
 
 public interface IWorkspaceFileService : IWorkspaceFileInspectionService
 {
+    WorkspaceExecutionScope ExecutionScope => throw new NotSupportedException(
+        "This workspace file owner does not expose its immutable execution scope.");
+
     WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100);
 
     WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100);

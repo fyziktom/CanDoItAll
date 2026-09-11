@@ -120,6 +120,10 @@ internal sealed record MafRuntimeCapabilityDependencies(
 {
     public IReadOnlyList<IAgentRuntimeCapabilityPolicyContributor> ContextPolicyContributors { get; init; } = [];
 
+    public IReadOnlyList<IToolInvocationPolicyContextContributor> WorkspacePathContributors { get; init; } = [];
+
+    public IAgentWorkspaceToolResultSource? WorkspaceToolResultSource { get; init; }
+
     public AgentToolPolicyCatalog ToolPolicies { get; init; } = AgentToolPolicyCatalog.BuiltIn;
 
     public static MafRuntimeCapabilityDependencies FromServices(IServiceProvider serviceProvider)
@@ -143,6 +147,8 @@ internal sealed record MafRuntimeCapabilityDependencies(
                     .Select(descriptor => descriptor.ServiceType)
                     .ToHashSet())) {
             ContextPolicyContributors = serviceProvider.GetServices<IAgentRuntimeCapabilityPolicyContributor>().ToArray(),
+            WorkspacePathContributors = serviceProvider.GetServices<IToolInvocationPolicyContextContributor>().ToArray(),
+            WorkspaceToolResultSource = serviceProvider.GetService<IAgentWorkspaceToolResultSource>(),
             ToolPolicies = serviceProvider.GetService<AgentToolPolicyCatalog>()
                 ?? new AgentToolPolicyCatalog(serviceProvider.GetServices<ToolCapabilityMetadata>())
         };

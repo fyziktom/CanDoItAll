@@ -99,14 +99,21 @@ public enum AgentToolProposalRecovery {
 
 public sealed record AgentToolPreparedPayload {
     public const int MaximumJsonLength = 4_194_304;
+    public const int MaximumSourcePreparationUtf8Bytes = 65_536;
 
+    public AgentToolPreparedPayload(string toolName, int semanticVersion, AgentToolSemanticDigest digest,
+        string argumentsJson, AgentToolProposalEffect effect, AgentToolProposalRecovery recovery)
+        : this(toolName, semanticVersion, digest, argumentsJson, effect, recovery, null) { }
+
+    [JsonConstructor]
     public AgentToolPreparedPayload(
         string toolName,
         int semanticVersion,
         AgentToolSemanticDigest digest,
         string argumentsJson,
         AgentToolProposalEffect effect,
-        AgentToolProposalRecovery recovery) {
+        AgentToolProposalRecovery recovery,
+        AgentToolProtocolEnvelope? sourcePreparation = null) {
         ArgumentException.ThrowIfNullOrWhiteSpace(toolName);
         ArgumentOutOfRangeException.ThrowIfLessThan(semanticVersion, 1);
         ArgumentException.ThrowIfNullOrWhiteSpace(digest.Value);
@@ -115,6 +122,11 @@ public sealed record AgentToolPreparedPayload {
         if (!Enum.IsDefined(effect) || !Enum.IsDefined(recovery)) {
             throw new ArgumentException("The prepared tool policy is invalid.");
         }
+        if (sourcePreparation is not null) {
+            ArgumentOutOfRangeException.ThrowIfLessThan(semanticVersion, 2);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(
+                System.Text.Encoding.UTF8.GetByteCount(sourcePreparation.PayloadJson), MaximumSourcePreparationUtf8Bytes);
+        }
 
         ToolName = toolName;
         SemanticVersion = semanticVersion;
@@ -122,6 +134,7 @@ public sealed record AgentToolPreparedPayload {
         ArgumentsJson = argumentsJson;
         Effect = effect;
         Recovery = recovery;
+        SourcePreparation = sourcePreparation;
     }
 
     public string ToolName { get; }
@@ -130,6 +143,9 @@ public sealed record AgentToolPreparedPayload {
     public string ArgumentsJson { get; }
     public AgentToolProposalEffect Effect { get; }
     public AgentToolProposalRecovery Recovery { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentToolProtocolEnvelope? SourcePreparation { get; }
 
     public override string ToString()
         => $"{ToolName} semantic-v{SemanticVersion} {Digest.Value}";

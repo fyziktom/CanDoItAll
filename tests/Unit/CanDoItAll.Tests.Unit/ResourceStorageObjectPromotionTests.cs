@@ -3,6 +3,7 @@ using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Resources;
+using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.Storage;
@@ -123,7 +124,7 @@ public sealed class ResourceStorageObjectPromotionTests
         PromotionFixture fixture = PromotionFixture.Create(events);
         fixture.Authorization.Authorized = fixture.Authorization.Authorized! with
         {
-            Storage = CreateStorage(Guid.NewGuid())
+            Storage = CreateStorage(Guid.NewGuid()).ToDriverInput()
         };
 
         ResourcePromotionException exception = await Assert.ThrowsAsync<ResourcePromotionException>(
@@ -197,7 +198,7 @@ public sealed class ResourceStorageObjectPromotionTests
                 FileToolsSemanticScopeKind.ResourceSource,
                 ResourceStorageSourceScopeKey.Create(
                     storage.Id,
-                    ResourceStorageSourceScopeKey.BuildFingerprint(storage)),
+                    ResourceStorageSourceScopeKey.BuildFingerprint(storage.ToSnapshot())),
                 storage.Name);
             var source = new ResourceFileSourceDescriptor(
                 sourceKey,
@@ -232,7 +233,7 @@ public sealed class ResourceStorageObjectPromotionTests
                 MetadataJson: "{\"secret\":\"must-not-persist\"}");
             var authorization = new RecordingAuthorizationCoordinator(
                 events,
-                new AuthorizedStorageFile(storage, reference, scope, FileAccessOperation.View, null));
+                new AuthorizedStorageFile(storage.ToDriverInput(), reference, scope, FileAccessOperation.View, null));
             var writer = new RecordingWriter(events);
             var revisions = new RecordingRevisions(events);
             var service = new ResourceStorageObjectPromotionService(
@@ -244,11 +245,13 @@ public sealed class ResourceStorageObjectPromotionTests
                 revisions,
                 revisions,
                 NullLogger<ResourceStorageObjectPromotionService>.Instance);
+            var projectId = Guid.NewGuid();
             var command = new ResourceStorageObjectPromotionCommand(
                 sourceKey,
                 itemKey,
-                Guid.NewGuid(),
-                "Promoted report");
+                projectId,
+                "Promoted report",
+                new(Guid.NewGuid(), projectId, Guid.NewGuid()));
             return new PromotionFixture(
                 service,
                 source,

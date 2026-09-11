@@ -77,6 +77,9 @@ public sealed class MafWorkflowCompiler(
 
         try
         {
+            var version = invocationContext.CompilerContractVersion ?? WorkflowProviderDisclosureProtocol.Current;
+            WorkflowProviderDisclosureProtocol.RequireSupported(version);
+            invocationContext = invocationContext with { CompilerContractVersion = version };
             var bindingCompiler = new MafWorkflowHitlBindingCompiler(
                 executorInvoker,
                 llmComponentInvoker,
@@ -113,8 +116,8 @@ public sealed class MafWorkflowCompiler(
                     Validation: validation,
                     ErrorMessage: string.Empty))
             {
-                TopologyFingerprint = MafWorkflowTopologyFingerprintFactory.Create(definition, bindings),
-                CompilerContractVersion = MafWorkflowTopologyFingerprintFactory.CompilerContractVersion,
+                TopologyFingerprint = MafWorkflowTopologyFingerprintFactory.Create(definition, bindings, version),
+                CompilerContractVersion = version,
                 HasNativeExternalRequests = bindings.Values.Any(binding => binding.HasNativeExternalRequest)
             };
         }

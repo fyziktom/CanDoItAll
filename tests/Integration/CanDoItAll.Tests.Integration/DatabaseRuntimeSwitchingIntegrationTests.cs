@@ -520,77 +520,58 @@ public sealed class DatabaseTransferIntegrationTests
     }
 
     [Fact]
-    public async Task Project_import_lock_blocks_concurrent_participant_write_and_final_recheck_detects_it()
-    {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create(
-            "integration-project-import-lock");
-        await using var provider =
-            DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(
-                testEnvironment,
-                new Dictionary<string, string?>
-                {
-                    ["SecretVault:Provider"] = "InMemory"
-                });
+    public async Task Project_import_lock_blocks_concurrent_participant_write_and_final_recheck_detects_it() {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-project-import-lock");
+        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment,
+            new Dictionary<string, string?> { ["SecretVault:Provider"] = "InMemory" });
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
         var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
-        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile(
-            "project-import-lock-target");
-        var targetSaveResult = await profileService.SaveAsync(
-            TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
-                targetTestProfile,
-                "PostgreSQL project import lock target"));
+        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile("project-import-lock-target");
+        var targetSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            targetTestProfile, "PostgreSQL project import lock target"));
         Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
         var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
         await bootstrapper.EnsureProfileReadyAsync(targetProfile);
 
         await using var guardScope = provider.CreateAsyncScope();
-        var guard = guardScope.ServiceProvider
-            .GetRequiredService<ProjectTransferTargetStateGuard>();
-        await using var lockingContext =
-            await profileFactory.CreateDbContextForProfileAsync(targetProfile);
-        await using var transaction = await lockingContext.Database.BeginTransactionAsync();
-        await guard.AcquireExclusiveImportLocksAsync(
-            lockingContext,
-            CancellationToken.None);
-
-        var insertStarted = new TaskCompletionSource(
-            TaskCreationOptions.RunContinuationsAsynchronously);
+        var guard = guardScope.ServiceProvider.GetRequiredService<ProjectTransferTargetStateGuard>();
+        var insertStarted = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         var planId = Guid.NewGuid();
-        var insertTask = InsertSchedulerPlanAsync();
-        await insertStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-        try
-        {
-            var firstCompletion = await Task.WhenAny(
-                insertTask,
-                Task.Delay(TimeSpan.FromMilliseconds(500)));
-            Assert.NotSame(insertTask, firstCompletion);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        Task insertTask = Task.CompletedTask;
+        try {
+            await guard.RunLockedImportAsync(targetProfile, async (session, token) => {
+                insertTask = InsertSchedulerPlanAsync(token);
+                var processId = await insertStarted.Task.WaitAsync(token);
+                await using var observer = await profileFactory.CreateDbContextForProfileAsync(targetProfile, token);
+                while (!await observer.Database.SqlQuery<bool>(
+                        $"SELECT EXISTS (SELECT 1 FROM pg_locks WHERE pid = {processId} AND locktype = 'relation' AND NOT granted) AS \"Value\"")
+                        .SingleAsync(token)) {
+                    await Task.Delay(TimeSpan.FromMilliseconds(20), token);
+                }
+                Assert.False(insertTask.IsCompleted);
+                return true;
+            }, deadline.Token);
+            await insertTask.WaitAsync(deadline.Token);
+            await guard.RunLockedImportAsync(targetProfile, async (session, token) => {
+                Assert.Contains(await guard.FindLockedResiduesAsync(session, token),
+                    residue => residue.Area == ProjectTransferTargetStateArea.SchedulerPlanner);
+                return true;
+            }, deadline.Token);
+        } finally {
+            deadline.Cancel();
+            try {
+                await insertTask.WaitAsync(TimeSpan.FromSeconds(10));
+            } catch (OperationCanceledException) {
+            }
         }
-        finally
-        {
-            await transaction.CommitAsync();
-        }
 
-        await insertTask.WaitAsync(TimeSpan.FromSeconds(10));
-        await using var recheckContext =
-            await profileFactory.CreateDbContextForProfileAsync(targetProfile);
-        var residues = await guard.FindResiduesAsync(
-            recheckContext,
-            CancellationToken.None);
-
-        Assert.Contains(
-            residues,
-            residue => residue.Area ==
-                ProjectTransferTargetStateArea.SchedulerPlanner);
-
-        async Task InsertSchedulerPlanAsync()
-        {
-            await using var insertingContext =
-                await profileFactory.CreateDbContextForProfileAsync(targetProfile);
-            insertingContext.Set<SchedulerPlan>().Add(new SchedulerPlan
-            {
+        async Task InsertSchedulerPlanAsync(CancellationToken cancellationToken) {
+            await using var insertingContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
+            await insertingContext.Database.OpenConnectionAsync(cancellationToken);
+            insertingContext.Set<SchedulerPlan>().Add(new SchedulerPlan {
                 Id = planId,
                 Name = "Concurrent project plan",
                 Description = "Must wait for the import exclusion lock",
@@ -605,8 +586,8 @@ public sealed class DatabaseTransferIntegrationTests
                 CreatedAtUtc = DateTimeOffset.UtcNow,
                 UpdatedAtUtc = DateTimeOffset.UtcNow
             });
-            insertStarted.TrySetResult();
-            await insertingContext.SaveChangesAsync();
+            insertStarted.TrySetResult(((NpgsqlConnection)insertingContext.Database.GetDbConnection()).ProcessID);
+            await insertingContext.SaveChangesAsync(cancellationToken);
         }
     }
 

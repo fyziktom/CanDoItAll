@@ -1,3 +1,6 @@
+using System.Collections.Immutable;
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 public interface IWorkspaceToolOperationResult
@@ -37,6 +40,19 @@ public sealed record WorkspaceFileListEntry(
     long? SizeBytes,
     DateTimeOffset? LastWriteTimeUtc);
 
+public sealed class WorkspaceFileReadSelection(string rootPath, bool isWorkspacePath, ImmutableArray<string> selectedPaths) {
+    private readonly string root = Path.IsPathFullyQualified(rootPath)
+        ? rootPath : throw new ArgumentException("A file read selection requires its original physical root.", nameof(rootPath));
+    private readonly ImmutableArray<string> paths = !selectedPaths.IsDefault
+        ? selectedPaths : throw new ArgumentException("A file read selection requires its selected physical paths.", nameof(selectedPaths));
+
+    public bool IsWorkspacePath { get; } = isWorkspacePath;
+    public int Count => paths.Length;
+    public string GetRootPath() => root;
+    public ImmutableArray<string> GetSelectedPaths() => paths;
+    public override string ToString() => $"Workspace file read selection ({Count} targets).";
+}
+
 public sealed record WorkspaceFileListResult(
     bool Succeeded,
     string Message,
@@ -44,7 +60,10 @@ public sealed record WorkspaceFileListResult(
     string RootPath,
     string SearchPattern,
     IReadOnlyList<WorkspaceFileListEntry> Entries,
-    bool IsTruncated) : IWorkspaceToolOperationResult;
+    bool IsTruncated) : IWorkspaceToolOperationResult {
+    [JsonIgnore]
+    public WorkspaceFileReadSelection? ReadSelection { get; init; }
+}
 
 public sealed record WorkspaceTextSearchMatch(
     string RelativePath,
@@ -58,7 +77,10 @@ public sealed record WorkspaceTextSearchResult(
     string Query,
     string RootPath,
     IReadOnlyList<WorkspaceTextSearchMatch> Matches,
-    bool IsTruncated) : IWorkspaceToolOperationResult;
+    bool IsTruncated) : IWorkspaceToolOperationResult {
+    [JsonIgnore]
+    public WorkspaceFileReadSelection? ReadSelection { get; init; }
+}
 
 public sealed record WorkspaceTextFileReadResult(
     bool Succeeded,

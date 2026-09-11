@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -6,8 +7,6 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
-using WorkflowOriginAssignmentId = CanDoItAll.AgentFramework.Models.WorkflowProcessAssignmentId;
-using WorkflowOriginProcessRunId = CanDoItAll.AgentFramework.Models.WorkflowProcessRunId;
 
 using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 
@@ -19,13 +18,16 @@ internal interface IProcessWorkflowStepExecutor
         ProcessRuntimeStepAssignment assignment,
         ProcessStepExecutionContract stepContract,
         CancellationToken cancellationToken = default,
-        Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null);
+        Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null,
+        ProcessDispatchClaimIdentity dispatchClaimIdentity = default);
 }
 
 internal sealed class WorkflowProcessStepExecutor(
     IWorkflowLaunchService launchService,
     IWorkflowRuntimeManager runtimeManager,
-    ProcessExecutionResultConverter resultConverter) : IProcessWorkflowStepExecutor
+    ProcessExecutionResultConverter resultConverter,
+    IWorkflowMappedProcessSourceAuthority? mappedSource = null,
+    IWorkflowProcessAssignmentRunQuery? assignmentRuns = null) : IProcessWorkflowStepExecutor
 {
     private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -36,7 +38,8 @@ internal sealed class WorkflowProcessStepExecutor(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepExecutionContract stepContract,
         CancellationToken cancellationToken = default,
-        Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null)
+        Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null,
+        ProcessDispatchClaimIdentity dispatchClaimIdentity = default)
     {
         ArgumentNullException.ThrowIfNull(assignment);
         ArgumentNullException.ThrowIfNull(stepContract);
@@ -73,22 +76,22 @@ internal sealed class WorkflowProcessStepExecutor(
                 $"{assignment.RunId}:{assignment.StepInstanceId}:{stepContract.ContractHash}:workflow-artifact-contract");
         }
 
-        var workflowId = new WorkflowId(binding.WorkflowId.Value);
-        var childRuns = (await runtimeManager.ListRunsAsync(workflowId, cancellationToken).ConfigureAwait(false))
-            .Where(run => IsVerifiedChild(run, assignment, binding))
-            .OrderBy(run => run.CreatedAtUtc)
-            .ThenBy(run => run.RunId.Value)
-            .ToArray();
-        if (childRuns.Length > 1)
-        {
-            return Failed(
-                "process.adapter.workflow_child_ambiguous",
-                $"Step '{assignment.StepKey}' has {childRuns.Length} verified workflow child runs; refusing to select one or launch another.",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:{string.Join(',', childRuns.Select(run => run.RunId.Value.ToString("N")))}");
+        if (dispatchClaimIdentity.Value == Guid.Empty || mappedSource is null || assignmentRuns is null) {
+            throw new InvalidOperationException("Mapped Workflow dispatch requires its actual Process claim, source authority and exact owner receipt query.");
         }
-
-        if (childRuns.Length == 1)
-        {
+        var origin = await mappedSource.CaptureAsync(new(assignment.RunId.Value), new(assignment.StepInstanceId.Value),
+            dispatchClaimIdentity.Value, stepContract.ContractHash, cancellationToken).ConfigureAwait(false);
+        if (origin.Dispatch.WorkflowId.Value != binding.WorkflowId.Value || origin.Dispatch.RequestedVersionId?.Value != binding.WorkflowVersionId?.Value) {
+            throw new InvalidOperationException("The actual mapped Workflow dispatch selected a different executor from the supplied assignment.");
+        }
+        var childRuns = await assignmentRuns.FindAsync(new(assignment.RunId.Value), new(assignment.StepInstanceId.Value), cancellationToken).ConfigureAwait(false);
+        if (childRuns.Count > 1) {
+            return Failed("process.adapter.workflow_child_ambiguous",
+                $"Step '{assignment.StepKey}' has multiple retained Workflow children; refusing to select one or launch another.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:multiple-children");
+        }
+        if (childRuns.Count == 1) {
+            RequireSameChild(childRuns[0], assignment, binding, origin);
             return await MapRunAsync(assignment, stepContract, childRuns[0], cancellationToken).ConfigureAwait(false);
         }
 
@@ -101,11 +104,28 @@ internal sealed class WorkflowProcessStepExecutor(
         var intent = new WorkflowLaunchIntent(
             CreateSelection(binding),
             WorkflowLaunchMode.Production,
-            CreateOrigin(assignment),
+            origin,
             CreateInputJson(assignment, stepContract),
             WorkflowLaunchCompletionPolicy.WaitForStopped,
             new WorkflowLaunchIdempotency.CallerSupplied(CreateIdempotencyKey(assignment)));
-        var launch = await launchService.LaunchAsync(intent, cancellationToken).ConfigureAwait(false);
+        WorkflowLaunchResult launch;
+        try {
+            launch = await launchService.LaunchAsync(intent, cancellationToken).ConfigureAwait(false);
+        } catch (Exception originalFailure) when (!cancellationToken.IsCancellationRequested) {
+            IReadOnlyList<WorkflowRunSnapshot> retained;
+            try {
+                retained = await assignmentRuns.FindAsync(new(assignment.RunId.Value), new(assignment.StepInstanceId.Value), cancellationToken).ConfigureAwait(false);
+            } catch {
+                ExceptionDispatchInfo.Capture(originalFailure).Throw();
+                throw;
+            }
+            if (retained.Count != 1 || retained[0].Origin is not WorkflowLaunchOrigin.ProcessDispatchAssignment receipt ||
+                    !origin.Dispatch.HasSameIntent(receipt.Dispatch)) {
+                throw;
+            }
+            RequireSameChild(retained[0], assignment, binding, origin);
+            return await MapRunAsync(assignment, stepContract, retained[0], cancellationToken).ConfigureAwait(false);
+        }
         if (!IsVerifiedChild(launch.Run, assignment, binding))
         {
             return Failed(
@@ -114,6 +134,7 @@ internal sealed class WorkflowProcessStepExecutor(
                 $"{assignment.RunId}:{assignment.StepInstanceId}:{launch.Run.RunId}:{launch.Run.WorkflowId}:{launch.Run.VersionId}:{launch.Run.Origin?.Kind.ToString() ?? "missing"}");
         }
 
+        RequireSameChild(launch.Run, assignment, binding, origin);
         return await MapRunAsync(assignment, stepContract, launch.Run, cancellationToken).ConfigureAwait(false);
     }
 
@@ -221,20 +242,24 @@ internal sealed class WorkflowProcessStepExecutor(
             stepContract: stepContract);
     }
 
-    private static bool IsVerifiedChild(
-        WorkflowRunSnapshot run,
-        ProcessRuntimeStepAssignment assignment,
-        ProcessWorkflowExecutorBinding binding)
-    {
-        if (run.WorkflowId.Value != binding.WorkflowId.Value ||
-            binding.WorkflowVersionId is { } versionId && run.VersionId.Value != versionId.Value ||
-            run.Origin is not WorkflowLaunchOrigin.ProcessAssignment origin)
-        {
+    private static bool IsVerifiedChild(WorkflowRunSnapshot run, ProcessRuntimeStepAssignment assignment, ProcessWorkflowExecutorBinding binding) {
+        if (run.WorkflowId.Value != binding.WorkflowId.Value || binding.WorkflowVersionId is { } versionId && run.VersionId.Value != versionId.Value) {
             return false;
         }
+        return run.Origin switch {
+            WorkflowLaunchOrigin.ProcessAssignment old => old.ProcessRun.Value == assignment.RunId.Value && old.Assignment.Value == assignment.StepInstanceId.Value,
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => mapped.Dispatch.ProcessRun.Value == assignment.RunId.Value &&
+                mapped.Dispatch.Assignment.Value == assignment.StepInstanceId.Value,
+            _ => false
+        };
+    }
 
-        return origin.ProcessRun == new WorkflowOriginProcessRunId(assignment.RunId.Value) &&
-               origin.Assignment == new WorkflowOriginAssignmentId(assignment.StepInstanceId.Value);
+    private static void RequireSameChild(WorkflowRunSnapshot run, ProcessRuntimeStepAssignment assignment,
+        ProcessWorkflowExecutorBinding binding, WorkflowLaunchOrigin.ProcessDispatchAssignment origin) {
+        if (!IsVerifiedChild(run, assignment, binding) || run.Origin is WorkflowLaunchOrigin.ProcessDispatchAssignment mapped &&
+                !origin.Dispatch.HasSameIntent(mapped.Dispatch)) {
+            throw new InvalidOperationException($"Mapped Process step '{assignment.StepInstanceId}' already has a different original Workflow contract; reconciliation is required.");
+        }
     }
 
     private static WorkflowDefinitionSelection CreateSelection(ProcessWorkflowExecutorBinding binding)
@@ -243,13 +268,6 @@ internal sealed class WorkflowProcessStepExecutor(
                 new WorkflowId(binding.WorkflowId.Value),
                 new WorkflowVersionId(versionId.Value))
             : new WorkflowDefinitionSelection.LatestActive(new WorkflowId(binding.WorkflowId.Value));
-
-    private static WorkflowLaunchOrigin.ProcessAssignment CreateOrigin(
-        ProcessRuntimeStepAssignment assignment)
-        => new(
-            new WorkflowOriginProcessRunId(assignment.RunId.Value),
-            new WorkflowOriginAssignmentId(assignment.StepInstanceId.Value),
-            new WorkflowLaunchCorrelationId(assignment.RunId.Value));
 
     private static WorkflowLaunchIdempotencyKey CreateIdempotencyKey(
         ProcessRuntimeStepAssignment assignment)

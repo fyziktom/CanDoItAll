@@ -10,6 +10,7 @@ public sealed class ProjectWorkAssignmentService(
     DbContextOptions<WorkbenchDbContext> options,
     CoordinatedDatabaseTransaction transactions,
     ProjectRecordQueryService projects,
+    ProjectWriteAdmissionService admissions,
     IProjectWorkAssignmentPartyFacts parties,
     IProjectWorkAssignmentQueries queries,
     IProjectWorkItemAssignmentMutationBridge revisions) : IProjectWorkAssignmentCommands {
@@ -48,6 +49,7 @@ public sealed class ProjectWorkAssignmentService(
 
     public async Task<Result<Guid>> SaveAsync(ProjectPartyAssignmentUpsertRequest request, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
+        request = request.Snapshot();
         var newAssignmentId = Guid.NewGuid();
         await using var context = await factory.CreateDbContextAsync(cancellationToken);
         await using var scope = await SerializableMutationScope.BeginAsync(context,
@@ -62,6 +64,8 @@ public sealed class ProjectWorkAssignmentService(
 
     public async Task<Result<Guid>> StageSaveAsync(ProjectPartyAssignmentUpsertRequest request, Guid newAssignmentId,
         ProjectWorkAssignmentCarryOver? carryOver = null, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        request = request.Snapshot();
         await using var context = await EnlistAsync(cancellationToken);
         return await SaveCoreAsync(context, request, newAssignmentId, carryOver, cancellationToken);
     }
@@ -69,6 +73,8 @@ public sealed class ProjectWorkAssignmentService(
     private async Task<Result<Guid>> SaveCoreAsync(WorkbenchDbContext context,
         ProjectPartyAssignmentUpsertRequest request, Guid newAssignmentId, ProjectWorkAssignmentCarryOver? carryOver, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(request);
+        var expected = ProjectAssignmentAdmission.Require(request.ProjectId, request.ExpectedProjectAdmission);
+        await admissions.RequireForMutationAsync(expected, cancellationToken);
         var nodeKey = request.NodeKey?.Trim() ?? string.Empty;
         var error = await ValidateAsync(context, request.ProjectId, nodeKey, [request], cancellationToken);
         if (error is not null) {
@@ -79,23 +85,23 @@ public sealed class ProjectWorkAssignmentService(
             : null;
         if (entity is null && carryOver is null) {
             entity = await context.Set<ProjectWorkAssignmentRecord>().SingleOrDefaultAsync(item =>
-                item.ProjectId == request.ProjectId && item.PartyId == request.PartyId && item.NodeKey == nodeKey, cancellationToken);
+                item.ProjectId == request.ProjectId && item.ProjectLifetimeId == expected.LifetimeId && item.PartyId == request.PartyId && item.NodeKey == nodeKey, cancellationToken);
         }
-        if (entity is not null && entity.ProjectId != request.ProjectId) {
+        if (entity is not null && (entity.ProjectId != request.ProjectId || entity.ProjectLifetimeId != expected.LifetimeId)) {
             return Result<Guid>.Failure(Validation("The assignment does not belong to the requested project.", "project-mismatch"));
         }
         if (request.AssignmentId is { } requestedId &&
             await parties.FindParticipationProjectForMutationAsync(requestedId, cancellationToken) is not null) {
             return Result<Guid>.Failure(Validation("An existing participation assignment requires a coordinated ownership transition.", "ownership-transition-required"));
         }
-        if (carryOver is not null && (entity is not null || request.AssignmentId != carryOver.Id)) {
+        if (carryOver is not null && (entity is not null || request.AssignmentId != carryOver.Id || carryOver.ProjectLifetimeId != expected.LifetimeId)) {
             throw new InvalidOperationException("An assignment ownership transition must preserve one unoccupied assignment identity.");
         }
         var affectedNodes = new HashSet<string>(StringComparer.Ordinal) { nodeKey };
         if (entity is not null) {
             affectedNodes.Add(entity.NodeKey);
         }
-        await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == request.ProjectId &&
+        await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == request.ProjectId && item.ProjectLifetimeId == expected.LifetimeId &&
             affectedNodes.Contains(item.NodeKey)).LoadAsync(cancellationToken);
         if (entity is null) {
             if (newAssignmentId == Guid.Empty || await parties.FindParticipationProjectForMutationAsync(newAssignmentId, cancellationToken) is not null) {
@@ -111,12 +117,12 @@ public sealed class ProjectWorkAssignmentService(
         }
         Apply(entity, request, request.ProjectId, nodeKey, request.IsPrimary);
         if (entity.IsPrimary) {
-            foreach (var other in Current(context, request.ProjectId, nodeKey).Where(item => item.Id != entity.Id)) {
+            foreach (var other in Current(context, request.ProjectId, expected.LifetimeId, nodeKey).Where(item => item.Id != entity.Id)) {
                 other.IsPrimary = false;
             }
         }
         foreach (var affectedNode in affectedNodes) {
-            await StageRevisionAsync(context, request.ProjectId, affectedNode, null, null, cancellationToken);
+            await StageRevisionAsync(context, request.ProjectId, expected.LifetimeId, affectedNode, null, null, cancellationToken);
         }
         await context.SaveChangesAsync(cancellationToken);
         return Result<Guid>.Success(entity.Id);
@@ -125,14 +131,18 @@ public sealed class ProjectWorkAssignmentService(
     public async Task<Result> ReplaceAsync(Guid projectId, ProjectNodeReference node,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
-        ProjectWorkItemDirectAssignmentRevision? expectedRevision = null, CancellationToken cancellationToken = default) {
+        ProjectWorkItemDirectAssignmentRevision? expectedRevision = null, CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null) {
         ArgumentNullException.ThrowIfNull(desiredAssignments);
+        var expected = ProjectAssignmentAdmission.Require(projectId, expectedProjectAdmission);
+        desiredAssignments = ProjectAssignmentAdmission.Snapshot(projectId, desiredAssignments, expected);
+        expectedAssignments = expectedAssignments?.ToArray();
         var newIds = desiredAssignments.Select(_ => Guid.NewGuid()).ToArray();
         await using var context = await factory.CreateDbContextAsync(cancellationToken);
         await using var scope = await SerializableMutationScope.BeginAsync(context,
             MutationKeys(projectId, desiredAssignments.Where(item => item.AssignmentId.HasValue).Select(item => item.AssignmentId!.Value).Concat(newIds)), cancellationToken);
         using var entry = transactions.Enter(context);
-        var result = await ReplaceCoreAsync(context, projectId, node, desiredAssignments, newIds, expectedAssignments, expectedRevision, cancellationToken);
+        var result = await ReplaceCoreAsync(context, projectId, node, desiredAssignments, newIds, expectedAssignments, expectedRevision, cancellationToken, expectedProjectAdmission);
         if (result.IsSuccess) {
             await scope.CommitAsync(cancellationToken);
         }
@@ -143,17 +153,24 @@ public sealed class ProjectWorkAssignmentService(
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<Guid> newAssignmentIds,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
-        ProjectWorkItemDirectAssignmentRevision? expectedRevision = null, CancellationToken cancellationToken = default) {
+        ProjectWorkItemDirectAssignmentRevision? expectedRevision = null, CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null) {
+        var expected = ProjectAssignmentAdmission.Require(projectId, expectedProjectAdmission);
+        desiredAssignments = ProjectAssignmentAdmission.Snapshot(projectId, desiredAssignments, expected);
+        newAssignmentIds = newAssignmentIds.ToArray();
+        expectedAssignments = expectedAssignments?.ToArray();
         await using var context = await EnlistAsync(cancellationToken);
-        return await ReplaceCoreAsync(context, projectId, node, desiredAssignments, newAssignmentIds, expectedAssignments, expectedRevision, cancellationToken);
+        return await ReplaceCoreAsync(context, projectId, node, desiredAssignments, newAssignmentIds, expectedAssignments, expectedRevision, cancellationToken, expectedProjectAdmission);
     }
 
     private async Task<Result> ReplaceCoreAsync(WorkbenchDbContext context, Guid projectId, ProjectNodeReference node,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<Guid> newAssignmentIds,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments,
-        ProjectWorkItemDirectAssignmentRevision? expectedRevision, CancellationToken cancellationToken) {
-        ArgumentNullException.ThrowIfNull(desiredAssignments);
+        ProjectWorkItemDirectAssignmentRevision? expectedRevision, CancellationToken cancellationToken, ProjectWriteAdmission? expectedProjectAdmission) {
+        var expected = ProjectAssignmentAdmission.Require(projectId, expectedProjectAdmission);
+        desiredAssignments = ProjectAssignmentAdmission.Snapshot(projectId, desiredAssignments, expected);
+        await admissions.RequireForMutationAsync(expected, cancellationToken);
         if (newAssignmentIds.Count != desiredAssignments.Count || newAssignmentIds.Any(id => id == Guid.Empty) ||
             newAssignmentIds.Distinct().Count() != newAssignmentIds.Count) {
             throw new ArgumentException("Every replacement requires its own preallocated assignment identity.", nameof(newAssignmentIds));
@@ -166,7 +183,7 @@ public sealed class ProjectWorkAssignmentService(
             return Result.Failure(error);
         }
         var existing = await context.Set<ProjectWorkAssignmentRecord>().Where(item =>
-            item.ProjectId == projectId && item.NodeKey == node.NodeKey).ToListAsync(cancellationToken);
+            item.ProjectId == projectId && item.ProjectLifetimeId == expected.LifetimeId && item.NodeKey == node.NodeKey).ToListAsync(cancellationToken);
         if (expectedAssignments is not null) {
             var facts = await parties.ReadForMutationAsync(existing.Select(item => item.PartyId).Distinct().ToArray(), cancellationToken);
             var actual = existing.Where(item => facts.ContainsKey(item.PartyId)).Select(item =>
@@ -195,7 +212,7 @@ public sealed class ProjectWorkAssignmentService(
         }
         context.RemoveRange(existing);
         context.AddRange(replacements);
-        var revision = await StageRevisionAsync(context, projectId, node.NodeKey, expectedRevision, null, cancellationToken);
+        var revision = await StageRevisionAsync(context, projectId, expected.LifetimeId, node.NodeKey, expectedRevision, null, cancellationToken);
         if (revision.Status != ProjectWorkItemDirectAssignmentMutationStatus.Applied) {
             return Stale();
         }
@@ -203,11 +220,15 @@ public sealed class ProjectWorkAssignmentService(
         return Result.Success();
     }
 
-    public async Task DeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default) {
+    public async Task DeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null) {
+        ArgumentNullException.ThrowIfNull(expectedReference);
+        expectedReference.RequireProfile(admissions.DatabaseProfileId, expectedReference.ProjectId);
         var original = await GetAsync(assignmentId, cancellationToken);
         if (original is null) {
             return;
         }
+        RequireReference(original.ProjectId, original.ProjectLifetimeId, expectedReference);
         await using var context = await factory.CreateDbContextAsync(cancellationToken);
         await using var scope = await SerializableMutationScope.BeginAsync(context,
             MutationKeys(original.ProjectId, [assignmentId]), cancellationToken);
@@ -216,63 +237,73 @@ public sealed class ProjectWorkAssignmentService(
         if (current is not null && current.ProjectId != original.ProjectId) {
             throw new InvalidOperationException("The assignment project changed while it was being deleted.");
         }
-        await StageDeleteAsync(assignmentId, cancellationToken);
+        await StageDeleteAsync(assignmentId, cancellationToken, expectedReference);
         await scope.CommitAsync(cancellationToken);
     }
 
-    public async Task StageDeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default) {
+    public async Task StageDeleteAsync(Guid assignmentId, CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null) {
         await using var context = await EnlistAsync(cancellationToken);
         var entity = await context.Set<ProjectWorkAssignmentRecord>().SingleOrDefaultAsync(item => item.Id == assignmentId, cancellationToken);
         if (entity is null) {
             return;
         }
-        await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == entity.ProjectId &&
+        RequireReference(entity.ProjectId, entity.ProjectLifetimeId, expectedReference);
+        await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == entity.ProjectId && item.ProjectLifetimeId == entity.ProjectLifetimeId &&
             item.NodeKey == entity.NodeKey).LoadAsync(cancellationToken);
         context.Remove(entity);
-        await StageRevisionAsync(context, entity.ProjectId, entity.NodeKey, null, null, cancellationToken);
+        await StageRevisionAsync(context, entity.ProjectId, entity.ProjectLifetimeId, entity.NodeKey, null, null, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task StageDeleteForNodesAsync(Guid projectId, IReadOnlyCollection<ProjectNodeReference> nodes,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null) {
         ArgumentNullException.ThrowIfNull(nodes);
+        var reference = RequireBoundReference(projectId, expectedReference);
         await using var context = await EnlistAsync(cancellationToken);
         var keys = nodes.Select(item => item.NodeKey).Distinct().ToArray();
-        var rows = await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == projectId &&
+        var rows = await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == projectId && item.ProjectLifetimeId == reference.LifetimeId &&
             keys.Contains(item.NodeKey)).ToListAsync(cancellationToken);
         context.RemoveRange(rows);
         foreach (var key in rows.Select(item => item.NodeKey).Distinct()) {
-            await StageRevisionAsync(context, projectId, key, null, null, cancellationToken);
+            await StageRevisionAsync(context, projectId, reference.LifetimeId, key, null, null, cancellationToken);
         }
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task StageDeleteForProjectAsync(Guid projectId, CancellationToken cancellationToken = default) {
+    public async Task StageDeleteForProjectAsync(Guid projectId, CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null) {
+        var reference = RequireBoundReference(projectId, expectedReference);
         await using var context = await EnlistAsync(cancellationToken);
-        context.RemoveRange(await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == projectId).ToListAsync(cancellationToken));
+        context.RemoveRange(await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == projectId && item.ProjectLifetimeId == reference.LifetimeId).ToListAsync(cancellationToken));
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task StageMoveAsync(Guid sourceProjectId, Guid targetProjectId, IReadOnlyCollection<ProjectNodeReference> nodes,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? sourceReference = null,
+        ProjectWriteAdmission? expectedTargetAdmission = null) {
         ArgumentNullException.ThrowIfNull(nodes);
+        var source = RequireBoundReference(sourceProjectId, sourceReference);
+        var target = ProjectAssignmentAdmission.Require(targetProjectId, expectedTargetAdmission);
+        await admissions.RequireForMutationAsync(target, cancellationToken);
         await using var context = await EnlistAsync(cancellationToken);
-        if (await projects.GetForMutationAsync(targetProjectId, cancellationToken) is null) {
-            throw new InvalidOperationException("The target project was not found.");
-        }
         var keys = nodes.Select(item => item.NodeKey).Distinct().ToArray();
         var rows = await context.Set<ProjectWorkAssignmentRecord>().Where(item => keys.Contains(item.NodeKey) &&
-            (item.ProjectId == sourceProjectId || item.ProjectId == targetProjectId)).ToListAsync(cancellationToken);
+            ((item.ProjectId == sourceProjectId && item.ProjectLifetimeId == source.LifetimeId) ||
+             (item.ProjectId == targetProjectId && item.ProjectLifetimeId == target.LifetimeId))).ToListAsync(cancellationToken);
         foreach (var row in rows) {
             if (row.ProjectId == targetProjectId) {
                 context.Remove(row);
             } else {
                 row.ProjectId = targetProjectId;
+                row.ProjectLifetimeId = target.LifetimeId;
             }
         }
         foreach (var key in rows.Select(item => item.NodeKey).Distinct()) {
-            await StageRevisionAsync(context, sourceProjectId, key, null, null, cancellationToken);
-            await StageRevisionAsync(context, targetProjectId, key, null, null, cancellationToken);
+            await StageRevisionAsync(context, sourceProjectId, source.LifetimeId, key, null, null, cancellationToken);
+            await StageRevisionAsync(context, targetProjectId, target.LifetimeId, key, null, null, cancellationToken);
         }
         await context.SaveChangesAsync(cancellationToken);
     }
@@ -296,10 +327,10 @@ public sealed class ProjectWorkAssignmentService(
                 row.PartyOrganizationAffiliationId = replacement;
             }
         }
-        foreach (var group in rows.Select(item => (item.ProjectId, item.NodeKey)).Distinct()) {
-            await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == group.ProjectId &&
+        foreach (var group in rows.Select(item => (item.ProjectId, item.ProjectLifetimeId, item.NodeKey)).Distinct()) {
+            await context.Set<ProjectWorkAssignmentRecord>().Where(item => item.ProjectId == group.ProjectId && item.ProjectLifetimeId == group.ProjectLifetimeId &&
                 item.NodeKey == group.NodeKey).LoadAsync(cancellationToken);
-            await StageRevisionAsync(context, group.ProjectId, group.NodeKey, null, merge.RetainedParty, cancellationToken);
+            await StageRevisionAsync(context, group.ProjectId, group.ProjectLifetimeId, group.NodeKey, null, merge.RetainedParty, cancellationToken);
         }
         await context.SaveChangesAsync(cancellationToken);
     }
@@ -332,9 +363,6 @@ public sealed class ProjectWorkAssignmentService(
         if (string.IsNullOrWhiteSpace(nodeKey)) {
             return Validation("A node is required for this assignment.", "node-required");
         }
-        if (await projects.GetForMutationAsync(projectId, cancellationToken) is null) {
-            return Validation("Project was not found.", "project-not-found");
-        }
         var node = await context.Set<ProjectObjectRecord>().AsNoTracking().SingleOrDefaultAsync(item =>
             item.ProjectId == projectId && item.NodeKey == nodeKey, cancellationToken);
         if (node is null) {
@@ -360,12 +388,18 @@ public sealed class ProjectWorkAssignmentService(
     }
 
     private async Task<ProjectWorkItemDirectAssignmentMutationResult> StageRevisionAsync(WorkbenchDbContext context,
-        Guid projectId, string nodeKey, ProjectWorkItemDirectAssignmentRevision? expectedRevision,
+        Guid projectId, Guid? projectLifetimeId, string nodeKey, ProjectWorkItemDirectAssignmentRevision? expectedRevision,
         ProjectWorkAssignmentPartyFact? retainedParty, CancellationToken cancellationToken) {
         if (string.IsNullOrWhiteSpace(nodeKey)) {
             return new(ProjectWorkItemDirectAssignmentMutationStatus.WorkItemNotFound, null);
         }
-        var rows = Current(context, projectId, nodeKey);
+        var currentProject = await projects.GetForMutationAsync(projectId, cancellationToken);
+        if (projectLifetimeId is null || currentProject?.LifetimeId != projectLifetimeId) {
+            return new(ProjectWorkItemDirectAssignmentMutationStatus.WorkItemNotFound, null);
+        }
+        var expected = new ProjectWriteAdmission(admissions.DatabaseProfileId, projectId, projectLifetimeId.Value);
+        await admissions.RequireForMutationAsync(expected, cancellationToken);
+        var rows = Current(context, projectId, projectLifetimeId, nodeKey);
         var facts = await parties.ReadForMutationAsync(rows.Select(item => item.PartyId).Distinct().ToArray(), cancellationToken);
         var final = rows.Select(item => {
             var fact = retainedParty?.PartyId == item.PartyId ? retainedParty : facts.GetValueOrDefault(item.PartyId);
@@ -374,17 +408,18 @@ public sealed class ProjectWorkAssignmentService(
             }
             return new ProjectWorkItemDirectAssignmentState(fact.PartyType, item.PartyId, item.IsPrimary, fact.DisplayName);
         }).ToArray();
-        return await revisions.StageMutationAsync(projectId, new ProjectNodeReference(nodeKey), final, expectedRevision, cancellationToken);
+        return await revisions.StageMutationAsync(projectId, new ProjectNodeReference(nodeKey), final, expectedRevision, cancellationToken, expected);
     }
 
-    private static List<ProjectWorkAssignmentRecord> Current(WorkbenchDbContext context, Guid projectId, string nodeKey) =>
+    private static List<ProjectWorkAssignmentRecord> Current(WorkbenchDbContext context, Guid projectId, Guid? projectLifetimeId, string nodeKey) =>
         context.ChangeTracker.Entries<ProjectWorkAssignmentRecord>().Where(entry =>
-            entry.State is not (EntityState.Deleted or EntityState.Detached) && entry.Entity.ProjectId == projectId &&
+            entry.State is not (EntityState.Deleted or EntityState.Detached) && entry.Entity.ProjectId == projectId && entry.Entity.ProjectLifetimeId == projectLifetimeId &&
             entry.Entity.NodeKey == nodeKey).Select(entry => entry.Entity).ToList();
 
     private static void Apply(ProjectWorkAssignmentRecord entity, ProjectPartyAssignmentUpsertRequest request,
         Guid projectId, string nodeKey, bool isPrimary) {
         entity.ProjectId = projectId;
+        entity.ProjectLifetimeId = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission).LifetimeId;
         entity.PartyId = request.PartyId;
         entity.PartyOrganizationAffiliationId = request.PartyAffiliationId;
         entity.NodeKey = nodeKey;
@@ -394,6 +429,20 @@ public sealed class ProjectWorkAssignmentService(
         entity.EndsAtUtc = ToUtcDate(request.EndsOn);
         entity.Source = string.IsNullOrWhiteSpace(request.Source) ? "crm-hr-ui" : request.Source.Trim();
         entity.Notes = request.Notes?.Trim() ?? string.Empty;
+    }
+
+    private void RequireReference(Guid projectId, Guid? lifetimeId, ProjectAssignmentReference? reference) {
+        ArgumentNullException.ThrowIfNull(reference);
+        reference.RequireProfile(admissions.DatabaseProfileId, projectId);
+        if (reference.LifetimeId != lifetimeId) {
+            throw new InvalidOperationException("The assignment belongs to a different captured project lifetime.");
+        }
+    }
+
+    private ProjectWriteAdmission RequireBoundReference(Guid projectId, ProjectAssignmentReference? reference) {
+        ArgumentNullException.ThrowIfNull(reference);
+        reference.RequireProfile(admissions.DatabaseProfileId, projectId);
+        return reference.RequireBoundAdmission();
     }
 
     private Task<WorkbenchDbContext> EnlistAsync(CancellationToken cancellationToken) =>

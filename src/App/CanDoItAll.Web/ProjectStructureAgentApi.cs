@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Models;
 using System.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
@@ -15,6 +16,7 @@ namespace CanDoItAll.Web;
 
 public static class ProjectStructureAgentApi
 {
+    private const string ProjectLifetimeRefreshRequiredErrorCode = "ProjectLifetimeRefreshRequired";
     private const string ReadSourceUnavailableErrorCode =
         "ProjectStructureReadSourceUnavailable";
     private const string ReadSourceInvalidErrorCode =
@@ -202,6 +204,8 @@ public static class ProjectStructureAgentApi
                 request,
                 async (agent, cancellationToken) =>
                 {
+                    var expected = RequireTaskAdmission(projectId, request.ExpectedProjectAdmission);
+                    agent = agent with { ExpectedProjectAdmission = expected };
                     try
                     {
                         return await taskCreationService.CreateAsync(
@@ -238,7 +242,7 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                async (_, cancellationToken) =>
+                async (agent, cancellationToken) =>
                 {
                     if (!string.Equals(taskId, request.TaskId.Value, StringComparison.Ordinal))
                     {
@@ -248,11 +252,13 @@ public static class ProjectStructureAgentApi
                             "The task id in the route must match request.taskId.");
                     }
 
+                    var expected = RequireTaskAdmission(projectId, request.ExpectedProjectAdmission);
+                    var owner = agent with { ExpectedProjectAdmission = expected };
                     try
                     {
                         return await taskDetailsService.UpdateAsync(
                             projectId,
-                            request,
+                            request with { MutationOwner = owner },
                             cancellationToken);
                     }
                     catch (ProjectStructureTaskDetailsException exception)
@@ -287,7 +293,7 @@ public static class ProjectStructureAgentApi
                     projectId,
                     taskId,
                     request,
-                    agent,
+                    agent with { ExpectedProjectAdmission = RequireTaskAdmission(projectId, request.ExpectedProjectAdmission) },
                     cancellationToken),
                 cancellationToken));
 
@@ -1508,7 +1514,7 @@ public static class ProjectStructureAgentApi
                 ProjectStructureHttpJsonContract.SerializerOptions,
                 statusCode: ex.StatusCode);
         }
-        catch (Exception ex) when (SerializableMutationScope.IsConflict(ex))
+        catch (Exception ex) when (SerializableMutationScope.IsConflict(ex) || ex is ProjectWriteAdmissionRejectedException)
         {
             const string errorCode = "ProjectStructureConcurrentMutation";
             const string message =
@@ -1631,6 +1637,14 @@ public static class ProjectStructureAgentApi
                 executionCancellationToken),
             cancellationToken,
             projectIdSelector);
+    }
+
+    private static ProjectWriteAdmission RequireTaskAdmission(Guid projectId, ProjectWriteAdmission? expected) {
+        if (expected is null || expected.ProjectId != projectId) {
+            throw new ProjectStructureAgentException(StatusCodes.Status409Conflict, ProjectLifetimeRefreshRequiredErrorCode,
+                "Reload the project structure and submit its expectedProjectAdmission with the task mutation.");
+        }
+        return expected;
     }
 
     private static ProjectStructureAgentContext ResolveAgentContext(HttpContext httpContext)

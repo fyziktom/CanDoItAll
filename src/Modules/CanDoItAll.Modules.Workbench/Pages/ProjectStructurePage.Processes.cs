@@ -65,6 +65,9 @@ public partial class ProjectStructurePage
     }
 
     private async Task OpenLinkProcessDialogAsync(ProjectStructureNode node) {
+        var openedSurface = surface ?? throw new InvalidOperationException("Reload the project before opening this editor.");
+        var mutationOwner = CreateProjectStructureUiAgentContext() with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
+
         CloseQuickActionDialog();
         CloseProcessLinkDialog();
         var projectId = ProjectId;
@@ -95,6 +98,8 @@ public partial class ProjectStructurePage
                 options.FirstOrDefault()?.DefinitionId,
                 options.Count == 0 ? "No process definitions are available in the process template catalog." : string.Empty) {
                 ProjectId = projectId,
+                OpenedSurface = openedSurface,
+                MutationOwner = mutationOwner,
                 DialogId = requestId,
                 NavigationIdentity = navigation
             };
@@ -110,6 +115,8 @@ public partial class ProjectStructurePage
                 null,
                 $"Process definitions could not be loaded: {exception.Message}") {
                 ProjectId = projectId,
+                OpenedSurface = openedSurface,
+                MutationOwner = mutationOwner,
                 DialogId = requestId,
                 NavigationIdentity = navigation
             };
@@ -165,7 +172,9 @@ public partial class ProjectStructurePage
         }
 
         try {
-            var sourceNode = ResolveNode(dialog.SourceNodeId)
+            var openedSurface = dialog.OpenedSurface ?? throw new InvalidOperationException("Reopen this editor to capture its project.");
+            var mutationOwner = dialog.MutationOwner ?? throw new InvalidOperationException("Reopen this editor to capture its project.");
+            var sourceNode = openedSurface.Nodes.FirstOrDefault(node => node.Id == dialog.SourceNodeId)
                 ?? throw new InvalidOperationException("The selected project-structure node is no longer available.");
             processLinkDialog = dialog with { IsBusy = true };
             if (IsCanonicalTaskNode(sourceNode)) {
@@ -177,14 +186,14 @@ public partial class ProjectStructurePage
                         new ProjectStructureTaskResourceSelection(
                             ProjectStructureTaskResourceKind.Process,
                             selectedOption.DefinitionId),
-                        execution),
-                    CreateProjectStructureUiAgentContext());
+                        execution) { ExpectedProjectAdmission = mutationOwner.ExpectedProjectAdmission },
+                    mutationOwner);
             } else {
                 await ProjectWorkbenchService.LinkObjectsAsync(
                     dialog.ProjectId,
                     sourceNode.Id,
                     ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(selectedOption.DefinitionId),
-                    ProjectObjectLinkKind.Uses);
+                    ProjectObjectLinkKind.Uses, expectedProjectAdmission: mutationOwner.ExpectedProjectAdmission, processMutationAdmission: mutationOwner.ProcessMutationAdmission);
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
             var message = exception is ProjectStructureAgentException or InvalidOperationException or ArgumentException

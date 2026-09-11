@@ -41,7 +41,7 @@ public sealed class WorkflowHistoryProjection(HistoryPartitionStore partitions, 
                 observation.ProviderName, observation.ProviderKind?.ToString() ?? "Unknown",
                 string.IsNullOrWhiteSpace(observation.Model) ? null : new ProviderModelIdentity(observation.Model),
                 string.IsNullOrWhiteSpace(observation.Model) ? null : new ProviderModelIdentity(observation.Model)),
-            HistoryOperation.CompleteChat, observation.Origin is WorkflowLaunchOrigin.ProcessAssignment
+            HistoryOperation.CompleteChat, observation.Origin is WorkflowLaunchOrigin.ProcessAssignment or WorkflowLaunchOrigin.ProcessToolInvocation or WorkflowLaunchOrigin.ProcessDispatchAssignment
                 ? HistoryWorkload.Process : HistoryWorkload.Workflow,
             HistoryOutcome.Unknown,
             new(HistoryAuthenticationKind.Unknown),

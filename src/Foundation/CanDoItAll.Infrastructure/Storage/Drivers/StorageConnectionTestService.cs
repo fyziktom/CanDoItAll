@@ -3,14 +3,14 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Infrastructure.Storage;
 
 public sealed class StorageConnectionTestService(
-    IStorageCatalogService catalogService,
+    StorageCatalogService catalogService,
     IStorageDriverRegistry driverRegistry,
     IStorageSecretResolver secretResolver,
     ILogger<StorageConnectionTestService> logger) : IStorageConnectionTestService
 {
     public async Task<StorageConnectionTestResult> TestAsync(Guid storageId, CancellationToken cancellationToken = default)
     {
-        var storage = await catalogService.GetAsync(storageId, cancellationToken);
+        var storage = await catalogService.GetDriverAsync(storageId, cancellationToken);
         if (storage is null)
         {
             return new StorageConnectionTestResult(
@@ -28,11 +28,7 @@ public sealed class StorageConnectionTestService(
             var driver = driverRegistry.Resolve(storage.ProviderKind);
             var result = await driver.TestConnectionAsync(storage, secretValue, cancellationToken);
 
-            storage.LastTestedAtUtc = result.TestedAtUtc;
-            storage.HealthStatus = result.HealthStatus;
-            storage.LastHealthMessage = result.Message;
-            storage.CapabilityMask = result.CapabilityMask;
-            await catalogService.SaveAsync(storage, cancellationToken);
+            await catalogService.SaveConnectionResultAsync(storage, result, updateCapabilities: true, cancellationToken);
 
             return result;
         }
@@ -47,10 +43,7 @@ public sealed class StorageConnectionTestService(
                 StorageCapability.None,
                 DateTimeOffset.UtcNow);
 
-            storage.LastTestedAtUtc = failure.TestedAtUtc;
-            storage.HealthStatus = failure.HealthStatus;
-            storage.LastHealthMessage = failure.Message;
-            await catalogService.SaveAsync(storage, cancellationToken);
+            await catalogService.SaveConnectionResultAsync(storage, failure, updateCapabilities: false, cancellationToken);
 
             return failure;
         }

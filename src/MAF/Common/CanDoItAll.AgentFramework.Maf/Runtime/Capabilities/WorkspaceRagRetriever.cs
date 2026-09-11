@@ -10,16 +10,22 @@ internal sealed class WorkspaceRagRetriever
     private readonly string workspaceRoot;
     private readonly WorkspaceScopeDescriptor workspaceScope;
     private readonly IPhysicalFileSystemPathPolicy workspacePathPolicy;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
+    private readonly WorkspacePathScopeContribution? workspacePaths;
 
     public WorkspaceRagRetriever(
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
-        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+        WorkspacePathScopeContribution? workspacePaths = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         workspacePathPolicy = physicalPathPolicyFactory.Create(workspaceRoot);
         this.workspaceRoot = workspacePathPolicy.RootPath;
         this.workspaceScope = workspaceScope ?? throw new ArgumentNullException(nameof(workspaceScope));
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory;
+        workspacePaths?.RequireScope(workspaceScope);
+        this.workspacePaths = workspacePaths;
     }
 
     public IReadOnlyList<string> ResolveSearchRoots(string configuredRoot)
@@ -37,40 +43,33 @@ internal sealed class WorkspaceRagRetriever
         {
             return [];
         }
-        if (workspaceScope.Kind != WorkspaceScopeKind.Project)
-        {
-            return IsSafeSearchRoot(normalizedRoot)
-                ? [normalizedRoot]
-                : [];
+        WorkspacePathScopeContribution.RequireAvailable(workspaceScope, workspacePaths);
+        if (workspacePaths is null) {
+            return IsSafeSearchRoot(normalizedRoot) ? [normalizedRoot] : [];
         }
 
-        if (!workspacePathPolicy.PathComparer.Equals(
-                Path.TrimEndingDirectorySeparator(normalizedRoot),
-                Path.TrimEndingDirectorySeparator(workspaceRoot)))
-        {
-            var relativeRoot = Path.GetRelativePath(workspaceRoot, normalizedRoot)
-                .Replace(Path.DirectorySeparatorChar, '/');
-            if (ManagedProjectMediaPath.IsProjectMediaPath(relativeRoot) &&
-                !ManagedProjectMediaPath.IsForProject(relativeRoot, workspaceScope.Key))
-            {
-                return [];
+        var isWorkspaceRoot = workspacePathPolicy.PathComparer.Equals(
+            Path.TrimEndingDirectorySeparator(normalizedRoot), Path.TrimEndingDirectorySeparator(workspaceRoot));
+        var relativeRoot = Path.GetRelativePath(workspaceRoot, normalizedRoot).Replace(Path.DirectorySeparatorChar, '/');
+        var relativeRoots = workspacePaths.RestrictSearchRoots(new(relativeRoot, isWorkspaceRoot))
+            ?? throw new InvalidOperationException("A workspace path contribution returned no search-root restriction.");
+        var configuredPathPolicy = isWorkspaceRoot ? null : physicalPathPolicyFactory.Create(normalizedRoot);
+        var searchRoots = new List<string>();
+        foreach (var proposedRoot in relativeRoots) {
+            if (string.IsNullOrWhiteSpace(proposedRoot) || Path.IsPathRooted(proposedRoot) ||
+                WorkspacePathMatching.HasParentTraversalSegment(proposedRoot)) {
+                throw new InvalidOperationException("A workspace path contribution returned a non-canonical relative search root.");
             }
-
-            return IsSafeSearchRoot(normalizedRoot)
-                ? [normalizedRoot]
-                : [];
+            var candidate = workspacePathPolicy.ResolveContainedPath(proposedRoot.Replace('/', Path.DirectorySeparatorChar));
+            if (!workspacePathPolicy.IsWithinRoot(candidate) || configuredPathPolicy?.IsWithinRoot(candidate) == false) {
+                throw new InvalidOperationException("A workspace path contribution expanded the configured search boundary.");
+            }
+            if (IsSafeSearchRoot(candidate, allowMissingLeaf: isWorkspaceRoot)) {
+                searchRoots.Add(candidate);
+            }
         }
-
-        return ManagedProjectMediaPath.ResolveTextAssetRelativeRoots(workspaceScope.Key)
-            .Select(relativePath => Path.Combine(
-                workspaceRoot,
-                relativePath.Replace('/', Path.DirectorySeparatorChar)))
-            .Select(Path.GetFullPath)
-            .Where(path => IsSafeSearchRoot(path, allowMissingLeaf: true))
-            .Distinct(workspacePathPolicy.PathComparer)
-            .OrderBy(
-                path => NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, path)),
-                StringComparer.Ordinal)
+        return searchRoots.Distinct(workspacePathPolicy.PathComparer)
+            .OrderBy(path => NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, path)), StringComparer.Ordinal)
             .ThenBy(path => path, StringComparer.Ordinal)
             .ToArray();
     }

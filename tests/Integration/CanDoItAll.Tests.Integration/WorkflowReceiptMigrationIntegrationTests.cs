@@ -17,6 +17,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class WorkflowReceiptMigrationIntegrationTests {
     private const string PreviousMigration = "20260910213323_AddCrmTechnicalProjectionProvenance";
+    private const string ReceiptMigration = "20260910225242_AddWorkflowStructureReceipts";
+    private const string LatestMigration = "20260911194528_BindWorkflowProviderDisclosureHistory";
     private static readonly DateTimeOffset SavedAt = new(2026, 2, 3, 4, 5, 6, TimeSpan.Zero);
     private const string OriginalJson = "{\"original\":true,\"unknownExtension\":{\"revision\":7}}";
 
@@ -30,6 +32,10 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
             await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
             await SeedNativeDataAsync(context);
             original = await NativePayloadsAsync(context);
+            await context.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
+            Assert.Equal(ReceiptMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            Assert.Equal(original, await NativePayloadsAsync(context));
+            await AssertEmptyReceiptSchemaAsync(context);
         }
         for (var restart = 0; restart < 2; restart++) {
             await using var provider = CreateProvider(profile);
@@ -37,19 +43,9 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
             await context.Database.MigrateAsync();
             Assert.Equal(original, await NativePayloadsAsync(context));
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(159, context.Model.GetEntityTypes().Count());
-            Assert.Equal(0, await context.Set<WorkflowStructureOutputRecord>().CountAsync());
-            Assert.Equal(0, await context.Set<StoragePlacementIntentRecord>().CountAsync());
-            Assert.Equal(0, await context.Set<ProjectWorkflowAdmissionRecord>().CountAsync());
-            Assert.Equal(0, await context.Set<ProjectWorkflowContributionRecord>().CountAsync());
-            Assert.Equal(0, await context.Database.SqlQueryRaw<int>("""
-                SELECT COUNT(*)::int AS "Value" FROM pg_constraint
-                WHERE contype = 'f' AND conrelid IN (
-                    '"AgentFramework_WorkflowStructureOutputs"'::regclass,
-                    '"Storage_PlacementIntents"'::regclass,
-                    '"Workbench_WorkflowAdmissions"'::regclass,
-                    '"Workbench_WorkflowContributionReceipts"'::regclass)
-                """).SingleAsync());
+            Assert.Equal(161, context.Model.GetEntityTypes().Count());
+            Assert.Equal(LatestMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            await AssertEmptyReceiptSchemaAsync(context);
         }
     }
 
@@ -58,14 +54,28 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         await using var environment = CanDoItAllTestEnvironment.Create("workflow-receipt-empty-down");
         await using var provider = CreateProvider(environment.CreatePostgreSqlProfile("empty"));
         await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-        await context.Database.MigrateAsync();
+        await context.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
+        Assert.Equal(ReceiptMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         await SeedNativeDataAsync(context);
         var original = await NativePayloadsAsync(context);
         await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
+        Assert.Equal(PreviousMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(original, await NativePayloadsAsync(context));
+        await context.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
+        Assert.Equal(original, await NativePayloadsAsync(context));
+        await AssertEmptyReceiptSchemaAsync(context);
+        await context.Database.MigrateAsync();
+        Assert.Equal(original, await NativePayloadsAsync(context));
+        await AssertEmptyReceiptSchemaAsync(context);
+        await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
+        Assert.Equal(PreviousMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         Assert.Equal(original, await NativePayloadsAsync(context));
         await context.Database.MigrateAsync();
         Assert.Equal(original, await NativePayloadsAsync(context));
         Assert.False(context.Database.HasPendingModelChanges());
+        Assert.Equal(161, context.Model.GetEntityTypes().Count());
+        Assert.Equal(LatestMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+        await AssertEmptyReceiptSchemaAsync(context);
     }
 
     [Theory]
@@ -77,6 +87,9 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         await using var environment = CanDoItAllTestEnvironment.Create("workflow-receipt-retained-down");
         var profile = environment.CreatePostgreSqlProfile("retained");
         string original;
+        string[] migrations;
+        string current;
+        string[] currentMigrations;
         await using (var provider = CreateProvider(profile)) {
             await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
             await context.Database.MigrateAsync();
@@ -106,15 +119,26 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
                     throw new ArgumentOutOfRangeException(nameof(owner));
             }
             await context.SaveChangesAsync();
+            current = await EvidencePayloadAsync(context, owner);
+            currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
+            await context.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
+            Assert.Equal(ReceiptMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
             original = await EvidencePayloadAsync(context, owner);
+            migrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
             var failure = await Assert.ThrowsAsync<PostgresException>(() => context.GetService<IMigrator>().MigrateAsync(PreviousMigration));
             Assert.Equal(PostgresErrorCodes.RaiseException, failure.SqlState);
+            Assert.Contains("Cannot remove Workflow or Storage recovery evidence", failure.MessageText, StringComparison.Ordinal);
+            Assert.Equal(migrations, (await context.Database.GetAppliedMigrationsAsync()).ToArray());
         }
         await using var restarted = CreateProvider(profile);
         await using var readback = await restarted.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         Assert.Equal(original, await EvidencePayloadAsync(readback, owner));
         Assert.False(readback.Database.HasPendingModelChanges());
         Assert.NotEqual(PreviousMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(migrations, (await readback.Database.GetAppliedMigrationsAsync()).ToArray());
+        await readback.Database.MigrateAsync();
+        Assert.Equal(current, await EvidencePayloadAsync(readback, owner));
+        Assert.Equal(currentMigrations, (await readback.Database.GetAppliedMigrationsAsync()).ToArray());
     }
 
     public enum RecoveryOwner {
@@ -129,6 +153,21 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         TestApplicationBootstrap.ConfigureDefaultServices(services, TestApplicationBootstrap.BuildConfiguration(profile),
             new TestHostEnvironment(profile.EnvironmentRootPath, "CanDoItAll.Tests.Integration"));
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+    }
+
+    private static async Task AssertEmptyReceiptSchemaAsync(AppDbContext context) {
+        Assert.Equal(0, await context.Set<WorkflowStructureOutputRecord>().CountAsync());
+        Assert.Equal(0, await context.Set<StoragePlacementIntentRecord>().CountAsync());
+        Assert.Equal(0, await context.Set<ProjectWorkflowAdmissionRecord>().CountAsync());
+        Assert.Equal(0, await context.Set<ProjectWorkflowContributionRecord>().CountAsync());
+        Assert.Equal(0, await context.Database.SqlQueryRaw<int>("""
+            SELECT COUNT(*)::int AS "Value" FROM pg_constraint
+            WHERE contype = 'f' AND conrelid IN (
+                '"AgentFramework_WorkflowStructureOutputs"'::regclass,
+                '"Storage_PlacementIntents"'::regclass,
+                '"Workbench_WorkflowAdmissions"'::regclass,
+                '"Workbench_WorkflowContributionReceipts"'::regclass)
+            """).SingleAsync());
     }
 
     private static async Task SeedNativeDataAsync(AppDbContext context) {

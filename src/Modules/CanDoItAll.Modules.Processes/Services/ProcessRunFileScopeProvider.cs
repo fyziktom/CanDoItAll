@@ -123,7 +123,7 @@ internal sealed class ProcessRunFileScopeProvider(
             throw ProviderError(FileBrowserErrorCode.Conflict, "The process-run file root is no longer current.");
         }
 
-        StorageCatalogRecord storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
+        StorageCatalogSnapshot storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
         if (storage.ProviderKind != StorageProviderKind.FileSystem)
         {
             throw ProviderError(

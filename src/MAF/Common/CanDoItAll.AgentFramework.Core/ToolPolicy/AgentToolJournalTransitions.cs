@@ -17,6 +17,7 @@ public static class AgentToolJournalTransitions {
             proposed.OriginalInput != current.OriginalInput || proposed.BackgroundInput != current.BackgroundInput ||
             proposed.RuntimeContext?.Content != current.RuntimeContext?.Content ||
             proposed.RuntimeContext?.WorkspaceScope != current.RuntimeContext?.WorkspaceScope || proposed.Revision < current.Revision ||
+            !HasSameContextAttachments(current.RuntimeContext, proposed.RuntimeContext) ||
             proposed.Batches.Length < current.Batches.Length || proposed.Segments.Length < current.Segments.Length) {
             throw Conflict("A run update cannot remove or replace its current tool admission journal.");
         }
@@ -221,6 +222,27 @@ public static class AgentToolJournalTransitions {
         };
         ValidatePersistence(journal, updated);
         return updated;
+    }
+
+    private static bool HasSameContextAttachments(AgentToolAdmittedRuntimeContext? current, AgentToolAdmittedRuntimeContext? proposed) {
+        var previous = current?.Attachments ?? default;
+        var next = proposed?.Attachments ?? default;
+        if (previous.IsDefaultOrEmpty || next.IsDefaultOrEmpty) {
+            return previous.IsDefaultOrEmpty && next.IsDefaultOrEmpty;
+        }
+        if (previous.Length != next.Length) {
+            return false;
+        }
+        for (var index = 0; index < previous.Length; index++) {
+            var prior = previous[index];
+            var target = next[index];
+            if (prior != target || !prior.CapturedAtUtc.EqualsExact(target.CapturedAtUtc) ||
+                prior.FreshUntilUtc is { } priorDeadline &&
+                    (target.FreshUntilUtc is not { } targetDeadline || !priorDeadline.EqualsExact(targetDeadline))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static bool Equivalent(AgentToolJournalRecord left, AgentToolJournalRecord right)

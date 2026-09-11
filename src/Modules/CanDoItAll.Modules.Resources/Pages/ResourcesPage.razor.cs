@@ -25,7 +25,7 @@ public partial class ResourcesPage
     public NavigationManager Navigation { get; set; } = default!;
 
     private IReadOnlyList<ResourceSummary> resources = [];
-    private IReadOnlyList<ProjectSummary> projects = [];
+    private IReadOnlyList<ProjectWriteSelection> projects = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private IReadOnlyList<ConnectorPluginManifest> resourceManifests = [];
@@ -81,7 +81,9 @@ public partial class ResourcesPage
              resource.ProjectName.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase) ||
              resource.LocationOrIdentifier.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase) ||
              resource.ConnectorDisplayName.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(projectFilter) || string.Equals(resource.ProjectId.ToString(), projectFilter, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(projectFilter) ||
+                string.Equals(resource.ProjectId.ToString(), projectFilter, StringComparison.OrdinalIgnoreCase) &&
+                projects.Any(project => project.Id == resource.ProjectId && project.Admission.LifetimeId == resource.ProjectLifetimeId)) &&
             (string.IsNullOrWhiteSpace(connectorFilter) || string.Equals(resource.ConnectorPluginKey, connectorFilter, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(validationFilter) || string.Equals(resource.ValidationStatus.ToString(), validationFilter, StringComparison.OrdinalIgnoreCase)))
         .OrderBy(resource => resource.ProjectName)
@@ -94,7 +96,7 @@ public partial class ResourcesPage
 
     private string SelectedResourceConnectorLabel => SelectedResourceManifest?.DisplayName ?? "Connector";
 
-    private string? SelectedProjectName => projects.FirstOrDefault(project => project.Id == editor.ProjectId)?.Name;
+    private string? SelectedProjectName => projects.FirstOrDefault(project => project.Admission == editor.ExpectedProjectAdmission)?.Name;
 
     private bool IsGovernedStorageObject => string.Equals(
         editor.ConnectorPluginKey,
@@ -142,7 +144,7 @@ public partial class ResourcesPage
                 return;
             }
 
-            var loadedEditor = CreateNewEditor(ProjectIdQuery, resourceManifests);
+            var loadedEditor = CreateNewEditor(ProjectIdQuery, resourceManifests, projects);
             var loadedResponsiblePartyOptions = await LoadResponsiblePartyOptionsAsync(
                 ResponsiblePartySelection.From(loadedEditor));
             TryCompleteAgentChatContextLoad(loadGeneration, () =>
@@ -247,85 +249,89 @@ public partial class ResourcesPage
             () => agentChatContextAccessState = AgentChatContextAccessState.Failed);
     }
 
-    private async Task SaveAsync()
-    {
+    private async Task SaveAsync() {
         var loadGeneration = BeginAgentChatContextLoad();
         var editorToSave = CloneEditor(editor);
-        try
-        {
+        Guid? savedId = null;
+        try {
             var result = await ResourcesService.SaveAsync(editorToSave);
-            if (!result.IsSuccess)
-            {
-                if (CompleteAgentChatContextLoad(loadGeneration))
-                {
+            if (!result.IsSuccess) {
+                if (CompleteAgentChatContextLoad(loadGeneration)) {
                     NotificationService.Warning("Resource was not saved", DescribeErrors(result.Errors));
                 }
-
                 return;
             }
-
+            savedId = result.Value;
+            agentChatContextLoads.TryCommit(loadGeneration, () => editor.Id = savedId);
             var loadedResourcesTask = ResourcesService.ListAsync();
-            var loadedEditorTask = ResourcesService.GetAsync(result.Value);
+            var loadedEditorTask = ResourcesService.GetAsync(savedId);
             await Task.WhenAll(loadedResourcesTask, loadedEditorTask);
-
             var loadedResources = await loadedResourcesTask;
             var loadedEditor = await loadedEditorTask;
+            if (loadedEditor.Id != savedId) {
+                throw new InvalidOperationException("The saved Resource is no longer available for refresh.");
+            }
             NormalizeResourceEditor(loadedEditor, resourceManifests);
-            var loadedResponsiblePartyOptions = await LoadResponsiblePartyOptionsAsync(
-                ResponsiblePartySelection.From(loadedEditor));
-            if (TryCompleteAgentChatContextLoad(loadGeneration, () =>
-                {
-                    resources = loadedResources;
-                    editor = loadedEditor;
-                    responsiblePartyOptions = loadedResponsiblePartyOptions;
-                }))
-            {
+            var loadedResponsiblePartyOptions = await LoadResponsiblePartyOptionsAsync(ResponsiblePartySelection.From(loadedEditor));
+            if (TryCompleteAgentChatContextLoad(loadGeneration, () => {
+                resources = loadedResources;
+                editor = loadedEditor;
+                responsiblePartyOptions = loadedResponsiblePartyOptions;
+            })) {
                 NotificationService.Success("Resource saved", "Resource saved.");
             }
-        }
-        catch (Exception exception)
-        {
-            if (FailAgentChatContextLoad(loadGeneration))
-            {
+        } catch (Exception exception) {
+            if (exception is ResourceCommittedMutationException { MutationKind: ResourceMutationKind.Save } committed) {
+                savedId = committed.ResourceId;
+            }
+            if (savedId is { } id) {
+                agentChatContextLoads.TryCommit(loadGeneration, () => editor.Id = id);
+                FailAgentChatContextLoad(loadGeneration);
+                NotificationService.Warning("Resource saved; refresh incomplete",
+                    $"Resource '{id:D}' was saved. A subsequent operation failed; reload Resources to view the committed state.");
+            } else if (FailAgentChatContextLoad(loadGeneration)) {
                 NotificationService.Error("Resource save failed", exception.Message);
             }
         }
     }
 
-    private async Task DeleteAsync()
-    {
-        if (!editor.Id.HasValue)
-        {
+    private async Task DeleteAsync() {
+        if (!editor.Id.HasValue) {
             return;
         }
-
         var loadGeneration = BeginAgentChatContextLoad();
         var resourceId = editor.Id.Value;
+        var admission = editor.ExpectedProjectAdmission;
         var projectId = ProjectIdQuery;
-        try
-        {
-            await ResourcesService.DeleteAsync(resourceId);
-            if (!agentChatContextLoads.IsCurrent(loadGeneration))
-            {
+        var deleted = false;
+        try {
+            await ResourcesService.DeleteAsync(resourceId, admission);
+            deleted = true;
+            RetainDeletion();
+            if (!agentChatContextLoads.IsCurrent(loadGeneration)) {
                 return;
             }
-
             var loadedState = await LoadPageStateAsync(null, projectId);
-            if (TryCompleteAgentChatContextLoad(
-                    loadGeneration,
-                    () => ApplyLoadedPageState(loadedState),
-                    ResolveRouteContextAccessState(loadedState)))
-            {
+            if (TryCompleteAgentChatContextLoad(loadGeneration, () => ApplyLoadedPageState(loadedState),
+                ResolveRouteContextAccessState(loadedState))) {
                 NotificationService.Success("Resource deleted", "Resource deleted.");
             }
-        }
-        catch (Exception exception)
-        {
-            if (FailAgentChatContextLoad(loadGeneration))
-            {
+        } catch (Exception exception) {
+            if (deleted || exception is ResourceCommittedMutationException { MutationKind: ResourceMutationKind.Delete }) {
+                RetainDeletion();
+                FailAgentChatContextLoad(loadGeneration);
+                NotificationService.Warning("Resource deleted; refresh incomplete",
+                    $"Resource '{resourceId:D}' was deleted. A subsequent operation failed; reload Resources to view the committed state.");
+            } else if (FailAgentChatContextLoad(loadGeneration)) {
                 NotificationService.Error("Resource delete failed", exception.Message);
             }
         }
+
+        void RetainDeletion() => agentChatContextLoads.TryCommit(loadGeneration, () => {
+            resources = resources.Where(resource => resource.Id != resourceId).ToArray();
+            editor = CreateNewEditor(projectId, resourceManifests, projects);
+            responsiblePartyOptions = [];
+        });
     }
 
     private static string DescribeErrors(IEnumerable<Error> errors)
@@ -352,6 +358,7 @@ public partial class ResourcesPage
 
     private async Task RefreshResponsiblePartyOptionsAsync()
     {
+        editor.ExpectedProjectAdmission = projects.FirstOrDefault(project => project.Id == editor.ProjectId)?.Admission;
         var loadGeneration = BeginAgentChatContextLoad();
         var selection = ResponsiblePartySelection.From(editor);
         try
@@ -400,7 +407,7 @@ public partial class ResourcesPage
     {
         var loadedResourceManifests = ResourcesService.ListConnectorManifests();
         var loadedResourcesTask = ResourcesService.ListAsync();
-        var loadedProjectsTask = ProjectsService.ListAsync();
+        var loadedProjectsTask = ProjectSelections.ListAsync();
         var loadedSecretsTask = SecretService.ListForPickerAsync();
         await Task.WhenAll(loadedResourcesTask, loadedProjectsTask, loadedSecretsTask);
 
@@ -414,7 +421,7 @@ public partial class ResourcesPage
         var loadedEditor = routeContextSelection.IsResolved && resourceId.HasValue
             ? await ResourcesService.GetAsync(resourceId.Value)
             : routeContextSelection.IsResolved
-                ? CreateNewEditor(projectId, loadedResourceManifests)
+                ? CreateNewEditor(projectId, loadedResourceManifests, loadedProjects)
                 : CreateUnresolvedRouteEditor(
                     resourceId,
                     projectId,
@@ -469,6 +476,7 @@ public partial class ResourcesPage
         {
             Id = source.Id,
             ProjectId = source.ProjectId,
+            ExpectedProjectAdmission = source.ExpectedProjectAdmission,
             OwnerPartyId = source.OwnerPartyId,
             MaintainerPartyId = source.MaintainerPartyId,
             Name = source.Name,
@@ -488,11 +496,13 @@ public partial class ResourcesPage
 
     private static ResourceEditorModel CreateNewEditor(
         Guid? projectId,
-        IReadOnlyList<ConnectorPluginManifest> manifests)
+        IReadOnlyList<ConnectorPluginManifest> manifests,
+        IReadOnlyList<ProjectWriteSelection>? selections = null)
     {
         var model = new ResourceEditorModel
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = selections?.FirstOrDefault(project => project.Id == projectId)?.Admission,
             ConnectorPluginKey = manifests.FirstOrDefault()?.PluginKey ?? ResourceConnectorPluginKeys.Repository
         };
         NormalizeResourceEditor(model, manifests);
@@ -522,7 +532,7 @@ public partial class ResourcesPage
     private sealed record LoadedResourcePageState(
         IReadOnlyList<ConnectorPluginManifest> ResourceManifests,
         IReadOnlyList<ResourceSummary> Resources,
-        IReadOnlyList<ProjectSummary> Projects,
+        IReadOnlyList<ProjectWriteSelection> Projects,
         IReadOnlyList<SecretListItem> Secrets,
         IReadOnlyList<ProjectPartyOption> ResponsiblePartyOptions,
         ResourceEditorModel Editor,

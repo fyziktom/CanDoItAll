@@ -80,26 +80,29 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         var second = await SeedAsync(application);
         await using var scope = application.Services.CreateAsyncScope();
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectWorkItemAssignmentMutationBridge>();
+        var admissions = scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>();
+        var firstAdmission = await admissions.CaptureAsync(first.ProjectId);
+        var secondAdmission = await admissions.CaptureAsync(second.ProjectId);
         var coordinator = application.Services.GetRequiredService<CoordinatedDatabaseTransaction>();
         await Assert.ThrowsAsync<InvalidOperationException>(() => bridge.StageMutationAsync(first.ProjectId,
-            new(first.TaskNodeKey), [new(ProjectPartyType.Person, first.PartyId, true, "Chosen person")]));
+            new(first.TaskNodeKey), [new(ProjectPartyType.Person, first.PartyId, true, "Chosen person")], expectedProjectAdmission: firstAdmission));
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         await using var transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         using (coordinator.Enter(owner)) {
             var applied = await bridge.StageMutationAsync(first.ProjectId, new(first.TaskNodeKey),
-                [new(ProjectPartyType.Person, first.PartyId, true, "Chosen person")], new(0));
+                [new(ProjectPartyType.Person, first.PartyId, true, "Chosen person")], new(0), expectedProjectAdmission: firstAdmission);
             Assert.Equal(ProjectWorkItemDirectAssignmentMutationStatus.Applied, applied.Status);
             var conflict = await bridge.StageMutationAsync(second.ProjectId, new(second.TaskNodeKey),
-                [new(ProjectPartyType.Person, second.PartyId, true, "Another person")], new(7));
+                [new(ProjectPartyType.Person, second.PartyId, true, "Another person")], new(7), expectedProjectAdmission: secondAdmission);
             Assert.Equal(ProjectWorkItemDirectAssignmentMutationStatus.RevisionConflict, conflict.Status);
             Assert.Equal(0L, conflict.Revision!.Value.Value);
-            var foreignProject = await bridge.StageMutationAsync(second.ProjectId, new(first.TaskNodeKey), []);
+            var foreignProject = await bridge.StageMutationAsync(second.ProjectId, new(first.TaskNodeKey), [], expectedProjectAdmission: secondAdmission);
             Assert.Equal(ProjectWorkItemDirectAssignmentMutationStatus.WorkItemNotFound, foreignProject.Status);
         }
         await transaction.RollbackAsync();
         await AssertTaskAsync(application, first, expectedRevision: 0, expectedDisplayName: string.Empty, expectedCost: 100m);
         await AssertTaskAsync(application, second, expectedRevision: 0, expectedDisplayName: string.Empty, expectedCost: 100m);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => bridge.StageMutationAsync(first.ProjectId, new(first.TaskNodeKey), []));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => bridge.StageMutationAsync(first.ProjectId, new(first.TaskNodeKey), [], expectedProjectAdmission: firstAdmission));
     }
 
     private static async Task<Seed> SeedAsync(TestApplication application) {

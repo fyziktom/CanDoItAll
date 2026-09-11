@@ -1613,6 +1613,11 @@
                 : "Opportunity linked to the selected project.";
             NotifySuccess("Opportunity converted", conversionMessage);
         }
+        catch (CrmOpportunityConversionRequiresObservationException exception) {
+            if (IsCurrentCrmAction(action)) {
+                NotifyError("Opportunity conversion requires review", exception.Message, keepDialogMessage: true);
+            }
+        }
         finally
         {
             if (transientGeneration == Volatile.Read(ref transientStateGeneration))
@@ -1909,6 +1914,7 @@
             ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
             LinkExistingProject = source.LinkExistingProject,
             ExistingProjectId = source.ExistingProjectId,
+            ExpectedProjectAdmission = source.ExpectedProjectAdmission,
             ProjectName = source.ProjectName,
             ProjectDescription = source.ProjectDescription,
             ProjectObjective = source.ProjectObjective,

@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Composition;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.AgentFramework.Models;
@@ -280,7 +281,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await Assert.ThrowsAsync<ProviderHistoryException>(() => source.Processor.ProcessAsync(source.Partition, 50, default));
         await using var sourceDb = source.Factory.CreateDbContext();
         await using var targetDb = target.Factory.CreateDbContext();
-        var context = new DatabaseTransferContext(Profile("source"), Profile("target"), sourceDb, targetDb, true);
+        var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
         var local = new CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile {
             Name = "Preserved publisher", ConnectorPluginKey = ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0", DefaultModel = "preserved", BaseUrl = "https://example.invalid/v1"
@@ -323,7 +324,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         Assert.Equal(import.RemoteRevision, preservedImport.RemoteRevision);
         Assert.Equal(import.RemoteCatalogSnapshotJson, preservedImport.RemoteCatalogSnapshotJson);
         var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new AiProvidersDatabaseTransferHandler([new SharedProviderDatabaseTransferGuard()]).TransferAsync(context));
+            CreateProviderTransferHandler().TransferAsync(context));
         Assert.Contains("transfer is blocked", blocked.Message);
         Assert.Empty(await targetDb.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>().ToArrayAsync());
         var locator = new AgentHistoryLocator {
@@ -332,7 +333,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         };
         sourceDb.Add(locator);
         await sourceDb.SaveChangesAsync();
-        var result = await new HistoryDatabaseTransferHandler([new AgentHistoryTransferParticipant()]).TransferAsync(context);
+        var result = await CreateTransferHandler().TransferAsync(context);
         var copiedLocator = await targetDb.Set<AgentHistoryLocator>().SingleAsync();
         Assert.Equal(locator.EvidenceId, copiedLocator.EvidenceId);
         Assert.Equal(locator.OwnerId, copiedLocator.OwnerId);
@@ -373,9 +374,9 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
             ScopeKind = WorkspaceScopeKind.Project, ScopeKey = project.ToString("D"), ProjectId = project, SourceVersion = 1
         });
         await sourceDb.SaveChangesAsync();
-        var context = new DatabaseTransferContext(Profile("source"), Profile("target"), sourceDb, targetDb, true);
+        var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new HistoryDatabaseTransferHandler([new AgentHistoryTransferParticipant()]).TransferAsync(context));
+            CreateTransferHandler().TransferAsync(context));
         await using var verification = target.Factory.CreateDbContext();
         Assert.Equal(target.Partition, await new HistoryPartitionStore(target.HistoryFactory, target.HistoryOptions, target.Transactions).GetAsync(default));
         Assert.Empty(await verification.Set<AgentHistoryLocator>().ToListAsync());
@@ -389,15 +390,25 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await target.Capture.BeginAsync(start, null, default);
         await using var sourceDb = source.Factory.CreateDbContext();
         await using var targetDb = target.Factory.CreateDbContext();
-        var context = new DatabaseTransferContext(Profile("source"), Profile("target"), sourceDb, targetDb, true);
-        var handler = new HistoryDatabaseTransferHandler([]);
+        var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
+        var handler = CreateTransferHandler(includeAgentHistory: false);
         Assert.False((await handler.PreviewAsync(context)).IsAvailable);
         await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(context));
         Assert.Equal(start.EntryId.Value, (await targetDb.Set<HistoryEntryRow>().SingleAsync()).Id);
     }
 
-    private static ResolvedDatabaseProfile Profile(string name) => new(
-        new DatabaseProfileRecord { DisplayName = name }, DatabaseProfileResolutionSource.ExplicitOverride, name);
+    private static AiProvidersDatabaseTransferHandler CreateProviderTransferHandler() {
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        return new(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.Create(sessions), [new SharedProviderDatabaseTransferGuard()]);
+    }
+
+    private static HistoryDatabaseTransferHandler CreateTransferHandler(bool includeAgentHistory = true) {
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        IHistoryTransferParticipant[] participants = includeAgentHistory
+            ? [new AgentHistoryTransferParticipant(sessions, new CanDoItAll.Modules.Projects.ProjectTransferReferenceQuery(sessions))]
+            : [];
+        return new(participants, sessions, DatabaseTransferTestSupport.Create(sessions));
+    }
 
     [Fact]
     public async Task Retention_preview_is_bounded_and_oversized_apply_rolls_back_atomically() {

@@ -111,13 +111,13 @@ public sealed class ProjectPackageHardeningTests
             Projects = [first, second],
             HierarchyLinks =
             [
-                new ProjectHierarchyLink
+                new ProjectTransferHierarchy
                 {
                     Id = Guid.NewGuid(),
                     ParentProjectId = first.Id,
                     ChildProjectId = second.Id
                 },
-                new ProjectHierarchyLink
+                new ProjectTransferHierarchy
                 {
                     Id = Guid.NewGuid(),
                     ParentProjectId = second.Id,
@@ -188,13 +188,13 @@ public sealed class ProjectPackageHardeningTests
             Projects = [first, second],
             HierarchyLinks =
             [
-                new ProjectHierarchyLink
+                new ProjectTransferHierarchy
                 {
                     Id = Guid.NewGuid(),
                     ParentProjectId = first.Id,
                     ChildProjectId = second.Id
                 },
-                new ProjectHierarchyLink
+                new ProjectTransferHierarchy
                 {
                     Id = Guid.NewGuid(),
                     ParentProjectId = first.Id,
@@ -473,8 +473,10 @@ public sealed class ProjectPackageHardeningTests
         }
     }
 
-    [Fact]
-    public async Task Failed_placement_verification_is_registered_for_compensation()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Failed_placement_verification_is_registered_for_compensation(bool wrongStorageId)
     {
         var root = CreateTemporaryDirectory();
         try
@@ -483,8 +485,8 @@ public sealed class ProjectPackageHardeningTests
             var driver = new TestStorageDriver(
                 StorageProviderKind.FileSystem,
                 StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete,
-                "different"u8.ToArray());
-            var importer = CreateImporter(root, driver);
+                "different"u8.ToArray(), wrongStorageId: wrongStorageId);
+            var (importer, storageTransfers) = CreateImporter(root, driver);
             var targetStorage = CreateStorage(
                 StorageProviderKind.FileSystem,
                 root,
@@ -552,13 +554,9 @@ public sealed class ProjectPackageHardeningTests
                     sourceReference,
                     ProjectManagedStorageObjectKey.FromReference(sourceReference))
             ]);
-            var storagePlan = new TargetStoragePlan(
-                [targetStorage],
-                [targetStorage],
-                [],
-                null,
-                null,
-                string.Empty);
+            var profile = TestProfile(root);
+            await SeedStorageAsync(profile, targetStorage);
+            await storageTransfers.WithTargetAsync(profile, async (storagePlan, token) => {
             var stagedWrites = importer.CreateStagingJournal();
 
             await Assert.ThrowsAsync<InvalidDataException>(
@@ -574,6 +572,9 @@ public sealed class ProjectPackageHardeningTests
             Assert.Single(stagedWrites);
             await importer.CleanupStagedWritesAsync(stagedWrites);
             Assert.Equal(1, driver.DeleteCount);
+            Assert.Equal(targetStorage.Id, driver.DeletedStorageId);
+                return true;
+            });
         }
         finally
         {
@@ -591,25 +592,15 @@ public sealed class ProjectPackageHardeningTests
                 StorageProviderKind.FileSystem,
                 StorageCapability.Read | StorageCapability.Write,
                 []);
-            var importer = CreateImporter(root, driver);
+            var (importer, storageTransfers) = CreateImporter(root, driver);
             var storage = CreateStorage(
                 StorageProviderKind.FileSystem,
                 root,
                 StorageCapability.Read | StorageCapability.Write);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"package-no-delete-{Guid.NewGuid():N}")
-                .Options;
-            await using var dbContext = new AppDbContext(options);
-            await dbContext.Database.EnsureCreatedAsync();
-            dbContext.Set<StorageCatalogRecord>().Add(storage);
-            await dbContext.SaveChangesAsync();
             var profile = TestProfile(root);
-
-            var exception = await Assert.ThrowsAsync<InvalidDataException>(
-                () => importer.BuildTargetStoragePlanAsync(
-                    dbContext,
-                    profile,
-                    CancellationToken.None));
+            await SeedStorageAsync(profile, storage);
+            var exception = await Assert.ThrowsAsync<InvalidDataException>(() => storageTransfers.WithTargetAsync(profile,
+                static (session, token) => Task.FromResult(true)));
 
             Assert.Contains("write and verify", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
@@ -629,26 +620,19 @@ public sealed class ProjectPackageHardeningTests
                 StorageProviderKind.FileSystem,
                 StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete,
                 []);
-            var importer = CreateImporter(root, driver);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"package-bootstrap-binding-{Guid.NewGuid():N}")
-                .Options;
-            await using var dbContext = new AppDbContext(options);
-            await dbContext.Database.EnsureCreatedAsync();
-
-            var plan = await importer.BuildTargetStoragePlanAsync(
-                dbContext,
-                TestProfile(root),
-                CancellationToken.None);
-
-            Assert.NotNull(plan.PendingStorage);
-            var storage = plan.PendingStorage;
-            Assert.Equal(HostBoundPathState.Active, storage.RootPathState);
-            Assert.Equal(HostPathContext.CaptureCurrent().HostBindingId, storage.RootHostBindingId);
-            Assert.Equal(
-                Path.GetFullPath(root),
-                StorageCatalogHostBindingPolicy.ResolveRequired(storage, root),
-                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            var (importer, storageTransfers) = CreateImporter(root, driver);
+            var profile = TestProfile(root);
+            await SeedStorageAsync(profile);
+            await storageTransfers.WithTargetAsync(profile, async (session, token) => {
+                var placed = await storageTransfers.PlaceAsync(session, new("bootstrap.bin", "application/octet-stream", [], StorageUsagePurpose.ProjectAsset), token);
+                var storage = Assert.IsType<StorageDriverInput>(driver.LastWrittenStorage);
+                Assert.Equal(storage.Id, placed.StorageId);
+                Assert.Equal(HostBoundPathState.Active, storage.RootPathState);
+                Assert.Equal(HostPathContext.CaptureCurrent().HostBindingId, storage.RootHostBindingId);
+                Assert.Equal(Path.GetFullPath(root), StorageCatalogHostBindingPolicy.ResolveRequired(storage, root),
+                    OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+                return true;
+            });
         }
         finally
         {
@@ -656,18 +640,20 @@ public sealed class ProjectPackageHardeningTests
         }
     }
 
-    [Fact]
-    public async Task Immutable_import_fails_when_target_ipfs_resolves_different_bytes()
-    {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Immutable_import_verifies_bytes_and_adopts_a_fresh_target_reference(bool matches, bool stableSource) {
         var root = CreateTemporaryDirectory();
-        try
-        {
+        try {
             var expectedContent = "immutable expected"u8.ToArray();
             var driver = new TestStorageDriver(
                 StorageProviderKind.Ipfs,
                 StorageCapability.Read,
-                "different network"u8.ToArray());
-            var importer = CreateImporter(root, driver);
+                matches ? expectedContent : "different network"u8.ToArray());
+            var (importer, storageTransfers) = CreateImporter(root, driver);
             var targetStorage = CreateStorage(
                 StorageProviderKind.Ipfs,
                 "http://127.0.0.1:5001",
@@ -679,30 +665,30 @@ public sealed class ProjectPackageHardeningTests
                 "bafy-package-test",
                 "immutable.txt",
                 "text/plain",
-                expectedContent.LongLength);
+                expectedContent.LongLength) {
+                FormatVersion = stableSource ? StorageObjectReference.StablePlacementFormatVersion : StorageObjectReference.CurrentFormatVersion,
+                PlacementIntentId = stableSource ? Guid.NewGuid() : null
+            };
             var projectId = Guid.NewGuid();
-            var projectObject = new ProjectObjectRecord
-            {
+            var projectObject = new ProjectObjectRecord {
                 Id = Guid.NewGuid(),
                 ProjectId = projectId,
                 NodeKey = "node:immutable",
                 Title = "Immutable"
             };
-            var binding = new ProjectNodeBindingRecord
-            {
+            var binding = new ProjectNodeBindingRecord {
                 Id = Guid.NewGuid(),
                 ProjectObjectId = projectObject.Id,
                 MediaContentType = "text/plain",
                 MediaOriginalFileName = "immutable.txt",
                 StorageObjectReferenceJson = StorageJson.SerializeReference(sourceReference)
             };
-            var manifest = new ProjectPackageManifest
-            {
+            var manifest = new ProjectPackageManifest {
                 PackageId = Guid.NewGuid(),
+                SourceProfileId = Guid.NewGuid(),
                 ImmutableStorageReferences =
                 [
-                    new ProjectPackageImmutableStorageReferenceManifest
-                    {
+                    new ProjectPackageImmutableStorageReferenceManifest {
                         SourceStorageId = sourceReference.StorageId,
                         ProviderKind = StorageProviderKind.Ipfs,
                         LocatorKind = StorageLocatorKind.ContentAddress,
@@ -714,8 +700,7 @@ public sealed class ProjectPackageHardeningTests
                     }
                 ]
             };
-            var dataSet = new ProjectTransferDataSet
-            {
+            var dataSet = new ProjectTransferDataSet {
                 Projects = [CreateProjectWithId(projectId)],
                 Objects = [projectObject],
                 NodeBindings = [binding]
@@ -727,28 +712,34 @@ public sealed class ProjectPackageHardeningTests
                     sourceReference,
                     ProjectManagedStorageObjectKey.FromReference(sourceReference))
             ]);
-            var storagePlan = new TargetStoragePlan(
-                [targetStorage],
-                [],
-                [],
-                null,
-                null,
-                string.Empty);
-
-            var exception = await Assert.ThrowsAsync<InvalidDataException>(
-                () => importer.RewriteStorageBindingsAsync(
-                    root,
-                    manifest,
-                    dataSet,
-                    preflight,
-                    storagePlan,
-                    importer.CreateStagingJournal(),
-                    CancellationToken.None));
-
-            Assert.Contains("different bytes", exception.Message, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
+            var profile = TestProfile(root);
+            await SeedStorageAsync(profile, targetStorage, CreateStorage(StorageProviderKind.FileSystem, root,
+                StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete));
+            await storageTransfers.WithTargetAsync(profile, async (storagePlan, token) => {
+            var originalJson = binding.StorageObjectReferenceJson;
+            if (!matches) {
+                var exception = await Assert.ThrowsAsync<InvalidDataException>(() => importer.RewriteStorageBindingsAsync(
+                    root, manifest, dataSet, preflight, storagePlan, importer.CreateStagingJournal(), CancellationToken.None));
+                Assert.Contains("different bytes", exception.Message, StringComparison.OrdinalIgnoreCase);
+                Assert.Equal(originalJson, binding.StorageObjectReferenceJson);
+            } else {
+                var staged = importer.CreateStagingJournal();
+                Assert.Equal(0, await importer.RewriteStorageBindingsAsync(root, manifest, dataSet, preflight, storagePlan, staged, CancellationToken.None));
+                Assert.Empty(staged);
+                var adopted = Assert.IsType<StorageObjectReference>(StorageJson.ParseReference(binding.StorageObjectReferenceJson));
+                Assert.Equal(targetStorage.Id, adopted.StorageId);
+                Assert.Equal(sourceReference.Locator, adopted.Locator);
+                Assert.Null(adopted.PlacementIntentId);
+                Assert.Equal(StorageObjectReference.CurrentFormatVersion, adopted.FormatVersion);
+                Assert.Equal(sourceReference, adopted.ImportedHistory!.SourceReference);
+                Assert.Equal(manifest.SourceProfileId, adopted.ImportedHistory.Origin.SourceProfileId);
+                Assert.Equal(manifest.PackageId, adopted.ImportedHistory.Origin.TransferId);
+                Assert.True(ProjectManagedStorageProvenancePolicy.TryValidate(adopted, null, out var error), error);
+            }
+            Assert.Equal(0, driver.DeleteCount);
+                return true;
+            });
+        } finally {
             Directory.Delete(root, recursive: true);
         }
     }
@@ -764,7 +755,7 @@ public sealed class ProjectPackageHardeningTests
                 StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete,
                 [],
                 failDelete: true);
-            var importer = CreateImporter(root, driver);
+            var (importer, storageTransfers) = CreateImporter(root, driver);
             var storage = CreateStorage(
                 StorageProviderKind.FileSystem,
                 root,
@@ -775,10 +766,13 @@ public sealed class ProjectPackageHardeningTests
                 StorageLocatorKind.RelativePath,
                 "managed-files/project-media/imports/orphan.bin");
 
+            var profile = TestProfile(root);
+            await SeedStorageAsync(profile, storage);
+            await storageTransfers.WithTargetAsync(profile, async (session, token) => {
             var exception = await Assert.ThrowsAsync<ProjectPackageCompensationException>(
                 () => importer.CleanupStagedWritesAsync(
                 [
-                    new StagedStorageWrite(storage, reference)
+                    new StagedStorageWrite(session, storage.Id, storage.ProviderKind, reference)
                 ]));
 
             Assert.Equal(3, driver.DeleteCount);
@@ -790,6 +784,8 @@ public sealed class ProjectPackageHardeningTests
                 exception.Message,
                 StringComparison.Ordinal);
             Assert.DoesNotContain(reference.Locator, exception.Message, StringComparison.Ordinal);
+                return true;
+            });
         }
         finally
         {
@@ -808,7 +804,7 @@ public sealed class ProjectPackageHardeningTests
                 StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete,
                 [],
                 failDelete: true);
-            var importer = CreateImporter(root, driver);
+            var (importer, storageTransfers) = CreateImporter(root, driver);
             var storage = CreateStorage(
                 StorageProviderKind.FileSystem,
                 root,
@@ -823,11 +819,14 @@ public sealed class ProjectPackageHardeningTests
                 Locator = "managed-files/project-media/imports/second-orphan.bin"
             };
 
+            var profile = TestProfile(root);
+            await SeedStorageAsync(profile, storage);
+            await storageTransfers.WithTargetAsync(profile, async (session, token) => {
             var exception = await Assert.ThrowsAsync<ProjectPackageCompensationException>(
                 () => importer.CleanupStagedWritesAsync(
                 [
-                    new StagedStorageWrite(storage, firstReference),
-                    new StagedStorageWrite(storage, secondReference)
+                    new StagedStorageWrite(session, storage.Id, storage.ProviderKind, firstReference),
+                    new StagedStorageWrite(session, storage.Id, storage.ProviderKind, secondReference)
                 ]));
 
             var firstFingerprint = ProjectPackageCompensationFailure
@@ -841,6 +840,8 @@ public sealed class ProjectPackageHardeningTests
             Assert.Contains(secondFingerprint, exception.Message, StringComparison.Ordinal);
             Assert.DoesNotContain(firstReference.Locator, exception.Message, StringComparison.Ordinal);
             Assert.DoesNotContain(secondReference.Locator, exception.Message, StringComparison.Ordinal);
+                return true;
+            });
         }
         finally
         {
@@ -851,7 +852,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_project_party_assignment_residue()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProjectPartyAssignment>().Add(new ProjectPartyAssignment
         {
             ProjectId = Guid.NewGuid(),
@@ -860,9 +863,9 @@ public sealed class ProjectPackageHardeningTests
         });
         await dbContext.SaveChangesAsync();
 
-        var participant = new CrmHrProjectTransferTargetStateParticipant();
+        var participant = new CrmHrProjectTransferTargetStateParticipant(inspections);
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.Contains(
@@ -873,7 +876,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_project_search_document_residue()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<SearchDocument>().Add(new SearchDocument
         {
             SourceType = SearchDocument.ProjectSourceType,
@@ -885,9 +890,9 @@ public sealed class ProjectPackageHardeningTests
         });
         await dbContext.SaveChangesAsync();
 
-        var participant = new InfrastructureProjectTransferTargetStateParticipant();
+        var participant = new InfrastructureProjectTransferTargetStateParticipant(inspections);
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.Contains(
@@ -901,7 +906,9 @@ public sealed class ProjectPackageHardeningTests
     public async Task Target_state_guard_detects_typed_project_storage_routing_scope(
         StorageRoutingScopeKind scopeKind)
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<StorageRoutingRule>().Add(new StorageRoutingRule
         {
             Name = "Stale project storage route",
@@ -911,9 +918,9 @@ public sealed class ProjectPackageHardeningTests
         });
         await dbContext.SaveChangesAsync();
 
-        var participant = new InfrastructureProjectTransferTargetStateParticipant();
+        var participant = new InfrastructureProjectTransferTargetStateParticipant(inspections);
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.Contains(
@@ -924,7 +931,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_ignores_unattributed_workspace_storage_route()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<StorageRoutingRule>().Add(new StorageRoutingRule
         {
             Name = "Workspace storage route",
@@ -933,10 +942,10 @@ public sealed class ProjectPackageHardeningTests
             PreferredStorageId = Guid.NewGuid()
         });
         await dbContext.SaveChangesAsync();
-        var participant = new InfrastructureProjectTransferTargetStateParticipant();
+        var participant = new InfrastructureProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.DoesNotContain(
@@ -947,11 +956,13 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Exclusive_import_locks_cover_project_related_state_tables()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         var guard = CreateTargetStateGuard(
-            new InfrastructureProjectTransferTargetStateParticipant(),
-            new CrmHrProjectTransferTargetStateParticipant());
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+            new InfrastructureProjectTransferTargetStateParticipant(inspections),
+            new CrmHrProjectTransferTargetStateParticipant(inspections));
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.Contains(
             "\"CrmHr_ProjectPartyAssignments\"",
@@ -967,13 +978,14 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Exclusive_import_lock_fails_fast_for_non_postgresql_provider()
     {
-        await using var dbContext = CreateTargetStateContext();
-        var guard = CreateTargetStateGuard();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
+        var operations = DatabaseTransferTestSupport.ForProfile(targetProfile, dbContext);
+        var guard = new ProjectTransferTargetStateGuard(Enum.GetValues<ProjectTransferTargetStateArea>().Select(area => new EmptyTargetStateParticipant(area)), operations);
 
-        var exception = await Assert.ThrowsAsync<NotSupportedException>(
-            () => guard.AcquireExclusiveImportLocksAsync(
-                dbContext,
-                CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<NotSupportedException>(() => guard.RunLockedImportAsync(targetProfile,
+            (session, token) => Task.FromResult(true)));
 
         Assert.Contains("require PostgreSQL", exception.Message, StringComparison.Ordinal);
     }
@@ -981,7 +993,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_project_origin_workflow_run_without_project_projection()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<WorkflowRunRecordEntity>().Add(new WorkflowRunRecordEntity
         {
             RunId = Guid.NewGuid(),
@@ -993,10 +1007,10 @@ public sealed class ProjectPackageHardeningTests
             UpdatedAtUtc = DateTimeOffset.UtcNow
         });
         await dbContext.SaveChangesAsync();
-        var participant = new AgentFrameworkProjectTransferTargetStateParticipant();
+        var participant = new AgentFrameworkProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.Contains(
@@ -1008,7 +1022,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_ignores_unattributed_api_workflow_run()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<WorkflowRunRecordEntity>().Add(new WorkflowRunRecordEntity
         {
             RunId = Guid.NewGuid(),
@@ -1020,10 +1036,10 @@ public sealed class ProjectPackageHardeningTests
             UpdatedAtUtc = DateTimeOffset.UtcNow
         });
         await dbContext.SaveChangesAsync();
-        var participant = new AgentFrameworkProjectTransferTargetStateParticipant();
+        var participant = new AgentFrameworkProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.DoesNotContain(
@@ -1035,7 +1051,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_and_locks_project_workflow_launch_claims()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>().Add(
             new WorkflowLaunchIdempotencyRecordEntity
             {
@@ -1048,13 +1066,13 @@ public sealed class ProjectPackageHardeningTests
                 LeaseExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(1)
             });
         await dbContext.SaveChangesAsync();
-        var participant = new AgentFrameworkProjectTransferTargetStateParticipant();
+        var participant = new AgentFrameworkProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.Contains(
             residues,
@@ -1068,7 +1086,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_and_locks_project_workflow_usage()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<WorkflowUsageObservationRecordEntity>().Add(
             new WorkflowUsageObservationRecordEntity
             {
@@ -1082,13 +1102,13 @@ public sealed class ProjectPackageHardeningTests
                 RecordedAtUtc = DateTimeOffset.UtcNow
             });
         await dbContext.SaveChangesAsync();
-        var participant = new AgentFrameworkProjectTransferTargetStateParticipant();
+        var participant = new AgentFrameworkProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.Contains(
             residues,
@@ -1102,7 +1122,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_ignores_nonproject_workflow_claim_and_usage()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>().Add(
             new WorkflowLaunchIdempotencyRecordEntity
             {
@@ -1127,10 +1149,10 @@ public sealed class ProjectPackageHardeningTests
                 RecordedAtUtc = DateTimeOffset.UtcNow
             });
         await dbContext.SaveChangesAsync();
-        var participant = new AgentFrameworkProjectTransferTargetStateParticipant();
+        var participant = new AgentFrameworkProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.DoesNotContain(
@@ -1143,7 +1165,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_and_locks_project_structure_leases()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProjectStructureLeaseRecord>().Add(new ProjectStructureLeaseRecord
         {
             ScopeKind = ProjectStructureLeaseScopeKind.Project,
@@ -1160,13 +1184,13 @@ public sealed class ProjectPackageHardeningTests
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(5)
         });
         await dbContext.SaveChangesAsync();
-        var participant = new WorkbenchProjectTransferTargetStateParticipant();
+        var participant = new WorkbenchProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.Contains(
             residues,
@@ -1177,7 +1201,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_ignores_repo_branch_leases_but_still_locks_table()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProjectStructureLeaseRecord>().Add(new ProjectStructureLeaseRecord
         {
             ScopeKind = ProjectStructureLeaseScopeKind.RepoBranch,
@@ -1194,13 +1220,13 @@ public sealed class ProjectPackageHardeningTests
             ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(5)
         });
         await dbContext.SaveChangesAsync();
-        var participant = new WorkbenchProjectTransferTargetStateParticipant();
+        var participant = new WorkbenchProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.DoesNotContain(
             residues,
@@ -1211,7 +1237,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_ignores_repo_branch_analytics_but_still_locks_table()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProjectStructureOperationAnalyticsRecord>().Add(
             new ProjectStructureOperationAnalyticsRecord
             {
@@ -1228,13 +1256,13 @@ public sealed class ProjectPackageHardeningTests
                 OccurredAtUtc = DateTimeOffset.UtcNow
             });
         await dbContext.SaveChangesAsync();
-        var participant = new WorkbenchProjectTransferTargetStateParticipant();
+        var participant = new WorkbenchProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.DoesNotContain(
             residues,
@@ -1248,7 +1276,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_fails_closed_and_locks_scheduler_state()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         var projectId = Guid.NewGuid();
         dbContext.Set<SchedulerPlan>().Add(new SchedulerPlan
         {
@@ -1265,13 +1295,13 @@ public sealed class ProjectPackageHardeningTests
             UpdatedAtUtc = DateTimeOffset.UtcNow
         });
         await dbContext.SaveChangesAsync();
-        var participant = new SchedulerPlannerProjectTransferTargetStateParticipant();
+        var participant = new SchedulerPlannerProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.Contains(
             residues,
@@ -1285,7 +1315,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_and_locks_process_assignment_project_state()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProcessRuntimeStepAssignmentEntity>().Add(
             CreateProcessAssignment(
                 JsonSerializer.Serialize(new Dictionary<string, string>
@@ -1294,25 +1326,27 @@ public sealed class ProjectPackageHardeningTests
                         Guid.NewGuid().ToString("D")
                 })));
         await dbContext.SaveChangesAsync();
-        var participant = new ProcessesProjectTransferTargetStateParticipant();
+        var participant = new ProcessesProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.Contains(
             residues,
             residue => residue.Description ==
                 "process step assignments linked to projects");
-        Assert.Contains("\"process_runtime_step_assignments\"", tableNames);
+        Assert.Contains("process_runtime_step_assignments", tableNames);
     }
 
     [Fact]
     public async Task Target_state_guard_detects_project_node_only_process_assignment()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProcessRuntimeStepAssignmentEntity>().Add(
             CreateProcessAssignment(
                 JsonSerializer.Serialize(new Dictionary<string, string>
@@ -1321,10 +1355,10 @@ public sealed class ProjectPackageHardeningTests
                         "custom:planning-note"
                 })));
         await dbContext.SaveChangesAsync();
-        var participant = new ProcessesProjectTransferTargetStateParticipant();
+        var participant = new ProcessesProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.Contains(
@@ -1341,14 +1375,16 @@ public sealed class ProjectPackageHardeningTests
     public async Task Target_state_guard_fails_closed_on_malformed_process_project_state(
         string launchVariablesJson)
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProcessRuntimeStepAssignmentEntity>().Add(
             CreateProcessAssignment(launchVariablesJson));
         await dbContext.SaveChangesAsync();
-        var participant = new ProcessesProjectTransferTargetStateParticipant();
+        var participant = new ProcessesProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.Contains(
@@ -1361,7 +1397,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_ignores_project_token_in_process_value()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         dbContext.Set<ProcessRuntimeStepAssignmentEntity>().Add(
             CreateProcessAssignment(
                 JsonSerializer.Serialize(new Dictionary<string, string>
@@ -1371,10 +1409,10 @@ public sealed class ProjectPackageHardeningTests
                         ProcessRuntimeLaunchVariables.ProjectNodeId
                 })));
         await dbContext.SaveChangesAsync();
-        var participant = new ProcessesProjectTransferTargetStateParticipant();
+        var participant = new ProcessesProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.DoesNotContain(
@@ -1387,7 +1425,9 @@ public sealed class ProjectPackageHardeningTests
     [Fact]
     public async Task Target_state_guard_detects_nonterminal_process_state_and_locks_sequence_tables()
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         var planId = Guid.NewGuid();
         dbContext.Set<ProcessInstancePlanEntity>().Add(new ProcessInstancePlanEntity
         {
@@ -1412,19 +1452,19 @@ public sealed class ProjectPackageHardeningTests
             ConcurrencyToken = Guid.NewGuid()
         });
         await dbContext.SaveChangesAsync();
-        var participant = new ProcessesProjectTransferTargetStateParticipant();
+        var participant = new ProcessesProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
         var guard = CreateTargetStateGuard(participant);
-        var tableNames = guard.ResolveExclusiveImportTableNames(dbContext);
+        var tableNames = ResolvePostgreSqlTableNames(guard.EntityTypesToLock);
 
         Assert.Contains(
             residues,
             residue => residue.Description == "nonterminal process runtime state");
-        Assert.Contains("\"process_instance_plans\"", tableNames);
-        Assert.Contains("\"process_runtime_states\"", tableNames);
+        Assert.Contains("process_instance_plans", tableNames);
+        Assert.Contains("process_runtime_states", tableNames);
     }
 
     [Theory]
@@ -1434,7 +1474,9 @@ public sealed class ProjectPackageHardeningTests
     public async Task Target_state_guard_allows_unattributed_terminal_process_history(
         ProcessRuntimeStatus status)
     {
-        await using var dbContext = CreateTargetStateContext();
+        await using var dbContext = CreateTargetStateContext(out var targetProfile);
+        var inspections = new ProjectTransferTargetInspectionRunner();
+        using var inspection = inspections.Begin(targetProfile, dbContext, ProjectTransferTargetInspectionMode.Independent, out var request);
         var planId = Guid.NewGuid();
         dbContext.Set<ProcessInstancePlanEntity>().Add(new ProcessInstancePlanEntity
         {
@@ -1459,10 +1501,10 @@ public sealed class ProjectPackageHardeningTests
             ConcurrencyToken = Guid.NewGuid()
         });
         await dbContext.SaveChangesAsync();
-        var participant = new ProcessesProjectTransferTargetStateParticipant();
+        var participant = new ProcessesProjectTransferTargetStateParticipant(inspections);
 
         var residues = await participant.FindResiduesAsync(
-            dbContext,
+            request,
             CancellationToken.None);
 
         Assert.DoesNotContain(
@@ -1478,7 +1520,7 @@ public sealed class ProjectPackageHardeningTests
             .Select(area => new EmptyTargetStateParticipant(area));
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => new ProjectTransferTargetStateGuard(participants));
+            () => new ProjectTransferTargetStateGuard(participants, DatabaseTransferTestSupport.Create()));
 
         Assert.Contains("Workspace", exception.Message, StringComparison.Ordinal);
         Assert.Contains("missing", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -1494,7 +1536,7 @@ public sealed class ProjectPackageHardeningTests
                 ProjectTransferTargetStateArea.Infrastructure));
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => new ProjectTransferTargetStateGuard(participants));
+            () => new ProjectTransferTargetStateGuard(participants, DatabaseTransferTestSupport.Create()));
 
         Assert.Contains("Infrastructure", exception.Message, StringComparison.Ordinal);
         Assert.Contains("duplicated", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -1508,7 +1550,7 @@ public sealed class ProjectPackageHardeningTests
         {
             Projects =
             [
-                new Project
+                new ProjectTransferProject
                 {
                     Id = projectId,
                     Name = "Project",
@@ -1519,12 +1561,20 @@ public sealed class ProjectPackageHardeningTests
         };
     }
 
-    private static AppDbContext CreateTargetStateContext()
+    private static IReadOnlyList<string> ResolvePostgreSqlTableNames(IReadOnlyCollection<Type> entityTypes) {
+        using var canonical = new AppDbContext(AppDbContextTestOptionsBuilder.Create()
+            .UseNpgsql("Host=localhost;Database=package-model").Options);
+        Assert.True(canonical.Database.IsNpgsql());
+        return DatabaseTransferOperationRunner.ResolveTableNames(canonical, entityTypes);
+    }
+
+    private static AppDbContext CreateTargetStateContext(out ResolvedDatabaseProfile profile)
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
             TestApplicationBootstrap.ModuleAssemblies);
-        var optionsBuilder = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"package-target-state-{Guid.NewGuid():N}");
+        var name = $"package-target-state-{Guid.NewGuid():N}";
+        profile = new(new() { ProviderKind = DatabaseProviderKind.InMemory }, DatabaseProfileResolutionSource.ExplicitOverride, name);
+        var optionsBuilder = AppDbContextTestOptionsBuilder.Create().UseInMemoryDatabase(name);
         var options = optionsBuilder.Options;
         return new AppDbContext(options);
     }
@@ -1553,10 +1603,10 @@ public sealed class ProjectPackageHardeningTests
             .Select(area => suppliedByArea.TryGetValue(area, out var participant)
                 ? participant
                 : new EmptyTargetStateParticipant(area));
-        return new ProjectTransferTargetStateGuard(complete);
+        return new ProjectTransferTargetStateGuard(complete, DatabaseTransferTestSupport.Create());
     }
 
-    private static Project CreateProject(string name)
+    private static ProjectTransferProject CreateProject(string name)
         => new()
         {
             Id = Guid.NewGuid(),
@@ -1564,7 +1614,7 @@ public sealed class ProjectPackageHardeningTests
             Slug = name
         };
 
-    private static Project CreateProjectWithId(Guid id)
+    private static ProjectTransferProject CreateProjectWithId(Guid id)
         => new()
         {
             Id = id,
@@ -1572,22 +1622,23 @@ public sealed class ProjectPackageHardeningTests
             Slug = "project"
         };
 
-    private static ProjectPackageStorageImporter CreateImporter(
-        string workspaceRoot,
-        IStorageDriver driver)
-    {
-        var registry = new StorageDriverRegistry([driver]);
-        var physicalIdentityPolicy = new ProjectManagedStoragePhysicalIdentityPolicy(
-            new FileSystemStoragePathPolicy(
-                new TestWorkspacePathResolver(workspaceRoot)),
+    private static (ProjectPackageStorageImporter Importer, StorageProfileTransferService Storage) CreateImporter(string workspaceRoot, IStorageDriver driver) {
+        IStorageDriver[] drivers = driver.ProviderKind == StorageProviderKind.Ipfs
+            ? [driver, new TestStorageDriver(StorageProviderKind.FileSystem, StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete, [])]
+            : [driver];
+        var registry = new StorageDriverRegistry(drivers);
+        var identity = new ProjectManagedStoragePhysicalIdentityPolicy(new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(workspaceRoot)),
             TestWorkspaceServices.PhysicalPathPolicyFactory);
-        return new ProjectPackageStorageImporter(
-            registry,
-            physicalIdentityPolicy,
-            TestWorkspaceServices.PhysicalPathPolicyFactory,
-            new FixedClock(),
-            NullLogger<StoragePlacementService>.Instance,
-            NullLogger<ProjectPackageService>.Instance);
+        var storage = new StorageProfileTransferService(DatabaseTransferTestSupport.Create(), registry, new ProjectStorageTransferProvenancePolicy(identity), new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(workspaceRoot)), new FixedClock(), NullLogger<StoragePlacementService>.Instance);
+        return (new(storage, TestWorkspaceServices.PhysicalPathPolicyFactory, NullLogger<ProjectPackageService>.Instance), storage);
+    }
+
+    private static async Task SeedStorageAsync(ResolvedDatabaseProfile profile, params StorageCatalogRecord[] storages) {
+        AppDbContextModelRegistry.ConfigureAssemblies(TestApplicationBootstrap.ModuleAssemblies);
+        await using var context = new AppDbContext(AppDbContextOptionsConfigurator.CreateOptions(profile));
+        await context.Database.EnsureCreatedAsync();
+        context.AddRange(storages);
+        await context.SaveChangesAsync();
     }
 
     private static StorageCatalogRecord CreateStorage(
@@ -1659,7 +1710,7 @@ public sealed class ProjectPackageHardeningTests
 
         public Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
             FindResiduesAsync(
-                AppDbContext dbContext,
+                ProjectTransferTargetInspection request,
                 CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<ProjectTransferTargetStateResidue>>([]);
     }
@@ -1681,16 +1732,18 @@ public sealed class ProjectPackageHardeningTests
         StorageProviderKind providerKind,
         StorageCapability supportedCapabilities,
         byte[] readContent,
-        bool failDelete = false) : IStorageDriver
+        bool failDelete = false, bool wrongStorageId = false) : IStorageDriver
     {
         public int DeleteCount { get; private set; }
+        public Guid? DeletedStorageId { get; private set; }
+        public StorageDriverInput? LastWrittenStorage { get; private set; }
 
         public StorageProviderKind ProviderKind => providerKind;
 
         public StorageCapability SupportedCapabilities => supportedCapabilities;
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new StorageConnectionTestResult(
@@ -1701,10 +1754,11 @@ public sealed class ProjectPackageHardeningTests
                 DateTimeOffset.UtcNow));
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
         {
+            LastWrittenStorage = storage;
             var locatorKind = providerKind switch
             {
                 StorageProviderKind.FileSystem => StorageLocatorKind.RelativePath,
@@ -1715,7 +1769,7 @@ public sealed class ProjectPackageHardeningTests
                 ? "bafy-test-write"
                 : request.RelativePathHint ?? request.FileName;
             var reference = new StorageObjectReference(
-                storage.Id,
+                wrongStorageId ? Guid.NewGuid() : storage.Id,
                 providerKind,
                 locatorKind,
                 locator,
@@ -1737,17 +1791,18 @@ public sealed class ProjectPackageHardeningTests
         }
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => Task.FromResult<Stream>(new MemoryStream(readContent, writable: false));
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
         {
             DeleteCount++;
+            DeletedStorageId = storage.Id;
             if (failDelete)
             {
                 throw new IOException("simulated delete failure");

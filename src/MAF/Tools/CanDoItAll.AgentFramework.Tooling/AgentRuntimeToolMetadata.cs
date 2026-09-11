@@ -4,6 +4,11 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Tooling;
 
+public enum AgentRuntimeToolRecoveryPolicy {
+    Default,
+    ReconcileBeforeRetry
+}
+
 public sealed record AgentRuntimeToolMetadata
 {
     public AgentRuntimeToolMetadata(
@@ -38,6 +43,12 @@ public sealed record AgentRuntimeToolMetadata
     public AgentRuntimeToolOperationKind OperationKind { get; }
 
     public bool RequiresApprovalByDefault { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public AgentRuntimeToolRecoveryPolicy RecoveryPolicy {
+        get;
+        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value));
+    }
 
     public IReadOnlyList<string> OwnershipTags { get; }
 

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Models;
@@ -15,10 +16,6 @@ internal sealed class WorkspaceFileQueryService
     private readonly WorkspaceFileReceiptWriter receiptWriter;
     private readonly WorkspaceTextContentGuard textContentGuard;
     private readonly Func<string, IReadOnlyList<string>> enumerateDirectoryEntries;
-
-    private readonly record struct WorkspaceFileListRequest(
-        string? RelativePath,
-        string SearchPattern);
 
     public WorkspaceFileQueryService(
         WorkspacePathPolicy pathPolicy,
@@ -60,7 +57,7 @@ internal sealed class WorkspaceFileQueryService
                 RootPath: resolution.RelativePath,
                 SearchPattern: searchPattern,
                 Entries: [entry],
-                IsTruncated: false);
+                IsTruncated: false) { ReadSelection = new(resolution.FullPath, resolution.IsWorkspacePath, [resolution.FullPath]) };
         }
 
         if (!Directory.Exists(resolution.FullPath))
@@ -116,7 +113,9 @@ internal sealed class WorkspaceFileQueryService
             RootPath: resolution.RelativePath,
             SearchPattern: searchPattern,
             Entries: entries,
-            IsTruncated: truncated);
+            IsTruncated: truncated) {
+                ReadSelection = new(resolution.FullPath, resolution.IsWorkspacePath, orderedPaths.Take(limit).ToImmutableArray())
+            };
     }
 
     public WorkspaceFileListResult ListFiles(
@@ -126,8 +125,8 @@ internal sealed class WorkspaceFileQueryService
         string? authorityRootAlias = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
-        var request = NormalizeListRequest(relativePath, searchPattern);
-        var normalizedSearchPattern = NormalizeSearchPattern(request.SearchPattern);
+        var request = WorkspaceFileListRequest.Normalize(relativePath, searchPattern);
+        var normalizedSearchPattern = request.SearchPattern;
         if (TryCreateSearchPatternValidationFailure(normalizedSearchPattern, out var patternValidationMessage))
         {
             return new WorkspaceFileListResult(
@@ -168,7 +167,7 @@ internal sealed class WorkspaceFileQueryService
                 RootPath: resolution.RelativePath,
                 SearchPattern: normalizedSearchPattern,
                 Entries: [entry],
-                IsTruncated: false);
+                IsTruncated: false) { ReadSelection = new(resolution.FullPath, resolution.IsWorkspacePath, [resolution.FullPath]) };
         }
 
         if (!Directory.Exists(resolution.FullPath))
@@ -187,7 +186,7 @@ internal sealed class WorkspaceFileQueryService
         }
 
         var limit = Math.Clamp(maxResults, 1, 400);
-        var entries = new List<WorkspaceFileListEntry>();
+        var entries = new List<(WorkspaceFileListEntry Result, string PhysicalPath)>();
         var truncated = false;
         var traversal = new DirectoryTraversalState();
         foreach (var path in EnumerateDirectoryTree(
@@ -205,11 +204,11 @@ internal sealed class WorkspaceFileQueryService
                 continue;
             }
 
-            entries.Add(CreateListEntry(path));
+            entries.Add((CreateListEntry(path), path));
         }
 
         entries = entries
-            .OrderBy(item => item.RelativePath, StringComparer.Ordinal)
+            .OrderBy(item => item.Result.RelativePath, StringComparer.Ordinal)
             .ToList();
         var listingBudgetReached = entries.Count > limit;
         if (listingBudgetReached)
@@ -246,8 +245,10 @@ internal sealed class WorkspaceFileQueryService
             Receipt: receiptWriter.CreateReceipt("workspace_list_files", false, "Succeeded", listMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
             RootPath: resolution.RelativePath,
             SearchPattern: normalizedSearchPattern,
-            Entries: entries,
-            IsTruncated: truncated);
+            Entries: entries.Select(item => item.Result).ToArray(),
+            IsTruncated: truncated) {
+                ReadSelection = new(resolution.FullPath, resolution.IsWorkspacePath, entries.Select(item => item.PhysicalPath).ToImmutableArray())
+            };
     }
 
     public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
@@ -313,7 +314,7 @@ internal sealed class WorkspaceFileQueryService
         }
 
         var limit = Math.Clamp(maxResults, 1, 50);
-        var matches = new List<WorkspaceTextSearchMatch>();
+        var matches = new List<(WorkspaceTextSearchMatch Result, string PhysicalPath)>();
         var skippedGuardedFiles = 0;
         var inaccessibleFiles = 0;
         var fileLimitReached = false;
@@ -354,15 +355,15 @@ internal sealed class WorkspaceFileQueryService
                 continue;
             }
 
-            matches.Add(new WorkspaceTextSearchMatch(
+            matches.Add((new WorkspaceTextSearchMatch(
                 RelativePath: relativeFilePath,
                 Score: score,
-                Snippet: BuildSearchSnippet(text, terms)));
+                Snippet: BuildSearchSnippet(text, terms)), filePath));
         }
 
         matches = matches
-            .OrderByDescending(item => item.Score)
-            .ThenBy(item => item.RelativePath, StringComparer.Ordinal)
+            .OrderByDescending(item => item.Result.Score)
+            .ThenBy(item => item.Result.RelativePath, StringComparer.Ordinal)
             .ToList();
 
         var resultLimitReached = matches.Count > limit;
@@ -415,8 +416,10 @@ internal sealed class WorkspaceFileQueryService
             Receipt: receiptWriter.CreateReceipt("workspace_search", false, "Succeeded", resultMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
             Query: query,
             RootPath: resolution.RelativePath,
-            Matches: matches,
-            IsTruncated: truncated);
+            Matches: matches.Select(item => item.Result).ToArray(),
+            IsTruncated: truncated) {
+                ReadSelection = new(resolution.FullPath, resolution.IsWorkspacePath, matches.Select(item => item.PhysicalPath).ToImmutableArray())
+            };
     }
 
     public WorkspaceTextFileReadResult ReadTextFile(
@@ -641,7 +644,9 @@ internal sealed class WorkspaceFileQueryService
                 Query: query,
                 RootPath: resolution.RelativePath,
                 Matches: [],
-                IsTruncated: true);
+                IsTruncated: true) {
+                    ReadSelection = new(resolution.FullPath, resolution.IsWorkspacePath, [])
+                };
         }
 
         if (guardFailure != WorkspaceTextGuardFailure.None)
@@ -678,7 +683,9 @@ internal sealed class WorkspaceFileQueryService
             Query: query,
             RootPath: resolution.RelativePath,
             Matches: matches,
-            IsTruncated: false);
+            IsTruncated: false) {
+                ReadSelection = new(resolution.FullPath, resolution.IsWorkspacePath, matches.Length == 0 ? [] : [resolution.FullPath])
+            };
     }
 
     private WorkspaceTextDiffResult CreateDiffFailure(string message, string leftPath, string rightPath, DateTimeOffset startedAtUtc)
@@ -1100,9 +1107,6 @@ internal sealed class WorkspaceFileQueryService
                || fullPath.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string NormalizeSearchPattern(string searchPattern)
-        => string.IsNullOrWhiteSpace(searchPattern) ? "*" : searchPattern.Trim();
-
     private static bool TryCreateSearchPatternValidationFailure(string searchPattern, out string message)
     {
         message = string.Empty;
@@ -1125,36 +1129,6 @@ internal sealed class WorkspaceFileQueryService
                searchPattern.Contains('|', StringComparison.Ordinal) ||
                normalizedPattern.StartsWith('^') ||
                normalizedPattern.EndsWith('$');
-    }
-
-    private static WorkspaceFileListRequest NormalizeListRequest(
-        string? relativePath,
-        string searchPattern)
-    {
-        var normalizedSearchPattern = NormalizeSearchPattern(searchPattern);
-        if (!string.Equals(normalizedSearchPattern, "*", StringComparison.Ordinal) ||
-            string.IsNullOrWhiteSpace(relativePath))
-        {
-            return new WorkspaceFileListRequest(relativePath, normalizedSearchPattern);
-        }
-
-        var normalizedPath = relativePath.Replace('\\', '/').Trim();
-        var globstarIndex = normalizedPath.IndexOf("**", StringComparison.Ordinal);
-        if (globstarIndex < 0)
-        {
-            return new WorkspaceFileListRequest(relativePath, normalizedSearchPattern);
-        }
-
-        var normalizedRelativePath = normalizedPath[..globstarIndex].TrimEnd('/');
-        var embeddedSearchPattern = normalizedPath[globstarIndex..].TrimStart('/');
-        if (embeddedSearchPattern is "" or "**")
-        {
-            embeddedSearchPattern = "**/*";
-        }
-
-        return new WorkspaceFileListRequest(
-            string.IsNullOrWhiteSpace(normalizedRelativePath) ? null : normalizedRelativePath,
-            embeddedSearchPattern);
     }
 
     private static bool MatchesSearchPattern(string rootFullPath, string candidateFullPath, string normalizedSearchPattern)

@@ -11,7 +11,7 @@ internal sealed record AuthorizedBrowserFile(
     long? Size);
 
 internal sealed class StorageFileBrowserItemAuthorizer(
-    StorageCatalogRecord storage,
+    StorageDriverInput storage,
     IStorageBrowseDriver driver,
     FileToolsBrowseWorkLimits limits,
     FileToolsStorageRoot root,

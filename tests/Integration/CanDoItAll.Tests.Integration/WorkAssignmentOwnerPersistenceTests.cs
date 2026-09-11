@@ -49,7 +49,7 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         await using var app = await TestApplication.CreateAsync();
         var seed = await SeedAsync(app);
         var participation = new ProjectPartyAssignment {
-            ProjectId = seed.ProjectId, PartyId = seed.PartyId, NodeKey = seed.NodeKey,
+            ProjectId = seed.ProjectId, ProjectLifetimeId = seed.Admission.LifetimeId, PartyId = seed.PartyId, NodeKey = seed.NodeKey,
             AssignmentKind = ProjectPartyAssignmentKind.Manager, PhaseName = "Retained phase", OpportunityId = Guid.NewGuid()
         };
         await using (var complete = await CanonicalAsync(app)) {
@@ -118,12 +118,12 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         var crm = crmScope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
         var workRequest = Request(workSeed, identity);
         var participationRequest = new ProjectPartyAssignmentUpsertRequest {
-            AssignmentId = identity, ProjectId = participationSeed.ProjectId, PartyId = participationSeed.PartyId,
+            AssignmentId = identity, ProjectId = participationSeed.ProjectId, ExpectedProjectAdmission = participationSeed.Admission, PartyId = participationSeed.PartyId,
             Role = ProjectPartyAssignmentRole.Manager
         };
         var results = await Task.WhenAll(
-            AttemptAsync(() => work.ReplaceAsync(workSeed.ProjectId, new(workSeed.NodeKey), [workRequest])),
-            AttemptAsync(() => crm.ReplaceProjectAssignmentsAsync(participationSeed.ProjectId, [participationRequest], [ProjectPartyAssignmentRole.Manager])));
+            AttemptAsync(() => work.ReplaceAsync(workSeed.ProjectId, new(workSeed.NodeKey), [workRequest], expectedProjectAdmission: workSeed.Admission)),
+            AttemptAsync(() => crm.ReplaceProjectAssignmentsAsync(participationSeed.ProjectId, [participationRequest], [ProjectPartyAssignmentRole.Manager], expectedProjectAdmission: participationSeed.Admission)));
         Assert.Single(results, item => item);
         Assert.Single(results, item => !item);
         await using var complete = await CanonicalAsync(app);
@@ -138,14 +138,14 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         var seed = await SeedAsync(app);
         var target = await SeedAsync(app);
         var work = new ProjectWorkAssignmentRecord {
-            ProjectId = seed.ProjectId, PartyId = seed.PartyId, NodeKey = seed.NodeKey, PhaseName = "Kept phase",
+            ProjectId = seed.ProjectId, ProjectLifetimeId = seed.Admission.LifetimeId, PartyId = seed.PartyId, NodeKey = seed.NodeKey, PhaseName = "Kept phase",
             OpportunityId = Guid.NewGuid(), AllocationPercent = 41.25m, StartsAtUtc = Now, EndsAtUtc = Now.AddDays(2),
             IsPrimary = true, Source = "legacy move", Notes = "Keep every work field"
         };
         var participation = new ProjectPartyAssignment {
-            ProjectId = seed.ProjectId, PartyId = seed.PartyId, NodeKey = seed.NodeKey, AssignmentKind = ProjectPartyAssignmentKind.Manager
+            ProjectId = seed.ProjectId, ProjectLifetimeId = seed.Admission.LifetimeId, PartyId = seed.PartyId, NodeKey = seed.NodeKey, AssignmentKind = ProjectPartyAssignmentKind.Manager
         };
-        var expected = Fact(work) with { ProjectId = target.ProjectId };
+        var expected = Fact(work) with { ProjectId = target.ProjectId, ProjectLifetimeId = target.Admission.LifetimeId };
         await using (var complete = await CanonicalAsync(app)) {
             complete.AddRange(work, participation);
             await complete.SaveChangesAsync();
@@ -153,8 +153,8 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         await using var scope = app.Services.CreateAsyncScope();
         var facade = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
         var move = new ProjectPartyAssignmentMoveOperationId(Guid.NewGuid());
-        await facade.MoveAssignmentsToProjectAsync(move, seed.ProjectId, [new(seed.NodeKey)], target.ProjectId);
-        await facade.MoveAssignmentsToProjectAsync(move, seed.ProjectId, [new(seed.NodeKey)], target.ProjectId);
+        await facade.MoveAssignmentsToProjectAsync(move, seed.ProjectId, [new(seed.NodeKey)], target.ProjectId, sourceReference: ProjectAssignmentReference.From(seed.Admission), expectedTargetAdmission: target.Admission);
+        await facade.MoveAssignmentsToProjectAsync(move, seed.ProjectId, [new(seed.NodeKey)], target.ProjectId, sourceReference: ProjectAssignmentReference.From(seed.Admission), expectedTargetAdmission: target.Admission);
         Assert.Equal(expected, await scope.ServiceProvider.GetRequiredService<IProjectWorkAssignmentQueries>().GetAsync(work.Id));
         await using (var complete = await CanonicalAsync(app)) {
             Assert.Equal(target.ProjectId, (await complete.Set<ProjectPartyAssignment>().SingleAsync(item => item.Id == participation.Id)).ProjectId);
@@ -162,7 +162,7 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
             complete.Remove(await complete.Set<ProjectPartyAssignment>().SingleAsync(item => item.Id == participation.Id));
             await complete.SaveChangesAsync();
         }
-        await facade.DeleteAssignmentsForNodesAsync(target.ProjectId, [new(seed.NodeKey)]);
+        await facade.DeleteAssignmentsForNodesAsync(target.ProjectId, [new(seed.NodeKey)], expectedReference: ProjectAssignmentReference.From(target.Admission));
         Assert.Null(await scope.ServiceProvider.GetRequiredService<IProjectWorkAssignmentQueries>().GetAsync(work.Id));
     }
 
@@ -190,7 +190,7 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
             IsPrimary = true, CreatedAtUtc = Now.AddDays(-1), UpdatedAtUtc = Now
         };
         var work = new ProjectWorkAssignmentRecord {
-            ProjectId = seed.ProjectId, PartyId = merged.Id, NodeKey = seed.NodeKey, PhaseName = "Retained phase",
+            ProjectId = seed.ProjectId, ProjectLifetimeId = seed.Admission.LifetimeId, PartyId = merged.Id, NodeKey = seed.NodeKey, PhaseName = "Retained phase",
             PartyOrganizationAffiliationId = withAffiliations ? mergedAffiliation.Id : null,
             OpportunityId = Guid.NewGuid(), AllocationPercent = 37m, StartsAtUtc = Now, EndsAtUtc = Now.AddDays(2),
             IsPrimary = true, Source = "Imported", Notes = "Untouched work notes"
@@ -234,9 +234,9 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         await using (var complete = await CanonicalAsync(app)) {
             complete.AddRange(new WorkforceProfile { PartyId = allocated.PartyId, JobTitle = "Work resource" },
                 new WorkforceProfile { PartyId = bench.PartyId, JobTitle = "Bench resource" },
-                new ProjectWorkAssignmentRecord { ProjectId = allocated.ProjectId, PartyId = allocated.PartyId,
+                new ProjectWorkAssignmentRecord { ProjectId = allocated.ProjectId, ProjectLifetimeId = allocated.Admission.LifetimeId, PartyId = allocated.PartyId,
                     NodeKey = allocated.NodeKey, AllocationPercent = 80m },
-                new ProjectPartyAssignment { ProjectId = allocated.ProjectId, PartyId = allocated.PartyId,
+                new ProjectPartyAssignment { ProjectId = allocated.ProjectId, ProjectLifetimeId = allocated.Admission.LifetimeId, PartyId = allocated.PartyId,
                     AssignmentKind = ProjectPartyAssignmentKind.TeamMember, AllocationPercent = 30m });
             await complete.SaveChangesAsync();
         }
@@ -267,11 +267,11 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         await using var complete = await CanonicalAsync(app);
         complete.AddRange(project, party, node);
         await complete.SaveChangesAsync();
-        return new(project.Id, party.Id, node.Id, node.NodeKey);
+        return new(project.Id, party.Id, node.Id, node.NodeKey, new(app.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id, project.Id, project.LifetimeId));
     }
 
     private static ProjectPartyAssignmentUpsertRequest Request(Seed seed, Guid? id = null) => new() {
-        AssignmentId = id, ProjectId = seed.ProjectId, PartyId = seed.PartyId, Role = ProjectPartyAssignmentRole.WorkItemAssignee,
+        AssignmentId = id, ProjectId = seed.ProjectId, ExpectedProjectAdmission = seed.Admission, PartyId = seed.PartyId, Role = ProjectPartyAssignmentRole.WorkItemAssignee,
         NodeKey = seed.NodeKey, IsPrimary = true, AllocationPercent = 37m, StartsOn = new(2026, 4, 5), EndsOn = new(2026, 4, 7), Source = "Work owner proof"
     };
 
@@ -296,9 +296,9 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
 
     private static ProjectWorkAssignmentFact Fact(ProjectWorkAssignmentRecord row) => new(row.Id, row.ProjectId, row.PartyId,
         row.PartyOrganizationAffiliationId, row.NodeKey, row.PhaseName, row.OpportunityId, row.AllocationPercent,
-        row.StartsAtUtc, row.EndsAtUtc, row.IsPrimary, row.Source, row.Notes);
+        row.StartsAtUtc, row.EndsAtUtc, row.IsPrimary, row.Source, row.Notes, row.ProjectLifetimeId);
 
-    private sealed record Seed(Guid ProjectId, Guid PartyId, Guid NodeId, string NodeKey);
+    private sealed record Seed(Guid ProjectId, Guid PartyId, Guid NodeId, string NodeKey, ProjectWriteAdmission Admission);
 
     private sealed class InjectedMergeFailure() : Exception("Injected CRM save failure after Work staging.");
 

@@ -34,7 +34,7 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
         var invoker = new WorkflowLlmComponentInvoker(
             port,
             new SingleProviderRegistry(provider),
-            new ProviderProfileService());
+            new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateLlmComponent();
         var node = CreateLlmNode(component.Id);
         var definition = CreateDefinition([node], [], node.Id);

@@ -107,7 +107,8 @@ internal sealed record MafWorkflowApprovalContinuation(
     }
 
     public WorkflowExecutorInvocationContext CreateInvocationContext(
-        WorkflowExecutorInvocationContext baseContext)
+        WorkflowExecutorInvocationContext baseContext,
+        string settingsJson)
     {
         ArgumentNullException.ThrowIfNull(baseContext);
         if (baseContext.ExternalResponseAuthorization != ExternalResponseAuthorization)
@@ -116,23 +117,25 @@ internal sealed record MafWorkflowApprovalContinuation(
                 "Workflow approval continuation authorization does not match the reconstructed external-response authorization.");
         }
 
-        return baseContext with
-        {
-            ApprovalAuthorization = new WorkflowExecutorApprovalAuthorization(
-                RequestId,
-                ExpectedToken,
-                PresentedToken,
-                RunId,
-                WorkflowId,
-                WorkflowVersionId,
-                NodeId,
-                ExecutorId,
-                RequiredCapabilities,
-                ApprovalRequirement,
-                InputHash,
-                ExternalResponseAuthorization,
-                Approved,
-                Message)
+        var approval = new WorkflowExecutorApprovalAuthorization(
+            RequestId,
+            ExpectedToken,
+            PresentedToken,
+            RunId,
+            WorkflowId,
+            WorkflowVersionId,
+            NodeId,
+            ExecutorId,
+            RequiredCapabilities,
+            ApprovalRequirement,
+            InputHash,
+            ExternalResponseAuthorization,
+            Approved,
+            Message);
+        return baseContext with {
+            ApprovalAuthorization = approval,
+            ApprovalAdmission = new WorkflowExecutorApprovalAdmission(
+                approval, settingsJson, OriginalInput, baseContext.ResponseLease)
         };
     }
 }
@@ -367,7 +370,9 @@ internal sealed class MafWorkflowHitlBindingCompiler(
                 continuation.OriginalInput,
                 new Dictionary<WorkflowComponentId, LlmCallComponent>(),
                 new Dictionary<WorkflowNodeId, WorkflowPreviewSimulationStep>(),
-                continuation.CreateInvocationContext(invocationContext),
+                continuation.CreateInvocationContext(invocationContext,
+                    string.IsNullOrWhiteSpace(node.Settings.ExecutorSettingsJson)
+                        ? descriptor.DefaultSettingsJson : node.Settings.ExecutorSettingsJson),
                 cancellationToken);
         }
 

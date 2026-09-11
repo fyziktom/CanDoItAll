@@ -22,6 +22,7 @@ public static class WorkspaceModuleServiceCollectionExtensions
             IProjectTransferTargetStateParticipant,
             WorkspaceProjectTransferTargetStateParticipant>());
         services.AddOptions<ApiAccessOptions>();
+        services.AddSingleton<WorkspaceDefaultsBootstrapService>();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
         services.TryAddScoped<IApiTokenAdministrationAccess, UnavailableApiTokenAdministrationAccess>();
         services.TryAddScoped<ApiTokenAdministrationService>();

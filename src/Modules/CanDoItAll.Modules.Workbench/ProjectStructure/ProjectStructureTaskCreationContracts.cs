@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Projects;
+
 namespace CanDoItAll.Modules.Workbench;
 
 public static class ProjectStructureTaskActionIds
@@ -37,6 +39,8 @@ public sealed record ProjectStructureTaskCreateRequest(
     ProjectStructureTaskResourceSelection? Resource = null,
     ProjectTaskEstimate? Estimate = null)
 {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
     public TimeSpan Duration => EndUtc - StartUtc;
 }
 

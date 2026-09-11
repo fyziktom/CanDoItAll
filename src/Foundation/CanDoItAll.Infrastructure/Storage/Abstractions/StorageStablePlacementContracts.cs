@@ -45,11 +45,11 @@ public sealed class StorageStablePlacementPendingException(StorageStablePlacemen
 
 internal interface IStorageStablePlacementDriver {
     bool CanRecoverWithoutWriteAcknowledgement { get; }
-    Task<StorageObjectReference> PrepareStableTargetAsync(StorageCatalogRecord storage, StoragePlacementIntentId intentId,
+    Task<StorageObjectReference> PrepareStableTargetAsync(StorageDriverInput storage, StoragePlacementIntentId intentId,
         StorageWriteRequest request, CancellationToken cancellationToken);
-    Task<StorageWriteResult> WriteStableTargetAsync(StorageCatalogRecord storage, StorageObjectReference target,
+    Task<StorageWriteResult> WriteStableTargetAsync(StorageDriverInput storage, StorageObjectReference target,
         StorageWriteRequest request, CancellationToken cancellationToken);
-    Task CompleteStableTargetAsync(StorageCatalogRecord storage, StorageObjectReference target, CancellationToken cancellationToken);
+    Task CompleteStableTargetAsync(StorageDriverInput storage, StorageObjectReference target, CancellationToken cancellationToken);
 }
 
 public interface IStoragePlacementReceiptObserver {

@@ -30,6 +30,11 @@ internal sealed class ToolCapabilityBuilder(
         spreadsheetPlugin,
         capabilityAccessPlan);
 
+    internal IReadOnlyList<AITool> CreateWorkspaceToolsForDisclosure(AgentWorkspaceToolAccessSettings currentAccess,
+        RuntimeCapabilityAccessPlan currentPlan, IReadOnlyList<CapabilityCatalogItem> currentCapabilities)
+        => new WorkspaceToolSet(currentAccess, filesystemPlugin, workspacePlugin, spreadsheetPlugin, currentPlan)
+            .CreateTools(currentCapabilities);
+
         public IReadOnlyList<AITool> CreateTools(
             CapabilityCatalogItem capability,
             ProviderProfile provider,

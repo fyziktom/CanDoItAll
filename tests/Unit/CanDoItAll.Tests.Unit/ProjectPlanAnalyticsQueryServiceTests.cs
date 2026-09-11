@@ -408,23 +408,27 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
             ProjectNodeReference nodeReference,
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null)
             => throw UnexpectedCall();
 
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
             => throw UnexpectedCall();
 
         public Task DeleteAssignmentsForNodesAsync(
             Guid projectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
             => throw UnexpectedCall();
 
         public Task DeleteAssignmentsForProjectAsync(
             Guid projectId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? expectedReference = null)
             => throw UnexpectedCall();
 
         public Task MoveAssignmentsToProjectAsync(
@@ -432,7 +436,9 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
             Guid sourceProjectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
             Guid targetProjectId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+        ProjectAssignmentReference? sourceReference = null,
+        ProjectWriteAdmission? expectedTargetAdmission = null)
             => throw UnexpectedCall();
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(

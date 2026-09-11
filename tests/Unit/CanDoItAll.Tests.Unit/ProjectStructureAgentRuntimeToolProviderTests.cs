@@ -101,7 +101,7 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
         IReadOnlySet<Guid> configuredProjectIds = new HashSet<Guid> { otherProjectId };
         IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid>();
 
-        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+        ProjectStructureAccessState.EnsureProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: true,
@@ -109,14 +109,14 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
             sessionCreatedProjectIds,
             activeProjectId);
 
-        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+        Assert.True(ProjectStructureAccessState.IsProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: true,
             configuredProjectIds,
             sessionCreatedProjectIds,
             activeProjectId));
-        Assert.False(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+        Assert.False(ProjectStructureAccessState.IsProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: true,
@@ -125,7 +125,7 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
             otherProjectId));
 
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
-            ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+            ProjectStructureAccessState.EnsureProjectAllowedForContext(
                 AgentRuntimeToolProviderPurpose.InteractiveChat,
                 intent,
                 allowAllProjects: true,
@@ -157,7 +157,7 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
         };
         IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid> { createdProjectId };
 
-        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+        ProjectStructureAccessState.EnsureProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: false,
@@ -165,14 +165,14 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
             sessionCreatedProjectIds,
             createdProjectId);
 
-        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+        Assert.True(ProjectStructureAccessState.IsProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: false,
             allowedProjectIds,
             sessionCreatedProjectIds,
             createdProjectId));
-        Assert.False(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+        Assert.False(ProjectStructureAccessState.IsProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: false,
@@ -193,7 +193,7 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
         IReadOnlySet<Guid> configuredProjectIds = new HashSet<Guid>();
         IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid>();
 
-        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+        ProjectStructureAccessState.EnsureProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: true,
@@ -201,7 +201,7 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
             sessionCreatedProjectIds,
             projectId);
 
-        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+        Assert.True(ProjectStructureAccessState.IsProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             intent,
             allowAllProjects: true,
@@ -223,7 +223,7 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
         IReadOnlySet<Guid> configuredProjectIds = new HashSet<Guid>();
         IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid>();
 
-        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+        ProjectStructureAccessState.EnsureProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
             intent,
             allowAllProjects: true,
@@ -231,7 +231,7 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
             sessionCreatedProjectIds,
             processProjectId);
 
-        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+        Assert.True(ProjectStructureAccessState.IsProjectAllowedForContext(
             AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
             intent,
             allowAllProjects: true,

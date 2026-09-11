@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 public enum WorkflowStructureOutputKind {
@@ -20,6 +22,7 @@ public enum WorkflowStructureOperatorSurface {
     Api
 }
 
+[JsonConverter(typeof(WorkflowStructureAuthorityJsonConverter))]
 public sealed record WorkflowStructureAuthority(
     WorkflowStructureAuthorityChannel Channel,
     WorkflowLaunchActor Principal,
@@ -35,11 +38,20 @@ public sealed record WorkflowStructureAuthority(
     public WorkflowStructureSchedulerAuthority? SchedulerAuthority { get; init; }
     public bool AllProjects { get; init; }
     public IReadOnlyList<Guid> ProjectIds { get; init; } = [];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowStructureProjectScope? ProjectScope { get; init; }
 }
 
 public sealed record WorkflowStructureSchedulerAuthority(Guid PlanId, Guid FireAdmissionId, string AuthorityFingerprint);
 
-public sealed record WorkflowStructureProcessAuthority(Guid RunId, Guid StepInstanceId, string ReadinessHash);
+public sealed record WorkflowStructureProcessAuthority(Guid RunId, Guid StepInstanceId, string ReadinessHash) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? ExecutionRunId { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OwnerFingerprint { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowProcessToolBinding? ToolInvocation { get; init; }
+}
 
 public sealed record WorkflowStructureAdmissionBinding(
     Guid IntentId,
@@ -72,7 +84,12 @@ public sealed record WorkflowStructureOutputPlan(
     string TargetBindingFingerprint,
     WorkflowStructureOutputKind Kind,
     WorkflowStructureOutputRole Role,
-    string Fingerprint);
+    string Fingerprint) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowProjectLifetime? ProjectLifetime { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SourceAuthorityFingerprint { get; init; }
+}
 
 public sealed record WorkflowStructureOutputReceipt(
     WorkflowStructureOutputIdentity Identity,
@@ -81,7 +98,10 @@ public sealed record WorkflowStructureOutputReceipt(
     string NodeId,
     Guid? AssetId,
     string StoragePath,
-    DateTimeOffset AppliedAtUtc);
+    DateTimeOffset AppliedAtUtc) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowProjectLifetime? ProjectLifetime { get; init; }
+}
 
 public enum WorkflowStructureOutputState {
     Prepared,

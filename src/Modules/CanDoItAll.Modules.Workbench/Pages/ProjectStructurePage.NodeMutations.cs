@@ -291,6 +291,10 @@ public partial class ProjectStructurePage
                     : exception.Message
             };
         }
+        catch (ProjectStructureAgentException exception) when (exception.Details is ProjectCreationPartialCompletion) {
+            Logger.LogWarning(exception, "Subproject creation or transfer requires observation for source project {SourceProjectId}.", ProjectId);
+            subprojectTransferDialog = transferDialog with { Error = exception.SafeMessage };
+        }
         catch (Exception exception)
         {
             Logger.LogError(

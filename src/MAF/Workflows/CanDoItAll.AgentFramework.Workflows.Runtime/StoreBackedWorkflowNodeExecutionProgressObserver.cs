@@ -11,6 +11,8 @@ internal sealed class StoreBackedWorkflowNodeExecutionProgressObserver(
 {
     private const int MaxMessageCharacters = 1_000;
 
+    public WorkflowReadEvidenceDurability ReadEvidenceDurability => WorkflowReadEvidenceDurability.Persisted;
+
     public async ValueTask RecordAsync(
         WorkflowNodeExecutionProgress progress,
         CancellationToken cancellationToken = default)
@@ -63,7 +65,10 @@ internal sealed class StoreBackedWorkflowNodeExecutionProgressObserver(
                 progress.ExecutorId,
                 inlineJson: inlinePayload,
                 usage: progress.Usage),
-            progress.OccurredAtUtc);
+            progress.OccurredAtUtc) {
+                CompletionProof = progress.CompletionProof,
+                ProviderReadEvidence = progress.ProviderReadEvidence
+            };
 
         await store.SaveEventAsync(workflowEvent, cancellationToken);
         await eventSink.PublishAsync(workflowEvent, cancellationToken);

@@ -43,6 +43,21 @@ public sealed class WorkflowExecutorExecutionAuditScope : IDisposable
 
     public static WorkflowRunId? CurrentRunId => Current.Value?.RunId;
     public static WorkflowLaunchOrigin? CurrentOrigin => Current.Value?.Origin;
+    public static WorkflowNodeInvocationBinding? CurrentInvocation => Current.Value?.Invocation;
+
+    private WorkflowExecutorExecutionAuditScope(ExecutionContext context) {
+        previous = Current.Value;
+        Current.Value = context;
+    }
+
+    public static WorkflowExecutorExecutionAuditScope PushInvocation(WorkflowDefinition definition, WorkflowNode node, WorkflowNodeInput input,
+        WorkflowExecutionOccurrence? occurrence, WorkflowCompilerContractVersion compilerVersion) {
+        if (occurrence is not null && occurrence.RunId != CurrentRunId) {
+            throw new InvalidOperationException("The Workflow invocation occurrence differs from its actual run audit.");
+        }
+        var binding = new WorkflowNodeInvocationBinding(definition, node, input, occurrence, compilerVersion, CurrentOrigin);
+        return new(new ExecutionContext(CurrentRunId, CurrentOrigin, binding));
+    }
 
     public static WorkflowExecutorExecutionAuditScope Push(WorkflowRunId runId, WorkflowLaunchOrigin? origin = null)
         => new(runId, origin);
@@ -51,7 +66,7 @@ public sealed class WorkflowExecutorExecutionAuditScope : IDisposable
         Current.Value = previous;
     }
 
-    private sealed record ExecutionContext(WorkflowRunId RunId, WorkflowLaunchOrigin? Origin);
+    private sealed record ExecutionContext(WorkflowRunId? RunId, WorkflowLaunchOrigin? Origin, WorkflowNodeInvocationBinding? Invocation = null);
 }
 
 public static class WorkflowExecutorPayloadPolicy

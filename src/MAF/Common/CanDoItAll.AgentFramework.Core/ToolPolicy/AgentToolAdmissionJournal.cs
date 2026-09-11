@@ -9,9 +9,11 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     private readonly ISandboxWorkspaceExecutionRunLeaseStore leases;
     private readonly AgentToolProfileBinding profile;
     private readonly TimeProvider clock;
+    private readonly AgentChatContextAttachmentPersistence contextAttachments;
 
     public AgentToolAdmissionJournal(ISandboxWorkspaceStore store, AgentToolProfileBinding profile, TimeProvider? clock = null,
-        IEnumerable<IAgentToolBackgroundSourcePolicy>? backgroundSources = null) {
+        IEnumerable<IAgentToolBackgroundSourcePolicy>? backgroundSources = null,
+        IEnumerable<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null) {
         reader = store as ISandboxWorkspaceExecutionRunStore
             ?? throw new InvalidOperationException("Tool admission requires the canonical execution-run reader.");
         writer = store as ISandboxWorkspaceExecutionRunMutationStore
@@ -20,8 +22,13 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             ?? throw new InvalidOperationException("Tool admission requires a real cross-instance run dispatch lease.");
         this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
         this.clock = clock ?? TimeProvider.System;
+        contextAttachments = new(contextAttachmentCodecs);
         this.backgroundSources = (backgroundSources ?? []).ToDictionary(item => item.SourceKind, StringComparer.OrdinalIgnoreCase);
     }
+
+    public bool CanRecoverRuntimeContext(AgentRuntimeTransientContext? context) => contextAttachments.CanCapture(context);
+
+    public AgentRuntimeTransientContext RestoreRuntimeContext(AgentToolAdmittedRuntimeContext context) => contextAttachments.Restore(context);
 
     public AgentToolJournalRecord CreateForNewRun(ExecutionRunRecord run, ChatSessionRecord chat,
         AgentToolAdmissionSupport support = AgentToolAdmissionSupport.Recoverable,
@@ -42,13 +49,17 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             throw Failure("The admitted input does not match the new run's persisted user message.");
         }
 
-        if (runtimeContext is not null && (!runtimeContext.Attachments.IsEmpty ||
+        if (runtimeContext is not null && (!contextAttachments.CanCapture(runtimeContext) ||
                 AgentChatContextDigest.Compute(runtimeContext) != ExecutionInvocationMetadata.ResolveTransientContextDigest(run))) {
             throw Failure("The saved runtime context does not match its admitted digest or requires an unsupported typed attachment.");
         }
 
-        return new(AgentToolJournalRecord.CurrentSchemaVersion, 1, session, [], [], Support: support,
-            OriginalInput: originalInput, RuntimeContext: runtimeContext is null ? null : new(runtimeContext.Content, runtimeContext.WorkspaceScope));
+        var savedContext = runtimeContext is null ? null : contextAttachments.Capture(runtimeContext);
+        var journal = new AgentToolJournalRecord(savedContext is { Attachments.IsDefaultOrEmpty: false }
+                ? AgentToolJournalRecord.TypedContextSchemaVersion : AgentToolJournalRecord.CurrentSchemaVersion,
+            1, session, [], [], Support: support, OriginalInput: originalInput, RuntimeContext: savedContext);
+        journal.Validate();
+        return journal;
     }
 
     public async ValueTask<AgentToolRunLease> AcquireRunAsync(AgentToolSessionReference reference, CancellationToken cancellationToken) {
@@ -70,6 +81,10 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     }
 
     private async Task<AgentToolJournalRecord> ReadVerifiedAsync(AgentToolRunLease lease, bool reconciliationOnly,
+        CancellationToken cancellationToken)
+        => RequireJournal(await ReadVerifiedDetailAsync(lease, reconciliationOnly, cancellationToken));
+
+    private async Task<ExecutionRunDetail> ReadVerifiedDetailAsync(AgentToolRunLease lease, bool reconciliationOnly,
         CancellationToken cancellationToken) {
         lease.RequireOwner(this);
         RequireLeaseMode(lease, reconciliationOnly);
@@ -80,7 +95,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             await RequireBackgroundSourceAsync(detail.Run, readOnly: true, cancellationToken);
         }
         RequireLease(lease, journal);
-        return journal;
+        return detail;
     }
 
     public Task<AgentToolJournalRecord> BeginSegmentAsync(AgentToolRunLease lease,
@@ -267,6 +282,19 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         }
 
         return (await ReadAsync(lease, cancellationToken)).Session;
+    }
+
+    public async ValueTask<AgentToolSessionObservation> RequireSessionObservationAsync(
+        AgentToolSessionReference reference, CancellationToken cancellationToken = default) {
+        var lease = AgentToolRunLease.Current ?? throw Failure("No active admitted runtime lease is held.");
+        lease.RequireOwner(this);
+        if (lease.Session != reference) {
+            throw Failure("The requested session does not match the active admitted runtime.");
+        }
+        var detail = await ReadVerifiedDetailAsync(lease, reconciliationOnly: false, cancellationToken);
+        return new(RequireJournal(detail).Session,
+            AgentTurnContextMetadata.TryReadTurnContextReference(detail.Run.MetadataJson),
+            AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(detail.Run.MetadataJson));
     }
 
     public async ValueTask<AgentToolAdmittedInvocation> RequireInvocationAsync(AgentToolSessionReference session,

@@ -199,7 +199,8 @@ internal sealed partial class AgentFrameworkProcessStepExecutor : IAgentFramewor
                     assignment,
                     request.StepContract,
                     cancellationToken,
-                    EvaluateHostCapabilityGateAsync)
+                    EvaluateHostCapabilityGateAsync,
+                    request.DispatchClaimIdentity)
                 .ConfigureAwait(false);
             return CompleteWithDispatchHostEvidence(workflowResult);
         }

@@ -28,7 +28,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class SharedProviderPremergeUpgradeTests {
     private const string DevelopmentMigration = "20260822013043_AddWorkflowNativeCheckpointRequestUniqueness";
-    private const string ReviewedMigration = "20260911010404_AddSourceBoundExecutionAdmissions";
+    private const string HistoricalReviewedMigration = "20260911010404_AddSourceBoundExecutionAdmissions";
+    private const string ReviewedMigration = "20260911194528_BindWorkflowProviderDisclosureHistory";
     private static readonly DateTimeOffset RecordedAt = new(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
@@ -87,11 +88,14 @@ public sealed class SharedProviderPremergeUpgradeTests {
         await new FileSandboxWorkspaceJsonStore().WriteJsonAtomicallyAsync(usagePath, agentUsage, default);
         var originalBytes = await File.ReadAllBytesAsync(usagePath);
 
+        await migrator.MigrateAsync(HistoricalReviewedMigration);
+        Assert.Equal(HistoricalReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
         await migrator.MigrateAsync();
         db.ChangeTracker.Clear();
         Assert.Equal(ReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
+        Assert.Equal(161, db.Model.GetEntityTypes().Count());
         var preservedProfile = await db.Set<PersistedProviderProfile>().SingleAsync();
         Assert.Equal(profile.Id, preservedProfile.Id);
         Assert.Equal(profile.ExtraSettingsJson, preservedProfile.ExtraSettingsJson);

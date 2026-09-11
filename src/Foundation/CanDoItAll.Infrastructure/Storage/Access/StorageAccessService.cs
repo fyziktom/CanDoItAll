@@ -12,7 +12,7 @@ public sealed class StorageAccessService(
         ArgumentNullException.ThrowIfNull(reference);
 
         var storage = reference.StorageId.HasValue
-            ? await catalogService.GetAsync(reference.StorageId.Value, cancellationToken)
+            ? await catalogService.GetDriverAsync(reference.StorageId.Value, cancellationToken)
             : null;
         var capabilityMask = ResolveCapabilityMask(reference, storage);
         var supportsInlinePreview = capabilityMask.HasFlag(StorageCapability.InlinePreview);
@@ -32,7 +32,7 @@ public sealed class StorageAccessService(
             BuildReasonWhenUnavailable(supportsInlinePreview, supportsDownload, supportsOpenLocally));
     }
 
-    private StorageCapability ResolveCapabilityMask(StorageObjectReference reference, StorageCatalogRecord? storage)
+    private StorageCapability ResolveCapabilityMask(StorageObjectReference reference, StorageDriverInput? storage)
     {
         if (storage is not null)
         {
@@ -62,7 +62,7 @@ public sealed class StorageAccessService(
 
     private bool SupportsOpenLocally(
         StorageObjectReference reference,
-        StorageCatalogRecord? storage,
+        StorageDriverInput? storage,
         StorageCapability capabilityMask)
     {
         if (reference.ProviderKind != StorageProviderKind.FileSystem ||
@@ -79,7 +79,7 @@ public sealed class StorageAccessService(
         return fileSystemPathPolicy.IsTrustedForLocalOpen(storage);
     }
 
-    private static string? ResolveDirectUrl(StorageObjectReference reference, StorageCatalogRecord? storage)
+    private static string? ResolveDirectUrl(StorageObjectReference reference, StorageDriverInput? storage)
     {
         if (!string.IsNullOrWhiteSpace(reference.Route) &&
             Uri.TryCreate(reference.Route, UriKind.Absolute, out var directUri))
@@ -92,7 +92,7 @@ public sealed class StorageAccessService(
             return null;
         }
 
-        var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+        var configuration = storage.ReadConfiguration();
         if (string.IsNullOrWhiteSpace(configuration.GatewayBaseUrl))
         {
             return null;

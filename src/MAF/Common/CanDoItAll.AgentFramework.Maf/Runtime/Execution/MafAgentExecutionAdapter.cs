@@ -172,13 +172,14 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
             // before session restore evaluates runtime-state compatibility.
             var capabilityState = runtimeBuild.CapabilityState;
             var canRecoverToolInvocations = supportsToolRecovery &&
-                (capabilityState?.Tools.Count > 0 ||
+                (capabilityState?.HasToolContracts == true ||
                     (await toolAdmissionJournal!.ReadAsync(admissionLease!, cancellationToken)).Segments.Length != 0);
             runtimeOptions = runtimeOptions with
             {
                 RequireDurableToolProtocol = canRecoverToolInvocations,
                 ToolsetFingerprint = MafToolsetFingerprint.ComputeContractFingerprint(
-                    capabilityState?.Tools ?? [], capabilityState?.ToolPolicies),
+                    capabilityState?.Tools ?? [], capabilityState?.ToolPolicies,
+                    capabilityState?.ContextToolRegistrations.SelectMany(registration => registration.Declarations)),
                 LegacyToolsetNameFingerprint = MafToolsetFingerprint.Compute(
                     (capabilityState?.Tools ?? []).Select(tool => tool.Name)),
                 CapabilityPolicyFingerprint = MafToolsetFingerprint.Compute(

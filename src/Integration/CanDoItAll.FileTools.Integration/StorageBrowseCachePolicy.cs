@@ -7,15 +7,14 @@ internal sealed record StorageBrowseCachePolicy(
     StorageBrowseCacheSettings Settings)
 {
     public static StorageBrowseCachePolicy Resolve(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         FileToolsStorageBinding binding,
         IStorageBrowseDriver driver)
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentNullException.ThrowIfNull(driver);
-        StorageBrowseCacheSettings settings = StorageJson
-            .ParseProviderConfiguration(storage.ConfigJson)
+        StorageBrowseCacheSettings settings = storage.ReadConfiguration()
             .BrowseCache;
         if (binding.HostCacheMode == FileToolsHostBrowseCacheMode.Disabled || !settings.Enabled)
         {

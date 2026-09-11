@@ -114,6 +114,9 @@ public sealed record ProjectStructureProcessLinkDialogState(
     Guid? SelectedDefinitionId,
     string Error)
 {
+    public ProjectStructureSurface? OpenedSurface { get; init; }
+    public ProjectStructureAgentContext? MutationOwner { get; init; }
+
     internal Guid ProjectId { get; init; }
 
     internal Guid DialogId { get; init; }
@@ -139,6 +142,9 @@ public sealed record ProjectStructureWorkflowAddDialogState(
     ProjectStructureWorkflowInputPreview Preview,
     string Error)
 {
+    public ProjectStructureSurface? OpenedSurface { get; init; }
+    public ProjectStructureAgentContext? MutationOwner { get; init; }
+
     public string Title => $"Add workflow for {ParentNodeTitle}";
 
     public string Copy => "Choose an active workflow and review the project, parent node, and optional sources that will be sent as input.";
@@ -161,6 +167,7 @@ public sealed record ProjectStructureWorkflowStartDialogState(
 {
     public Guid ProjectId { get; init; }
     public Guid IntentId { get; init; }
+    public ProjectStructureAgentContext? MutationOwner { get; init; }
 
     public string Title => $"Start {NodeTitle}";
 

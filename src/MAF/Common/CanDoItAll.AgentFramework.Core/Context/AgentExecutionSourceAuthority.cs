@@ -12,7 +12,15 @@ public sealed record AgentExecutionSourceAuthorityRequest(
     AgentChatContextSourceKind SourceKind,
     AgentChatContextSourceId SourceId,
     WorkspaceScopeDescriptor? ObservedWorkspaceScope,
-    Guid CurrentDatabaseProfileId);
+    Guid CurrentDatabaseProfileId) {
+    public AgentExecutionAuthorityRevalidation? Revalidation { get; init; }
+
+    public bool IsCapturedSandboxRevalidation => Revalidation is { } captured &&
+        captured.Source.SourceKind == SourceKind && captured.Source.SourceId == SourceId &&
+        captured.Authority.AgentId == Agent.Id && captured.Authority.DatabaseProfileId == CurrentDatabaseProfileId &&
+        captured.Authority.WorkspaceScope == WorkspaceScopeDescriptor.Sandbox &&
+        ObservedWorkspaceScope == captured.Authority.WorkspaceScope;
+}
 
 /// <summary>
 /// Durable authority decision for one source kind: the canonical workspace

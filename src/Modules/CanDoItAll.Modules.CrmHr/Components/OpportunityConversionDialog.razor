@@ -1,3 +1,4 @@
+@inject CanDoItAll.Modules.Projects.ProjectWriteAdmissionService ProjectWriteAdmissions
 @using CanDoItAll.Modules.Projects
 
 @if (IsOpen && Opportunity is not null)
@@ -167,8 +168,9 @@
 
 <ProjectRecordPickerDialog IsOpen="isProjectPickerOpen"
                            SelectedProjectId="draft.ExistingProjectId"
+                           SelectedProjectLifetimeId="draft.ExpectedProjectAdmission?.LifetimeId"
                            InitialScope="ProjectRecordScope.Open"
-                           SelectionConfirmed="HandleProjectSelectedAsync"
+                           SnapshotConfirmed="HandleProjectSelectedAsync"
                            OnClose="CloseProjectPickerAsync"
                            LoadFailed="LoadFailed"
                            Title="Choose an existing project"
@@ -235,6 +237,7 @@
     private void ClearExistingProject()
     {
         draft.ExistingProjectId = null;
+        draft.ExpectedProjectAdmission = null;
     }
 
     private Task CloseProjectPickerAsync()
@@ -243,9 +246,12 @@
         return Task.CompletedTask;
     }
 
-    private async Task HandleProjectSelectedAsync(Guid projectId)
+    private async Task HandleProjectSelectedAsync(ProjectRecordPickerSelection selection)
     {
-        draft.ExistingProjectId = projectId;
+        draft.ExistingProjectId = selection.ProjectId;
+        draft.ExpectedProjectAdmission = new CanDoItAll.Modules.Projects.ProjectWriteAdmission(
+            ProjectWriteAdmissions.DatabaseProfileId, selection.ProjectId, selection.LifetimeId
+                ?? throw new InvalidOperationException("The selected project row has no lifetime binding."));
         await CloseProjectPickerAsync();
     }
 
@@ -271,6 +277,7 @@
             ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
             LinkExistingProject = source.LinkExistingProject,
             ExistingProjectId = source.ExistingProjectId,
+            ExpectedProjectAdmission = source.ExpectedProjectAdmission,
             ProjectName = source.ProjectName,
             ProjectDescription = source.ProjectDescription,
             ProjectObjective = source.ProjectObjective,

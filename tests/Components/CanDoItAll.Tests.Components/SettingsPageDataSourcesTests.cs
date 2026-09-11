@@ -124,18 +124,9 @@ public sealed class SettingsPageDataSourcesTests
         Assert.True(cut.Find("[data-testid='database-profile-save']").HasAttribute("disabled"));
     }
 
-    private static async Task<ComponentTestHarness> CreateUnlockedHarnessAsync()
-    {
-        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-settings-tests");
-        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
-
-        return await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
-        {
-            TestEnvironment = testEnvironment,
-            ActiveProfile = activeProfile,
-            ConfigurationOverrides = new Dictionary<string, string?>
-            {
-                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath,
+    private static Task<ComponentTestHarness> CreateUnlockedHarnessAsync() {
+        return ComponentTestHarness.CreateAsync(options: new TestHarnessOptions {
+            ConfigurationOverrides = new Dictionary<string, string?> {
                 ["Database:Provider"] = null,
                 ["Database:ConnectionString"] = null
             }

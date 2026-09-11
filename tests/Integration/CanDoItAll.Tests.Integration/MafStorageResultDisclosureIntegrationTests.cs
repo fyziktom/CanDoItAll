@@ -64,8 +64,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
                 agent with { ConfigurationJson = Configuration(agent.ConfigurationJson, [other.Id]) });
             Assert.DoesNotContain(target.Id, AgentWorkspaceToolAccessMetadata.Read(currentAgent.ConfigurationJson).AllowedStorageCatalogIds);
         } else {
-            target.IsEnabled = false;
-            await catalogs.SaveAsync(target);
+            await catalogs.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(target) with { IsEnabled = false });
         }
         var beforeDenied = await CatalogRowsAsync(services.ServiceProvider);
         first.Reset();
@@ -77,8 +76,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         Assert.Equal(checkpoint, Assert.Single(Assert.Single(deniedState.Batches).Proposals).Result);
 
         if (!revokeAllowedCatalog) {
-            target.IsEnabled = true;
-            await catalogs.SaveAsync(target);
+            await catalogs.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(target) with { IsEnabled = true });
         }
         await SaveCanonicalAgentAsync(services.ServiceProvider, agent);
         first.Reset();
@@ -119,7 +117,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
             CanReadFiles = false, CanReadStorage = true, AllowedStorageCatalogIds = allowed
         });
 
-    private static StorageCatalogRecord Storage(string name, string root) => new() {
+    private static StorageCatalogSaveRequest Storage(string name, string root) => new() {
         Name = name, ProviderKind = StorageProviderKind.FileSystem, IsEnabled = true,
         ConnectionMode = StorageConnectionMode.Local, EndpointOrRoot = root,
         CapabilityMask = StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete,

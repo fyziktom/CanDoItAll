@@ -3,7 +3,7 @@ namespace CanDoItAll.Infrastructure.Storage;
 public sealed partial class IpfsStorageDriver : IStorageStablePlacementDriver {
     bool IStorageStablePlacementDriver.CanRecoverWithoutWriteAcknowledgement => true;
 
-    async Task<StorageObjectReference> IStorageStablePlacementDriver.PrepareStableTargetAsync(StorageCatalogRecord storage,
+    async Task<StorageObjectReference> IStorageStablePlacementDriver.PrepareStableTargetAsync(StorageDriverInput storage,
         StoragePlacementIntentId intentId, StorageWriteRequest request, CancellationToken cancellationToken) {
         var token = await secretResolver.ResolveCredentialAsync(storage.CredentialSecretId, cancellationToken);
         var content = await RequireStableTransport().AddStableAsync(storage, token, request.FileName, request.Content,
@@ -13,7 +13,7 @@ public sealed partial class IpfsStorageDriver : IStorageStablePlacementDriver {
             request.Content.LongLength, ResolveDirectUrl(storage, content.ContentId)) { PlacementIntentId = intentId.Value };
     }
 
-    async Task<StorageWriteResult> IStorageStablePlacementDriver.WriteStableTargetAsync(StorageCatalogRecord storage,
+    async Task<StorageWriteResult> IStorageStablePlacementDriver.WriteStableTargetAsync(StorageDriverInput storage,
         StorageObjectReference target, StorageWriteRequest request, CancellationToken cancellationToken) {
         if (target.ProviderKind != ProviderKind || target.StorageId != storage.Id || target.LocatorKind != StorageLocatorKind.ContentAddress) {
             throw new InvalidOperationException("The prepared IPFS target does not match this storage.");
@@ -28,9 +28,9 @@ public sealed partial class IpfsStorageDriver : IStorageStablePlacementDriver {
             true, true, false, target.DisplayName, target.ContentType, target.ContentLength, string.Empty));
     }
 
-    async Task IStorageStablePlacementDriver.CompleteStableTargetAsync(StorageCatalogRecord storage,
+    async Task IStorageStablePlacementDriver.CompleteStableTargetAsync(StorageDriverInput storage,
         StorageObjectReference target, CancellationToken cancellationToken) {
-        if (StorageJson.ParseProviderConfiguration(storage.ConfigJson).PinOnUpload) {
+        if (storage.ReadConfiguration().PinOnUpload) {
             var token = await secretResolver.ResolveCredentialAsync(storage.CredentialSecretId, cancellationToken);
             await transport.PinAsync(storage, token, target.Locator, cancellationToken);
         }

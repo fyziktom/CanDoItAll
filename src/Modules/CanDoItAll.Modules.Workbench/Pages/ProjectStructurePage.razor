@@ -970,6 +970,10 @@ else
             processDialogNavigationIdentity = processNavigation;
             CloseProcessStartDialog();
             CloseProcessLinkDialog();
+            actionNavigationRevision++;
+            CloseSummary();
+            CancelTranscriptAction();
+            CloseSecretReferenceDialog();
         }
 
         if (loadedProjectId != ProjectId)
@@ -1734,6 +1738,8 @@ else
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
+        var originalNode = ResolveNode(nodeId);
+        var actionContext = CaptureActionContext(actionId, originalNode);
         if (await TryHandleFileBrowserActionAsync(actionId, nodeId))
         {
             return;
@@ -1779,7 +1785,7 @@ else
                 await OpenSecretReferenceDialogAsync(action, request with
                 {
                     CreateMode = action.CreateMode
-                });
+                }, actionContext);
                 return;
             }
 
@@ -1821,13 +1827,12 @@ else
         switch (actionId)
         {
             case ProjectStructureActionCatalogAdapter.EditActionId:
-                if (ResolveNode(nodeId) is { } editNode)
-                {
-                    await OpenEditDialogAsync(editNode);
+                if ((actionContext is null ? ResolveNode(nodeId) : originalNode) is { } editNode) {
+                    await OpenEditDialogAsync(editNode, actionContext);
                 }
                 break;
             case "summary":
-                await OpenSummaryAsync(nodeId);
+                await OpenSummaryAsync(nodeId, actionContext);
                 break;
             case "add-process":
                 if (ResolveNode(nodeId) is { } processLinkNode)
@@ -1943,16 +1948,16 @@ else
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Wizard, nodeId);
                 break;
             case "transcript:create":
-                await CreateTranscriptFromRecordingAsync(ResolveNode(nodeId));
+                await CreateTranscriptFromRecordingAsync(originalNode, actionContext);
                 break;
             case "transcript:summarize":
-                await OpenTranscriptActionAsync(ProjectLlmActionKind.Summarize, nodeId);
+                await OpenTranscriptActionAsync(ProjectLlmActionKind.Summarize, nodeId, actionContext);
                 break;
             case "transcript:find-my-tasks":
-                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindMyTasks, nodeId);
+                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindMyTasks, nodeId, actionContext);
                 break;
             case "transcript:find-others-deliveries":
-                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindOthersDeliveries, nodeId);
+                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindOthersDeliveries, nodeId, actionContext);
                 break;
             case "group-frame":
                 await CreateSelectionBorderAsync();
@@ -2028,12 +2033,17 @@ else
         CanvasWorkbenchCreateActionRequest request,
         Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest>? configureRequest = null,
         CancellationToken cancellationToken = default,
-        Action<ProjectStructureNode>? onNodeCommitted = null)
+        Action<ProjectStructureNode>? onNodeCommitted = null,
+        ProjectStructureSurface? capturedSurface = null,
+        long? capturedNavigationRevision = null)
     {
-        var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
+        var mutationNavigationRevision = capturedNavigationRevision ?? actionNavigationRevision;
+        var mutationSurface = capturedSurface ?? surface;
+        var mutationProjectId = mutationSurface?.ProjectId ?? ProjectId;
+        var sourceNode = mutationSurface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
         var parentNodeId = ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, request);
-        var parentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
-        var placementPlan = placementPolicy.ResolveCreatePlacementPlan(surface?.Nodes ?? [], sourceNode, parentNode, request, definition.ObjectType);
+        var parentNode = mutationSurface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
+        var placementPlan = placementPolicy.ResolveCreatePlacementPlan(mutationSurface?.Nodes ?? [], sourceNode, parentNode, request, definition.ObjectType);
         var prepared = ProjectStructureCreateRequestComposer.Compose(
             definition,
             request with
@@ -2042,11 +2052,15 @@ else
                 Subtitle = request.Subtitle?.Trim() ?? string.Empty,
                 Notes = ResolveCreatedNotes(definition, request)
             },
-            parentNodeId ?? $"project:{ProjectId}",
+            parentNodeId ?? $"project:{mutationProjectId}",
             placementPlan.Placement);
         var createRequest = configureRequest?.Invoke(prepared.Request) ?? prepared.Request;
+        createRequest = createRequest with {
+            ExpectedProjectAdmission = createRequest.ExpectedProjectAdmission ?? mutationSurface?.ExpectedProjectAdmission
+                ?? throw new InvalidOperationException("The original project lifetime is unavailable. Reopen this create action.")
+        };
         var created = await ProjectWorkbenchService.CreateObjectAsync(
-            ProjectId,
+            mutationProjectId,
             createRequest,
             cancellationToken);
         onNodeCommitted?.Invoke(created);
@@ -2054,22 +2068,24 @@ else
         foreach (var pendingLink in prepared.PendingLinks)
         {
             await ProjectWorkbenchService.LinkObjectsAsync(
-                ProjectId,
+                mutationProjectId,
                 created.Id,
                 pendingLink.TargetNodeId,
                 pendingLink.LinkKind,
-                cancellationToken);
+                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission);
         }
 
         if (placementPlan.FollowUpMoves.Count > 0)
         {
             await ProjectWorkbenchService.MoveObjectsAsync(
-                ProjectId,
+                mutationProjectId,
                 placementPlan.FollowUpMoves,
-                cancellationToken);
+                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission);
         }
 
-        await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
+        if (actionNavigationRevision == mutationNavigationRevision && ProjectId == mutationProjectId && surface?.ExpectedProjectAdmission == createRequest.ExpectedProjectAdmission) {
+            await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
+        }
         return created;
     }
 
@@ -2128,8 +2144,13 @@ else
 
     private async Task OpenSecretReferenceDialogAsync(
         CanvasWorkbenchAction action,
-        CanvasWorkbenchCreateActionRequest request)
-    {
+        CanvasWorkbenchCreateActionRequest request,
+        ProjectStructureActionContext? capturedContext = null) {
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return;
+        }
+        secretReferenceActionContext = context;
         isSecretReferenceEditMode = false;
         secretReferenceAction = action;
         secretReferenceRequest = request;
@@ -2140,12 +2161,19 @@ else
         secretReferencePurpose = "Project structure reference";
         secretReferenceExternalReference = string.Empty;
         secretReferenceCreateModel = NewProjectStructureSecretModel();
-        secretReferenceItems = await WorkspaceService.ListSecretsAsync();
-        isSecretReferenceDialogOpen = true;
+        var items = await WorkspaceService.ListSecretsAsync();
+        if (IsCurrentSecretReferenceDialog(context)) {
+            secretReferenceItems = items;
+            isSecretReferenceDialogOpen = true;
+        }
     }
 
-    private async Task OpenSecretReferenceEditDialogAsync(ProjectStructureNode node)
-    {
+    private async Task OpenSecretReferenceEditDialogAsync(ProjectStructureNode node, ProjectStructureActionContext? capturedContext = null) {
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return;
+        }
+        secretReferenceActionContext = context;
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
         var secretReference = metadata.SecretReference;
         isSecretReferenceEditMode = true;
@@ -2155,19 +2183,21 @@ else
         secretReferenceSearch = string.Empty;
         secretReferenceDialogError = string.Empty;
         selectedSecretReferenceId = secretReference?.SecretId is { } secretId && secretId != Guid.Empty
-            ? secretId.ToString("D")
-            : string.Empty;
+            ? secretId.ToString("D") : string.Empty;
         secretReferencePurpose = string.IsNullOrWhiteSpace(secretReference?.Purpose)
             ? string.IsNullOrWhiteSpace(node.Notes) ? "Project structure reference" : node.Notes
             : secretReference.Purpose;
         secretReferenceExternalReference = secretReference?.ExternalReference ?? node.Subtitle ?? string.Empty;
         secretReferenceCreateModel = NewProjectStructureSecretModel();
-        secretReferenceItems = await WorkspaceService.ListSecretsAsync();
-        isSecretReferenceDialogOpen = true;
+        var items = await WorkspaceService.ListSecretsAsync();
+        if (IsCurrentSecretReferenceDialog(context)) {
+            secretReferenceItems = items;
+            isSecretReferenceDialogOpen = true;
+        }
     }
 
-    private void CloseSecretReferenceDialog()
-    {
+    private void CloseSecretReferenceDialog() {
+        secretReferenceActionContext = null;
         isSecretReferenceDialogOpen = false;
         isSecretReferenceDialogBusy = false;
         isSecretReferenceEditMode = false;
@@ -2182,183 +2212,155 @@ else
     }
 
     private void HandleSecretReferenceSearchChanged(ChangeEventArgs args)
-    {
-        secretReferenceSearch = args.Value?.ToString() ?? string.Empty;
-    }
+        => secretReferenceSearch = args.Value?.ToString() ?? string.Empty;
 
     private void HandleSelectedSecretReferenceChanged(ChangeEventArgs args)
-    {
-        selectedSecretReferenceId = args.Value?.ToString() ?? string.Empty;
-    }
+        => selectedSecretReferenceId = args.Value?.ToString() ?? string.Empty;
 
     private void HandleSecretReferencePurposeChanged(ChangeEventArgs args)
-    {
-        secretReferencePurpose = args.Value?.ToString() ?? string.Empty;
-    }
+        => secretReferencePurpose = args.Value?.ToString() ?? string.Empty;
 
     private void HandleSecretReferenceExternalReferenceChanged(ChangeEventArgs args)
-    {
-        secretReferenceExternalReference = args.Value?.ToString() ?? string.Empty;
-    }
+        => secretReferenceExternalReference = args.Value?.ToString() ?? string.Empty;
 
-    private Task UseSelectedProjectStructureSecretAsync()
-    {
+    private Task UseSelectedProjectStructureSecretAsync() {
         var selectedSecretId = SelectedSecretReferenceGuid;
         var selectedSecret = selectedSecretId.HasValue
-            ? secretReferenceItems.FirstOrDefault(secret => secret.Id == selectedSecretId.Value)
-            : null;
-        if (selectedSecret is null)
-        {
+            ? secretReferenceItems.FirstOrDefault(secret => secret.Id == selectedSecretId.Value) : null;
+        if (selectedSecret is null) {
             secretReferenceDialogError = "Select a stored secret first.";
             return Task.CompletedTask;
         }
-
         return SelectProjectStructureSecretAsync(selectedSecret);
     }
 
-    private async Task SelectProjectStructureSecretAsync(SecretListItem secret)
-    {
+    private sealed record SecretReferenceAction(
+        ProjectStructureActionContext Context,
+        ProjectStructureNode? EditedNode,
+        ProjectStructureCreateLeafDefinition? Definition,
+        CanvasWorkbenchCreateActionRequest? Request,
+        string Purpose,
+        string ExternalReference);
+
+    private SecretReferenceAction CaptureSecretReferenceAction() {
+        var context = secretReferenceActionContext
+            ?? throw new InvalidOperationException("Reopen the secret reference dialog to capture its original project.");
+        ProjectStructureNode? editedNode = null;
+        ProjectStructureCreateLeafDefinition? definition = null;
+        CanvasWorkbenchCreateActionRequest? request = null;
+        if (isSecretReferenceEditMode) {
+            editedNode = context.Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, secretReferenceEditNodeId, StringComparison.Ordinal))
+                ?? throw new InvalidOperationException("The original secret reference node is no longer available.");
+        } else if (TryResolvePendingSecretCreateRequest(out var resolvedDefinition, out var resolvedRequest)) {
+            definition = resolvedDefinition;
+            request = resolvedRequest;
+        } else {
+            throw new InvalidOperationException(secretReferenceDialogError);
+        }
+        return new(context, editedNode, definition, request,
+            NormalizeSecretReferencePurpose(), secretReferenceExternalReference.Trim());
+    }
+
+    private bool IsCurrentSecretReferenceDialog(ProjectStructureActionContext context)
+        => ReferenceEquals(secretReferenceActionContext, context) && IsCurrentAction(context);
+
+    private void ReportSecretReferenceFailure(SecretReferenceAction action, Exception exception, string? completed) {
+        var failureMessage = ReportActionFailure(action.Context, exception, completed);
+        if (IsCurrentSecretReferenceDialog(action.Context)) {
+            secretReferenceDialogError = failureMessage;
+        }
+    }
+
+    private async Task SelectProjectStructureSecretAsync(SecretListItem secret) {
+        var action = CaptureSecretReferenceAction();
         selectedSecretReferenceId = secret.Id.ToString("D");
-        if (isSecretReferenceEditMode)
-        {
-            await UpdateProjectStructureSecretReferenceAsync(secret);
-            return;
-        }
-
-        if (!TryResolvePendingSecretCreateRequest(out var definition, out var request))
-        {
-            return;
-        }
-
         isSecretReferenceDialogBusy = true;
         secretReferenceDialogError = string.Empty;
-        try
-        {
-            var referenceRequest = BuildSecretReferenceCreateRequest(request, secret);
-            await CreateObjectAsync(definition, referenceRequest);
-            CloseSecretReferenceDialog();
-        }
-        catch (Exception exception)
-        {
-            secretReferenceDialogError = exception.Message;
-        }
-        finally
-        {
-            isSecretReferenceDialogBusy = false;
+        ProjectStructureNode? committed = null;
+        try {
+            await SaveProjectStructureSecretReferenceAsync(action, secret, node => committed = node);
+        } catch (Exception exception) {
+            ReportSecretReferenceFailure(action, exception, committed is null ? null : $"Secret reference {committed.Title} ({committed.Id}) was saved.");
+        } finally {
+            if (IsCurrentSecretReferenceDialog(action.Context)) {
+                isSecretReferenceDialogBusy = false;
+            }
         }
     }
 
-    private async Task CreateAndUseProjectStructureSecretAsync()
-    {
-        ProjectStructureCreateLeafDefinition? pendingDefinition = null;
-        CanvasWorkbenchCreateActionRequest? pendingRequest = null;
-        if (!isSecretReferenceEditMode)
-        {
-            if (!TryResolvePendingSecretCreateRequest(out var definition, out var request))
-            {
-                return;
-            }
-
-            pendingDefinition = definition;
-            pendingRequest = request;
-        }
-
-        if (!isSecretReferenceEditMode &&
-            (pendingDefinition is null || pendingRequest is null))
-        {
-            secretReferenceDialogError = "Secret reference create state is no longer available.";
-            return;
-        }
-
+    private async Task CreateAndUseProjectStructureSecretAsync() {
+        var action = CaptureSecretReferenceAction();
+        var model = new SecretEditorModel {
+            Id = secretReferenceCreateModel.Id,
+            Name = secretReferenceCreateModel.Name,
+            Kind = secretReferenceCreateModel.Kind,
+            SecretValue = secretReferenceCreateModel.SecretValue,
+            Scope = secretReferenceCreateModel.Scope,
+            RotationNote = secretReferenceCreateModel.RotationNote,
+            MetadataJson = secretReferenceCreateModel.MetadataJson
+        };
         isSecretReferenceDialogBusy = true;
         secretReferenceDialogError = string.Empty;
-        try
-        {
-            var result = await SecretService.SaveAsync(secretReferenceCreateModel);
-            if (!result.IsSuccess)
-            {
-                secretReferenceDialogError = string.Join(" ", result.Errors.Select(error => error.Message));
-                return;
+        Guid? createdSecretId = null;
+        ProjectStructureNode? committed = null;
+        try {
+            var result = await SecretService.SaveAsync(model);
+            if (!result.IsSuccess) {
+                throw new InvalidOperationException(string.Join(" ", result.Errors.Select(error => error.Message)));
             }
-
-            secretReferenceItems = await WorkspaceService.ListSecretsAsync();
-            var createdSecret = secretReferenceItems.FirstOrDefault(secret => secret.Id == result.Value);
-            if (createdSecret is null)
-            {
-                secretReferenceDialogError = "The secret was created, but the picker could not reload its catalog entry.";
-                return;
-            }
-
-            if (isSecretReferenceEditMode)
-            {
+            createdSecretId = result.Value;
+            var items = await WorkspaceService.ListSecretsAsync();
+            var createdSecret = items.FirstOrDefault(secret => secret.Id == result.Value)
+                ?? throw new InvalidOperationException("The picker could not reload the created secret's catalog entry.");
+            if (IsCurrentSecretReferenceDialog(action.Context)) {
+                secretReferenceItems = items;
                 selectedSecretReferenceId = createdSecret.Id.ToString("D");
-                await UpdateProjectStructureSecretReferenceAsync(createdSecret);
-                return;
             }
-
-            var referenceRequest = BuildSecretReferenceCreateRequest(pendingRequest!, createdSecret);
-            await CreateObjectAsync(pendingDefinition!, referenceRequest);
-            CloseSecretReferenceDialog();
-        }
-        catch (Exception exception)
-        {
-            secretReferenceDialogError = exception.Message;
-        }
-        finally
-        {
-            isSecretReferenceDialogBusy = false;
+            await SaveProjectStructureSecretReferenceAsync(action, createdSecret, node => committed = node);
+        } catch (Exception exception) {
+            var completed = committed is not null ? $"Secret reference {committed.Title} ({committed.Id}) was saved."
+                : createdSecretId is { } id ? $"Secret {id:D} was created; completion of its original project reference could not be confirmed."
+                : null;
+            ReportSecretReferenceFailure(action, exception, completed);
+        } finally {
+            if (IsCurrentSecretReferenceDialog(action.Context)) {
+                isSecretReferenceDialogBusy = false;
+            }
         }
     }
 
-    private async Task UpdateProjectStructureSecretReferenceAsync(SecretListItem secret)
-    {
-        if (string.IsNullOrWhiteSpace(secretReferenceEditNodeId) ||
-            surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, secretReferenceEditNodeId, StringComparison.Ordinal)) is not { } targetNode)
-        {
-            secretReferenceDialogError = "The secret reference node is no longer selected.";
-            return;
-        }
-
-        isSecretReferenceDialogBusy = true;
-        secretReferenceDialogError = string.Empty;
-        try
-        {
+    private async Task SaveProjectStructureSecretReferenceAsync(
+        SecretReferenceAction action, SecretListItem secret, Action<ProjectStructureNode> onCommitted) {
+        ProjectStructureNode updated;
+        if (action.EditedNode is { } targetNode) {
             var metadata = ProjectObjectMetadataSerializer.Parse(targetNode.MetadataJson);
-            metadata.SecretReference = new ProjectSecretReferenceMetadata
-            {
+            metadata.SecretReference = new ProjectSecretReferenceMetadata {
                 SecretId = secret.Id,
                 SecretNameSnapshot = secret.Name,
-                Purpose = NormalizeSecretReferencePurpose(),
-                ExternalReference = secretReferenceExternalReference.Trim()
+                Purpose = action.Purpose,
+                ExternalReference = action.ExternalReference
             };
-
-            var updated = await ProjectWorkbenchService.UpdateObjectAsync(ProjectId, targetNode.Id, new ProjectObjectEditRequest(
-                secret.Name,
-                secretReferenceExternalReference.Trim(),
-                metadata.SecretReference.Purpose,
-                targetNode.StartUtc,
-                targetNode.EndUtc,
-                ProjectObjectMetadataSerializer.Serialize(metadata),
-                targetNode.DurationSeconds,
-                targetNode.NodeReferences));
-            if (updated is null)
-            {
-                secretReferenceDialogError = "The selected secret reference node could not be updated.";
-                return;
+            updated = await ProjectWorkbenchService.UpdateObjectAsync(
+                action.Context.Surface.ProjectId, targetNode.Id,
+                new ProjectObjectEditRequest(secret.Name, action.ExternalReference, action.Purpose,
+                    targetNode.StartUtc, targetNode.EndUtc, ProjectObjectMetadataSerializer.Serialize(metadata),
+                    targetNode.DurationSeconds, targetNode.NodeReferences) { ExpectedProjectAdmission = action.Context.Admission })
+                ?? throw new InvalidOperationException("The original secret reference node could not be updated.");
+            onCommitted(updated);
+            if (IsCurrentAction(action.Context)) {
+                await ApplySurfaceNodeUpdatesAsync([updated]);
             }
-
-            await ApplySurfaceNodeUpdatesAsync([updated]);
-            workflowFeedback = $"{updated.Title} was updated.";
-            workflowFeedbackTone = "mint";
+        } else {
+            var request = BuildSecretReferenceCreateRequest(action.Request!, secret, action.Purpose, action.ExternalReference);
+            updated = await CreateObjectAsync(action.Definition!, request,
+                configureRequest: prepared => prepared with { ExpectedProjectAdmission = action.Context.Admission },
+                onNodeCommitted: onCommitted, capturedSurface: action.Context.Surface,
+                capturedNavigationRevision: action.Context.NavigationRevision)
+                ?? throw new InvalidOperationException("The original secret reference node could not be created.");
+        }
+        ReportActionResult(action.Context, $"{updated.Title} was {(action.EditedNode is null ? "created" : "updated")}.");
+        if (IsCurrentSecretReferenceDialog(action.Context)) {
             CloseSecretReferenceDialog();
-        }
-        catch (Exception exception)
-        {
-            secretReferenceDialogError = exception.Message;
-        }
-        finally
-        {
-            isSecretReferenceDialogBusy = false;
         }
     }
 
@@ -2385,15 +2387,17 @@ else
         return true;
     }
 
-    private CanvasWorkbenchCreateActionRequest BuildSecretReferenceCreateRequest(
+    private static CanvasWorkbenchCreateActionRequest BuildSecretReferenceCreateRequest(
         CanvasWorkbenchCreateActionRequest request,
-        SecretListItem secret)
+        SecretListItem secret,
+        string purpose,
+        string externalReference)
     {
         return request with
         {
             Title = secret.Name,
-            Subtitle = secretReferenceExternalReference.Trim(),
-            Notes = NormalizeSecretReferencePurpose(),
+            Subtitle = externalReference,
+            Notes = purpose,
             InputValues =
             [
                 new CanvasWorkbenchInputValue

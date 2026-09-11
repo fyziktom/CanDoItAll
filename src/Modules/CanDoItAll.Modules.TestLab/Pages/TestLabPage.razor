@@ -1,8 +1,8 @@
-﻿@page "/test-lab"
+@page "/test-lab"
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @inject TestLabService TestLabService
-@inject ProjectsService ProjectsService
+@inject ProjectWriteSelectionQuery ProjectSelections
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject NotificationService NotificationService
 
@@ -125,7 +125,7 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Project</label>
-                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
+                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="testlab-project-select" @bind-Value:after="ProjectSelectionChangedAsync">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
                                             {
@@ -277,7 +277,7 @@
     [SupplyParameterFromQuery(Name = "projectId")]
     public Guid? ProjectIdQuery { get; set; }
 
-    private IReadOnlyList<ProjectSummary> projects = [];
+    private IReadOnlyList<ProjectWriteSelection> projects = [];
     private IReadOnlyList<TestPlanSummary> plans = [];
     private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private TestPlanEditorModel editor = new();
@@ -292,8 +292,10 @@
             (string.IsNullOrWhiteSpace(planSearch) ||
              plan.Title.Contains(planSearch, StringComparison.OrdinalIgnoreCase) ||
              plan.Phase.Contains(planSearch, StringComparison.OrdinalIgnoreCase) ||
-             ResolveProjectName(plan.ProjectId).Contains(planSearch, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(projectFilter) || string.Equals(plan.ProjectId?.ToString(), projectFilter, StringComparison.OrdinalIgnoreCase)) &&
+             ResolveProjectName(plan).Contains(planSearch, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(projectFilter) ||
+                string.Equals(plan.ProjectId?.ToString(), projectFilter, StringComparison.OrdinalIgnoreCase) &&
+                projects.Any(project => project.Id == plan.ProjectId && project.Admission.LifetimeId == plan.ProjectLifetimeId)) &&
             (string.IsNullOrWhiteSpace(phaseFilter) || string.Equals(plan.Phase, phaseFilter, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(resultFilter) ||
              string.Equals(plan.LatestResult?.ToString(), resultFilter, StringComparison.OrdinalIgnoreCase)))
@@ -322,16 +324,16 @@
 
     private async Task LoadAsync(Guid? planId = null, Guid? projectId = null)
     {
-        projects = await ProjectsService.ListAsync();
+        projects = await ProjectSelections.ListAsync();
         plans = await TestLabService.ListAsync();
-        editor = planId.HasValue ? await TestLabService.GetAsync(planId.Value) : new TestPlanEditorModel { ProjectId = projectId };
+        editor = planId.HasValue ? await TestLabService.GetAsync(planId.Value) : CreateNewEditor(projectId);
         await LoadResponsiblePartyOptionsAsync();
         detailTab = "overview";
     }
 
     private async Task CreateNewAsync()
     {
-        editor = new TestPlanEditorModel { ProjectId = ProjectIdQuery };
+        editor = CreateNewEditor(ProjectIdQuery);
         detailTab = "overview";
         await LoadResponsiblePartyOptionsAsync();
     }
@@ -361,24 +363,89 @@
         return Task.CompletedTask;
     }
 
-    private async Task SaveAsync()
-    {
-        try
-        {
-            var result = await TestLabService.SaveAsync(editor);
-            plans = await TestLabService.ListAsync();
-            if (!result.IsSuccess)
-            {
-                NotificationService.Warning("Test plan was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+    private async Task SaveAsync() {
+        var savingEditor = editor;
+        var originalProjectId = savingEditor.ProjectId;
+        var originalAdmission = savingEditor.ExpectedProjectAdmission;
+        var originalCases = savingEditor.Cases.Select(item => (Item: item, Id: item.Id)).ToArray();
+        var originalEvidence = savingEditor.Evidence.Select(item => (Item: item, Id: item.Id)).ToArray();
+        var originalRuns = savingEditor.Runs.Select(item => (Item: item, Id: item.Id)).ToArray();
+        var snapshot = CloneEditor(savingEditor);
+        Guid? savedId = null;
+        try {
+            var result = await TestLabService.SaveAsync(snapshot);
+            if (!result.IsSuccess) {
+                if (IsCurrent()) {
+                    NotificationService.Warning("Test plan was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                }
                 return;
             }
-
-            editor = await TestLabService.GetAsync(result.Value);
-            NotificationService.Success("Test plan saved", "Test plan saved.");
+            savedId = result.Value;
+            RetainCommittedIdentities();
+            var loadedPlans = await TestLabService.ListAsync();
+            var loadedEditor = await TestLabService.GetAsync(savedId);
+            if (loadedEditor.Id != savedId) {
+                throw new InvalidOperationException("The saved test plan is no longer available for refresh.");
+            }
+            if (IsCurrent()) {
+                plans = loadedPlans;
+                editor = loadedEditor;
+            }
+            NotificationService.Success("Test plan saved", $"Test plan '{savedId:D}' was saved.");
+        } catch (Exception exception) {
+            if (exception is TestPlanCommittedSaveException committed) {
+                savedId = committed.TestPlanId;
+            }
+            if (savedId is { } id) {
+                RetainCommittedIdentities();
+                NotificationService.Warning("Test plan saved; refresh incomplete",
+                    $"Test plan '{id:D}' was saved. A subsequent operation failed; reload Test Lab to view the committed state.");
+            } else if (IsCurrent()) {
+                NotificationService.Error("Test plan save failed", exception.Message);
+            }
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Test plan save failed", exception.Message);
+
+        bool IsCurrent() => ReferenceEquals(editor, savingEditor) && editor.ProjectId == originalProjectId &&
+            editor.ExpectedProjectAdmission == originalAdmission;
+
+        void RetainCommittedIdentities() {
+            if (!IsCurrent() || savedId is not { } id) {
+                return;
+            }
+            savingEditor.Id = id;
+            RetainChildIdentities(originalCases, snapshot.Cases, savingEditor.Cases);
+            RetainChildIdentities(originalEvidence, snapshot.Evidence, savingEditor.Evidence);
+            RetainChildIdentities(originalRuns, snapshot.Runs, savingEditor.Runs);
+        }
+    }
+
+    private static TestPlanEditorModel CloneEditor(TestPlanEditorModel source) => new() {
+        Id = source.Id,
+        ProjectId = source.ProjectId,
+        ExpectedProjectAdmission = source.ExpectedProjectAdmission,
+        ResponsiblePartyId = source.ResponsiblePartyId,
+        Title = source.Title,
+        Phase = source.Phase,
+        CoverageGoal = source.CoverageGoal,
+        PlaywrightSpecPath = source.PlaywrightSpecPath,
+        Cases = source.Cases.Select(item => new TestCaseEditorModel {
+            Id = item.Id, Name = item.Name, StoryOrFeature = item.StoryOrFeature, Status = item.Status, Notes = item.Notes
+        }).ToList(),
+        Evidence = source.Evidence.Select(item => new TestEvidenceEditorModel {
+            Id = item.Id, EvidenceLabel = item.EvidenceLabel, ArtifactPath = item.ArtifactPath, EvidenceKind = item.EvidenceKind, Notes = item.Notes
+        }).ToList(),
+        Runs = source.Runs.Select(item => new TestRunEditorModel {
+            Id = item.Id, ExecutedAtUtc = item.ExecutedAtUtc, Runner = item.Runner, Result = item.Result, Summary = item.Summary
+        }).ToList()
+    };
+
+    private static void RetainChildIdentities<T>(IReadOnlyList<(T Item, Guid? Id)> original, IReadOnlyList<T> saved, ICollection<T> current)
+        where T : class, ITestPlanChildEditor {
+        for (var index = 0; index < original.Count; index++) {
+            var (item, originalId) = original[index];
+            if (saved[index].Id is { } id && current.Contains(item) && item.Id == originalId) {
+                item.Id = id;
+            }
         }
     }
 
@@ -397,14 +464,24 @@
     }
 
     private string BuildPlanMeta(TestPlanSummary plan)
-        => $"{ResolveProjectName(plan.ProjectId)} / {plan.CaseCount} case(s) / {plan.EvidenceCount} evidence item(s)";
+        => $"{ResolveProjectName(plan)} / {plan.CaseCount} case(s) / {plan.EvidenceCount} evidence item(s)";
 
     private static string BuildPlanSummary(TestPlanSummary plan) => $"Updated {plan.UpdatedAtUtc.LocalDateTime:g}";
 
-    private string ResolveProjectName(Guid? projectId)
-        => projectId.HasValue
-            ? projects.FirstOrDefault(project => project.Id == projectId.Value)?.Name ?? "No project"
+    private string ResolveProjectName(TestPlanSummary plan)
+        => plan.ProjectId.HasValue
+            ? projects.FirstOrDefault(project => project.Id == plan.ProjectId && project.Admission.LifetimeId == plan.ProjectLifetimeId)?.Name ?? "No project"
             : "No project";
+
+    private TestPlanEditorModel CreateNewEditor(Guid? projectId) => new() {
+        ProjectId = projectId,
+        ExpectedProjectAdmission = projects.FirstOrDefault(project => project.Id == projectId)?.Admission
+    };
+
+    private Task ProjectSelectionChangedAsync() {
+        editor.ExpectedProjectAdmission = projects.FirstOrDefault(project => project.Id == editor.ProjectId)?.Admission;
+        return LoadResponsiblePartyOptionsAsync();
+    }
 
     private async Task LoadResponsiblePartyOptionsAsync()
     {
@@ -434,5 +511,4 @@
         _ => "neutral"
     };
 }
-
 

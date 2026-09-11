@@ -53,12 +53,12 @@ public sealed class StorageContentConflictException(
 public interface IStorageRevisionedContentDriver
 {
     Task<StorageContentRevision?> GetRevisionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default);
 
     Task<StorageRevisionedWriteResult> ReplaceAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageRevisionedWriteRequest request,
         CancellationToken cancellationToken = default);
 }

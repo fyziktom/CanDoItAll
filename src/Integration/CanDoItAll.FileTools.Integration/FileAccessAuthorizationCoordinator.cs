@@ -31,7 +31,7 @@ public interface IStorageFileAccessAuthorizationCoordinator
 }
 
 public sealed record AuthorizedStorageFile(
-    StorageCatalogRecord Storage,
+    StorageDriverInput Storage,
     StorageObjectReference Reference,
     FileToolsSemanticScope Scope,
     FileAccessOperation Operations,
@@ -91,7 +91,7 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(reference);
-        StorageCatalogRecord storage = await ResolveStorageAsync(request.StorageId, cancellationToken);
+        StorageDriverInput storage = await ResolveStorageAsync(request.StorageId, cancellationToken);
         if (reference.StorageId != storage.Id || reference.ProviderKind != storage.ProviderKind)
         {
             throw Denied(FileAccessFailureCode.SourceUnavailable);
@@ -135,7 +135,7 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
     {
         FileAccessHandleId id = AuthorizedFileReference.Parse(file);
         FileAccessHandleGrant grant = registry.Resolve(id, context, operation);
-        StorageCatalogRecord storage = await ResolveStorageAsync(grant.Request.StorageId, cancellationToken);
+        StorageDriverInput storage = await ResolveStorageAsync(grant.Request.StorageId, cancellationToken);
         if (grant.Reference.StorageId != storage.Id || grant.Reference.ProviderKind != storage.ProviderKind)
         {
             throw Denied(FileAccessFailureCode.SourceUnavailable);
@@ -176,9 +176,9 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
         return ValueTask.CompletedTask;
     }
 
-    private async Task<StorageCatalogRecord> ResolveStorageAsync(Guid storageId, CancellationToken cancellationToken)
+    private async Task<StorageDriverInput> ResolveStorageAsync(Guid storageId, CancellationToken cancellationToken)
     {
-        StorageCatalogRecord? storage = await storageCatalog.GetAsync(storageId, cancellationToken);
+        StorageDriverInput? storage = await storageCatalog.GetDriverAsync(storageId, cancellationToken);
         if (storage is null || !storage.IsEnabled)
         {
             throw Denied(FileAccessFailureCode.SourceUnavailable);
@@ -189,7 +189,7 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
 
     private async ValueTask EnsureCurrentBindingAsync(
         FileToolsSemanticScope scope,
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string occurrenceId,
         CancellationToken cancellationToken)
     {

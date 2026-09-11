@@ -19,7 +19,8 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
         CancellationToken cancellationToken,
         Action<Guid>? retainProjectAccessForSession = null,
         Guid? parentProjectId = null,
-        Action<ProjectCreationReservation>? retainLifetimeAccessForSession = null)
+        Action<ProjectCreationReservation>? retainLifetimeAccessForSession = null,
+        ProjectMutationAuthorization? authorization = null)
     {
         var reservedProjectId = projectIdFactory();
         if (reservedProjectId == Guid.Empty)
@@ -28,7 +29,7 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
         }
 
         var reservation = await writeAdmissionService.ReserveCreationAsync(
-            reservedProjectId, agent.Id, Guid.NewGuid(), parentProjectId, cancellationToken);
+            reservedProjectId, agent.Id, Guid.NewGuid(), parentProjectId, cancellationToken, authorization);
         await writeAdmissionService.RequireCreationGrantAsync(reservation, cancellationToken);
         await authorizationService.GrantCreatedProjectAccessAsync(
             agent.Id,
@@ -37,6 +38,7 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
 
         try
         {
+            ProjectStructureResultEvidenceScope.RecordReservation(reservation);
             var result = await create(reservation, cancellationToken);
             var createdProjectId = projectIdSelector(result);
             if (createdProjectId != reservedProjectId)
@@ -99,6 +101,19 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
                 "Project creation was rejected and its reserved access grant could not be revoked.");
 
             throw;
+        }
+        catch (Exception original) {
+            ProjectCreationReservationState? observed;
+            try {
+                observed = await writeAdmissionService.ReadCreationStateAsync(reservation, CancellationToken.None);
+            } catch (Exception observationFailure) {
+                throw ProjectCreationPartialCompletionFailure.Create(reservedProjectId, false,
+                    new AggregateException("Creation failed and its original reservation could not be observed.", original, observationFailure));
+            }
+            if (observed == ProjectCreationReservationState.Reserved) {
+                throw;
+            }
+            throw ProjectCreationPartialCompletionFailure.Create(reservedProjectId, observed == ProjectCreationReservationState.Consumed, original);
         }
     }
 

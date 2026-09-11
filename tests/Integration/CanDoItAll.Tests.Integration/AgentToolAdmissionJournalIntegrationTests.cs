@@ -24,9 +24,13 @@ public sealed class AgentToolAdmissionJournalIntegrationTests {
         Assert.Empty((await fixture.NewStore().GetExecutionRunAsync(fixture.Session.ExecutionRunId))!.ToolAdmission!.Segments);
     }
 
-    [Fact]
-    public async Task Independent_stores_serialize_dispatch_without_blocking_the_short_checkpoint_lock() {
-        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Independent_stores_serialize_dispatch_without_blocking_the_short_checkpoint_lock(bool typedContext) {
+        var context = typedContext ? StructureAdmittedContextFixture.Capture(Guid.NewGuid(), Guid.NewGuid(), new(1)).Options.TransientContext : null;
+        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync(transientContext: context,
+            contextAttachmentCodecs: StructureAdmittedContextFixture.Codecs());
         var first = fixture.NewJournal();
         await using (var lease = await first.AcquireRunAsync(fixture.Session, default)) {
             using var current = lease.Bind();
@@ -145,9 +149,13 @@ public sealed class AgentToolAdmissionJournalIntegrationTests {
         }
     }
 
-    [Fact]
-    public async Task Approval_checkpoint_and_exact_digest_survive_restart_and_reject_changed_payload() {
-        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Approval_checkpoint_and_exact_digest_survive_restart_and_reject_changed_payload(bool typedContext) {
+        var context = typedContext ? StructureAdmittedContextFixture.Capture(Guid.NewGuid(), Guid.NewGuid(), new(1)).Options.TransientContext : null;
+        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync(transientContext: context,
+            contextAttachmentCodecs: StructureAdmittedContextFixture.Codecs());
         var journal = fixture.NewJournal();
         await using var lease = await journal.AcquireRunAsync(fixture.Session, default);
         using var current = lease.Bind();

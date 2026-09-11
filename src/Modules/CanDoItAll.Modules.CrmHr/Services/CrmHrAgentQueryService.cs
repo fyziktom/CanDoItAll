@@ -97,7 +97,8 @@ public interface ICrmHrAgentQueryService
 public sealed class CrmHrAgentQueryService(
     IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
-    IProjectWorkAssignmentQueries workAssignments) : ICrmHrAgentQueryService
+    IProjectWorkAssignmentQueries workAssignments,
+    ProjectRecordQueryService projectRecordQueryService) : ICrmHrAgentQueryService
 {
     private static readonly IReadOnlyList<CrmHrAgentRecordKind> SupportedRecordKinds =
     [
@@ -587,7 +588,8 @@ public sealed class CrmHrAgentQueryService(
             return new Dictionary<Guid, CrmHrAgentAvailability>();
         }
 
-        var assignmentRows = await ProjectAssignmentReporting.ForPartiesAsync(dbContext, workAssignments, workforcePartyIds, cancellationToken);
+        var assignmentRows = (await ProjectAssignmentReporting.ForPartiesAsync(dbContext, workAssignments, projectRecordQueryService, workforcePartyIds, cancellationToken))
+            .Where(item => item.ProjectLifetimeId != null && item.ProjectLifetimeId == item.CurrentProjectLifetimeId);
         var allocations = await assignmentRows
             .AsNoTracking()
             .Where(item =>

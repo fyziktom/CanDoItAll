@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Agents.Storage;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.AgentFramework.Core;
@@ -19,6 +20,7 @@ internal static class MafRuntimeTestServices
     {
         var services = new ServiceCollection();
         services.AddProductToolPolicies();
+        services.AddSingleton<IToolInvocationPolicyContextContributor, ProjectWorkspacePathContributor>();
         services.AddAgentStorageTools();
         services.AddSingleton<IMafProviderRuntimeGateway>(new UnavailableMafProviderRuntimeGateway());
         services.AddSingleton<IMafProviderStreamingDispatchGate>(NoOpMafProviderStreamingDispatchGate.Instance);

@@ -41,7 +41,8 @@ public sealed record AgentToolProviderDispatchOutcome(
 internal static class AgentToolProviderJournalValidation {
     internal static void Validate(AgentToolJournalRecord journal) {
         var dispatches = journal.ProviderDispatches.IsDefault ? [] : journal.ProviderDispatches;
-        if ((journal.SchemaVersion == AgentToolJournalRecord.ProviderDispatchSchemaVersion) != (dispatches.Length != 0) ||
+        if (journal.SchemaVersion != AgentToolJournalRecord.TypedContextSchemaVersion &&
+                (journal.SchemaVersion == AgentToolJournalRecord.ProviderDispatchSchemaVersion) != (dispatches.Length != 0) ||
             dispatches.Length > AgentToolJournalRecord.MaximumBatches) {
             throw new InvalidDataException("The provider-dispatch journal version or count is unsupported.");
         }

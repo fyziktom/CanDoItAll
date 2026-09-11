@@ -124,15 +124,16 @@ public partial class ProjectStructurePage
         }
     }
 
-    private ProjectStructureCanvasTaskDialogContext CreateCanvasTaskDialogContext()
-        => new(
-            ProjectId,
-            BuildNodeOptions(ProjectObjectType.Repository),
-            CreateCanvasTaskNodeAsync,
-            ReloadSurfaceAsync,
-            CreateProjectStructureUiAgentContext());
+    private ProjectStructureCanvasTaskDialogContext CreateCanvasTaskDialogContext() {
+        var openedSurface = surface ?? throw new InvalidOperationException("Reload the project structure before opening the task editor.");
+        var owner = CreateProjectStructureUiAgentContext() with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
+        ProjectAssignmentAdmission.Require(openedSurface.ProjectId, owner.ExpectedProjectAdmission);
+        return new(openedSurface.ProjectId, BuildNodeOptions(ProjectObjectType.Repository),
+            (request, configure) => CreateCanvasTaskNodeAsync(openedSurface, request, configure), ReloadSurfaceAsync, owner);
+    }
 
     private Task<ProjectStructureNode?> CreateCanvasTaskNodeAsync(
+        ProjectStructureSurface openedSurface,
         CanvasWorkbenchCreateActionRequest createRequest,
         Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configureRequest)
     {
@@ -147,6 +148,6 @@ public partial class ProjectStructurePage
         return CreateObjectAsync(
             definition,
             createRequest,
-            configureRequest);
+            configureRequest, capturedSurface: openedSurface);
     }
 }

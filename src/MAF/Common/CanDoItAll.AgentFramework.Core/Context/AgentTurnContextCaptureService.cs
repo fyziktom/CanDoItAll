@@ -23,7 +23,22 @@ public sealed record AgentExecutionAuthorityResolutionRequest(
     AgentChatContextSourceId SourceId,
     WorkspaceScopeDescriptor? ObservedWorkspaceScope,
     DatabaseProfileGeneration ExpectedDatabaseProfileGeneration,
-    AgentChatContextAgentAccess? UiAccessHint);
+    AgentChatContextAgentAccess? UiAccessHint) {
+    public AgentExecutionAuthorityRevalidation? Revalidation { get; init; }
+
+    public static AgentExecutionAuthorityResolutionRequest FromCaptured(
+        AgentTurnContextReference source, AgentExecutionGovernanceSnapshot authority) {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(authority);
+        return new(authority.AgentId, source.SourceKind, source.SourceId, authority.WorkspaceScope,
+            authority.DatabaseProfileGeneration, UiAccessHint: null) {
+            Revalidation = new(source, authority)
+        };
+    }
+}
+
+public sealed record AgentExecutionAuthorityRevalidation(
+    AgentTurnContextReference Source, AgentExecutionGovernanceSnapshot Authority);
 
 /// <summary>
 /// Resolves what an admitted turn may do from canonical authorization data.

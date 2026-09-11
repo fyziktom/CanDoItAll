@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -78,10 +79,10 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
             importProviderId);
 
         await using var sourceDbContext = await dbContextFactory.CreateDbContextAsync();
-        await using var targetDbContext = await dbContextFactory.CreateDbContextAsync();
+        await using var targetDatabase = await HistoryPersistenceTestDatabase.CreateAsync();
+        await using var targetDbContext = targetDatabase.Factory.CreateDbContext();
         var transferContext = CreateTransferContext(sourceDbContext, targetDbContext);
-        var transferHandler = new AiProvidersDatabaseTransferHandler(
-            [new SharedProviderDatabaseTransferGuard()]);
+        var transferHandler = CreateProviderTransferHandler();
         var preview = await transferHandler.PreviewAsync(transferContext);
         Assert.False(preview.IsAvailable);
         Assert.Contains(
@@ -113,8 +114,7 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
         await using (var targetDbContext = await dbContextFactory.CreateDbContextAsync())
         {
             var transferContext = CreateTransferContext(sourceDbContext, targetDbContext);
-            var preview = await new AiProvidersDatabaseTransferHandler(
-                [new SharedProviderDatabaseTransferGuard()]).PreviewAsync(transferContext);
+            var preview = await CreateProviderTransferHandler().PreviewAsync(transferContext);
             Assert.True(preview.IsAvailable);
             Assert.Null(preview.Warning);
         }
@@ -297,7 +297,12 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
             persistedIds.Order());
     }
 
-    private static DatabaseTransferContext CreateTransferContext(
+    private static AiProvidersDatabaseTransferHandler CreateProviderTransferHandler() {
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        return new(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.Create(sessions), [new SharedProviderDatabaseTransferGuard()]);
+    }
+
+    private static DatabaseTransferOperation CreateTransferContext(
         AppDbContext sourceDbContext,
         AppDbContext targetDbContext)
     {
@@ -307,19 +312,17 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
                 DisplayName = "Shared-provider transfer source"
             },
             DatabaseProfileResolutionSource.ExplicitOverride,
-            "test-source");
+            sourceDbContext.Database.GetConnectionString()!);
         var targetProfile = new ResolvedDatabaseProfile(
             new DatabaseProfileRecord
             {
                 DisplayName = "Shared-provider transfer target"
             },
             DatabaseProfileResolutionSource.ExplicitOverride,
-            "test-target");
-        return new DatabaseTransferContext(
+            targetDbContext.Database.GetConnectionString()!);
+        return new DatabaseTransferOperation(
             sourceProfile,
             targetProfile,
-            sourceDbContext,
-            targetDbContext,
             ReplaceExisting: true);
     }
 }

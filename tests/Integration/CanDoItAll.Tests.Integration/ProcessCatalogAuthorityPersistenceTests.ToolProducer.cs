@@ -45,6 +45,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         using var audit = WorkspaceExecutionAuditContext.BeginScope(original);
         await using var lease = await journal.AcquireRunAsync(original.ToolAdmission!.Session.Reference, default);
         using var bound = lease.Bind();
+        var tools = await provider.CreateToolsAsync(context, default);
         var metadata = Assert.Single(provider.GetToolMetadata(context), item =>
             item.ToolName == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart);
         var payload = metadata.PrepareAdmission!(JsonSerializer.SerializeToElement(input, ProjectStructureProcessProposalCodec.SerializerOptions));
@@ -53,7 +54,6 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var batch = Assert.Single((await journal.AdmitBatchAsync(lease, payload.Digest,
             CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalFixture.Envelope(),
             [new("first", payload, false), new("second", payload, false)], default)).Batches);
-        var tools = await provider.CreateToolsAsync(context, default);
         var tool = Assert.Single(tools.OfType<AIFunction>(), item => item.Name == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart);
         var results = new List<ProjectStructureProcessNodeStartResult>();
         foreach (var call in new[] { "first", "second" }) {

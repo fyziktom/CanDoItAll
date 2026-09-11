@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Components.Gantt;
 using System.Text.Json.Serialization;
 
@@ -43,7 +44,12 @@ public sealed record ProjectStructureTaskDetailsUpdateRequest(
     ProjectTaskExecutionSnapshot CurrentExecution,
     ProjectTaskExecutionSnapshot ProposedExecution,
     [property: JsonRequired] ProjectTaskExpectedCostBasis? CurrentCostBasis,
-    long CurrentDirectAssignmentRevision);
+    long CurrentDirectAssignmentRevision) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+    [JsonIgnore]
+    public ProjectStructureAgentContext? MutationOwner { get; init; }
+}
 
 public sealed record ProjectStructureTaskDetailsMutationRequest(
     GanttTaskId TaskId,
@@ -59,7 +65,12 @@ public sealed record ProjectStructureTaskDetailsMutationRequest(
     ProjectTaskExpectedCostBasis? CurrentCostBasis,
     ProjectTaskExpectedCostBasis? ProposedCostBasis,
     bool CostBasisChanged,
-    long CurrentDirectAssignmentRevision);
+    long CurrentDirectAssignmentRevision) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+    [JsonIgnore]
+    public ProjectStructureAgentContext? MutationOwner { get; init; }
+}
 
 public sealed record ProjectStructureTaskDetailsUpdateResult(
     ProjectStructureGanttMutationResult Mutation,

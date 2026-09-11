@@ -9,12 +9,16 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 
 internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
     private readonly CanDoItAllTestEnvironment environment;
+    private readonly IReadOnlyList<IAgentChatContextAttachmentCodec> contextAttachmentCodecs;
 
     private AgentToolAdmissionJournalFixture(CanDoItAllTestEnvironment environment, string workspaceRoot,
         FileSandboxWorkspaceStore store, AgentToolProfileBinding profile, AgentDefinition agent,
-        ProviderProfile provider, ExecutionRunDetail detail) {
+        ProviderProfile provider, ExecutionRunDetail detail, WorkspaceScopeDescriptor storageScope,
+        IReadOnlyList<IAgentChatContextAttachmentCodec> contextAttachmentCodecs) {
         this.environment = environment;
+        this.contextAttachmentCodecs = contextAttachmentCodecs;
         WorkspaceRoot = workspaceRoot;
+        StorageScope = storageScope;
         Store = store;
         Profile = profile;
         Agent = agent;
@@ -23,24 +27,28 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
     }
 
     internal string WorkspaceRoot { get; }
+    internal WorkspaceScopeDescriptor StorageScope { get; }
     internal FileSandboxWorkspaceStore Store { get; }
     internal AgentToolProfileBinding Profile { get; }
     internal AgentDefinition Agent { get; }
     internal ProviderProfile Provider { get; }
     internal ExecutionRunDetail Detail { get; }
     internal AgentToolSessionReference Session => Detail.Run.ToolAdmission!.Session.Reference;
-    internal AgentToolAdmissionJournal NewJournal(FileSandboxWorkspaceStore? store = null) => new(store ?? Store, Profile);
+    internal AgentToolAdmissionJournal NewJournal(FileSandboxWorkspaceStore? store = null) => new(store ?? Store, Profile, contextAttachmentCodecs: contextAttachmentCodecs);
     internal FileSandboxWorkspaceStore NewStore(Action<ExistingRunDetailCommitStage>? fault = null)
-        => new(WorkspaceRoot, WorkspaceScopeDescriptor.Sandbox, chatBackedRunCommitBoundary: null, existingRunDetailCommitBoundary: fault);
+        => new(WorkspaceRoot, StorageScope, chatBackedRunCommitBoundary: null, existingRunDetailCommitBoundary: fault);
 
     internal static async Task<AgentToolAdmissionJournalFixture> CreateAsync(
         AgentToolAdmissionSupport support = AgentToolAdmissionSupport.Recoverable,
         AgentToolProfileBinding? profileBinding = null, AgentRuntimeTransientContext? transientContext = null,
-        bool includeRecoveryInput = false, bool managedHr = false, Func<AgentDefinition, AgentDefinition>? configureAgent = null) {
+        bool includeRecoveryInput = false, bool managedHr = false, Func<AgentDefinition, AgentDefinition>? configureAgent = null,
+        WorkspaceScopeDescriptor? storageScope = null,
+        IReadOnlyList<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null) {
         var environment = CanDoItAllTestEnvironment.Create($"tool-admission-{Guid.NewGuid():N}");
         try {
             var profile = environment.CreateInMemoryProfile("primary");
-            var store = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, WorkspaceScopeDescriptor.Sandbox);
+            var actualStorageScope = storageScope ?? WorkspaceScopeDescriptor.Sandbox;
+            var store = new FileSandboxWorkspaceStore(profile.WorkspaceRootPath, actualStorageScope);
             var catalog = await store.LoadCatalogSnapshotAsync();
             var agent = catalog.Catalog.Agents.First(item => item.ProviderProfileId.HasValue) with {
                 ChatHistoryMode = AgentChatHistoryMode.FrameworkManaged
@@ -102,11 +110,11 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
                     run.MetadataJson, AgentChatContextDigest.Compute(transientContext)) };
             }
 
-            var journal = new AgentToolAdmissionJournal(store, binding);
+            var journal = new AgentToolAdmissionJournal(store, binding, contextAttachmentCodecs: contextAttachmentCodecs);
             run = run with { ToolAdmission = journal.CreateForNewRun(run, chat, support,
                 includeRecoveryInput ? new(input.Id, input.Content) : null, transientContext) };
             var detail = await store.SaveExecutionRunDetailAsync(new(run, chat, [], []));
-            return new(environment, profile.WorkspaceRootPath, store, binding, agent, provider, detail);
+            return new(environment, profile.WorkspaceRootPath, store, binding, agent, provider, detail, actualStorageScope, contextAttachmentCodecs ?? []);
         } catch {
             await environment.DisposeAsync();
             throw;

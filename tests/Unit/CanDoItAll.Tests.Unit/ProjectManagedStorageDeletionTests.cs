@@ -150,7 +150,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 StorageLocatorKind.RemotePath,
                 requestedFtpPath),
             requestedFtpPath,
-            ftpStorage,
+            ftpStorage.ToDriverInput(),
             physicalIdentityPolicy);
         var ipfsReference = ProjectManagedStorageProvenancePolicy.Stamp(
             new StorageObjectReference(
@@ -159,7 +159,7 @@ public sealed class ProjectManagedStorageDeletionTests
                 StorageLocatorKind.ContentAddress,
                 "bafy-owned"),
             "managed-files/project-media/files/immutable.txt",
-            ipfsStorage,
+            ipfsStorage.ToDriverInput(),
             physicalIdentityPolicy);
         dbContext.AddRange(ftpStorage, ipfsStorage);
         dbContext.AddRange(ftpObject, ipfsObject);
@@ -195,7 +195,7 @@ public sealed class ProjectManagedStorageDeletionTests
         var original = ProjectManagedStorageProvenancePolicy.Stamp(
             CreateReference(),
             "managed-files/project-media/files/shared.txt",
-            CreateBootstrapStorage(),
+            CreateBootstrapStorage().ToDriverInput(),
             CreatePhysicalIdentityPolicy());
         dbContext.AddRange(mismatched, dotSegment);
         dbContext.AddRange(
@@ -432,7 +432,7 @@ public sealed class ProjectManagedStorageDeletionTests
         var stamped = ProjectManagedStorageProvenancePolicy.Stamp(
             reference,
             reference.Locator,
-            storage,
+            storage.ToDriverInput(),
             CreatePhysicalIdentityPolicy());
         dbContext.Add(asset);
         dbContext.Add(storage);
@@ -472,12 +472,12 @@ public sealed class ProjectManagedStorageDeletionTests
             CreateBinding(candidate.Id, ProjectManagedStorageProvenancePolicy.Stamp(
                 referenceA,
                 referenceA.Locator,
-                storageA,
+                storageA.ToDriverInput(),
                 policy)),
             CreateBinding(survivor.Id, ProjectManagedStorageProvenancePolicy.Stamp(
                 referenceB,
                 referenceB.Locator,
-                storageB,
+                storageB.ToDriverInput(),
                 policy)));
         await dbContext.SaveChangesAsync();
 
@@ -521,12 +521,12 @@ public sealed class ProjectManagedStorageDeletionTests
             var stampedA = ProjectManagedStorageProvenancePolicy.Stamp(
                 referenceA,
                 candidateLocator,
-                storageA,
+                storageA.ToDriverInput(),
                 policy);
             var stampedB = ProjectManagedStorageProvenancePolicy.Stamp(
                 referenceB,
                 survivorLocator,
-                storageB,
+                storageB.ToDriverInput(),
                 policy);
             dbContext.AddRange(candidate, survivor, storageA, storageB);
             dbContext.AddRange(
@@ -603,12 +603,12 @@ public sealed class ProjectManagedStorageDeletionTests
                 locator);
             var policy = CreatePhysicalIdentityPolicy();
 
-            var fingerprint = policy.ResolveObjectFingerprint(reference, storage);
-            var livenessKey = policy.ResolveConservativeLivenessKey(reference, storage);
+            var fingerprint = policy.ResolveObjectFingerprint(reference, storage.ToDriverInput());
+            var livenessKey = policy.ResolveConservativeLivenessKey(reference, storage.ToDriverInput());
             var stamped = ProjectManagedStorageProvenancePolicy.Stamp(
                 reference,
                 locator,
-                storage,
+                storage.ToDriverInput(),
                 policy);
 
             Assert.Equal(64, fingerprint.Length);
@@ -740,12 +740,12 @@ public sealed class ProjectManagedStorageDeletionTests
             CreateBinding(candidate.Id, ProjectManagedStorageProvenancePolicy.Stamp(
                 referenceA,
                 referenceA.Locator,
-                storageA,
+                storageA.ToDriverInput(),
                 policy)),
             CreateBinding(survivor.Id, ProjectManagedStorageProvenancePolicy.Stamp(
                 referenceB,
                 referenceB.Locator,
-                storageB,
+                storageB.ToDriverInput(),
                 policy)));
         await dbContext.SaveChangesAsync();
 
@@ -791,7 +791,7 @@ public sealed class ProjectManagedStorageDeletionTests
                     ProjectManagedStorageProvenancePolicy.Stamp(
                         referenceA,
                         candidatePath,
-                        storageA,
+                        storageA.ToDriverInput(),
                         policy))
             },
             new ProjectNodeBindingRecord
@@ -801,7 +801,7 @@ public sealed class ProjectManagedStorageDeletionTests
                     ProjectManagedStorageProvenancePolicy.Stamp(
                         referenceB,
                         survivorPath,
-                        storageB,
+                        storageB.ToDriverInput(),
                         policy))
             });
         await dbContext.SaveChangesAsync();
@@ -820,20 +820,20 @@ public sealed class ProjectManagedStorageDeletionTests
         var facts = StorageCatalogPlanningFact.FromCatalogRecord(bootstrap, includeFtpAddressing: false);
         var paths = new FileSystemStoragePathPolicy(new StubWorkspacePathResolver());
         var reference = CreateReference(storageId: bootstrap.Id);
-        Assert.Equal(paths.ResolveRootPath(bootstrap), paths.ResolveRootPathFromFacts(facts));
-        Assert.Equal(paths.ResolveFullPath(bootstrap, reference.Locator), paths.ResolveFullPathFromFacts(facts, reference.Locator));
-        Assert.Equal(paths.ResolveFullPath(bootstrap, reference.Locator), paths.ResolveWorkspaceFullPath(reference.Locator));
+        Assert.Equal(paths.ResolveRootPath(bootstrap.ToSnapshot()), paths.ResolveRootPathFromFacts(facts));
+        Assert.Equal(paths.ResolveFullPath(bootstrap.ToSnapshot(), reference.Locator), paths.ResolveFullPathFromFacts(facts, reference.Locator));
+        Assert.Equal(paths.ResolveFullPath(bootstrap.ToSnapshot(), reference.Locator), paths.ResolveWorkspaceFullPath(reference.Locator));
         Assert.Equal(bootstrap.Id, StorageBootstrapCatalogPolicy.ResolveAuthoritativeFileSystemStorageFact(
             [facts], paths.ResolveWorkspaceRootPath())?.Id);
         var physical = CreatePhysicalIdentityPolicy();
-        Assert.Equal(physical.ResolveObjectFingerprint(reference, bootstrap, bootstrap.Id),
+        Assert.Equal(physical.ResolveObjectFingerprint(reference, bootstrap.ToDriverInput(), bootstrap.Id),
             physical.ResolveObjectFingerprintFromFacts(reference, facts, bootstrap.Id));
         var ftp = CreateStorage(Guid.NewGuid(), StorageProviderKind.Ftp);
         ftp.EndpointOrRoot = "ftps://example.invalid/Root";
         ftp.ConfigJson = "{\"port\":2121,\"basePath\":\"MixedCase\"}";
         var ftpFacts = StorageCatalogPlanningFact.FromCatalogRecord(ftp, includeFtpAddressing: true);
         const string remotePath = "managed-files/project-media/files/Asset.txt";
-        Assert.Equal(FtpStorageAddressPolicy.ResolveObjectUri(ftp, remotePath),
+        Assert.Equal(FtpStorageAddressPolicy.ResolveObjectUri(ftp.ToDriverInput(), remotePath),
             FtpStorageAddressPolicy.ResolveObjectUriFromFacts(ftpFacts, remotePath));
         Assert.Equal("/Root/MixedCase/managed-files/project-media/files/Asset.txt",
             FtpStorageAddressPolicy.ResolveObjectUriFromFacts(ftpFacts, remotePath).AbsolutePath);
@@ -901,9 +901,9 @@ public sealed class ProjectManagedStorageDeletionTests
             await edit.SaveChangesAsync(cancellationToken);
         });
         Assert.Equal(1, driver.DeleteCalls);
-        var used = Assert.IsType<StorageCatalogRecord>(driver.LastDeletedStorage);
+        var used = Assert.IsType<StorageDriverInput>(driver.LastDeletedStorage);
         Assert.Equal(storage.EndpointOrRoot, used.EndpointOrRoot);
-        Assert.Equal(storage.ConfigJson, used.ConfigJson);
+        Assert.Equal(storage.ConfigJson, used.OriginalConfigurationJson);
         await using var readback = await factory.StorageFactory.CreateDbContextAsync();
         Assert.Equal("ftp://example.invalid/retargeted", (await readback.Set<StorageCatalogRecord>().SingleAsync()).EndpointOrRoot);
     }
@@ -957,7 +957,7 @@ public sealed class ProjectManagedStorageDeletionTests
             ownershipBasis,
             physicalIdentityPolicy.ResolveObjectFingerprint(
                 reference,
-                storage,
+                storage.ToDriverInput(),
                 authoritativeBootstrapStorageId: Guid.Empty),
             reference.ProviderKind == StorageProviderKind.Ipfs
                 ? string.Empty
@@ -1022,7 +1022,7 @@ public sealed class ProjectManagedStorageDeletionTests
         => ProjectManagedStorageProvenancePolicy.Stamp(
             reference,
             reference.Locator,
-            storage,
+            storage.ToDriverInput(),
             CreatePhysicalIdentityPolicy());
 
     private static StorageCatalogRecord CreateStorage(Guid id, StorageProviderKind providerKind)
@@ -1126,28 +1126,28 @@ public sealed class ProjectManagedStorageDeletionTests
 
         public int DeleteCalls { get; private set; }
 
-        public StorageCatalogRecord? LastDeletedStorage { get; private set; }
+        public StorageDriverInput? LastDeletedStorage { get; private set; }
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
         {

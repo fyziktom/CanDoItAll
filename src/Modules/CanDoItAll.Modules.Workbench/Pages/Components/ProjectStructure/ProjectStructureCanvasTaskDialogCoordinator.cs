@@ -231,13 +231,13 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
                     context.ProjectId,
                     estimate,
                     submission.Assignee,
-                    AssignmentSource),
+                    AssignmentSource, context.MutationOwner),
                 (pricing, _) => context.CreateTaskNodeAsync(
                     submission.CreateRequest,
                     request =>
                         ProjectStructureCanvasTaskCommitPolicy.ApplyCreate(
                             request,
-                            pricing)),
+                            pricing) with { ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission, ProcessMutationAdmission = context.MutationOwner.ProcessMutationAdmission }),
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -343,7 +343,7 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
                     proposedExecution,
                     assignmentWasChanged,
                     submission.Assignee,
-                    AssignmentSource),
+                    AssignmentSource, context.MutationOwner),
                 async (commit, token) =>
                 {
                     var update =
@@ -358,6 +358,10 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
                             commit.ProposedExecution,
                             commit.Pricing,
                             commit.ProposedCostBasis);
+                    update = update with {
+                        ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission,
+                        ProcessMutationAdmission = context.MutationOwner.ProcessMutationAdmission
+                    };
                     return await projectWorkbenchService
                         .UpdateObjectIfMetadataAsync(
                             context.ProjectId,
@@ -632,5 +636,6 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         ArgumentNullException.ThrowIfNull(context.CreateTaskNodeAsync);
         ArgumentNullException.ThrowIfNull(context.ReloadAuthoritativeProject);
         ArgumentNullException.ThrowIfNull(context.MutationOwner);
+        ProjectAssignmentAdmission.Require(context.ProjectId, context.MutationOwner.ExpectedProjectAdmission);
     }
 }

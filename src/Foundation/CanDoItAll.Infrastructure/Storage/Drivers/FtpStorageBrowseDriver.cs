@@ -46,7 +46,7 @@ public sealed class FtpStorageBrowseDriver : IStorageBrowseDriver
         maximumDuration: TimeSpan.FromSeconds(30));
 
     public async Task<StorageBrowsePage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -141,7 +141,7 @@ public sealed class FtpStorageBrowseDriver : IStorageBrowseDriver
         }
     }
 
-    private int ResolveOffset(StorageCatalogRecord storage, StorageBrowseRequest request)
+    private int ResolveOffset(StorageDriverInput storage, StorageBrowseRequest request)
     {
         if (request.Cursor is null)
         {
@@ -199,7 +199,7 @@ public sealed class FtpStorageBrowseDriver : IStorageBrowseDriver
     private static IReadOnlyList<StorageBrowsePathSegment> CreatePath(StorageBrowseContainer container)
         => [new StorageBrowsePathSegment(container.IsRoot ? "FTP root" : container.Key, container)];
 
-    private void Validate(StorageCatalogRecord storage, StorageBrowseRequest request)
+    private void Validate(StorageDriverInput storage, StorageBrowseRequest request)
     {
         if (storage.ProviderKind != ProviderKind)
         {

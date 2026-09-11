@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
-public sealed class WorkflowStructureDeliveryPersistenceTests {
+public sealed partial class WorkflowStructureDeliveryPersistenceTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -131,7 +131,7 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
         var outputs = OutputStore(fixture.Services);
         await outputs.PrepareAsync(fixture.Plan);
         var applied = await fixture.Owner.CreateWorkflowContributionAsync(fixture.Plan, fixture.Request);
-        var unrelated = await fixture.Owner.CreateObjectAsync(fixture.ProjectId, fixture.Request with { Title = "Unrelated concurrent work" });
+        var unrelated = await fixture.Owner.CreateObjectAsync(fixture.ProjectId, fixture.Request with { Title = "Unrelated concurrent work", WorkflowMutationAdmission = null });
 
         var restarted = OutputStore(fixture.Services);
         Assert.Null((await restarted.FindAsync(fixture.Plan.Identity))!.Receipt);
@@ -227,7 +227,7 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
     [Fact]
     public async Task AssetDispatchClaimSurvivesRestartAndCannotAdmitAnotherPlacement() {
         await using var app = await TestApplication.CreateAsync(new() { ConfigureServices = RemoveAutomaticDelivery });
-        await using var fixture = await CreateFixtureAsync(app);
+        await using var fixture = await CreateFixtureAsync(app, prepareOutput: false);
         await SaveRunAsync(fixture.Services, fixture.Plan.Identity.Occurrence.RunId, fixture.Definition);
         var plan = fixture.Plan with { Kind = WorkflowStructureOutputKind.Asset };
         var outputs = OutputStore(fixture.Services);
@@ -248,7 +248,7 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
     [InlineData(true)]
     public async Task AssetPlacementReceiptSurvivesNativeRollbackOrLostAcknowledgementWithoutAnotherObject(bool afterCommit) {
         await using var app = await TestApplication.CreateAsync(new() { ConfigureServices = RemoveAutomaticDelivery });
-        await using var fixture = await CreateFixtureAsync(app);
+        await using var fixture = await CreateFixtureAsync(app, prepareOutput: false);
         var request = fixture.Request with {
             ObjectType = ProjectObjectType.File,
             ObjectSubtype = "json",
@@ -256,6 +256,7 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
         };
         var plan = fixture.Plan with { Kind = WorkflowStructureOutputKind.Asset };
         plan = plan with { Fingerprint = ProjectWorkflowContributionFingerprint.Create(plan, request) };
+        request = BindRequest(request, plan, fixture.Request.WorkflowMutationAdmission!.Authority);
         await SaveRunAsync(fixture.Services, plan.Identity.Occurrence.RunId, fixture.Definition);
         var outputs = OutputStore(fixture.Services);
         var prepared = await outputs.PrepareAsync(plan);
@@ -295,8 +296,9 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
         await using var fixture = await CreateFixtureAsync(app);
         var authority = await fixture.Services.GetRequiredService<ProjectStructureWorkflowAuthorityService>().CaptureAsync(fixture.ProjectId,
             ProjectStructureWorkflowAuthoritySource.LocalOperator(WorkflowStructureOperatorSurface.UserInterface));
-        var origin = new WorkflowLaunchOrigin.Preview(authority.Principal, new("prepared-output-recovery")) { StructureAuthority = authority };
-        var saved = await SaveRunAsync(fixture.Services, fixture.Plan.Identity.Occurrence.RunId, fixture.Definition, origin);
+        Assert.Equal(fixture.Plan.SourceAuthorityFingerprint, WorkflowStructureAuthorityFingerprint.Create(authority));
+        var saved = Assert.IsType<WorkflowRunSnapshot>(await fixture.Services.GetRequiredService<IWorkflowRunStore>()
+            .GetRunAsync(fixture.Plan.Identity.Occurrence.RunId));
         var outputs = OutputStore(fixture.Services);
         await outputs.PrepareAsync(fixture.Plan);
         var fault = new CommitFault(afterCommit: false);
@@ -309,8 +311,10 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
         });
         var gateway = Assert.IsType<WorkbenchProjectStructureRuntimeGateway>(fixture.Services.GetRequiredService<IProjectStructureRuntimeGateway>());
         if (cancelled) {
+            await Assert.ThrowsAsync<WorkflowStructureOutputCancelledException>(() => outputs.PrepareAsync(fixture.Plan));
             var error = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => gateway.ReconcileWorkflowOutputAsync(fixture.Plan.Identity));
             Assert.Equal(409, error.StatusCode);
+            Assert.Equal("WorkflowRunNotExecuting", error.ErrorCode);
             Assert.Null(await fixture.Owner.FindWorkflowContributionAsync(fixture.Plan.Identity));
             Assert.Null((await outputs.FindAsync(fixture.Plan.Identity))!.Receipt);
         } else {
@@ -333,7 +337,7 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
         }
     }
 
-    private static async Task<Fixture> CreateFixtureAsync(TestApplication app) {
+    private static async Task<Fixture> CreateFixtureAsync(TestApplication app, bool prepareOutput = true, WorkflowStructureOperatorSurface sourceSurface = WorkflowStructureOperatorSurface.UserInterface) {
         var scope = app.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var projects = services.GetRequiredService<ProjectsService>();
@@ -344,16 +348,36 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
         var parent = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(saved.Value);
         var request = new ProjectObjectCreateRequest(ProjectObjectType.WorkItem, $"Contribution {Guid.NewGuid():N}", "", "Initial notes", parent,
             ObjectSubtype: "task", MetadataJson: "{}", PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent);
+        var authority = await services.GetRequiredService<ProjectStructureWorkflowAuthorityService>().CaptureAsync(saved.Value,
+            ProjectStructureWorkflowAuthoritySource.LocalOperator(sourceSurface));
         var plan = new WorkflowStructureOutputPlan(new(WorkflowExecutionOccurrence.Start(WorkflowRunId.New())
                 .Advance(definition.VersionId, new("effect")), 0), definition.VersionId, new("effect"), saved.Value,
             new(parent), await owner.ReadWorkflowTargetBindingAsync(saved.Value, parent), WorkflowStructureOutputKind.Task,
-            WorkflowStructureOutputRole.RequiredResult, string.Empty);
+            WorkflowStructureOutputRole.RequiredResult, string.Empty) {
+            ProjectLifetime = authority.ProjectScope!.Find(saved.Value),
+            SourceAuthorityFingerprint = WorkflowStructureAuthorityFingerprint.Create(authority)
+        };
         plan = plan with { Fingerprint = ProjectWorkflowContributionFingerprint.Create(plan, request) };
+        request = BindRequest(request, plan, authority);
+        await SaveRunAsync(services, plan.Identity.Occurrence.RunId, definition,
+            new WorkflowLaunchOrigin.Preview(authority.Principal, new("workflow-output-fixture")) { StructureAuthority = authority });
+        if (prepareOutput) {
+            await OutputStore(services).PrepareAsync(plan);
+        }
         return new(saved.Value, owner, Factory(services), definition, plan, request, scope);
     }
 
     private static PersistentWorkflowStructureOutputStore OutputStore(IServiceProvider services) =>
-        new(services.GetRequiredService<IDbContextFactory<WorkflowDbContext>>(), TimeProvider.System);
+        new(services.GetRequiredService<IDbContextFactory<WorkflowDbContext>>(), TimeProvider.System,
+            services.GetRequiredService<IWorkflowStructureSourceAuthorityPolicy>(),
+            services.GetRequiredService<CoordinatedDatabaseTransaction>(), services.GetRequiredService<DbContextOptions<WorkflowDbContext>>());
+
+    private static ProjectObjectCreateRequest BindRequest(ProjectObjectCreateRequest request, WorkflowStructureOutputPlan plan,
+        WorkflowStructureAuthority authority) => request with {
+        ExpectedProjectAdmission = ProjectStructureWorkflowAuthorityService.ToProjectAdmission(plan.ProjectLifetime!),
+        WorkflowMutationAdmission = new(authority, plan.ProjectLifetime!, plan.Kind == WorkflowStructureOutputKind.Asset
+            ? WorkflowStructureAuthorityUse.AssetOutput : WorkflowStructureAuthorityUse.TaskOutput, plan)
+    };
 
     private static OwnerFactory Factory(IServiceProvider services, params IInterceptor[] interceptors) {
         var options = new DbContextOptionsBuilder<WorkbenchDbContext>();
@@ -373,6 +397,7 @@ public sealed class WorkflowStructureDeliveryPersistenceTests {
     private static async Task<WorkflowRunSnapshot> SaveRunAsync(IServiceProvider services, WorkflowRunId id,
         WorkflowDefinition definition, WorkflowLaunchOrigin? origin = null) {
         var now = DateTimeOffset.UtcNow;
+        origin ??= (await services.GetRequiredService<IWorkflowRunStore>().GetRunAsync(id))?.Origin;
         var run = new WorkflowRunSnapshot(id, definition.Id, definition.VersionId, WorkflowRunState.Completed,
             WorkflowRuntimeBackendKind.InProcess, id.ToString(), "Completed", now, now) { Origin = origin };
         await services.GetRequiredService<IWorkflowRunStore>().SaveRunAsync(run);

@@ -9,7 +9,7 @@ namespace CanDoItAll.FileTools.Integration;
 internal sealed record StorageBrowseCacheContext(
     FileToolsSemanticScope Scope,
     FileToolsStorageBinding Binding,
-    StorageCatalogRecord Storage,
+    StorageDriverInput Storage,
     string SourceSetFingerprint,
     string StorageFingerprint);
 
@@ -98,31 +98,10 @@ internal static class StorageBrowseCacheKeyBuilder
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 
-    public static string BuildStorageFingerprint(
-        StorageCatalogRecord storage,
-        FileToolsStorageBinding binding)
-    {
+    public static string BuildStorageFingerprint(StorageDriverInput storage, FileToolsStorageBinding binding) {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(binding);
-        string endpoint = storage.EndpointOrRoot ?? string.Empty;
-        string configuration = storage.ConfigJson ?? "{}";
-        if (endpoint.Length > StorageBrowseContainer.MaximumKeyLength ||
-            configuration.Length > StorageJson.MaximumProviderConfigurationJsonLength)
-        {
-            throw InvalidConfiguration("The storage source configuration exceeds the bounded fingerprint contract.");
-        }
-
-        string canonical = string.Join('\n',
-            storage.Id.ToString("N"),
-            ((int)storage.ProviderKind).ToString(CultureInfo.InvariantCulture),
-            endpoint,
-            configuration,
-            ((int)storage.CapabilityMask).ToString(CultureInfo.InvariantCulture),
-            storage.IsEnabled ? "1" : "0",
-            storage.IsReadOnly ? "1" : "0",
-            storage.CredentialSecretId?.ToString("N") ?? "none",
-            binding.Root.Value);
-        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+        return storage.BuildBrowseFingerprint(binding.Root.Value);
     }
 
     public static FileToolsBrowseSessionRevision BuildSessionRevision(

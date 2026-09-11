@@ -28,6 +28,11 @@
                             Size="ButtonSize.Small"
                             Click="@(() => ResetStorageAsync(StorageProviderKind.Ftp))"
                             data-testid="storage-settings-new-ftp" />
+                    <Button Text="Recovery"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="@(() => storageRecoveryOpen = true)"
+                            data-testid="storage-settings-recovery" />
                 </Cluster>
             </Actions>
             <Filters>
@@ -325,7 +330,13 @@
     </DetailContent>
 </ListDetailShell>
 
+@if (storageRecoveryOpen) {
+    <StoragePlacementRecoveryDialog @key="storageModel.Id" StorageId="storageModel.Id"
+                                    OnClose="@(() => storageRecoveryOpen = false)" />
+}
+
 @code {
+    private bool storageRecoveryOpen;
     private static readonly IReadOnlyDictionary<string, object> storageWizardAttributes =
         new Dictionary<string, object>
         {

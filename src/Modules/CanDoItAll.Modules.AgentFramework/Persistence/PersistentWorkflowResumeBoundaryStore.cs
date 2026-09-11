@@ -695,14 +695,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         WorkflowBackendStartResult result,
         CancellationToken cancellationToken)
     {
-        var eventIds = result.Events.Select(workflowEvent => workflowEvent.Id).ToArray();
-        var existingEventIds = await dbContext.Set<WorkflowEventRecordEntity>()
-            .Where(workflowEvent => eventIds.Contains(workflowEvent.Id))
-            .Select(workflowEvent => workflowEvent.Id)
-            .ToArrayAsync(cancellationToken);
-        dbContext.Set<WorkflowEventRecordEntity>().AddRange(result.Events
-            .Where(workflowEvent => !existingEventIds.Contains(workflowEvent.Id))
-            .Select(WorkflowEventRecordEntity.FromEvent));
+        await PersistentWorkflowRunStore.StageBackendDisclosureEventsAsync(dbContext, result.Run, result.Events, cancellationToken);
 
         foreach (var externalRequest in result.ExternalRequests)
         {
@@ -762,6 +755,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         WorkflowRunSnapshot result,
         DateTimeOffset committedAtUtc)
     {
+        PersistentWorkflowRunStore.RequireFrozenAuthority(target, result);
         target.WorkflowId = result.WorkflowId.Value;
         target.VersionId = result.VersionId.Value;
         target.State = result.State;

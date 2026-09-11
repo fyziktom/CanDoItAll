@@ -22,6 +22,7 @@ public sealed class WorkbenchOwnerInMemoryFixture {
             workbench.ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning));
         }
         CompleteOptions = complete.Options;
+        WorkbenchOptions = workbench.Options;
         WorkbenchFactory = new PooledDbContextFactory<WorkbenchDbContext>(workbench.Options);
         ProjectsFactory = new PooledDbContextFactory<ProjectsDbContext>(projects.Options);
         var profile = new ResolvedDatabaseProfile(new DatabaseProfileRecord {
@@ -32,7 +33,8 @@ public sealed class WorkbenchOwnerInMemoryFixture {
         Transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
         Projects = new(ProjectsFactory, projects.Options, Transactions);
         Hierarchy = new(ProjectsFactory, projects.Options, Transactions);
-        MutationScopes = new(Projects, new ProjectWriteAdmissionService(ProjectsFactory, projects.Options, Transactions, new CanonicalDatabase(profile)), Transactions);
+        Admissions = new ProjectWriteAdmissionService(ProjectsFactory, projects.Options, Transactions, new CanonicalDatabase(profile));
+        MutationScopes = new(Projects, Admissions, Transactions);
     }
 
     private sealed class CanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
@@ -41,6 +43,8 @@ public sealed class WorkbenchOwnerInMemoryFixture {
     }
 
     public DbContextOptions<AppDbContext> CompleteOptions { get; }
+    public DbContextOptions<WorkbenchDbContext> WorkbenchOptions { get; }
+    public ProjectWriteAdmissionService Admissions { get; }
     public IDbContextFactory<WorkbenchDbContext> WorkbenchFactory { get; }
     public IDbContextFactory<ProjectsDbContext> ProjectsFactory { get; }
     public ProjectRecordQueryService Projects { get; }

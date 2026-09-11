@@ -24,14 +24,15 @@ public sealed class WorkbenchOwnerPersistenceTests {
     private static readonly DateTimeOffset Now = new(2026, 3, 4, 5, 6, 7, TimeSpan.Zero);
 
     [Fact]
-    public async Task Thirteen_owner_mappings_match_the_complete_schema_and_reject_foreign_entities() {
+    public async Task Fifteen_owner_mappings_match_the_complete_schema_and_reject_foreign_entities() {
         await using var application = await TestApplication.CreateAsync();
         await using var complete = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
         Type[] expected = [typeof(ProjectObjectRecord), typeof(ProjectObjectLinkRecord), typeof(ProjectWorkbenchViewStateRecord),
             typeof(ProjectStructureProjectionLayoutRecord), typeof(ProjectStructureOperationAnalyticsRecord), typeof(ProjectStructureLeaseRecord),
             typeof(ProjectNodeBindingRecord), typeof(ProjectNodeReferenceRecord), typeof(ProjectNodeLifecycleEventRecord),
-            typeof(ProjectCrossModuleMutationRecord), typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord), typeof(ProjectWorkAssignmentRecord)];
+            typeof(ProjectCrossModuleMutationRecord), typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord),
+            typeof(ProjectWorkAssignmentRecord), typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord)];
         var entities = owner.GetService<IDesignTimeModel>().Model.GetEntityTypes().ToArray();
         Assert.Equal(expected.OrderBy(type => type.FullName), entities.Select(entity => entity.ClrType).OrderBy(type => type.FullName));
         foreach (var entity in entities) {
