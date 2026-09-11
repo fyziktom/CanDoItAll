@@ -46,13 +46,21 @@ The Web host exposes the supported HTTP slice at `/api/crm-hr`. Web owns route b
 
 ## Assignment staging boundary
 
-Direct task-assignment mutations derive the final assignment DTOs from CRM's current
-ChangeTracker, including unsaved additions and excluding deleted/detached rows. The
-single staging helper used by save, replace, delete, node cleanup, and project move
-enters the existing mutation transaction only while calling Workbench's data-only
-assignment bridge. Workbench saves through its explicit enlisted owner context; CRM
-then performs its final save and retains commit ownership. The public bridge exposes
-no DbContext or foreign persistence entity.
+Work-item assignees live in Workbench's `Workbench_WorkAssignments` table. CRM
+retains project participation, staffing, capacity, rates and the mixed project-move
+receipt. Its compatibility facade stages cross-role transitions, replacements and
+cleanup with the Work owner on one serializable transaction. Assignment identities
+are locked across both owners; cross-role edits retain the same ID, phase and
+opportunity. Party merge stages Work party/affiliation rewrites and native task
+revisions before CRM's intermediate saves, retaining the existing audit entry.
+Public contracts contain typed facts and commands, without persistence entities or
+contexts. CRM supplies only Party and affiliation facts needed by Work mutations.
+
+Combined assignment and workforce reports use a fixed read-only SQL union before
+joins, predicates, totals, ordering and paging. `WorkItemAssignee` remains an explicit
+constant discriminator. The query maps no writable Work entity into CRM's runtime
+model. The InMemory provider has a separate explicit test path; it does not establish
+cross-context transaction atomicity.
 
 CRM uses its explicit runtime model for parties, staffing, recruiting and current
 participation records. The complete migration model preserves the physical

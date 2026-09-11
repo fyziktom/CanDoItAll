@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Text.Json;
@@ -242,6 +244,9 @@ public sealed class CrmHrAgentQueryServiceTests
         services.AddSingleton<IDbContextFactory<CrmHrDbContext>>(new PooledDbContextFactory<CrmHrDbContext>(
             new DbContextOptionsBuilder<CrmHrDbContext>()
                 .UseInMemoryDatabase(databaseName, databaseRoot).Options));
+        services.AddSingleton<IProjectWorkAssignmentQueries>(new ProjectWorkAssignmentQueryService(
+            new PooledDbContextFactory<WorkbenchDbContext>(new DbContextOptionsBuilder<WorkbenchDbContext>()
+                .UseInMemoryDatabase(databaseName, databaseRoot).Options)));
         return services.BuildServiceProvider(validateScopes: true);
     }
 

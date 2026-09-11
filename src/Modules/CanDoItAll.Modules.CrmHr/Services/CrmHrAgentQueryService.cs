@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.SourceGateway;
@@ -95,7 +96,8 @@ public interface ICrmHrAgentQueryService
 
 public sealed class CrmHrAgentQueryService(
     IDbContextFactory<CrmHrDbContext> dbContextFactory,
-    IClock clock) : ICrmHrAgentQueryService
+    IClock clock,
+    IProjectWorkAssignmentQueries workAssignments) : ICrmHrAgentQueryService
 {
     private static readonly IReadOnlyList<CrmHrAgentRecordKind> SupportedRecordKinds =
     [
@@ -585,7 +587,8 @@ public sealed class CrmHrAgentQueryService(
             return new Dictionary<Guid, CrmHrAgentAvailability>();
         }
 
-        var allocations = await dbContext.Set<ProjectPartyAssignment>()
+        var assignmentRows = await ProjectAssignmentReporting.ForPartiesAsync(dbContext, workAssignments, workforcePartyIds, cancellationToken);
+        var allocations = await assignmentRows
             .AsNoTracking()
             .Where(item =>
                 workforcePartyIds.Contains(item.PartyId) &&
@@ -597,7 +600,7 @@ public sealed class CrmHrAgentQueryService(
                 item.StartsAtUtc,
                 item.EndsAtUtc
             })
-            .ToListAsync(cancellationToken);
+            .ToAssignmentReportListAsync(cancellationToken);
         var capacityBlocks = await dbContext.Set<CapacityBlock>()
             .AsNoTracking()
             .Where(item => workforcePartyIds.Contains(item.PartyId))
@@ -608,7 +611,7 @@ public sealed class CrmHrAgentQueryService(
                 item.StartDateUtc,
                 item.EndDateUtc
             })
-            .ToListAsync(cancellationToken);
+            .ToAssignmentReportListAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var today = DateOnly.FromDateTime(now.UtcDateTime);
 

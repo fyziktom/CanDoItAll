@@ -810,7 +810,8 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             new ProjectStructureTaskApplicationService(
                 new ProjectStructureWorkItemAssigneeService(
                     bridge,
-                    workbenchService),
+                    workbenchService,
+                    new ProjectWorkAssignmentTestCommands(bridge)),
                 estimateRefreshService ??
                     services.GetRequiredService<
                         ProjectStructureTaskEstimateRefreshService>(),

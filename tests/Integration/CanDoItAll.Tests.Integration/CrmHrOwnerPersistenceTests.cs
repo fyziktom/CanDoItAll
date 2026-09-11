@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.CrmHr;
@@ -49,9 +50,17 @@ public sealed class CrmHrOwnerPersistenceTests {
         })).ToArray();
         complete.Add(party);
         complete.AddRange(projects);
-        complete.AddRange(assignments);
+        complete.AddRange(assignments.Where(item => item.AssignmentKind != ProjectPartyAssignmentKind.WorkItemAssignee));
+        complete.AddRange(assignments.Where(item => item.AssignmentKind == ProjectPartyAssignmentKind.WorkItemAssignee)
+            .Select(item => new ProjectWorkAssignmentRecord {
+                Id = item.Id, PartyId = item.PartyId, ProjectId = item.ProjectId, Notes = item.Notes, NodeKey = item.NodeKey
+            }));
         await complete.SaveChangesAsync();
-        var expectedQuery = from assignment in complete.Set<ProjectPartyAssignment>().AsNoTracking()
+        var expectedAssignments = complete.Set<ProjectPartyAssignment>().AsNoTracking()
+            .Select(item => new { item.Id, item.ProjectId, item.PartyId, AssignmentKind = item.AssignmentKind.ToString() })
+            .Concat(complete.Set<ProjectWorkAssignmentRecord>().AsNoTracking()
+                .Select(item => new { item.Id, item.ProjectId, item.PartyId, AssignmentKind = nameof(ProjectPartyAssignmentKind.WorkItemAssignee) }));
+        var expectedQuery = from assignment in expectedAssignments
             where assignment.PartyId == party.Id
             join project in complete.Set<Project>() on assignment.ProjectId equals project.Id into related
             from project in related.DefaultIfEmpty()
@@ -66,7 +75,7 @@ public sealed class CrmHrOwnerPersistenceTests {
             actual.AddRange(page.Items);
         }
         Assert.Equal(expected.Select(item => (item.Id, item.Name, item.AssignmentKind)),
-            actual.Select(item => (item.Id, item.ProjectName, item.AssignmentKind)));
+            actual.Select(item => (item.Id, item.ProjectName, item.AssignmentKind.ToString())));
     }
 
     [Fact]

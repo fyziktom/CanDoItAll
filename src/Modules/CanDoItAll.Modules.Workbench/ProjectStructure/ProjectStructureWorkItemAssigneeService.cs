@@ -9,7 +9,8 @@ public sealed record ProjectStructureTaskAssigneeMutationSnapshot(
 
 public sealed class ProjectStructureWorkItemAssigneeService(
     IProjectPartyIntegrationBridge partyIntegrationBridge,
-    ProjectWorkbenchService projectWorkbenchService)
+    ProjectWorkbenchService projectWorkbenchService,
+    IProjectWorkAssignmentCommands workAssignments)
 {
     private static readonly IReadOnlyList<ProjectPartyAssignmentRole> WorkItemAssignmentRoles =
         [ProjectPartyAssignmentRole.WorkItemAssignee];
@@ -154,11 +155,10 @@ public sealed class ProjectStructureWorkItemAssigneeService(
                     }
                 ];
         var assignmentResult =
-            await partyIntegrationBridge.ReplaceNodeAssignmentsIfCurrentAsync(
+            await workAssignments.ReplaceAsync(
                 projectId,
                 new ProjectNodeReference(taskNodeId),
                 desiredAssignments,
-                WorkItemAssignmentRoles,
                 expectedAssignments
                     .Select(ProjectPartyAssignmentConcurrencySnapshot.From)
                     .ToArray(),
@@ -229,17 +229,15 @@ public sealed class ProjectStructureWorkItemAssigneeService(
             ];
 
         var assignmentResult = expectedAssignments is null
-            ? await partyIntegrationBridge.ReplaceNodeAssignmentsAsync(
+            ? await workAssignments.ReplaceAsync(
                 projectId,
                 new ProjectNodeReference(taskNodeId),
                 desiredAssignments,
-                WorkItemAssignmentRoles,
-                cancellationToken)
-            : await partyIntegrationBridge.ReplaceNodeAssignmentsIfCurrentAsync(
+                cancellationToken: cancellationToken)
+            : await workAssignments.ReplaceAsync(
                 projectId,
                 new ProjectNodeReference(taskNodeId),
                 desiredAssignments,
-                WorkItemAssignmentRoles,
                 expectedAssignments
                     .Select(ProjectPartyAssignmentConcurrencySnapshot.From)
                     .ToArray(),

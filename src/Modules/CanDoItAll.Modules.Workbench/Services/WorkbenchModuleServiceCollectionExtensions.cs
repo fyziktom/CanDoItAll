@@ -66,6 +66,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
             IProjectDeletionParticipant,
             ProjectWorkbenchDeletionParticipant>());
         services.AddScoped<ProjectStructureMutationScopeFactory>();
+        services.AddScoped<IProjectWorkAssignmentCommands, ProjectWorkAssignmentService>();
+        services.AddScoped<IProjectWorkAssignmentQueries, ProjectWorkAssignmentQueryService>();
         services.AddScoped<ProjectWorkbenchCommandService>();
         services.AddScoped<ProjectWorkbenchCrossModuleMutationService>();
         services.AddScoped<ProjectWorkbenchLifecycleService>();

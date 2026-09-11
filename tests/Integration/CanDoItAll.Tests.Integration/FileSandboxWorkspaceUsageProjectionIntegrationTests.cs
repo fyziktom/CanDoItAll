@@ -446,8 +446,9 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         var runtime = new DatabaseRuntimeState(new DatabaseSwitchNotificationService());
         var context = new HistoryMaintenanceContext(history.Partition, runtime.GetSnapshot(), runtime);
         var runner = new HistorySourceMaintenanceRunner(history.HistoryFactory, TimeProvider.System);
-        AgentFileHistorySource CreateSource() => new(history.Factory, history.Partitions, new FixedHistoryProfile(profile),
-            new HistoryWorkspacePaths(scenario.WorkspaceRoot), new(history.Factory, history.Partitions, history.Projection, history.Transactions),
+        AgentFileHistorySource CreateSource() => new(AgentHistoryOwnerPersistenceTestFactory.Locators(history.Factory),
+            AgentHistoryOwnerPersistenceTestFactory.Projects(history.Factory, history.Transactions), history.Partitions, new FixedHistoryProfile(profile),
+            new HistoryWorkspacePaths(scenario.WorkspaceRoot), AgentHistoryOwnerPersistenceTestFactory.Publications(history.Factory, history.Partitions, history.Projection, history.Transactions),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance,
             new SingleRecordBudgetClock());
         var source = CreateSource();
@@ -510,9 +511,10 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         var journal = new FileProviderHistoryJournal(scenario.WorkspaceRoot, scenario.Scope);
         var publication = Assert.Single(await journal.ReadBatchAsync(history.Partition, 10));
         if (failAfterFlush) {
-            var failingStore = new AgentHistoryPublicationStore(history.Factory.WithInterceptor(new FailAfterLocatorFlush()),
+            var failingStore = AgentHistoryOwnerPersistenceTestFactory.Publications(history.Factory.WithInterceptor(new FailAfterLocatorFlush()),
                 history.Partitions, history.Projection, history.Transactions);
-            using var failingSource = new AgentFileHistorySource(history.Factory, history.Partitions, new FixedHistoryProfile(profile),
+            using var failingSource = new AgentFileHistorySource(AgentHistoryOwnerPersistenceTestFactory.Locators(history.Factory),
+                AgentHistoryOwnerPersistenceTestFactory.Projects(history.Factory, history.Transactions), history.Partitions, new FixedHistoryProfile(profile),
                 new HistoryWorkspacePaths(scenario.WorkspaceRoot), failingStore, Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance);
             await Assert.ThrowsAsync<InvalidOperationException>(() => failingSource.ProcessAsync(history.Maintenance, null, 10, default));
             await using var db = history.Factory.CreateDbContext();
@@ -520,8 +522,9 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
             Assert.Empty(await db.Set<AgentHistoryLocator>().ToArrayAsync());
             Assert.Single(await journal.ReadBatchAsync(history.Partition, 10));
         }
-        using var source = new AgentFileHistorySource(history.Factory, history.Partitions, new FixedHistoryProfile(profile),
-            new HistoryWorkspacePaths(scenario.WorkspaceRoot), new(history.Factory, history.Partitions, history.Projection, history.Transactions),
+        using var source = new AgentFileHistorySource(AgentHistoryOwnerPersistenceTestFactory.Locators(history.Factory),
+            AgentHistoryOwnerPersistenceTestFactory.Projects(history.Factory, history.Transactions), history.Partitions, new FixedHistoryProfile(profile),
+            new HistoryWorkspacePaths(scenario.WorkspaceRoot), AgentHistoryOwnerPersistenceTestFactory.Publications(history.Factory, history.Partitions, history.Projection, history.Transactions),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentFileHistorySource>.Instance);
         var progress = await source.ProcessAsync(history.Maintenance, null, 10, default);
         progress = await source.ProcessAsync(history.Maintenance, progress.Cursor, 10, default);
@@ -571,7 +574,7 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
         await scenario.Store.SaveExecutionRunDetailAsync(CreateRunDetail(run, agent, history.Clock.Now, "Local", "model", [usage]));
         var journal = new FileProviderHistoryJournal(scenario.WorkspaceRoot, scenario.Scope);
         var publication = Assert.Single(await journal.ReadBatchAsync(history.Partition, 10));
-        var store = new AgentHistoryPublicationStore(history.Factory, history.Partitions, history.Projection, history.Transactions);
+        var store = AgentHistoryOwnerPersistenceTestFactory.Publications(history.Factory, history.Partitions, history.Projection, history.Transactions);
         await store.PublishAsync(history.Partition, scenario.Scope, [publication], default);
         await journal.AcknowledgeAsync(publication);
         await using (var db = history.Factory.CreateDbContext()) {
@@ -599,7 +602,7 @@ public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
     private sealed class FailAfterLocatorFlush : SaveChangesInterceptor {
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
             CancellationToken cancellationToken = default) {
-            if (eventData.Context is AppDbContext db && db.ChangeTracker.Entries<AgentHistoryLocator>().Any()) {
+            if (eventData.Context is AgentHistoryDbContext db && db.ChangeTracker.Entries<AgentHistoryLocator>().Any()) {
                 throw new InvalidOperationException("Crash after locator and index flush, before commit.");
             }
             return ValueTask.FromResult(result);

@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.CrmHr;
 using System.Data;
 using System.Data.Common;
 using CanDoItAll.Infrastructure.Persistence;
@@ -23,19 +24,33 @@ public sealed class WorkbenchOwnerPersistenceTests {
     private static readonly DateTimeOffset Now = new(2026, 3, 4, 5, 6, 7, TimeSpan.Zero);
 
     [Fact]
-    public async Task Twelve_owner_mappings_match_the_complete_schema_and_reject_foreign_entities() {
+    public async Task Thirteen_owner_mappings_match_the_complete_schema_and_reject_foreign_entities() {
         await using var application = await TestApplication.CreateAsync();
         await using var complete = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
         Type[] expected = [typeof(ProjectObjectRecord), typeof(ProjectObjectLinkRecord), typeof(ProjectWorkbenchViewStateRecord),
             typeof(ProjectStructureProjectionLayoutRecord), typeof(ProjectStructureOperationAnalyticsRecord), typeof(ProjectStructureLeaseRecord),
             typeof(ProjectNodeBindingRecord), typeof(ProjectNodeReferenceRecord), typeof(ProjectNodeLifecycleEventRecord),
-            typeof(ProjectCrossModuleMutationRecord), typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord)];
+            typeof(ProjectCrossModuleMutationRecord), typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord), typeof(ProjectWorkAssignmentRecord)];
         var entities = owner.GetService<IDesignTimeModel>().Model.GetEntityTypes().ToArray();
         Assert.Equal(expected.OrderBy(type => type.FullName), entities.Select(entity => entity.ClrType).OrderBy(type => type.FullName));
         foreach (var entity in entities) {
             var canonical = Assert.IsAssignableFrom<IEntityType>(complete.GetService<IDesignTimeModel>().Model.FindEntityType(entity.ClrType));
-            Assert.Equal(canonical.ToDebugString(MetadataDebugStringOptions.LongDefault), entity.ToDebugString(MetadataDebugStringOptions.LongDefault));
+            if (entity.ClrType == typeof(ProjectWorkAssignmentRecord)) {
+                Assert.Equal(canonical.GetProperties().Select(property => (property.Name, property.ClrType, property.IsNullable,
+                        property.IsConcurrencyToken, property.ValueGenerated, property.GetColumnType(), property.GetMaxLength())),
+                    entity.GetProperties().Select(property => (property.Name, property.ClrType, property.IsNullable,
+                        property.IsConcurrencyToken, property.ValueGenerated, property.GetColumnType(), property.GetMaxLength())));
+                Assert.Equal(canonical.GetKeys().Select(key => key.ToDebugString()), entity.GetKeys().Select(key => key.ToDebugString()));
+                Assert.Equal(canonical.GetIndexes().Select(index => index.ToDebugString()), entity.GetIndexes().Select(index => index.ToDebugString()));
+                var affiliationKey = Assert.Single(canonical.GetForeignKeys());
+                Assert.Equal(typeof(PartyOrganizationAffiliation), affiliationKey.PrincipalEntityType.ClrType);
+                Assert.Equal(DeleteBehavior.Restrict, affiliationKey.DeleteBehavior);
+                Assert.Equal(nameof(ProjectWorkAssignmentRecord.PartyOrganizationAffiliationId), Assert.Single(affiliationKey.Properties).Name);
+                Assert.Empty(entity.GetForeignKeys());
+            } else {
+                Assert.Equal(canonical.ToDebugString(MetadataDebugStringOptions.LongDefault), entity.ToDebugString(MetadataDebugStringOptions.LongDefault));
+            }
         }
         Assert.Throws<InvalidOperationException>(() => owner.Set<Project>().ToQueryString());
         Assert.Throws<InvalidOperationException>(() => owner.Set<PromptArtifact>().ToQueryString());

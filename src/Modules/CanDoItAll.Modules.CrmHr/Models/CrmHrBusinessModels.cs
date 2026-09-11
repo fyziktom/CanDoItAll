@@ -730,7 +730,8 @@ internal sealed class ProjectPartyAssignmentConfiguration : IEntityTypeConfigura
 {
     public void Configure(EntityTypeBuilder<ProjectPartyAssignment> builder)
     {
-        builder.ToTable("CrmHr_ProjectPartyAssignments");
+        builder.ToTable("CrmHr_ProjectPartyAssignments", table => table.HasCheckConstraint(
+            "CK_CrmHr_ProjectPartyAssignments_ParticipationRole", "\"AssignmentKind\" <> 'WorkItemAssignee'"));
         builder.HasKey(assignment => assignment.Id);
         builder.Property(assignment => assignment.AssignmentKind).HasConversion<string>().HasMaxLength(48);
         builder.Property(assignment => assignment.NodeKey).HasMaxLength(160);

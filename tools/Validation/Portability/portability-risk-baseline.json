@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T23:53:18.064371+00:00",
+  "generated_utc": "2026-09-11T00:56:19.796283+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14442,
+  "allowance_count": 14446,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -11717,6 +11717,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910225242_AddWorkflowStructureReceipts.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "3d26c6ea4abae1e4d86567578152874c5d0c6815553d2df213d8227965dd0a8b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260911000227_MoveWorkItemAssignments.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "343258b1e3c443de48677345ceddca1497d8662ef050660d678252e572947d59",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260911000227_MoveWorkItemAssignments.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "405515d4fba03eab4778bf186d79618284eeb56eb16823d45c39e5b0536e2b0b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260911000227_MoveWorkItemAssignments.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "5698241b2e8c880aac343cc1c4822ddc1abb5ba36e36ccf8cbc2ac9f12c6bb55",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260911000227_MoveWorkItemAssignments.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "9c68589fa526d62ebef9905bd5bda1c0ac33ecb76a407a0f0f105347ebf5242e",
       "count": 1
     },
     {

@@ -24,7 +24,7 @@ This module owns product semantics for its bounded area. Keep business behavior 
 
 `WorkspaceConnectorCommandDbContext` contains only connector outbox commands and their audit history. The canonical profile-bound pooled factory reuses the existing mappings, idempotency and queue indexes, and command/audit cascade. Command processing retains the existing lease predicates and atomic finalization/audit transaction. The complete `AppDbContext` remains the migration authority and explicit profile-transfer maintenance model.
 
-Workspace preferences and database-profile administration retain their existing persistence boundaries. Project lifetime admission for new connector commands and durable provider-effect reconciliation remain required dependent work; moving the outbox into its owner context does not establish those guarantees.
+`WorkspaceSettingsDbContext` maps the existing workspace preferences table. Ordinary settings reads and saves use its canonical profile-bound factory; public settings fields, latest-record selection and currency normalization remain unchanged. Database-profile schema inspection and explicit transfer maintenance retain the complete canonical model until their separate maintenance boundary cutover. Project lifetime admission for new connector commands and durable provider-effect reconciliation remain required dependent work; moving the outbox into its owner context does not establish those guarantees.
 
 ## Related Docs
 

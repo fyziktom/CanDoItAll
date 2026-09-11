@@ -546,7 +546,8 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton(workbenchService);
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             bridge,
-            workbenchService);
+            workbenchService,
+                    new ProjectWorkAssignmentTestCommands(bridge));
         var taskResourceService = new ProjectStructureTaskResourceService(
             assigneeService,
             null!,

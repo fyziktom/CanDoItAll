@@ -12,6 +12,9 @@ public static class WorkspaceModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkspaceModule(this IServiceCollection services)
     {
+        services.AddPooledDbContextFactory<WorkspaceSettingsDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.AddPooledDbContextFactory<WorkspaceConnectorCommandDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });

@@ -14,7 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class AgentFileHistorySource(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<AgentHistoryDbContext> factory,
+    ProjectIdentityQueryService projects,
     HistoryPartitionStore partitions,
     IDatabaseProfileRuntimeAccessor profiles,
     IWorkspacePathResolver paths,
@@ -79,9 +80,7 @@ public sealed class AgentFileHistorySource(
         if (position.Phase == BackfillPhase.Complete) {
             return null;
         }
-        await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        var project = await db.Set<Project>().AsNoTracking().Where(row => row.Id.CompareTo(position.AfterProject) > 0)
-            .OrderBy(row => row.Id).Select(row => (Guid?)row.Id).FirstOrDefaultAsync(cancellationToken);
+        var project = await projects.FindNextIdAfterAsync(position.AfterProject, cancellationToken);
         return project is { } id ? WorkspaceScopeDescriptor.Project(id.ToString("D")) : null;
     }
 
@@ -115,7 +114,7 @@ public sealed class AgentFileHistorySource(
         if (locator.IsDeleted) {
             return new(source, new(locator.SourceVersion), HistorySourceMutationKind.Delete, null, []);
         }
-        if (locator.ProjectId is { } project && !await db.Set<Project>().AnyAsync(row => row.Id == project, cancellationToken)) {
+        if (locator.ProjectId is { } project && !await projects.ExistsAsync(project, cancellationToken)) {
             return new(source, new(checked(locator.SourceVersion + 1)), HistorySourceMutationKind.Delete, null, []);
         }
         var journal = new FileProviderHistoryJournal(paths.ResolveWorkspaceRoot(), new(locator.ScopeKind, locator.ScopeKey));

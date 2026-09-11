@@ -710,7 +710,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             partyIntegrationBridge,
-            workbenchService);
+            workbenchService,
+                    new ProjectWorkAssignmentTestCommands(partyIntegrationBridge));
         var resourceService = new ProjectStructureTaskResourceService(
             assigneeService,
             services.GetRequiredService<IWorkflowCatalogService>(),

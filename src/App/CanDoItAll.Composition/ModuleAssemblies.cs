@@ -22,10 +22,10 @@ using CanDoItAll.Processes.Persistence;
 
 namespace CanDoItAll.Composition;
 
-public static class ModuleAssemblies
-{
+public static class ModuleAssemblies {
     public static readonly Assembly[] All =
     [
+        typeof(ModuleAssemblies).Assembly,
         typeof(AgentFrameworkModuleAssemblyMarker).Assembly,
         typeof(ProviderManagementModuleAssemblyMarker).Assembly,
         typeof(CanDoItAll.AgentFramework.ProviderHistory.Persistence.ProviderHistoryPersistenceAssemblyMarker).Assembly,

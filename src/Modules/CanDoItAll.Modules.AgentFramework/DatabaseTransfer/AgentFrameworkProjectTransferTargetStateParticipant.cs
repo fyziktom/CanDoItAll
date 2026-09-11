@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class AgentFrameworkProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.AgentFramework;
 
@@ -16,14 +15,14 @@ internal sealed class AgentFrameworkProjectTransferTargetStateParticipant
         typeof(WorkflowRunRecordEntity),
         typeof(WorkflowUsageObservationRecordEntity),
         typeof(AgentProjectStructureAccessRevocationRecord),
-        typeof(AgentHistoryLocator)
+        typeof(AgentHistoryLocator),
+        typeof(WorkflowStructureOutputRecord)
     ];
 
     public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
     FindResiduesAsync(
             AppDbContext dbContext,
-            CancellationToken cancellationToken)
-    {
+            CancellationToken cancellationToken) {
         var residues = new List<ProjectTransferTargetStateResidue>();
         if (await dbContext.Set<WorkflowRunRecordEntity>()
                 .AsNoTracking()
@@ -32,8 +31,7 @@ internal sealed class AgentFrameworkProjectTransferTargetStateParticipant
                         item.OriginProjectId.HasValue ||
                         item.OriginKind ==
                             WorkflowLaunchOriginKind.ProjectStructureNode,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("agent workflow runs linked to projects"));
         }
 
@@ -42,8 +40,7 @@ internal sealed class AgentFrameworkProjectTransferTargetStateParticipant
                 .AnyAsync(
                     item => item.OriginKind ==
                         WorkflowLaunchOriginKind.ProjectStructureNode,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("project structure workflow launch claims"));
         }
 
@@ -52,23 +49,24 @@ internal sealed class AgentFrameworkProjectTransferTargetStateParticipant
                 .AnyAsync(
                     item => item.OriginKind ==
                         WorkflowLaunchOriginKind.ProjectStructureNode,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("project structure workflow usage observations"));
         }
 
         if (await dbContext.Set<AgentProjectStructureAccessRevocationRecord>()
                 .AsNoTracking()
-                .AnyAsync(cancellationToken))
-        {
+                .AnyAsync(cancellationToken)) {
             residues.Add(new("project access revocation recoveries"));
         }
 
         if (await dbContext.Set<AgentHistoryLocator>()
                 .AsNoTracking()
-                .AnyAsync(item => item.ProjectId.HasValue, cancellationToken))
-        {
+                .AnyAsync(item => item.ProjectId.HasValue, cancellationToken)) {
             residues.Add(new("project-linked canonical agent history"));
+        }
+
+        if (await dbContext.Set<WorkflowStructureOutputRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained workflow Structure outputs"));
         }
 
         return residues;

@@ -17,7 +17,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class WorkbenchAssignmentOwnerPersistenceTests {
     [Fact]
-    public async Task Crm_add_and_remove_stage_final_tracked_assignments_on_the_same_canonical_task_after_restart() {
+    public async Task Work_owner_add_and_remove_stage_final_tracked_assignments_on_the_same_canonical_task_after_restart() {
         await using var environment = CanDoItAllTestEnvironment.Create("workbench-assignment-owner");
         var profile = environment.CreatePostgreSqlProfile("original");
         var otherProfile = environment.CreatePostgreSqlProfile("other");
@@ -26,7 +26,7 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
             seed = await SeedAsync(original);
         }
         var commands = new WorkbenchCommandProbe();
-        var saves = new CrmSaveProbe();
+        var saves = new WorkSaveProbe();
         await using var application = await TestApplication.CreateAsync(Harness(environment, profile, commands, saves));
         await using var scope = application.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
@@ -35,7 +35,7 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         AssertEnlisted(commands, saves);
         await AssertTaskAsync(application, seed, expectedRevision: 1, expectedDisplayName: "Chosen person", expectedCost: null);
         await using (var canonical = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
-            var assignment = await canonical.Set<ProjectPartyAssignment>().SingleAsync(item => item.Id == result.Value);
+            var assignment = await canonical.Set<ProjectWorkAssignmentRecord>().SingleAsync(item => item.Id == result.Value);
             Assert.Equal(seed.ProjectId, assignment.ProjectId);
             Assert.Equal(seed.TaskNodeKey, assignment.NodeKey);
             Assert.Equal(seed.PartyId, assignment.PartyId);
@@ -45,7 +45,7 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         AssertEnlisted(commands, saves);
         await AssertTaskAsync(application, seed, expectedRevision: 2, expectedDisplayName: string.Empty, expectedCost: null);
         await using (var canonical = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
-            Assert.False(await canonical.Set<ProjectPartyAssignment>().AnyAsync(item => item.Id == result.Value));
+            Assert.False(await canonical.Set<ProjectWorkAssignmentRecord>().AnyAsync(item => item.Id == result.Value));
         }
         await using var other = await TestApplication.CreateAsync(new TestHarnessOptions { TestEnvironment = environment, ActiveProfile = otherProfile });
         await using var otherWorkbench = await other.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
@@ -54,22 +54,22 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
     }
 
     [Fact]
-    public async Task Failure_in_the_final_crm_save_rolls_back_successfully_staged_workbench_changes() {
+    public async Task Failure_in_the_final_work_assignment_save_rolls_back_successfully_staged_task_changes() {
         var commands = new WorkbenchCommandProbe();
-        var saves = new CrmSaveProbe();
+        var saves = new WorkSaveProbe();
         await using var application = await TestApplication.CreateAsync(Harness(commands: commands, saves: saves));
         var seed = await SeedAsync(application);
         await using var scope = application.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
         commands.Commands.Clear();
         saves.FailAssignmentSave = true;
-        await Assert.ThrowsAsync<InjectedCrmSaveFailure>(() => service.SaveAssignmentAsync(Request(seed)));
+        await Assert.ThrowsAsync<InjectedWorkSaveFailure>(() => service.SaveAssignmentAsync(Request(seed)));
         saves.FailAssignmentSave = false;
         AssertEnlisted(commands, saves);
         Assert.Contains(commands.Commands, command => command.Text.Contains("UPDATE", StringComparison.OrdinalIgnoreCase));
         await AssertTaskAsync(application, seed, expectedRevision: 0, expectedDisplayName: string.Empty, expectedCost: 100m);
         await using var canonical = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-        Assert.False(await canonical.Set<ProjectPartyAssignment>().AnyAsync(item => item.ProjectId == seed.ProjectId));
+        Assert.False(await canonical.Set<ProjectWorkAssignmentRecord>().AnyAsync(item => item.ProjectId == seed.ProjectId));
         Assert.True(await canonical.Set<ProjectNodeReferenceRecord>().AnyAsync(item => item.Id == seed.ReferenceRowId));
     }
 
@@ -167,7 +167,7 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
     }
 
     private static TestHarnessOptions Harness(CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null,
-        WorkbenchCommandProbe? commands = null, CrmSaveProbe? saves = null) => new() {
+        WorkbenchCommandProbe? commands = null, WorkSaveProbe? saves = null) => new() {
         TestEnvironment = environment, ActiveProfile = profile,
         ConfigureServices = services => {
             services.AddSingleton<DbContextOptions<WorkbenchDbContext>>(provider => {
@@ -175,6 +175,9 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
                 AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
                 if (commands is not null) {
                     options.AddInterceptors(commands);
+                }
+                if (saves is not null) {
+                    options.AddInterceptors(saves);
                 }
                 return options.Options;
             });
@@ -189,7 +192,7 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         }
     };
 
-    private static void AssertEnlisted(WorkbenchCommandProbe commands, CrmSaveProbe saves) {
+    private static void AssertEnlisted(WorkbenchCommandProbe commands, WorkSaveProbe saves) {
         Assert.NotNull(saves.OwnerConnection);
         Assert.NotNull(saves.OwnerTransaction);
         var staged = commands.Commands.Where(command => command.Transaction is not null).ToArray();
@@ -202,22 +205,22 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
 
     private sealed record Seed(Guid ProjectId, Guid PartyId, Guid TaskId, string TaskNodeKey, Guid BindingId, Guid ReferenceRowId, Guid ResourceId);
 
-    private sealed class InjectedCrmSaveFailure() : Exception("Injected failure after Workbench staging and before the final CRM save.") {
+    private sealed class InjectedWorkSaveFailure() : Exception("Injected failure after native task staging and before the final Work assignment save.") {
     }
 
-    private sealed class CrmSaveProbe : SaveChangesInterceptor {
+    private sealed class WorkSaveProbe : SaveChangesInterceptor {
         public bool FailAssignmentSave { get; set; }
         public DbConnection? OwnerConnection { get; private set; }
         public DbTransaction? OwnerTransaction { get; private set; }
 
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
-            if (eventData.Context is AppDbContext context && context.ChangeTracker.Entries<ProjectPartyAssignment>()
+            if (eventData.Context is WorkbenchDbContext context && context.ChangeTracker.Entries<ProjectWorkAssignmentRecord>()
                 .Any(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)) {
                 OwnerConnection = context.Database.GetDbConnection();
                 OwnerTransaction = context.Database.CurrentTransaction?.GetDbTransaction();
                 if (FailAssignmentSave) {
-                    throw new InjectedCrmSaveFailure();
+                    throw new InjectedWorkSaveFailure();
                 }
             }
             return ValueTask.FromResult(result);

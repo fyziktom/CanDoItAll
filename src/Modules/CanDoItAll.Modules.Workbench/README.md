@@ -131,8 +131,8 @@ The fact query follows binding-ID collection, so these independent reads are not
 new atomic catalog snapshot. Existing record-based provenance helpers remain explicit
 compatibility adapters for creation/transfer callers that have not yet migrated.
 
-Workbench runtime services use the explicit twelve-record `WorkbenchDbContext`: the
-existing ten records plus Workflow contribution receipts and admissions. The pooled
+Workbench runtime services use the explicit thirteen-record `WorkbenchDbContext`: the
+existing ten records, Workflow contribution receipts and admissions, and Work assignments. The pooled
 factory remains bound to the immutable canonical host profile. Complete migrations
 remain the only schema authority; profile-transfer maintenance is a separate cutover.
 
@@ -159,6 +159,37 @@ account for that evidence. This ownership cutover does not establish admission f
 all project-attributed writers; the separate lifetime/admission boundary remains
 required. Storage reconciliation and Workflow launch authority retain their own
 explicit pending/conflict/reconciliation dispositions.
+
+## Work assignment ownership
+
+`ProjectWorkAssignmentService` owns direct `WorkItemAssignee` rows and stages the
+existing canonical work-item revision/display/pricing update on the same database
+transaction. `ProjectObjectRecord` remains the sole writable native task identity;
+no task table is duplicated. Ordinary fact queries use an independent Workbench
+factory. Explicit staged commands require the caller's coordinated transaction and
+ordered project/assignment identity locks. Preallocated IDs preserve the original
+global assignment identity constraint across the two owner tables.
+
+CRM owns Party/affiliation validation, participation roles, capacity and rates. The
+canonical schema retains the affiliation Restrict FK for each assignment table;
+the Workbench runtime model contains only its scalar reference and indexes. Work
+records retain IDs, phase/opportunity, allocation, UTC intervals, primary flags,
+source and notes, including unavailable historical references. Existing task edit
+compensation across assignment and later pricing commits remains unchanged.
+
+The existing twelve-collection Projects package does not export assignment rows.
+Native task metadata still travels with Objects. Work assignment residue therefore
+blocks a nonempty target as it did when stored in CRM; this cut does not add a new
+assignment export feature. Captured project-lifetime admission for every writer
+and the broader Work Management scheduling/reservation invariants remain required.
+
+Migration `20260911000227_MoveWorkItemAssignments` copies every direct Work row and
+all thirteen fields under exclusive locks before enforcing the CRM participation-only
+check. Existing native identities, duplicates, unavailable references and affiliation
+FKs survive. The populated Down restores those rows to CRM and refuses conflicting
+assignment IDs before changing data or constraints. Stop old/new writers during this
+cutover: old binaries cannot write Work assignments after Up, and new binaries require
+the Work table. Downgrading further remains subject to each earlier receipt gate.
 
 ## Related Docs
 

@@ -28,7 +28,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class SharedProviderPremergeUpgradeTests {
     private const string DevelopmentMigration = "20260822013043_AddWorkflowNativeCheckpointRequestUniqueness";
-    private const string ReviewedMigration = "20260910225242_AddWorkflowStructureReceipts";
+    private const string ReviewedMigration = "20260911000227_MoveWorkItemAssignments";
     private static readonly DateTimeOffset RecordedAt = new(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class SharedProviderPremergeUpgradeTests {
         var journal = new FileProviderHistoryJournal(files.RootPath, scope);
         var batch = await journal.ReadBatchAsync(partition, 10);
         Assert.Single(batch);
-        await new AgentHistoryPublicationStore(factory, history.Partitions, history.Projection, history.Transactions).PublishAsync(partition, scope, batch, default);
+        await AgentHistoryOwnerPersistenceTestFactory.Publications(factory, history.Partitions, history.Projection, history.Transactions).PublishAsync(partition, scope, batch, default);
         await journal.AcknowledgeAsync(batch[0]);
         Assert.Empty(await journal.ReadBatchAsync(partition, 10));
         db.ChangeTracker.Clear();

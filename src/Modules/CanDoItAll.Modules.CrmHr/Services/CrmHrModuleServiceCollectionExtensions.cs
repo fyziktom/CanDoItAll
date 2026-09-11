@@ -37,6 +37,7 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<ICrmHrAgentQueryService, CrmHrAgentQueryService>();
         services.AddScoped<ProjectPartyAssignmentNodePolicy>();
         services.AddScoped<ProjectPartyAffiliationContextService>();
+        services.AddScoped<IProjectWorkAssignmentPartyFacts, ProjectWorkAssignmentPartyFacts>();
         services.AddScoped<ProjectPartyIntegrationService>();
         services.AddScoped<ICrmHrSourceSnapshotProvider, CrmHrSourceSnapshotProvider>();
         services.AddMemorySourceGatewayAdapter<CrmHrMemorySourceGatewayAdapter>();

@@ -37,7 +37,7 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
             await context.Database.MigrateAsync();
             Assert.Equal(original, await NativePayloadsAsync(context));
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(155, context.Model.GetEntityTypes().Count());
+            Assert.Equal(156, context.Model.GetEntityTypes().Count());
             Assert.Equal(0, await context.Set<WorkflowStructureOutputRecord>().CountAsync());
             Assert.Equal(0, await context.Set<StoragePlacementIntentRecord>().CountAsync());
             Assert.Equal(0, await context.Set<ProjectWorkflowAdmissionRecord>().CountAsync());

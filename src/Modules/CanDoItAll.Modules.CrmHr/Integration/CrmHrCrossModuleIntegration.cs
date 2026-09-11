@@ -137,20 +137,22 @@ public sealed partial class PartyDirectoryService
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var totalCount = await dbContext.Set<ProjectPartyAssignment>().AsNoTracking()
+        var totalCount = await ProjectAssignmentReporting.Relational(dbContext)
             .CountAsync(assignment => assignment.PartyId == query.PartyId, cancellationToken);
         const string unknownProject = "Unknown project";
-        var items = await dbContext.Database.SqlQuery<PartyProjectAssignmentItemModel>($"""
+        var items = await dbContext.Database.SqlQueryRaw<PartyProjectAssignmentItemModel>("""
                 SELECT assignment."Id", assignment."ProjectId",
-                    COALESCE(project."Name", {unknownProject}) AS "ProjectName",
+                    COALESCE(project."Name", {0}) AS "ProjectName",
                     assignment."AssignmentKind", assignment."NodeKey", assignment."AllocationPercent",
                     (assignment."StartsAtUtc" AT TIME ZONE 'UTC')::date AS "StartsOn",
                     (assignment."EndsAtUtc" AT TIME ZONE 'UTC')::date AS "EndsOn",
                     assignment."IsPrimary", assignment."Notes"
-                FROM "CrmHr_ProjectPartyAssignments" AS assignment
+                FROM (
+                """ + ProjectAssignmentReporting.AllAssignmentsSql + """
+                ) AS assignment
                 LEFT JOIN "Projects_Projects" AS project ON assignment."ProjectId" = project."Id"
-                WHERE assignment."PartyId" = {query.PartyId}
-                """)
+                WHERE assignment."PartyId" = {1}
+                """, unknownProject, query.PartyId)
             .OrderBy(item => item.ProjectName)
             .ThenBy(item => item.AssignmentKind)
             .ThenBy(item => item.Id)

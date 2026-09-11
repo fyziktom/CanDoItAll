@@ -126,4 +126,19 @@ request/operation versions and lease epochs retain their existing explicit proto
 History projection, usage append and resume commit keep explicit owner/History
 transaction enlistment. Ordinary factories remain independent. This cutover does not
 move schema/migration authority, change saved payloads, or complete target-profile
-transfer, Agent history locators, producer authority or project lifetime admission.
+transfer, producer authority or project lifetime admission.
+
+Agent history locators use the one-record `AgentHistoryDbContext`. Publication keeps
+locator and History index changes in the same existing database transaction; file
+acknowledgement remains after that commit. Project scope existence and GUID cursor
+reads use the Projects-owned `ProjectIdentityQueryService`, with an explicit enlisted
+method for publication and independent methods for normal reads.
+
+Orphan reconciliation retains one fixed, parameterized PostgreSQL read joining the
+owned locator table to the Project identity column. This read-only reporting dependency
+keeps the missing-project predicate before ordering and the batch limit, in the same
+statement and isolation level as before. It maps and tracks only owned locator rows;
+the runtime model cannot construct, track or write a Project. The canonical migration
+model remains the sole mapping/schema authority. Locator scope, evidence identity,
+source version, tombstones and historical missing-project behavior are unchanged;
+this path does not infer or grant a current Project lifetime.

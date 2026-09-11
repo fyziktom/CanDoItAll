@@ -20,6 +20,7 @@ public static class ProjectsModuleServiceCollectionExtensions
         services.AddScoped<ProjectsService>();
         services.AddScoped<ProjectWriteAdmissionService>();
         services.AddScoped<ProjectRecordQueryService>();
+        services.AddSingleton<ProjectIdentityQueryService>();
         services.AddScoped<ProjectStructureProjectionQueryService>();
         services.AddScoped<IProjectRecordQueryService>(provider => provider.GetRequiredService<ProjectRecordQueryService>());
         services.AddScoped<IRecentProjectActivityQueryService, RecentProjectActivityQueryService>();

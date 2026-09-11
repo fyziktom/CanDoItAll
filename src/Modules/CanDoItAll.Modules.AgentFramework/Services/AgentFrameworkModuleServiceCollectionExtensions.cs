@@ -54,6 +54,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddPooledDbContextFactory<AgentProjectAccessDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });
+        services.AddPooledDbContextFactory<AgentHistoryDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.AddPooledDbContextFactory<WorkflowDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });

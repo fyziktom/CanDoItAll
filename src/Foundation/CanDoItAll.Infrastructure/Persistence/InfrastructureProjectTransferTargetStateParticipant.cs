@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Infrastructure.Persistence;
 
 internal sealed class InfrastructureProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.Infrastructure;
 
@@ -14,14 +13,14 @@ internal sealed class InfrastructureProjectTransferTargetStateParticipant
     [
         typeof(SearchDocument),
         typeof(StorageCatalogRecord),
-        typeof(StorageRoutingRule)
+        typeof(StorageRoutingRule),
+        typeof(StoragePlacementIntentRecord)
     ];
 
     public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
         FindResiduesAsync(
             AppDbContext dbContext,
-            CancellationToken cancellationToken)
-    {
+            CancellationToken cancellationToken) {
         var residues = new List<ProjectTransferTargetStateResidue>();
         if (await dbContext.Set<SearchDocument>()
                 .AsNoTracking()
@@ -29,8 +28,7 @@ internal sealed class InfrastructureProjectTransferTargetStateParticipant
                     document =>
                         document.ProjectId.HasValue ||
                         document.SourceType == SearchDocument.ProjectSourceType,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("project search documents"));
         }
 
@@ -41,9 +39,12 @@ internal sealed class InfrastructureProjectTransferTargetStateParticipant
                         rule.ProjectId.HasValue ||
                         rule.ScopeKind == StorageRoutingScopeKind.Project ||
                         rule.ScopeKind == StorageRoutingScopeKind.Node,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("project storage routing rules"));
+        }
+
+        if (await dbContext.Set<StoragePlacementIntentRecord>().AsNoTracking().AnyAsync(item => item.ProjectId.HasValue, cancellationToken)) {
+            residues.Add(new("project storage placement intents"));
         }
 
         return residues;
