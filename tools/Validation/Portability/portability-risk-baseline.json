@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-10T23:12:56.480310+00:00",
+  "generated_utc": "2026-09-10T23:53:18.064371+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14435,
+  "allowance_count": 14442,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -9722,6 +9722,12 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.StablePlacement.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "d9181ca120b5549d1f56210a2fada39764341a11756f802cd636ea2bf3fd2ac6",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "0b7eeef77d76763eb86741cd153530bb5c78877b117eadc64ed82deb2bb6ae0d",
@@ -10772,6 +10778,12 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Placement/StorageStablePlacementService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "2ff1358d2c75feedec668659f9eb53b0f300fe391b306bc5b9721516244ddbae",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Routing/DefaultStorageRoutingService.cs",
       "category": "case-policy",
       "source_fingerprint": "291267b16a8098ab144f080951a3de14ad41706fa56c133fa9c88a80bfd566e7",
@@ -11681,6 +11693,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910213323_AddCrmTechnicalProjectionProvenance.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "d0f642d9f0c83426ce12cfb50ba43a8dee6c1f3dac8de5b41d6d05ee2157cecc",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910225242_AddWorkflowStructureReceipts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "1993d2da549c419c67a99b1c4b4c6f443342933e11e80501f989122f93bb2760",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910225242_AddWorkflowStructureReceipts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "6be9b5a3822d41a18fad6e43931c252d3a14e88836a05fbac9b05bf19c64eed1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910225242_AddWorkflowStructureReceipts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "044481b1c981298802d2f177358b1def25a8bf36eaa975f3cc5b4d2ee95a3723",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260910225242_AddWorkflowStructureReceipts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "3d26c6ea4abae1e4d86567578152874c5d0c6815553d2df213d8227965dd0a8b",
       "count": 1
     },
     {
@@ -14255,6 +14291,12 @@
       "path": "src/Integration/CanDoItAll.FileTools.Integration/StorageFileToolsKnownFileResolver.cs",
       "category": "external-tool",
       "source_fingerprint": "e82b10c0d6f93f096229410778075ab7be98440a5f5fe66edeb09a7e33d618a6",
+      "count": 1
+    },
+    {
+      "path": "src/Integration/CanDoItAll.FileTools.Integration/StoragePlacementFileCatalogObserver.cs",
+      "category": "external-tool",
+      "source_fingerprint": "523e4d691c754fadce8342dc23bed7a5ee5f2ee23c0861dc70d5a34d4b2085f8",
       "count": 1
     },
     {
@@ -64052,12 +64094,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowLaunchIntentFactory.cs",
-      "category": "permissions",
-      "source_fingerprint": "5b8b3175152f4d5403b423b3cd5e99a9be26a53ae15e0ff6a19d5a5bdcc04c3d",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeKeys.cs",
       "category": "case-policy",
       "source_fingerprint": "838ef4aabeb2be40070fceb8ae11ea89b76efc1dcf03746134f57cefe5ef7b43",
@@ -64067,12 +64103,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs",
       "category": "case-policy",
       "source_fingerprint": "0bf6af628ce625ce76b66aea3f9a7ceaf8d05553e67302ac139579964e93c103",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a5766f73277d870b9e2a6b4e1fc6de04b8f4c1f277de22000c58a99f5ea6c0e7",
       "count": 1
     },
     {
@@ -64151,6 +64181,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchMarkdownMermaidComponentRegistration.cs",
       "category": "external-tool",
       "source_fingerprint": "bbd10d7dd7fc58906b6423fb5df68d8bb21e549a462c727fcdcf0c88e1846c7e",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureRuntimeGateway.WorkflowOutputs.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "79d589918f649f4c3592e7640aa141411e0e940665986436e56f6685eec1cc9a",
       "count": 1
     },
     {
@@ -64721,6 +64757,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchService.Clipboard.cs",
       "category": "case-policy",
       "source_fingerprint": "ce4fb6ee19ed99f4592b7aeeb97065099e79896268715cf22028dc10657c117a",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchService.WorkflowAdmissions.cs",
+      "category": "permissions",
+      "source_fingerprint": "4d9db77fa87b2f29ef66f8ea5123dee1323c73287c9002314b9f3626abc90eca",
       "count": 1
     },
     {

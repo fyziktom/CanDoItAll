@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AppComponents.FileTools;
@@ -64,6 +65,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectDeletionParticipant,
             ProjectWorkbenchDeletionParticipant>());
+        services.AddScoped<ProjectStructureMutationScopeFactory>();
         services.AddScoped<ProjectWorkbenchCommandService>();
         services.AddScoped<ProjectWorkbenchCrossModuleMutationService>();
         services.AddScoped<ProjectWorkbenchLifecycleService>();
@@ -148,7 +150,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessSubprocessLaunchCoordinator, ProjectStructureProcessSubprocessLaunchCoordinator>());
         services.TryAddSingleton<ProjectStructureWorkflowLaunchIntentFactory>();
+        services.AddScoped<ProjectStructureWorkflowAuthorityService>();
+        services.AddScoped<IWorkflowStructureAuthorityFactory>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureWorkflowAuthorityService>());
         services.AddScoped<ProjectStructureWorkflowNodeService>();
+        services.AddHostedService<ProjectStructureWorkflowDeliveryWorker>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {
             var workspaceRoot = serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
@@ -167,7 +173,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAgentService>();
         services.AddScoped<ProjectStructureAgentNodeCopyCoordinator>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectStructureAgentRuntimeToolProvider>());
-        services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
+        services.AddScoped<WorkbenchProjectStructureRuntimeGateway>();
+        services.AddScoped<IProjectStructureRuntimeGateway>(serviceProvider =>
+            serviceProvider.GetRequiredService<WorkbenchProjectStructureRuntimeGateway>());
         services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, WorkbenchProjectStructureMemorySourceGatewayAdapter>());
         services.AddScoped<ProjectMemoryIngestionService>();

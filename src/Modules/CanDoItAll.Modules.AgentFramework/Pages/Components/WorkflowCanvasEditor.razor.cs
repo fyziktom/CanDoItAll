@@ -48,6 +48,9 @@ public partial class WorkflowCanvasEditor
     public IWorkflowTestRunner TestRunner { get; set; } = default!;
 
     [Inject]
+    public IWorkflowStructureAuthorityFactory StructureAuthority { get; set; } = default!;
+
+    [Inject]
     public IProjectStructureRuntimeGateway ProjectStructureGateway { get; set; } = default!;
 
     [Inject]
@@ -148,7 +151,7 @@ public partial class WorkflowCanvasEditor
     private string SelectionWindowSummary
         => SelectedNode is null
             ? $"{document.Nodes.Count} nodes"
-            : $"{SelectedNode.Kind} · {SelectedNode.Id.Value}";
+            : $"{SelectedNode.Kind} Â· {SelectedNode.Id.Value}";
 
     private sealed record RemovalBridge(
         WorkflowNodeId SourceNodeId,
@@ -985,12 +988,18 @@ public partial class WorkflowCanvasEditor
                     RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
                     ValidateOnly: false)
                 {
-                    PreviewSimulationPlan = simulationPlan
+                    PreviewSimulationPlan = simulationPlan,
+                    StructureAuthority = await StructureAuthority.CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.UserInterface)
                 });
             validationIssues = testResult.Validation.Issues;
             if (testResult.Run is not null)
             {
                 await PreviewRunCompleted.InvokeAsync(testResult.Run);
+            }
+
+            if (!testResult.DetailsComplete) {
+                NotificationService.Warning("Workflow run recorded", "The run is recorded. Its detailed status is not available yet.");
+                return;
             }
 
             if (!testResult.Succeeded)
@@ -2397,8 +2406,8 @@ public partial class WorkflowCanvasEditor
 
     private string BuildNodeDetailsDialogSubtitle(WorkflowCanvasNodeDraft node)
         => node.Kind == WorkflowNodeKind.Executor && ResolveSelectedExecutorDescriptor(node) is { } descriptor
-            ? $"{descriptor.Category} executor · {node.Id.Value}"
-            : $"{node.Kind} · {node.Id.Value}";
+            ? $"{descriptor.Category} executor Â· {node.Id.Value}"
+            : $"{node.Kind} Â· {node.Id.Value}";
 
     private string FormatExecutorSettingsJson(WorkflowCanvasNodeDraft node)
     {
@@ -2584,7 +2593,7 @@ public partial class WorkflowCanvasEditor
 
         var artifact = component.PromptArtifactId?.ToString("D") ?? "missing artifact";
         var revision = component.PromptVersionId?.ToString("D") ?? "missing revision";
-        return $"{component.Name} · Gallery item {artifact} · immutable revision {revision}";
+        return $"{component.Name} Â· Gallery item {artifact} Â· immutable revision {revision}";
     }
 
     private string BuildProviderOptionsSummary()

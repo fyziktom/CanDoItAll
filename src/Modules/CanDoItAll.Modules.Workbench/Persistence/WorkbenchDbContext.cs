@@ -15,6 +15,8 @@ public sealed class WorkbenchDbContext(DbContextOptions<WorkbenchDbContext> opti
         modelBuilder.ApplyConfiguration(new ProjectNodeReferenceRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectNodeLifecycleEventRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectCrossModuleMutationRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new ProjectWorkflowContributionRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new ProjectWorkflowAdmissionRecordConfiguration());
         base.OnModelCreating(modelBuilder);
     }
 

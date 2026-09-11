@@ -171,6 +171,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IStorageRoutingService, DefaultStorageRoutingService>();
         services.AddSingleton<IStorageConnectionTestService, StorageConnectionTestService>();
         services.AddSingleton<IStorageAccessService, StorageAccessService>();
+        services.AddSingleton<StorageStablePlacementService>();
         services.AddSingleton<StoragePlacementService>();
         services.AddSingleton<IStoragePlacementService>(provider =>
             provider.GetRequiredService<StoragePlacementService>());

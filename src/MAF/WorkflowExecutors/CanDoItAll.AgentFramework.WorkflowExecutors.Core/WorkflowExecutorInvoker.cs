@@ -82,6 +82,7 @@ public sealed class WorkflowExecutorInvoker(
             policy)
         {
             RunId = WorkflowExecutorExecutionAuditScope.CurrentRunId,
+            ExecutionOccurrence = invocationContext.ExecutionOccurrence,
             PluginConnectionId = pluginConnectionId,
             RedactedSettingsSummary = redactedSettingsSummary,
             CausationRequestId = invocationContext.CausationRequestId,

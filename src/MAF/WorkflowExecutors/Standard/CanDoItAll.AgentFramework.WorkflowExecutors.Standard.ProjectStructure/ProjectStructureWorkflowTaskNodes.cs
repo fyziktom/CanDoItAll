@@ -14,6 +14,7 @@ public sealed partial class ProjectStructureWorkflowExecutor
 
     private static async Task<object> CreateTaskNodesAsync(
         IProjectStructureRuntimeGateway gateway,
+        WorkflowExecutorExecutionContext context,
         WorkflowProjectStructureExecutorSettings settings,
         WorkflowNodeInput input,
         CancellationToken cancellationToken)
@@ -24,7 +25,6 @@ public sealed partial class ProjectStructureWorkflowExecutor
                            throw new InvalidOperationException("Project-structure task creation requires 'NodeId', 'NodeIdJsonPath', or '$.runContext.workflowNodeId'.");
         var tasks = ReadTaskSources(settings, input);
         var createdNodes = new List<ProjectStructureRuntimeNodeSummary>(tasks.Count);
-        var agent = BuildAgentContext(input);
         var idempotencyBatchKey = ResolveProjectWriteIdempotencyKey(settings, input);
         var taskIndex = 0;
 
@@ -33,7 +33,7 @@ public sealed partial class ProjectStructureWorkflowExecutor
             taskIndex++;
             cancellationToken.ThrowIfCancellationRequested();
             var taskIdempotencyKey = BuildTaskIdempotencyKey(idempotencyBatchKey, taskIndex);
-            createdNodes.Add(await gateway.CreateNodeAsync(
+            createdNodes.Add(await gateway.CreateWorkflowTaskAsync(
                 projectId,
                 new ProjectStructureRuntimeNodeCreateRequest(
                     ProjectObjectType.WorkItem,
@@ -43,10 +43,10 @@ public sealed partial class ProjectStructureWorkflowExecutor
                     parentNodeId,
                     EndUtc: task.DueUtc,
                     ObjectSubtype: NormalizeTaskSubtype(settings.TaskObjectSubtype),
-                    MetadataJson: BuildTaskMetadataJson(task, input),
+                    MetadataJson: BuildTaskMetadataJson(task, context, parentNodeId),
                     IdempotencyKey: taskIdempotencyKey,
                     IdempotencyBatchKey: idempotencyBatchKey),
-                agent,
+                RequireEffectContext(context, taskIndex - 1),
                 cancellationToken));
         }
 
@@ -57,6 +57,9 @@ public sealed partial class ProjectStructureWorkflowExecutor
             idempotencyBatchKey,
             createdTaskCount = createdNodes.Count,
             createdNodeIds = createdNodes.Select(node => node.Id).ToArray(),
+            outputReceipts = createdNodes.Select(node => node.WorkflowOutputReceipt).ToArray(),
+            manifestPending = createdNodes.Any(node => node.WorkflowManifestPending),
+            deletedOutputNodeIds = createdNodes.Where(node => node.WorkflowOutputTargetDeleted).Select(node => node.Id).ToArray(),
             createdNodes = createdNodes.Select(node => new
             {
                 node.Id,
@@ -216,7 +219,7 @@ public sealed partial class ProjectStructureWorkflowExecutor
         return builder.ToString().Trim();
     }
 
-    private static string BuildTaskMetadataJson(WorkflowTaskNodeSource task, WorkflowNodeInput input)
+    private static string BuildTaskMetadataJson(WorkflowTaskNodeSource task, WorkflowExecutorExecutionContext context, string parentNodeId)
         => JsonSerializer.Serialize(
             new Dictionary<string, object?>
             {
@@ -226,8 +229,9 @@ public sealed partial class ProjectStructureWorkflowExecutor
                 ["owner"] = task.Owner,
                 ["requiresResponse"] = task.RequiresResponse,
                 ["asap"] = task.Asap,
-                ["workflowRunId"] = ReadRunContextString(input, "runId"),
-                ["workflowNodeId"] = ReadRunContextString(input, "workflowNodeId")
+                ["workflowRunId"] = context.ExecutionOccurrence!.RunId.ToString(),
+                ["workflowNodeId"] = parentNodeId,
+                ["workflowStepId"] = context.Node.Id.Value
             },
             TaskMetadataJsonOptions);
 

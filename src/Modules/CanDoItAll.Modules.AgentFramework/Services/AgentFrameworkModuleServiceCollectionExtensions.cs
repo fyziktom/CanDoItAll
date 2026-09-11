@@ -54,6 +54,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddPooledDbContextFactory<AgentProjectAccessDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });
+        services.AddPooledDbContextFactory<WorkflowDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.AddSingleton(AgentProjectAccessClaimOptions.Default);
         services.AddConversationShell();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
@@ -367,6 +370,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowCatalogLookupService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
+        services.AddScoped<PersistentWorkflowStructureOutputStore>();
+        services.AddScoped<IWorkflowStructureOutputStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowStructureOutputStore>());
         services.TryAddScoped<PersistentWorkflowRunStore>();
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());

@@ -341,11 +341,10 @@ public sealed class WorkflowUsageAnalyticsTests
     [Fact]
     public async Task PersistentStoreRoundTripsImmutableFactsAndAggregatesWithoutDoubleCounting()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(PersistentWorkflowUsageObservationStore).Assembly,
-            typeof(CanDoItAll.AgentFramework.ProviderHistory.Persistence.ProviderHistoryPersistenceAssemblyMarker).Assembly]);
+
         var databaseName = $"workflow-usage-{Guid.NewGuid():N}";
         var databaseRoot = new InMemoryDatabaseRoot();
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase(databaseName, databaseRoot)
             .Options;
         var history = CreateHistory(databaseName, databaseRoot);
@@ -388,12 +387,12 @@ public sealed class WorkflowUsageAnalyticsTests
     {
         var databaseName = $"workflow-usage-composition-{Guid.NewGuid():N}";
         var databaseRoot = new InMemoryDatabaseRoot();
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase(databaseName, databaseRoot)
             .Options;
         var history = CreateHistory(databaseName, databaseRoot);
         var services = new ServiceCollection();
-        services.AddSingleton<IDbContextFactory<AppDbContext>>(
+        services.AddSingleton<IDbContextFactory<WorkflowDbContext>>(
             new WorkflowUsageTestDbContextFactory(options));
         services.AddSingleton(history.Partitions);
         services.AddSingleton(history.Outbox);
@@ -679,10 +678,10 @@ internal sealed class WorkflowUsageFailingBackend(
 }
 
 internal sealed class WorkflowUsageTestDbContextFactory(
-    DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+    DbContextOptions<WorkflowDbContext> options) : IDbContextFactory<WorkflowDbContext>
 {
-    public AppDbContext CreateDbContext() => new(options);
+    public WorkflowDbContext CreateDbContext() => new(options);
 
-    public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+    public Task<WorkflowDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(CreateDbContext());
 }

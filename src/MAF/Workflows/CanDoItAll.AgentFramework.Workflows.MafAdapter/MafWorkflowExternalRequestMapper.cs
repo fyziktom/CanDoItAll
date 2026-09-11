@@ -170,7 +170,7 @@ internal sealed class MafWorkflowExternalRequestMapper(TimeProvider timeProvider
 
         ValidateHumanRequest(persistedRequest, humanRequest);
         return restoredRequest.CreateResponse(
-            new MafWorkflowHumanInputResponse(responseJson));
+            new MafWorkflowHumanInputResponse(responseJson) { ExecutionOccurrence = humanRequest.Context.ExecutionOccurrence });
     }
 
     private static ExternalResponse CreateApprovalResponse(

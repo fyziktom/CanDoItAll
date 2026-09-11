@@ -35,7 +35,7 @@ public sealed class WorkflowHitlProductionConstructorGuardTests
 
     private static Action CreateConstruction(ConstructorDependency dependency)
     {
-        IDbContextFactory<AppDbContext> dbContextFactory = new ThrowingDbContextFactory();
+        IDbContextFactory<WorkflowDbContext> dbContextFactory = new ThrowingDbContextFactory();
         IDataProtectionProvider dataProtectionProvider = new EphemeralDataProtectionProvider();
         var catalog = new WorkflowExecutorCatalog([]);
         var inner = new WorkflowExecutorInvoker(catalog, []);
@@ -120,9 +120,9 @@ public sealed class WorkflowHitlProductionConstructorGuardTests
         ResumeBoundaryTransactions
     }
 
-    private sealed class ThrowingDbContextFactory : IDbContextFactory<AppDbContext>
+    private sealed class ThrowingDbContextFactory : IDbContextFactory<WorkflowDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public WorkflowDbContext CreateDbContext()
             => throw new InvalidOperationException("The constructor test must not create a database context.");
     }
 }

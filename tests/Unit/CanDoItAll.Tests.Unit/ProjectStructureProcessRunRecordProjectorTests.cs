@@ -230,6 +230,18 @@ public sealed class ProjectStructureProcessRunRecordProjectorTests
             UpdatedAtUtc: EndedAtUtc.AddMinutes(1));
     }
 
+    [Fact]
+    public async Task Mutation_projection_uses_the_explicit_enlisted_record_query() {
+        var projectId = Guid.NewGuid();
+        var summary = CreateSummary(projectId, ProcessRunDisposition.Succeeded, ProcessRunFactsStatus.Completed);
+        var reader = new RecordingReader(new ProcessRunRecordPage([summary], NextCursor: null));
+        var projector = new ProjectStructureProcessRunRecordProjector(reader, NullLogger<ProjectStructureProcessRunRecordProjector>.Instance);
+        var result = await projector.LoadAsync(projectId, CancellationToken.None, forMutation: true);
+        Assert.Single(result);
+        Assert.Equal(1, reader.MutationCalls);
+        Assert.Single(reader.Queries);
+    }
+
     private static ProcessRunNarrative CreateNarrative()
     {
         var participantId = new ProcessRunParticipantId("agent:manager");
@@ -248,9 +260,23 @@ public sealed class ProjectStructureProcessRunRecordProjectorTests
                 EndedAtUtc));
     }
 
-    private sealed class RecordingReader(params ProcessRunRecordPage[] pages) : IProcessRunRecordReader
+    private sealed class RecordingReader(params ProcessRunRecordPage[] pages) : IProcessStructureProjectionQueryService
     {
         private readonly Queue<ProcessRunRecordPage> _pages = new(pages);
+        public int MutationCalls { get; private set; }
+        public Task<ProcessRunRecordPage> ListForMutationAsync(ProcessRunRecordListQuery query, CancellationToken cancellationToken = default) {
+            MutationCalls++;
+            return ListAsync(query, cancellationToken);
+        }
+        public Task<IReadOnlyList<ProcessStructureAssignmentFact>> GetProjectAssignmentsAsync(Guid projectId,
+            IReadOnlyCollection<Guid> excludedRunIds, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected assignment read.");
+        public Task<IReadOnlyList<ProcessStructureAssignmentFact>> GetProjectAssignmentsForMutationAsync(Guid projectId,
+            IReadOnlyCollection<Guid> excludedRunIds, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected assignment read.");
+        public Task<ProcessStructureRuntimeFacts> GetRuntimeFactsAsync(IReadOnlyCollection<Guid> runIds,
+            CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected runtime read.");
+        public Task<ProcessStructureRuntimeFacts> GetRuntimeFactsForMutationAsync(IReadOnlyCollection<Guid> runIds,
+            CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected runtime read.");
+
 
         public List<ProcessRunRecordListQuery> Queries { get; } = [];
 

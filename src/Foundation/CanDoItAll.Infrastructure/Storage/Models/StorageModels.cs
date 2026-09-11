@@ -128,8 +128,13 @@ public sealed record StorageObjectReference(
     string MetadataJson = "{}")
 {
     public const int CurrentFormatVersion = 2;
+    public const int StablePlacementFormatVersion = 3;
+    public const int MaximumSupportedFormatVersion = StablePlacementFormatVersion;
 
     public int FormatVersion { get; init; } = CurrentFormatVersion;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? PlacementIntentId { get; init; }
 }
 
 public sealed record StorageAccessDescriptor(

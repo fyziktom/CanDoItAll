@@ -220,6 +220,8 @@ public abstract record WorkflowLaunchOrigin
 
     public HistoryCaller? HistoryCaller { get; init; }
 
+    public WorkflowStructureAuthority? StructureAuthority { get; init; }
+
     public sealed record Api : WorkflowLaunchOrigin
     {
         [JsonConstructor]
@@ -314,10 +316,6 @@ public abstract record WorkflowLaunchOrigin
             }
 
             ArgumentNullException.ThrowIfNull(requestingActor);
-            if (requestingActor.Kind != WorkflowLaunchActorKind.Agent)
-            {
-                throw new ArgumentException("Project-structure workflow origin requires an agent actor.", nameof(requestingActor));
-            }
 
             if (string.IsNullOrWhiteSpace(sessionId.Value))
             {
@@ -337,6 +335,8 @@ public abstract record WorkflowLaunchOrigin
         public WorkflowLaunchActor RequestingActor { get; }
 
         public WorkflowLaunchSessionId SessionId { get; }
+
+        public WorkflowStructureAdmissionBinding? StructureAdmission { get; init; }
     }
 
     public sealed record AgentRuntimeInvocation : WorkflowLaunchOrigin
@@ -495,7 +495,9 @@ public enum WorkflowLaunchIdempotencyClaimOutcome
 public sealed record WorkflowLaunchIdempotencyCompletion(
     WorkflowRunSnapshot Run,
     WorkflowResolvedRuntimeRequest ResolvedRequest,
-    DateTimeOffset CompletedAtUtc);
+    DateTimeOffset CompletedAtUtc) {
+    public WorkflowLaunchObservation Observation { get; init; }
+}
 
 public sealed record WorkflowLaunchIdempotencyClaimResult(
     WorkflowLaunchIdempotencyClaimOutcome Outcome,
@@ -600,4 +602,18 @@ public enum WorkflowLaunchIdempotencyDisposition
 public sealed record WorkflowLaunchResult(
     WorkflowRunSnapshot Run,
     WorkflowResolvedRuntimeRequest ResolvedRequest,
-    WorkflowLaunchIdempotencyDisposition IdempotencyDisposition);
+    WorkflowLaunchIdempotencyDisposition IdempotencyDisposition) {
+    public WorkflowLaunchObservation Observation { get; init; }
+
+    [JsonIgnore]
+    public Exception? ObservationException { get; init; }
+
+    [JsonIgnore]
+    public Exception? ReceiptObservationException { get; init; }
+}
+
+public enum WorkflowLaunchObservation {
+    Confirmed,
+    RecoveredAfterObserverFailure,
+    AdmissionReceiptPending
+}

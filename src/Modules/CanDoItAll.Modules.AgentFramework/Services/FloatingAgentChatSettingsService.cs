@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class FloatingAgentChatSettingsService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkflowDbContext> dbContextFactory,
     TimeProvider timeProvider) : IFloatingAgentChatSettingsService
 {
     private const string SettingsId = "floating-agent-chats.v1";

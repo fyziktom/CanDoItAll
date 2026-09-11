@@ -184,6 +184,9 @@ public sealed record WorkflowTestRunRequest(
     WorkflowRuntimeBackendKind? RequestedBackend,
     bool ValidateOnly)
 {
+    [System.Text.Json.Serialization.JsonIgnore]
+    public WorkflowStructureAuthority? StructureAuthority { get; init; }
+
     public WorkflowPreviewSimulationPlan PreviewSimulationPlan { get; init; } = WorkflowPreviewSimulationPlan.Empty;
 }
 
@@ -197,4 +200,8 @@ public sealed record WorkflowTestRunResult(
     string ErrorMessage)
 {
     public IReadOnlyList<WorkflowCheckpointRecord> Checkpoints { get; init; } = [];
+    public bool DetailsComplete { get; init; } = true;
+    public WorkflowLaunchObservation Observation { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Exception? ObservationException { get; init; }
 }

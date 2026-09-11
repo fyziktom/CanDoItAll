@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class WorkflowProjectStructureReportStoreTests
 {
     private static readonly DateTimeOffset Now = new(2026, 7, 22, 16, 0, 0, TimeSpan.Zero);
@@ -19,17 +18,17 @@ public sealed class WorkflowProjectStructureReportStoreTests
     [Fact]
     public async Task Persistent_store_filters_and_aggregates_the_requested_project_page()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(AgentFrameworkModuleAssemblyMarker).Assembly]);
+
         var queryInterceptor = new QueryCompilationCountingInterceptor();
         var databaseRoot = new InMemoryDatabaseRoot();
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase(
                 $"workflow-project-report-{Guid.NewGuid():N}",
                 databaseRoot)
             .EnableServiceProviderCaching(false)
             .AddInterceptors(queryInterceptor)
             .Options;
-        var factory = new TrackingAppDbContextFactory(options);
+        var factory = new TrackingWorkflowDbContextFactory(options);
         var projectId = Guid.NewGuid();
         var otherProjectId = Guid.NewGuid();
         var first = CreateRun(
@@ -153,11 +152,11 @@ public sealed class WorkflowProjectStructureReportStoreTests
     [Fact]
     public async Task Persistent_store_uses_terminal_time_as_the_canonical_activity_time()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(AgentFrameworkModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-project-activity-{Guid.NewGuid():N}")
             .Options;
-        var factory = new TrackingAppDbContextFactory(options);
+        var factory = new TrackingWorkflowDbContextFactory(options);
         var projectId = Guid.NewGuid();
         var terminalInsideWindow = CreateRun(
             sequence: 1,
@@ -360,19 +359,19 @@ public sealed class WorkflowProjectStructureReportStoreTests
         }
     }
 
-    private sealed class TrackingAppDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+    private sealed class TrackingWorkflowDbContextFactory(
+        DbContextOptions<WorkflowDbContext> options) : IDbContextFactory<WorkflowDbContext>
     {
         public int TrackedEntityCount { get; private set; }
 
-        public AppDbContext CreateDbContext()
+        public WorkflowDbContext CreateDbContext()
         {
-            var dbContext = new AppDbContext(options);
+            var dbContext = new WorkflowDbContext(options);
             dbContext.ChangeTracker.Tracked += (_, _) => TrackedEntityCount++;
             return dbContext;
         }
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<WorkflowDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());

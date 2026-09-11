@@ -14,7 +14,7 @@ using Npgsql;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowCatalogService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkflowDbContext> dbContextFactory,
     IWorkflowDefinitionValidator validator,
     IPromptGalleryService promptGallery,
     IPromptGalleryImportService promptGalleryImporter,
@@ -1161,7 +1161,7 @@ public sealed class PersistentWorkflowCatalogService(
     }
 
     private async Task<WorkflowGraph> SnapshotGraphAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowGraph graph,
         CancellationToken cancellationToken)
     {
@@ -1416,7 +1416,7 @@ public sealed class PersistentWorkflowCatalogService(
             DateTimeOffset.UtcNow);
     }
 
-    private static IQueryable<WorkflowDefinitionRecord> LatestDefinitionQuery(AppDbContext dbContext)
+    private static IQueryable<WorkflowDefinitionRecord> LatestDefinitionQuery(WorkflowDbContext dbContext)
         => from head in dbContext.Set<WorkflowDefinitionHeadRecord>().AsNoTracking()
            join record in dbContext.Set<WorkflowDefinitionRecord>().AsNoTracking()
                on new { head.WorkflowId, head.VersionId }
@@ -1463,7 +1463,7 @@ public sealed class PersistentWorkflowCatalogService(
         string DefinitionJson);
 }
 
-public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> dbContextFactory) :
+public sealed class PersistentWorkflowRunStore(IDbContextFactory<WorkflowDbContext> dbContextFactory) :
     IWorkflowRunStore,
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore,
@@ -1645,7 +1645,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     }
 
     private static async Task CreateRunWithStartedEventInMemoryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowRunSnapshot run,
         WorkflowEventRecord startedEvent,
         CancellationToken cancellationToken)
@@ -1665,7 +1665,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     }
 
     private static async Task<WorkflowRunTransitionResult> TryTransitionRunInMemoryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowRunId runId,
         IReadOnlyCollection<WorkflowRunState> expectedStates,
         WorkflowRunSnapshot updatedRun,
@@ -1693,7 +1693,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     }
 
     private static async Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseInMemoryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalRequestId requestId,
         string responseJson,
         DateTimeOffset respondedAtUtc,
@@ -2456,7 +2456,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     }
 
     private static async Task<WorkflowExternalRequestRecord> HydrateExternalRequestAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalRequestRecordEntity request,
         CancellationToken cancellationToken)
     {

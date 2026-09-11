@@ -78,7 +78,7 @@ public sealed class ProjectStructureFileActionCoordinatorTests
             projectScopes,
             new ProjectStructureFileScopeResolver(
                 new ThrowingDbContextFactory(),
-                new ProjectStructureAssemblyService([], new SystemClock(),
+                new ProjectStructureAssemblyService(new ThrowingDbContextFactory(), [], new SystemClock(),
                     CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
                         new() { ProviderKind = DatabaseProviderKind.InMemory },
                         DatabaseProfileResolutionSource.ExplicitOverride,
@@ -232,13 +232,13 @@ public sealed class ProjectStructureFileActionCoordinatorTests
             => Task.FromException<T>(new InvalidOperationException("Unexpected storage scope resolution."));
     }
 
-    private sealed class ThrowingDbContextFactory : IDbContextFactory<AppDbContext>
+    private sealed class ThrowingDbContextFactory : IDbContextFactory<WorkbenchDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public WorkbenchDbContext CreateDbContext()
             => throw new InvalidOperationException("Unexpected node scope resolution.");
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromException<AppDbContext>(new InvalidOperationException("Unexpected node scope resolution."));
+        public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromException<WorkbenchDbContext>(new InvalidOperationException("Unexpected node scope resolution."));
     }
 
     private static class ProjectStructureTestNodes

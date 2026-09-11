@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class WorkflowRuntimeEvidenceSourceProvider(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IWorkflowRuntimeEvidenceSourceProvider
+    IDbContextFactory<WorkflowDbContext> dbContextFactory) : IWorkflowRuntimeEvidenceSourceProvider
 {
     public async Task<MemorySourceSnapshot> ReadSnapshotAsync(
         WorkflowRuntimeEvidenceSourceRequest request,

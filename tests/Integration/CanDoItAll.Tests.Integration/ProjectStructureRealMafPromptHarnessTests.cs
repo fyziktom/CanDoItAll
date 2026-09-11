@@ -826,7 +826,7 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 link.LinkKind == ProjectObjectLinkKind.DependsOn);
         var assembly = await scope.ServiceProvider
             .GetRequiredService<ProjectStructureAssemblyService>()
-            .LoadAsync(dbContext, projectId);
+            .LoadAsync(projectId);
         var expectedCopiedRootPosition = ProjectStructureAutomaticPlacementPolicy.Resolve(
             assembly.Nodes,
             new ProjectStructureAutomaticPlacementRequest(

@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
@@ -56,8 +57,7 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
                 UpdatedAtUtc = layoutAt
             }
         };
-        await using var global = await CreateGlobalFactory(application, reads).CreateDbContextAsync();
-        var context = new ProjectStructureProjectionContext(global, project.Id, assembledAt, layouts);
+        var context = new ProjectStructureProjectionContext(project.Id, assembledAt, layouts);
         var contributors = scope.ServiceProvider.GetServices<IProjectStructureProjectionContributor>().ToArray();
         var resources = Assert.Single(contributors.OfType<ProjectResourceProjectionContributor>());
         var testPlans = Assert.Single(contributors.OfType<TestPlanProjectionContributor>());
@@ -146,7 +146,9 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
             await schema.SaveChangesAsync();
         }
 
-        var bridge = new ProjectNodeScopeBridge(CreateGlobalFactory(application, reads),
+        var bridge = new ProjectNodeScopeBridge(CreateOwnerFactory(application, reads),
+            scope.ServiceProvider.GetRequiredService<ProjectStructureProjectionQueryService>(),
+            scope.ServiceProvider.GetRequiredService<IPromptArtifactProjectionQueryService>(),
             scope.ServiceProvider.GetRequiredService<ResourcesService>(),
             scope.ServiceProvider.GetRequiredService<TestLabService>());
         Assert.Equal(new ProjectNodeScopeResolution(true, false, false, ProjectObjectType.Connector, "webhook-endpoint"),
@@ -211,6 +213,7 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         var testPlans = scope.ServiceProvider.GetRequiredService<TestLabService>();
         var coordination = scope.ServiceProvider.GetRequiredService<CoordinatedDatabaseTransaction>();
         var assembly = new ProjectStructureAssemblyService(
+            CreateOwnerFactory(application, reads),
             [new ProjectResourceProjectionContributor(resources), new TestPlanProjectionContributor(testPlans)],
             new SystemClock(), coordination);
         var project = new Project { Name = "Serializable projection owner" };
@@ -222,7 +225,7 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
             await schema.SaveChangesAsync();
         }
 
-        await using var owner = await CreateGlobalFactory(application, reads).CreateDbContextAsync();
+        await using var owner = await CreateOwnerFactory(application, reads).CreateDbContextAsync();
         await using var transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         reads.Reset();
         var initial = await assembly.LoadAsync(owner, project.Id);
@@ -292,7 +295,7 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         Assert.Equal((220d, 230d), (layouts[$"test-plan:{plan.Id}"].PositionX, layouts[$"test-plan:{plan.Id}"].PositionY));
     }
 
-    private static void AssertEnlistedReads(OwnerReadProbe reads, AppDbContext owner, IDbContextTransaction transaction) {
+    private static void AssertEnlistedReads(OwnerReadProbe reads, WorkbenchDbContext owner, IDbContextTransaction transaction) {
         Assert.Equal(1, reads.ResourceQueries);
         Assert.Equal(1, reads.TestPlanQueries);
         Assert.All(reads.Queries, query => {
@@ -339,9 +342,9 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
             }
         });
 
-    private static IDbContextFactory<AppDbContext> CreateGlobalFactory(TestApplication application, OwnerReadProbe reads) =>
-        new PooledDbContextFactory<AppDbContext>(new DbContextOptionsBuilder<AppDbContext>(
-            application.Services.GetRequiredService<DbContextOptions<AppDbContext>>()).AddInterceptors(reads).Options);
+    private static IDbContextFactory<WorkbenchDbContext> CreateOwnerFactory(TestApplication application, OwnerReadProbe reads) =>
+        new PooledDbContextFactory<WorkbenchDbContext>(new DbContextOptionsBuilder<WorkbenchDbContext>(
+            application.Services.GetRequiredService<DbContextOptions<WorkbenchDbContext>>()).AddInterceptors(reads).Options);
 
     private sealed class OwnerReadProbe : DbCommandInterceptor {
         public int ResourceQueries { get; private set; }

@@ -149,6 +149,9 @@ public sealed record ProjectStructureWorkflowStartDialogState(
     bool IsBusy,
     string Error)
 {
+    public Guid ProjectId { get; init; }
+    public Guid IntentId { get; init; }
+
     public string Title => $"Start {NodeTitle}";
 
     public string Copy => "Confirm the workflow start. The workflow definition owns its execution settings, so this starts directly without resource matching.";

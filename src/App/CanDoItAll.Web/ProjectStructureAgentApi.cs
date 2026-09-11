@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using System.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workbench;
@@ -1445,22 +1446,32 @@ public static class ProjectStructureAgentApi
             stopwatch.Stop();
             var warnings = ExtractWarnings(response);
             var effectiveProjectId = projectId ?? projectIdSelector?.Invoke(response);
-            await analyticsService.RecordAsync(
-                new ProjectStructureAnalyticsWriteRequest(
-                    operationName,
-                    effectiveProjectId,
-                    nodeId,
-                    scopeKind,
-                    scopeKey,
-                    agent,
-                    true,
-                    stopwatch.ElapsedMilliseconds,
-                    warnings,
-                    null,
-                    null,
-                    ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                    ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
-                cancellationToken);
+            try {
+                await analyticsService.RecordAsync(
+                    new ProjectStructureAnalyticsWriteRequest(
+                        operationName,
+                        effectiveProjectId,
+                        nodeId,
+                        scopeKind,
+                        scopeKey,
+                        agent,
+                        true,
+                        stopwatch.ElapsedMilliseconds,
+                        warnings,
+                        null,
+                        null,
+                        ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
+                        ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
+                    cancellationToken);
+            } catch (Exception exception) when (response is ProjectStructureWorkflowNodeStartResult) {
+                var admitted = (ProjectStructureWorkflowNodeStartResult)(object)response;
+                httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ProjectStructureWorkflowLaunch")
+                    .LogWarning(exception, "Workflow {RunId} retained its admission; analytics acknowledgement failed.", admitted.RunId);
+                return Results.Json(admitted with {
+                    Warnings = [.. admitted.Warnings, "The workflow admission is retained; analytics acknowledgement remains pending."],
+                    ObservationException = admitted.ObservationException ?? exception
+                }, ProjectStructureHttpJsonContract.SerializerOptions);
+            }
             return Results.Json(
                 response,
                 ProjectStructureHttpJsonContract.SerializerOptions);
@@ -1641,6 +1652,8 @@ public static class ProjectStructureAgentApi
                             httpContext.User.FindFirstValue(ClaimTypes.Name) ??
                             httpContext.User.FindFirstValue("name") ??
                             agentId;
+            var hasExpiry = long.TryParse(httpContext.User.FindFirstValue("exp"), System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var expiresAt);
 
             return new ProjectStructureAgentContext(
                 agentId,
@@ -1648,7 +1661,11 @@ public static class ProjectStructureAgentApi
                 Environment.MachineName,
                 string.Empty,
                 string.Empty,
-                sessionId);
+                sessionId) {
+                WorkflowAuthority = hasExpiry
+                    ? ProjectStructureWorkflowAuthoritySource.AuthenticatedOperator(agentId, DateTimeOffset.FromUnixTimeSeconds(expiresAt))
+                    : null
+            };
         }
 
         return new ProjectStructureAgentContext(
@@ -1657,7 +1674,9 @@ public static class ProjectStructureAgentApi
             Environment.MachineName,
             string.Empty,
             string.Empty,
-            $"runtime-{Environment.ProcessId}");
+            $"runtime-{Environment.ProcessId}") {
+            WorkflowAuthority = ProjectStructureWorkflowAuthoritySource.LocalOperator(WorkflowStructureOperatorSurface.Api)
+        };
     }
 
     private static IReadOnlyList<string> ExtractWarnings<T>(T response)

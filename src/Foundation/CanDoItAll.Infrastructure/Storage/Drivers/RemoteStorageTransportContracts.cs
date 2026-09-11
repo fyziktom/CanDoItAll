@@ -102,3 +102,13 @@ public interface IFtpStorageTransport
         RemoteBrowseTransportRequest request,
         CancellationToken cancellationToken);
 }
+
+public enum IpfsStableAddMode {
+    ComputeOnly,
+    Store
+}
+
+public interface IIpfsStableStorageTransport {
+    Task<IpfsAddResult> AddStableAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+        ReadOnlyMemory<byte> content, IpfsStableAddMode mode, CancellationToken cancellationToken);
+}

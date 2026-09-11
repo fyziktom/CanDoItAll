@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class IpfsStorageDriver(
+public sealed partial class IpfsStorageDriver(
     ILogger<IpfsStorageDriver> logger,
     IStorageSecretResolver secretResolver,
     IIpfsStorageTransport transport) : IStorageDriver

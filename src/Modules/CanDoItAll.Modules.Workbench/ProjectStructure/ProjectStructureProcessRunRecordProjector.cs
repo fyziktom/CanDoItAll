@@ -7,14 +7,15 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureProcessRunRecordProjector(
-    IProcessRunRecordReader runRecordReader,
+    IProcessStructureProjectionQueryService runRecordReader,
     ILogger<ProjectStructureProcessRunRecordProjector> logger)
 {
     private const int MaximumProjectedRecordCount = 1000;
 
     public async Task<IReadOnlyDictionary<Guid, ProjectStructureProcessRunRecordProjection>> LoadAsync(
         Guid projectId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forMutation = false)
     {
         var projections = new Dictionary<Guid, ProjectStructureProcessRunRecordProjection>();
         ProcessRunRecordCursor? cursor = null;
@@ -24,17 +25,15 @@ internal sealed class ProjectStructureProcessRunRecordProjector(
             var take = Math.Min(
                 ProcessRunRecordPayloadLimits.MaximumPageSize,
                 remainingCapacity);
-            var page = await runRecordReader
-                .ListAsync(
-                    new ProcessRunRecordListQuery(take)
-                    {
-                        Payload = ProcessRunRecordListPayload.Full,
-                        ProjectId = projectId,
-                        Cursor = cursor,
-                        RootRunsOnly = true
-                    },
-                    cancellationToken)
-                .ConfigureAwait(false);
+            var query = new ProcessRunRecordListQuery(take) {
+                Payload = ProcessRunRecordListPayload.Full,
+                ProjectId = projectId,
+                Cursor = cursor,
+                RootRunsOnly = true
+            };
+            var page = forMutation
+                ? await runRecordReader.ListForMutationAsync(query, cancellationToken)
+                : await runRecordReader.ListAsync(query, cancellationToken);
             foreach (var summary in page.Records.Take(remainingCapacity))
             {
                 projections[summary.Identity.RunId.Value] = CreateProjection(summary);

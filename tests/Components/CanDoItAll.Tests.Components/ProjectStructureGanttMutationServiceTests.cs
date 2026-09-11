@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -1107,10 +1108,8 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 typeof(Project).Assembly,
                 typeof(ProjectObjectRecord).Assembly
             ]);
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase($"gantt-mutations-{Guid.NewGuid():N}")
-                .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
-                .Options;
+            var owners = new WorkbenchOwnerInMemoryFixture("gantt-mutations", ignoreTransactionWarning: true);
+            var options = owners.CompleteOptions;
             var factory = new TestDbContextFactory(options);
             var projectId = Guid.NewGuid();
             await using (var context = await factory.CreateDbContextAsync())
@@ -1139,7 +1138,9 @@ public sealed class ProjectStructureGanttMutationServiceTests
             }
 
             var service = new ProjectStructureGanttMutationService(
-                factory,
+                owners.WorkbenchFactory,
+                owners.Projects,
+                owners.Transactions,
                 new FixedClock(Baseline.AddDays(1)),
                 NullLogger<ProjectStructureGanttMutationService>.Instance);
             return new MutationFixture(projectId, factory, service);

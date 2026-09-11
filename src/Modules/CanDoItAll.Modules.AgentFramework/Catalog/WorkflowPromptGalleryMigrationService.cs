@@ -12,7 +12,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class WorkflowPromptGalleryMigrationService(
     IWorkflowComponentLibraryService componentLibrary,
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkflowDbContext> dbContextFactory,
     ILogger<WorkflowPromptGalleryMigrationService> logger)
 {
     private const int MigrationBatchSize = 100;

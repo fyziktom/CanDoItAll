@@ -23,7 +23,7 @@ public sealed class WorkflowRuntimePersistenceLifecycleTests
             await dbContext.Database.EnsureCreatedAsync();
         }
 
-        var store = new PersistentWorkflowRunStore(new TestDbContextFactory(options));
+        var store = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(new TestDbContextFactory(options)));
         var running = CreateRun(WorkflowRunState.Running, StartedAtUtc);
         var startedEvent = CreateEvent(running.RunId, WorkflowEventKind.Started, StartedAtUtc);
 

@@ -82,6 +82,7 @@ public static class FileToolsIntegrationServiceCollectionExtensions
 
         services.RemoveAll<IStoragePlacementService>();
         services.AddSingleton<IStoragePlacementService, RevisionPublishingStoragePlacementService>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStoragePlacementReceiptObserver, StoragePlacementFileCatalogObserver>());
         return services;
     }
 }

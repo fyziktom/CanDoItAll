@@ -395,6 +395,20 @@ internal static class ProjectManagedStorageProvenancePolicy
         };
     }
 
+    internal static StorageObjectReference StampStable(StorageObjectReference reference, string requestedManagedPath,
+        StorageCatalogPlanningFact storage, ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
+        StoragePlacementIntentId intentId) {
+        if (reference.PlacementIntentId != intentId.Value) {
+            throw new InvalidOperationException("The placement receipt and managed asset identity differ.");
+        }
+        var key = ProjectManagedStorageObjectKey.FromReference(reference);
+        var provenance = new ProjectManagedStorageProvenance(OwnershipKind, CurrentVersion, intentId.Value,
+            NormalizeManagedPath(requestedManagedPath), key.StorageId, key.ProviderKind, key.LocatorKind, key.Locator,
+            physicalIdentityPolicy.ResolveObjectFingerprintFromFacts(reference, storage),
+            string.IsNullOrWhiteSpace(reference.MetadataJson) ? "{}" : reference.MetadataJson);
+        return reference with { MetadataJson = JsonSerializer.Serialize(provenance, JsonOptions) };
+    }
+
     internal static bool HasManagedMarker(StorageObjectReference reference)
     {
         if (string.IsNullOrWhiteSpace(reference.MetadataJson))

@@ -131,10 +131,34 @@ The fact query follows binding-ID collection, so these independent reads are not
 new atomic catalog snapshot. Existing record-based provenance helpers remain explicit
 compatibility adapters for creation/transfer callers that have not yet migrated.
 
-Workflow contribution receipts and admissions remain a dependent cutover. Their
-required retention policy excludes ordinary project/node cascades; profile transfer
-and explicit purge must account for them separately. This cutover does not establish
-admission for all project-attributed writers or prohibit reuse of retired project IDs.
+Workbench runtime services use the explicit twelve-record `WorkbenchDbContext`: the
+existing ten records plus Workflow contribution receipts and admissions. The pooled
+factory remains bound to the immutable canonical host profile. Complete migrations
+remain the only schema authority; profile-transfer maintenance is a separate cutover.
+
+Structure contributors receive graph data without a caller context. Projects owns
+bounded hierarchy and phase facts, including the reached descendant closure and its
+external parents; unrelated projects are never materialized. Limits are explicit:
+2048 reached/related projects, 8192 links and 1024 phases. Exceeding a limit fails the
+projection without returning a partial graph. Prompt bindings and projection fields
+come from Prompts; Process runtime and completed-record facts come from Processes.
+Historical Process assignment discovery retains its existing JSON scope filter and
+now rejects more than 4096 matching candidates; runtime ID batches have the same cap.
+The existing 1000 completed-root history cap and warning remain unchanged.
+
+Mutation planning explicitly enlists these reads in the native serializable
+transaction. Normal query methods always create independent owner contexts. Prompt
+creation stages its Gallery record and native binding under that same transaction,
+then completes search/activity follow-up after releasing the transaction and its
+coordination scope. A lost commit acknowledgement preserves the existing ordinary
+create exception; ordinary creation does not acquire Workflow intent replay semantics.
+
+Workflow contribution receipts and admissions are retained across ordinary project
+and node deletion. Profile transfer and explicit purge must preserve or deliberately
+account for that evidence. This ownership cutover does not establish admission for
+all project-attributed writers; the separate lifetime/admission boundary remains
+required. Storage reconciliation and Workflow launch authority retain their own
+explicit pending/conflict/reconciliation dispositions.
 
 ## Related Docs
 

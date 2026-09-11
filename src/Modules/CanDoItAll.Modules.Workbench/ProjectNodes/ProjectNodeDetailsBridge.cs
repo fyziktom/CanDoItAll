@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectNodeDetailsBridge(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IProjectNodeDetailsBridge
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory) : IProjectNodeDetailsBridge
 {
     public async Task<ProjectNodeDetails?> GetAsync(
         Guid projectId,

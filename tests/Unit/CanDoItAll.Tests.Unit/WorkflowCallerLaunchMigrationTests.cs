@@ -58,6 +58,24 @@ public sealed class WorkflowCallerLaunchMigrationTests
     }
 
     [Fact]
+    public async Task TestRunner_PostAdmissionReadFailureRetainsRunAndExactException() {
+        var definition = CreateDefinition(WorkflowLifecycleStatus.Active);
+        var launch = new RecordingLaunchService();
+        var failure = new ArgumentException("Injected event observation failure");
+        var runner = new WorkflowTestRunner(new RecordingCatalog(definition), launch,
+            new QueryOnlyRuntimeManager(failure), new InMemoryWorkflowRunStore());
+        var result = await runner.RunAsync(new(definition.Id, definition.VersionId, null, "{}",
+            WorkflowRuntimeBackendKind.InProcess, false));
+
+        Assert.Single(launch.Intents);
+        Assert.Same(launch.LastRun, result.Run);
+        Assert.Same(failure, result.ObservationException);
+        Assert.False(result.DetailsComplete);
+        Assert.Equal(WorkflowLaunchObservation.RecoveredAfterObserverFailure, result.Observation);
+        Assert.True(result.Validation.Succeeded);
+    }
+
+    [Fact]
     public void ProductionCallers_DependsOnLaunchBoundaryAndDoNotConstructLegacyStartRequests()
     {
         var apiSource = ReadSource("src", "App", "CanDoItAll.Web", "Api", "WorkflowsApi.cs");
@@ -95,63 +113,45 @@ public sealed class WorkflowCallerLaunchMigrationTests
     }
 
     [Fact]
-    public void ProjectStructureIntentFactory_UsesRealLineageAndStableRetryKey()
-    {
+    public void ProjectStructureIntentFactory_UsesFrozenAdmissionLineageAndExplicitRetryKey() {
         var factory = new ProjectStructureWorkflowLaunchIntentFactory();
         var definition = CreateDefinition(WorkflowLifecycleStatus.Active);
         var projectId = Guid.NewGuid();
-        var agent = new ProjectStructureAgentContext(
-            "agent-42",
-            "Agent 42",
-            "build-host",
-            @"C:\repositories\CanDoItAll",
-            "tests/workflow-launch",
-            "session-99");
+        var actor = new WorkflowLaunchActor(WorkflowLaunchActorKind.Agent, Guid.NewGuid().ToString("D"));
+        var authority = new WorkflowStructureAuthority(WorkflowStructureAuthorityChannel.AgentExecution, actor,
+            Guid.NewGuid(), projectId, true, false, null, "fixture-policy");
+        ProjectWorkflowAdmission Admission(Guid intentId, long sequence) {
+            var binding = new WorkflowStructureAdmissionBinding(intentId, WorkflowRunId.New(), sequence, Guid.NewGuid(),
+                new string('A', 64), new("workflow-node-7"), WorkflowStructureOutputRole.RequiredResult, authority);
+            var origin = new WorkflowLaunchOrigin.ProjectStructureNode(projectId, new("workflow-node-7"), actor,
+                new("session-99"), new(intentId)) { StructureAdmission = binding, StructureAuthority = authority };
+            var intent = new WorkflowLaunchIntent(new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
+                WorkflowLaunchMode.Production, origin, "{}", WorkflowLaunchCompletionPolicy.WaitForStopped,
+                new WorkflowLaunchIdempotency.CallerSupplied(new($"structure-admission:{intentId:N}"))) {
+                RequestedBackend = WorkflowRuntimeBackendKind.InProcess
+            };
+            return new(projectId, "workflow-node-7", binding, definition, intent, true, ProjectWorkflowDeliveryState.Prepared, null);
+        }
 
-        var first = factory.Create(
-            definition,
-            projectId,
-            "workflow-node-7",
-            agent,
-            "{}",
-            WorkflowRuntimeBackendKind.InProcess,
-            WorkflowPreviewSimulationPlan.Empty,
-            previousRunId: null);
-        var retry = factory.Create(
-            definition,
-            projectId,
-            "workflow-node-7",
-            agent,
-            "{}",
-            WorkflowRuntimeBackendKind.InProcess,
-            WorkflowPreviewSimulationPlan.Empty,
-            previousRunId: null);
-        var nextRun = factory.Create(
-            definition,
-            projectId,
-            "workflow-node-7",
-            agent,
-            "{}",
-            WorkflowRuntimeBackendKind.InProcess,
-            WorkflowPreviewSimulationPlan.Empty,
-            WorkflowRunId.New());
+        var firstAdmission = Admission(Guid.NewGuid(), 1);
+        var nextAdmission = Admission(Guid.NewGuid(), 2);
+        var first = factory.Create(firstAdmission);
+        var retry = factory.Create(firstAdmission);
+        var nextRun = factory.Create(nextAdmission);
 
-        Assert.Equal(
-            new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
-            Assert.IsType<WorkflowDefinitionSelection.ExactSavedVersion>(first.Selection));
+        Assert.Same(firstAdmission.LaunchIntent, first);
+        Assert.Same(first, retry);
+        Assert.Equal(new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId), first.Selection);
         Assert.Equal(WorkflowLaunchMode.Production, first.Mode);
         var origin = Assert.IsType<WorkflowLaunchOrigin.ProjectStructureNode>(first.Origin);
         Assert.Equal(projectId, origin.ProjectId);
         Assert.Equal("workflow-node-7", origin.NodeId.Value);
-        Assert.Equal(WorkflowLaunchActorKind.Agent, origin.RequestingActor.Kind);
-        Assert.Equal(agent.AgentId, origin.RequestingActor.SubjectId);
-        Assert.Equal(agent.SessionId, origin.SessionId.Value);
-        var firstKey = Assert.IsType<WorkflowLaunchIdempotency.CallerSupplied>(first.Idempotency).Key;
-        var retryKey = Assert.IsType<WorkflowLaunchIdempotency.CallerSupplied>(retry.Idempotency).Key;
-        var nextRunKey = Assert.IsType<WorkflowLaunchIdempotency.CallerSupplied>(nextRun.Idempotency).Key;
-        Assert.Equal(firstKey, retryKey);
-        Assert.Equal(first.Origin.CorrelationId, retry.Origin.CorrelationId);
-        Assert.NotEqual(firstKey, nextRunKey);
+        Assert.Equal(actor, origin.RequestingActor);
+        Assert.Equal("session-99", origin.SessionId.Value);
+        Assert.Equal(firstAdmission.Binding, origin.StructureAdmission);
+        Assert.Equal(first.Idempotency, retry.Idempotency);
+        Assert.NotEqual(first.Idempotency, nextRun.Idempotency);
+        Assert.NotEqual(firstAdmission.Binding.RunId, nextAdmission.Binding.RunId);
     }
 
     private static WorkflowDefinition CreateDefinition(WorkflowLifecycleStatus status)
@@ -193,6 +193,7 @@ public sealed class WorkflowCallerLaunchMigrationTests
     private sealed class RecordingLaunchService : IWorkflowLaunchService
     {
         public List<WorkflowLaunchIntent> Intents { get; } = [];
+        public WorkflowRunSnapshot? LastRun { get; private set; }
 
         public Task<WorkflowLaunchResult> LaunchAsync(
             WorkflowLaunchIntent intent,
@@ -237,6 +238,7 @@ public sealed class WorkflowCallerLaunchMigrationTests
                 "Completed.",
                 FixedUtcNow,
                 FixedUtcNow);
+            LastRun = run;
             return Task.FromResult(new WorkflowLaunchResult(
                 run,
                 resolved,
@@ -307,7 +309,7 @@ public sealed class WorkflowCallerLaunchMigrationTests
         }
     }
 
-    private sealed class QueryOnlyRuntimeManager : IWorkflowRuntimeManager
+    private sealed class QueryOnlyRuntimeManager(Exception? eventFailure = null) : IWorkflowRuntimeManager
     {
         public Task<WorkflowRunSnapshot> StartAsync(
             WorkflowDefinition definition,
@@ -328,7 +330,8 @@ public sealed class WorkflowCallerLaunchMigrationTests
         public Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(
             WorkflowRunId runId,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<WorkflowEventRecord>>([]);
+            => eventFailure is null ? Task.FromResult<IReadOnlyList<WorkflowEventRecord>>([])
+                : Task.FromException<IReadOnlyList<WorkflowEventRecord>>(eventFailure);
 
         public Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
             WorkflowRunId runId,

@@ -1374,6 +1374,57 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Storage_Catalog", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StoragePlacementIntentRecord", b => {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("DeletionRequested")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ExternalDispatchConfirmedStopped")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PlanJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReceiptJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StorageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("WriteAcknowledged")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "State", "Id");
+
+                    b.HasIndex("StorageId", "State", "Id");
+
+                    b.ToTable("Storage_PlacementIntents", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StorageRoutingRule", b => {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -3173,6 +3224,44 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasKey("Id");
 
                     b.ToTable("AgentFramework_WorkflowSettings", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowStructureOutputRecord", b => {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OccurrencePath")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Slot")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("AssetDispatchStarted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsComplete")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("NextInspectionAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PlanJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReceiptJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("StoragePlacementIntentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RunId", "OccurrencePath", "Slot");
+
+                    b.HasIndex("IsComplete", "NextInspectionAtUtc", "RunId", "OccurrencePath", "Slot");
+
+                    b.ToTable("AgentFramework_WorkflowStructureOutputs", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowUsageObservationRecordEntity", b => {
@@ -7054,6 +7143,107 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsUnique();
 
                     b.ToTable("Workbench_ViewStates", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkflowAdmissionRecord", b => {
+                    b.Property<Guid>("IntentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdmissionJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Delivery")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("DeliveryFinished")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("NativeNodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<DateTimeOffset?>("ObservedRunUpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StatusJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("IntentId");
+
+                    b.HasIndex("RunId")
+                        .IsUnique();
+
+                    b.HasIndex("DeliveryFinished", "NextAttemptAtUtc", "IntentId");
+
+                    b.HasIndex("ProjectId", "NodeId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("Workbench_WorkflowAdmissions", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkflowContributionRecord", b => {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OccurrencePath")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Slot")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("NativeObjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NodeJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlanJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("PreparedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReceiptJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("StoragePlacementIntentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RunId", "OccurrencePath", "Slot");
+
+                    b.HasIndex("ProjectId", "NativeObjectId");
+
+                    b.ToTable("Workbench_WorkflowContributionReceipts", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b => {

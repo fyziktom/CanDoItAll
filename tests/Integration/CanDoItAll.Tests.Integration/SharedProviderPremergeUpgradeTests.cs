@@ -28,7 +28,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class SharedProviderPremergeUpgradeTests {
     private const string DevelopmentMigration = "20260822013043_AddWorkflowNativeCheckpointRequestUniqueness";
-    private const string ReviewedMigration = "20260830104752_AddProviderHistoryExternalReference";
+    private const string ReviewedMigration = "20260910225242_AddWorkflowStructureReceipts";
     private static readonly DateTimeOffset RecordedAt = new(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
@@ -91,6 +91,7 @@ public sealed class SharedProviderPremergeUpgradeTests {
         db.ChangeTracker.Clear();
         Assert.Equal(ReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
+        Assert.False(db.Database.HasPendingModelChanges());
         var preservedProfile = await db.Set<PersistedProviderProfile>().SingleAsync();
         Assert.Equal(profile.Id, preservedProfile.Id);
         Assert.Equal(profile.ExtraSettingsJson, preservedProfile.ExtraSettingsJson);
@@ -128,7 +129,7 @@ public sealed class SharedProviderPremergeUpgradeTests {
         var outbox = history.Outbox;
         IHistorySourceMaintenance[] sources = [
             new LlmChatHistorySource(chatFactory, history.Partitions, outbox, history.Transactions),
-            new WorkflowHistorySource(factory, history.Partitions, history.Transactions, outbox)
+            new WorkflowHistorySource(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory), history.Partitions, history.Transactions, outbox)
         ];
         foreach (var source in sources) {
             var progress = await source.ProcessAsync(maintenance, null, 10, default);

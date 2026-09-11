@@ -25,7 +25,7 @@ public sealed class SearchStorageOwnerPersistenceTests {
         await using var search = await application.Services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync();
         await using var storage = await application.Services.GetRequiredService<IDbContextFactory<StorageDbContext>>().CreateDbContextAsync();
         AssertModel(schema, search, [typeof(SearchDocument)]);
-        AssertModel(schema, storage, [typeof(StorageCatalogRecord), typeof(StorageRoutingRule)]);
+        AssertModel(schema, storage, [typeof(StorageCatalogRecord), typeof(StorageRoutingRule), typeof(StoragePlacementIntentRecord)]);
         Assert.Throws<InvalidOperationException>(() => search.Set<StorageRoutingRule>().ToQueryString());
         Assert.Throws<InvalidOperationException>(() => storage.Set<SearchDocument>().ToQueryString());
         await using var scope = application.Services.CreateAsyncScope();

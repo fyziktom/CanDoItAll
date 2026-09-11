@@ -1,9 +1,20 @@
 using CanDoItAll.SharedKernel;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 public interface IProjectStructureRuntimeGateway
 {
+    Task<ProjectStructureRuntimeNodeSummary> CreateWorkflowTaskAsync(Guid projectId,
+        ProjectStructureRuntimeNodeCreateRequest request, WorkflowStructureEffectContext effect,
+        CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException("This host has no durable workflow Structure output adapter.");
+
+    Task<ProjectStructureRuntimeNodeSummary> CreateWorkflowAssetAsync(Guid projectId,
+        ProjectStructureRuntimeAssetCreateRequest request, WorkflowStructureEffectContext effect,
+        CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException("This host has no durable workflow Structure output adapter.");
+
     Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(CancellationToken cancellationToken = default);
 
     Task<ProjectStructureRuntimeReadResponse> ReadStructureAsync(
@@ -154,7 +165,15 @@ public sealed record ProjectStructureRuntimeNodeSummary(
     double? X,
     double? Y,
     int? DurationSeconds = null,
-    ProjectStructureRuntimeNodeActionCapabilities? ActionCapabilities = null);
+    ProjectStructureRuntimeNodeActionCapabilities? ActionCapabilities = null) {
+    public WorkflowStructureOutputReceipt? WorkflowOutputReceipt { get; init; }
+    public bool WorkflowManifestPending { get; init; }
+    public bool WorkflowOutputTargetDeleted { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Exception? WorkflowOutputObservationException { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Exception? WorkflowManifestObservationException { get; init; }
+}
 
 public sealed record ProjectStructureRuntimeLinkSummary(
     string SourceId,

@@ -108,6 +108,9 @@ internal sealed record WorkflowRunStartApiResponse(
     bool Created,
     bool Replayed)
 {
+    public bool DetailsComplete { get; init; } = true;
+    public WorkflowLaunchObservation Observation { get; init; }
+
     public static WorkflowRunStartApiResponse From(
         WorkflowRunDetailApiResponse detail,
         WorkflowLaunchIdempotencyDisposition disposition) => new(

@@ -14,7 +14,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class PersistentWorkflowResumeBoundaryStoreInMemoryTests
 {
     private static readonly DateTimeOffset Now =
@@ -105,12 +104,10 @@ public sealed class PersistentWorkflowResumeBoundaryStoreInMemoryTests
 
     private static TestFixture CreateFixture()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([
-            typeof(AgentFrameworkModuleAssemblyMarker).Assembly
-        ]);
+
         var databaseName = $"persistent-resume-{Guid.NewGuid():N}";
         var databaseRoot = new InMemoryDatabaseRoot();
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase(databaseName, databaseRoot)
             .Options;
         var factory = new TestDbContextFactory(options);
@@ -507,12 +504,12 @@ public sealed class PersistentWorkflowResumeBoundaryStoreInMemoryTests
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) :
-        IDbContextFactory<AppDbContext>
+    private sealed class TestDbContextFactory(DbContextOptions<WorkflowDbContext> options) :
+        IDbContextFactory<WorkflowDbContext>
     {
-        public AppDbContext CreateDbContext() => new(options);
+        public WorkflowDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(
+        public Task<WorkflowDbContext> CreateDbContextAsync(
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();

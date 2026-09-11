@@ -11,14 +11,14 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBoundaryStore
 {
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<WorkflowDbContext> dbContextFactory;
     private readonly IDataProtector responseProtector;
     private readonly IDataProtector checkpointPayloadProtector;
     private readonly WorkflowHistoryProjection historyProjection;
     private readonly CoordinatedDatabaseTransaction transactions;
 
     public PersistentWorkflowResumeBoundaryStore(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkflowDbContext> dbContextFactory,
         IDataProtectionProvider dataProtectionProvider,
         WorkflowHistoryProjection historyProjection,
         CoordinatedDatabaseTransaction transactions) {
@@ -476,7 +476,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private static async Task<bool> NativeCheckpointLinksExistAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowBackendStartResult result,
         CancellationToken cancellationToken)
     {
@@ -512,7 +512,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private async Task<WorkflowResumeBoundaryLoadOutcome> ClassifyResumableBoundaryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowRunRecordEntity run,
         WorkflowExternalRequestRecordEntity request,
         WorkflowExternalRequestBoundaryRecord boundary,
@@ -691,7 +691,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private async Task AddBackendResultRecordsAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowBackendStartResult result,
         CancellationToken cancellationToken)
     {
@@ -778,7 +778,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private static async Task MarkSourceCheckpointResumedAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         Guid requestId,
         DateTimeOffset resumedAtUtc,
         CancellationToken cancellationToken)

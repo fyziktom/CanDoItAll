@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectWorkbenchLifecycleService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock,
     ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary)
 {
@@ -20,7 +21,7 @@ public sealed class ProjectWorkbenchLifecycleService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);

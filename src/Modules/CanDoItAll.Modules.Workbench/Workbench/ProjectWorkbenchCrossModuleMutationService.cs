@@ -11,7 +11,8 @@ internal sealed record ProjectStructureDeletionReplayResult(
     IReadOnlyList<ProjectStructureDeletionWarning> Warnings);
 
 public sealed class ProjectWorkbenchCrossModuleMutationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock,
     ProjectCrossModuleMutationProcessingOptions processingOptions,
     ProjectCrossModuleMutationCoordinator mutationCoordinator,
@@ -113,7 +114,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);
@@ -266,7 +267,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);
@@ -470,7 +471,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             outcome.Reason);
 
     private async Task<int> HideProjectedNodeAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string nodeKey,
         bool reconcileDetachedTaskResource,
@@ -536,7 +537,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
     }
 
     private static void UpsertHiddenProjectionLayout(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         ProjectObjectRecord node,
         DateTimeOffset updatedAtUtc,
@@ -573,7 +574,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProjects(
                     sourceProjectId,
@@ -628,7 +629,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProjects(
                     sourceProjectId,
@@ -664,7 +665,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
     }
 
     private async Task<ProjectStructureSubprojectTransferResult?> MoveCollectedNodesToProjectAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid sourceProjectId,
         string scopeNodeKey,
         Guid targetProjectId,
@@ -676,14 +677,6 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         ProjectStructureSerializableMutationScope mutationScope,
         CancellationToken cancellationToken)
     {
-        var targetProjectExists = await dbContext.Set<Project>()
-            .AnyAsync(project => project.Id == targetProjectId, cancellationToken);
-        if (!targetProjectExists)
-        {
-            throw new InvalidOperationException(
-                $"Target project '{targetProjectId:D}' does not exist and cannot receive project-structure nodes.");
-        }
-
         var targetNodeKeys = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == targetProjectId)
             .Select(item => item.NodeKey)

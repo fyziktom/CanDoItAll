@@ -106,6 +106,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessProjectionStore, EfProcessProjectionStore>();
         services.TryAddScoped<IProcessRunRecordStore, EfProcessRunRecordStore>();
         services.TryAddScoped<IProcessRunRecordReader, ProcessRunRecordReader>();
+        services.TryAddScoped<IProcessStructureProjectionQueryService, ProcessStructureProjectionQueryService>();
         services.TryAddScoped<IProcessRunRecordBackfillSource, EfProcessRunRecordBackfillSource>();
         services.TryAddScoped<IProcessInstancePlanStore, EfProcessInstancePlanStore>();
         services.TryAddScoped<IProcessRuntimeStepAssignmentStore, EfProcessRuntimeStepAssignmentStore>();

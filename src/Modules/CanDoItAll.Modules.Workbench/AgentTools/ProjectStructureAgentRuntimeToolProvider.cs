@@ -1913,6 +1913,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 request,
                 async cancellationToken =>
                 {
+                    if (!request.IntentId.HasValue || request.IntentId == Guid.Empty) {
+                        throw new ProjectStructureAgentException(400, "WorkflowIntentRequired", "Supply one intentId for this launch and reuse it if its acknowledgement is lost.");
+                    }
+
                     EnsureProjectWriteAllowed(accessState, projectId);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     return await agentService.StartWorkflowNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
@@ -2793,16 +2797,23 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             string? branchName = null,
             string? repositoryRoot = null)
         {
+            var workflowAuthority = projectId.HasValue
+                ? ProjectStructureWorkflowAuthoritySource.Agent(agent.Id, projectId.Value,
+                    accessState.CanWriteTasksUnscoped || accessState.ScopedProcessAccess?.CanWrite == true,
+                    accessState.CanWrite, accessState.Governance,
+                    accessState.ScopedProcessAccess is { } process ? Guid.Parse(process.ProcessRunId) : null,
+                    accessState.ScopedProcessAccess is { } step ? Guid.Parse(step.ProcessStepId) : null)
+                : null;
             if (projectId.HasValue &&
                 string.IsNullOrWhiteSpace(branchName) &&
                 string.IsNullOrWhiteSpace(repositoryRoot) &&
                 accessState.ScopedProcessAccess is { AgentContext: { } scopedAgentContext } scopedProcessAccess &&
                 scopedProcessAccess.ProjectId == projectId.Value)
             {
-                return scopedAgentContext;
+                return scopedAgentContext with { WorkflowAuthority = workflowAuthority };
             }
 
-            return BuildAgentContext(agent, branchName, repositoryRoot);
+            return BuildAgentContext(agent, branchName, repositoryRoot) with { WorkflowAuthority = workflowAuthority };
         }
 
         private string ResolveRepositoryRoot(string repositoryRoot)
@@ -3372,6 +3383,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             ContextIntent = contextIntent;
             Purpose = purpose;
             InvocationSnapshotReadContext = invocationSnapshotReadContext;
+            Governance = governance;
             if (scopedProcessAccess is not null)
             {
                 AllowedProjectIds.Add(scopedProcessAccess.ProjectId);
@@ -3407,6 +3419,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         public AgentRuntimeToolProviderPurpose Purpose { get; }
 
         public ProjectStructureInvocationSnapshotReadContext InvocationSnapshotReadContext { get; }
+
+        public AgentExecutionGovernanceSnapshot? Governance { get; }
     }
 
     private sealed record ProjectStructureScopedProcessAccess(

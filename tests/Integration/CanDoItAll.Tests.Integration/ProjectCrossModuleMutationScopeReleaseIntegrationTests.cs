@@ -55,9 +55,9 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         await SeedAssignmentAsync(partyIntegration, projectId, node.Id);
         var mutationId = Guid.NewGuid();
 
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        await using (var dbContext = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync())
         await using (var mutationScope =
-                     await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+                     await scope.ServiceProvider.GetRequiredService<ProjectStructureMutationScopeFactory>().BeginBindingWriteAsync(
                          dbContext,
                          ProjectStructureSerializableMutationScope.ForProject(projectId),
                          CancellationToken.None))

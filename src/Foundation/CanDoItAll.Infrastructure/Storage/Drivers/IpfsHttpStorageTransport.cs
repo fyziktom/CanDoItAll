@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStorageTransport
+public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStorageTransport, IIpfsStableStorageTransport
 {
     private const long MaximumContentBytes = 256L * 1024 * 1024;
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
@@ -24,13 +24,24 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<IpfsAddResult> AddAsync(
-        StorageCatalogRecord storage,
-        string? bearerToken,
-        string fileName,
-        ReadOnlyMemory<byte> content,
-        CancellationToken cancellationToken)
-    {
+    public Task<IpfsAddResult> AddAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+        ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
+        => AddCoreAsync(storage, bearerToken, fileName, content, BuildApiUri(storage, "add"), cancellationToken);
+
+    public Task<IpfsAddResult> AddStableAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+        ReadOnlyMemory<byte> content, IpfsStableAddMode mode, CancellationToken cancellationToken) {
+        if (!Enum.IsDefined(mode)) {
+            throw new ArgumentOutOfRangeException(nameof(mode));
+        }
+        var uri = new UriBuilder(BuildApiUri(storage, "add")) {
+            Query = "cid-version=1&hash=sha2-256&raw-leaves=true&chunker=size-262144&trickle=false&wrap-with-directory=false&" +
+                "preserve-mode=false&preserve-mtime=false&pin=false&only-hash=" + (mode == IpfsStableAddMode.ComputeOnly ? "true" : "false")
+        };
+        return AddCoreAsync(storage, bearerToken, fileName, content, uri.Uri, cancellationToken);
+    }
+
+    private async Task<IpfsAddResult> AddCoreAsync(StorageCatalogRecord storage, string? bearerToken, string fileName,
+        ReadOnlyMemory<byte> content, Uri uri, CancellationToken cancellationToken) {
         if (content.Length > MaximumContentBytes)
         {
             throw new StorageBrowseException(new StorageBrowseError(
@@ -48,7 +59,7 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
         multipart.Add(fileContent, "file", fileName);
         using HttpResponseMessage response = await SendAsync(
             HttpMethod.Post,
-            BuildApiUri(storage, "add"),
+            uri,
             bearerToken,
             multipart,
             cancellationToken);

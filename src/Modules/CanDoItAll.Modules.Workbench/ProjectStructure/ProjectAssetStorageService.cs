@@ -6,7 +6,8 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectAssetStorageService(
     IStoragePlacementService storagePlacementService,
     ProjectAssetCreationService assetCreationService,
-    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy)
+    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
+    StorageStablePlacementService? stablePlacementService = null)
 {
     internal async Task<SavedMediaDescriptor?> SaveAsync(
         Guid projectId,
@@ -77,6 +78,36 @@ public sealed class ProjectAssetStorageService(
             objectType.ToString(),
             StorageJson.SerializeReference(storageObjectReference),
             mermaidDiagramKind);
+    }
+
+    internal async Task<(SavedMediaDescriptor Media, Exception? ObservationException)> SaveStableAsync(
+        StoragePlacementIntentId intentId, Guid projectId, ProjectObjectType objectType, string objectSubtype,
+        ProjectObjectMediaPayload media, CancellationToken cancellationToken) {
+        var service = stablePlacementService
+            ?? throw new InvalidOperationException("Stable workflow asset placement requires the registered Storage owner service.");
+        var content = NormalizeTypedTextContent(objectType, objectSubtype, Decode(media), cancellationToken);
+        var diagramKind = ResolveMermaidDiagramKind(objectType, objectSubtype, content.Content, cancellationToken);
+        var extension = Path.GetExtension(content.FileName);
+        var safeExtension = string.IsNullOrWhiteSpace(extension) ? objectType == ProjectObjectType.ImageAsset ? ".png" : ".bin" : extension;
+        var safeFileName = $"{SanitizeSlug(Path.GetFileNameWithoutExtension(content.FileName))}-{intentId.Value:N}{safeExtension}";
+        var category = objectType switch {
+            ProjectObjectType.ImageAsset => "images",
+            ProjectObjectType.VideoAsset => "videos",
+            _ => "files"
+        };
+        var relativePath = $"managed-files/project-media/{category}/{projectId:N}/{safeFileName}";
+        var contentKind = StorageContentClassifier.Resolve(content.ContentType, content.FileName);
+        var outcome = await service.PlaceAsync(intentId, new(content.FileName, content.ContentType, content.Content.ToArray(),
+            StorageUsagePurpose.ProjectAsset, contentKind, projectId, RelativePathHint: relativePath,
+            PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)), cancellationToken);
+        if (outcome.State != StorageStablePlacementState.Completed || outcome.Receipt is null) {
+            throw new StorageStablePlacementPendingException(outcome);
+        }
+        var receipt = outcome.Receipt;
+        var reference = ProjectManagedStorageProvenancePolicy.StampStable(receipt.WriteResult.Reference, relativePath,
+            receipt.Storage, physicalIdentityPolicy, intentId);
+        return (new(receipt.RelativePath, receipt.Route, reference.ContentType, content.FileName, objectType.ToString(),
+            StorageJson.SerializeReference(reference), diagramKind), outcome.ObservationException);
     }
 
     private static ProjectAssetContent Decode(ProjectObjectMediaPayload media)

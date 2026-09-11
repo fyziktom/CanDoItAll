@@ -10,7 +10,8 @@ public sealed record StorageObjectDeletionFacts(
 public sealed class StorageObjectDeletionService(
     IDbContextFactory<StorageDbContext> dbContextFactory,
     IStorageDriverRegistry driverRegistry,
-    FileSystemStoragePathPolicy fileSystemPathPolicy) {
+    FileSystemStoragePathPolicy fileSystemPathPolicy,
+    StorageStablePlacementService? stablePlacements = null) {
     public async Task DeleteUnderCallerBindingGateAsync(StorageObjectReference reference,
         Func<StorageObjectDeletionFacts, CancellationToken, Task> validateCurrentReferences,
         CancellationToken cancellationToken = default) {
@@ -45,6 +46,17 @@ public sealed class StorageObjectDeletionService(
         }
         if (storage.IsReadOnly || !storage.CapabilityMask.HasFlag(StorageCapability.Delete)) {
             throw new InvalidOperationException($"Storage '{storage.Id:D}' does not allow managed project media deletion.");
+        }
+        if (reference.PlacementIntentId.HasValue) {
+            var placements = stablePlacements
+                ?? throw new InvalidOperationException("Stable managed asset deletion requires the Storage placement owner.");
+            if (!await placements.MarkDeletionAsync(reference, cancellationToken)) {
+                var pending = await placements.FindAsync(new(reference.PlacementIntentId.Value), cancellationToken)
+                    ?? throw new InvalidOperationException("The managed asset placement intent is missing.");
+                throw new StorageStablePlacementPendingException(pending with {
+                    Message = "Deletion is retained but awaits completion of the original storage dispatch. Its target was preserved."
+                });
+            }
         }
         await driver.DeleteAsync(storage, reference, cancellationToken);
     }

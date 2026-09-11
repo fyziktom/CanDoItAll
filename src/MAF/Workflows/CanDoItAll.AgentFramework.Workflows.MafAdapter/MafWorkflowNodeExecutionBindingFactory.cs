@@ -64,6 +64,13 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
         ArgumentNullException.ThrowIfNull(simulationSteps);
         ArgumentNullException.ThrowIfNull(invocationContext);
 
+        var occurrence = input.ExecutionOccurrence?.Advance(definition.VersionId, node.Id);
+        if (occurrence is not null && occurrence.RunId != WorkflowExecutorExecutionAuditScope.CurrentRunId) {
+            throw new InvalidOperationException("The workflow message occurrence belongs to a different admitted run.");
+        }
+
+        invocationContext = invocationContext with { ExecutionOccurrence = occurrence };
+
         var progressObserver = WorkflowNodeExecutionProgressScope.Current;
         var startedAtUtc = clock.GetUtcNow();
         var invocationId = Guid.NewGuid();
@@ -90,7 +97,7 @@ internal sealed class MafWorkflowNodeExecutionBindingFactory(
                 usage: usage,
                 usageObservations: usageObservations,
                 occurredAtUtc: clock.GetUtcNow());
-            return output;
+            return output with { ExecutionOccurrence = occurrence };
         }
         catch (Exception exception)
         {

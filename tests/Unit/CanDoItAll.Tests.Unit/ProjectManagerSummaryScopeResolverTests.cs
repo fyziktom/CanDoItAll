@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -164,12 +165,11 @@ public sealed class ProjectManagerSummaryScopeResolverTests
                 typeof(ProjectsModuleAssemblyMarker).Assembly,
                 typeof(WorkbenchModuleAssemblyMarker).Assembly
             ]);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"manager-summary-scope-{Guid.NewGuid():N}")
-                .Options;
-            var factory = new TestDbContextFactory(options);
+            var owners = new WorkbenchOwnerInMemoryFixture("ProjectManagerSummaryScopeResolverTests");
+            var options = owners.CompleteOptions;
             var analytics = new ProjectPlanAnalyticsQueryService(
-                factory,
+                owners.WorkbenchFactory,
+                owners.Projects,
                 new NoopProjectPartyIntegrationBridge(),
                 new ProjectPlanSummaryCalculator());
             var rootProjectId = Guid.NewGuid();
@@ -180,7 +180,8 @@ public sealed class ProjectManagerSummaryScopeResolverTests
                 options,
                 rootProjectId,
                 new ProjectManagerSummaryScopeResolver(
-                    factory,
+                    owners.Projects,
+                    owners.Hierarchy,
                     analytics,
                     scopeLimits ?? ProjectManagerSummaryScopeLimits.Default));
         }
@@ -240,12 +241,4 @@ public sealed class ProjectManagerSummaryScopeResolverTests
         }
     }
 
-    private sealed class TestDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
-        {
-            return new AppDbContext(options);
-        }
-    }
 }

@@ -790,7 +790,10 @@ public sealed record WorkflowArtifactRecord(
     string Summary,
     DateTimeOffset CreatedAtUtc);
 
-public sealed record WorkflowNodeInput(string PayloadJson);
+public sealed record WorkflowNodeInput(string PayloadJson) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
+}
 
 public sealed record WorkflowNodeExecutionResult(
     WorkflowNodeId NodeId,

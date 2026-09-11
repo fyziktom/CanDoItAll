@@ -9,7 +9,9 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureGanttMutationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectRecordQueryService projects,
+    CoordinatedDatabaseTransaction transactions,
     IClock clock,
     ILogger<ProjectStructureGanttMutationService> logger)
 {
@@ -248,7 +250,7 @@ public sealed class ProjectStructureGanttMutationService(
 
     private async Task<ProjectStructureGanttMutationResult> ExecuteAsync(
         Guid projectId,
-        Func<AppDbContext, MutationState, DateTimeOffset, CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
+        Func<WorkbenchDbContext, MutationState, DateTimeOffset, CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
         CancellationToken cancellationToken)
     {
         if (projectId == Guid.Empty)
@@ -279,12 +281,13 @@ public sealed class ProjectStructureGanttMutationService(
         }
     }
 
-    private static async Task<MutationState> LoadStateAsync(
-        AppDbContext context,
+    private async Task<MutationState> LoadStateAsync(
+        WorkbenchDbContext context,
         Guid projectId,
         CancellationToken cancellationToken)
     {
-        if (!await context.Set<Project>().AnyAsync(project => project.Id == projectId, cancellationToken))
+        using var coordination = transactions.Enter(context);
+        if (await projects.GetForMutationAsync(projectId, cancellationToken) is null)
         {
             throw new ProjectStructureGanttMutationException(
                 ProjectStructureGanttMutationErrorCode.ProjectNotFound,
@@ -312,7 +315,7 @@ public sealed class ProjectStructureGanttMutationService(
     }
 
     private static async Task<ProjectStructureGanttMutationResult> AddDependencyAsync(
-        AppDbContext context,
+        WorkbenchDbContext context,
         MutationState state,
         GanttDependencyMutationRequest request,
         DateTimeOffset now,
@@ -358,7 +361,7 @@ public sealed class ProjectStructureGanttMutationService(
     }
 
     private static ProjectStructureGanttMutationResult RemoveDependency(
-        AppDbContext context,
+        WorkbenchDbContext context,
         MutationState state,
         GanttDependencyMutationRequest request,
         DateTimeOffset now)
@@ -429,7 +432,7 @@ public sealed class ProjectStructureGanttMutationService(
     }
 
     private static async Task<ProjectStructureGanttMutationResult> InsertTaskAsync(
-        AppDbContext context,
+        WorkbenchDbContext context,
         MutationState state,
         GanttTaskInsertionRequest request,
         DateTimeOffset now,

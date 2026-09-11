@@ -7,6 +7,7 @@ public sealed class StorageDbContext(DbContextOptions<StorageDbContext> options)
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.ApplyConfiguration(new StorageCatalogRecordConfiguration());
         modelBuilder.ApplyConfiguration(new StorageRoutingRuleConfiguration());
+        modelBuilder.ApplyConfiguration(new StoragePlacementIntentRecordConfiguration());
         base.OnModelCreating(modelBuilder);
     }
 

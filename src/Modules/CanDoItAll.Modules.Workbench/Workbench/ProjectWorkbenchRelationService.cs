@@ -6,7 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectWorkbenchRelationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock,
     ProjectStructureAssemblyService projectStructureAssemblyService)
 {
@@ -51,7 +52,7 @@ public sealed class ProjectWorkbenchRelationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await mutationScopes.BeginAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -202,7 +203,7 @@ public sealed class ProjectWorkbenchRelationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await mutationScopes.BeginAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -248,7 +249,7 @@ public sealed class ProjectWorkbenchRelationService(
     }
 
     private static async Task ResetProjectionLayoutsAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,
@@ -273,7 +274,7 @@ public sealed class ProjectWorkbenchRelationService(
     }
 
     private async Task ClearProjectionVisibilityOverrideAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken)
@@ -298,7 +299,7 @@ public sealed class ProjectWorkbenchRelationService(
     }
 
     private async Task UpdateProjectionVisibilityAfterUnlinkAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken)
@@ -369,7 +370,7 @@ public sealed class ProjectWorkbenchRelationService(
     }
 
     private static async Task<bool> HasCanonicalNodeAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken)
@@ -392,7 +393,7 @@ public sealed class ProjectWorkbenchRelationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await mutationScopes.BeginAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -459,7 +460,7 @@ public sealed class ProjectWorkbenchRelationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await mutationScopes.BeginAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -696,7 +697,7 @@ public sealed class ProjectWorkbenchRelationService(
     }
 
     private static async Task UpsertUserAuthoredLinkAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,

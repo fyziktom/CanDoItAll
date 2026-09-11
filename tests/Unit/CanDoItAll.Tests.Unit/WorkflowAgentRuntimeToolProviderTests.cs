@@ -764,7 +764,8 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             runtimeManager ?? new RecordingWorkflowRuntimeManager(),
             externalResponseService ??= new RecordingWorkflowExternalResponseService(),
             new RecordingWorkflowExternalResponseActorContextFactory(),
-            new WorkflowAgentRuntimeAuthorizationService(workspaceService));
+            new WorkflowAgentRuntimeAuthorizationService(workspaceService),
+            new StructureAuthorityFixture());
         var profileId = Guid.NewGuid();
         var generation = new DatabaseProfileGeneration(1);
         var scope = WorkspaceScopeDescriptor.Organization(profileId.ToString("N"));
@@ -791,6 +792,17 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
                 allowedCapabilityKeys: capabilities.Select(item => item.Key).ToArray())
         };
         return new RuntimeHarness(provider, context, workspace, externalResponseService);
+    }
+
+    private sealed class StructureAuthorityFixture : IWorkflowStructureAuthorityFactory {
+        public WorkflowStructureAuthority CaptureAgent(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance)
+            => new(WorkflowStructureAuthorityChannel.AgentExecution,
+                new WorkflowLaunchActor(WorkflowLaunchActorKind.Agent, agent.Id.ToString("D")), governance.DatabaseProfileId,
+                Guid.Empty, governance.MutationAllowed, false, null, governance.PolicyFingerprint) { AgentGovernance = governance };
+        public Task<WorkflowStructureAuthority> CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface surface, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<WorkflowStructureAuthority> CaptureAuthenticatedOperatorAsync(string subject, DateTimeOffset expiresAtUtc, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private static string FindRepositoryRoot()

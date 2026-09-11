@@ -4,7 +4,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisionedContentDriver
+public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRevisionedContentDriver
 {
     private readonly FileSystemStoragePathPolicy pathPolicy;
     private readonly DurableFileWriter durableFileWriter;

@@ -9,7 +9,7 @@ internal static class WorkflowPersistenceProvider
     private const string InMemoryProviderName = "Microsoft.EntityFrameworkCore.InMemory";
     private static readonly SemaphoreSlim InMemoryMutationGate = new(1, 1);
 
-    public static bool IsInMemory(AppDbContext dbContext)
+    public static bool IsInMemory(WorkflowDbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
         return string.Equals(
@@ -19,7 +19,7 @@ internal static class WorkflowPersistenceProvider
     }
 
     public static async ValueTask<IDisposable?> EnterInMemoryMutationAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
@@ -33,7 +33,7 @@ internal static class WorkflowPersistenceProvider
         return new SemaphoreLease(InMemoryMutationGate);
     }
 
-    public static void EnsureRelational(AppDbContext dbContext)
+    public static void EnsureRelational(WorkflowDbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
         if (dbContext.Database.IsRelational())

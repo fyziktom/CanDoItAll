@@ -137,7 +137,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     {
         await using var fixture = await CreateFixtureAsync("workflowhitllegacyboundary");
         var seeded = await SeedWaitingRequestAsync(fixture, createBoundary: false);
-        var store = new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory);
+        var store = new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
 
         var legacy = await store.ReadAsync(seeded.Request.Id);
         Assert.Equal(WorkflowExternalRequestBoundaryReadOutcome.LegacyNonResumable, legacy.Outcome);
@@ -150,7 +150,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         await using var fixture = await CreateFixtureAsync("workflowhitlinitiallink");
         var seeded = await SeedWaitingRequestAsync(fixture, createBoundary: true);
 
-        var read = await new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory)
+        var read = await new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory))
             .ReadAsync(seeded.Request.Id);
         Assert.Equal(WorkflowExternalRequestBoundaryReadOutcome.Found, read.Outcome);
         Assert.Equal(CreateBoundary(seeded.Request), read.Boundary);
@@ -199,7 +199,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             duplicateRequest,
             duplicateCheckpointValue);
 
-        var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory);
+        var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
         var rejected = await boundaryStore.UpsertAsync(CreateBoundary(duplicateRequest));
         Assert.Equal(WorkflowExternalRequestBoundarySaveOutcome.VersionConflict, rejected.Outcome);
         await AssertNativeCheckpointRequestLinkAsync(
@@ -294,7 +294,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
 
         var interceptor = new NativeRequestPrecheckBarrierInterceptor();
         var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(
-            fixture.Factory.WithInterceptor(interceptor));
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory.WithInterceptor(interceptor)));
         var results = await Task.WhenAll(
             boundaryStore.UpsertAsync(CreateBoundary(firstRequest)),
             boundaryStore.UpsertAsync(CreateBoundary(secondRequest)));
@@ -696,7 +696,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         await Assert.ThrowsAsync<WorkflowExternalResponsePayloadCorruptException>(
             () => store.GetAsync(created.Operation!.Id));
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory),
             fixture.CreateDataProtectionProvider(),
             fixture.CreateHistoryProjection(),
             fixture.History.Transactions);
@@ -730,7 +730,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
                 new WorkflowLaunchCorrelationId("load-failure-classification"),
                 TestTime));
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory),
             fixture.CreateDataProtectionProvider(),
             fixture.CreateHistoryProjection(),
             fixture.History.Transactions);
@@ -915,7 +915,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.Equal(WorkflowExternalResponseOperationMutationOutcome.Updated, terminal.Outcome);
 
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory),
             fixture.CreateDataProtectionProvider(),
             fixture.CreateHistoryProjection(),
             fixture.History.Transactions);
@@ -1092,7 +1092,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         };
         var saveFailure = new FailAfterResumeHistorySave(rollback);
         var boundaryStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory.WithInterceptor(saveFailure),
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory.WithInterceptor(saveFailure)),
             fixture.CreateDataProtectionProvider(),
             fixture.CreateHistoryProjection(saveFailure),
             fixture.History.Transactions);
@@ -1258,7 +1258,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
 
         if (createBoundary)
         {
-            var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory);
+            var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
             var saved = await boundaryStore.UpsertAsync(CreateBoundary(request));
             Assert.True(saved.Succeeded);
         }
@@ -1485,17 +1485,17 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         public PersistentWorkflowBackendCheckpointPayloadStore CreateCheckpointStore(
             bool reconstructDataProtectionProvider = false)
             => new(
-                Factory,
+                WorkflowOwnerPersistenceTestFactory.FromCanonical(Factory),
                 keyDirectory.CreateProvider(),
                 TimeProvider.System);
 
         public PersistentWorkflowExternalResponseOperationStore CreateOperationStore(
             bool reconstructDataProtectionProvider = false)
-            => new(Factory, keyDirectory.CreateProvider());
+            => new(WorkflowOwnerPersistenceTestFactory.FromCanonical(Factory), keyDirectory.CreateProvider());
 
         public PersistentWorkflowExternalResponseOperationStore CreateOperationStore(
             IInterceptor interceptor)
-            => new(Factory.WithInterceptor(interceptor), keyDirectory.CreateProvider());
+            => new(WorkflowOwnerPersistenceTestFactory.FromCanonical(Factory.WithInterceptor(interceptor)), keyDirectory.CreateProvider());
 
         public string ConnectionString => database.ConnectionString;
 
@@ -1610,7 +1610,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
                 history.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
                 outboxTransaction = history.Database.CurrentTransaction?.GetDbTransaction();
             }
-            if (enabled && eventData.Context is AppDbContext db &&
+            if (enabled && eventData.Context is WorkflowDbContext db &&
                 db.ChangeTracker.Entries<WorkflowUsageObservationRecordEntity>().Any() &&
                 db.Database.CurrentTransaction is { } transaction && outboxTransaction is not null &&
                 ReferenceEquals(transaction.GetDbTransaction(), outboxTransaction)) {

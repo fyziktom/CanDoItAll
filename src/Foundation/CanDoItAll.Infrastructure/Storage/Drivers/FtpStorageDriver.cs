@@ -3,7 +3,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class FtpStorageDriver(
+public sealed partial class FtpStorageDriver(
     IStorageSecretResolver secretResolver,
     IFtpStorageTransport transport,
     ILogger<FtpStorageDriver> logger) : IStorageDriver

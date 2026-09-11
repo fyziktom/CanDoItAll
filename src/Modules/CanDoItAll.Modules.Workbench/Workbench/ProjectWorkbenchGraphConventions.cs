@@ -96,7 +96,7 @@ internal static class ProjectWorkbenchGraphConventions
     }
 
     internal static async Task UpsertLinkAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,

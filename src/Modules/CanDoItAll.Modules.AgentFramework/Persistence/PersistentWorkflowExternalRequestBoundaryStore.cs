@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowExternalRequestBoundaryStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) :
+    IDbContextFactory<WorkflowDbContext> dbContextFactory) :
     IWorkflowExternalRequestBoundaryStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory =
+    private readonly IDbContextFactory<WorkflowDbContext> dbContextFactory =
         dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
 
     public async Task<WorkflowExternalRequestBoundarySaveResult> UpsertAsync(

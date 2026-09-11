@@ -149,7 +149,7 @@ public sealed class WorkflowLaunchIdempotencyPersistenceIntegrationTests
         {
             Origin = origin
         };
-        var runStore = new PersistentWorkflowRunStore(fixture.Factory);
+        var runStore = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
         await runStore.CreateRunWithStartedEventAsync(
             running,
             new WorkflowEventRecord(
@@ -235,7 +235,7 @@ public sealed class WorkflowLaunchIdempotencyPersistenceIntegrationTests
         return new PersistenceFixture(
             database,
             factory,
-            new PersistentWorkflowLaunchIdempotencyStore(factory));
+            new PersistentWorkflowLaunchIdempotencyStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory)));
     }
 
     private static WorkflowLaunchIdempotencyScope CreateScope()

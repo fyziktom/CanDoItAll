@@ -2,13 +2,16 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using Microsoft.Extensions.Logging;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public sealed class WorkbenchProjectStructureRuntimeGateway(
+public sealed partial class WorkbenchProjectStructureRuntimeGateway(
     ProjectsService projectsService,
     ProjectWorkbenchService projectWorkbenchService,
     ProjectStructureLeaseService leaseService,
@@ -17,7 +20,11 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
     IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathResolver workspacePathResolver,
-    ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver) : IProjectStructureRuntimeGateway
+    ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver,
+    IWorkflowRunStore workflowRuns,
+    IWorkflowStructureOutputStore workflowOutputs,
+    ProjectStructureWorkflowAuthorityService workflowAuthority,
+    ILogger<WorkbenchProjectStructureRuntimeGateway> logger) : IProjectStructureRuntimeGateway
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> IdempotentMutationLocks = new(StringComparer.Ordinal);

@@ -9,7 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectNodeScopeBridge(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureProjectionQueryService projects,
+    IPromptArtifactProjectionQueryService prompts,
     ResourcesService resourcesService,
     TestLabService testLabService) : IProjectNodeScopeBridge {
     public async Task<ProjectNodeScopeResolution> ResolveAsync(
@@ -53,7 +55,7 @@ internal sealed class ProjectNodeScopeBridge(
             return new ProjectNodeScopeResolution(true, false, true, projectNode.ObjectType, projectNode.ObjectSubtype);
         }
 
-        var projectedScope = await ResolveProjectedNodeAsync(dbContext, projectId, normalizedNodeKey, cancellationToken);
+        var projectedScope = await ResolveProjectedNodeAsync(projectId, normalizedNodeKey, cancellationToken);
         if (projectedScope is not null)
         {
             return projectedScope;
@@ -83,17 +85,13 @@ internal sealed class ProjectNodeScopeBridge(
     }
 
     private async Task<ProjectNodeScopeResolution?> ResolveProjectedNodeAsync(
-        AppDbContext dbContext,
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken)
     {
         if (TryParsePrefixedGuidNodeKey(nodeKey, "phase:", out var phaseId))
         {
-            var phaseProjectId = await dbContext.Set<ProjectPhase>()
-                .Where(item => item.Id == phaseId)
-                .Select(item => (Guid?)item.ProjectId)
-                .FirstOrDefaultAsync(cancellationToken);
+            var phaseProjectId = await projects.GetPhaseProjectIdAsync(phaseId, cancellationToken);
             return BuildProjectedResolution(phaseProjectId, projectId, ProjectObjectType.Phase);
         }
 
@@ -105,14 +103,7 @@ internal sealed class ProjectNodeScopeBridge(
 
         if (TryParsePrefixedGuidNodeKey(nodeKey, "prompt:", out var promptId))
         {
-            var prompt = await dbContext.Set<PromptArtifact>()
-                .Where(item => item.Id == promptId)
-                .Select(item => new
-                {
-                    item.ProjectId,
-                    item.Kind
-                })
-                .FirstOrDefaultAsync(cancellationToken);
+            var prompt = await prompts.GetBindingFactAsync(promptId, cancellationToken);
             if (prompt is null)
             {
                 return null;

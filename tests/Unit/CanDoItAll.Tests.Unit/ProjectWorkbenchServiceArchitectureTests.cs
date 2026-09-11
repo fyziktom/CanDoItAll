@@ -28,7 +28,9 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
 
         Assert.Equal(
             [
-                typeof(IDbContextFactory<AppDbContext>),
+                typeof(IDbContextFactory<WorkbenchDbContext>),
+                typeof(ProjectStructureMutationScopeFactory),
+                typeof(ProjectRecordQueryService),
                 typeof(IClock),
                 typeof(ProjectAssetStorageService),
                 typeof(ProjectStructureAssemblyService),
@@ -48,7 +50,7 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
             .Select(parameter => parameter.ParameterType)
             .ToArray();
 
-        Assert.Equal(typeof(IStoragePlacementService), compatibilityParameterTypes[2]);
+        Assert.Equal(typeof(IStoragePlacementService), compatibilityParameterTypes[4]);
     }
 
     [Fact]
@@ -63,7 +65,8 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
             [
                 typeof(IStoragePlacementService),
                 typeof(ProjectAssetCreationService),
-                typeof(ProjectManagedStoragePhysicalIdentityPolicy)
+                typeof(ProjectManagedStoragePhysicalIdentityPolicy),
+                typeof(StorageStablePlacementService)
             ],
             parameterTypes);
     }
@@ -78,9 +81,13 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
 
         Assert.Equal(
             [
-                typeof(IDbContextFactory<AppDbContext>),
+                typeof(IDbContextFactory<WorkbenchDbContext>),
+                typeof(ProjectStructureMutationScopeFactory),
                 typeof(IClock),
-                typeof(IPromptGalleryService),
+                typeof(IPromptGalleryMutationService),
+                typeof(IPromptArtifactProjectionQueryService),
+                typeof(ProjectRecordQueryService),
+                typeof(CoordinatedDatabaseTransaction),
                 typeof(ProjectStructureAssemblyService)
             ],
             parameterTypes);

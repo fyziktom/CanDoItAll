@@ -134,6 +134,8 @@ public sealed record WorkflowExecutorInvocationContext
 {
     public static WorkflowExecutorInvocationContext Empty { get; } = new();
 
+    public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
+
     public WorkflowExecutorApprovalAuthorization? ApprovalAuthorization { get; init; }
 
     public WorkflowExternalResponseAuthorization? ExternalResponseAuthorization { get; init; }
@@ -185,6 +187,8 @@ public sealed record WorkflowExecutorExecutionContext(
     WorkflowExecutorExecutionPolicy Policy)
 {
     public WorkflowRunId? RunId { get; init; }
+
+    public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
 
     public string PluginConnectionId { get; init; } = string.Empty;
 

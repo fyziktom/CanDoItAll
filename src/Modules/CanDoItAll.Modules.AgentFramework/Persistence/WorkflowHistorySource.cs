@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class WorkflowHistorySource(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<WorkflowDbContext> factory,
     HistoryPartitionStore partitions,
     CoordinatedDatabaseTransaction transactions,
     HistoryOutboxWriter outbox) : IProviderHistorySource, IHistorySourceMaintenance {

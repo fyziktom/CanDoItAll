@@ -430,11 +430,11 @@ public sealed class ProjectStructureFileScopeResolverTests
     private sealed class ResolverFixture : IAsyncDisposable
     {
         public static readonly Guid StorageId = Guid.Parse("4a94a2c2-c6df-41ac-91ce-d5c851995303");
-        private readonly DbContextOptions<AppDbContext> options;
+        private readonly DbContextOptions<WorkbenchDbContext> options;
         private readonly MutableProjectionContributor? projectionContributor;
 
         private ResolverFixture(
-            DbContextOptions<AppDbContext> options,
+            DbContextOptions<WorkbenchDbContext> options,
             string databaseName,
             Guid projectId,
             string nodeKey,
@@ -449,7 +449,7 @@ public sealed class ProjectStructureFileScopeResolverTests
                 : [projectionContributor];
             Sut = new ProjectStructureFileScopeResolver(
                 new TestDbContextFactory(options),
-                new ProjectStructureAssemblyService(projectionContributors, new SystemClock(),
+                new ProjectStructureAssemblyService(new TestDbContextFactory(options), projectionContributors, new SystemClock(),
                     CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
                         new() { ProviderKind = DatabaseProviderKind.InMemory },
                         DatabaseProfileResolutionSource.ExplicitOverride,
@@ -492,12 +492,12 @@ public sealed class ProjectStructureFileScopeResolverTests
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
             var databaseName = $"project-structure-file-scope-{Guid.NewGuid():N}";
-            var options = AppDbContextTestOptionsBuilder.Create()
+            var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
                 .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = $"node:{Guid.NewGuid():N}";
-            await using var dbContext = new AppDbContext(options);
+            await using var dbContext = new WorkbenchDbContext(options);
             var node = new ProjectObjectRecord
             {
                 Id = Guid.NewGuid(),
@@ -529,12 +529,12 @@ public sealed class ProjectStructureFileScopeResolverTests
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
             var databaseName = $"project-structure-file-collection-{Guid.NewGuid():N}";
-            var options = AppDbContextTestOptionsBuilder.Create()
+            var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
                 .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = $"node:{Guid.NewGuid():N}";
-            await using var dbContext = new AppDbContext(options);
+            await using var dbContext = new WorkbenchDbContext(options);
             var node = new ProjectObjectRecord
             {
                 Id = Guid.NewGuid(),
@@ -568,7 +568,7 @@ public sealed class ProjectStructureFileScopeResolverTests
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
             var databaseName = $"project-structure-projected-file-collection-{Guid.NewGuid():N}";
-            var options = AppDbContextTestOptionsBuilder.Create()
+            var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
                 .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
@@ -599,7 +599,7 @@ public sealed class ProjectStructureFileScopeResolverTests
 
         public async ValueTask DisposeAsync()
         {
-            await using var dbContext = new AppDbContext(options);
+            await using var dbContext = new WorkbenchDbContext(options);
             await dbContext.Database.EnsureDeletedAsync();
         }
     }
@@ -622,12 +622,12 @@ public sealed class ProjectStructureFileScopeResolverTests
         }
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
+    private sealed class TestDbContextFactory(DbContextOptions<WorkbenchDbContext> options)
+        : IDbContextFactory<WorkbenchDbContext>
     {
-        public AppDbContext CreateDbContext() => new(options);
+        public WorkbenchDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(CreateDbContext());
     }
 

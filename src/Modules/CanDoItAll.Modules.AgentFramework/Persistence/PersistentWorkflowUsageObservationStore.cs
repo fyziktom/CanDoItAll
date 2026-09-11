@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowUsageObservationStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkflowDbContext> dbContextFactory,
     WorkflowHistoryProjection history,
     CoordinatedDatabaseTransaction transactions) :
     IWorkflowUsageObservationStore,

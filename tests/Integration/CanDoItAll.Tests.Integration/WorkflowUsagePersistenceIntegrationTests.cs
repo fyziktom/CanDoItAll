@@ -30,12 +30,12 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         }
 
         var factory = new WorkflowUsagePostgresDbContextFactory(options);
-        var runStore = new PersistentWorkflowRunStore(factory);
+        var runStore = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory));
         var history = new HistoryTargetWriteSession(new(new DatabaseProfileRecord {
             ProviderKind = DatabaseProviderKind.PostgreSql,
             SourceKind = DatabaseProfileSourceKind.PostgresConnection
         }, DatabaseProfileResolutionSource.ExplicitOverride, database.ConnectionString), TimeProvider.System);
-        var usageStore = new PersistentWorkflowUsageObservationStore(factory,
+        var usageStore = new PersistentWorkflowUsageObservationStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
             new(history.Partitions, history.Outbox), history.Transactions);
         var runId = WorkflowRunId.New();
         var workflowId = WorkflowId.New();
@@ -127,7 +127,7 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         var factory = history.Factory.WithInterceptor(interceptor);
         var historyFactory = history.HistoryFactory.WithInterceptor(interceptor);
         var outbox = new HistoryOutboxWriter(historyFactory.Options, history.Transactions, history.Clock);
-        var store = new PersistentWorkflowUsageObservationStore(factory,
+        var store = new PersistentWorkflowUsageObservationStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
             new(history.Partitions, outbox), history.Transactions);
         var start = history.Start();
         var exact = HistoryAttemptEvidence.Create(start, history.Completion());
@@ -158,14 +158,14 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         Assert.Empty(await db.Set<HistoryDetailRow>().ToListAsync());
         var restored = Assert.Single(await store.ListAsync(new() { RunIds = [runId] }));
         Assert.Equal(observation.HistoryEvidence, restored.HistoryEvidence);
-        var adapter = new WorkflowHistorySource(history.Factory, history.Partitions, history.Transactions, history.Outbox);
+        var adapter = new WorkflowHistorySource(WorkflowOwnerPersistenceTestFactory.FromCanonical(history.Factory), history.Partitions, history.Transactions, history.Outbox);
         var source = new CanonicalEvidenceReference(history.Partition, HistorySourceKind.Workflow,
             new(runId.Value.ToString("N")), new(observation.Id.Value.ToString("N")));
         var linked = await adapter.ReadAsync(source, default);
         Assert.Equal(exact.Id, Assert.Single(linked!.Attempts).Id);
         var progress = await adapter.ProcessAsync(history.Maintenance, null, 1, default);
         Assert.False(progress.BackfillComplete);
-        var resumed = await new WorkflowHistorySource(history.Factory, history.Partitions, history.Transactions, history.Outbox)
+        var resumed = await new WorkflowHistorySource(WorkflowOwnerPersistenceTestFactory.FromCanonical(history.Factory), history.Partitions, history.Transactions, history.Outbox)
             .ProcessAsync(history.Maintenance, progress.Cursor, 1, default);
         Assert.True(resumed.BackfillComplete);
         Assert.Equal(1, await history.Processor.ProcessAsync(history.Partition, 10, default));
@@ -205,7 +205,7 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
                 history.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
                 outboxTransaction = history.Database.CurrentTransaction?.GetDbTransaction();
             }
-            if (enabled && eventData.Context is AppDbContext db &&
+            if (enabled && eventData.Context is WorkflowDbContext db &&
                 db.ChangeTracker.Entries<WorkflowUsageObservationRecordEntity>().Any() &&
                 db.Database.CurrentTransaction is { } transaction && outboxTransaction is not null &&
                 ReferenceEquals(transaction.GetDbTransaction(), outboxTransaction)) {

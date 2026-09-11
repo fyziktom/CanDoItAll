@@ -14,6 +14,7 @@ public sealed record PromptSearchProjectionState(bool IsProjectable, DateTimeOff
 public interface IPromptArtifactProjectionQueryService {
     Task<IReadOnlyList<PromptArtifactProjectionFact>> ListProjectFactsAsync(Guid projectId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PromptArtifactProjectionFact>> ListProjectFactsForMutationAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<PromptArtifactBindingFact?> GetBindingFactAsync(Guid promptId, CancellationToken cancellationToken = default);
     Task<PromptArtifactBindingFact?> GetBindingFactForMutationAsync(Guid promptId, CancellationToken cancellationToken = default);
     Task<PromptSearchProjectionState?> GetSearchStateForMutationAsync(Guid promptId, CancellationToken cancellationToken = default);
 }
@@ -34,12 +35,16 @@ public sealed class PromptArtifactProjectionQueryService(
         return await ReadFactsAsync(context, projectId, cancellationToken);
     }
 
+    public async Task<PromptArtifactBindingFact?> GetBindingFactAsync(Guid promptId,
+        CancellationToken cancellationToken = default) {
+        await using var context = await factory.CreateDbContextAsync(cancellationToken);
+        return await ReadBindingAsync(context, promptId, cancellationToken);
+    }
+
     public async Task<PromptArtifactBindingFact?> GetBindingFactForMutationAsync(Guid promptId,
         CancellationToken cancellationToken = default) {
         await using var context = await transactions.CreateEnlistedAsync(options, static value => new PromptsDbContext(value), cancellationToken);
-        return await context.Set<PromptArtifact>().AsNoTracking().Where(item => item.Id == promptId)
-            .Select(item => new PromptArtifactBindingFact(item.Id, item.ProjectId, item.Kind))
-            .SingleOrDefaultAsync(cancellationToken);
+        return await ReadBindingAsync(context, promptId, cancellationToken);
     }
 
     public async Task<PromptSearchProjectionState?> GetSearchStateForMutationAsync(Guid promptId,
@@ -53,6 +58,13 @@ public sealed class PromptArtifactProjectionQueryService(
         return await artifacts.AsNoTracking().Select(item => new PromptSearchProjectionState(
             !item.IsArchived && item.Status == PromptArtifactStatus.Final && item.CurrentVersionNumber > 0,
             item.UpdatedAtUtc)).SingleOrDefaultAsync(cancellationToken);
+    }
+
+    private static Task<PromptArtifactBindingFact?> ReadBindingAsync(
+        PromptsDbContext context, Guid promptId, CancellationToken cancellationToken) {
+        return context.Set<PromptArtifact>().AsNoTracking().Where(item => item.Id == promptId)
+            .Select(item => new PromptArtifactBindingFact(item.Id, item.ProjectId, item.Kind))
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<PromptArtifactProjectionFact>> ReadFactsAsync(

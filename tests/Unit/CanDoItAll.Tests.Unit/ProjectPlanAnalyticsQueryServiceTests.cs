@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -309,9 +310,8 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
                 typeof(ProjectsModuleAssemblyMarker).Assembly,
                 typeof(WorkbenchModuleAssemblyMarker).Assembly
             ]);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"plan-analytics-{Guid.NewGuid():N}")
-                .Options;
+            var owners = new WorkbenchOwnerInMemoryFixture("ProjectPlanAnalyticsQueryServiceTests");
+            var options = owners.CompleteOptions;
             var projectId = Guid.NewGuid();
             await using var dbContext = new AppDbContext(options);
             dbContext.Set<Project>().Add(new Project
@@ -321,12 +321,12 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
                 Slug = $"plan-analytics-{projectId:N}"
             });
             await dbContext.SaveChangesAsync();
-            var factory = new TestDbContextFactory(options);
             return new AnalyticsFixture(
                 options,
                 projectId,
                 new ProjectPlanAnalyticsQueryService(
-                    factory,
+                    owners.WorkbenchFactory,
+                    owners.Projects,
                     partyIntegrationBridge ?? new NoopProjectPartyIntegrationBridge(),
                     new ProjectPlanSummaryCalculator(),
                     limits ?? ProjectPlanAnalyticsLimits.Default));
@@ -358,14 +358,6 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
         }
     }
 
-    private sealed class TestDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
-        {
-            return new AppDbContext(options);
-        }
-    }
 
     private sealed class FailingProjectPartyIntegrationBridge : IProjectPartyIntegrationBridge
     {

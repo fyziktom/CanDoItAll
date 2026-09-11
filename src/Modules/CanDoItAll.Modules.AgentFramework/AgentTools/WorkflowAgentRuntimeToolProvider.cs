@@ -20,6 +20,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
     private readonly IWorkflowExternalResponseService externalResponseService;
     private readonly IWorkflowExternalResponseActorContextFactory actorContextFactory;
     private readonly WorkflowAgentRuntimeAuthorizationService authorizationService;
+    private readonly IWorkflowStructureAuthorityFactory structureAuthority;
 
     public WorkflowAgentRuntimeToolProvider(
         IWorkflowCatalogService catalog,
@@ -27,7 +28,8 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         IWorkflowRuntimeManager runtimeManager,
         IWorkflowExternalResponseService externalResponseService,
         IWorkflowExternalResponseActorContextFactory actorContextFactory,
-        WorkflowAgentRuntimeAuthorizationService authorizationService)
+        WorkflowAgentRuntimeAuthorizationService authorizationService,
+        IWorkflowStructureAuthorityFactory structureAuthority)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(launchService);
@@ -41,6 +43,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         this.externalResponseService = externalResponseService;
         this.actorContextFactory = actorContextFactory;
         this.authorizationService = authorizationService;
+        this.structureAuthority = structureAuthority;
     }
 
     public int Order => ProviderOrder;
@@ -245,7 +248,8 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             request.SelectionMode,
             result.ResolvedRequest.Backend.Kind,
             result.IdempotencyDisposition,
-            "Workflow launch completed through the governed launch service.");
+            result.Observation == WorkflowLaunchObservation.Confirmed ? "Workflow launch was admitted through the governed launch service."
+                : "Workflow launch was admitted; subsequent acknowledgement requires observation.") { Observation = result.Observation };
     }
 
     private async Task<WorkflowAgentRunStatusResult> GetStatusAsync(
@@ -307,7 +311,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             result.SafeMessage);
     }
 
-    private static WorkflowLaunchOrigin.AgentRuntimeInvocation CreateOrigin(
+    private WorkflowLaunchOrigin.AgentRuntimeInvocation CreateOrigin(
         AgentRuntimeToolProviderContext context)
     {
         if (context.Agent.Id == Guid.Empty)
@@ -340,7 +344,8 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             new WorkflowLaunchCorrelationId(correlationId))
         {
             AuthorizationScope = governance.WorkspaceScope,
-            AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+            AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
+            StructureAuthority = structureAuthority.CaptureAgent(context.Agent, governance)
         };
     }
 
@@ -575,7 +580,9 @@ public sealed record WorkflowAgentStartResult(
     WorkflowAgentDefinitionSelectionMode SelectionMode,
     WorkflowRuntimeBackendKind ResolvedBackend,
     WorkflowLaunchIdempotencyDisposition IdempotencyDisposition,
-    string Message);
+    string Message) {
+    public WorkflowLaunchObservation Observation { get; init; }
+}
 
 public enum WorkflowAgentRunLookupOutcome
 {

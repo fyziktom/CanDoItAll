@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureTaskEditCompensationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock)
 {
     public async Task<ProjectStructureNode> RestorePricingAsync(
@@ -25,7 +26,7 @@ public sealed class ProjectStructureTaskEditCompensationService(
             dbContext,
             cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);

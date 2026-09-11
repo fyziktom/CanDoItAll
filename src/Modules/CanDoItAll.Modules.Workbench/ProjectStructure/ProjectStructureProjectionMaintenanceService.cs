@@ -13,7 +13,7 @@ public sealed record ProjectStructureProjectionRepairResult(
 }
 
 public sealed class ProjectStructureProjectionMaintenanceService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     IEnumerable<IProjectStructureProjectionContributor> projectionContributors,
     IClock clock)
 {
@@ -68,15 +68,16 @@ public sealed class ProjectStructureProjectionMaintenanceService(
     }
 
     private async Task<HashSet<string>> LoadProjectionNodeKeysAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         CancellationToken cancellationToken)
     {
         var context = new ProjectStructureProjectionContext(
-            dbContext,
             projectId,
             clock.GetUtcNow(),
-            new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal));
+            new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal),
+            canonicalLinks: await dbContext.Set<ProjectObjectLinkRecord>().AsNoTracking()
+                .Where(link => link.ProjectId == projectId && !link.IsSystemManaged).ToListAsync(cancellationToken));
 
         foreach (var contributor in _projectionContributors)
         {

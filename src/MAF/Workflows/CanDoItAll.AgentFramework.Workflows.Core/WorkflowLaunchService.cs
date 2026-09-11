@@ -61,7 +61,8 @@ public sealed class WorkflowLaunchService(
             cancellationToken.ThrowIfCancellationRequested();
             var now = timeProvider.GetUtcNow();
             var claimToken = WorkflowLaunchIdempotencyClaimToken.New();
-            var proposedRunId = WorkflowRunId.New();
+            var proposedRunId = intent.Origin is WorkflowLaunchOrigin.ProjectStructureNode { StructureAdmission: { } admission }
+                ? admission.RunId : WorkflowRunId.New();
             var claim = await idempotencyStore.TryClaimAsync(
                 scope,
                 fingerprint,
@@ -120,6 +121,12 @@ public sealed class WorkflowLaunchService(
                 inputJson,
                 reservedRunId,
                 launchCancellation.Token);
+            var existingRun = await runStore.GetRunAsync(reservedRunId, launchCancellation.Token);
+            if (existingRun is not null) {
+                return await CompletePersistedRunAsync(scope, claimToken, reservedRunId, resolvedRequest,
+                    existingRun, null, WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun);
+            }
+
             var run = await runLauncher.StartAsync(resolvedRequest, launchCancellation.Token);
             var result = new WorkflowLaunchResult(
                 run,
@@ -145,26 +152,20 @@ public sealed class WorkflowLaunchService(
 
             return result;
         }
-        catch (WorkflowLaunchIdempotencyClaimLostException)
-        {
-            throw;
-        }
         catch (Exception launchException)
         {
             heartbeatStop.Cancel();
-            if (heartbeat.IsFaulted)
-            {
-                await heartbeat;
-            }
-
-            if (resolvedRequest is not null &&
-                await TryCompletePersistedRunAfterFailureAsync(
+            if (resolvedRequest is not null && await TryCompletePersistedRunAfterFailureAsync(
                     scope,
                     claimToken,
                     reservedRunId,
-                    resolvedRequest))
-            {
-                ExceptionDispatchInfo.Capture(launchException).Throw();
+                    resolvedRequest,
+                    launchException) is { } recovered) {
+                return recovered;
+            }
+
+            if (launchException is WorkflowLaunchIdempotencyClaimLostException) {
+                throw;
             }
 
             await ReleaseFailedClaimAsync(scope, claimToken, launchException);
@@ -178,18 +179,32 @@ public sealed class WorkflowLaunchService(
         }
     }
 
-    private async Task<bool> TryCompletePersistedRunAfterFailureAsync(
+    private async Task<WorkflowLaunchResult?> TryCompletePersistedRunAfterFailureAsync(
         WorkflowLaunchIdempotencyScope scope,
         WorkflowLaunchIdempotencyClaimToken claimToken,
         WorkflowRunId reservedRunId,
-        WorkflowResolvedRuntimeRequest resolvedRequest)
+        WorkflowResolvedRuntimeRequest resolvedRequest,
+        Exception launchException)
     {
-        var persistedRun = await runStore.GetRunAsync(reservedRunId, CancellationToken.None);
+        WorkflowRunSnapshot? persistedRun;
+        try {
+            persistedRun = await runStore.GetRunAsync(reservedRunId, CancellationToken.None);
+        } catch (Exception observationException) {
+            throw new WorkflowLaunchAdmissionObservationException(reservedRunId, launchException, observationException);
+        }
         if (persistedRun is null)
         {
-            return false;
+            return null;
         }
 
+        return await CompletePersistedRunAsync(scope, claimToken, reservedRunId, resolvedRequest,
+            persistedRun, launchException, WorkflowLaunchIdempotencyDisposition.EnforcedNewRun);
+    }
+
+    private async Task<WorkflowLaunchResult> CompletePersistedRunAsync(
+        WorkflowLaunchIdempotencyScope scope, WorkflowLaunchIdempotencyClaimToken claimToken,
+        WorkflowRunId reservedRunId, WorkflowResolvedRuntimeRequest resolvedRequest,
+        WorkflowRunSnapshot persistedRun, Exception? launchException, WorkflowLaunchIdempotencyDisposition disposition) {
         if (persistedRun.WorkflowId != resolvedRequest.Definition.Id ||
             persistedRun.VersionId != resolvedRequest.Definition.VersionId)
         {
@@ -197,19 +212,30 @@ public sealed class WorkflowLaunchService(
                 $"Reserved workflow run '{reservedRunId}' does not match its resolved workflow definition.");
         }
 
-        if (!await idempotencyStore.TryCompleteClaimAsync(
+        var completed = false;
+        Exception? receiptObservationException = null;
+        try {
+            completed = await idempotencyStore.TryCompleteClaimAsync(
                 scope,
                 claimToken,
                 new WorkflowLaunchIdempotencyCompletion(
                     persistedRun,
                     resolvedRequest,
-                    timeProvider.GetUtcNow()),
-                CancellationToken.None))
-        {
-            throw new WorkflowLaunchIdempotencyClaimLostException(scope);
+                    timeProvider.GetUtcNow()) {
+                    Observation = launchException is null ? WorkflowLaunchObservation.Confirmed : WorkflowLaunchObservation.RecoveredAfterObserverFailure
+                },
+                CancellationToken.None);
+        } catch (Exception exception) {
+            receiptObservationException = exception;
         }
 
-        return true;
+        return new WorkflowLaunchResult(persistedRun, resolvedRequest, disposition) {
+            Observation = completed
+                ? launchException is null ? WorkflowLaunchObservation.Confirmed : WorkflowLaunchObservation.RecoveredAfterObserverFailure
+                : WorkflowLaunchObservation.AdmissionReceiptPending,
+            ObservationException = launchException,
+            ReceiptObservationException = receiptObservationException
+        };
     }
 
     private async Task MaintainClaimLeaseAsync(
@@ -306,7 +332,9 @@ public sealed class WorkflowLaunchService(
         return new WorkflowLaunchResult(
             completion.Run,
             completion.ResolvedRequest,
-            WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun);
+            WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun) {
+            Observation = completion.Observation
+        };
     }
 
     private async Task<WorkflowLaunchResult> LaunchNewAsync(
@@ -315,16 +343,33 @@ public sealed class WorkflowLaunchService(
         WorkflowLaunchIdempotencyDisposition disposition,
         CancellationToken cancellationToken)
     {
-        var resolvedRequest = await ResolveRuntimeRequestAsync(
-            intent,
-            inputJson,
-            requestedRunId: null,
-            cancellationToken);
-        var run = await runLauncher.StartAsync(resolvedRequest, cancellationToken);
-        return new WorkflowLaunchResult(
-            run,
-            resolvedRequest,
-            disposition);
+        var reservedRunId = WorkflowRunId.New();
+        var resolvedRequest = await ResolveRuntimeRequestAsync(intent, inputJson, reservedRunId, cancellationToken);
+        try {
+            var run = await runLauncher.StartAsync(resolvedRequest, cancellationToken);
+            return new WorkflowLaunchResult(run, resolvedRequest, disposition);
+        } catch (Exception launchException) {
+            WorkflowRunSnapshot? persisted;
+            try {
+                persisted = await runStore.GetRunAsync(reservedRunId, CancellationToken.None);
+            } catch (Exception observationException) {
+                throw new WorkflowLaunchAdmissionObservationException(reservedRunId, launchException, observationException);
+            }
+
+            if (persisted is null) {
+                throw;
+            }
+
+            if (persisted.WorkflowId != resolvedRequest.Definition.Id || persisted.VersionId != resolvedRequest.Definition.VersionId) {
+                throw new WorkflowLaunchAdmissionObservationException(reservedRunId, launchException,
+                    new InvalidOperationException("The persisted workflow admission differs from its resolved definition."));
+            }
+
+            return new WorkflowLaunchResult(persisted, resolvedRequest, disposition) {
+                Observation = WorkflowLaunchObservation.RecoveredAfterObserverFailure,
+                ObservationException = launchException
+            };
+        }
     }
 
     private async Task<WorkflowResolvedRuntimeRequest> ResolveRuntimeRequestAsync(

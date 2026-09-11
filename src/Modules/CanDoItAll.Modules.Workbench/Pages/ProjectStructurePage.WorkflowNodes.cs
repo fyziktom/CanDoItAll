@@ -204,6 +204,7 @@ public partial class ProjectStructurePage
     private async Task OpenStartWorkflowDialogAsync(ProjectStructureNode node)
     {
         CloseQuickActionDialog();
+        var projectId = ProjectId;
 
         if (node.ObjectType != ProjectObjectType.WorkflowDefinition)
         {
@@ -218,11 +219,15 @@ public partial class ProjectStructurePage
         var error = string.Empty;
         try
         {
-            startOptions = await WorkflowNodeService.GetStartOptionsAsync(ProjectId, node.Id);
+            startOptions = await WorkflowNodeService.GetStartOptionsAsync(projectId, node.Id);
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
             error = FormatWorkflowUiException(exception);
+        }
+
+        if (projectId != ProjectId) {
+            return;
         }
 
         workflowStartDialog = new ProjectStructureWorkflowStartDialogState(
@@ -236,7 +241,10 @@ public partial class ProjectStructurePage
             startOptions?.BackendWarning ?? string.Empty,
             [],
             false,
-            error);
+            error) {
+            ProjectId = projectId,
+            IntentId = Guid.NewGuid()
+        };
 
         await InvokeAsync(StateHasChanged);
     }
@@ -264,21 +272,32 @@ public partial class ProjectStructurePage
         try
         {
             var started = await WorkflowNodeService.StartAsync(
-                ProjectId,
+                dialog.ProjectId,
                 dialog.NodeId,
                 new ProjectStructureWorkflowNodeStartInput(
                     dialog.RequestedBackend,
                     RequestedBy: "project-structure-ui",
-                    SimulatedNodeIds: dialog.SimulatedNodeIds),
-                CreateProjectStructureUiAgentContext());
+                    SimulatedNodeIds: dialog.SimulatedNodeIds,
+                    IntentId: dialog.IntentId),
+                CreateProjectStructureUiAgentContext(dialog.ProjectId));
+            if (ProjectId != dialog.ProjectId) {
+                return;
+            }
             selectedWorkflowStatus = started.Status;
             workflowStartDialog = null;
-            workflowFeedback = $"{dialog.NodeTitle} started from project structure.";
-            workflowFeedbackTone = started.Status.State == WorkflowRunState.Failed ? "warn" : "mint";
+            workflowFeedback = started.RunAdmissionObserved
+                ? $"{dialog.NodeTitle} has a recorded workflow run."
+                : $"{dialog.NodeTitle} launch was recorded and is waiting to start.";
+            workflowFeedbackTone = started.Status.State == WorkflowRunState.Failed || !started.RunAdmissionObserved ? "warn" : "mint";
             await ReloadSurfaceAsync(dialog.NodeId);
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
+            if (ProjectId != dialog.ProjectId) {
+                Logger.LogWarning(exception, "Workflow admission observation failed for prior project {ProjectId} and intent {IntentId}", dialog.ProjectId, dialog.IntentId);
+                return;
+            }
+
             var message = FormatWorkflowUiException(exception);
             var status = await TryRefreshWorkflowStatusAsync(dialog.NodeId, reloadSurface: true);
             workflowStartDialog = dialog with
@@ -471,14 +490,16 @@ public partial class ProjectStructurePage
             error);
     }
 
-    private ProjectStructureAgentContext CreateProjectStructureUiAgentContext()
+    private ProjectStructureAgentContext CreateProjectStructureUiAgentContext(Guid? projectId = null)
         => new(
             "project-structure-ui",
             "Project structure UI",
             Environment.MachineName,
             AppContext.BaseDirectory,
             string.Empty,
-            ProjectId.ToString("D"));
+            (projectId ?? ProjectId).ToString("D")) {
+            WorkflowAuthority = ProjectStructureWorkflowAuthoritySource.LocalOperator(WorkflowStructureOperatorSurface.UserInterface)
+        };
 
     private static ProjectStructureWorkflowInputSettings CloneWorkflowInputSettings(
         ProjectStructureWorkflowInputSettings inputSettings)

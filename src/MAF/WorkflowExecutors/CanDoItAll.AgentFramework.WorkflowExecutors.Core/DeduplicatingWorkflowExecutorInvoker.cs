@@ -217,7 +217,7 @@ public sealed class DeduplicatingWorkflowExecutorInvoker(
             return false;
         }
 
-        if (invocationContext == WorkflowExecutorInvocationContext.Empty)
+        if ((invocationContext with { ExecutionOccurrence = null }) == WorkflowExecutorInvocationContext.Empty)
         {
             return false;
         }

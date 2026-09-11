@@ -44,7 +44,9 @@ internal sealed record MafWorkflowHumanInputRequest(
     WorkflowValueShape? ResponseShape,
     WorkflowNodeInput Context);
 
-internal sealed record MafWorkflowHumanInputResponse(string PayloadJson);
+internal sealed record MafWorkflowHumanInputResponse(string PayloadJson) {
+    public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
+}
 
 internal sealed record MafWorkflowApprovalRequest(
     WorkflowExecutorApprovalRequestId RequestId,
@@ -258,12 +260,12 @@ internal sealed class MafWorkflowHitlBindingCompiler(
                     ? $"Provide input for workflow node '{node.Id}'."
                     : node.Settings.Instructions.Trim(),
                 node.Settings.ResultShape,
-                input);
+                input with { ExecutionOccurrence = input.ExecutionOccurrence?.Advance(definition.VersionId, node.Id) });
 
         static WorkflowNodeInput MapResponse(MafWorkflowHumanInputResponse response)
         {
             ArgumentNullException.ThrowIfNull(response);
-            return new WorkflowNodeInput(response.PayloadJson);
+            return new WorkflowNodeInput(response.PayloadJson) { ExecutionOccurrence = response.ExecutionOccurrence };
         }
 
         var preparation = ((Func<WorkflowNodeInput, MafWorkflowHumanInputRequest>)Prepare)
@@ -347,12 +349,16 @@ internal sealed class MafWorkflowHitlBindingCompiler(
                         continuation.RequestId,
                         continuation.NodeId,
                         continuation.ExecutorId,
-                        continuation.Message)));
+                        continuation.Message))) {
+                    ExecutionOccurrence = continuation.OriginalInput.ExecutionOccurrence?.Advance(definition.VersionId, node.Id)
+                };
             }
 
             if (!invokesExecutor)
             {
-                return continuation.OriginalInput;
+                return continuation.OriginalInput with {
+                    ExecutionOccurrence = continuation.OriginalInput.ExecutionOccurrence?.Advance(definition.VersionId, node.Id)
+                };
             }
 
             return await nodeExecution.ExecuteAsync(

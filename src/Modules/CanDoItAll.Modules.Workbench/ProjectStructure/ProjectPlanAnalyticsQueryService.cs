@@ -7,17 +7,20 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectPlanAnalyticsQueryService
 {
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<WorkbenchDbContext> dbContextFactory;
+    private readonly ProjectRecordQueryService projects;
     private readonly IProjectPartyIntegrationBridge partyIntegrationBridge;
     private readonly ProjectPlanSummaryCalculator calculator;
     private readonly ProjectPlanAnalyticsLimits limits;
 
     public ProjectPlanAnalyticsQueryService(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+        ProjectRecordQueryService projects,
         IProjectPartyIntegrationBridge partyIntegrationBridge,
         ProjectPlanSummaryCalculator calculator)
         : this(
             dbContextFactory,
+            projects,
             partyIntegrationBridge,
             calculator,
             ProjectPlanAnalyticsLimits.Default)
@@ -25,12 +28,14 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     internal ProjectPlanAnalyticsQueryService(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+        ProjectRecordQueryService projects,
         IProjectPartyIntegrationBridge partyIntegrationBridge,
         ProjectPlanSummaryCalculator calculator,
         ProjectPlanAnalyticsLimits limits)
     {
         this.dbContextFactory = dbContextFactory;
+        this.projects = projects;
         this.partyIntegrationBridge = partyIntegrationBridge;
         this.calculator = calculator;
         this.limits = limits.Validate();
@@ -54,10 +59,8 @@ public sealed class ProjectPlanAnalyticsQueryService
         var distinctProjectIds = NormalizeProjectIds(projectIds);
         ValidateQuery(query);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var projectNames = await dbContext.Set<Project>()
-            .AsNoTracking()
-            .Where(project => distinctProjectIds.Contains(project.Id))
-            .ToDictionaryAsync(project => project.Id, project => project.Name, cancellationToken);
+        var projectNames = (await projects.GetManyAsync(distinctProjectIds, cancellationToken))
+            .ToDictionary(project => project.Id, project => project.Name);
         if (projectNames.Count != distinctProjectIds.Length)
         {
             var missingProjectId = distinctProjectIds.First(projectId => !projectNames.ContainsKey(projectId));
@@ -147,7 +150,6 @@ public sealed class ProjectPlanAnalyticsQueryService
         ValidateManagerQuery(query);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var projectNames = await LoadProjectNamesAsync(
-            dbContext,
             distinctProjectIds,
             cancellationToken);
 
@@ -239,7 +241,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private async Task<IReadOnlyList<ProjectPlanManagerSummary>> LoadManagerScheduleSummariesAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid[] projectIds,
         IReadOnlyDictionary<Guid, string> projectNames,
         ProjectPlanManagerSummaryQuery query,
@@ -279,7 +281,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private async Task<IReadOnlyList<ProjectPlanManagerSummary>> LoadManagerForecastSummariesAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid[] projectIds,
         IReadOnlyDictionary<Guid, string> projectNames,
         ProjectPlanManagerSummaryQuery query,
@@ -396,15 +398,12 @@ public sealed class ProjectPlanAnalyticsQueryService
         return summaries;
     }
 
-    private static async Task<IReadOnlyDictionary<Guid, string>> LoadProjectNamesAsync(
-        AppDbContext dbContext,
+    private async Task<IReadOnlyDictionary<Guid, string>> LoadProjectNamesAsync(
         Guid[] projectIds,
         CancellationToken cancellationToken)
     {
-        var projectNames = await dbContext.Set<Project>()
-            .AsNoTracking()
-            .Where(project => projectIds.Contains(project.Id))
-            .ToDictionaryAsync(project => project.Id, project => project.Name, cancellationToken);
+        var projectNames = (await projects.GetManyAsync(projectIds, cancellationToken))
+            .ToDictionary(project => project.Id, project => project.Name);
         if (projectNames.Count == projectIds.Length)
         {
             return projectNames;
@@ -578,7 +577,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private static IQueryable<ProjectObjectRecord> BuildCanonicalTaskQuery(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         IReadOnlyCollection<Guid> projectIds)
     {
         return dbContext.Set<ProjectObjectRecord>()
@@ -591,7 +590,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private static IQueryable<ProjectObjectRecord> BuildWorkflowBindingNodeQuery(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         IReadOnlyCollection<Guid> projectIds)
     {
         var canonicalTasks = BuildCanonicalTaskQuery(dbContext, projectIds);
@@ -608,7 +607,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private static IQueryable<ProjectObjectRecord> BuildPlanNodeQuery(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         IReadOnlyCollection<Guid> projectIds)
     {
         var canonicalTasks = BuildCanonicalTaskQuery(dbContext, projectIds);
@@ -627,7 +626,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private static IQueryable<ProjectObjectLinkRecord> BuildPlanLinkQuery(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         IReadOnlyCollection<Guid> projectIds)
     {
         var canonicalTasks = BuildCanonicalTaskQuery(dbContext, projectIds);
@@ -653,7 +652,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private static IQueryable<ProjectObjectLinkRecord> BuildProcessResourceLinkQuery(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         IReadOnlyCollection<Guid> projectIds)
     {
         var canonicalTasks = BuildCanonicalTaskQuery(dbContext, projectIds);
@@ -671,7 +670,7 @@ public sealed class ProjectPlanAnalyticsQueryService
     }
 
     private async Task<ProjectPlanAnalyticsPreflight> PreflightAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid[] projectIds,
         CancellationToken cancellationToken)
     {

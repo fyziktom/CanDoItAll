@@ -25,7 +25,10 @@ public sealed record ProjectStructureAgentContext(
     string MachineName,
     string RepositoryRoot,
     string BranchName,
-    string SessionId);
+    string SessionId) {
+    [JsonIgnore]
+    public ProjectStructureWorkflowAuthoritySource? WorkflowAuthority { get; init; }
+}
 
 [JsonConverter(typeof(FlexibleProjectStructureLeaseScopeKindJsonConverter))]
 public enum ProjectStructureLeaseScopeKind
@@ -566,7 +569,8 @@ public sealed record ProjectStructureWorkflowNodeStartInput(
     WorkflowRuntimeBackendKind? RequestedBackend = null,
     string RequestedBy = "project-structure",
     string? LeaseToken = null,
-    IReadOnlyList<string>? SimulatedNodeIds = null);
+    IReadOnlyList<string>? SimulatedNodeIds = null,
+    Guid? IntentId = null);
 
 public sealed record ProjectStructureWorkflowRunEventSummary(
     WorkflowEventKind Kind,
@@ -607,7 +611,11 @@ public sealed record ProjectStructureWorkflowRunStatus(
     int StepCount,
     string Message,
     ProjectStructureWorkflowExecutionSummary Summary,
-    IReadOnlyList<ProjectStructureWorkflowRunEventSummary> RecentEvents);
+    IReadOnlyList<ProjectStructureWorkflowRunEventSummary> RecentEvents) {
+    public ProjectWorkflowDeliveryState Delivery { get; init; } = ProjectWorkflowDeliveryState.LegacyObservation;
+    public Guid? IntentId { get; init; }
+    public long? AdmissionSequence { get; init; }
+}
 
 public sealed record ProjectStructureWorkflowNodeStartResult(
     Guid ProjectId,
@@ -617,7 +625,15 @@ public sealed record ProjectStructureWorkflowNodeStartResult(
     WorkflowRunId RunId,
     string Route,
     ProjectStructureWorkflowRunStatus Status,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings) {
+    public Guid IntentId { get; init; }
+    public bool CallerSuppliedIntent { get; init; }
+    public bool RunAdmissionObserved { get; init; }
+    [JsonIgnore]
+    public Exception? ObservationException { get; init; }
+    [JsonIgnore]
+    public Exception? ReceiptObservationException { get; init; }
+}
 
 public sealed record ProjectStructureNodeCommandInput(
     ProjectStructureCommandKind CommandKind,

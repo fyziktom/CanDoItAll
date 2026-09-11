@@ -28,15 +28,17 @@ public sealed class WorkflowTestRunner(
             return MissingDefinitionResult();
         }
 
-        try
-        {
-            var launchResult = await launchService.LaunchAsync(
+        WorkflowLaunchResult? launchResult = null;
+        try {
+            launchResult = await launchService.LaunchAsync(
                 new WorkflowLaunchIntent(
                     selection,
                     WorkflowLaunchMode.Preview,
                     new WorkflowLaunchOrigin.Preview(
-                        new WorkflowLaunchActor(WorkflowLaunchActorKind.Service, PreviewActorSubjectId),
-                        new WorkflowLaunchCorrelationId(Guid.NewGuid())),
+                        request.StructureAuthority?.Principal ?? new WorkflowLaunchActor(WorkflowLaunchActorKind.Service, PreviewActorSubjectId),
+                        new WorkflowLaunchCorrelationId(Guid.NewGuid())) {
+                        StructureAuthority = request.StructureAuthority
+                    },
                     request.InputJson,
                     WorkflowLaunchCompletionPolicy.WaitForStopped,
                     new WorkflowLaunchIdempotency.NotRequested())
@@ -60,7 +62,18 @@ public sealed class WorkflowTestRunner(
                 pendingExternalRequests,
                 run.State == WorkflowRunState.Failed ? run.Summary : string.Empty)
             {
-                Checkpoints = checkpoints
+                Checkpoints = checkpoints,
+                Observation = launchResult.Observation
+            };
+        }
+        catch (Exception exception) when (launchResult is not null) {
+            return new WorkflowTestRunResult(
+                launchResult.Run.State is WorkflowRunState.Completed or WorkflowRunState.WaitingForInput or WorkflowRunState.Idle,
+                WorkflowValidationResult.Success, launchResult.Run, [], [], [],
+                "The workflow run was admitted; its detailed observation remains pending.") {
+                DetailsComplete = false,
+                Observation = WorkflowLaunchObservation.RecoveredAfterObserverFailure,
+                ObservationException = exception
             };
         }
         catch (WorkflowLaunchValidationException exception)

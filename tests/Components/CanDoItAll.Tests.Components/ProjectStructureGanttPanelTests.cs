@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using Bunit;
 using Bunit.TestDoubles;
 using CanDoItAll.Components.BaseLib;
@@ -532,11 +533,13 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton<NotificationService>();
         context.Services.AddSingleton(bridge);
         context.Services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
-        var (workbenchService, dbContextFactory, clock) = CreateWorkbenchService();
+        var (workbenchService, dbContextFactory, clock, owners) = CreateWorkbenchService();
         context.Services.AddSingleton(dbContextFactory);
         context.Services.AddSingleton<IClock>(clock);
         var mutationService = new ProjectStructureGanttMutationService(
-            dbContextFactory,
+            owners.WorkbenchFactory,
+            owners.Projects,
+            owners.Transactions,
             clock,
             NullLogger<ProjectStructureGanttMutationService>.Instance);
         context.Services.AddSingleton(mutationService);
@@ -569,7 +572,8 @@ public sealed class ProjectStructureGanttPanelTests
             assigneeService,
             estimateRefreshService,
             new ProjectStructureTaskEditCompensationService(
-                dbContextFactory,
+                owners.WorkbenchFactory,
+                owners.MutationScopes,
                 clock),
             workbenchService,
             NullLogger<ProjectStructureTaskApplicationService>.Instance);
@@ -582,7 +586,7 @@ public sealed class ProjectStructureGanttPanelTests
         var taskPricingCommitService = new ProjectStructureTaskPricingCommitService(
             workbenchService,
             estimateRefreshService,
-            new ProjectStructureTaskPricingPersistenceService(dbContextFactory, clock),
+            new ProjectStructureTaskPricingPersistenceService(owners.WorkbenchFactory, owners.MutationScopes, clock),
             NullLogger<ProjectStructureTaskPricingCommitService>.Instance);
         context.Services.AddSingleton(taskPricingCommitService);
         var taskResourceAttachmentService = new ProjectStructureTaskResourceAttachmentService(
@@ -641,22 +645,23 @@ public sealed class ProjectStructureGanttPanelTests
     private static (
         ProjectWorkbenchService Service,
         IDbContextFactory<AppDbContext> DbContextFactory,
-        IClock Clock) CreateWorkbenchService()
+        IClock Clock,
+        WorkbenchOwnerInMemoryFixture Owners) CreateWorkbenchService()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
             typeof(Project).Assembly,
             typeof(ProjectObjectRecord).Assembly
         ]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"gantt-panel-{Guid.NewGuid():N}")
-            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
+        var owners = new WorkbenchOwnerInMemoryFixture("gantt-panel", ignoreTransactionWarning: true);
+        var options = owners.CompleteOptions;
         var factory = new TestDbContextFactory(options);
         var clock = new FixedClock();
         return (
             new ProjectWorkbenchService(
-                factory,
+                owners.WorkbenchFactory,
+                owners.MutationScopes,
+                owners.Projects,
                 clock,
                 new ProjectAssetStorageService(
                     null!,
@@ -669,7 +674,8 @@ public sealed class ProjectStructureGanttPanelTests
                 null!,
                 null!),
             factory,
-            clock);
+            clock,
+            owners);
     }
 
     private static ProjectStructureSurface CreateSurface(Guid projectId, params ProjectStructureNode[] nodes)

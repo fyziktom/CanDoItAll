@@ -18,7 +18,7 @@ internal enum WorkflowNativeCheckpointRequestLinkOutcome
 internal static class WorkflowNativeCheckpointRequestLinker
 {
     public static async Task<WorkflowNativeCheckpointRequestLinkOutcome> LinkAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalRequestBoundaryRecord boundary,
         WorkflowRunId runId,
         WorkflowId workflowId,

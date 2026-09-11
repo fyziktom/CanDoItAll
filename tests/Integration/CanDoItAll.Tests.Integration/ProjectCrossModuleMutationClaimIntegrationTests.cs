@@ -267,7 +267,8 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
         IClock clock)
     {
         return new ProjectWorkbenchCrossModuleMutationService(
-            services.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+            services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(),
+            services.GetRequiredService<ProjectStructureMutationScopeFactory>(),
             clock,
             ProcessingOptions,
             new ProjectCrossModuleMutationCoordinator(clock),

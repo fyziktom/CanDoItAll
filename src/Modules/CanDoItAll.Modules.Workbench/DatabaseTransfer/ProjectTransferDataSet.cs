@@ -208,7 +208,6 @@ internal sealed class ProjectTransferDataSet
         CancellationToken cancellationToken)
     {
         await ProjectsSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
     }
 
     public static async Task<ProjectTransferRecordCounts> CountAsync(

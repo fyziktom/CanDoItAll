@@ -414,14 +414,16 @@ kind: service
 name: ProjectWorkbenchService
 summary: Owns the unified project object graph, workbench projections, calendar view state, and typed structure commands.
 owns: project-graph, structure-canvas-projection, calendar-projection, view-state
-deps: AppDbContext
+deps: WorkbenchDbContext, ProjectRecordQueryService, ProjectStructureMutationScopeFactory, ProjectAssetStorageService, ProjectStructureAssemblyService, ProjectWorkbenchRelationService, ProjectWorkbenchLifecycleService, ProjectWorkbenchCommandService, ProjectWorkbenchCrossModuleMutationService, ProjectStructureRuntimeNodeMetadataBoundary
 risks: stale-cross-module-sync, graph-drift
 tests: integration:ProjectWorkbenchServiceTests
 inputs: project id, command requests, graph mutations
 outputs: ProjectStructureSurface, ProjectCalendarSurface, ArtifactReference
 */
 public sealed partial class ProjectWorkbenchService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
+    ProjectRecordQueryService projects,
     IClock clock,
     ProjectAssetStorageService assetStorageService,
     ProjectStructureAssemblyService projectStructureAssemblyService,
@@ -432,7 +434,9 @@ public sealed partial class ProjectWorkbenchService(
     ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectWorkbenchSeedService
 {
     public ProjectWorkbenchService(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+        ProjectStructureMutationScopeFactory mutationScopes,
+        ProjectRecordQueryService projects,
         IClock clock,
         IStoragePlacementService storagePlacementService,
         ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
@@ -444,6 +448,8 @@ public sealed partial class ProjectWorkbenchService(
         ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary)
         : this(
             dbContextFactory,
+            mutationScopes,
+            projects,
             clock,
             new ProjectAssetStorageService(
                 storagePlacementService,
@@ -476,7 +482,7 @@ public sealed partial class ProjectWorkbenchService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == projectId, cancellationToken);
+        var project = await projects.GetAsync(projectId, cancellationToken);
         if (project is null)
         {
             return new ProjectStructureLoadResult(
@@ -513,7 +519,7 @@ public sealed partial class ProjectWorkbenchService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == projectId, cancellationToken);
+        var project = await projects.GetAsync(projectId, cancellationToken);
         if (project is null)
         {
             return new ProjectCalendarLoadResult(
@@ -556,7 +562,7 @@ public sealed partial class ProjectWorkbenchService(
         Guid projectId,
         ProjectObjectCreateRequest request,
         CancellationToken cancellationToken = default)
-        => CreateObjectCoreAsync(
+        => CreateOrdinaryObjectAsync(
             projectId,
             request,
             allowCanonicalTaskResourceChild: false,
@@ -566,25 +572,43 @@ public sealed partial class ProjectWorkbenchService(
         Guid projectId,
         ProjectObjectCreateRequest request,
         CancellationToken cancellationToken = default)
-        => CreateObjectCoreAsync(
+        => CreateOrdinaryObjectAsync(
             projectId,
             request,
             allowCanonicalTaskResourceChild: true,
             cancellationToken);
 
-    private async Task<ProjectStructureNode> CreateObjectCoreAsync(
+    private async Task<ProjectStructureNode> CreateOrdinaryObjectAsync(
         Guid projectId,
         ProjectObjectCreateRequest request,
         bool allowCanonicalTaskResourceChild,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) {
+        var result = await CreateObjectCoreAsync(projectId, request, allowCanonicalTaskResourceChild, cancellationToken);
+        return result.Node;
+    }
+
+    private async Task<ProjectWorkflowContributionResult> CreateObjectCoreAsync(
+        Guid projectId,
+        ProjectObjectCreateRequest request,
+        bool allowCanonicalTaskResourceChild,
+        CancellationToken cancellationToken,
+        CanDoItAll.AgentFramework.Models.WorkflowStructureOutputPlan? contribution = null,
+        SavedMediaDescriptor? preparedContributionMedia = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
-                ProjectStructureSerializableMutationScope.ForProject(projectId),
+                contribution is null
+                    ? [ProjectStructureSerializableMutationScope.ForProject(projectId)]
+                    : [ProjectStructureSerializableMutationScope.ForProject(projectId), WorkflowContributionScope(contribution.Identity)],
                 cancellationToken);
+        if (contribution is not null && await ReadWorkflowContributionAsync(dbContext, contribution.Identity, cancellationToken) is { } replay) {
+            EnsureContributionMatches(contribution, request, replay.Receipt!);
+            return replay;
+        }
+
         var normalizedParentNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
         var existingNodes = await LoadCreatePlanningNodesAsync(
             dbContext,
@@ -592,6 +616,9 @@ public sealed partial class ProjectWorkbenchService(
             normalizedParentNodeKey,
             request,
             cancellationToken);
+        if (contribution is not null) {
+            await ValidateWorkflowContributionTargetAsync(dbContext, projectId, normalizedParentNodeKey, contribution, request, cancellationToken);
+        }
         EnsureCanonicalTaskResourceChildAllowed(
             normalizedParentNodeKey,
             request.ObjectType,
@@ -620,7 +647,7 @@ public sealed partial class ProjectWorkbenchService(
             normalizedObjectSubtype,
             request.Notes,
             request.MetadataJson);
-        var media = await assetStorageService.SaveAsync(
+        var media = contribution is not null ? preparedContributionMedia : await assetStorageService.SaveAsync(
             projectId,
             request.ObjectType,
             normalizedObjectSubtype,
@@ -673,20 +700,30 @@ public sealed partial class ProjectWorkbenchService(
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
 
-        if (request.ObjectType is ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep)
-        {
-            await commandService.EnsurePromptGalleryArtifactAsync(dbContext, projectId, record, cancellationToken);
+        ProjectPromptBindingPreparation? promptPreparation = null;
+        if (request.ObjectType is ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep) {
+            promptPreparation = await commandService.EnsurePromptGalleryArtifactAsync(dbContext, projectId, record, cancellationToken);
         }
 
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, record, cancellationToken);
+        ProjectWorkflowContributionResult? contributionResult = null;
+        if (contribution is not null) {
+            ProjectNodeBindingStorage.Apply(record, bindingPlan);
+            contributionResult = await StageWorkflowContributionAsync(dbContext, record, contribution, cancellationToken);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
         await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.DisposeAsync();
+        if (promptPreparation is not null) {
+            await commandService.CompletePromptCreationAsync(promptPreparation, cancellationToken);
+        }
         ProjectNodeBindingStorage.Apply(record, bindingPlan);
-        return ProjectWorkbenchNodeMapper.MapStructureNode(record);
+        return contributionResult ?? new(ProjectWorkbenchNodeMapper.MapStructureNode(record), null, false, false);
     }
 
     private async Task<IReadOnlyList<ProjectObjectRecord>> LoadCreatePlanningNodesAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string parentNodeKey,
         ProjectObjectCreateRequest request,
@@ -706,10 +743,6 @@ public sealed partial class ProjectWorkbenchService(
                 ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
                 StringComparison.Ordinal))
         {
-            await dbContext.Set<Project>()
-                .Where(project => project.Id == projectId)
-                .Select(project => project.Id)
-                .FirstAsync(cancellationToken);
             return [];
         }
 
@@ -778,7 +811,7 @@ public sealed partial class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);
@@ -1146,7 +1179,7 @@ public sealed partial class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -1312,7 +1345,7 @@ public sealed partial class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -1399,7 +1432,7 @@ public sealed partial class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);
@@ -1946,7 +1979,7 @@ public sealed partial class ProjectWorkbenchService(
     }
 
     private static async Task<IReadOnlyList<string>> LoadCanonicalGanttTaskNodeIdsAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         CancellationToken cancellationToken)
     {
@@ -1976,7 +2009,7 @@ public sealed partial class ProjectWorkbenchService(
     }
 
     private static async Task<ProjectStructureGanttViewState> LoadNormalizedGanttViewStateAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         IReadOnlyList<string> taskNodeIds,
         CancellationToken cancellationToken)
@@ -1990,7 +2023,7 @@ public sealed partial class ProjectWorkbenchService(
     }
 
     private async Task PersistGanttViewStateAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         ProjectStructureGanttViewState state,
         CancellationToken cancellationToken)
@@ -2005,7 +2038,7 @@ public sealed partial class ProjectWorkbenchService(
     }
 
     private async Task UpsertViewStateAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string surfaceKind,
         string stateJson,
@@ -2028,7 +2061,7 @@ public sealed partial class ProjectWorkbenchService(
         record.UpdatedAtUtc = clock.GetUtcNow();
     }
 
-    private static async Task<string?> LoadViewStateAsync(AppDbContext dbContext, Guid projectId, string surfaceKind, CancellationToken cancellationToken)
+    private static async Task<string?> LoadViewStateAsync(WorkbenchDbContext dbContext, Guid projectId, string surfaceKind, CancellationToken cancellationToken)
         => await dbContext.Set<ProjectWorkbenchViewStateRecord>()
             .Where(item => item.ProjectId == projectId && item.SurfaceKind == surfaceKind)
             .Select(item => item.StateJson)

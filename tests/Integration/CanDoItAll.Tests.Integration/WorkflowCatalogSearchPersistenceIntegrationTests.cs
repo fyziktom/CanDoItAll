@@ -40,7 +40,7 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
 
         var gallery = CreateGallery(factory);
         IWorkflowCatalogSearchService searchService = new PersistentWorkflowCatalogService(
-            factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
             new WorkflowDefinitionValidator(),
             gallery,
             gallery);

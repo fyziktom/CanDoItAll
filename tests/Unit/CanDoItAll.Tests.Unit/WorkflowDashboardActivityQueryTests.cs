@@ -11,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class WorkflowDashboardActivityQueryTests
 {
     private static readonly DateTimeOffset Now = new(2026, 7, 22, 16, 0, 0, TimeSpan.Zero);
@@ -85,11 +84,11 @@ public sealed class WorkflowDashboardActivityQueryTests
     [Fact]
     public async Task Persistent_store_matches_active_policy_is_bounded_and_does_not_track_rows()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(AgentFrameworkModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-dashboard-activity-{Guid.NewGuid():N}")
             .Options;
-        var factory = new TrackingAppDbContextFactory(options);
+        var factory = new TrackingWorkflowDbContextFactory(options);
         await using (var dbContext = factory.CreateDbContext())
         {
             var activeRecords = Enumerable.Range(1, 7)
@@ -118,11 +117,11 @@ public sealed class WorkflowDashboardActivityQueryTests
     [Fact]
     public async Task Persistent_store_matches_recent_fallback_when_no_run_is_active()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(AgentFrameworkModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-dashboard-fallback-{Guid.NewGuid():N}")
             .Options;
-        var factory = new TrackingAppDbContextFactory(options);
+        var factory = new TrackingWorkflowDbContextFactory(options);
         await using (var dbContext = factory.CreateDbContext())
         {
             dbContext.Set<WorkflowRunRecordEntity>().AddRange(
@@ -147,11 +146,11 @@ public sealed class WorkflowDashboardActivityQueryTests
     [Fact]
     public async Task Persistent_run_page_filters_project_state_and_time_without_deserializing_unrelated_origins()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(AgentFrameworkModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-manager-report-{Guid.NewGuid():N}")
             .Options;
-        var factory = new TrackingAppDbContextFactory(options);
+        var factory = new TrackingWorkflowDbContextFactory(options);
         var projectId = Guid.NewGuid();
         var directMatch = CreateRun(30, WorkflowRunState.Completed, Now) with
         {
@@ -206,14 +205,13 @@ public sealed class WorkflowDashboardActivityQueryTests
     [Fact]
     public async Task Persistent_catalog_lookup_returns_only_requested_write_heads_without_tracking()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies(
-            [typeof(AgentFrameworkModuleAssemblyMarker).Assembly, typeof(PromptsModuleAssemblyMarker).Assembly]);
+
         var databaseName = $"workflow-dashboard-catalog-{Guid.NewGuid():N}";
         var store = new InMemoryDatabaseRoot();
-        var options = AppDbContextTestOptionsBuilder.Create().UseInMemoryDatabase(databaseName, store).Options;
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>().UseInMemoryDatabase(databaseName, store).Options;
         var promptFactory = new PromptGalleryTestSupport.TestDbContextFactory(
             new DbContextOptionsBuilder<PromptsDbContext>().UseInMemoryDatabase(databaseName, store).Options);
-        var factory = new TrackingAppDbContextFactory(options);
+        var factory = new TrackingWorkflowDbContextFactory(options);
         var requestedWorkflowId = new WorkflowId(Guid.Parse("40000000-0000-0000-0000-000000000001"));
         var unrelatedWorkflowId = new WorkflowId(Guid.Parse("40000000-0000-0000-0000-000000000002"));
         var missingWorkflowId = new WorkflowId(Guid.Parse("40000000-0000-0000-0000-000000000003"));
@@ -535,19 +533,19 @@ public sealed class WorkflowDashboardActivityQueryTests
         }
     }
 
-    private sealed class TrackingAppDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+    private sealed class TrackingWorkflowDbContextFactory(
+        DbContextOptions<WorkflowDbContext> options) : IDbContextFactory<WorkflowDbContext>
     {
         public int TrackedEntityCount { get; private set; }
 
-        public AppDbContext CreateDbContext()
+        public WorkflowDbContext CreateDbContext()
         {
-            var dbContext = new AppDbContext(options);
+            var dbContext = new WorkflowDbContext(options);
             dbContext.ChangeTracker.Tracked += (_, _) => TrackedEntityCount++;
             return dbContext;
         }
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<WorkflowDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());

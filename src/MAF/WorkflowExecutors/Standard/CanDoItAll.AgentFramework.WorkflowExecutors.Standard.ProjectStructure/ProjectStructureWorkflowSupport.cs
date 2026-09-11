@@ -10,36 +10,6 @@ namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure;
 
 public sealed partial class ProjectStructureWorkflowExecutor
 {
-    private static ProjectStructureRuntimeAgentContext BuildAgentContext(WorkflowNodeInput input)
-    {
-        var fallback = new ProjectStructureRuntimeAgentContext(
-            "workflow-executor",
-            "Workflow executor",
-            Environment.MachineName,
-            string.Empty,
-            string.Empty,
-            Guid.NewGuid().ToString("N"));
-
-        return string.IsNullOrWhiteSpace(ReadRunContextString(input, "agentId"))
-            ? fallback
-            : new ProjectStructureRuntimeAgentContext(
-                ReadRunContextString(input, "agentId"),
-                ReadRunContextString(input, "agentName", fallback.AgentName),
-                ReadRunContextString(input, "machineName", fallback.MachineName),
-                ReadRunContextString(input, "repositoryRoot", fallback.RepositoryRoot),
-                ReadRunContextString(input, "branchName", fallback.BranchName),
-                ReadRunContextString(input, "sessionId", fallback.SessionId));
-    }
-
-    private static string ReadRunContextString(
-        WorkflowNodeInput input,
-        string propertyName,
-        string fallback = "")
-        => TryResolveInputJsonString(input, $"$.runContext.{propertyName}", out var value) &&
-           !string.IsNullOrWhiteSpace(value)
-            ? value.Trim()
-            : fallback;
-
     private static string NormalizeAssetKind(string value)
         => string.IsNullOrWhiteSpace(value) ? "md" : value.Trim().TrimStart('.').ToLowerInvariant();
 

@@ -42,13 +42,14 @@ public sealed partial class ProjectStructureWorkflowExecutor(IProjectStructureRu
                     IncludeNotes: true,
                     IncludeAssets: true),
                 cancellationToken),
-            WorkflowProjectStructureOperation.CreateAsset => await projectStructureGateway.CreateAssetAsync(
+            WorkflowProjectStructureOperation.CreateAsset => await projectStructureGateway.CreateWorkflowAssetAsync(
                 RequireProjectId(settings, input),
                 BuildAssetRequest(settings, input),
-                BuildAgentContext(input),
+                RequireEffectContext(context, 0),
                 cancellationToken),
             WorkflowProjectStructureOperation.CreateTaskNodes => await CreateTaskNodesAsync(
                 projectStructureGateway,
+                context,
                 settings,
                 input,
                 cancellationToken),
@@ -60,6 +61,16 @@ public sealed partial class ProjectStructureWorkflowExecutor(IProjectStructureRu
             : result;
 
         return WorkflowExecutorJson.Result(context, result);
+    }
+
+    private static WorkflowStructureEffectContext RequireEffectContext(WorkflowExecutorExecutionContext context, int slot) {
+        var occurrence = context.ExecutionOccurrence
+            ?? throw new InvalidOperationException("This saved workflow message has no trusted execution occurrence. Reconcile the saved checkpoint before creating new Structure outputs.");
+        if (context.RunId.HasValue && context.RunId != occurrence.RunId) {
+            throw new InvalidOperationException("Workflow output occurrence does not match its admitted execution run.");
+        }
+
+        return new(occurrence, context.Definition.VersionId, context.Node.Id, slot);
     }
 
     private static object IncludeInputPayload(

@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class PersistentWorkflowRunStoreInMemoryTests
 {
     private static readonly DateTimeOffset StartedAtUtc =
@@ -196,10 +195,8 @@ public sealed class PersistentWorkflowRunStoreInMemoryTests
 
     private static StoreHarness CreateHarness()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([
-            typeof(AgentFrameworkModuleAssemblyMarker).Assembly
-        ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-run-store-{Guid.NewGuid():N}")
             .Options;
         var factory = new TestDbContextFactory(options);
@@ -339,12 +336,12 @@ public sealed class PersistentWorkflowRunStoreInMemoryTests
         WorkflowExternalRequestRecord Request,
         WorkflowExternalRequestBoundaryRecord Boundary);
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) :
-        IDbContextFactory<AppDbContext>
+    private sealed class TestDbContextFactory(DbContextOptions<WorkflowDbContext> options) :
+        IDbContextFactory<WorkflowDbContext>
     {
-        public AppDbContext CreateDbContext() => new(options);
+        public WorkflowDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<WorkflowDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());

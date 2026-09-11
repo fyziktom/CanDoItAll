@@ -6,7 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureLeaseService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock)
 {
     private static readonly TimeSpan MutationLeaseConflictRetryWindow = TimeSpan.FromSeconds(30);
@@ -30,7 +31,7 @@ public sealed class ProjectStructureLeaseService(
             scopeKey,
             cancellationToken);
         await using var mutationScope = projectId.HasValue
-            ? await ProjectStructureSerializableMutationScope.BeginAsync(
+            ? await mutationScopes.BeginAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId.Value),
                 cancellationToken)
@@ -84,7 +85,7 @@ public sealed class ProjectStructureLeaseService(
     }
 
     private static async Task<Guid?> ResolveLeaseProjectIdAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectStructureLeaseScopeKind scopeKind,
         string scopeKey,
         CancellationToken cancellationToken)
@@ -161,7 +162,7 @@ public sealed class ProjectStructureLeaseService(
             scopeKey,
             cancellationToken);
         await using var mutationScope = projectId.HasValue
-            ? await ProjectStructureSerializableMutationScope.BeginAsync(
+            ? await mutationScopes.BeginAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId.Value),
                 cancellationToken)
@@ -477,7 +478,7 @@ public sealed class ProjectStructureLeaseService(
     }
 
     private static async Task<ProjectStructureLeaseRecord?> FindActiveLeaseAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectStructureLeaseScopeKind scopeKind,
         string scopeKey,
         DateTimeOffset now,

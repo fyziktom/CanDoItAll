@@ -109,3 +109,21 @@ older binaries still use the legacy unguarded updates.
 - Reusable floating agent chats: `docs/architecture/internal-communication.md`
 - Simple Chats product and API: `docs/llm-chats-api.md`
 - Simple Chats integration ownership: `docs/architecture/llm-chats-boundary-and-handoffs.md`
+
+
+Workflow persistence uses the explicit seventeen-record `WorkflowDbContext`: definition
+versions and heads, components/settings, runs/events/artifacts/checkpoints, request and
+response recovery, launch/executor claims, usage facts, backend checkpoint sessions and
+payloads, and retained Structure output manifests. The canonical pooled factory binds
+to the immutable database profile. The historical floating-chat settings key remains in
+the shared Workflow settings table and uses this same owner factory.
+
+The runtime model excludes Prompt Gallery entities while retaining the component
+reference columns and both lookup indexes. The complete canonical migration model
+retains both physical Prompt foreign keys. Definition-head `VersionId` concurrency is
+separate from automatic GUID stamps on request boundaries and response operations;
+request/operation versions and lease epochs retain their existing explicit protocols.
+History projection, usage append and resume commit keep explicit owner/History
+transaction enlistment. Ordinary factories remain independent. This cutover does not
+move schema/migration authority, change saved payloads, or complete target-profile
+transfer, Agent history locators, producer authority or project lifetime admission.

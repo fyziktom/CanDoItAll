@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureTaskPricingPersistenceService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock)
 {
     internal async Task<ProjectStructureNode?> CommitAsync(
@@ -22,7 +23,7 @@ public sealed class ProjectStructureTaskPricingPersistenceService(
             dbContext,
             cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(
                     plan.ProjectId),

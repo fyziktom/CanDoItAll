@@ -19,6 +19,8 @@ public sealed class ProjectStructureWorkflowNodeService(
     IWorkflowRunStore workflowRunStore,
     IEnumerable<IWorkflowExecutionBackend> workflowExecutionBackends,
     ProjectStructureLeaseService leaseService,
+    ProjectStructureWorkflowAuthorityService workflowAuthority,
+    IWorkflowStructureOutputStore workflowOutputs,
     ILogger<ProjectStructureWorkflowNodeService> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = BuildJsonOptions();
@@ -123,20 +125,46 @@ public sealed class ProjectStructureWorkflowNodeService(
             cancellationToken);
     }
 
-    public Task<ProjectStructureWorkflowNodeStartResult> StartAsync(
-        Guid projectId,
-        string nodeId,
-        ProjectStructureWorkflowNodeStartInput request,
-        ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
-    {
-        return leaseService.RunWithProjectMutationLeaseAsync(
-            projectId,
-            request.LeaseToken,
-            agent,
-            "start-workflow-node",
-            cancellationToken => StartCoreAsync(projectId, nodeId, request, agent, cancellationToken),
-            cancellationToken);
+    public async Task<ProjectStructureWorkflowNodeStartResult> StartAsync(
+        Guid projectId, string nodeId, ProjectStructureWorkflowNodeStartInput request,
+        ProjectStructureAgentContext agent, CancellationToken cancellationToken = default) {
+        var intentId = request.IntentId ?? Guid.NewGuid();
+        if (intentId == Guid.Empty) {
+            throw new ProjectStructureAgentException(400, "WorkflowIntentRequired", "The workflow launch intent cannot be empty.");
+        }
+
+        try {
+            return await leaseService.RunWithProjectMutationLeaseAsync(projectId, request.LeaseToken, agent,
+                "start-workflow-node", ct => StartCoreAsync(projectId, nodeId, intentId, request, agent, ct), cancellationToken);
+        } catch (Exception exception) when (exception is not ProjectStructureAgentException { StatusCode: 403 or 409 }) {
+            var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, CancellationToken.None);
+            if (admission is null || admission.ProjectId != projectId || admission.NodeId != nodeId ||
+                agent.WorkflowAuthority is not { } source || admission.Binding.Authority.Channel != source.Channel ||
+                admission.Binding.Authority.Principal != source.Principal) {
+                throw;
+            }
+
+            logger.LogWarning(exception, "Workflow admission {IntentId} reserved run {RunId}; later execution or delivery acknowledgement failed.",
+                intentId, admission.Binding.RunId);
+            WorkflowRunSnapshot? run = null;
+            ProjectStructureWorkflowRunStatus status;
+            Exception? observationFailure = null;
+            try {
+                run = await workflowRunStore.GetRunAsync(admission.Binding.RunId, CancellationToken.None);
+                status = await BuildAdmissionStatusAsync(admission, run, CancellationToken.None);
+            } catch (Exception observationException) {
+                observationFailure = observationException;
+                status = admission.RecordedStatus ?? BuildStatus(admission.Definition,
+                    new ProjectWorkflowNodeMetadata { LastRunId = admission.Binding.RunId }, null,
+                    WorkflowRunState.NotStarted, [], [], "Workflow admission was recorded; its execution outcome is awaiting observation.");
+            }
+
+            return StartResult(admission, run, status with { Delivery = ProjectWorkflowDeliveryState.Pending },
+                ["Workflow admission was recorded. Its execution or projection acknowledgement needs reconciliation."]) with {
+                ObservationException = exception,
+                ReceiptObservationException = observationFailure
+            };
+        }
     }
 
     public async Task<IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption>> ListStartSimulationOptionsAsync(
@@ -163,28 +191,49 @@ public sealed class ProjectStructureWorkflowNodeService(
             backendSelection.Warning);
     }
 
-    public async Task<ProjectStructureWorkflowRunStatus> GetStatusAsync(
-        Guid projectId,
-        string nodeId,
-        CancellationToken cancellationToken = default)
-    {
+    public async Task<ProjectStructureWorkflowRunStatus> GetStatusAsync(Guid projectId, string nodeId,
+        CancellationToken cancellationToken = default) {
         var context = await LoadNodeContextAsync(projectId, nodeId, cancellationToken);
+        var admission = await projectWorkbenchService.FindSelectedWorkflowAdmissionAsync(projectId, nodeId, cancellationToken);
+        if (admission is not null) {
+            var admittedRun = await workflowRunStore.GetRunAsync(admission.Binding.RunId, cancellationToken);
+            return await BuildAdmissionStatusAsync(admission, admittedRun, cancellationToken);
+        }
+
         var workflowMetadata = ResolveWorkflowMetadata(context.Node);
         var detail = await LoadDefinitionAsync(workflowMetadata, cancellationToken);
         var run = workflowMetadata.LastRunId.HasValue
-            ? await workflowRuntimeManager.GetRunAsync(workflowMetadata.LastRunId.Value, cancellationToken)
-            : null;
-        if (workflowMetadata.LastRunId.HasValue && run is null)
-        {
-            throw new ProjectStructureAgentException(
-                404,
-                "WorkflowRunNotFound",
-                $"Workflow run '{workflowMetadata.LastRunId.Value}' linked from node '{nodeId}' was not found.");
+            ? await workflowRuntimeManager.GetRunAsync(workflowMetadata.LastRunId.Value, cancellationToken) : null;
+        if (workflowMetadata.LastRunId.HasValue && run is null) {
+            throw new ProjectStructureAgentException(404, "WorkflowRunNotFound", "The workflow run linked from this node was not found.");
         }
 
-        var status = await BuildStatusAsync(detail.Definition, workflowMetadata, run, cancellationToken);
-        await ApplyStatusAsync(projectId, nodeId, workflowMetadata, detail.Definition, status, run, cancellationToken);
-        return status;
+        return await BuildStatusAsync(detail.Definition, workflowMetadata, run, cancellationToken);
+    }
+
+    public async Task<ProjectWorkflowDeliveryState> ReconcileAsync(Guid intentId,
+        CancellationToken cancellationToken = default) {
+        var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, cancellationToken)
+            ?? throw new ProjectStructureAgentException(404, "WorkflowAdmissionNotFound", "The workflow launch admission was not found.");
+        var run = await workflowRunStore.GetRunAsync(admission.Binding.RunId, cancellationToken);
+        if (run is null) {
+            await workflowAuthority.EnsureCurrentAsync(admission.Binding.Authority, null, cancellationToken);
+            var owner = admission.Binding.LeaseOwner
+                ?? throw new InvalidOperationException("The prepared workflow admission has no retained lease owner.");
+            var agent = new ProjectStructureAgentContext(owner.AgentId, owner.AgentName, owner.MachineName,
+                owner.RepositoryRoot, owner.BranchName, owner.SessionId);
+            var recovered = await leaseService.RunWithProjectMutationLeaseAsync(admission.ProjectId, null, agent,
+                "reconcile-workflow-admission", async ct => {
+                    await workflowAuthority.EnsureCurrentAsync(admission.Binding.Authority, null, ct);
+                    return await workflowLaunchService.LaunchAsync(launchIntentFactory.Create(admission), ct);
+                }, cancellationToken);
+            run = recovered.Run;
+        }
+
+        var outputs = await workflowOutputs.ListAsync(admission.Binding.RunId, cancellationToken);
+        var status = await BuildAdmissionStatusAsync(admission, run, cancellationToken);
+        return await projectWorkbenchService.DeliverWorkflowStatusAsync(admission, status, run,
+            outputs.All(output => output.Receipt is not null), cancellationToken);
     }
 
     private async Task<ProjectStructureWorkflowNodeCreateResult> CreateCoreAsync(
@@ -303,103 +352,94 @@ public sealed class ProjectStructureWorkflowNodeService(
             []);
     }
 
-    private async Task<ProjectStructureWorkflowNodeStartResult> StartCoreAsync(
-        Guid projectId,
-        string nodeId,
-        ProjectStructureWorkflowNodeStartInput request,
-        ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(nodeId))
-        {
+    private async Task<ProjectStructureWorkflowNodeStartResult> StartCoreAsync(Guid projectId, string nodeId,
+        Guid intentId, ProjectStructureWorkflowNodeStartInput request, ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken) {
+        if (string.IsNullOrWhiteSpace(nodeId)) {
             throw new ProjectStructureAgentException(400, "NodeRequired", "A project-structure node id is required.");
         }
 
-        var context = await LoadNodeContextAsync(projectId, nodeId, cancellationToken);
-        var existingNodeIds = context.Surface.Nodes
-            .Select(node => node.Id)
-            .ToHashSet(StringComparer.Ordinal);
-        var workflowMetadata = ResolveWorkflowMetadata(context.Node);
-        var detail = await LoadDefinitionAsync(workflowMetadata, cancellationToken);
-        EnsureActiveDefinition(detail.Definition);
-        EnsureValidDefinition(detail);
-
-        workflowMetadata.WorkflowId = detail.Definition.Id;
-        workflowMetadata.WorkflowVersionId = detail.Definition.VersionId;
-        workflowMetadata.WorkflowName = detail.Definition.Name;
-        workflowMetadata.WorkflowDescription = detail.Definition.Description;
-
-        var inputSettings = ProjectStructureWorkflowInputSettingsNormalizer.Normalize(workflowMetadata.InputSettings);
-        workflowMetadata.InputSettings = inputSettings;
-        var simulationPlan = ProjectStructureWorkflowPreviewSimulationSupport.BuildPlan(
-            detail.Definition,
-            request.SimulatedNodeIds);
-        var preview = BuildPreview(
-            context.Project,
-            context.ParentNode,
-            context.Surface,
-            context.NodesById,
-            inputSettings,
-            context.Node,
-            agent,
-            request.RequestedBy);
-        var backendSelection = ResolveStartBackendSelection(detail.Definition, request.RequestedBackend);
-
-        try
-        {
-            var launchResult = await workflowLaunchService.LaunchAsync(
-                launchIntentFactory.Create(
-                    detail.Definition,
-                    projectId,
-                    nodeId,
-                    agent,
-                    preview.InputJson,
-                    request.RequestedBackend,
-                    simulationPlan,
-                    workflowMetadata.LastRunId),
-                cancellationToken);
-            var run = launchResult.Run;
-            var resolvedDefinition = launchResult.ResolvedRequest.Definition;
-            var status = await BuildStatusAsync(resolvedDefinition, workflowMetadata, run, cancellationToken);
-            var projection = await BuildResultProjectionAsync(projectId, existingNodeIds, cancellationToken);
-            status = MergeResultProjection(status, projection);
-            await ApplyStatusAsync(projectId, nodeId, workflowMetadata, resolvedDefinition, status, run, cancellationToken);
-
-            return new ProjectStructureWorkflowNodeStartResult(
-                projectId,
-                nodeId,
-                resolvedDefinition.Id,
-                resolvedDefinition.VersionId,
-                run.RunId,
-                BuildWorkflowRunRoute(projectId, resolvedDefinition.Id, run.RunId),
-                status,
-                string.IsNullOrWhiteSpace(backendSelection.Warning) ? [] : [backendSelection.Warning]);
+        var authority = await workflowAuthority.CaptureAsync(projectId, agent.WorkflowAuthority, cancellationToken);
+        var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, cancellationToken);
+        if (admission is not null) {
+            var simulation = ProjectStructureWorkflowPreviewSimulationSupport.BuildPlan(admission.Definition, request.SimulatedNodeIds);
+            await projectWorkbenchService.ValidateWorkflowAdmissionReplayAsync(admission, projectId, nodeId, authority,
+                request.RequestedBackend, simulation, cancellationToken);
+            await workflowAuthority.EnsureCurrentAsync(admission.Binding.Authority, null, cancellationToken);
+        } else {
+            var context = await LoadNodeContextAsync(projectId, nodeId, cancellationToken);
+            var metadata = ResolveWorkflowMetadata(context.Node);
+            var detail = await LoadDefinitionAsync(metadata, cancellationToken);
+            EnsureActiveDefinition(detail.Definition);
+            EnsureValidDefinition(detail);
+            var inputSettings = ProjectStructureWorkflowInputSettingsNormalizer.Normalize(metadata.InputSettings);
+            var simulation = ProjectStructureWorkflowPreviewSimulationSupport.BuildPlan(detail.Definition, request.SimulatedNodeIds);
+            var preview = BuildPreview(context.Project, context.ParentNode, context.Surface, context.NodesById,
+                inputSettings, context.Node, agent, request.RequestedBy);
+            _ = ResolveStartBackendSelection(detail.Definition, request.RequestedBackend);
+            admission = await projectWorkbenchService.PrepareWorkflowAdmissionAsync(projectId, nodeId, intentId,
+                request.IntentId.HasValue, detail.Definition, preview.InputJson, request.RequestedBackend,
+                simulation, authority, agent, cancellationToken);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or KeyNotFoundException)
-        {
-            logger.LogWarning(
-                exception,
-                "Workflow run from project structure failed. ProjectId={ProjectId} NodeId={NodeId} WorkflowId={WorkflowId} WorkflowVersionId={WorkflowVersionId} RequestedBackend={RequestedBackend}",
-                projectId,
-                nodeId,
-                detail.Definition.Id,
-                detail.Definition.VersionId,
-                request.RequestedBackend ?? detail.Definition.RuntimePolicy.PreferredBackend);
-            var failedStatus = BuildStatus(
-                detail.Definition,
-                workflowMetadata,
-                null,
-                WorkflowRunState.Failed,
-                [],
-                [],
-                exception.Message);
-            await ApplyStatusAsync(projectId, nodeId, workflowMetadata, detail.Definition, failedStatus, null, cancellationToken);
 
-            throw new ProjectStructureAgentException(
-                400,
-                "WorkflowRunStartFailed",
-                exception.Message);
+        var launch = await workflowLaunchService.LaunchAsync(launchIntentFactory.Create(admission), cancellationToken);
+        var status = await BuildAdmissionStatusAsync(admission, launch.Run, cancellationToken);
+        var outputs = await workflowOutputs.ListAsync(admission.Binding.RunId, cancellationToken);
+        var delivery = await projectWorkbenchService.DeliverWorkflowStatusAsync(admission, status, launch.Run,
+            outputs.All(output => output.Receipt is not null), cancellationToken);
+        var warnings = new List<string>();
+        var backend = ResolveStartBackendSelection(admission.Definition, admission.LaunchIntent.RequestedBackend);
+        if (!string.IsNullOrWhiteSpace(backend.Warning)) {
+            warnings.Add(backend.Warning);
         }
+
+        if (launch.Observation != WorkflowLaunchObservation.Confirmed) {
+            warnings.Add("Workflow admission succeeded; an execution or admission-receipt observer failed. The original run identity is retained.");
+        }
+
+        if (!admission.CallerSuppliedIntent) {
+            warnings.Add("This legacy request supplied no intentId. Repeating it intentionally creates another admission.");
+        }
+
+        return StartResult(admission, launch.Run, status with { Delivery = delivery }, warnings) with {
+            ObservationException = launch.ObservationException,
+            ReceiptObservationException = launch.ReceiptObservationException
+        };
+    }
+
+    private static ProjectStructureWorkflowNodeStartResult StartResult(ProjectWorkflowAdmission admission,
+        WorkflowRunSnapshot? run, ProjectStructureWorkflowRunStatus status, IReadOnlyList<string> warnings)
+        => new(admission.ProjectId, admission.NodeId, admission.Definition.Id, admission.Definition.VersionId,
+            admission.Binding.RunId, BuildWorkflowRunRoute(admission.ProjectId, admission.Definition.Id, admission.Binding.RunId),
+            status with { IntentId = admission.Binding.IntentId, AdmissionSequence = admission.Binding.Sequence }, warnings) {
+            IntentId = admission.Binding.IntentId,
+            CallerSuppliedIntent = admission.CallerSuppliedIntent,
+            RunAdmissionObserved = run is not null
+        };
+
+    private async Task<ProjectStructureWorkflowRunStatus> BuildAdmissionStatusAsync(ProjectWorkflowAdmission admission,
+        WorkflowRunSnapshot? run, CancellationToken cancellationToken) {
+        if (run is not null && (run.RunId != admission.Binding.RunId || run.VersionId != admission.Definition.VersionId)) {
+            throw new InvalidOperationException("The observed workflow run differs from its exact Structure admission.");
+        }
+
+        var outputs = await workflowOutputs.ListAsync(admission.Binding.RunId, cancellationToken);
+        var receipts = outputs.Where(output => output.Receipt is not null).Select(output => output.Receipt!).ToList();
+        var metadata = new ProjectWorkflowNodeMetadata {
+            LastRunId = admission.Binding.RunId,
+            LastRunState = run?.State ?? WorkflowRunState.NotStarted,
+            LastRunSummary = run?.Summary ?? "Workflow launch is prepared; run admission is awaiting observation.",
+            LastCreatedNodeIds = receipts.Select(receipt => receipt.NodeId).ToList(),
+            LastCreatedAssetIds = receipts.Where(receipt => receipt.AssetId.HasValue).Select(receipt => receipt.AssetId!.Value.ToString("D")).ToList(),
+            LastCreatedFilePaths = receipts.Select(receipt => receipt.StoragePath).Where(path => !string.IsNullOrWhiteSpace(path)).ToList()
+        };
+        var status = await BuildStatusAsync(admission.Definition, metadata, run, cancellationToken);
+        return status with {
+            Summary = status.Summary with { CreatedFilePaths = metadata.LastCreatedFilePaths },
+            IntentId = admission.Binding.IntentId,
+            AdmissionSequence = admission.Binding.Sequence,
+            Delivery = admission.Delivery
+        };
     }
 
     private async Task<ProjectStructureWorkflowNodeContext> LoadNodeContextAsync(
@@ -905,55 +945,6 @@ public sealed class ProjectStructureWorkflowNodeService(
             recentEvents);
     }
 
-    private async Task<ProjectStructureWorkflowResultProjection> BuildResultProjectionAsync(
-        Guid projectId,
-        IReadOnlySet<string> existingNodeIds,
-        CancellationToken cancellationToken)
-    {
-        var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
-        var createdNodes = surface.Nodes
-            .Where(node => !existingNodeIds.Contains(node.Id))
-            .OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(node => node.Id, StringComparer.Ordinal)
-            .ToList();
-        var createdAssetIds = createdNodes
-            .Where(IsAssetNode)
-            .Select(ResolveAssetId)
-            .ToList();
-
-        return new ProjectStructureWorkflowResultProjection(
-            NormalizeDistinct(createdNodes.Select(node => node.Id), StringComparer.Ordinal),
-            NormalizeDistinct(createdAssetIds, StringComparer.Ordinal));
-    }
-
-    private static ProjectStructureWorkflowRunStatus MergeResultProjection(
-        ProjectStructureWorkflowRunStatus status,
-        ProjectStructureWorkflowResultProjection projection)
-    {
-        if (projection.CreatedNodeIds.Count == 0 && projection.CreatedAssetIds.Count == 0)
-        {
-            return status;
-        }
-
-        var summary = status.Summary with
-        {
-            CreatedNodeIds = NormalizeDistinct(
-                status.Summary.CreatedNodeIds.Concat(projection.CreatedNodeIds),
-                StringComparer.Ordinal),
-            CreatedAssetIds = NormalizeDistinct(
-                status.Summary.CreatedAssetIds.Concat(projection.CreatedAssetIds),
-                StringComparer.Ordinal)
-        };
-
-        return status with { Summary = summary };
-    }
-
-    private static bool IsAssetNode(ProjectStructureNode node)
-        => node.ObjectType is ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset;
-
-    private static string ResolveAssetId(ProjectStructureNode node)
-        => node.ArtifactId?.ToString("D") ?? node.Id;
-
     private static IReadOnlyList<string> NormalizeDistinct(
         IEnumerable<string> values,
         StringComparer comparer)
@@ -963,87 +954,6 @@ public sealed class ProjectStructureWorkflowNodeService(
             .Select(value => value.Trim())
             .Distinct(comparer)
             .ToList();
-    }
-
-    private async Task ApplyStatusAsync(
-        Guid projectId,
-        string nodeId,
-        ProjectWorkflowNodeMetadata workflowMetadata,
-        WorkflowDefinition definition,
-        ProjectStructureWorkflowRunStatus status,
-        WorkflowRunSnapshot? run,
-        CancellationToken cancellationToken)
-    {
-        var now = DateTimeOffset.UtcNow;
-        workflowMetadata.WorkflowId = definition.Id;
-        workflowMetadata.WorkflowVersionId = definition.VersionId;
-        workflowMetadata.WorkflowName = definition.Name;
-        workflowMetadata.WorkflowDescription = definition.Description;
-        workflowMetadata.LastRunId = status.RunId;
-        workflowMetadata.LastRunState = status.State;
-        workflowMetadata.LastRunSummary = status.Summary.RunSummary;
-        workflowMetadata.LastCreatedNodeIds = status.Summary.CreatedNodeIds;
-        workflowMetadata.LastCreatedAssetIds = status.Summary.CreatedAssetIds;
-        workflowMetadata.LastCreatedFilePaths = status.Summary.CreatedFilePaths;
-        workflowMetadata.LastStepIndex = status.CurrentStepIndex;
-        workflowMetadata.LastStepCount = status.StepCount;
-        workflowMetadata.LastStartedAtUtc = run?.CreatedAtUtc ??
-            (status.State == WorkflowRunState.NotStarted ? workflowMetadata.LastStartedAtUtc : workflowMetadata.LastStartedAtUtc ?? now);
-        workflowMetadata.LastUpdatedAtUtc = run?.UpdatedAtUtc ??
-            (status.State == WorkflowRunState.NotStarted ? workflowMetadata.LastUpdatedAtUtc : now);
-
-        var updatedNode = await projectWorkbenchService.UpdateObjectMetadataAsync(
-            projectId,
-            nodeId,
-            ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
-            {
-                Workflow = workflowMetadata
-            }),
-            status: status.Status,
-            cancellationToken: cancellationToken);
-        if (updatedNode is null)
-        {
-            throw new ProjectStructureAgentException(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
-        }
-
-        await projectWorkbenchService.UpdateObjectProgressDetailedAsync(
-            projectId,
-            [nodeId],
-            status.ProgressMode,
-            status.ProgressPercent,
-            cancellationToken);
-        await ApplyWorkflowMarkerAsync(projectId, nodeId, status, cancellationToken);
-    }
-
-    private async Task ApplyWorkflowMarkerAsync(
-        Guid projectId,
-        string nodeId,
-        ProjectStructureWorkflowRunStatus status,
-        CancellationToken cancellationToken)
-    {
-        foreach (var markerIcon in new[] { "alert", "pause", "stop" })
-        {
-            await projectWorkbenchService.RemoveObjectMarkerDetailedAsync(
-                projectId,
-                [nodeId],
-                markerIcon,
-                string.Empty,
-                string.Empty,
-                cancellationToken);
-        }
-
-        if (string.IsNullOrWhiteSpace(status.MarkerIcon))
-        {
-            return;
-        }
-
-        await projectWorkbenchService.AddObjectMarkerDetailedAsync(
-            projectId,
-            [nodeId],
-            status.MarkerIcon,
-            status.MarkerTone,
-            status.MarkerLabel,
-            cancellationToken);
     }
 
     private static ProjectStructureWorkflowRunArtifactSummary MapArtifactSummary(WorkflowArtifactRecord artifact)
@@ -1213,7 +1123,7 @@ public sealed class ProjectStructureWorkflowNodeService(
     {
         var nodeCount = definition.Graph.Nodes.Count;
         var stepLabel = nodeCount == 1 ? "node" : "nodes";
-        return $"{definition.Status} workflow · {nodeCount} {stepLabel}";
+        return $"{definition.Status} workflow Ă„â€šĂ˘â‚¬ĹˇÄ‚â€šĂ‚Â· {nodeCount} {stepLabel}";
     }
 
     private static string BuildNotes(WorkflowDefinition definition, ProjectStructureNode parentNode)
@@ -1313,10 +1223,6 @@ public sealed class ProjectStructureWorkflowNodeService(
         IReadOnlyDictionary<string, ProjectStructureNode> NodesById,
         ProjectStructureNode Node,
         ProjectStructureNode ParentNode);
-
-    private sealed record ProjectStructureWorkflowResultProjection(
-        IReadOnlyList<string> CreatedNodeIds,
-        IReadOnlyList<string> CreatedAssetIds);
 
     private sealed record ProjectStructureNodeStatePresentation(
         string Status,
