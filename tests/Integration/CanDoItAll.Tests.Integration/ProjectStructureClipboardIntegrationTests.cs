@@ -782,13 +782,13 @@ public sealed class ProjectStructureClipboardIntegrationTests
     {
         services.AddSingleton<SaveChangesCounter>();
 
-        var factoryDescriptor = services.Last(descriptor => descriptor.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+        var factoryDescriptor = services.Last(descriptor => descriptor.ServiceType == typeof(IDbContextFactory<WorkbenchDbContext>));
         services.Remove(factoryDescriptor);
         services.Add(new ServiceDescriptor(
-            typeof(IDbContextFactory<AppDbContext>),
+            typeof(IDbContextFactory<WorkbenchDbContext>),
             serviceProvider =>
             {
-                var innerFactory = (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, factoryDescriptor);
+                var innerFactory = (IDbContextFactory<WorkbenchDbContext>)CreateService(serviceProvider, factoryDescriptor);
                 var counter = serviceProvider.GetRequiredService<SaveChangesCounter>();
                 return new CountingDbContextFactory(innerFactory, counter);
             },
@@ -817,24 +817,24 @@ public sealed class ProjectStructureClipboardIntegrationTests
     }
 
     private sealed class CountingDbContextFactory(
-        IDbContextFactory<AppDbContext> innerFactory,
-        SaveChangesCounter counter) : IDbContextFactory<AppDbContext>
+        IDbContextFactory<WorkbenchDbContext> innerFactory,
+        SaveChangesCounter counter) : IDbContextFactory<WorkbenchDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public WorkbenchDbContext CreateDbContext()
         {
             var dbContext = innerFactory.CreateDbContext();
             AttachSaveCounter(dbContext);
             return dbContext;
         }
 
-        public async Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public async Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             var dbContext = await innerFactory.CreateDbContextAsync(cancellationToken);
             AttachSaveCounter(dbContext);
             return dbContext;
         }
 
-        private void AttachSaveCounter(AppDbContext dbContext)
+        private void AttachSaveCounter(WorkbenchDbContext dbContext)
         {
             dbContext.SavedChanges += (_, _) => counter.Increment();
         }

@@ -113,7 +113,7 @@ public sealed class SearchStorageOwnerPersistenceTests {
         Assert.Null(await otherScope.ServiceProvider.GetRequiredService<StorageCatalogService>().GetAsync(catalog.Id));
         Assert.DoesNotContain(await otherScope.ServiceProvider.GetRequiredService<StorageCatalogService>().ListRulesAsync(), item => item.Id == rule.Id);
         Assert.Empty(await otherScope.ServiceProvider.GetRequiredService<SearchIndexService>().SearchAsync("Updated through Search"));
-        Assert.Equal(reloaded.Name, (await storageService.GetAsync(catalog.Id))!.Name);
+        Assert.Equal(edit.Name, (await storageService.GetAsync(catalog.Id))!.Name);
     }
 
     [Theory]

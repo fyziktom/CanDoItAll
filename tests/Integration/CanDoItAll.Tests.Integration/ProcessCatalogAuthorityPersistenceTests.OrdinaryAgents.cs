@@ -108,12 +108,15 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var services = scope.ServiceProvider;
         var fixture = await Fixture.CreateAsync(services);
         var held = new CatalogCommitProbe(fixture.Writer);
-        probe.Observer = held;
+        var creation = new TaskCreationCommitProbe(held);
+        probe.Observer = creation;
         var owner = OrdinaryOwner(fixture, ProjectAgentMutationDomain.Tasks);
         var created = await services.GetRequiredService<ProjectStructureTaskCreationService>().CreateAsync(fixture.Project.ProjectId,
             new("Admitted task", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1)) { ExpectedProjectAdmission = owner.ExpectedProjectAdmission }, owner);
         Assert.True(held.BeforeCommit);
         Assert.True(held.AfterCommit);
+        Assert.Equal(2, creation.ObjectCommits);
+        Assert.Equal(1, creation.RowCommits);
         var surface = await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(fixture.Project.ProjectId);
         Assert.Contains(surface.Nodes, node => node.Id == created.TaskNodeId && node.ObjectSubtype == "task");
         Assert.Contains(created.TaskNodeId, (await services.GetRequiredService<ProjectWorkbenchService>().LoadGanttViewStateAsync(fixture.Project.ProjectId)).OrderedTaskNodeIds);
@@ -395,6 +398,40 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         });
         await context.SaveChangesAsync();
         return (first, second);
+    }
+
+    private sealed class TaskCreationCommitProbe(CatalogCommitProbe catalog) : DbTransactionInterceptor {
+        private readonly Dictionary<DbTransaction, bool> selected = new(ReferenceEqualityComparer.Instance);
+        public int ObjectCommits { get; private set; }
+        public int RowCommits { get; private set; }
+
+        public override async ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction,
+            TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default) {
+            if (eventData.Context is not WorkbenchDbContext context) {
+                return result;
+            }
+            var hasObjects = context.ChangeTracker.Entries<ProjectObjectRecord>().Any();
+            var hasRows = context.ChangeTracker.Entries<ProjectWorkbenchViewStateRecord>().Any();
+            if (!hasObjects && !hasRows) {
+                return result;
+            }
+            Assert.False(hasObjects && hasRows);
+            selected.Add(transaction, hasRows);
+            return await catalog.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
+        }
+
+        public override async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default) {
+            if (!selected.Remove(transaction, out var hasRows)) {
+                return;
+            }
+            await catalog.TransactionCommittedAsync(transaction, eventData, cancellationToken);
+            if (hasRows) {
+                RowCommits++;
+            } else {
+                ObjectCommits++;
+            }
+        }
     }
 
     private sealed class GanttRowCommitProbe(CatalogCommitProbe catalog) : DbTransactionInterceptor {

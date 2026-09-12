@@ -232,46 +232,36 @@ public sealed class ProjectStructureAssetEffectIntegrationTests
             .OfType<ProjectStructureAgentRuntimeToolProvider>()
             .Single();
         return await provider.CreateToolsAsync(
-            CreateContext(CreateAgent(projectId), projectId),
+            CreateContext(await CreateAgentAsync(services, projectId), projectId),
             CancellationToken.None);
     }
 
-    private static AgentDefinition CreateAgent(Guid projectId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var configurationJson = AgentProjectStructureAccessMetadata.Write(
-            "{}",
-            new AgentProjectStructureAccessSettings
-            {
+    private static async Task<AgentDefinition> CreateAgentAsync(IServiceProvider services, Guid projectId) {
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var provider = (await workspace.ListProvidersAsync())
+            .First(item => item.IsEnabled && item.SupportsTools && item.Purpose == ProviderProfilePurpose.Chat);
+        var agentId = await workspace.SaveAgentAsync(new AgentEditorModel {
+            Name = "Asset effect integration agent",
+            RoleTitle = "Portfolio architect",
+            Summary = "Exercises the managed project asset boundary.",
+            Instructions = "Create managed assets only in the active project.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = provider.Id,
+            Model = provider.DefaultModel,
+            ConfigurationJson = "{}",
+            Permissions = AgentPermissionsPolicy.Default,
+            ProjectStructureAccess = new() {
                 CanRead = true,
                 CanWrite = false,
                 CanWriteNonTaskStructure = true,
                 CanWriteTasks = false,
                 AllowAllProjects = false,
                 AllowedProjectIds = [projectId]
-            });
-        return new AgentDefinition(
-            Guid.NewGuid(),
-            "Asset effect integration agent",
-            "Portfolio architect",
-            "Exercises the managed project asset boundary.",
-            "Create managed assets only in the active project.",
-            AgentLifecycleStatus.Active,
-            Guid.NewGuid(),
-            "test-model",
-            AgentWorkloadKind.General,
-            AgentChatHistoryMode.ProviderDefault,
-            0.2,
-            RequirePerServiceCallChatHistoryPersistence: false,
-            EnableBackgroundResponses: false,
-            configurationJson,
-            IsTemplate: false,
-            TemplateKey: string.Empty,
-            AgentPermissionsPolicy.Default,
-            [],
-            [],
-            now,
-            now);
+            }
+        });
+        var agent = Assert.Single(await workspace.ListAgentsAsync(), item => item.Id == agentId);
+        Assert.Equal(projectId, Assert.Single(AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson).AllowedProjectLifetimes).ProjectId);
+        return agent;
     }
 
     private static AgentRuntimeToolProviderContext CreateContext(AgentDefinition agent, Guid projectId)

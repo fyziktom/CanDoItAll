@@ -729,6 +729,8 @@ public sealed class ProjectStructureAgentIntegrationTests
                 null,
                 "delivery"));
 
+        var authority = await scope.ServiceProvider.GetRequiredService<IProcessLaunchOperatorAuthoritySource>()
+            .CaptureUserInterfaceAsync(projectId);
         var result = await launchService.LaunchAsync(
             new ProcessLaunchRequest(
                 DefinitionKey: "software-delivery",
@@ -743,7 +745,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                     ["OutputRoot"] = productRoot
                 },
                 RunReadiness: false,
-                Execute: false));
+                Execute: false) { Authority = authority, ProjectAdmission = authority.ProjectAdmission });
 
         Assert.True(result.RunId.HasValue);
         var runId = result.RunId.Value;
@@ -814,7 +816,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         FileToolsStorageBinding outputBinding = Assert.Single(
             await nodeStorageBindingSource.ResolveAsync(outputScope));
         Assert.Equal(
-            WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
+            WorkspaceScopeDescriptor.Organization(authority.DatabaseProfileId.ToString("N"))
                 .CombineArtifactPath("process-runs", runId.Value.ToString("D")),
             outputBinding.Root.Value);
         var summaryNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(runId.Value), StringComparison.Ordinal));

@@ -41,7 +41,7 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
             Assert.Equal(seed.PartyId, assignment.PartyId);
         }
         commands.Commands.Clear();
-        await service.DeleteAssignmentAsync(result.Value);
+        await service.DeleteAssignmentAsync(result.Value, expectedReference: ProjectAssignmentReference.From(seed.Admission));
         AssertEnlisted(commands, saves);
         await AssertTaskAsync(application, seed, expectedRevision: 2, expectedDisplayName: string.Empty, expectedCost: null);
         await using (var canonical = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
@@ -138,11 +138,14 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
                 ReferenceId = resourceId.ToString(), OrderIndex = 3, CreatedAtUtc = timestamp
             });
         await canonical.SaveChangesAsync();
-        return new(projectId, partyId, taskId, nodeKey, bindingId, referenceId, resourceId);
+        await using var scope = application.Services.CreateAsyncScope();
+        var admission = Assert.IsType<ProjectWriteAdmission>(await scope.ServiceProvider
+            .GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        return new(projectId, partyId, taskId, nodeKey, bindingId, referenceId, resourceId, admission);
     }
 
     private static ProjectPartyAssignmentUpsertRequest Request(Seed seed) => new() {
-        ProjectId = seed.ProjectId, PartyId = seed.PartyId, Role = ProjectPartyAssignmentRole.WorkItemAssignee,
+        ProjectId = seed.ProjectId, ExpectedProjectAdmission = seed.Admission, PartyId = seed.PartyId, Role = ProjectPartyAssignmentRole.WorkItemAssignee,
         NodeKey = seed.TaskNodeKey, IsPrimary = true, Source = "owner-persistence-proof"
     };
 
@@ -206,7 +209,8 @@ public sealed class WorkbenchAssignmentOwnerPersistenceTests {
         });
     }
 
-    private sealed record Seed(Guid ProjectId, Guid PartyId, Guid TaskId, string TaskNodeKey, Guid BindingId, Guid ReferenceRowId, Guid ResourceId);
+    private sealed record Seed(Guid ProjectId, Guid PartyId, Guid TaskId, string TaskNodeKey, Guid BindingId, Guid ReferenceRowId,
+        Guid ResourceId, ProjectWriteAdmission Admission);
 
     private sealed class InjectedWorkSaveFailure() : Exception("Injected failure after native task staging and before the final Work assignment save.") {
     }

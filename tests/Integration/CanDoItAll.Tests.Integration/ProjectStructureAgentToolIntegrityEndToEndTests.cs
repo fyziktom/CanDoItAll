@@ -390,7 +390,7 @@ internal sealed class IntegrityScenarioMafProviderAgentFactory(
         bool frameworkManagedHistory,
         bool allowBackgroundResponses)
     {
-        return chatClient.AsAIAgent(options: options);
+        return new ChatClientAgent(new MafToolAdmissionChatClient(chatClient), options);
     }
 }
 

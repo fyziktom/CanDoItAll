@@ -315,7 +315,10 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         var appliedBefore = (await sourceDb.Database.GetAppliedMigrationsAsync()).ToArray();
         Assert.Equal("20260830104752_AddProviderHistoryExternalReference", appliedBefore.Last());
         await sourceDb.Database.GetService<IMigrator>().MigrateAsync();
-        Assert.Equal(appliedBefore, await sourceDb.Database.GetAppliedMigrationsAsync());
+        var appliedCurrent = (await sourceDb.Database.GetAppliedMigrationsAsync()).ToArray();
+        Assert.Equal(sourceDb.Database.GetMigrations(), appliedCurrent);
+        await sourceDb.Database.GetService<IMigrator>().MigrateAsync();
+        Assert.Equal(appliedCurrent, await sourceDb.Database.GetAppliedMigrationsAsync());
         sourceDb.ChangeTracker.Clear();
         Assert.Equal(publication.PublicId, (await sourceDb.Set<ProviderSharePublication>().SingleAsync()).PublicId);
         Assert.Equal(remote.RemoteInstanceId, (await sourceDb.Set<SharedProviderSource>().SingleAsync()).RemoteInstanceId);

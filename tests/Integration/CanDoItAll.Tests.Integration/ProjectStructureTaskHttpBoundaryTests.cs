@@ -64,6 +64,9 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
             ProjectWorkItemEffortUnit.Hours,
             240m,
             "USD");
+        var displayed = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest());
+        var admission = Assert.IsType<ProjectWriteAdmission>(displayed.ExpectedProjectAdmission);
         var created = await PostAndReadAsync<ProjectStructureTaskCreateResult>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/tasks",
@@ -72,7 +75,7 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
                 DateTimeOffset.Parse("2026-07-23T12:00:00Z"),
                 DateTimeOffset.Parse("2026-07-23T18:00:00Z"),
                 Resource: null,
-                Estimate: expectedEstimate));
+                Estimate: expectedEstimate) { ExpectedProjectAdmission = admission });
 
         Assert.Null(created.AttachedResource);
         Assert.Equal(
@@ -138,13 +141,16 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
                 project.Id.ToString(),
                 "Validate typed task process attachment",
                 15));
+        var displayed = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest());
+        var admission = Assert.IsType<ProjectWriteAdmission>(displayed.ExpectedProjectAdmission);
         var created = await PostAndReadAsync<ProjectStructureTaskCreateResult>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/tasks",
             new ProjectStructureTaskCreateRequest(
                 "Main App",
                 DateTimeOffset.Parse("2026-07-25T12:00:00Z"),
-                DateTimeOffset.Parse("2026-07-25T20:00:00Z")));
+                DateTimeOffset.Parse("2026-07-25T20:00:00Z")) { ExpectedProjectAdmission = admission });
 
         var genericResponse = await host.Client.PostAsJsonAsync(
             $"/api/project-structure/projects/{project.Id:D}/nodes/{created.TaskNodeId}/process-definition",
@@ -165,7 +171,7 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
                 new ProjectStructureTaskResourceSelection(
                     ProjectStructureTaskResourceKind.Process,
                     SoftwareDeliveryDefinitionId),
-                ProjectTaskExecutionSnapshot.NotStarted));
+                ProjectTaskExecutionSnapshot.NotStarted) { ExpectedProjectAdmission = admission });
 
         Assert.Equal(ProjectStructureTaskResourceKind.Process, attached.Resource.Kind);
         Assert.Equal(SoftwareDeliveryDefinitionId, attached.Resource.ResourceId);

@@ -23,9 +23,10 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         var partyIntegration = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
         var dbContextFactory = scope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var projectId = await CreateProjectAsync(projects, "Subtree scope release");
+        var admission = await CreateProjectAsync(projects, "Subtree scope release");
+        var projectId = admission.ProjectId;
         var node = await CreateAssignableWorkItemAsync(workbench, projectId, "Delete with CRM");
-        await SeedAssignmentAsync(partyIntegration, projectId, node.Id);
+        await SeedAssignmentAsync(partyIntegration, admission, node.Id);
 
         var deletedCount = await workbench.DeleteObjectAsync(projectId, node.Id)
             .WaitAsync(CompletionTimeout);
@@ -50,9 +51,10 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         var mutationCoordinator = scope.ServiceProvider
             .GetRequiredService<ProjectCrossModuleMutationCoordinator>();
-        var projectId = await CreateProjectAsync(projects, "Replay scope release");
+        var admission = await CreateProjectAsync(projects, "Replay scope release");
+        var projectId = admission.ProjectId;
         var node = await CreateAssignableWorkItemAsync(workbench, projectId, "Replay with CRM");
-        await SeedAssignmentAsync(partyIntegration, projectId, node.Id);
+        await SeedAssignmentAsync(partyIntegration, admission, node.Id);
         var mutationId = Guid.NewGuid();
 
         await using (var dbContext = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync())
@@ -60,7 +62,8 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
                      await scope.ServiceProvider.GetRequiredService<ProjectStructureMutationScopeFactory>().BeginBindingWriteAsync(
                          dbContext,
                          ProjectStructureSerializableMutationScope.ForProject(projectId),
-                         CancellationToken.None))
+                         CancellationToken.None,
+                         expectedAdmissions: [admission]))
         {
             var projectObject = await dbContext.Set<ProjectObjectRecord>()
                 .SingleAsync(record =>
@@ -75,7 +78,8 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
                 JsonSerializer.Serialize(new DeleteSubtreeMutationPayload(
                     node.Id,
                     [node.Id],
-                    0)));
+                    0,
+                    SourceReference: ProjectAssignmentReference.From(admission))));
             mutation.Id = mutationId;
             mutationCoordinator.MarkWorkbenchCommitted(mutation);
             dbContext.Remove(binding);
@@ -110,12 +114,13 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         var partyIntegration = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
         var dbContextFactory = scope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var sourceProjectId = await CreateProjectAsync(projects, "Transfer source");
-        var targetProjectId = await CreateProjectAsync(projects, "Transfer target");
+        var sourceAdmission = await CreateProjectAsync(projects, "Transfer source");
+        var sourceProjectId = sourceAdmission.ProjectId;
+        var targetProjectId = (await CreateProjectAsync(projects, "Transfer target")).ProjectId;
         var node = await CreateAssignableWorkItemAsync(workbench, sourceProjectId, "Move with CRM");
         var assignmentId = await SeedAssignmentAsync(
             partyIntegration,
-            sourceProjectId,
+            sourceAdmission,
             node.Id);
 
         var result = await workbench.MoveNodesToProjectAsync(
@@ -132,10 +137,14 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
             (await verificationContext.Set<ProjectObjectRecord>()
                 .AsNoTracking()
                 .SingleAsync(record => record.NodeKey == node.Id)).ProjectId);
-        var assignment = await verificationContext.Set<ProjectPartyAssignment>()
+        var assignment = await verificationContext.Set<ProjectWorkAssignmentRecord>()
             .AsNoTracking()
             .SingleAsync(record => record.Id == assignmentId);
         Assert.Equal(targetProjectId, assignment.ProjectId);
+        Assert.True(await verificationContext.Set<ProjectPartyAssignment>()
+            .AnyAsync(record => record.ProjectId == targetProjectId && record.NodeKey == node.Id));
+        Assert.False(await verificationContext.Set<ProjectPartyAssignment>()
+            .AnyAsync(record => record.ProjectId == sourceProjectId && record.NodeKey == node.Id));
         var mutation = await verificationContext.Set<ProjectCrossModuleMutationRecord>()
             .AsNoTracking()
             .SingleAsync(record =>
@@ -146,18 +155,16 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
             .AnyAsync(receipt => receipt.OperationId == mutation.Id));
     }
 
-    private static async Task<Guid> CreateProjectAsync(
+    private static async Task<ProjectWriteAdmission> CreateProjectAsync(
         ProjectsService projects,
-        string name)
-    {
-        var result = await projects.SaveAsync(new ProjectEditorModel
-        {
+        string name) {
+        var result = await projects.CreateWithAdmissionAsync(new ProjectEditorModel {
             Name = name,
             Objective = "Prove committed mutation scopes are released before reconciliation.",
             CurrentPhase = "Validation"
         });
         Assert.True(result.IsSuccess);
-        return result.Value;
+        return Assert.IsType<ProjectWriteAdmission>(result.Value);
     }
 
     private static Task<ProjectStructureNode> CreateAssignableWorkItemAsync(
@@ -182,9 +189,9 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
 
     private static async Task<Guid> SeedAssignmentAsync(
         IProjectPartyIntegrationBridge partyIntegration,
-        Guid projectId,
-        string nodeKey)
-    {
+        ProjectWriteAdmission admission,
+        string nodeKey) {
+        var projectId = admission.ProjectId;
         var party = await partyIntegration.CreatePartyAsync(new ProjectPartyQuickCreateRequest
         {
             ProjectId = projectId,
@@ -196,18 +203,22 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
             party.IsSuccess,
             string.Join(" ", party.Errors.Select(error => error.Message)));
         var createdParty = Assert.IsType<ProjectPartyQuickCreateResult>(party.Value);
-        var assignment = await partyIntegration.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
-        {
+        var request = new ProjectPartyAssignmentUpsertRequest {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = createdParty.PartyId,
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = nodeKey,
             IsPrimary = true,
             Source = "cross-module-scope-release-integration"
-        });
+        };
+        var assignment = await partyIntegration.SaveAssignmentAsync(request);
         Assert.True(
             assignment.IsSuccess,
             string.Join(" ", assignment.Errors.Select(error => error.Message)));
+        request.Role = ProjectPartyAssignmentRole.Stakeholder;
+        var participation = await partyIntegration.SaveAssignmentAsync(request);
+        Assert.True(participation.IsSuccess, string.Join(" ", participation.Errors.Select(error => error.Message)));
         return assignment.Value;
     }
 
@@ -222,6 +233,8 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
             .AnyAsync(record =>
                 record.ProjectId == projectId &&
                 record.NodeKey == nodeKey));
+        Assert.False(await dbContext.Set<ProjectWorkAssignmentRecord>()
+            .AnyAsync(record => record.ProjectId == projectId && record.NodeKey == nodeKey));
         var mutation = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .AsNoTracking()
             .SingleAsync(record =>
