@@ -412,7 +412,7 @@ public sealed class LlmChatConversationTransactionIntegrationTests
             0);
 }
 
-public sealed class LlmChatTurnTransactionIntegrationTests
+public sealed partial class LlmChatTurnTransactionIntegrationTests
 {
     [Fact]
     public async Task Operation_admission_round_trips_typed_project_attribution()

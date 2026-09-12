@@ -127,6 +127,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         Assert.Equal(2, history.Length);
         var usabilityRows = await ReadOwnedHostUsabilityRowsAsync(context, component, definition, cancellationToken);
         Assert.Equal(5, usabilityRows.Length);
+        var retainedHistory = await SeedOwnedHostHistoryAsync(services, context, graph, providerId, tag, model, cancellationToken);
         await AssertOwnedHostStartingMigrationsAsync(context, cancellationToken);
         Assert.Equal(graphRows, await ReadRetainedGraphRowsAsync(context, graph));
         Assert.Equal(recordRows, await ReadRecordsAsync(context, records));
@@ -141,7 +142,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
             HashOwnedHostValue(string.Join('\n', recordRows)),
             HashOwnedHostValue(agentJson), HashOwnedHostValue(string.Join('\n', usabilityRows)),
             HashOwnedHostValue(string.Join('\n', history)), OriginalGraphRowCount: 13,
-            OriginalPluginAndSchedulerRowCount: 8, SyntheticProcessEventCount: 2);
+            OriginalPluginAndSchedulerRowCount: 8, SyntheticProcessEventCount: 2, retainedHistory.Descriptor);
         Guid? previousLifetime = null;
         return new OwnedHostRetainedSeed(descriptor, async token => {
             await using var restarted = BuildOwnedHostFixtureServices(profile);
@@ -168,9 +169,10 @@ public sealed partial class MigrationAuthorityIntegrationTests {
             Assert.Equal(component.Instructions, hydrated.Instructions);
             Assert.Equal(templateJson, JsonSerializer.Serialize(new ProcessTemplatePackLoader(processTemplateRoot)
                 .LoadDefinition(OwnedHostProcessTemplateKey), GraphJson));
+            var historyVerification = await retainedHistory.VerifyAsync(readServices, reader, token);
             return new OwnedHostSeedVerification(descriptor.DatabaseProfileId, previousLifetime.Value, 13,
                 observedGraph.Length - graphRows.Length, recordRows.Length, usabilityRows.Length, history.Length,
-                (await reader.Database.GetAppliedMigrationsAsync(token)).ToArray(), DateTimeOffset.UtcNow);
+                (await reader.Database.GetAppliedMigrationsAsync(token)).ToArray(), DateTimeOffset.UtcNow, historyVerification);
         });
     }
 
@@ -236,13 +238,14 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         string ProcessTemplateKey, Guid ProcessDefinitionId, string ProcessTemplateHash,
         string OriginalGraphHash, string OriginalPluginAndSchedulerHash, string OrdinaryAgentHash,
         string WorkflowAndPromptHash, string SyntheticTimelineHash,
-        int OriginalGraphRowCount, int OriginalPluginAndSchedulerRowCount, int SyntheticProcessEventCount);
+        int OriginalGraphRowCount, int OriginalPluginAndSchedulerRowCount, int SyntheticProcessEventCount,
+        OwnedHostHistoryDescriptor RetainedHistory);
 
     public sealed record OwnedHostSeedVerification(
         Guid DatabaseProfileId, Guid OriginalProjectLifetimeId, int PreservedOriginalGraphRows,
         int AdditionalRelatedGraphRows, int PreservedPluginAndSchedulerRows,
         int PreservedWorkflowAndPromptRows, int PreservedSyntheticProcessEvents,
-        string[] AppliedMigrations, DateTimeOffset VerifiedAtUtc);
+        string[] AppliedMigrations, DateTimeOffset VerifiedAtUtc, OwnedHostHistoryVerification RetainedHistory);
 
     public sealed class OwnedHostRetainedSeed(
         OwnedHostSeedDescriptor descriptor, Func<CancellationToken, Task<OwnedHostSeedVerification>> verify) {

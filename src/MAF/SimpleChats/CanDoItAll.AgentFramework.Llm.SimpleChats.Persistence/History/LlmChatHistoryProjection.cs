@@ -44,10 +44,10 @@ public sealed class LlmChatHistoryProjection(HistoryPartitionStore partitions, H
     internal static HistoryEntry LegacyEntry(LlmChatInvocationRecord record, CanonicalEvidenceReference source) {
         var price = record.PricingStatus switch {
             LlmChatInvocationPricingEvidenceStatus.ProviderReported =>
-                new HistoryPrice(HistoryPriceState.ProviderReported, record.ProviderCostUsd, "USD",
+                new HistoryPrice(HistoryPriceState.ProviderReported, NormalizePriceAmount(record.ProviderCostUsd), "USD",
                     record.PricingProfileHash, record.PricingVersion),
             LlmChatInvocationPricingEvidenceStatus.CalculatedAtExecution =>
-                new HistoryPrice(HistoryPriceState.CalculatedAtExecution, record.CalculatedCostUsd, "USD",
+                new HistoryPrice(HistoryPriceState.CalculatedAtExecution, NormalizePriceAmount(record.CalculatedCostUsd), "USD",
                     record.PricingProfileHash, record.PricingVersion),
             _ => new HistoryPrice(HistoryPriceState.Unpriced)
         };
@@ -71,4 +71,8 @@ public sealed class LlmChatHistoryProjection(HistoryPartitionStore partitions, H
                 Version = 1
             };
     }
+
+    private static decimal? NormalizePriceAmount(decimal? amount) => amount is { } value
+        ? decimal.Parse(value.ToString("G29", CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture)
+        : null;
 }

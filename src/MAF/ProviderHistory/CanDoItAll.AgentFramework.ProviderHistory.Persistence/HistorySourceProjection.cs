@@ -30,7 +30,7 @@ internal static class HistorySourceProjection {
             return;
         }
         if (source.Version == mutation.Version.Value) {
-            if (source.MutationHash != hash) {
+            if (source.MutationHash != hash && (source.IsDeleted || !HistorySourceIdentity.MatchesHistoricalChatPrice(mutation, source.MutationHash))) {
                 throw new ProviderHistoryException(HistoryFailure.Conflict, "A history source version was reused with different evidence.");
             }
             return;

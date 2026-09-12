@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class ProviderHistorySourceProjectionIntegrationTests {
+public sealed partial class ProviderHistorySourceProjectionIntegrationTests {
     [Fact]
     public async Task Source_and_intent_commit_atomically() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
