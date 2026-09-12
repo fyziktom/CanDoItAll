@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class AgentChatExecutionActivityOrchestratorTests
+public sealed partial class AgentChatExecutionActivityOrchestratorTests
 {
     [Fact]
     public async Task StartSendMessage_returns_before_context_capture_and_exposes_initial_activity()
@@ -273,8 +273,7 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
         var contextRegistry = new ControllableAgentChatContextRegistry(
             blockContextCapture,
             snapshot);
-        var generationSource = new FixedAgentExecutionProfileGenerationSource(
-            new DatabaseProfileGeneration(0));
+        var generationSource = new RecoveryProfileGenerationSource();
         var turnContextCaptureService = new AgentTurnContextCaptureService(
             contextRegistry,
             new SandboxAgentExecutionAuthorityResolver(),
@@ -294,7 +293,7 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
             coordinator,
             contextRegistry,
             workspace,
-            Guid.NewGuid());
+            Guid.NewGuid(), profileId, generationSource);
     }
 
     private static async Task<IReadOnlyList<
@@ -315,7 +314,9 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
         AgentExecutionActivityCoordinator Coordinator,
         ControllableAgentChatContextRegistry ContextRegistry,
         ActivityWorkspaceExecutionService Workspace,
-        Guid AgentId)
+        Guid AgentId,
+        Guid ProfileId,
+        RecoveryProfileGenerationSource GenerationSource)
     {
         public static TimeSpan DefaultTimeout { get; } = TimeSpan.FromSeconds(10);
     }
@@ -423,6 +424,28 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
         public List<SendCall> SendCalls { get; } = [];
 
         public List<ApprovalCall> ApprovalCalls { get; } = [];
+
+        public List<(IAgentExecutionActivityOperationLease Operation, Guid RunId)> RecoveryCalls { get; } = [];
+        public Exception? RecoveryFault { get; set; }
+        public bool LeaveRecoveryUnfinished { get; set; }
+        public TaskCompletionSource<ExecutionRunResult>? RecoveryCompletion { get; set; }
+        public TaskCompletionSource RecoveryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<ExecutionRunResult> RecoverExecutionRunWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+            Guid executionRunId, CancellationToken cancellationToken = default) {
+            RecoveryCalls.Add((operation, executionRunId));
+            RecoveryStarted.TrySetResult();
+            if (RecoveryFault is not null) {
+                throw RecoveryFault;
+            }
+            var result = RecoveryCompletion is null
+                ? new ExecutionRunResult(executionRunId, SessionId, "Recovered", null, SendResult.Metric) { State = ExecutionState.Completed }
+                : await RecoveryCompletion.Task;
+            if (!LeaveRecoveryUnfinished) {
+                BindAndComplete(operation);
+            }
+            return result;
+        }
 
         public Task<ExecutionRunResult> ExecuteRunWithinOperationAsync(
             IAgentExecutionActivityOperationLease operation,

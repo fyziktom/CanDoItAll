@@ -2,6 +2,10 @@
 @if (sessionStartRejection is not null) {
     <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-chat-start-rejected">
         @sessionStartRejection.Message
+        @if (CanShowRunRecovery) {
+            <Button Text="Recover original run" Icon="restore" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                    Disabled="@IsRunRecoveryBlocked" Click="StartRunRecoveryAsync" data-testid="agents-chat-recover-original-run" />
+        }
     </Alert>
 }
         <ChatWorkspacePanel Navigation="@NavigationPresentation" NavigationIntent="HandleNavigationIntentAsync" SelectionGeneration="@chatSession.Generation" Agent="@selectedAgent"

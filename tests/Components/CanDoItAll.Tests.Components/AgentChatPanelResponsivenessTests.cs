@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
-public sealed class AgentChatPanelResponsivenessTests
+public sealed partial class AgentChatPanelResponsivenessTests
 {
     [Theory]
     [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, false)]
@@ -74,7 +74,9 @@ public sealed class AgentChatPanelResponsivenessTests
 
             completion.SetException(rejection);
             cut.WaitForAssertion(() => {
-                Assert.Equal(rejection.Message, cut.Find("[data-testid='agents-chat-start-rejected']").TextContent.Trim());
+                Assert.StartsWith(rejection.Message, cut.Find("[data-testid='agents-chat-start-rejected']").TextContent.Trim(), StringComparison.Ordinal);
+                Assert.Equal(reason == AgentChatSessionBlockReason.UnresolvedEffects ? 1 : 0,
+                    cut.FindAll("[data-testid='agents-chat-recover-original-run']").Count);
                 var panel = cut.FindComponent<ChatWorkspacePanel>().Instance;
                 Assert.False(panel.IsBusy);
                 Assert.Equal(prompt, panel.DraftPrompt);
@@ -84,6 +86,7 @@ public sealed class AgentChatPanelResponsivenessTests
                 Assert.Empty(panel.ActiveRun.PendingApprovals);
                 Assert.Equal(session.Messages, panel.Session!.Messages);
                 Assert.Single(orchestrator.SendRequests);
+                Assert.Empty(orchestrator.RecoveryRequests);
             });
             Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages,
                 item => item.Detail == rejection.Message);
@@ -95,9 +98,10 @@ public sealed class AgentChatPanelResponsivenessTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task A_stale_or_foreign_chat_start_refusal_cannot_rewrite_the_current_composer(bool switchAwayAndBack) {
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task A_stale_or_foreign_chat_start_refusal_cannot_rewrite_the_current_composer(bool switchAwayAndBack, bool changeProfile) {
         var agent = CreateAgent();
         var session = CreateSession(agent.Id);
         var other = CreateSession(agent.Id);
@@ -112,6 +116,8 @@ public sealed class AgentChatPanelResponsivenessTests
         orchestrator.SendCompletion = completion;
         var logger = new RecordingLogger<AgentChatPanel>("Agent chat start was rejected.");
         using var context = CreateContext(workspaceService, orchestratorService);
+        var generation = new RecoveryPanelGeneration();
+        context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(generation);
         context.Services.AddSingleton<ILogger<AgentChatPanel>>(logger);
         var cut = context.Render<AgentChatPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, agent.Id)
@@ -130,8 +136,11 @@ public sealed class AgentChatPanelResponsivenessTests
                 }
             }
             cut.Find("[data-testid='chat-prompt-input']").Input("Current unsent draft");
+            if (changeProfile) {
+                generation.Value = new(2);
+            }
             completion.SetException(new AgentChatSessionBlockedException(agent.Id,
-                switchAwayAndBack ? session.Id : other.Id, Guid.NewGuid(), AgentChatSessionBlockReason.UnresolvedEffects));
+                switchAwayAndBack || changeProfile ? session.Id : other.Id, Guid.NewGuid(), AgentChatSessionBlockReason.UnresolvedEffects));
             var log = await logger.Entry.Task.WaitAsync(TimeSpan.FromSeconds(2));
             Assert.Null(log.Exception);
             cut.WaitForAssertion(() => {
@@ -1056,6 +1065,7 @@ public sealed class AgentChatPanelResponsivenessTests
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<AgentToolPolicyCatalog>();
+        context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(new FixedAgentExecutionProfileGenerationSource(new(0)));
         context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton(orchestratorService);
@@ -1541,8 +1551,20 @@ public sealed class AgentChatPanelResponsivenessTests
 
         public AgentExecutionActivityStreamId? LastStreamId { get; private set; }
 
+        public List<(Guid AgentId, Guid SessionId, Guid RunId, AgentExecutionActivityStreamId StreamId)> RecoveryRequests { get; } = [];
+        public TaskCompletionSource<ExecutionRunResult> RecoveryCompletion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource RecoveryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
+            if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.StartRunRecovery)) {
+                var source = (AgentExecutionActivityStreamId)args![3]!;
+                RecoveryRequests.Add(((Guid)args[0]!, (Guid)args[1]!, (Guid)args[2]!, source));
+                LastStreamId = new(source.DatabaseProfileId, source.WorkspaceScope, source.DatabaseProfileGeneration, AgentExecutionOperationId.New());
+                RecoveryStarted.TrySetResult();
+                return (LastStreamId, RecoveryCompletion.Task);
+            }
+
             if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.StartSendMessage))
             {
                 SendRequests.Add(Assert.IsType<AgentChatSendRequest>(args![0]));

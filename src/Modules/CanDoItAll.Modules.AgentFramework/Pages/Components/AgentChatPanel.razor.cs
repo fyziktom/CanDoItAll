@@ -67,6 +67,9 @@ public partial class AgentChatPanel : IAsyncDisposable {
     public IAgentChatExecutionOrchestrator ChatExecutionOrchestrator { get; set; } = default!;
 
     [Inject]
+    public IAgentExecutionProfileGenerationSource ProfileGenerationSource { get; set; } = default!;
+
+    [Inject]
     public IJSRuntime JsRuntime { get; set; } = default!;
 
     [Inject]
@@ -133,6 +136,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
     private string voiceStatusTone = "neutral";
     private Task trackedChatOperation = Task.CompletedTask;
     private AgentChatSessionBlockedException? sessionStartRejection;
+    private AgentExecutionActivityStreamId? sessionStartRejectionStreamId;
     private AgentExecutionActivityStreamId? activeActivityStreamId;
     private Guid? terminalWorkspaceRefreshRunId;
     private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
@@ -171,6 +175,14 @@ public partial class AgentChatPanel : IAsyncDisposable {
                ExecutionState.WaitingOnTool or
                ExecutionState.Persisting;
 
+    private bool CanShowRunRecovery => sessionStartRejection is { Reason: AgentChatSessionBlockReason.UnresolvedEffects } rejection &&
+        rejection.AgentId == selectedAgentId && rejection.ChatSessionId == selectedSessionId && sessionStartRejectionStreamId is not null;
+
+    private bool IsRunRecoveryBlocked => !CanShowRunRecovery || IsChatInteractionBusy ||
+        PersistedActiveChatRunState != ActiveAgentChatRunState.Idle || workspace?.SelectedRun?.State == ExecutionState.WaitingOnTool ||
+        workspace?.SelectedRun?.PendingApprovals.Count > 0 || !chatSession.IsCurrent(chatSession.Generation) ||
+        sessionStartRejectionStreamId!.DatabaseProfileGeneration != ProfileGenerationSource.GetGeneration();
+
     private AgentVoiceAccessSettings SelectedAgentVoiceAccess
         => selectedAgent is null
             ? new AgentVoiceAccessSettings()
@@ -183,7 +195,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         => DisplayMode == AgentChatPanelDisplayMode.FocusedFloating;
 
     protected override void OnInitialized() {
-        chatSession = new(WorkspaceService, ProviderRuntimeAdministrationService, Logger);
+        chatSession = new(WorkspaceService, ProviderRuntimeAdministrationService, ProfileGenerationSource, Logger);
         WorkspaceService.ExecutionUpdated += HandleExecutionUpdated;
     }
 
@@ -220,6 +232,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         attachmentRead = null;
         trackedChatOperation = Task.CompletedTask;
         sessionStartRejection = null;
+        sessionStartRejectionStreamId = null;
         pendingUserPrompt = "";
         draftPrompt = "";
         draftAttachmentPaths = [];
@@ -330,6 +343,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         }
 
         sessionStartRejection = null;
+        sessionStartRejectionStreamId = null;
         pendingUserCreatedAtUtc = DateTimeOffset.UtcNow;
         pendingUserPrompt = draftPrompt;
         var previousDraft = draftPrompt;
@@ -361,6 +375,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         long owner) {
         var executionCompleted = false;
         var continuationWorkspaceGeneration = executionWorkspaceGeneration;
+        AgentExecutionActivityStreamId? executionStreamId = null;
         try {
             var operation = ChatExecutionOrchestrator.StartSendMessage(
                 new AgentChatSendRequest(
@@ -371,6 +386,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
                     ConversationHandleId = executionHandleId
                 });
             activeActivityStreamId = operation.StreamId;
+            executionStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);
             var result = await operation.Completion;
             executionCompleted = true;
@@ -409,10 +425,13 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 exception.AgentId, exception.ChatSessionId, exception.ExecutionRunId, exception.Reason);
             if (exception.AgentId == executionAgentId &&
                 exception.ChatSessionId == executionSessionId &&
+                executionStreamId?.DatabaseProfileGeneration == ProfileGenerationSource.GetGeneration() &&
+                chatSession.IsCurrent(chatSession.Generation) &&
                 IsOperationTargetCurrent(executionAgentId, executionSessionId, executionHandleId, owner)) {
                 draftPrompt = previousDraft;
                 composerKey++;
                 sessionStartRejection = exception;
+                sessionStartRejectionStreamId = executionStreamId;
                 ResolveRunState();
                 SetMessage("Prompt not sent", "warning", exception.Message);
             }
@@ -493,6 +512,80 @@ public partial class AgentChatPanel : IAsyncDisposable {
 
     private Task ApproveConversationAsync()
         => StartApprovalOperation(decisions: null, autoApprovePendingToolCalls: true);
+
+    private Task StartRunRecoveryAsync() {
+        if (IsRunRecoveryBlocked) {
+            return Task.CompletedTask;
+        }
+        var rejection = sessionStartRejection!;
+        var rejectedStreamId = sessionStartRejectionStreamId!;
+        var handleId = ActiveChatHandleId;
+        if (!TryBeginChatOperation(handleId)) {
+            return Task.CompletedTask;
+        }
+        trackedChatOperation = RunRecoveryOperationAsync(rejection, rejectedStreamId, handleId, effectOwner);
+        return Task.CompletedTask;
+    }
+
+    private async Task RunRecoveryOperationAsync(AgentChatSessionBlockedException rejection,
+        AgentExecutionActivityStreamId rejectedStreamId, AgentChatHandleId? handleId, long owner) {
+        await Task.Yield();
+        var executionCompleted = false;
+        bool IsCurrent() => IsOperationTargetCurrent(rejection.AgentId, rejection.ChatSessionId, handleId, owner) &&
+            rejectedStreamId.DatabaseProfileGeneration == ProfileGenerationSource.GetGeneration();
+        try {
+            if (!IsCurrent()) {
+                return;
+            }
+            var operation = ChatExecutionOrchestrator.StartRunRecovery(rejection.AgentId, rejection.ChatSessionId,
+                rejection.ExecutionRunId, rejectedStreamId);
+            activeActivityStreamId = operation.StreamId;
+            await InvokeAsync(StateHasChanged);
+            var result = await operation.Completion;
+            executionCompleted = true;
+            if (!IsCurrent()) {
+                LogDetachedCompletion(rejection.AgentId, rejection.ChatSessionId, handleId, "recovery");
+                return;
+            }
+            if (result.ExecutionRunId != rejection.ExecutionRunId || result.ChatSessionId != rejection.ChatSessionId) {
+                throw new InvalidOperationException("Recovery returned a result for another run or thread.");
+            }
+            var expectedGeneration = unchecked(chatSession.Generation + 1);
+            await LoadWorkspaceAsync(rejection.AgentId, rejection.ChatSessionId, rejection.ExecutionRunId,
+                rejectedStreamId.DatabaseProfileGeneration);
+            if (!IsCurrent() || !chatSession.IsCurrent(expectedGeneration)) {
+                LogDetachedCompletion(rejection.AgentId, rejection.ChatSessionId, handleId, "recovery readback");
+                return;
+            }
+            if (workspace?.SelectedRun is not { } saved || saved.Id != rejection.ExecutionRunId) {
+                SetMessage("Refresh needed", "warning", "Recovery finished, but the original run could not be loaded. Refresh this thread to inspect its state.");
+                return;
+            }
+            if (saved.State == ExecutionState.Completed && saved.ToolAdmission?.HasUnresolvedEffects != true ||
+                saved.State == ExecutionState.WaitingOnTool && saved.PendingApprovals.Count > 0) {
+                sessionStartRejection = null;
+                sessionStartRejectionStreamId = null;
+                ResolveRunState();
+                SetMessage(saved.State == ExecutionState.WaitingOnTool ? "Approval needed" : "Ready", "success",
+                    saved.State == ExecutionState.WaitingOnTool ? "Review the original run's pending approvals." : "The original run was recovered. Your draft is ready to send.");
+            } else {
+                SetMessage("Recovery needs attention", "warning", "The original run still needs attention. Inspect its persisted state before retrying.");
+            }
+        } catch (Exception exception) {
+            LogOperationFailure(exception, rejection.AgentId, rejection.ChatSessionId, handleId, "recovery", executionCompleted);
+            if (IsCurrent()) {
+                SetMessage(executionCompleted ? "Refresh needed" : "Recovery needs attention", "warning",
+                    executionCompleted ? "Recovery finished, but its persisted state could not be loaded. Refresh this thread." :
+                        "The original run could not be recovered. Inspect its persisted state before retrying.");
+            }
+        } finally {
+            if (owner == effectOwner && !isDisposed) {
+                isBusy = false;
+            }
+            await FinishChatOperationAsync(handleId, rejection.AgentId, rejection.ChatSessionId, "recovery", owner,
+                rejectedStreamId.DatabaseProfileGeneration);
+        }
+    }
 
     private Task StartApprovalOperation(
         IReadOnlyList<PendingToolApprovalDecision>? decisions,
@@ -688,10 +781,12 @@ public partial class AgentChatPanel : IAsyncDisposable {
         Guid agentId,
         Guid? sessionId,
         string operationKind,
-        long owner) {
+        long owner,
+        DatabaseProfileGeneration? expectedProfileGeneration = null) {
         try {
             ReconcileActiveChatRunState(handleId);
-            if (!isDisposed && owner == effectOwner) {
+            if (!isDisposed && owner == effectOwner &&
+                (!expectedProfileGeneration.HasValue || expectedProfileGeneration.Value == ProfileGenerationSource.GetGeneration())) {
                 SynchronizeActiveChatRunState();
                 await InvokeAsync(StateHasChanged);
             }
@@ -910,17 +1005,20 @@ public partial class AgentChatPanel : IAsyncDisposable {
         }
     }
 
-    private Task LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId, Guid? preferredExecutionRunId = null)
+    private Task LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId, Guid? preferredExecutionRunId = null,
+        DatabaseProfileGeneration? expectedProfileGeneration = null)
         => LoadTargetAsync(agentId, preferredSessionId, refreshCatalog: false, throwOnFailure: true,
-            runId: preferredExecutionRunId, preserveEffects: true);
+            runId: preferredExecutionRunId, preserveEffects: true, expectedProfileGeneration: expectedProfileGeneration);
 
     private async Task LoadTargetAsync(Guid? agentId, Guid? sessionId, bool refreshCatalog, bool throwOnFailure,
-        Guid? runId = null, bool preserveEffects = false, bool usePreferredAgent = false) {
+        Guid? runId = null, bool preserveEffects = false, bool usePreferredAgent = false,
+        DatabaseProfileGeneration? expectedProfileGeneration = null) {
         if (isDisposed) {
             return;
         }
         var changed = chatSession.DesiredAgentId != agentId || chatSession.DesiredSessionId != sessionId;
-        var load = chatSession.LoadAsync(agentId, sessionId, IsFocusedFloating, usePreferredAgent ? PreferredAgent : null, refreshCatalog, runId);
+        var load = chatSession.LoadAsync(agentId, sessionId, IsFocusedFloating, usePreferredAgent ? PreferredAgent : null,
+            refreshCatalog, runId, expectedProfileGeneration);
         var generation = chatSession.Generation;
         if (changed && !preserveEffects) {
             ResetTargetEffects();

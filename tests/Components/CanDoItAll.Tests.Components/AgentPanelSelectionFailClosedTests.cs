@@ -153,6 +153,7 @@ public sealed class AgentPanelSelectionFailClosedTests
     private static BunitContext CreateChatTestContext(WorkspaceServiceProxy workspace)
     {
         var context = CreateBaseTestContext(workspace.Service);
+        context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(new FixedAgentExecutionProfileGenerationSource(new(0)));
         context.Services.AddSingleton<AgentToolPolicyCatalog>();
         context.Services.AddSingleton<IAgentCapabilitiesReads, AgentCapabilitiesReads>();
         context.Services.AddSingleton(

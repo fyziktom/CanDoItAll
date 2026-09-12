@@ -10,6 +10,69 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatSessionTests {
     [Theory]
+    [InlineData(ProfileReadStage.Catalog)]
+    [InlineData(ProfileReadStage.Workspace)]
+    [InlineData(ProfileReadStage.Detail)]
+    public async Task Profile_change_during_a_read_rejects_the_old_snapshot_before_acceptance(ProfileReadStage stage) {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var chat = CreateSession(agent.Id);
+        var run = CreateRunningRun(agent.Id, chat.Id) with { State = ExecutionState.Completed };
+        var source = new MutableProfileGeneration();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        async Task PauseAsync(ProfileReadStage current) {
+            if (stage == current) {
+                started.SetResult();
+                await release.Task;
+            }
+        }
+        reads.Catalog = async (_, _) => {
+            await PauseAsync(ProfileReadStage.Catalog);
+            return [agent];
+        };
+        reads.Workspace = async (_, _, _) => {
+            await PauseAsync(ProfileReadStage.Workspace);
+            return CreateWorkspace(agent.Id, chat, run);
+        };
+        reads.Detail = async (_, _) => {
+            await PauseAsync(ProfileReadStage.Detail);
+            return new(run, chat, [], []);
+        };
+        using var session = Session(service, source);
+        var load = session.LoadAsync(agent.Id, chat.Id, false, expectedProfileGeneration: source.GetGeneration());
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var generation = session.Generation;
+        source.Value = new(2);
+        release.SetResult();
+
+        Assert.False(await load);
+        Assert.False(session.IsCurrent(generation));
+        Assert.False(session.MatchesAccepted(agent.Id, chat.Id));
+        Assert.Null(session.Workspace);
+        Assert.Null(session.Agent);
+    }
+
+    [Fact]
+    public async Task Recovery_read_rejects_a_profile_change_before_admission_without_querying_the_new_profile() {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var chat = CreateSession(agent.Id);
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, chat));
+        var source = new MutableProfileGeneration();
+        using var session = Session(service, source);
+        var original = source.GetGeneration();
+        source.Value = new(2);
+
+        Assert.False(await session.LoadAsync(agent.Id, chat.Id, false, expectedProfileGeneration: original));
+        Assert.Equal(0, reads.CatalogCalls);
+        Assert.Equal(0, reads.WorkspaceCalls);
+        Assert.True(await session.LoadAsync(agent.Id, chat.Id, false));
+        Assert.True(session.MatchesAccepted(agent.Id, chat.Id));
+    }
+
+    [Theory]
     [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Success, false)]
     [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Failure, false)]
     [InlineData(WorkflowOwnershipTests.DelayedReadOutcome.Cancellation, false)]
@@ -249,8 +312,16 @@ public sealed class AgentChatSessionTests {
         return (service, (ReadProxy)(object)service);
     }
 
-    private static AgentChatSession Session(IAgentFrameworkWorkspaceService service)
-        => new(service, DispatchProxy.Create<ProviderService, ReadProxy>(), NullLogger.Instance);
+    private static AgentChatSession Session(IAgentFrameworkWorkspaceService service, IAgentExecutionProfileGenerationSource? generationSource = null)
+        => new(service, DispatchProxy.Create<ProviderService, ReadProxy>(),
+            generationSource ?? new FixedAgentExecutionProfileGenerationSource(new(0)), NullLogger.Instance);
+
+    public enum ProfileReadStage { Catalog, Workspace, Detail }
+
+    private sealed class MutableProfileGeneration : IAgentExecutionProfileGenerationSource {
+        public DatabaseProfileGeneration Value { get; set; } = new(0);
+        public DatabaseProfileGeneration GetGeneration() => Value;
+    }
 
     public class ReadProxy : DispatchProxy {
         public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];

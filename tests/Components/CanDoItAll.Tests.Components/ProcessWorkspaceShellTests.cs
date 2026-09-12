@@ -1926,6 +1926,7 @@ public sealed partial class ProcessWorkspaceShellTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddSingleton<AgentToolPolicyCatalog>();
+        context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(new FixedAgentExecutionProfileGenerationSource(new(0)));
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
@@ -2165,6 +2166,11 @@ public sealed partial class ProcessWorkspaceShellTests
         IAgentFrameworkWorkspaceService? workspaceService,
         IAgentChatContextRegistry contextRegistry) : IAgentChatExecutionOrchestrator
     {
+        public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunResult> Completion) StartRunRecovery(
+            Guid agentId, Guid chatSessionId, Guid executionRunId, AgentExecutionActivityStreamId rejectedStreamId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("This Process workspace fixture does not recover Agent runs.");
+
         public AgentChatSendRequest? LastSendRequest { get; private set; }
 
         public AgentChatContextSnapshot? LastCapturedContext { get; private set; }

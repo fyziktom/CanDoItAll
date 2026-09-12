@@ -17,6 +17,7 @@ public sealed class AgentChatExecutionOrchestrator(
 {
     private const string SendAcceptedMessage = "Agent request accepted.";
     private const string ApprovalAcceptedMessage = "Approval response accepted.";
+    private const string RecoveryAcceptedMessage = "Original run recovery accepted.";
     private const string CapturingContextMessage = "Capturing the current workspace context.";
     private const string PreparingInputMessage = "Preparing the agent invocation from the current workspace context.";
     private const string ResolvingSessionMessage = "Loading the conversation awaiting an approval response.";
@@ -122,6 +123,20 @@ public sealed class AgentChatExecutionOrchestrator(
         return new AgentChatOperationHandle(operation.StreamId, completion);
     }
 
+    public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunResult> Completion) StartRunRecovery(
+        Guid agentId, Guid chatSessionId, Guid executionRunId, AgentExecutionActivityStreamId rejectedStreamId,
+        CancellationToken cancellationToken = default) {
+        ValidateAgentId(agentId);
+        ValidateSessionId(chatSessionId);
+        if (executionRunId == Guid.Empty) {
+            throw new ArgumentException("Execution run id cannot be empty.", nameof(executionRunId));
+        }
+        ArgumentNullException.ThrowIfNull(rejectedStreamId);
+        cancellationToken.ThrowIfCancellationRequested();
+        var operation = AdmitOperation(agentId, chatSessionId, RecoveryAcceptedMessage, rejectedStreamId);
+        return (operation.StreamId, RecoverRunCoreAsync(operation, executionRunId, cancellationToken));
+    }
+
     public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,
         Guid chatSessionId,
@@ -192,7 +207,7 @@ public sealed class AgentChatExecutionOrchestrator(
                     .ConfigureAwait(false);
                 EnsureTerminalized(operation);
                 CommitConversationAdoption(conversationKey, capture);
-                await PublishCompletionAsync(result).ConfigureAwait(false);
+                await PublishCompletionAsync(result.ContextCompletionNotification).ConfigureAwait(false);
                 return result;
             }
             catch (OperationCanceledException)
@@ -235,7 +250,7 @@ public sealed class AgentChatExecutionOrchestrator(
                         cancellationToken)
                     .ConfigureAwait(false);
                 EnsureTerminalized(operation);
-                await PublishCompletionAsync(result).ConfigureAwait(false);
+                await PublishCompletionAsync(result.ContextCompletionNotification).ConfigureAwait(false);
                 return result;
             }
             catch (OperationCanceledException)
@@ -251,10 +266,32 @@ public sealed class AgentChatExecutionOrchestrator(
         }
     }
 
+    private async Task<ExecutionRunResult> RecoverRunCoreAsync(IAgentExecutionActivityOperationLease operation,
+        Guid executionRunId, CancellationToken cancellationToken) {
+        using (operation) {
+            try {
+                operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Loading the original run for recovery.");
+                await Task.Yield();
+                var result = await workspaceExecutionService.RecoverExecutionRunWithinOperationAsync(
+                    operation, executionRunId, cancellationToken).ConfigureAwait(false);
+                EnsureTerminalized(operation);
+                await PublishCompletionAsync(result.ContextCompletionNotification).ConfigureAwait(false);
+                return result;
+            } catch (OperationCanceledException) {
+                TerminalizeCancellation(operation);
+                throw;
+            } catch {
+                TerminalizeFailure(operation);
+                throw;
+            }
+        }
+    }
+
     private IAgentExecutionActivityOperationLease AdmitOperation(
         Guid agentId,
         Guid? chatSessionId,
-        string acceptedMessage)
+        string acceptedMessage,
+        AgentExecutionActivityStreamId? expectedStreamId = null)
     {
         var firstProfile = databaseProfileRuntimeAccessor
             .ResolveCurrentProfile()
@@ -281,6 +318,10 @@ public sealed class AgentChatExecutionOrchestrator(
                 "The current database profile changed while the agent operation was being admitted.");
         }
 
+        if (expectedStreamId is not null) {
+            AgentExecutionActivityAccessPolicy.EnsureAuthorized(expectedStreamId, confirmedProfile.Id, confirmedProfileGeneration);
+        }
+
         var streamId = new AgentExecutionActivityStreamId(
             confirmedProfile.Id,
             workspaceScope,
@@ -302,9 +343,9 @@ public sealed class AgentChatExecutionOrchestrator(
         };
     }
 
-    private Task PublishCompletionAsync(AgentChatRunResult result)
+    private Task PublishCompletionAsync(AgentChatExecutionCompleted? notification)
     {
-        return result.ContextCompletionNotification is { } notification
+        return notification is not null
             ? notificationHub.PublishAsync(notification)
             : Task.CompletedTask;
     }
