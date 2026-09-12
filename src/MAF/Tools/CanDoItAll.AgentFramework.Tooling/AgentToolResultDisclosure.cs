@@ -10,4 +10,7 @@ public sealed record AgentToolResultDisclosure(
     AgentToolEffectState EffectState,
     JsonElement Result,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    AgentToolProtocolEnvelope? Evidence = null);
+    AgentToolProtocolEnvelope? Evidence = null) {
+    [JsonIgnore]
+    public bool IsTypedFailure { get; init; }
+}

@@ -362,7 +362,12 @@ public sealed class HrAgentRuntimeToolProvider(
             _ => toolName
         };
         await RequireReadAsync();
-        if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
+        if (disclosure.IsTypedFailure &&
+            toolName is HrAgentToolPolicy.HrCrmSearch or HrAgentToolPolicy.HrCrmItemSummaryGet) {
+            if (!IsKnownQueryFailure()) {
+                throw new UnauthorizedAccessException("The saved HR query failure has no supported outcome evidence.");
+            }
+        } else if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
             switch (toolName) {
                 case HrAgentToolPolicy.HrCrmSearch:
                     foreach (var item in ReadResult<CrmHrAgentQueryItem[]>()) {
@@ -397,6 +402,17 @@ public sealed class HrAgentRuntimeToolProvider(
 
         T ReadResult<T>() => disclosure.Result.Deserialize<T>(DisclosureJson)
             ?? throw new InvalidOperationException("The saved HR result has no supported result value.");
+
+        bool IsKnownQueryFailure() {
+            if (disclosure.Payload.Effect != AgentToolProposalEffect.Read ||
+                disclosure.Payload.Recovery != AgentToolProposalRecovery.RevalidateAndRead ||
+                disclosure.EffectState != AgentToolEffectState.None) {
+                return false;
+            }
+            var failure = ReadResult<AgentToolFailureResult>();
+            return failure is { Succeeded: false, EffectState: AgentToolEffectState.None, CanRetryWithCorrectedInput: true } &&
+                QueryFailureMessage(failure.ErrorCode) is { } message && failure.Message == message;
+        }
 
         async Task RequireVisibleAsync(CrmHrAgentRecordKind kind, Guid id,
             CrmHrAgentRedactionState priorRedaction = CrmHrAgentRedactionState.None) {
@@ -456,7 +472,7 @@ public sealed class HrAgentRuntimeToolProvider(
         CancellationToken cancellationToken)
     {
         var result = await crmHrQueryService.SearchAsync(request, cancellationToken);
-        return RequireResult(result, "CRM/HR search");
+        return RequireQueryResult(result, "CRM/HR search");
     }
 
     private async Task<CrmHrAgentQueryItem> GetCrmHrSummaryAsync(
@@ -464,7 +480,7 @@ public sealed class HrAgentRuntimeToolProvider(
         CancellationToken cancellationToken)
     {
         var result = await crmHrQueryService.GetSummaryAsync(request, cancellationToken);
-        return RequireResult(result, "CRM/HR item summary");
+        return RequireQueryResult(result, "CRM/HR item summary");
     }
 
     private async Task<CrmPartyCreateResult> CreateCrmPartyAsync(
@@ -504,6 +520,31 @@ public sealed class HrAgentRuntimeToolProvider(
 
     private static string BuildActor(Guid actorAgentId)
         => $"hr-agent:{actorAgentId:D}";
+
+    private static T RequireQueryResult<T>(Result<T> result, string operation) {
+        if (result.IsFailure && result.Errors is [var error] && QueryFailureMessage(error.Code) is { } message) {
+            throw new HrQueryFailure(error.Code, message);
+        }
+        return RequireResult(result, operation);
+    }
+
+    private static string? QueryFailureMessage(string code) => code switch {
+        CrmHrAgentQueryErrorCodes.SearchRequired => "CRM/HR search text is required.",
+        CrmHrAgentQueryErrorCodes.SearchTooLong => $"CRM/HR search text cannot exceed {CrmHrAgentQueryLimits.MaxQueryLength} characters.",
+        CrmHrAgentQueryErrorCodes.TakeOutOfRange => $"CRM/HR search take must be between {CrmHrAgentQueryLimits.MinTake} and {CrmHrAgentQueryLimits.MaxTake}.",
+        CrmHrAgentQueryErrorCodes.RecordKindInvalid => "The supplied CRM/HR record kind is not supported.",
+        CrmHrAgentQueryErrorCodes.RecordIdRequired => "CRM/HR record id is required.",
+        CrmHrAgentQueryErrorCodes.RecordNotFound => "The requested CRM/HR record was not found for the supplied record kind.",
+        _ => null
+    };
+
+    private sealed class HrQueryFailure(string code, string message) : InvalidOperationException(message), IAgentToolFailureEffectEvidence {
+        public string ErrorCode => code;
+        public string SafeMessage => Message;
+        public bool IsSafeToExpose => true;
+        public bool CanRetryWithCorrectedInput => true;
+        public AgentToolEffectState EffectState => AgentToolEffectState.None;
+    }
 
     private static T RequireResult<T>(Result<T> result, string operation)
     {

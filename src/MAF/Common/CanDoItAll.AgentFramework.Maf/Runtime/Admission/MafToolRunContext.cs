@@ -331,6 +331,7 @@ internal sealed class MafToolRunContext {
             return RestoreResult(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."), claim.Proposal.EffectState);
         }
 
+        var invocationEnteredAfterAuthorization = false;
         async ValueTask<object?> InvokeAuthorizedAsync() {
             IAsyncDisposable? authorization;
             try {
@@ -342,6 +343,7 @@ internal sealed class MafToolRunContext {
             }
             await using var authorizationScope = authorization;
             try {
+                invocationEnteredAfterAuthorization = true;
                 return await invoke(cancellationToken);
             } catch (Exception exception) when (effectScope.CommittedEffect is null &&
                 MafAgentToolFailureMapper.TryMap(exception, out var failure) &&
@@ -355,10 +357,17 @@ internal sealed class MafToolRunContext {
 
         try {
             var result = await InvokeAuthorizedAsync();
+            var resolvedReadFailure = invocationEnteredAfterAuthorization &&
+                claim.Proposal.State is AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired &&
+                payload.Effect == AgentToolProposalEffect.Read &&
+                payload.Recovery == AgentToolProposalRecovery.RevalidateAndRead &&
+                claim.Proposal.Result is null && claim.Proposal.EffectState == AgentToolEffectState.Unknown &&
+                effectScope.CommittedEffect is null && effectScope.PreDispatchFailure is null &&
+                result is AgentToolFailureResult { Succeeded: false, EffectState: AgentToolEffectState.None };
             if (claim.Proposal.State != AgentToolProposalState.Prepared &&
-                (effectScope.PreDispatchFailure is not null || result is AgentToolFailureResult {
-                    Succeeded: false, EffectState: AgentToolEffectState.None or AgentToolEffectState.NotCommitted
-                })) {
+                (effectScope.PreDispatchFailure is not null || result is AgentToolFailureResult { Succeeded: false } failure &&
+                    (payload.Effect == AgentToolProposalEffect.Read ||
+                        failure.EffectState is AgentToolEffectState.None or AgentToolEffectState.NotCommitted)) && !resolvedReadFailure) {
                 throw new AgentToolAdmissionException("tool-admission.reconciliation-required",
                     "A current denial cannot resolve the earlier dispatched effect. The original outcome evidence requires owner reconciliation.");
             }
@@ -471,7 +480,7 @@ internal sealed class MafToolRunContext {
             var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(proposal.Result
                 ?? throw Denied("The completed invocation has no saved result."));
             return authorize(new(proposal.IntentId, proposal.Payload, proposal.EffectState, result.Value,
-                proposal.DisclosureEvidence), cancellationToken);
+                proposal.DisclosureEvidence) { IsTypedFailure = result.Kind == ResultKind.TypedFailureJson }, cancellationToken);
         }
 
         if (completedInCurrentInvocation.Contains(proposal.IntentId)) {
