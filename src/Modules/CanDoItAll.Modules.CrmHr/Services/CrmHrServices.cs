@@ -3553,7 +3553,7 @@ public sealed partial class HrService(
                 var profile = profilesByPartyId.GetValueOrDefault(item.Id);
                 var capacitySummary = BuildCapacitySummary(
                     profile?.CapacityHoursPerWeek ?? 40m,
-                    projectAllocationsByPartyId.GetValueOrDefault(item.Id) ?? [],
+                    projectAllocationsByPartyId.GetValueOrDefault(item.Id).Current ?? [],
                     capacityBlocksByPartyId.GetValueOrDefault(item.Id) ?? []);
                 var skillSummary = string.Join(
                     ", ",
@@ -3731,13 +3731,13 @@ public sealed partial class HrService(
         CancellationToken cancellationToken)
     {
         var capacityBlocks = (await GetCapacityBlockMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
-        var projectAllocations = (await GetProjectAllocationMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
+        var projectAllocations = (await GetProjectAllocationMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId);
 
         return new WorkforceCapacityWorkspaceModel(
             partyId,
             capacityBlocks,
-            projectAllocations,
-            BuildCapacitySummary(capacityHoursPerWeek, projectAllocations, capacityBlocks));
+            projectAllocations.Display ?? [],
+            BuildCapacitySummary(capacityHoursPerWeek, projectAllocations.Current ?? [], capacityBlocks));
     }
 
     private static WorkforceWorkspaceModel CombineWorkforceWorkspaces(
@@ -5004,24 +5004,23 @@ public sealed partial class HrService(
                 .ToList());
     }
 
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<ProjectAllocationItemModel>>> GetProjectAllocationMapAsync(
+    private async Task<IReadOnlyDictionary<Guid, (IReadOnlyList<ProjectAllocationItemModel> Display,
+        IReadOnlyList<ProjectAllocationItemModel> Current)>> GetProjectAllocationMapAsync(
         CrmHrDbContext dbContext,
         IReadOnlyList<Guid> partyIds,
-        CancellationToken cancellationToken)
-    {
-        if (partyIds.Count == 0)
-        {
-            return new Dictionary<Guid, IReadOnlyList<ProjectAllocationItemModel>>();
+        CancellationToken cancellationToken) {
+        if (partyIds.Count == 0) {
+            return new Dictionary<Guid, (IReadOnlyList<ProjectAllocationItemModel>, IReadOnlyList<ProjectAllocationItemModel>)>();
         }
 
-        var assignmentRows = (await ProjectAssignmentReporting.ForPartiesAsync(dbContext, workAssignments, projectRecordQueryService, partyIds, cancellationToken))
-            .Where(item => item.ProjectLifetimeId != null && item.ProjectLifetimeId == item.CurrentProjectLifetimeId);
+        var assignmentRows = await ProjectAssignmentReporting.ForPartiesAsync(dbContext, workAssignments, projectRecordQueryService, partyIds, cancellationToken);
         var assignments = await assignmentRows
             .Where(item => partyIds.Contains(item.PartyId) && item.AllocationPercent.HasValue)
-            .Select(item => new
-            {
+            .Select(item => new {
                 item.Id,
                 item.ProjectId,
+                item.ProjectLifetimeId,
+                item.CurrentProjectLifetimeId,
                 item.PartyId,
                 item.AssignmentKind,
                 item.AllocationPercent,
@@ -5030,9 +5029,8 @@ public sealed partial class HrService(
                 item.Notes
             })
             .ToAssignmentReportListAsync(cancellationToken);
-        if (assignments.Count == 0)
-        {
-            return new Dictionary<Guid, IReadOnlyList<ProjectAllocationItemModel>>();
+        if (assignments.Count == 0) {
+            return new Dictionary<Guid, (IReadOnlyList<ProjectAllocationItemModel>, IReadOnlyList<ProjectAllocationItemModel>)>();
         }
 
         assignments = assignments
@@ -5042,8 +5040,8 @@ public sealed partial class HrService(
 
         var projectIds = assignments.Select(item => item.ProjectId).Where(projectId => projectId != Guid.Empty).Distinct().ToList();
         var partyNameIds = assignments.Select(item => item.PartyId).Distinct().ToList();
-        var projectNames = (await projectRecordQueryService.GetManyAsync(projectIds, cancellationToken))
-            .ToDictionary(item => item.Id, item => item.Name);
+        var projectsById = (await projectRecordQueryService.GetManyAsync(projectIds, cancellationToken))
+            .ToDictionary(item => item.Id);
         var partyNames = await dbContext.Set<Party>()
             .Where(item => partyNameIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
@@ -5053,30 +5051,38 @@ public sealed partial class HrService(
             .GroupBy(item => item.PartyId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<ProjectAllocationItemModel>)group.Select(item =>
-                {
-                    var startsOn = ToDateOnly(item.StartsAtUtc);
-                    var endsOn = ToDateOnly(item.EndsAtUtc);
-                    var isActive = (!startsOn.HasValue || startsOn.Value <= today) && (!endsOn.HasValue || endsOn.Value >= today);
-                    var isFuture = startsOn.HasValue && startsOn.Value > today;
-                    return new ProjectAllocationItemModel(
-                        item.Id,
-                        item.ProjectId,
-                        projectNames.GetValueOrDefault(item.ProjectId) ?? string.Empty,
-                        item.PartyId,
-                        partyNames.GetValueOrDefault(item.PartyId) ?? string.Empty,
-                        MapProjectAssignmentRole(item.AssignmentKind),
-                        item.AllocationPercent ?? 0m,
-                        startsOn,
-                        endsOn,
-                        item.Notes,
-                        isActive,
-                        isFuture);
-                })
-                .OrderByDescending(item => item.IsActive)
-                .ThenBy(item => item.StartsOn)
-                .ThenBy(item => item.ProjectName)
-                .ToList());
+                group => {
+                    var allocations = group.Select(item => {
+                        var startsOn = ToDateOnly(item.StartsAtUtc);
+                        var endsOn = ToDateOnly(item.EndsAtUtc);
+                        var isActive = (!startsOn.HasValue || startsOn.Value <= today) && (!endsOn.HasValue || endsOn.Value >= today);
+                        var isFuture = startsOn.HasValue && startsOn.Value > today;
+                        var project = projectsById.GetValueOrDefault(item.ProjectId);
+                        var projectName = project is not null && (item.ProjectLifetimeId is null || item.ProjectLifetimeId == project.LifetimeId)
+                            ? project.Name
+                            : string.Empty;
+                        var model = new ProjectAllocationItemModel(
+                            item.Id,
+                            item.ProjectId,
+                            projectName,
+                            item.PartyId,
+                            partyNames.GetValueOrDefault(item.PartyId) ?? string.Empty,
+                            MapProjectAssignmentRole(item.AssignmentKind),
+                            item.AllocationPercent ?? 0m,
+                            startsOn,
+                            endsOn,
+                            item.Notes,
+                            isActive,
+                            isFuture);
+                        return (Item: model, IsCurrent: item.ProjectLifetimeId.HasValue && item.ProjectLifetimeId == item.CurrentProjectLifetimeId);
+                    })
+                    .OrderByDescending(item => item.Item.IsActive)
+                    .ThenBy(item => item.Item.StartsOn)
+                    .ThenBy(item => item.Item.ProjectName)
+                    .ToArray();
+                    return (Display: (IReadOnlyList<ProjectAllocationItemModel>)allocations.Select(item => item.Item).ToArray(),
+                        Current: (IReadOnlyList<ProjectAllocationItemModel>)allocations.Where(item => item.IsCurrent).Select(item => item.Item).ToArray());
+                });
     }
 
     private static WorkforceKind ResolveDefaultWorkforceKind(PartyType partyType, IReadOnlyList<PartyRoleKind> roles, WorkforceProfile? profile)

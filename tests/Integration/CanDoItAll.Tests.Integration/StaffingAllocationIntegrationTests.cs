@@ -63,7 +63,8 @@ public sealed class StaffingAllocationIntegrationTests
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var hrService = scope.ServiceProvider.GetRequiredService<HrService>();
         var homeQueryService = scope.ServiceProvider.GetRequiredService<ICrmHrHomeQueryService>();
-        var projectId = await CreateProjectAsync(projectsService, "Bounded staffing project");
+        var admission = await CreateProjectAsync(projectsService, "Bounded staffing project");
+        var projectId = admission.ProjectId;
         var now = DateTimeOffset.UtcNow;
         var parties = Enumerable.Range(0, 9)
             .Select(index => new Party
@@ -96,6 +97,7 @@ public sealed class StaffingAllocationIntegrationTests
             .Select(index => new StaffingRequest
             {
                 ProjectId = projectId,
+                ProjectLifetimeId = admission.LifetimeId,
                 RequestedByPartyId = parties[index].Id,
                 Title = $"Bounded request {index:D2}",
                 NeededRole = "Engineer",
@@ -204,7 +206,8 @@ public sealed class StaffingAllocationIntegrationTests
         var hrService = scope.ServiceProvider.GetRequiredService<HrService>();
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
 
-        var projectId = await CreateProjectAsync(projectsService, "B07 Integration Project");
+        var admission = await CreateProjectAsync(projectsService, "B07 Integration Project");
+        var projectId = admission.ProjectId;
         var workerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Lina Capacity");
         var unitId = await CreatePartyAsync(partyDirectoryService, PartyType.OrganizationUnit, "Delivery Capacity Unit");
 
@@ -252,6 +255,7 @@ public sealed class StaffingAllocationIntegrationTests
         Assert.True((await hrService.SaveStaffingRequestAsync(new StaffingRequestEditorModel
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             RequestedByPartyId = workerId,
             DeliveryUnitPartyId = unitId,
             Title = "Need cloud architecture coverage",
@@ -267,6 +271,7 @@ public sealed class StaffingAllocationIntegrationTests
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = workerId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             AllocationPercent = 60m,
@@ -309,10 +314,8 @@ public sealed class StaffingAllocationIntegrationTests
         Assert.True(dashboard.OverallocatedCount >= 1);
     }
 
-    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
-    {
-        var result = await projectsService.SaveAsync(new ProjectEditorModel
-        {
+    private static async Task<ProjectWriteAdmission> CreateProjectAsync(ProjectsService projectsService, string name) {
+        var result = await projectsService.CreateWithAdmissionAsync(new ProjectEditorModel {
             Name = name,
             Description = $"{name} description",
             Objective = $"{name} objective",
@@ -320,7 +323,7 @@ public sealed class StaffingAllocationIntegrationTests
         });
 
         Assert.True(result.IsSuccess);
-        return result.Value;
+        return Assert.IsType<ProjectWriteAdmission>(result.Value);
     }
 
     private static async Task<Guid> CreatePartyAsync(PartyDirectoryService partyDirectoryService, PartyType partyType, string displayName)

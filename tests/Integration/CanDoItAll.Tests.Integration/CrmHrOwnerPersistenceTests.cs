@@ -43,17 +43,20 @@ public sealed class CrmHrOwnerPersistenceTests {
         var party = new Party { PartyType = PartyType.Person, DisplayName = "Assignment owner" };
         var projects = new[] { "beta", "Alpha", "Alpha", "Žlutý", "Unknown project" }
             .Select(name => new Project { Name = name, Slug = Guid.NewGuid().ToString("N") }).ToArray();
+        var lifetimes = projects.ToDictionary(project => project.Id, project => (Guid?)project.LifetimeId);
         var projectIds = projects.Select(project => project.Id).Append(Guid.NewGuid()).Append(Guid.Empty).ToArray();
         var kinds = Enum.GetValues<ProjectPartyAssignmentKind>();
         var assignments = projectIds.SelectMany(projectId => kinds.Select(kind => new ProjectPartyAssignment {
-            PartyId = party.Id, ProjectId = projectId, AssignmentKind = kind, Notes = "Retained assignment", NodeKey = Guid.NewGuid().ToString("N")
+            PartyId = party.Id, ProjectId = projectId, ProjectLifetimeId = lifetimes.GetValueOrDefault(projectId),
+            AssignmentKind = kind, Notes = "Retained assignment", NodeKey = Guid.NewGuid().ToString("N")
         })).ToArray();
         complete.Add(party);
         complete.AddRange(projects);
         complete.AddRange(assignments.Where(item => item.AssignmentKind != ProjectPartyAssignmentKind.WorkItemAssignee));
         complete.AddRange(assignments.Where(item => item.AssignmentKind == ProjectPartyAssignmentKind.WorkItemAssignee)
             .Select(item => new ProjectWorkAssignmentRecord {
-                Id = item.Id, PartyId = item.PartyId, ProjectId = item.ProjectId, Notes = item.Notes, NodeKey = item.NodeKey
+                Id = item.Id, PartyId = item.PartyId, ProjectId = item.ProjectId, ProjectLifetimeId = item.ProjectLifetimeId,
+                Notes = item.Notes, NodeKey = item.NodeKey
             }));
         await complete.SaveChangesAsync();
         var expectedAssignments = complete.Set<ProjectPartyAssignment>().AsNoTracking()
@@ -91,7 +94,7 @@ public sealed class CrmHrOwnerPersistenceTests {
         complete.Add(party);
         complete.AddRange(projects);
         complete.AddRange(projects.Select(project => new ProjectPartyAssignment {
-            PartyId = party.Id, ProjectId = project.Id, NodeKey = Guid.NewGuid().ToString("N"),
+            PartyId = party.Id, ProjectId = project.Id, ProjectLifetimeId = project.LifetimeId, NodeKey = Guid.NewGuid().ToString("N"),
             StartsAtUtc = start.ToUniversalTime(), EndsAtUtc = start.AddDays(1).ToUniversalTime()
         }));
         await complete.SaveChangesAsync();
@@ -111,7 +114,7 @@ public sealed class CrmHrOwnerPersistenceTests {
         await using var scope = application.Services.CreateAsyncScope();
         await using var complete = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         var project = new Project { Name = "Žlutý 50%_Istanbul", Slug = Guid.NewGuid().ToString("N") };
-        var request = new StaffingRequest { ProjectId = project.Id, Title = "Quiet request", NeededRole = "Resource" };
+        var request = new StaffingRequest { ProjectId = project.Id, ProjectLifetimeId = project.LifetimeId, Title = "Quiet request", NeededRole = "Resource" };
         complete.AddRange(project, request);
         await complete.SaveChangesAsync();
         var service = scope.ServiceProvider.GetRequiredService<HrService>();
@@ -167,6 +170,72 @@ public sealed class CrmHrOwnerPersistenceTests {
                 Assert.Equal(block.RelatedProjectId == project.Id ? project.Name : string.Empty, item.RelatedProjectName);
                 Assert.Equal(block.Notes, item.Notes);
             }
+        }
+    }
+
+    [Fact]
+    public async Task Workforce_displays_retained_allocations_but_only_current_lifetimes_affect_capacity() {
+        await using var application = await TestApplication.CreateAsync();
+        var party = new Party { PartyType = PartyType.Person, DisplayName = "Historical capacity" };
+        var current = new Project { Name = "Current allocation", Slug = Guid.NewGuid().ToString("N") };
+        var retired = new Project { Name = "Retained retired allocation", Slug = Guid.NewGuid().ToString("N") };
+        var original = new Project { Name = "Original allocation", Slug = Guid.NewGuid().ToString("N") };
+        var replacement = new Project { Id = original.Id, Name = "Replacement allocation", Slug = Guid.NewGuid().ToString("N") };
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var start = new DateTimeOffset(today.AddDays(-1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        ProjectPartyAssignment[] assignments = [
+            Allocation(current.Id, current.LifetimeId, 20m, 20),
+            Allocation(current.Id, null, 15m, 1),
+            Allocation(retired.Id, retired.LifetimeId, 15m, 2),
+            Allocation(original.Id, original.LifetimeId, 15m, 3),
+            Allocation(Guid.NewGuid(), Guid.NewGuid(), 15m, 4),
+            Allocation(Guid.Empty, null, 15m, 5)
+        ];
+        await using (var seed = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
+            seed.AddRange(party, current, retired, original, new WorkforceProfile {
+                PartyId = party.Id, WorkforceKind = WorkforceKind.Employee, CapacityHoursPerWeek = 40m, Status = "Active"
+            });
+            await seed.SaveChangesAsync();
+            seed.Remove(original);
+            seed.AddRange(new ProjectRetirementRecord {
+                ProjectId = original.Id, LifetimeId = original.LifetimeId, RetiredAtUtc = DateTimeOffset.UtcNow
+            }, new ProjectRetirementRecord {
+                ProjectId = retired.Id, LifetimeId = retired.LifetimeId, RetiredAtUtc = DateTimeOffset.UtcNow
+            });
+            await seed.SaveChangesAsync();
+            seed.Add(replacement);
+            seed.AddRange(assignments);
+            await seed.SaveChangesAsync();
+        }
+        Assert.NotEqual(original.LifetimeId, replacement.LifetimeId);
+        await AssertCapacityAsync(assignments, 20m, today.AddDays(20));
+        await using (var owner = await application.Services.GetRequiredService<IDbContextFactory<CrmHrDbContext>>().CreateDbContextAsync()) {
+            owner.Remove(await owner.Set<ProjectPartyAssignment>().SingleAsync(item => item.Id == assignments[0].Id));
+            await owner.SaveChangesAsync();
+        }
+        await AssertCapacityAsync(assignments[1..], 0m, null);
+
+        ProjectPartyAssignment Allocation(Guid projectId, Guid? lifetimeId, decimal percent, int endDays) => new() {
+            PartyId = party.Id, ProjectId = projectId, ProjectLifetimeId = lifetimeId,
+            AssignmentKind = ProjectPartyAssignmentKind.TeamMember, AllocationPercent = percent,
+            StartsAtUtc = start, EndsAtUtc = start.AddDays(endDays + 1), Notes = "Retained capacity evidence"
+        };
+
+        async Task AssertCapacityAsync(IReadOnlyList<ProjectPartyAssignment> expected, decimal activePercent, DateOnly? nextAvailability) {
+            await using var scope = application.Services.CreateAsyncScope();
+            var hr = scope.ServiceProvider.GetRequiredService<HrService>();
+            var workspace = Assert.IsType<WorkforceCapacityWorkspaceModel>(await hr.GetWorkforceCapacityWorkspaceAsync(party.Id));
+            Assert.Equal(expected.Select(item => item.Id).Order(), workspace.ProjectAllocations.Select(item => item.AssignmentId).Order());
+            Assert.Equal(current.Name, Assert.Single(workspace.ProjectAllocations, item => item.AssignmentId == assignments[1].Id).ProjectName);
+            Assert.Equal(retired.Name, Assert.Single(workspace.ProjectAllocations, item => item.AssignmentId == assignments[2].Id).ProjectName);
+            Assert.Empty(Assert.Single(workspace.ProjectAllocations, item => item.AssignmentId == assignments[3].Id).ProjectName);
+            Assert.All(workspace.ProjectAllocations, item => Assert.True(item.IsActive));
+            Assert.Equal(activePercent, workspace.CapacitySummary.ActiveAllocationPercent);
+            Assert.Equal(100m - activePercent, workspace.CapacitySummary.AvailablePercent);
+            Assert.Equal(nextAvailability, workspace.CapacitySummary.NextAvailabilityOn);
+            var directory = Assert.Single(await hr.ListWorkforceDirectoryAsync(), item => item.PartyId == party.Id);
+            Assert.Equal(100m - activePercent, directory.AvailablePercent);
+            Assert.Equal(nextAvailability, directory.NextAvailabilityOn);
         }
     }
 

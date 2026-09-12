@@ -43,6 +43,11 @@ Exact verbs, DTO fields, enum values, and limits live in the running OpenAPI doc
 The canonical skill is maintained in `CanDoItAll.SharedInfo`; this product repository
 does not maintain a duplicate skill source.
 
+Workforce capacity views retain historical project allocations. Only allocations bound
+to a current, unretired project lifetime contribute to capacity and next availability.
+An allocation bound to an older lifetime does not inherit the name of a project recreated
+with the same public ID; legacy unbound references retain their existing display labels.
+
 ## Privacy And Safety
 
 - Party and workforce collection reads use the source-paged party query service; they do not load every party and fake paging in Web.
