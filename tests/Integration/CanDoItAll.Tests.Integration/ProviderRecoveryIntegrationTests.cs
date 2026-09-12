@@ -359,8 +359,8 @@ public sealed class ProviderRecoveryFixture : IAsyncLifetime {
 
     public async Task InitializeAsync() {
         Host = await ApiTestHost.CreateAsync(jwtEnabled: false, configureServices: services => {
-            services.AddSingleton<IDbContextFactory<AppDbContext>>(provider => new RecoveryFactory(
-                new DbContextOptionsBuilder<AppDbContext>(provider.GetRequiredService<DbContextOptions<AppDbContext>>())
+            services.AddSingleton<IDbContextFactory<ProvidersDbContext>>(provider => new RecoveryFactory(
+                new DbContextOptionsBuilder<ProvidersDbContext>(provider.GetRequiredService<DbContextOptions<ProvidersDbContext>>())
                     .AddInterceptors(new RecoverySaveInterceptor(Fault), new RecoveryTransactionInterceptor(Fault)).Options, Fault));
         }, configureApplication: app => app.MapDelete("/fixture/recovery/sources/{id:guid}/{token:guid}",
             (HttpContext context, Guid id, Guid token, ISharedProviderManagementService management) =>
@@ -372,14 +372,14 @@ public sealed class ProviderRecoveryFixture : IAsyncLifetime {
 
     public Task DisposeAsync() => Host.DisposeAsync().AsTask();
 
-    private sealed class RecoveryFactory(DbContextOptions<AppDbContext> options, RecoveryFault fault) : IDbContextFactory<AppDbContext> {
-        public AppDbContext CreateDbContext() => new(options);
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+    private sealed class RecoveryFactory(DbContextOptions<ProvidersDbContext> options, RecoveryFault fault) : IDbContextFactory<ProvidersDbContext> {
+        public ProvidersDbContext CreateDbContext() => new(options);
+        public Task<ProvidersDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
             if (fault.FailRead) {
                 fault.FailRead = false;
                 throw RecoveryFault.Failure();
             }
-            return Task.FromResult(new AppDbContext(options));
+            return Task.FromResult(new ProvidersDbContext(options));
         }
     }
 
