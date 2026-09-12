@@ -64,7 +64,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
     [Fact]
     public void Preparation_service_does_not_activate_the_dotnet_driver_for_root_delivery_templates()
     {
-        var service = new ProcessLaunchVariablePreparationService(
+        IProcessLaunchVariablePreparer service = new ProcessLaunchVariablePreparationService(
             [new DotNetProcessLaunchVariableContributor(
                 TestExternalTargetPathRegistry.Create(),
                 TestWorkspaceServices.PhysicalPathPolicyFactory)],

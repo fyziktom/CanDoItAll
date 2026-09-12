@@ -135,7 +135,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
     public async Task<IReadOnlyDictionary<string, string>> BuildProjectScopedLaunchVariablesAsync(
         ProjectStructureProcessLaunchVariableBuildRequest request,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -158,9 +158,10 @@ public sealed partial class ProjectStructureProcessNodeService(
         }
 
         await using var scope = serviceScopeFactory.CreateAsyncScope();
-        var dependencies = ResolveScopedDependencies(scope.ServiceProvider);
+        var projectWorkbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var definitions = scope.ServiceProvider.GetRequiredService<ProcessDefinitionCatalogProjectionService>();
         var surface = await LoadSurfaceAsync(
-            dependencies.ProjectWorkbenchService,
+            projectWorkbench,
             request.ProjectId,
             cancellationToken).ConfigureAwait(false);
         var targetNode = surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, request.ProjectNodeId, StringComparison.Ordinal))
@@ -177,7 +178,7 @@ public sealed partial class ProjectStructureProcessNodeService(
             request.DefinitionKey,
             processDefinitionId == Guid.Empty
                 ? string.Empty
-                : dependencies.ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
+                : definitions.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
         var agent = new ProjectStructureAgentContext(
             AgentId: "process-api",
             AgentName: string.IsNullOrWhiteSpace(request.RequestedBy) ? "Process API" : request.RequestedBy.Trim(),
@@ -1045,7 +1046,7 @@ public sealed partial class ProjectStructureProcessNodeService(
             serviceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStateStore>(),
             serviceProvider.GetRequiredService<IWorkspaceFileService>(),
-            serviceProvider.GetRequiredService<ProcessLaunchVariablePreparationService>(),
+            serviceProvider.GetRequiredService<IProcessLaunchVariablePreparer>(),
             serviceProvider.GetService<IProcessPreparedLaunchStore>(),
             serviceProvider.GetService<ProjectProcessLaunchTargetQuery>(),
             serviceProvider.GetService<ProjectProcessLaunchDeliveryService>());
@@ -1058,7 +1059,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         Guid processDefinitionId,
         ProjectStructureNode targetNode,
         ProjectStructureAgentContext agent,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         string? definitionKey)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1119,7 +1120,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         ProjectStructureProcessSubprocessLaunchInput request,
         ProjectStructureAgentContext agent,
         IWorkspaceFileService workspaceFiles,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService)
+        IProcessLaunchVariablePreparer launchVariablePreparationService)
     {
         var variables = CopyInheritableSubprocessLaunchVariables(parentAssignment.LaunchVariables);
         if (request.Variables is not null)
@@ -1271,7 +1272,7 @@ public sealed partial class ProjectStructureProcessNodeService(
     }
 
     private static void ApplyLaunchVariablePreparation(
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         ProjectStructureSurface surface,
         ProjectStructureNode targetNode,
         string? definitionKey,
@@ -1494,7 +1495,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         IProcessRuntimeStepAssignmentStore AssignmentStore,
         IProcessRuntimeStateStore StateStore,
         IWorkspaceFileService WorkspaceFiles,
-        ProcessLaunchVariablePreparationService LaunchVariablePreparationService,
+        IProcessLaunchVariablePreparer LaunchVariablePreparationService,
         IProcessPreparedLaunchStore? Preparations,
         ProjectProcessLaunchTargetQuery? Targets,
         ProjectProcessLaunchDeliveryService? Delivery);

@@ -45,7 +45,7 @@ internal static class ProcessesApi
                 IProcessLaunchOperatorAuthoritySource authoritySource,
                 IProcessPreparedLaunchStore preparations,
                 ProcessLaunchApplicationService launchService,
-                ProcessLaunchVariablePreparationService launchVariablePreparationService,
+                IProcessLaunchVariablePreparer launchVariablePreparationService,
                 ProjectStructureProcessNodeService projectStructureProcessNodeService,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
@@ -68,7 +68,7 @@ internal static class ProcessesApi
                 IProcessLaunchOperatorAuthoritySource authoritySource,
                 IProcessPreparedLaunchStore preparations,
                 ProcessLaunchApplicationService launchService,
-                ProcessLaunchVariablePreparationService launchVariablePreparationService,
+                IProcessLaunchVariablePreparer launchVariablePreparationService,
                 ProjectStructureProcessNodeService projectStructureProcessNodeService,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
@@ -276,7 +276,7 @@ internal static class ProcessesApi
         IProcessLaunchOperatorAuthoritySource authoritySource,
         IProcessPreparedLaunchStore preparations,
         ProcessLaunchApplicationService launchService,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         ProjectStructureProcessNodeService projectStructureProcessNodeService,
         ILoggerFactory loggerFactory,
         bool previewOnly,
@@ -348,7 +348,7 @@ internal static class ProcessesApi
         HttpContext context,
         IProcessLaunchOperatorAuthoritySource authoritySource,
         IProcessPreparedLaunchStore preparations,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         ProjectStructureProcessNodeService projectStructureProcessNodeService,
         CancellationToken cancellationToken)
     {

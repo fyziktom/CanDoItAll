@@ -43,7 +43,7 @@ public partial class ProjectStructurePage
     private IProcessHistoricalRunCostReader ProcessHistoricalRunCostReader { get; set; } = default!;
 
     [Inject]
-    private ProcessLaunchVariablePreparationService ProcessLaunchVariablePreparationService { get; set; } = default!;
+    private IProcessLaunchVariablePreparer ProcessLaunchVariablePreparationService { get; set; } = default!;
 
     [Inject]
     private ProjectStructureTaskResourceAttachmentService TaskResourceAttachmentService { get; set; } = default!;

@@ -36,13 +36,15 @@ public sealed class AgentApiFailureContractIntegrationTests
     };
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Eager_workspace_and_workbench_resolve_the_same_owner_receipt_graph(bool workbenchFirst) {
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Eager_workspace_and_workbench_resolve_the_same_owner_receipt_graph(bool workbenchFirst, bool useProductionWorkspace) {
         Assert.DoesNotContain(typeof(ProjectStructureWorkflowAuthorityService).GetConstructors()
             .SelectMany(constructor => constructor.GetParameters()),
             parameter => parameter.ParameterType == typeof(IAgentFrameworkWorkspaceService));
-        var runtime = new FailingAgentRuntime();
+        var runtime = useProductionWorkspace ? null : new FailingAgentRuntime();
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
             useInMemoryDatabase: true,
@@ -51,7 +53,14 @@ public sealed class AgentApiFailureContractIntegrationTests
         var services = scope.ServiceProvider;
         var firstOwner = workbenchFirst ? services.GetRequiredService<ProjectWorkbenchService>() : null;
 
-        var workspace = Assert.IsType<AgentFrameworkWorkspaceService>(services.GetRequiredService<IAgentFrameworkWorkspaceService>());
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        if (useProductionWorkspace) {
+            Assert.IsType<CurrentProfileAgentFrameworkWorkspaceService>(workspace);
+        } else {
+            Assert.IsType<AgentFrameworkWorkspaceService>(workspace);
+        }
+        var agents = await workspace.ListAgentsAsync(false);
+        Assert.NotEmpty(agents);
         var owner = services.GetRequiredService<ProjectWorkbenchService>();
         if (workbenchFirst) {
             Assert.Same(firstOwner, owner);
@@ -76,14 +85,14 @@ public sealed class AgentApiFailureContractIntegrationTests
             Assert.DoesNotContain(dependencies, parameter => parameter.ParameterType == typeof(IAgentFrameworkWorkspaceService));
             Assert.Same(sourceOwner, Assert.Single(services.GetServices<IAgentExecutionSourceAuthorityProvider>(), candidate => candidate.SourceKind == sourceKind));
         }
-        var agents = await workspace.ListAgentsAsync(false);
-        Assert.NotEmpty(agents);
         var agent = agents.First();
         var catalog = Assert.IsType<CanonicalAgentCatalogLeaseSource>(services.GetRequiredService<IAgentCatalogReadLeaseStore>());
         await using var held = await catalog.AcquireAgentReadLeaseAsync(agent.Id);
         Assert.Equal(WorkspaceScopeDescriptor.Organization(services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id.ToString("N")), held.Scope);
         Assert.Equal(agent.Id, Assert.IsType<AgentDefinition>(held.Agent).Id);
-        Assert.Equal(0, runtime.RunInvocationCount);
+        if (runtime is not null) {
+            Assert.Equal(0, runtime.RunInvocationCount);
+        }
     }
 
     [Fact]

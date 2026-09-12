@@ -1,6 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -8,6 +11,112 @@ namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed class ProcessApiIntegrationTests
 {
+    private const string SelectedNodeTitle = "Saved process variable source";
+    private const string NodeTitleVariable = "ProjectNodeTitle";
+    private const string CallerVariable = "CallerInput";
+    private const string ContributedVariable = "ContributedInput";
+
+    [Fact]
+    public async Task Project_scoped_variables_use_owner_reads_without_resolving_launch_execution() {
+        var contributor = new RecordingLaunchContributor();
+        await using var host = await CreateVariablePreparationHostAsync(contributor);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var source = await CreateVariableSourceAsync(services);
+        var input = new Dictionary<string, string> {
+            [NodeTitleVariable] = "Caller-supplied title",
+            [CallerVariable] = "Retained input"
+        };
+        var before = input.ToArray();
+
+        var result = await services.GetRequiredService<ProjectStructureProcessNodeService>()
+            .BuildProjectScopedLaunchVariablesAsync(new(source.ProjectId, source.NodeId, null, null, "Process API test", input),
+                services.GetRequiredService<IProcessLaunchVariablePreparer>());
+
+        Assert.Equal(SelectedNodeTitle, result[NodeTitleVariable]);
+        Assert.Equal(input[CallerVariable], result[CallerVariable]);
+        Assert.Equal("Owner contribution", result[ContributedVariable]);
+        Assert.Equal(before, input.ToArray());
+        Assert.Equal(1, contributor.Calls);
+        Assert.Equal(source.ProjectId, contributor.Context!.Source.ProjectId);
+        Assert.Equal(source.NodeId, contributor.Context.Source.SelectedItem.Id);
+    }
+
+    [Fact]
+    public async Task Project_scoped_variables_reject_missing_nodes_before_contributors() {
+        var contributor = new RecordingLaunchContributor();
+        await using var host = await CreateVariablePreparationHostAsync(contributor);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var source = await CreateVariableSourceAsync(services);
+
+        var failure = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            services.GetRequiredService<ProjectStructureProcessNodeService>()
+                .BuildProjectScopedLaunchVariablesAsync(new(source.ProjectId, "missing-node", null, null,
+                    "Process API test", new Dictionary<string, string>()), services.GetRequiredService<IProcessLaunchVariablePreparer>()));
+
+        Assert.Equal(404, failure.StatusCode);
+        Assert.Equal("ProjectStructureNodeNotFound", failure.ErrorCode);
+        Assert.Equal(0, contributor.Calls);
+    }
+
+    [Fact]
+    public async Task Project_scoped_variables_preserve_contributor_failures() {
+        var expected = new InvalidOperationException("The selected contributor failed.");
+        var contributor = new RecordingLaunchContributor(expected);
+        await using var host = await CreateVariablePreparationHostAsync(contributor);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var source = await CreateVariableSourceAsync(services);
+        var input = new Dictionary<string, string> { [CallerVariable] = "Retained input" };
+        var before = input.ToArray();
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            services.GetRequiredService<ProjectStructureProcessNodeService>()
+                .BuildProjectScopedLaunchVariablesAsync(new(source.ProjectId, source.NodeId, null, null, "Process API test", input),
+                    services.GetRequiredService<IProcessLaunchVariablePreparer>()));
+
+        Assert.Same(expected, failure);
+        Assert.Equal(1, contributor.Calls);
+        Assert.Equal(before, input.ToArray());
+    }
+
+    private static Task<ApiTestHost> CreateVariablePreparationHostAsync(IProcessLaunchVariableContributor contributor) =>
+        ApiTestHost.CreateAsync(jwtEnabled: false, services => {
+            services.RemoveAll<ProcessLaunchApplicationService>();
+            services.AddScoped<ProcessLaunchApplicationService>(_ =>
+                throw new InvalidOperationException("Variable preparation must not resolve launch execution."));
+            services.AddSingleton(contributor);
+        });
+
+    private static async Task<(Guid ProjectId, string NodeId)> CreateVariableSourceAsync(IServiceProvider services) {
+        var created = await services.GetRequiredService<ProjectsService>().SaveAsync(new ProjectEditorModel {
+            Name = "Scoped variable owner reads",
+            Description = "A persisted source for process variable preparation.",
+            Objective = "Prepare variables without resolving execution.",
+            CurrentPhase = "Validation"
+        });
+        Assert.True(created.IsSuccess);
+        var node = await services.GetRequiredService<ProjectWorkbenchService>().CreateObjectAsync(created.Value,
+            new ProjectObjectCreateRequest(ProjectObjectType.ProjectBlock, SelectedNodeTitle, string.Empty,
+                string.Empty, $"project:{created.Value:D}"));
+        return (created.Value, node.Id);
+    }
+
+    private sealed class RecordingLaunchContributor(Exception? failure = null) : IProcessLaunchVariableContributor {
+        public int Calls { get; private set; }
+        public ProcessLaunchPreparationContext? Context { get; private set; }
+
+        public void Enrich(ProcessLaunchPreparationContext context, IDictionary<string, string> variables) {
+            Calls++;
+            Context = context;
+            if (failure is not null) {
+                throw failure;
+            }
+            variables[ContributedVariable] = "Owner contribution";
+        }
+    }
+
     [Fact]
     public async Task Projection_reads_do_not_require_foreground_catchup_service()
     {
