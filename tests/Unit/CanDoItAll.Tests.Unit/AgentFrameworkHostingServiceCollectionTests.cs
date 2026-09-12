@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Hosting;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel.Streaming;
@@ -182,6 +183,13 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
                 workspaceScope,
                 workspaceIdentity);
 
+            AssertScoped<MafAgentRuntime>(services);
+            AssertScoped<IAgentExecutionRuntime>(services);
+            AssertScoped<IAgentContinuationRuntime>(services);
+            AssertScoped<IProviderDiagnosticsRuntime>(services);
+            AssertScoped<IProviderModelAdministrationRuntime>(services);
+            AssertScoped<IProviderDiagnosticsService>(services);
+
             await using var provider = services.BuildServiceProvider(
                 new ServiceProviderOptions
                 {
@@ -212,6 +220,21 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             var activityExecutionService = firstScope.ServiceProvider
                 .GetRequiredService<
                     IAgentFrameworkWorkspaceActivityExecutionService>();
+            var firstRuntime = firstScope.ServiceProvider.GetRequiredService<MafAgentRuntime>();
+            var secondRuntime = secondScope.ServiceProvider.GetRequiredService<MafAgentRuntime>();
+
+            Assert.Same(firstRuntime, firstScope.ServiceProvider.GetRequiredService<MafAgentRuntime>());
+            Assert.NotSame(firstRuntime, secondRuntime);
+            Assert.Same(firstRuntime.ExecutionPort, firstScope.ServiceProvider.GetRequiredService<IAgentExecutionRuntime>());
+            Assert.Same(firstRuntime.ContinuationPort, firstScope.ServiceProvider.GetRequiredService<IAgentContinuationRuntime>());
+            Assert.Same(firstRuntime.DiagnosticsPort, firstScope.ServiceProvider.GetRequiredService<IProviderDiagnosticsRuntime>());
+            Assert.Same(firstRuntime.ModelAdministrationPort, firstScope.ServiceProvider.GetRequiredService<IProviderModelAdministrationRuntime>());
+            Assert.Same(secondRuntime.ExecutionPort, secondScope.ServiceProvider.GetRequiredService<IAgentExecutionRuntime>());
+            Assert.Same(secondRuntime.ContinuationPort, secondScope.ServiceProvider.GetRequiredService<IAgentContinuationRuntime>());
+            Assert.Same(secondRuntime.DiagnosticsPort, secondScope.ServiceProvider.GetRequiredService<IProviderDiagnosticsRuntime>());
+            Assert.Same(secondRuntime.ModelAdministrationPort, secondScope.ServiceProvider.GetRequiredService<IProviderModelAdministrationRuntime>());
+            Assert.NotSame(firstScope.ServiceProvider.GetRequiredService<IProviderDiagnosticsService>(),
+                secondScope.ServiceProvider.GetRequiredService<IProviderDiagnosticsService>());
 
             Assert.Same(firstStream, secondStream);
             Assert.Same(coordinator, coordinatorContract);

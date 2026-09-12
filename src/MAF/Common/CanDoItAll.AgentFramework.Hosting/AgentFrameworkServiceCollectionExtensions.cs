@@ -176,20 +176,20 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
             serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
             serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
-        services.TryAddSingleton<MafAgentRuntime>(serviceProvider => new MafAgentRuntime(normalizedWorkspaceRoot, serviceProvider, resolvedScope));
+        services.TryAddScoped<MafAgentRuntime>(serviceProvider => new MafAgentRuntime(normalizedWorkspaceRoot, serviceProvider, resolvedScope));
         // SB18: the four narrow runtime ports resolve directly to the native MAF adapters exposed
         // by the same MafAgentRuntime composition (one adapter set per runtime scope). No broad
         // runtime interface or compatibility facade is constructed by production registrations.
-        services.TryAddSingleton<IAgentExecutionRuntime>(serviceProvider =>
+        services.TryAddScoped<IAgentExecutionRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<MafAgentRuntime>().ExecutionPort);
-        services.TryAddSingleton<IAgentContinuationRuntime>(serviceProvider =>
+        services.TryAddScoped<IAgentContinuationRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<MafAgentRuntime>().ContinuationPort);
-        services.TryAddSingleton<IProviderDiagnosticsRuntime>(serviceProvider =>
+        services.TryAddScoped<IProviderDiagnosticsRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<MafAgentRuntime>().DiagnosticsPort);
-        services.TryAddSingleton<IProviderModelAdministrationRuntime>(serviceProvider =>
+        services.TryAddScoped<IProviderModelAdministrationRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<MafAgentRuntime>().ModelAdministrationPort);
         services.TryAddSingleton<ICapabilityProofService, CapabilityProofService>();
-        services.TryAddSingleton<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
+        services.TryAddScoped<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
             serviceProvider.GetRequiredService<IProviderDiagnosticsRuntime>(),
             serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();

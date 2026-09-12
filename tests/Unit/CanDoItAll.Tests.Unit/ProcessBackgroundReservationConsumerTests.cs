@@ -17,7 +17,7 @@ public sealed class ProcessBackgroundReservationConsumerTests {
     public async Task Actual_executor_adapter_uses_admitted_source_and_recovers_the_original_execution(
         ExecutionRunSourceDisposition disposition, int recoveryCalls) {
         var fixture = Create(disposition);
-        var result = await AgentFrameworkProcessStepExecutor.ExecuteAdmittedProcessRunAsync(
+        var result = await ProcessAgentExecutionAdmission.ExecuteAsync(
             fixture.Service, fixture.Assignment, fixture.Request, default);
         Assert.Same(fixture.Proxy.Result, result);
         Assert.Equal(1, fixture.Proxy.Reservations);
@@ -32,7 +32,7 @@ public sealed class ProcessBackgroundReservationConsumerTests {
     public async Task Existing_active_execution_retains_its_claim_and_does_not_invoke_a_second_provider() {
         var fixture = Create(ExecutionRunSourceDisposition.ExistingActive);
         var error = await Assert.ThrowsAsync<ProcessRuntimeDispatchInProgressException>(() =>
-            AgentFrameworkProcessStepExecutor.ExecuteAdmittedProcessRunAsync(fixture.Service, fixture.Assignment, fixture.Request, default));
+            ProcessAgentExecutionAdmission.ExecuteAsync(fixture.Service, fixture.Assignment, fixture.Request, default));
         Assert.Equal(fixture.Proxy.Result.ExecutionRunId, error.ExecutionRunId.Value);
         Assert.Equal(0, fixture.Proxy.Recoveries);
         Assert.Equal(1, fixture.Proxy.Reservations);
@@ -42,7 +42,7 @@ public sealed class ProcessBackgroundReservationConsumerTests {
     public async Task Different_claim_with_unacknowledged_execution_keeps_original_identity_and_requires_reconciliation() {
         var fixture = Create(ExecutionRunSourceDisposition.SourceReconciliationRequired);
         var error = await Assert.ThrowsAsync<ProcessSourceExecutionReconciliationException>(() =>
-            AgentFrameworkProcessStepExecutor.ExecuteAdmittedProcessRunAsync(fixture.Service, fixture.Assignment, fixture.Request, default));
+            ProcessAgentExecutionAdmission.ExecuteAsync(fixture.Service, fixture.Assignment, fixture.Request, default));
         Assert.Equal(fixture.Proxy.Result.ExecutionRunId, error.ExecutionRunId.Value);
         Assert.Equal("process.adapter.prior_execution_unreconciled", error.Code);
         Assert.Equal(0, fixture.Proxy.Recoveries);
@@ -56,7 +56,7 @@ public sealed class ProcessBackgroundReservationConsumerTests {
         var failure = new AgentToolAdmissionException(code, "The saved effect is uncertain.");
         fixture.Proxy.RecoveryFailure = failure;
         var error = await Assert.ThrowsAsync<ProcessSourceExecutionReconciliationException>(() =>
-            AgentFrameworkProcessStepExecutor.ExecuteAdmittedProcessRunAsync(fixture.Service, fixture.Assignment, fixture.Request, default));
+            ProcessAgentExecutionAdmission.ExecuteAsync(fixture.Service, fixture.Assignment, fixture.Request, default));
         Assert.Same(failure, error.InnerException);
         Assert.Equal(code, error.Code);
         Assert.Equal(fixture.Proxy.Result.ExecutionRunId, error.ExecutionRunId.Value);
@@ -69,7 +69,7 @@ public sealed class ProcessBackgroundReservationConsumerTests {
         fixture.Proxy.RecoveryFailure = failure;
         ProcessExecutionRunId? observed = null;
         Assert.Same(failure, await Assert.ThrowsAsync<IOException>(() =>
-            AgentFrameworkProcessStepExecutor.ExecuteAdmittedProcessRunAsync(fixture.Service, fixture.Assignment, fixture.Request, default,
+            ProcessAgentExecutionAdmission.ExecuteAsync(fixture.Service, fixture.Assignment, fixture.Request, default,
                 id => observed = id)));
         Assert.Equal(fixture.Proxy.Run.Id, observed!.Value.Value);
     }

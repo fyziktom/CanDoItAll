@@ -6,8 +6,8 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed partial class AgentFrameworkProcessStepExecutor {
-    internal static async Task<ExecutionRunResult> ExecuteAdmittedProcessRunAsync(IAgentFrameworkWorkspaceService workspace,
+internal static class ProcessAgentExecutionAdmission {
+    internal static async Task<ExecutionRunResult> ExecuteAsync(IAgentFrameworkWorkspaceService workspace,
         ProcessRuntimeStepAssignment assignment, ExecutionRunRequest request, CancellationToken cancellationToken,
         Action<ProcessExecutionRunId>? observeAdmission = null) {
         var context = request.Context ?? throw new InvalidOperationException("The Process execution has no source context.");

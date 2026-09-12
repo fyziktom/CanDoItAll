@@ -40,7 +40,7 @@ using static CanDoItAll.Modules.Processes.ProcessSubprocessState;
 namespace CanDoItAll.Modules.Processes;
 
 
-internal sealed partial class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcessStepExecutor
+internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcessStepExecutor
 {
     private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
     private readonly IAgentReferenceDataProvider agentReferenceDataProvider;
@@ -332,7 +332,7 @@ internal sealed partial class AgentFrameworkProcessStepExecutor : IAgentFramewor
                 assignment.StepKey,
                 subprocessContract);
             executionStage = ProcessAgentExecutionStage.AgentExecution;
-            var result = await ExecuteAdmittedProcessRunAsync(workspaceService, assignment,
+            var result = await ProcessAgentExecutionAdmission.ExecuteAsync(workspaceService, assignment,
                     new ExecutionRunRequest(
                         agentId,
                         processStepPrompt,
@@ -573,41 +573,5 @@ internal sealed partial class AgentFrameworkProcessStepExecutor : IAgentFramewor
                 .ToArray();
         }
     }
-
-    private static ProcessExecutionAdapterResult CreateHostCapabilityFailureResult(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessRuntimeToolPreflightResult preflight)
-    {
-        var issue = CreateRuntimeToolPreflightIssue(assignment, preflight);
-        return AttachHostCapabilityEvidence(
-            NeedsManagerForCompletionIssue(
-                assignment,
-                ComputeHash(issue.Evidence),
-                issue),
-            preflight.HostCapabilityEvidence);
-    }
-
-    private static ProcessExecutionAdapterResult CreateRuntimeToolContractChangedResult(
-        ProcessRuntimeStepAssignment assignment)
-    {
-        var issue = new ProcessCompletionIssue(
-            "process.adapter.runtime_tool_contract_changed",
-            $"Step '{assignment.StepKey}' has runtime-tool requirements that differ from its immutable process plan. Repair or reseal the assignment before retrying.",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-tool-contract-changed",
-            [],
-            ProcessDiagnosticRetrySafety.UnsafeToRetry,
-            ProcessDiagnosticIdempotencyClassification.Unknown);
-        return NeedsManagerForCompletionIssue(
-            assignment,
-            ComputeHash(issue.Evidence),
-            issue);
-    }
-
-    private static ProcessExecutionAdapterResult AttachHostCapabilityEvidence(
-        ProcessExecutionAdapterResult result,
-        ProcessHostCapabilityEvaluationEvidence? evidence)
-        => evidence is null
-            ? result
-            : result with { HostCapabilityEvidence = evidence };
 
 }

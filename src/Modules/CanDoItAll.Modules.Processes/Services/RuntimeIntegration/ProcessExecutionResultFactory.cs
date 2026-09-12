@@ -25,6 +25,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using static CanDoItAll.Modules.Processes.ProcessCompletionRuleParser;
+using static CanDoItAll.Modules.Processes.ProcessCompletionIssueResultFactory;
+using static CanDoItAll.Modules.Processes.ProcessSubprocessCompletionPolicy;
 using static CanDoItAll.Modules.Processes.ProcessProductCompletionRuleParser;
 using static CanDoItAll.Modules.Processes.ProcessProductRootResolver;
 using static CanDoItAll.Modules.Processes.ProcessCompletionText;
@@ -37,6 +39,32 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessExecutionResultFactory
 {
+    internal static ProcessExecutionAdapterResult CreateHostCapabilityFailureResult(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeToolPreflightResult preflight) {
+        var issue = CreateRuntimeToolPreflightIssue(assignment, preflight);
+        return AttachHostCapabilityEvidence(
+            NeedsManagerForCompletionIssue(assignment, ComputeHash(issue.Evidence), issue),
+            preflight.HostCapabilityEvidence);
+    }
+
+    internal static ProcessExecutionAdapterResult CreateRuntimeToolContractChangedResult(
+        ProcessRuntimeStepAssignment assignment) {
+        var issue = new ProcessCompletionIssue(
+            "process.adapter.runtime_tool_contract_changed",
+            $"Step '{assignment.StepKey}' has runtime-tool requirements that differ from its immutable process plan. Repair or reseal the assignment before retrying.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-tool-contract-changed",
+            [],
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+        return NeedsManagerForCompletionIssue(assignment, ComputeHash(issue.Evidence), issue);
+    }
+
+    internal static ProcessExecutionAdapterResult AttachHostCapabilityEvidence(
+        ProcessExecutionAdapterResult result,
+        ProcessHostCapabilityEvaluationEvidence? evidence)
+        => evidence is null ? result : result with { HostCapabilityEvidence = evidence };
+
     internal static ProcessExecutionAdapterResult Failed(
         string code,
         string summary,

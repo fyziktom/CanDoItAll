@@ -73,6 +73,20 @@ public sealed class ProcessWorkspaceInvocationPolicyTests {
     }
 
     [Fact]
+    public async Task Force_scaffold_denial_retains_existing_recovery_guidance() {
+        var context = CreateContext(ToolContractCatalog.WorkspaceDotNetNew,
+            [new("parentDirectory", ProductRoot), new("name", "application"), new("force", "true")]);
+
+        var decision = await new DefaultAgentToolInvocationPolicy().EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("cannot run workspace_dotnet_new with force=true", decision.Reason, StringComparison.Ordinal);
+        Assert.True(ProcessToolInvocationRecoveryPolicy.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceDotNetNew, decision, context, out var guidance));
+        Assert.Contains("Retry without force only when the target scaffold is absent", guidance, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Copy_source_and_destination_are_checked_against_original_grounded_roots() {
         const string source = "external-target/C/previous-product/archive/program.cs";
         var context = CreateContext(ToolContractCatalog.WorkspaceCopyPath,

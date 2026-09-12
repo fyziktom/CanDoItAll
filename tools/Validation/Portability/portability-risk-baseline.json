@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-12T05:12:32.212946+00:00",
+  "generated_utc": "2026-09-12T18:25:15.605884+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -24346,6 +24346,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "4e4b34b06010e754ffec279890f0867f0b56fa54b8e7c1339d16eaf7cb8fbdbc",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "74807bad4c754c0e69a7a74b735892a6f531a1e5720c28663f4fc394373ba532",
       "count": 1
     },
@@ -24360,12 +24366,6 @@
       "category": "absolute-path-field",
       "source_fingerprint": "8d4bc306176cb0e59bdcfde4535bb61979da1a76ad7246917aa42675f7d8beb3",
       "count": 2
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "99da08082d3e6c609c8c7c7ffd601c23a20f08c252d7ee8a0d5e62bdcdafa065",
-      "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs",

@@ -16,7 +16,7 @@ internal static class ProcessToolInvocationRecoveryPolicy {
     internal const string ProductMutationBranchOutcomeRequiredDenialMarker =
         "must declare exactly one valid Branch outcome key";
     private const string GovernedDotnetNewForceDeniedMarker =
-        "cannot run workspace_dotnet_new with force=true";
+        $"cannot run {ToolContractCatalog.WorkspaceDotNetNew} with force=true";
 
     private static readonly HashSet<string> RecoverableWorkspaceReadDiscoveryTools = new(StringComparer.OrdinalIgnoreCase) {
         ToolContractCatalog.WorkspaceListDirectory,
