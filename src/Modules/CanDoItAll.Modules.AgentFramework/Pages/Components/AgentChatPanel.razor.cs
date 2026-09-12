@@ -132,6 +132,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
     private string voiceStatusText = string.Empty;
     private string voiceStatusTone = "neutral";
     private Task trackedChatOperation = Task.CompletedTask;
+    private AgentChatSessionBlockedException? sessionStartRejection;
     private AgentExecutionActivityStreamId? activeActivityStreamId;
     private Guid? terminalWorkspaceRefreshRunId;
     private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
@@ -218,6 +219,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         attachmentRead?.Cancel();
         attachmentRead = null;
         trackedChatOperation = Task.CompletedTask;
+        sessionStartRejection = null;
         pendingUserPrompt = "";
         draftPrompt = "";
         draftAttachmentPaths = [];
@@ -327,6 +329,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
             return Task.CompletedTask;
         }
 
+        sessionStartRejection = null;
         pendingUserCreatedAtUtc = DateTimeOffset.UtcNow;
         pendingUserPrompt = draftPrompt;
         var previousDraft = draftPrompt;
@@ -371,16 +374,17 @@ public partial class AgentChatPanel : IAsyncDisposable {
             await InvokeAsync(StateHasChanged);
             var result = await operation.Completion;
             executionCompleted = true;
-            if (!IsOperationWorkspaceCurrent(
+            if (!IsOperationTargetCurrent(
                     executionAgentId,
                     executionSessionId,
-                    executionWorkspaceGeneration)) {
+                    executionHandleId,
+                    owner)) {
                 LogDetachedCompletion(executionAgentId, result.ChatSessionId, executionHandleId, "send");
                 return;
             }
 
             draftAttachmentPaths = [];
-            continuationWorkspaceGeneration = unchecked(executionWorkspaceGeneration + 1);
+            continuationWorkspaceGeneration = unchecked(chatSession.Generation + 1);
             await LoadWorkspaceAsync(executionAgentId, result.ChatSessionId);
             if (chatSession.Generation != continuationWorkspaceGeneration ||
                 selectedAgentId != executionAgentId ||
@@ -399,14 +403,28 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 "send");
         } catch (Exception exception) when (isDisposed) {
             LogDetachedOperationFailure(exception, executionAgentId, executionSessionId, executionHandleId, "send");
+        } catch (AgentChatSessionBlockedException exception) {
+            Logger.LogWarning(
+                "Agent chat start was rejected. AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} Reason={Reason}.",
+                exception.AgentId, exception.ChatSessionId, exception.ExecutionRunId, exception.Reason);
+            if (exception.AgentId == executionAgentId &&
+                exception.ChatSessionId == executionSessionId &&
+                IsOperationTargetCurrent(executionAgentId, executionSessionId, executionHandleId, owner)) {
+                draftPrompt = previousDraft;
+                composerKey++;
+                sessionStartRejection = exception;
+                ResolveRunState();
+                SetMessage("Prompt not sent", "warning", exception.Message);
+            }
         } catch (AgentChatRunFailedException exception) {
             if (exception.AgentId == executionAgentId &&
                 (!executionSessionId.HasValue ||
                  exception.ChatSessionId == executionSessionId) &&
-                IsOperationWorkspaceCurrent(
+                IsOperationTargetCurrent(
                     executionAgentId,
                     executionSessionId,
-                    executionWorkspaceGeneration)) {
+                    executionHandleId,
+                    owner)) {
                 var reloadGeneration = chatSession.Generation;
                 var workspaceReloaded = await TryReloadFailedWorkspaceAsync(exception);
                 if (WasFailedRunReloadSuperseded(reloadGeneration) ||
@@ -537,15 +555,16 @@ public partial class AgentChatPanel : IAsyncDisposable {
             }
             await operation.Completion;
             executionCompleted = true;
-            if (!IsOperationWorkspaceCurrent(
+            if (!IsOperationTargetCurrent(
                     executionAgentId,
                     executionSessionId,
-                    executionWorkspaceGeneration)) {
+                    executionHandleId,
+                    owner)) {
                 LogDetachedCompletion(executionAgentId, executionSessionId, executionHandleId, "approval");
                 return;
             }
 
-            continuationWorkspaceGeneration = unchecked(executionWorkspaceGeneration + 1);
+            continuationWorkspaceGeneration = unchecked(chatSession.Generation + 1);
             await LoadWorkspaceAsync(executionAgentId, executionSessionId);
             if (chatSession.Generation != continuationWorkspaceGeneration ||
                 selectedAgentId != executionAgentId ||
@@ -571,10 +590,11 @@ public partial class AgentChatPanel : IAsyncDisposable {
         } catch (AgentChatRunFailedException exception) {
             if (exception.AgentId == executionAgentId &&
                 exception.ChatSessionId == executionSessionId &&
-                IsOperationWorkspaceCurrent(
+                IsOperationTargetCurrent(
                     executionAgentId,
                     executionSessionId,
-                    executionWorkspaceGeneration)) {
+                    executionHandleId,
+                    owner)) {
                 var reloadGeneration = chatSession.Generation;
                 var workspaceReloaded = await TryReloadFailedWorkspaceAsync(exception);
                 if (WasFailedRunReloadSuperseded(reloadGeneration) ||
@@ -639,6 +659,18 @@ public partial class AgentChatPanel : IAsyncDisposable {
         isBusy = true;
         effectOwner++;
         return true;
+    }
+
+    private bool IsOperationTargetCurrent(
+        Guid agentId,
+        Guid? sessionId,
+        AgentChatHandleId? handleId,
+        long owner) {
+        return !isDisposed &&
+               owner == effectOwner &&
+               ActiveChatHandleId == handleId &&
+               selectedAgentId == agentId &&
+               selectedSessionId == sessionId;
     }
 
     private bool IsOperationWorkspaceCurrent(

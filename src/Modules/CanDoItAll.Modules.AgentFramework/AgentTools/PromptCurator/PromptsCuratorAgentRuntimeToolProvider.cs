@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
@@ -220,6 +221,7 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
                     ExpectedUpdatedAtUtc: null),
                 cancellationToken),
             "Prompt Gallery draft creation");
+        RecordCommitted(PromptArtifactEffectSourceKind, saveReceipt.PromptArtifactId);
         return await LoadEditorAsync(saveReceipt.PromptArtifactId, cancellationToken);
     }
 
@@ -246,6 +248,7 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
                     request.ExpectedUpdatedAtUtc),
                 cancellationToken),
             "Prompt Gallery draft update");
+        RecordCommitted(PromptArtifactEffectSourceKind, saveReceipt.PromptArtifactId);
         return await LoadEditorAsync(saveReceipt.PromptArtifactId, cancellationToken);
     }
 
@@ -254,7 +257,7 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return RequireValue(
+        var saved = RequireValue(
             await promptGallery.CreateVersionAsync(
                 request.PromptArtifactId,
                 new PromptVersionCreateRequest(
@@ -263,6 +266,8 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
                     request.OutputFormat),
                 cancellationToken),
             "Prompt Gallery version creation");
+        RecordCommitted(PromptVersionEffectSourceKind, saved.PromptVersionId);
+        return saved;
     }
 
     private async Task<PromptsCuratorItemEditorResult> LoadEditorAsync(
@@ -336,5 +341,15 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
 
         return result.Value
             ?? throw new InvalidOperationException($"{operation} completed without a result.");
+    }
+
+    private const string PromptArtifactEffectSourceKind = "prompt-artifact";
+    private const string PromptVersionEffectSourceKind = "prompt-version";
+
+    private static void RecordCommitted(string sourceKind, Guid id) {
+        if (id == Guid.Empty) {
+            throw new InvalidOperationException("The Prompt owner returned an empty committed identity.");
+        }
+        AgentToolInvocationEffectScope.RecordCommitted(sourceKind, id.ToString("D"));
     }
 }

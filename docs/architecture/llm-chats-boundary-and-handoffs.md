@@ -27,6 +27,13 @@ engine and is not globally registered.
 | Remote integration | `CanDoItAll.Web` | Publish the authorized HTTP/OpenAPI contract with server-owned API origin, typed DTOs, ETags, Problem Details, and replayable SSE. |
 | Managed HR definition administration | `CanDoItAll.Agents.SimpleChats` | External Agent runtime adapter invokes the Simple Chats application owner; exact disclosure/mutation proposals require approval and current authority. Definition creation uses the atomic owner receipt. Ordinary turns receive no Agent tools, implicit project context or access to unrelated transcripts. |
 
+Approved HR settings disclosure replays the exact immutable definition revision originally
+read. Current owner authorization is checked before and after the historical read; a
+missing definition or corrupt revision fails explicitly. A subsequent approved update does
+not invalidate that earlier result merely because the current revision advanced. Fresh
+updates still require the current concurrency token, and existing conversations retain
+their admitted revision. This read path provides no transcript access.
+
 ## Remaining Ownership Handoffs
 
 | Future work | Owning boundary | Required constraints |

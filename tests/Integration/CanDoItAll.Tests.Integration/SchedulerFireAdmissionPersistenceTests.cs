@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -239,7 +240,15 @@ public sealed class SchedulerFireAdmissionPersistenceTests {
             WorkflowRuntimeBackendKind.InProcess, "legacy-backend", "Original result", fire.FiredAtUtc, fire.FiredAtUtc) {
             Origin = new WorkflowLaunchOrigin.SchedulerPlanRun(plan.Id, history.Id, new(fire.SchedulerFireId), fire.FiredAtUtc, new(fire.CorrelationId!.Value))
         };
-        await scope.ServiceProvider.GetRequiredService<IWorkflowRunStore>().SaveRunAsync(run);
+        var runs = scope.ServiceProvider.GetRequiredService<IWorkflowRunStore>();
+        await Assert.ThrowsAsync<WorkflowScheduledSourceAuthorityException>(() => runs.SaveRunAsync(run));
+        Assert.Null(await runs.GetRunAsync(run.RunId));
+        var legacyRow = WorkflowRunRecordEntity.FromSnapshot(run);
+        // Seed pre-authority history without admitting a new scheduled execution.
+        await using (var historical = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkflowDbContext>>().CreateDbContextAsync()) {
+            historical.Add(legacyRow);
+            await historical.SaveChangesAsync();
+        }
         await using (var database = await Factory(application).CreateDbContextAsync()) {
             database.Add(history);
             var current = await database.Set<SchedulerPlan>().SingleAsync(row => row.Id == plan.Id);
@@ -261,6 +270,13 @@ public sealed class SchedulerFireAdmissionPersistenceTests {
         await store.CompleteAsync(claim, result, null);
         await using var readback = await Factory(application).CreateDbContextAsync();
         Assert.Equal(SchedulerFireAdmissionState.Observed, (await readback.Set<SchedulerFireAdmissionRecord>().SingleAsync(row => row.Id == history.Id)).State);
+        await using var workflowReadback = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkflowDbContext>>().CreateDbContextAsync();
+        var retained = await workflowReadback.Set<WorkflowRunRecordEntity>().AsNoTracking().SingleAsync(row => row.RunId == run.RunId.Value);
+        Assert.Equal(legacyRow.OriginJson, retained.OriginJson);
+        Assert.Null(retained.ToSnapshot().Origin!.StructureAuthority);
+        Assert.Equal(originalWorkflowId.Value, retained.WorkflowId);
+        Assert.Equal(originalVersionId.Value, retained.VersionId);
+        Assert.Equal(WorkflowRunState.Completed, retained.State);
     }
 
     private static IDbContextFactory<SchedulerPlannerDbContext> Factory(TestApplication application) =>

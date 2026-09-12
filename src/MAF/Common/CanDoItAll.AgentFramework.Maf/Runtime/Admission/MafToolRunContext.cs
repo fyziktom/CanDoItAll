@@ -103,14 +103,14 @@ internal sealed class MafToolRunContext {
                 throw Denied("The saved SDK checkpoint is incompatible with current provider, context or authority policy.");
             }
 
-            session = await MafRuntimeSessionBuilder.RestoreOrCreateSessionAsync(runtimeAgent, agent, provider, model,
-                restartChat, options, cancellationToken, checkpoint.IsApprovalContinuation, progress);
+            session = await MafRuntimeSessionBuilder.RestoreToolAdmissionSessionAsync(runtimeAgent, evaluation,
+                cancellationToken, progress);
             input = checkpoint.Input;
         } else {
             var serialized = await persistence.TrySerializePersistableRuntimeSessionAsync(runtimeAgent, session,
                 provider, model, options, chat.Compatibility?.PendingApprovals ?? [],
                 (state, phase, message) => progress(state == ExecutionState.Persisting ? ExecutionState.Preparing : state, phase, message),
-                cancellationToken)
+                cancellationToken, MafRuntimeSessionCapturePurpose.ToolAdmissionCheckpoint)
                 ?? throw Denied("This invocation has no persistable SDK checkpoint; admitted tools cannot execute.");
             var checkpoint = new RestartCheckpoint(serialized, input, isApprovalContinuation,
                 chat.Compatibility?.PendingApprovals.ToArray() ?? []);
@@ -328,7 +328,7 @@ internal sealed class MafToolRunContext {
         if (claim.Proposal.State == AgentToolProposalState.Completed) {
             await PauseForPendingNativeApprovalAsync(cancellationToken);
             await using var disclosure = await AuthorizeDisclosureAsync(claim.Proposal, cancellationToken);
-            return RestoreResult(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."));
+            return RestoreResult(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."), claim.Proposal.EffectState);
         }
 
         async ValueTask<object?> InvokeAuthorizedAsync() {
@@ -363,7 +363,7 @@ internal sealed class MafToolRunContext {
                     "A current denial cannot resolve the earlier dispatched effect. The original outcome evidence requires owner reconciliation.");
             }
 
-            var checkpoint = CaptureResult(result, effectScope.PreDispatchFailure);
+            var checkpoint = CaptureResult(result, effectScope.PreDispatchFailure, effectScope.CommittedEffect);
             var effect = effectScope.CommittedEffect is not null ? AgentToolEffectState.Committed :
                 MafRuntimeToolInvocationResultClassifier.Assess(call.Name,
                     toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure).EffectState;
@@ -374,7 +374,7 @@ internal sealed class MafToolRunContext {
                 completedInCurrentInvocation.Add(claim.Proposal.IntentId);
             }
             await PauseForPendingNativeApprovalAsync(cancellationToken);
-            return RestoreResult(checkpoint);
+            return RestoreResult(checkpoint, effect);
         } catch {
             try {
                 await journal.PreserveUncertainInvocationAsync(claim, CancellationToken.None);
@@ -505,7 +505,11 @@ internal sealed class MafToolRunContext {
         return binding.BatchId;
     }
 
-    private static AgentToolProtocolEnvelope CaptureResult(object? value, AgentToolPreDispatchFailure? failure = null) {
+    private static AgentToolProtocolEnvelope CaptureResult(object? value, AgentToolPreDispatchFailure? failure = null,
+        AgentToolCommittedEffect? committedEffect = null) {
+        if (failure is not null && committedEffect is not null) {
+            throw Denied("A committed owner acknowledgement cannot contain pre-dispatch failure evidence.");
+        }
         if (failure is not null) {
             if (value is AgentToolFailureResult hostFailure) {
                 RequireHostFailure(hostFailure, failure);
@@ -528,11 +532,31 @@ internal sealed class MafToolRunContext {
             ResultKind.Contents => JsonSerializer.SerializeToElement(((IEnumerable<AIContent>)value!).ToArray(), MafToolProtocolCodec.SerializationOptions),
             _ => JsonSerializer.SerializeToElement(value, MafToolProtocolCodec.SerializationOptions)
         };
-        return MafToolProtocolCodec.Encode(new ResultCheckpoint(kind, element) { PreDispatchFailure = failure });
+        return MafToolProtocolCodec.Encode(committedEffect is null
+            ? new ResultCheckpoint(kind, element) { PreDispatchFailure = failure }
+            : new ResultCheckpoint(ResultKind.CommittedOwnerResult, element) {
+                CommittedEffect = committedEffect,
+                CommittedResultKind = kind
+            });
     }
 
-    private static object? RestoreResult(AgentToolProtocolEnvelope saved) {
+    private static object? RestoreResult(AgentToolProtocolEnvelope saved, AgentToolEffectState savedEffect) {
         var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(saved);
+        var hasCommittedEvidence = result.CommittedEffect is not null || result.CommittedResultKind is not null;
+        if ((result.Kind == ResultKind.CommittedOwnerResult) != hasCommittedEvidence) {
+            throw Denied("The saved owner acknowledgement has incompatible result evidence.");
+        }
+        if (result.Kind == ResultKind.CommittedOwnerResult) {
+            if (savedEffect != AgentToolEffectState.Committed || result.PreDispatchFailure is not null ||
+                    result.CommittedEffect is not { } committed ||
+                    string.IsNullOrWhiteSpace(committed.SourceKind) || committed.SourceKind != committed.SourceKind.Trim() ||
+                    string.IsNullOrWhiteSpace(committed.SourceId) || committed.SourceId != committed.SourceId.Trim() ||
+                    result.CommittedResultKind is not (ResultKind.Null or ResultKind.Text or ResultKind.Content or
+                        ResultKind.Contents or ResultKind.Json or ResultKind.TypedFailureJson)) {
+                throw Denied("The saved owner acknowledgement does not match its committed journal outcome.");
+            }
+            result = result with { Kind = result.CommittedResultKind.Value };
+        }
         if ((result.Kind is ResultKind.PreDispatchDeniedText or ResultKind.PreDispatchDeniedJson) != (result.PreDispatchFailure is not null)) {
             throw Denied("The saved pre-dispatch denial has incompatible outcome evidence.");
         }
@@ -544,7 +568,7 @@ internal sealed class MafToolRunContext {
             }
             AgentToolInvocationEffectScope.RecordPreDispatchFailure(failure);
         }
-        return result.Kind switch {
+        object? value = result.Kind switch {
             ResultKind.Null => null,
             ResultKind.Text or ResultKind.PreDispatchDeniedText => result.Value.GetString(),
             ResultKind.Content => result.Value.Deserialize<AIContent>(MafToolProtocolCodec.SerializationOptions),
@@ -554,6 +578,10 @@ internal sealed class MafToolRunContext {
                 ?? throw Denied("The saved typed tool failure is empty."),
             _ => throw Denied("The saved tool result shape is unsupported.")
         };
+        if (result.CommittedEffect is { } acknowledgement) {
+            AgentToolInvocationEffectScope.RecordCommitted(acknowledgement.SourceKind, acknowledgement.SourceId);
+        }
+        return value;
     }
 
     private static void RequireHostFailure(AgentToolFailureResult hostFailure, AgentToolPreDispatchFailure captured) {
@@ -565,10 +593,14 @@ internal sealed class MafToolRunContext {
     }
 
     private static AgentToolAdmissionException Denied(string message) => new("tool-admission.runtime-denied", message);
-    private enum ResultKind { Null, Text, Content, Contents, Json, PreDispatchDeniedText, PreDispatchDeniedJson, TypedFailureJson }
+    private enum ResultKind { Null, Text, Content, Contents, Json, PreDispatchDeniedText, PreDispatchDeniedJson, TypedFailureJson, CommittedOwnerResult }
     private sealed record ResultCheckpoint(ResultKind Kind, JsonElement Value) {
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public AgentToolPreDispatchFailure? PreDispatchFailure { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public AgentToolCommittedEffect? CommittedEffect { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ResultKind? CommittedResultKind { get; init; }
     }
     private sealed record RestartCheckpoint(string SerializedSessionStateJson, List<ChatMessage> Input,
         bool IsApprovalContinuation, PendingToolApprovalRecord[] PendingApprovals);

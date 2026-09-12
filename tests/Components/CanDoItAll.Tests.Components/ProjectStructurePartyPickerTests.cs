@@ -100,12 +100,15 @@ public sealed class ProjectStructurePartyPickerTests
         var bridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var projectId = await CreateProjectAsync(projectsService, "Meeting Assignment Project");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await harness.Context.Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var customerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Meeting Customer");
         var ownerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Meeting Owner");
 
         await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = customerId,
             Role = ProjectPartyAssignmentRole.Customer,
             IsPrimary = true,
@@ -114,6 +117,7 @@ public sealed class ProjectStructurePartyPickerTests
         await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = ownerId,
             Role = ProjectPartyAssignmentRole.Manager,
             IsPrimary = true,
@@ -130,7 +134,7 @@ public sealed class ProjectStructurePartyPickerTests
                 $"project:{projectId}",
                 420,
                 260,
-                ObjectSubtype: "online"));
+                ObjectSubtype: "online") { ExpectedProjectAdmission = admission });
         var workItemNode = await workbenchService.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -141,7 +145,7 @@ public sealed class ProjectStructurePartyPickerTests
                 $"project:{projectId}",
                 620,
                 260,
-                ObjectSubtype: "task"));
+                ObjectSubtype: "task") { ExpectedProjectAdmission = admission });
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, meetingNode.Id);
 
@@ -198,6 +202,8 @@ public sealed class ProjectStructurePartyPickerTests
         var bridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var projectId = await CreateProjectAsync(projectsService, "Canonical Read Project");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await harness.Context.Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var participantPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Canonical Participant");
         var meetingCustomerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Canonical Meeting Customer");
         var meetingOwnerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Canonical Meeting Owner");
@@ -220,7 +226,7 @@ public sealed class ProjectStructurePartyPickerTests
                         ParticipantKind = ProjectParticipantKind.Freelancer,
                         Role = "Designer"
                     }
-                })));
+                })) { ExpectedProjectAdmission = admission });
         var meetingNode = await workbenchService.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -235,10 +241,11 @@ public sealed class ProjectStructurePartyPickerTests
                 MetadataJson: ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
                 {
                     Meeting = new ProjectMeetingMetadata()
-                })));
+                })) { ExpectedProjectAdmission = admission });
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = participantPartyId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             NodeKey = participantNode.Id,
@@ -248,6 +255,7 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = meetingCustomerId,
             Role = ProjectPartyAssignmentRole.MeetingParticipant,
             NodeKey = meetingNode.Id,
@@ -257,6 +265,7 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = meetingOwnerId,
             Role = ProjectPartyAssignmentRole.MeetingParticipant,
             NodeKey = meetingNode.Id,

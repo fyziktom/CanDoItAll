@@ -308,7 +308,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             var dispatch = new EfProcessWorkflowDispatchAuthority(new Factory<ProcessPersistenceDbContext>(options, static configured => new(configured)),
                 options, services.GetRequiredService<CoordinatedDatabaseTransaction>(), clock);
             return new(services.GetRequiredService<ICanonicalRuntimeDatabase>(),
-                services.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>(), services.GetRequiredService<IAgentFrameworkWorkspaceService>(),
+                services.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>(),
                 services.GetRequiredService<IProcessRuntimeStateStore>(), services.GetRequiredService<IProcessRuntimeStepAssignmentStore>(), clock,
                 services.GetRequiredService<IWorkflowScheduledAuthorityPolicy>(), fixture.Source,
                 services.GetRequiredService<IAgentExecutionProfileGenerationSource>(), services.GetRequiredService<ProjectWriteAdmissionService>(),

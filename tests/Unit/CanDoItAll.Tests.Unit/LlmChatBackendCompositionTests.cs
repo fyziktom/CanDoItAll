@@ -119,6 +119,10 @@ public sealed class LlmChatBackendCompositionTests
         services.AddScoped(_ => new AppDbContext(options));
         services.AddSingleton<IDbContextFactory<AppDbContext>>(new TestDbContextFactory(options));
         services.AddSingleton<CoordinatedDatabaseTransaction>();
+        services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
+        services.AddScoped<DatabaseTransferOwnerSessionRunner>();
+        services.AddScoped<ProjectTransferTargetInspectionRunner>();
+        services.AddScoped<DatabaseTransferOperationRunner>();
         services.AddDbContextFactory<ProviderHistoryDbContext>(builder =>
             builder.UseInMemoryDatabase(databaseName));
         services.AddSingleton<IDatabaseRuntimeState>(

@@ -4,10 +4,18 @@ using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Persistence;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,6 +32,20 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         ProjectStructureToolPolicy.ProjectStructureLeaseGet,
         ProjectStructureToolPolicy.ProjectStructureLeaseRenew,
         ProjectStructureToolPolicy.ProjectStructureLeaseRelease
+    ];
+
+    private static readonly string[] GovernedRoundTripToolNames =
+    [
+        ProjectStructureToolPolicy.ProjectStructureRead,
+        ProjectStructureToolPolicy.ProjectStructureNodeCreate,
+        ProjectStructureToolPolicy.ProjectStructureNodeUpdate,
+        ProjectStructureToolPolicy.ProjectStructureNodeProcessStart,
+        ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+        ProjectStructureToolPolicy.ProjectStructureAssetGet,
+        ProjectStructureToolPolicy.ProjectStructureAssetContentGet,
+        ProjectStructureToolPolicy.ProjectStructureAssetTextGet,
+        ProjectStructureToolPolicy.ProjectStructureAssetCreateRevision,
+        .. ExplicitLeaseToolNames
     ];
 
     [Fact]
@@ -504,6 +526,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 selectedNode.Id,
                 ObjectSubtype: "implementation"));
         var agent = await CreateAgentAsync(scope.ServiceProvider, projectId);
+        var execution = await CreateGovernedExecutionAsync(scope.ServiceProvider, agent, projectId);
+        using var audit = WorkspaceExecutionAuditContext.BeginScope(execution);
         var tools = await provider.CreateToolsAsync(
             CreateContext(
                 agent,
@@ -511,6 +535,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 AgentRuntimeToolProviderPurpose.GovernedProcessAutomation),
             CancellationToken.None);
 
+        Assert.Equal(GovernedRoundTripToolNames.Order(StringComparer.Ordinal),
+            tools.Select(tool => tool.Name).Order(StringComparer.Ordinal));
         Assert.Contains(tools, tool => tool.Name == "project_structure_read");
         Assert.Contains(tools, tool => tool.Name == "project_structure_node_create");
         Assert.Contains(tools, tool => tool.Name == "project_structure_node_update");
@@ -825,6 +851,90 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.Null(await leaseService.GetActiveLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
             projectId.ToString("D")));
+        await AssertCurrentGovernedExecutionAsync(scope.ServiceProvider, execution, projectId);
+    }
+
+    private static async Task<ExecutionRunRecord> CreateGovernedExecutionAsync(IServiceProvider services, AgentDefinition agent, Guid projectId) {
+        var project = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var profile = services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id;
+        Assert.Equal(profile, project.DatabaseProfileId);
+        var governance = new AgentExecutionGovernanceSnapshot(new(Guid.NewGuid()), agent.Id, profile,
+            services.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration(),
+            WorkspaceScopeDescriptor.Organization(profile.ToString("N")), true, true,
+            "retained-structure-round-trip", "retained-structure-round-trip",
+            allowedOperations: GovernedRoundTripToolNames);
+        var authority = await services.GetRequiredService<ProjectProcessLaunchAuthorityService>().CaptureAgentAsync(
+            new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId), governance, ProcessLaunchAgentOperation.StructureStart);
+        Assert.False(authority.CanCreateTasks);
+        Assert.True(authority.CanCreateAssets);
+        var preparation = ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid()));
+        var initial = preparation.InitialCommit;
+        var assignment = Assert.Single(initial.InitialAssignments!) with {
+            ExecutorId = agent.Id.ToString("D"),
+            ExecutorDisplayName = agent.Name,
+            AllowedOperations = [ProcessOperationContractNames.ReadProjectStructure, ProcessOperationContractNames.ExecuteExternalAction],
+            LaunchVariables = new Dictionary<string, string> { [ProcessRuntimeLaunchVariables.ProjectId] = projectId.ToString("D") }
+        };
+        preparation = preparation with {
+            InitialCommit = initial with { InitialAssignments = [assignment] },
+            Review = preparation.Review with { Steps = [Assert.Single(preparation.Review.Steps) with {
+                ExecutorId = assignment.ExecutorId, ExecutorDisplayName = assignment.ExecutorDisplayName,
+                AllowedOperations = assignment.AllowedOperations, OperationTargetScope = assignment.OperationTargetScope
+            }] }
+        };
+        var saved = await services.GetRequiredService<IProcessPreparedLaunchStore>().PrepareAsync(preparation);
+        Assert.True((await services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(ProcessPreparedLaunchFixture.Commit(saved))).Succeeded);
+
+        var now = services.GetRequiredService<TimeProvider>().GetUtcNow();
+        var claim = Guid.NewGuid();
+        await using (var context = await services.GetRequiredService<IDbContextFactory<ProcessPersistenceDbContext>>().CreateDbContextAsync()) {
+            var state = await context.RuntimeStates.SingleAsync(item => item.RunId == assignment.RunId.Value);
+            var step = await context.RuntimeSteps.SingleAsync(item => item.RunId == assignment.RunId.Value && item.StepInstanceId == assignment.StepInstanceId.Value);
+            state.Status = ProcessRuntimeStatus.Active;
+            step.Status = ProcessRuntimeStepStatus.Running;
+            step.AttemptNumber = 1;
+            step.ActiveClaimToken = claim;
+            context.DispatchClaims.Add(new() {
+                RunId = assignment.RunId.Value, StepInstanceId = assignment.StepInstanceId.Value,
+                ClaimToken = claim, OwnerId = nameof(ProjectStructureAgentRuntimeToolRoundTripIntegrationTests),
+                Status = DispatchClaimStatus.Claimed, AttemptNumber = 1,
+                CreatedAtUtc = now.AddSeconds(-1), ExpiresAtUtc = now.AddDays(1)
+            });
+            await context.SaveChangesAsync();
+        }
+        var metadata = new Dictionary<string, object>();
+        ProcessDispatchClaimExecutionMetadata.Add(metadata, new(claim));
+        var execution = new ExecutionRunRecord(Guid.NewGuid(), agent.Id, null, agent.Name, ProcessMockAgentCatalog.ProcessSourceKind,
+            assignment.StepKey, assignment.RunId.ToString(), assignment.StepInstanceId.ToString(), "process-runtime", "system",
+            JsonSerializer.Serialize(metadata), "Execute the selected Structure round trip.", "", "fixture", "fixture",
+            ExecutionState.Running, null, now, now, now, null, "", null, [],
+            ProcessRunId: assignment.RunId.ToString(), ProcessStepId: assignment.StepInstanceId.ToString());
+        var stored = await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().SaveExecutionRunDetailAsync(new(execution, null, [], []));
+        Assert.Equal(execution.Id, stored.Run.Id);
+        Assert.Null(stored.Run.ToolAdmission);
+        await AssertCurrentGovernedExecutionAsync(services, stored.Run, projectId);
+        return stored.Run;
+    }
+
+    private static async Task AssertCurrentGovernedExecutionAsync(IServiceProvider services, ExecutionRunRecord execution, Guid projectId) {
+        var observed = await services.GetRequiredService<IProcessExecutionDispatchAuthorityReader>().ReadAsync(execution.Id);
+        var dispatch = Assert.IsType<ProcessExecutionDispatchAuthority>(observed.Snapshot);
+        Assert.True(dispatch.ObservedCurrentDispatch);
+        Assert.Equal(execution.Id, dispatch.Evidence.ExecutionRunId);
+        Assert.Equal(execution.AgentId, dispatch.Evidence.ExecutorAgentId);
+        Assert.Equal(execution.ProcessRunId, dispatch.Evidence.RunId.ToString());
+        Assert.Equal(execution.ProcessStepId, dispatch.Evidence.StepInstanceId.ToString());
+        Assert.True(ProcessDispatchClaimExecutionMetadata.TryRead(execution, out var claim));
+        Assert.Equal(claim.Value, dispatch.Evidence.DispatchClaimToken);
+        Assert.Equal(projectId, dispatch.ProjectId);
+        Assert.NotNull(dispatch.ProjectReference);
+        var source = Assert.IsType<ProcessLaunchAuthority>(dispatch.SourceAuthority);
+        var principal = Assert.IsType<ProcessLaunchPrincipal.AgentExecution>(source.Principal);
+        Assert.Equal(execution.AgentId, principal.Ceiling.AgentId);
+        Assert.Equal(GovernedRoundTripToolNames.Order(StringComparer.Ordinal),
+            principal.Ceiling.AllowedOperations.Order(StringComparer.Ordinal));
+        Assert.False(source.CanCreateTasks);
+        Assert.True(source.CanCreateAssets);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projects)

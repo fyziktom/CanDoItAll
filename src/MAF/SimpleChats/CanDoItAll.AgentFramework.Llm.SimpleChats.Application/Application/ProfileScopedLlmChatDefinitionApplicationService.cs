@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
@@ -36,6 +37,12 @@ internal sealed class ProfileScopedLlmChatDefinitionApplicationService(
         LlmChatDefinitionId definitionId,
         CancellationToken cancellationToken = default)
         => ExecuteAsync(token => inner.GetAsync(definitionId, token), cancellationToken);
+
+    public Task<Result<LlmChatDefinitionRevision>> GetRevisionAsync(
+        LlmChatDefinitionId definitionId,
+        LlmChatDefinitionRevisionNumber revision,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(token => inner.GetRevisionAsync(definitionId, revision, token), cancellationToken);
 
     public Task<Result<IReadOnlyList<LlmChatDefinitionDetails>>> ListAsync(
         LlmChatDefinitionQuery query,

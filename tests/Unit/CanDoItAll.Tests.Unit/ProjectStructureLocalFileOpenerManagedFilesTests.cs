@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.FileTools.Desktop;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -12,7 +13,7 @@ namespace CanDoItAll.Tests.Unit.Projects;
 public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
 {
     [Fact]
-    public async Task Projected_process_run_folder_uses_the_authoritative_project_scoped_path()
+    public async Task Projected_process_run_folder_uses_the_Process_owners_authorized_workspace_path()
     {
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
 
@@ -21,14 +22,14 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             Guid projectId = Guid.NewGuid();
             Guid runId = Guid.NewGuid();
             string logicalRoot = $"artifacts/process-runs/{runId:D}";
-            string scopedRoot = WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
+            string scopedRoot = WorkspaceScopeDescriptor.Organization(ProcessFileRoots.ProfileId.ToString("N"))
                 .CombineArtifactPath("process-runs", runId.ToString("D"));
             string scopedDirectoryPath = Path.Combine(
                 workspaceRoot,
                 scopedRoot.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(scopedDirectoryPath);
             var launcher = new RecordingDesktopFileLauncher();
-            var sut = CreateSut(workspaceRoot, launcher);
+            var sut = CreateSut(workspaceRoot, launcher, new ProcessFileRoots(projectId, runId, scopedRoot));
             var node = CreateNode(
                 mediaRelativePath: string.Empty,
                 objectType: ProjectObjectType.File,
@@ -60,6 +61,24 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
         finally
         {
             TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Malformed_Process_output_cannot_fall_back_to_an_existing_metadata_directory() {
+        var workspace = TestFileSystem.CreateTemporaryRoot("process-output-local-denial");
+        try {
+            Directory.CreateDirectory(Path.Combine(workspace, "artifacts", "decoy"));
+            var node = CreateNode(string.Empty, objectType: ProjectObjectType.File, objectSubtype: "folder",
+                metadata: new ProjectObjectMetadataEnvelope {
+                    File = new ProjectFileMetadata { FileSubtype = ProjectFileSubtype.Folder, ExternalPath = "artifacts/decoy" }
+                }) with { ProjectId = Guid.NewGuid(), ArtifactKind = ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind };
+            var opener = CreateSut(workspace);
+            Assert.False(opener.CanOpen(node));
+            Assert.False(opener.CanOpenInPreferredApplication(node));
+            Assert.False((await opener.OpenAsync(node)).IsSuccess);
+        } finally {
+            TestFileSystem.DeleteDirectoryWithRetry(workspace);
         }
     }
 
@@ -415,7 +434,8 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
 
     private static ProjectStructureLocalFileOpener CreateSut(
         string workspaceRoot,
-        IDesktopFileLauncher? desktopFileLauncher = null)
+        IDesktopFileLauncher? desktopFileLauncher = null,
+        IProcessRunFileScopeProvider? processFiles = null)
     {
         var pathResolver = new TestWorkspacePathResolver(workspaceRoot);
         return new ProjectStructureLocalFileOpener(
@@ -425,7 +445,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             new FileSystemStoragePathPolicy(pathResolver),
             new EmptyFileApplicationPreferenceService(),
             desktopFileLauncher ?? new AvailableDesktopFileLauncher(),
-            NullLogger<ProjectStructureLocalFileOpener>.Instance);
+            NullLogger<ProjectStructureLocalFileOpener>.Instance, processFiles ?? new ProcessFileRoots());
     }
 
     private static ProjectStructureNode CreateNode(
@@ -464,6 +484,22 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             null,
             metadata is null ? string.Empty : ProjectObjectMetadataSerializer.Serialize(metadata),
             storageObjectReferenceJson);
+
+    private sealed class ProcessFileRoots(Guid? expectedProject = null, Guid? expectedRun = null,
+        string? path = null) : IProcessRunFileScopeProvider {
+        public static readonly Guid ProfileId = Guid.Parse("f135b252-7616-4d8d-af8d-76eccb22d891");
+        public ValueTask<ProcessRunFileScopeSet> ResolveAsync(Guid runId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public ValueTask<FileToolsStorageBinding> ResolveRootAsync(Guid runId, string directoryPath, Guid projectId,
+            CancellationToken cancellationToken = default) {
+            Assert.Equal(expectedProject, projectId);
+            Assert.Equal(expectedRun, runId);
+            Assert.Equal($"artifacts/process-runs/{runId:D}", directoryPath);
+            return ValueTask.FromResult(new FileToolsStorageBinding(Guid.NewGuid(), "Process files",
+                new(50, 2_000, 50, 1, TimeSpan.FromSeconds(5)), new(path!), FileToolsHostBrowseCacheMode.Disabled));
+        }
+    }
 
     private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
     {

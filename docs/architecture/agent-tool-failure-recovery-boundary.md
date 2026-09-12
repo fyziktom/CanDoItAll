@@ -97,6 +97,28 @@ does not rerun the tool. Older readers reject version2. Noncollection result evi
 retains its original version1 bytes and semantics. This private result-evidence version
 is separate from the attachment journal schema below and has no SQL migration.
 
+## Returned owner acknowledgements
+
+HR, curator and Scheduler adapters capture a confirmed owner effect immediately after the
+owner returns its typed save result, before reading an editor or updating a projection.
+When that failure can be checkpointed, the trace retains `Failed` with `Committed`
+effect state. Failure to capture or save the result checkpoint instead leaves the journal
+`ReconciliationRequired` with an `Unknown` effect and no result. Neither case proves rollback
+or successful completion. An unexpected or unresolved throw before the owner returns,
+including a lost response after a write, requires owner reconciliation. Reviewed typed
+pre-write refusals retain their explicit `None` or `NotCommitted` evidence.
+An acknowledgement alone does not provide atomic deduplication for another invocation.
+
+The private `CommittedOwnerResult` checkpoint persists its committed effect and kind
+together. Restoration requires the corresponding committed journal state and a valid pair;
+legacy unmarked results keep their original bytes. Older readers reject this new kind.
+The marker is trusted runtime evidence and is not disclosed as model-controlled content.
+
+Governed Process tool admission persists the exact SDK session before dispatch even when
+there is no pending approval. Final conversation persistence keeps its existing governed
+run policy. Missing or unreadable recovery state refuses continuation instead of creating
+a fresh session; original serial ordering, approvals and current authority still apply.
+
 ## Captured context across restart
 
 Recoverable interactive runs persist supported context attachments through explicit owner

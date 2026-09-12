@@ -88,7 +88,8 @@ public static class AgentEditorDraftPolicy {
             CanCreateProjects = source.ProjectStructureAccess.CanCreateProjects,
             CanCreateSubprojects = source.ProjectStructureAccess.CanCreateSubprojects,
             AllowAllProjects = source.ProjectStructureAccess.AllowAllProjects,
-            AllowedProjectIds = source.ProjectStructureAccess.AllowedProjectIds.ToList()
+            AllowedProjectIds = source.ProjectStructureAccess.AllowedProjectIds.ToList(),
+            AllowedProjectLifetimes = source.ProjectStructureAccess.AllowedProjectLifetimes.ToList()
         },
         ProcessAccess = new() {
             CanRead = source.ProcessAccess.CanRead,

@@ -8,6 +8,7 @@ using CanDoItAll.Agents.SimpleChats;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -20,7 +21,10 @@ public sealed class HrSimpleChatRuntimeToolProviderTests {
         Assert.Equal(14, HrAgentCapabilityKeys.ToolNameToCapabilityKey.Count);
         Assert.Equal(HrSimpleChatToolPolicy.Operations.Select(operation => operation.ToolName), tools.Select(tool => tool.Name));
         Assert.All(fixture.Provider.GetToolMetadata(fixture.Context), metadata => {
-            Assert.True(ToolCapabilityRegistry.TryResolve(metadata.ToolName, out var registered));
+            Assert.False(ToolCapabilityRegistry.TryResolve(metadata.ToolName, out _));
+            Assert.True(ProductToolPolicies.TryResolve(metadata.ToolName, out var registered));
+            Assert.Equal("hr-approval-redacted-v1", registered.BusinessArgumentRetentionScheme);
+            Assert.True(registered.ProtectRuntimeStateOnExport);
             Assert.Equal(metadata.RequiresApprovalByDefault, registered.RequiresApprovalByDefault);
         });
         var settings = Assert.Single(fixture.Provider.GetToolMetadata(fixture.Context), metadata =>

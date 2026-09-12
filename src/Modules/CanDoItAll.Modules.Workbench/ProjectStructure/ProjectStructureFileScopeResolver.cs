@@ -12,7 +12,8 @@ namespace CanDoItAll.Modules.Workbench;
 internal sealed class ProjectStructureFileScopeResolver(
     IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     ProjectStructureAssemblyService assemblyService,
-    IStorageCatalogService storageCatalog)
+    IStorageCatalogService storageCatalog,
+    IProcessRunFileScopeProvider processFiles)
     : IFileToolsStorageBindingSource, IProjectStructureNodeFileScopeProvider
 {
     private static readonly FileToolsBrowseWorkLimits WorkLimits = new(
@@ -469,15 +470,13 @@ internal sealed class ProjectStructureFileScopeResolver(
                 "The projected node is not an authorized process-run folder collection.");
         }
 
-        Guid storageId = await ResolveWorkspaceStorageIdAsync(cancellationToken);
+        var binding = await processFiles.ResolveRootAsync(node.Binding.ExternalArtifactId!.Value,
+            outputFolder.DirectoryPath, scopeKey.ProjectId, cancellationToken);
         var scope = new FileToolsSemanticScope(
             FileToolsSemanticScopeKind.ProjectNode,
             scopeKey.ToScopeId(),
             node.Title);
-        string scopedDirectoryPath = ProjectStructureProcessRunOutputFolderPolicy.ResolveProjectScopedDirectoryPath(
-            scopeKey.ProjectId,
-            outputFolder);
-        return new NodeCollectionBinding(scope, storageId, node.Title, scopedDirectoryPath);
+        return new NodeCollectionBinding(scope, binding.StorageId, node.Title, binding.Root.Value);
     }
 
     private async ValueTask<Guid> ResolveWorkspaceStorageIdAsync(CancellationToken cancellationToken)

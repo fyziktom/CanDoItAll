@@ -10,6 +10,12 @@ public interface IProcessLaunchOperatorAuthoritySource {
 }
 
 public static class ProcessLaunchProducerRequests {
+    public static Task<ProcessLaunchAuthority> CaptureUserInterfaceAsync(this IProcessLaunchOperatorAuthoritySource source,
+        Guid? projectId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(source);
+        return source.CaptureLocalAsync(projectId, ProcessLaunchOperatorSurface.UserInterface, cancellationToken);
+    }
+
     public static string InputFingerprint(ProcessLaunchRequest input, ProcessLaunchAuthority caller) {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(caller);

@@ -5,6 +5,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.SchedulerPlanner;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
@@ -29,6 +34,57 @@ public sealed class AgentApiFailureContractIntegrationTests
                 allowIntegerValues: false)
         }
     };
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Eager_workspace_and_workbench_resolve_the_same_owner_receipt_graph(bool workbenchFirst) {
+        Assert.DoesNotContain(typeof(ProjectStructureWorkflowAuthorityService).GetConstructors()
+            .SelectMany(constructor => constructor.GetParameters()),
+            parameter => parameter.ParameterType == typeof(IAgentFrameworkWorkspaceService));
+        var runtime = new FailingAgentRuntime();
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            useInMemoryDatabase: true,
+            agentRuntimeOverride: runtime);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var firstOwner = workbenchFirst ? services.GetRequiredService<ProjectWorkbenchService>() : null;
+
+        var workspace = Assert.IsType<AgentFrameworkWorkspaceService>(services.GetRequiredService<IAgentFrameworkWorkspaceService>());
+        var owner = services.GetRequiredService<ProjectWorkbenchService>();
+        if (workbenchFirst) {
+            Assert.Same(firstOwner, owner);
+        }
+        Assert.Same(workspace, services.GetRequiredService<IAgentFrameworkWorkspaceService>());
+        var receipts = services.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray();
+        Assert.Same(services.GetRequiredService<ProjectProcessAssetToolAdmission>(),
+            Assert.Single(receipts, receipt => receipt is ProjectProcessAssetToolAdmission));
+        Assert.Same(services.GetRequiredService<ProjectStructureProcessToolAdmission>(),
+            Assert.Single(receipts, receipt => receipt is ProjectStructureProcessToolAdmission));
+        Assert.Same(services.GetRequiredService<WorkflowProcessToolAdmission>(),
+            Assert.Single(receipts, receipt => receipt is WorkflowProcessToolAdmission));
+        var authority = services.GetRequiredService<ProjectStructureWorkflowAuthorityService>();
+        Assert.Same(authority, services.GetRequiredService<IWorkflowStructureAuthorityFactory>());
+        Assert.Same(authority, services.GetRequiredService<IWorkflowStructureSourceAuthorityPolicy>());
+        var sourceOwners = services.GetServices<IAgentExecutionSourceAuthorityProvider>().ToArray();
+        var schedulerSource = SchedulerAgentChatContextBuilder.Build(SchedulerAgentChatView.Calendar, null, null, null).Source.Kind.Value;
+        foreach (var sourceKind in new[] { PromptGalleryAgentChatContextBuilder.SourceKind, AgentFrameworkWorkflowsChatContextBuilder.SourceKind, schedulerSource }) {
+            var sourceOwner = Assert.Single(sourceOwners, candidate => candidate.SourceKind == sourceKind);
+            var dependencies = sourceOwner.GetType().GetConstructors().SelectMany(constructor => constructor.GetParameters()).ToArray();
+            Assert.Contains(dependencies, parameter => parameter.ParameterType == typeof(IAgentCatalogReadLeaseStore));
+            Assert.DoesNotContain(dependencies, parameter => parameter.ParameterType == typeof(IAgentFrameworkWorkspaceService));
+            Assert.Same(sourceOwner, Assert.Single(services.GetServices<IAgentExecutionSourceAuthorityProvider>(), candidate => candidate.SourceKind == sourceKind));
+        }
+        var agents = await workspace.ListAgentsAsync(false);
+        Assert.NotEmpty(agents);
+        var agent = agents.First();
+        var catalog = Assert.IsType<CanonicalAgentCatalogLeaseSource>(services.GetRequiredService<IAgentCatalogReadLeaseStore>());
+        await using var held = await catalog.AcquireAgentReadLeaseAsync(agent.Id);
+        Assert.Equal(WorkspaceScopeDescriptor.Organization(services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id.ToString("N")), held.Scope);
+        Assert.Equal(agent.Id, Assert.IsType<AgentDefinition>(held.Agent).Id);
+        Assert.Equal(0, runtime.RunInvocationCount);
+    }
 
     [Fact]
     public async Task Chat_runtime_failure_returns_typed_identity_and_persists_the_exact_failed_run()

@@ -493,9 +493,14 @@ public sealed class ProviderFeatureMatrixTests
     {
         var source = ReadRepositoryFile(
             "src",
-            "App",
-            "CanDoItAll.Composition",
-            "RuntimeHostServiceCollectionExtensions.cs");
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+            "Administration",
+            "ProviderDefaultsBootstrapService.cs");
+
+        var compositionSource = ReadRepositoryFile("src", "App", "CanDoItAll.Composition", "RuntimeHostServiceCollectionExtensions.cs");
+        Assert.Contains("services.AddAgentFrameworkProviderManagement()", compositionSource, StringComparison.Ordinal);
+        Assert.Contains("providerBootstrap.PrepareAsync(profile, secretId, cancellationToken)", compositionSource, StringComparison.Ordinal);
 
         Assert.Contains("ManagedSeedProviderFallbacks.OpenAiDefaultProviderName", source, StringComparison.Ordinal);
         Assert.Contains("SupportsStructuredOutput = true", source, StringComparison.Ordinal);

@@ -26,6 +26,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         var bridge =
             services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var mutationOwner = CreateMutationOwner(admission);
         var personId = await CreateRatedPartyAsync(
             partyDirectoryService,
             hrService,
@@ -46,12 +49,14 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                 projectId,
                 estimate,
                 assignee,
-                "application-service-tests"),
+                "application-service-tests",
+                MutationOwner: mutationOwner),
             (pricing, cancellationToken) => CreateTaskAsync(
                 workbenchService,
                 projectId,
                 "CRM-priced task",
                 pricing,
+                mutationOwner,
                 cancellationToken));
 
         Assert.Equal(
@@ -94,6 +99,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         var bridge =
             services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var mutationOwner = CreateMutationOwner(admission);
         var personA = await CreateRatedPartyAsync(
             partyDirectoryService,
             hrService,
@@ -112,7 +120,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
             projectId,
             "A to B task",
             personA,
-            8m);
+            8m,
+            mutationOwner);
         var expectedState =
             ProjectStructureTaskEditStatePolicy.Read(created.Task);
         ProjectStructureTaskEditCommitContext? observedCommit = null;
@@ -133,7 +142,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                     new ProjectStructureTaskResourceSelection(
                         ProjectStructureTaskResourceKind.Person,
                         personB),
-                "application-service-tests"),
+                "application-service-tests",
+                MutationOwner: mutationOwner),
             async (commit, cancellationToken) =>
             {
                 observedCommit = commit;
@@ -142,6 +152,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                     projectId,
                     commit,
                     "A to B task updated",
+                    mutationOwner,
                     cancellationToken);
             });
 
@@ -198,6 +209,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         var bridge =
             services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var mutationOwner = CreateMutationOwner(admission);
         var personA = await CreateRatedPartyAsync(
             partyDirectoryService,
             hrService,
@@ -216,7 +230,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
             projectId,
             "Compensation task",
             personA,
-            8m);
+            8m,
+            mutationOwner);
         var startsOn = new DateOnly(2026, 7, 20);
         var endsOn = new DateOnly(2026, 7, 31);
         var exactAssignmentResult =
@@ -227,6 +242,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                     new ProjectPartyAssignmentUpsertRequest
                     {
                         ProjectId = projectId,
+                        ExpectedProjectAdmission = admission,
                         PartyId = personA,
                         Role =
                             ProjectPartyAssignmentRole.WorkItemAssignee,
@@ -239,7 +255,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                         Notes = "Restore this exact assignment."
                     }
                 ],
-                [ProjectPartyAssignmentRole.WorkItemAssignee]);
+                [ProjectPartyAssignmentRole.WorkItemAssignee],
+                expectedProjectAdmission: admission);
         Assert.True(exactAssignmentResult.IsSuccess);
         var originalAssignment = Assert.Single(
             await ReadDirectAssignmentsAsync(
@@ -270,7 +287,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                         new ProjectStructureTaskResourceSelection(
                             ProjectStructureTaskResourceKind.Person,
                             personB),
-                    "application-service-tests"),
+                    "application-service-tests",
+                    MutationOwner: mutationOwner),
                 (_, _) => throw new InvalidOperationException(
                     "Injected persistence failure.")));
 
@@ -319,6 +337,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         var bridge =
             services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var mutationOwner = CreateMutationOwner(admission);
         var personA = await CreateRatedPartyAsync(
             partyDirectoryService,
             hrService,
@@ -343,7 +364,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
             projectId,
             "Competing callback task",
             personA,
-            8m);
+            8m,
+            mutationOwner);
         var expectedState =
             ProjectStructureTaskEditStatePolicy.Read(created.Task);
 
@@ -366,13 +388,15 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                             new ProjectStructureTaskResourceSelection(
                                 ProjectStructureTaskResourceKind.Person,
                                 personB),
-                        "application-service-tests"),
+                        "application-service-tests",
+                        MutationOwner: mutationOwner),
                     async (commit, cancellationToken) =>
                     {
                         var saveResult = await bridge.SaveAssignmentAsync(
                             new ProjectPartyAssignmentUpsertRequest
                             {
                                 ProjectId = projectId,
+                                ExpectedProjectAdmission = admission,
                                 PartyId = competingAgent,
                                 Role = ProjectPartyAssignmentRole
                                     .WorkItemAssignee,
@@ -387,6 +411,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                             projectId,
                             commit,
                             "Must not persist",
+                            mutationOwner,
                             cancellationToken);
                     }));
 
@@ -442,6 +467,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         var bridge =
             services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var mutationOwner = CreateMutationOwner(admission);
         var personA = await CreateRatedPartyAsync(
             partyDirectoryService,
             hrService,
@@ -466,11 +494,13 @@ public sealed class ProjectStructureTaskApplicationServiceTests
             projectId,
             "Mixed assignment task",
             personA,
-            8m);
+            8m,
+            mutationOwner);
         var addAgentResult = await bridge.SaveAssignmentAsync(
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = supportingAgent,
                 Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                 NodeKey = created.Task.Id,
@@ -504,12 +534,14 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                 ProjectTaskExecutionSnapshot.NotStarted,
                 AssigneeChanged: false,
                 ProposedAssignee: null,
-                "application-service-tests"),
+                "application-service-tests",
+                MutationOwner: mutationOwner),
             (commit, cancellationToken) => PersistEditAsync(
                 mutationService,
                 projectId,
                 commit,
                 "Mixed assignment scalar edit",
+                mutationOwner,
                 cancellationToken));
 
         var assignmentsAfterScalar = (await ReadDirectAssignmentsAsync(
@@ -547,7 +579,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                             new ProjectStructureTaskResourceSelection(
                                 ProjectStructureTaskResourceKind.Person,
                                 personB),
-                        "application-service-tests"),
+                        "application-service-tests",
+                        MutationOwner: mutationOwner),
                     (_, _) =>
                     {
                         callbackInvoked = true;
@@ -574,6 +607,15 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                     projectId,
                     created.Task.Id)));
     }
+
+    private static ProjectStructureAgentContext CreateMutationOwner(ProjectWriteAdmission admission)
+        => new(
+            "component-tests-task-application",
+            "Component tests",
+            Environment.MachineName,
+            string.Empty,
+            string.Empty,
+            $"{admission.ProjectId:D}-task-application") { ExpectedProjectAdmission = admission };
 
     private static async Task<Guid> CreateProjectAsync(
         ProjectsService projectsService)
@@ -631,7 +673,8 @@ public sealed class ProjectStructureTaskApplicationServiceTests
             Guid projectId,
             string title,
             Guid personId,
-            decimal effortHours)
+            decimal effortHours,
+            ProjectStructureAgentContext mutationOwner)
     {
         return applicationService.CreateAsync(
             new ProjectStructureTaskCreateApplicationRequest(
@@ -644,12 +687,14 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                 new ProjectStructureTaskResourceSelection(
                     ProjectStructureTaskResourceKind.Person,
                     personId),
-                "application-service-tests"),
+                "application-service-tests",
+                MutationOwner: mutationOwner),
             (pricing, cancellationToken) => CreateTaskAsync(
                 workbenchService,
                 projectId,
                 title,
                 pricing,
+                mutationOwner,
                 cancellationToken));
     }
 
@@ -658,6 +703,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         Guid projectId,
         string title,
         ProjectStructureTaskEstimateRefreshResult pricing,
+        ProjectStructureAgentContext mutationOwner,
         CancellationToken cancellationToken)
     {
         var estimate = pricing.Estimate;
@@ -694,7 +740,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                     }),
                 TaskPricingInitialization:
                     ProjectObjectTaskPricingInitialization
-                        .PreserveValidatedAuthoritativePricing),
+                        .PreserveValidatedAuthoritativePricing) { ExpectedProjectAdmission = mutationOwner.ExpectedProjectAdmission },
             cancellationToken);
     }
 
@@ -704,6 +750,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
             Guid projectId,
             ProjectStructureTaskEditCommitContext commit,
             string proposedTitle,
+            ProjectStructureAgentContext mutationOwner,
             CancellationToken cancellationToken)
     {
         var currentProgress = Math.Clamp(
@@ -727,7 +774,10 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                 commit.ProposedCostBasis,
                 commit.ProposedCostBasis !=
                     commit.CurrentState.CostBasis,
-                commit.CurrentState.DirectAssignmentRevision),
+                commit.CurrentState.DirectAssignmentRevision) {
+                ExpectedProjectAdmission = mutationOwner.ExpectedProjectAdmission,
+                MutationOwner = mutationOwner
+            },
             cancellationToken);
     }
 

@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
-public sealed class PromptsCuratorAgentRuntimeToolProviderTests
+public sealed partial class PromptsCuratorAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
@@ -429,18 +429,21 @@ public sealed class PromptsCuratorAgentRuntimeToolProviderTests
     private static async Task<TResult> InvokeAsync<TResult>(AITool tool, object request)
     {
         var function = Assert.IsAssignableFrom<AIFunction>(tool);
+        using var capture = AgentToolInvocationEffectScope.Begin();
         var rawResult = await function.InvokeAsync(new AIFunctionArguments
         {
             ["request"] = request
         });
-        return rawResult switch
+        var result = rawResult switch
         {
-            TResult result => result,
+            TResult typed => typed,
             JsonElement element => JsonSerializer.Deserialize<TResult>(element.GetRawText(), JsonOptions)
                 ?? throw new InvalidOperationException("Prompts Curator runtime tool returned null JSON."),
             _ => throw new InvalidOperationException(
                 $"Unexpected Prompts Curator runtime tool result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
         };
+        AssertOwnerAcknowledgement(tool.Name, result, capture.CommittedEffect);
+        return result;
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

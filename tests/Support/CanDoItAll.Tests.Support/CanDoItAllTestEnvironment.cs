@@ -62,7 +62,7 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
             RootPath,
             profileRootPath,
             TestDatabaseProviderKind.InMemory,
-            string.IsNullOrWhiteSpace(databaseName) ? $"{SanitizeSegment(profileKey)}-inmemory" : databaseName,
+            string.IsNullOrWhiteSpace(databaseName) ? $"{SanitizeSegment(profileKey)}-inmemory-{Path.GetFileName(RootPath)}" : databaseName,
             workspaceRootPath,
             managerArtifactsRootPath);
     }

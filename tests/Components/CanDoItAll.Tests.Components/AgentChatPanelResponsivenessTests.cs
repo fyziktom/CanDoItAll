@@ -1,5 +1,6 @@
 using System.Reflection;
 using Bunit;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
@@ -18,6 +19,269 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatPanelResponsivenessTests
 {
+    [Theory]
+    [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, false)]
+    [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, true)]
+    [InlineData(AgentChatSessionBlockReason.PendingApproval, false)]
+    [InlineData(AgentChatSessionBlockReason.PendingApproval, true)]
+    [InlineData(AgentChatSessionBlockReason.ActiveExecution, false)]
+    [InlineData(AgentChatSessionBlockReason.ActiveExecution, true)]
+    public async Task Full_page_chat_start_refusal_restores_draft_and_remains_visible_after_same_target_refresh(
+        AgentChatSessionBlockReason reason, bool refreshBeforeFailure) {
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id) with { Messages = [
+            new(Guid.NewGuid(), ChatMessageRole.User, "Original approved change", DateTimeOffset.UtcNow, 4),
+            new(Guid.NewGuid(), ChatMessageRole.Assistant, "The original run failed.", DateTimeOffset.UtcNow, 5)
+        ] };
+        var failedRun = CreateRunningRun(agent.Id, session.Id) with {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            CompletedAtUtc = DateTimeOffset.UtcNow,
+            PendingApprovals = []
+        };
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.Agents = [agent];
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, session, failedRun);
+        workspace.InitialRunDetail = new(failedRun, session, [], []);
+        var orchestratorService = DispatchProxy.Create<IAgentChatExecutionOrchestrator, CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        var completion = new TaskCompletionSource<AgentChatRunResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        orchestrator.SendCompletion = completion;
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = context.Render<AgentChatPanel>(parameters => parameters
+            .Add(component => component.PreferredAgentId, agent.Id)
+            .Add(component => component.PreferredSessionId, session.Id));
+        const string prompt = "Read the current approved Agent settings.";
+        var rejection = new AgentChatSessionBlockedException(agent.Id, session.Id, failedRun.Id, reason);
+        try {
+            cut.WaitForElement("[data-testid='chat-prompt-input']").Input(prompt);
+            Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            await cut.Find("[data-testid='chat-send-button']").ClickAsync(new MouseEventArgs())
+                .WaitAsync(TimeSpan.FromSeconds(2));
+            await orchestrator.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Null(cut.Instance.ActiveChatHandleId);
+            if (refreshBeforeFailure) {
+                var generation = cut.FindComponent<ChatWorkspacePanel>().Instance.SelectionGeneration;
+                workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, session, failedRun));
+                await cut.InvokeAsync(() => cut.Render(parameters => parameters
+                    .Add(component => component.PreferredAgentId, agent.Id)
+                    .Add(component => component.PreferredAgent, agent with { Summary = "Current catalog projection" })
+                    .Add(component => component.PreferredSessionId, session.Id)));
+                Assert.True(cut.FindComponent<ChatWorkspacePanel>().Instance.SelectionGeneration > generation);
+            }
+
+            completion.SetException(rejection);
+            cut.WaitForAssertion(() => {
+                Assert.Equal(rejection.Message, cut.Find("[data-testid='agents-chat-start-rejected']").TextContent.Trim());
+                var panel = cut.FindComponent<ChatWorkspacePanel>().Instance;
+                Assert.False(panel.IsBusy);
+                Assert.Equal(prompt, panel.DraftPrompt);
+                Assert.Empty(panel.PendingUserPrompt);
+                Assert.Equal(failedRun.Id, panel.ActiveRun!.Id);
+                Assert.Equal(ExecutionState.Failed, panel.ActiveRun.State);
+                Assert.Empty(panel.ActiveRun.PendingApprovals);
+                Assert.Equal(session.Messages, panel.Session!.Messages);
+                Assert.Single(orchestrator.SendRequests);
+            });
+            Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages,
+                item => item.Detail == rejection.Message);
+            Assert.Equal(refreshBeforeFailure ? 2 : 1, workspace.WorkspaceRequestCount);
+            Assert.Null(rejection.InnerException);
+        } finally {
+            completion.TrySetCanceled();
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_stale_or_foreign_chat_start_refusal_cannot_rewrite_the_current_composer(bool switchAwayAndBack) {
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var other = CreateSession(agent.Id);
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.Agents = [agent];
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, session);
+        var orchestratorService = DispatchProxy.Create<IAgentChatExecutionOrchestrator, CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        var completion = new TaskCompletionSource<AgentChatRunResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        orchestrator.SendCompletion = completion;
+        var logger = new RecordingLogger<AgentChatPanel>("Agent chat start was rejected.");
+        using var context = CreateContext(workspaceService, orchestratorService);
+        context.Services.AddSingleton<ILogger<AgentChatPanel>>(logger);
+        var cut = context.Render<AgentChatPanel>(parameters => parameters
+            .Add(component => component.PreferredAgentId, agent.Id)
+            .Add(component => component.PreferredSessionId, session.Id));
+        try {
+            cut.WaitForElement("[data-testid='chat-prompt-input']").Input("Original submitted draft");
+            await cut.Find("[data-testid='chat-send-button']").ClickAsync(new MouseEventArgs())
+                .WaitAsync(TimeSpan.FromSeconds(2));
+            await orchestrator.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            if (switchAwayAndBack) {
+                foreach (var target in new[] { other, session }) {
+                    workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, target));
+                    await cut.InvokeAsync(() => cut.Render(parameters => parameters
+                        .Add(component => component.PreferredAgentId, agent.Id)
+                        .Add(component => component.PreferredSessionId, target.Id)));
+                }
+            }
+            cut.Find("[data-testid='chat-prompt-input']").Input("Current unsent draft");
+            completion.SetException(new AgentChatSessionBlockedException(agent.Id,
+                switchAwayAndBack ? session.Id : other.Id, Guid.NewGuid(), AgentChatSessionBlockReason.UnresolvedEffects));
+            var log = await logger.Entry.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Null(log.Exception);
+            cut.WaitForAssertion(() => {
+                Assert.False(cut.FindComponent<ChatWorkspacePanel>().Instance.IsBusy);
+                Assert.Equal("Current unsent draft", cut.FindComponent<ChatWorkspacePanel>().Instance.DraftPrompt);
+                Assert.Equal(session.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.Session!.Id);
+                Assert.Empty(cut.FindAll("[data-testid='agents-chat-start-rejected']"));
+                Assert.Single(orchestrator.SendRequests);
+            });
+            Assert.Empty(context.Services.GetRequiredService<NotificationService>().Messages);
+            Assert.Equal(switchAwayAndBack ? 3 : 1, workspace.WorkspaceRequestCount);
+        } finally {
+            completion.TrySetCanceled();
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Same_thread_catalog_refresh_preserves_completion_and_releases_the_next_send(
+        bool approval, bool failed) {
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var initialRun = approval
+            ? CreateWaitingApprovalRun(agent.Id, session.Id)
+            : CreateRunningRun(agent.Id, session.Id);
+        var runningRun = approval
+            ? ExecutionRunStateTransitions.CreateContinuationStartRun(initialRun, true, false, DateTimeOffset.UtcNow)
+            : initialRun;
+        var terminalRun = runningRun with {
+            State = failed ? ExecutionState.Failed : ExecutionState.Completed,
+            Outcome = failed ? RunOutcome.Failed : RunOutcome.Succeeded,
+            ResultSummary = failed ? "The saved run failed after its owner acknowledgement." : "Completed after catalog refresh.",
+            CompletedAtUtc = DateTimeOffset.UtcNow,
+            PendingApprovals = []
+        };
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, session, approval ? initialRun : null);
+        workspace.InitialRunDetail = new(initialRun, session, [], []);
+        var orchestratorService = DispatchProxy.Create<IAgentChatExecutionOrchestrator, CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        var completion = new TaskCompletionSource<AgentChatRunResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (approval) {
+            orchestrator.ApprovalCompletion = completion;
+        } else {
+            orchestrator.SendCompletion = completion;
+        }
+        var registry = new ActiveAgentChatRegistry(TimeProvider.System);
+        var chat = registry.Open(new(agent.Id, agent.Name, agent.RoleTitle, agent.AvatarImageUrl),
+            session.Id, FloatingAgentChatSettings.Default);
+        await using var coordinator = new FloatingAgentChatCoordinator(workspaceService, registry,
+            new EmptyPreparationPool(),
+            DispatchProxy.Create<IFloatingAgentChatSettingsService, UnexpectedCallProxy>(),
+            TimeProvider.System, NullLogger<FloatingAgentChatCoordinator>.Instance);
+        using var context = CreateContext(workspaceService, orchestratorService);
+        context.Services.AddSingleton<IFloatingAgentChatCoordinator>(coordinator);
+        var cut = context.Render<AgentChatPanel>(parameters => parameters
+            .Add(component => component.PreferredAgentId, agent.Id)
+            .Add(component => component.PreferredAgent, agent)
+            .Add(component => component.PreferredSessionId, session.Id)
+            .Add(component => component.ActiveChatHandleId, chat.HandleId)
+            .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating));
+        var nextCompletion = new TaskCompletionSource<AgentChatRunResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        try {
+            if (approval) {
+                await cut.WaitForElement("[data-testid='chat-approve-once-button']")
+                    .ClickAsync(new MouseEventArgs()).WaitAsync(TimeSpan.FromSeconds(2));
+                await orchestrator.ApprovalStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            } else {
+                cut.WaitForElement("[data-testid='chat-prompt-input']").Input("Run before refreshing this catalog entry.");
+                await cut.Find("[data-testid='chat-send-button']").ClickAsync(new MouseEventArgs())
+                    .WaitAsync(TimeSpan.FromSeconds(2));
+                await orchestrator.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            }
+            Assert.False(coordinator.TryBeginOperation(chat.HandleId));
+            var generation = cut.FindComponent<ChatWorkspacePanel>().Instance.SelectionGeneration;
+            workspace.InitialRunDetail = new(runningRun, session, [], []);
+            workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, session, runningRun));
+            var refreshedAgent = agent with { Summary = "Current catalog observation for the same selected Agent." };
+            await RerenderFocusedChatAsync(cut, refreshedAgent, session);
+            Assert.True(cut.FindComponent<ChatWorkspacePanel>().Instance.SelectionGeneration > generation);
+            Assert.Equal(session.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.Session!.Id);
+            Assert.Equal(2, workspace.WorkspaceRequestCount);
+            workspace.InitialRunDetail = new(terminalRun, session, [], []);
+            workspace.PostRunWorkspace.SetResult(CreateWorkspace(agent.Id, session, terminalRun));
+            await cut.InvokeAsync(() => workspace.RaiseExecutionUpdated(new ExecutionLogEntry(
+                Guid.NewGuid(), agent.Id, session.Id, DateTimeOffset.UtcNow, terminalRun.State,
+                "terminal", "The original owner operation has finished.") { ExecutionRunId = terminalRun.Id }));
+            if (failed) {
+                completion.SetException(new AgentChatRunFailedException(agent.Id, terminalRun.Id, session.Id,
+                    "test-provider", "test-model", new InvalidOperationException("api_key=provider-secret"),
+                    terminalRun.ResultSummary, AgentProviderFailureCategory.ProviderError));
+            } else {
+                var result = CreateRunResult(agent.Id, session.Id);
+                completion.SetResult(result with {
+                    ExecutionRunId = terminalRun.Id,
+                    Metric = result.Metric with { ExecutionRunId = terminalRun.Id }
+                });
+            }
+            cut.WaitForAssertion(() => {
+                var panel = cut.FindComponent<ChatWorkspacePanel>().Instance;
+                Assert.Equal(3, workspace.WorkspaceRequestCount);
+                Assert.Equal(terminalRun.Id, panel.ActiveRun!.Id);
+                Assert.Equal(terminalRun.State, panel.ActiveRun.State);
+                Assert.Empty(panel.ActiveRun.PendingApprovals);
+                Assert.False(panel.IsBusy);
+                Assert.Equal(ActiveAgentChatRunState.Idle, Assert.Single(coordinator.Snapshot().ActiveChats).RunState);
+                Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+                var expectedMessage = failed ? terminalRun.ResultSummary : approval
+                    ? "Approval resumed the run."
+                    : "Prompt sent through the integrated runtime.";
+                Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages,
+                    message => message.Detail == expectedMessage);
+            });
+            var originalSendCount = orchestrator.SendRequests.Count;
+            orchestrator.SendCompletion = nextCompletion;
+            cut.Find("[data-testid='chat-prompt-input']").Input("Read the committed result without repeating the mutation.");
+            await cut.Find("[data-testid='chat-send-button']").ClickAsync(new MouseEventArgs())
+                .WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(originalSendCount + 1, orchestrator.SendRequests.Count);
+            var nextRequest = orchestrator.SendRequests[^1];
+            Assert.Equal(agent.Id, nextRequest.AgentId);
+            Assert.Equal(session.Id, nextRequest.ChatSessionId);
+            Assert.Equal(chat.HandleId, nextRequest.ConversationHandleId);
+            Assert.Equal("Read the committed result without repeating the mutation.", nextRequest.Prompt);
+            Assert.Empty(cut.FindComponent<ChatWorkspacePanel>().Instance.DraftPrompt);
+            Assert.False(coordinator.TryBeginOperation(chat.HandleId));
+            var nextRun = terminalRun with { Id = Guid.NewGuid(), State = ExecutionState.Completed, Outcome = RunOutcome.Succeeded };
+            workspace.InitialRunDetail = new(nextRun, session, [], []);
+            workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, session, nextRun));
+            var nextResult = CreateRunResult(agent.Id, session.Id);
+            nextCompletion.SetResult(nextResult with {
+                ExecutionRunId = nextRun.Id,
+                Metric = nextResult.Metric with { ExecutionRunId = nextRun.Id }
+            });
+            cut.WaitForAssertion(() => {
+                Assert.False(cut.FindComponent<ChatWorkspacePanel>().Instance.IsBusy);
+                Assert.Equal(nextRun.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.ActiveRun!.Id);
+                Assert.Equal(ActiveAgentChatRunState.Idle, Assert.Single(coordinator.Snapshot().ActiveChats).RunState);
+            });
+        } finally {
+            completion.TrySetCanceled();
+            nextCompletion.TrySetCanceled();
+        }
+    }
+
     [Fact]
     public async Task Failed_send_reloads_and_selects_the_exact_persisted_run()
     {
@@ -791,6 +1055,7 @@ public sealed class AgentChatPanelResponsivenessTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<AgentToolPolicyCatalog>();
         context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton(orchestratorService);
@@ -1087,6 +1352,8 @@ public sealed class AgentChatPanelResponsivenessTests
 
         public IAgentFrameworkWorkspaceService Service { get; set; } = default!;
 
+        public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+
         public ChatAgentWorkspaceSnapshot InitialWorkspace { get; set; } = default!;
 
         public ExecutionRunDetail? InitialRunDetail { get; set; }
@@ -1113,6 +1380,7 @@ public sealed class AgentChatPanelResponsivenessTests
             {
                 "add_ExecutionUpdated" => AddExecutionUpdated((EventHandler<ExecutionLogEntry>)args![0]!),
                 "remove_ExecutionUpdated" => RemoveExecutionUpdated((EventHandler<ExecutionLogEntry>)args![0]!),
+                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => Task.FromResult(Agents),
                 nameof(IAgentFrameworkWorkspaceService.GetChatAgentWorkspaceAsync) => GetWorkspace(),
                 nameof(IAgentFrameworkWorkspaceService.SendMessageAsync) => SendMessage(args!),
                 nameof(IAgentFrameworkWorkspaceActivityExecutionService.SendMessageWithinOperationAsync) =>
@@ -1259,6 +1527,8 @@ public sealed class AgentChatPanelResponsivenessTests
     {
         public AgentChatRunResult Result { get; set; } = default!;
 
+        public List<AgentChatSendRequest> SendRequests { get; } = [];
+
         public Exception? Failure { get; set; }
 
         public TaskCompletionSource<AgentChatRunResult>? SendCompletion { get; set; }
@@ -1275,6 +1545,7 @@ public sealed class AgentChatPanelResponsivenessTests
         {
             if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.StartSendMessage))
             {
+                SendRequests.Add(Assert.IsType<AgentChatSendRequest>(args![0]));
                 Started.TrySetResult();
                 LastStreamId = CreateActivityStreamId();
                 return new AgentChatOperationHandle(
@@ -1329,6 +1600,23 @@ public sealed class AgentChatPanelResponsivenessTests
         {
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class EmptyPreparationPool : IAgentChatPreparationPool {
+        public bool HasPreparedEntries => false;
+
+        public int PruneExpired() => 0;
+
+        public AgentChatPreparationPoolSnapshot Snapshot() => new(0, 0, 0, 0, []);
+
+        public void Configure(FloatingAgentChatSettings settings) =>
+            throw new InvalidOperationException("The focused panel fixture must not configure preparation for its already-open chat.");
+
+        public Task WarmAsync(CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The focused panel fixture must not warm preparation for its already-open chat.");
+
+        public Task<AgentDefinition?> AcquireAsync(Guid agentId, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The focused panel fixture must not acquire another Agent for its already-open chat.");
     }
 
     private class UnexpectedCallProxy : DispatchProxy

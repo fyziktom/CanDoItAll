@@ -282,6 +282,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
                 InputParameters = request.InputParameters
             },
             cancellationToken);
+        RecordCommitted(definition);
         return await LoadEditorAsync(definition.Id, definition.VersionId, cancellationToken);
     }
 
@@ -316,6 +317,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
                 InputParameters = request.InputParameters ?? current.InputParameters
             },
             cancellationToken);
+        RecordCommitted(saved);
         return await LoadEditorAsync(saved.Id, saved.VersionId, cancellationToken);
     }
 
@@ -367,6 +369,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
                 InputParameters = current.InputParameters
             },
             cancellationToken);
+        RecordCommitted(saved);
         return await LoadEditorAsync(saved.Id, saved.VersionId, cancellationToken);
     }
 
@@ -385,6 +388,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
                 new WorkflowVersionId(request.ExpectedVersionId),
                 request.Status),
             cancellationToken);
+        RecordCommitted(changed);
         return await LoadEditorAsync(changed.Id, changed.VersionId, cancellationToken);
     }
 
@@ -655,5 +659,14 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
             toolName,
             cancellationToken);
         return await action(cancellationToken);
+    }
+
+    private const string WorkflowEffectSourceKind = "workflow-definition";
+
+    private static void RecordCommitted(WorkflowDefinition definition) {
+        if (definition.Id.Value == Guid.Empty || definition.VersionId.Value == Guid.Empty) {
+            throw new InvalidOperationException("The Workflow owner returned an empty committed identity.");
+        }
+        AgentToolInvocationEffectScope.RecordCommitted(WorkflowEffectSourceKind, definition.Id.Value.ToString("D"));
     }
 }

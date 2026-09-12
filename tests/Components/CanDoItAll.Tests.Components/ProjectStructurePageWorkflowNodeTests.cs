@@ -28,6 +28,8 @@ public sealed class ProjectStructurePageWorkflowNodeTests
         var projectId = await CreateProjectAsync(
             services.GetRequiredService<ProjectsService>(),
             "Canonical task workflow attachment");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var workflow = await CreateWorkflowAsync(
             services.GetRequiredService<IWorkflowCatalogService>(),
             "Canvas delivery workflow");
@@ -36,8 +38,8 @@ public sealed class ProjectStructurePageWorkflowNodeTests
             new ProjectStructureTaskCreateRequest(
                 "Implement Canvas interactions",
                 DateTimeOffset.Parse("2026-07-25T12:00:00Z"),
-                DateTimeOffset.Parse("2026-07-25T20:00:00Z")),
-            CreateAgent(projectId));
+                DateTimeOffset.Parse("2026-07-25T20:00:00Z")) { ExpectedProjectAdmission = admission },
+            CreateAgent(admission));
 
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
@@ -246,12 +248,12 @@ public sealed class ProjectStructurePageWorkflowNodeTests
                 ResultShape: WorkflowValueShape.Text));
     }
 
-    private static ProjectStructureAgentContext CreateAgent(Guid projectId)
+    private static ProjectStructureAgentContext CreateAgent(ProjectWriteAdmission admission)
         => new(
             "component-tests-workflow-attachment",
             "Component tests",
             Environment.MachineName,
             AppContext.BaseDirectory,
-            JsonSerializer.Serialize(new { ProjectId = projectId }),
-            $"{projectId:D}-workflow-attachment");
+            JsonSerializer.Serialize(new { ProjectId = admission.ProjectId }),
+            $"{admission.ProjectId:D}-workflow-attachment") { ExpectedProjectAdmission = admission };
 }

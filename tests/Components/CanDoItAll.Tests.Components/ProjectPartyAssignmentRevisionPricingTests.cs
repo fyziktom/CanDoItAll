@@ -21,6 +21,8 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
         var bridge =
             services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var personA = await CreatePersonAsync(
             partyDirectoryService,
             "Generic assignment A");
@@ -34,7 +36,7 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             "Generic save task",
             manualCostAmount: 999m);
         var saveResult = await bridge.SaveAssignmentAsync(
-            CreateAssignment(projectId, saveTask.Id, personA));
+            CreateAssignment(admission, saveTask.Id, personA));
         Assert.True(saveResult.IsSuccess);
         AssertClearedWithRevision(
             await ReadStateAsync(
@@ -48,14 +50,16 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             projectId,
             "Generic delete task");
         var deleteSaveResult = await bridge.SaveAssignmentAsync(
-            CreateAssignment(projectId, deleteTask.Id, personA));
+            CreateAssignment(admission, deleteTask.Id, personA));
         Assert.True(deleteSaveResult.IsSuccess);
         await SetAuthoritativePersonPricingAsync(
             workbenchService,
             projectId,
             deleteTask.Id,
             personA);
-        await bridge.DeleteAssignmentAsync(deleteSaveResult.Value);
+        await bridge.DeleteAssignmentAsync(
+            deleteSaveResult.Value,
+            expectedReference: ProjectAssignmentReference.From(admission));
         AssertClearedWithRevision(
             await ReadStateAsync(
                 workbenchService,
@@ -72,7 +76,7 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             projectId,
             "Generic replace task");
         var replaceSaveResult = await bridge.SaveAssignmentAsync(
-            CreateAssignment(projectId, replaceTask.Id, personA));
+            CreateAssignment(admission, replaceTask.Id, personA));
         Assert.True(replaceSaveResult.IsSuccess);
         await SetAuthoritativePersonPricingAsync(
             workbenchService,
@@ -84,11 +88,12 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             new ProjectNodeReference(replaceTask.Id),
             [
                 CreateAssignment(
-                    projectId,
+                    admission,
                     replaceTask.Id,
                     personB)
             ],
-            [ProjectPartyAssignmentRole.WorkItemAssignee]);
+            [ProjectPartyAssignmentRole.WorkItemAssignee],
+            expectedProjectAdmission: admission);
         Assert.True(replaceResult.IsSuccess);
         AssertClearedWithRevision(
             await ReadStateAsync(
@@ -174,13 +179,14 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
     }
 
     private static ProjectPartyAssignmentUpsertRequest CreateAssignment(
-        Guid projectId,
+        ProjectWriteAdmission admission,
         string taskNodeId,
         Guid partyId)
     {
         return new ProjectPartyAssignmentUpsertRequest
         {
-            ProjectId = projectId,
+            ProjectId = admission.ProjectId,
+            ExpectedProjectAdmission = admission,
             PartyId = partyId,
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = taskNodeId,

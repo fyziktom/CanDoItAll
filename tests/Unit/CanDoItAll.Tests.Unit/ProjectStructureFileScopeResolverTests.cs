@@ -287,7 +287,7 @@ public sealed class ProjectStructureFileScopeResolverTests
 
         Assert.Equal(ResolverFixture.StorageId, binding.StorageId);
         Assert.Equal(
-            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+            WorkspaceScopeDescriptor.Organization(ProcessFileRoots.ProfileId.ToString("N"))
                 .CombineArtifactPath("process-runs", runId.ToString("D")),
             binding.Root.Value);
         Assert.Equal(FileToolsHostBrowseCacheMode.Disabled, binding.HostCacheMode);
@@ -295,7 +295,7 @@ public sealed class ProjectStructureFileScopeResolverTests
     }
 
     [Fact]
-    public async Task ResolveNodeCollectionAsync_maps_projected_product_output_to_the_project_output_scope()
+    public async Task ResolveNodeCollectionAsync_uses_the_Process_owners_exact_product_output_scope()
     {
         Guid runId = Guid.NewGuid();
         string root = $"output/process-runs/{runId:D}/Calculator";
@@ -307,7 +307,7 @@ public sealed class ProjectStructureFileScopeResolverTests
         FileToolsStorageBinding binding = Assert.Single(await fixture.Sut.ResolveAsync(scope));
 
         Assert.Equal(
-            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+            WorkspaceScopeDescriptor.Organization(ProcessFileRoots.ProfileId.ToString("N"))
                 .CombineOutputPath("process-runs", runId.ToString("D"), "Calculator"),
             binding.Root.Value);
     }
@@ -427,6 +427,24 @@ public sealed class ProjectStructureFileScopeResolverTests
         return ProjectWorkbenchNodeMapper.MapStructureNode(record);
     }
 
+    private sealed class ProcessFileRoots(Guid expectedProjectId) : IProcessRunFileScopeProvider {
+        public static readonly Guid ProfileId = Guid.Parse("b7dbe7b7-d62f-4815-a2f2-a2d46d1f8c80");
+        public ValueTask<ProcessRunFileScopeSet> ResolveAsync(Guid runId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public ValueTask<FileToolsStorageBinding> ResolveRootAsync(Guid runId, string directoryPath, Guid projectId,
+            CancellationToken cancellationToken = default) {
+            Assert.Equal(expectedProjectId, projectId);
+            Assert.Contains(runId.ToString("D"), directoryPath, StringComparison.Ordinal);
+            var scope = WorkspaceScopeDescriptor.Organization(ProfileId.ToString("N"));
+            var root = directoryPath.StartsWith("artifacts/", StringComparison.Ordinal)
+                ? scope.ArtifactRootRelativePath + directoryPath["artifacts".Length..]
+                : scope.OutputRootRelativePath + directoryPath["output".Length..];
+            return ValueTask.FromResult(new FileToolsStorageBinding(ResolverFixture.StorageId, "Original Process files",
+                new(50, 2_000, 50, 1, TimeSpan.FromSeconds(5)), new(root), FileToolsHostBrowseCacheMode.Disabled));
+        }
+    }
+
     private sealed class ResolverFixture : IAsyncDisposable
     {
         public static readonly Guid StorageId = Guid.Parse("4a94a2c2-c6df-41ac-91ce-d5c851995303");
@@ -454,7 +472,7 @@ public sealed class ProjectStructureFileScopeResolverTests
                         new() { ProviderKind = DatabaseProviderKind.InMemory },
                         DatabaseProfileResolutionSource.ExplicitOverride,
                         databaseName))),
-                new StaticStorageCatalog(CreateStorage(isReadOnly: false)));
+                new StaticStorageCatalog(CreateStorage(isReadOnly: false)), new ProcessFileRoots(projectId));
         }
 
         public Guid ProjectId { get; }

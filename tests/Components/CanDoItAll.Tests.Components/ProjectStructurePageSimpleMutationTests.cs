@@ -2612,13 +2612,13 @@ public sealed class ProjectStructurePageSimpleMutationTests
     {
         services.AddSingleton<DbContextCreateCounter>();
 
-        var factoryDescriptor = services.Last(descriptor => descriptor.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+        var factoryDescriptor = services.Last(descriptor => descriptor.ServiceType == typeof(IDbContextFactory<WorkbenchDbContext>));
         services.Remove(factoryDescriptor);
         services.Add(new ServiceDescriptor(
-            typeof(IDbContextFactory<AppDbContext>),
+            typeof(IDbContextFactory<WorkbenchDbContext>),
             serviceProvider =>
             {
-                var innerFactory = (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, factoryDescriptor);
+                var innerFactory = (IDbContextFactory<WorkbenchDbContext>)CreateService(serviceProvider, factoryDescriptor);
                 var counter = serviceProvider.GetRequiredService<DbContextCreateCounter>();
                 return new CountingDbContextFactory(innerFactory, counter);
             },
@@ -2646,16 +2646,16 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     private sealed class CountingDbContextFactory(
-        IDbContextFactory<AppDbContext> innerFactory,
-        DbContextCreateCounter counter) : IDbContextFactory<AppDbContext>
+        IDbContextFactory<WorkbenchDbContext> innerFactory,
+        DbContextCreateCounter counter) : IDbContextFactory<WorkbenchDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public WorkbenchDbContext CreateDbContext()
         {
             counter.Increment();
             return innerFactory.CreateDbContext();
         }
 
-        public async Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public async Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             counter.Increment();
             return await innerFactory.CreateDbContextAsync(cancellationToken);

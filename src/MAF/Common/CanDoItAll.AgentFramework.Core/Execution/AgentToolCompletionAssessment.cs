@@ -5,7 +5,8 @@ namespace CanDoItAll.AgentFramework.Core;
 internal sealed record AgentToolCompletionAssessment(
     ExecutionState State,
     RunOutcome? Outcome,
-    string FailureSummary)
+    string FailureSummary,
+    AgentToolCompletionFailureKind FailureKind = AgentToolCompletionFailureKind.None)
 {
     public static AgentToolCompletionAssessment Create(
         IReadOnlyList<AgentToolInvocationTrace> traces,
@@ -27,7 +28,8 @@ internal sealed record AgentToolCompletionAssessment(
             return new AgentToolCompletionAssessment(
                 ExecutionState.Failed,
                 RunOutcome.Failed,
-                FailureSummary: string.Empty);
+                FailureSummary: string.Empty,
+                AgentToolCompletionFailureKind.PortableOutputValidation);
         }
 
         var unresolvedMutation = traces
@@ -51,7 +53,8 @@ internal sealed record AgentToolCompletionAssessment(
         return new AgentToolCompletionAssessment(
             ExecutionState.Failed,
             RunOutcome.Failed,
-            $"Required mutation '{unresolvedMutation.ToolName}' did not complete: {reason}");
+            $"Required mutation '{unresolvedMutation.ToolName}' did not complete: {reason}",
+            AgentToolCompletionFailureKind.RequiredMutation);
     }
 
     internal static bool IsResolvedByLaterCommittedAttempt(
@@ -78,3 +81,4 @@ internal sealed record AgentToolCompletionAssessment(
                 StringComparison.Ordinal));
     }
 }
+internal enum AgentToolCompletionFailureKind { None, PortableOutputValidation, RequiredMutation }

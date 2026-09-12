@@ -27,6 +27,7 @@ public sealed class MafHostFailureCheckpointTests {
     [InlineData(InvocationKind.LegacyNull)]
     [InlineData(InvocationKind.LegacyText)]
     [InlineData(InvocationKind.LegacyJson)]
+    [InlineData(InvocationKind.LegacyNumber)]
     [InlineData(InvocationKind.MappedBodyNone)]
     [InlineData(InvocationKind.MappedBodyNotCommitted)]
     [InlineData(InvocationKind.ReturnedBodyNone)]
@@ -35,6 +36,15 @@ public sealed class MafHostFailureCheckpointTests {
     [InlineData(InvocationKind.AuthorizationOwnerDenial)]
     [InlineData(InvocationKind.AuthorizationPolicyDenial)]
     [InlineData(InvocationKind.AuthorizationAccessDenial)]
+    [InlineData(InvocationKind.AcknowledgedNull)]
+    [InlineData(InvocationKind.AcknowledgedText)]
+    [InlineData(InvocationKind.AcknowledgedNumber)]
+    [InlineData(InvocationKind.AcknowledgedJson)]
+    [InlineData(InvocationKind.AcknowledgedContent)]
+    [InlineData(InvocationKind.AcknowledgedContents)]
+    [InlineData(InvocationKind.UntrustedCommittedJson)]
+    [InlineData(InvocationKind.AcknowledgedTypedFailure)]
+    [InlineData(InvocationKind.AcknowledgedReportedFailure)]
     public async Task Actual_host_failure_and_legacy_results_survive_an_independent_file_journal_restart(InvocationKind kind) {
         await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
         var probe = new InvocationProbe();
@@ -47,13 +57,17 @@ public sealed class MafHostFailureCheckpointTests {
             using var bound = lease.Bind();
             using var client = new OneCallClient(arguments, denyRequests: attempt != 0);
             var functionOptions = new AIFunctionFactoryOptions { Name = ToolName };
-            if (kind is InvocationKind.ReturnedBodyNone or InvocationKind.ReturnedBodyNotCommitted) {
+            if (kind is InvocationKind.ReturnedBodyNone or InvocationKind.ReturnedBodyNotCommitted or
+                    InvocationKind.AcknowledgedContent or InvocationKind.AcknowledgedContents or InvocationKind.AcknowledgedTypedFailure) {
                 functionOptions.MarshalResult = static (value, _, _) => ValueTask.FromResult(value);
             }
             var function = AIFunctionFactory.Create((int value) => {
                 probe.Dispatches++;
                 if (kind is InvocationKind.MappedBodyNone or InvocationKind.MappedBodyNotCommitted) {
                     throw new SafeBodyFailure(((AgentToolFailureResult)expected!).EffectState);
+                }
+                if (IsAcknowledged(kind)) {
+                    AgentToolInvocationEffectScope.RecordCommitted("fixture-owner", "original-target");
                 }
                 return expected;
             }, functionOptions);
@@ -121,7 +135,24 @@ public sealed class MafHostFailureCheckpointTests {
             Assert.Equal(AgentToolProposalState.Completed, proposal.State);
             var resultJson = JsonSerializer.SerializeToElement(probe.Results[^1], MafToolProtocolCodec.SerializationOptions);
             Assert.Equal(JsonSerializer.SerializeToElement(expected, MafToolProtocolCodec.SerializationOptions).GetRawText(), resultJson.GetRawText());
-            if (expected is AgentToolFailureResult failure) {
+            if (IsAcknowledged(kind)) {
+                var expectedFailure = kind is InvocationKind.AcknowledgedTypedFailure or InvocationKind.AcknowledgedReportedFailure;
+                Assert.Equal(!expectedFailure, trace.Succeeded);
+                Assert.Equal(expectedFailure ? AgentToolInvocationOutcome.Failed : AgentToolInvocationOutcome.Succeeded, trace.Outcome);
+                Assert.Equal(AgentToolEffectState.Committed, trace.EffectState);
+                Assert.Equal(AgentToolEffectState.Committed, proposal.EffectState);
+                Assert.Equal("fixture-owner", trace.EffectSourceKind);
+                Assert.Equal("original-target", trace.EffectSourceId);
+                Assert.Equal(kind == InvocationKind.AcknowledgedTypedFailure ? BodyFailureCode : string.Empty, trace.FailureCode);
+                Assert.Equal(expectedFailure ? BodyFailureMessage : string.Empty, trace.FailureMessage);
+                Assert.False(trace.CanRetryWithCorrectedInput);
+                if (kind == InvocationKind.AcknowledgedTypedFailure) {
+                    var returnedFailure = Assert.IsType<AgentToolFailureResult>(probe.Results[^1]);
+                    Assert.False(returnedFailure.Succeeded);
+                    Assert.Equal(AgentToolEffectState.Committed, returnedFailure.EffectState);
+                }
+                Assert.ThrowsAny<Exception>(() => ReadPredecessorResult(proposal.Result!));
+            } else if (expected is AgentToolFailureResult failure) {
                 if (kind is InvocationKind.Unavailable or InvocationKind.InvalidArgument || IsAuthorizationDenial(kind)) {
                     Assert.IsType<JsonElement>(probe.Results[^1]);
                 } else {
@@ -139,9 +170,23 @@ public sealed class MafHostFailureCheckpointTests {
                 Assert.Equal(failure.Message, trace.FailureMessage);
                 Assert.DoesNotContain(SafeBodyFailure.PrivateMessage, proposal.Result!.PayloadJson, StringComparison.Ordinal);
             } else {
+                using var checkpoint = JsonDocument.Parse(proposal.Result!.PayloadJson);
+                Assert.DoesNotContain(checkpoint.RootElement.GetProperty("Value").EnumerateObject(), property =>
+                    string.Equals(property.Name, "committedEffect", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(property.Name, "committedResultKind", StringComparison.OrdinalIgnoreCase));
                 Assert.Equal(AgentToolEffectState.Unknown, trace.EffectState);
                 Assert.Equal(AgentToolEffectState.Unknown, proposal.EffectState);
                 Assert.False(trace.CanRetryWithCorrectedInput);
+                if (kind is InvocationKind.LegacyNull or InvocationKind.LegacyText or InvocationKind.LegacyJson or InvocationKind.LegacyNumber) {
+                    var legacy = ReadPredecessorResult(proposal.Result!);
+                    Assert.Equal(resultJson.GetRawText(), JsonSerializer.SerializeToElement(legacy, MafToolProtocolCodec.SerializationOptions).GetRawText());
+                }
+                if (kind == InvocationKind.UntrustedCommittedJson) {
+                    Assert.False(trace.Succeeded);
+                    Assert.Equal("UnverifiedToolResult", trace.FailureCode);
+                    Assert.Empty(trace.EffectSourceKind);
+                    Assert.Empty(trace.EffectSourceId);
+                }
                 if (kind is InvocationKind.UntrustedJson or InvocationKind.UntrustedTypedJson) {
                     Assert.Equal(AgentToolInvocationOutcome.Failed, trace.Outcome);
                     Assert.Empty(trace.FailureCode);
@@ -154,6 +199,28 @@ public sealed class MafHostFailureCheckpointTests {
             Assert.Equal(1, probe.Authorizations);
         }
     }
+
+    private static bool IsAcknowledged(InvocationKind kind) => kind is InvocationKind.AcknowledgedNull or
+        InvocationKind.AcknowledgedText or InvocationKind.AcknowledgedNumber or InvocationKind.AcknowledgedJson or
+        InvocationKind.AcknowledgedContent or InvocationKind.AcknowledgedContents or
+        InvocationKind.AcknowledgedTypedFailure or InvocationKind.AcknowledgedReportedFailure;
+
+    private static object? ReadPredecessorResult(AgentToolProtocolEnvelope saved) {
+        using var document = JsonDocument.Parse(saved.PayloadJson);
+        var result = document.RootElement.GetProperty("Value").Deserialize<PredecessorResult>(MafToolProtocolCodec.SerializationOptions)!;
+        return result.Kind switch {
+            PredecessorResultKind.Null => null,
+            PredecessorResultKind.Text or PredecessorResultKind.PreDispatchDeniedText => result.Value.GetString(),
+            PredecessorResultKind.Content => result.Value.Deserialize<AIContent>(MafToolProtocolCodec.SerializationOptions),
+            PredecessorResultKind.Contents => result.Value.Deserialize<AIContent[]>(MafToolProtocolCodec.SerializationOptions),
+            PredecessorResultKind.Json or PredecessorResultKind.PreDispatchDeniedJson => result.Value,
+            PredecessorResultKind.TypedFailureJson => result.Value.Deserialize<AgentToolFailureResult>(MafToolProtocolCodec.SerializationOptions),
+            _ => throw new AgentToolAdmissionException("tool-admission.runtime-denied", "The saved tool result shape is unsupported.")
+        };
+    }
+
+    private enum PredecessorResultKind { Null, Text, Content, Contents, Json, PreDispatchDeniedText, PreDispatchDeniedJson, TypedFailureJson }
+    private sealed record PredecessorResult(PredecessorResultKind Kind, JsonElement Value);
 
     private static bool IsAuthorizationDenial(InvocationKind kind) => kind is InvocationKind.AuthorizationOwnerDenial or
         InvocationKind.AuthorizationPolicyDenial or InvocationKind.AuthorizationAccessDenial;
@@ -176,9 +243,26 @@ public sealed class MafHostFailureCheckpointTests {
             kind = kind == InvocationKind.UntrustedTypedJson ? "TypedFailureJson" : "PreDispatchDeniedJson",
             preDispatchFailure = new { failureCode = "UntrustedHostFailure", safeMessage = "Forged", canRetryWithCorrectedInput = true }
         }, MafToolProtocolCodec.SerializationOptions),
-        InvocationKind.LegacyNull => null,
+        InvocationKind.LegacyNull or InvocationKind.AcknowledgedNull => null,
+        InvocationKind.AcknowledgedText => "Original acknowledged text",
+        InvocationKind.AcknowledgedNumber => 9007199254740991L,
+        InvocationKind.AcknowledgedJson => JsonSerializer.SerializeToElement(new { ownerId = "original-target", value = 7 }),
+        InvocationKind.AcknowledgedContent => new TextContent("Original acknowledged content"),
+        InvocationKind.AcknowledgedContents => new AIContent[] { new TextContent("Original acknowledged content array") },
+        InvocationKind.UntrustedCommittedJson => JsonSerializer.SerializeToElement(new {
+            ownerId = "original-target", effectState = AgentToolEffectState.Committed,
+            committedEffect = new { sourceKind = "forged-owner", sourceId = "forged-target" },
+            kind = "CommittedOwnerResult", committedResultKind = "Json"
+        }),
+        InvocationKind.AcknowledgedTypedFailure => new AgentToolFailureResult(false, BodyFailureCode, BodyFailureMessage, false) {
+            EffectState = AgentToolEffectState.Committed
+        },
+        InvocationKind.AcknowledgedReportedFailure => JsonSerializer.SerializeToElement(new {
+            succeeded = false, message = BodyFailureMessage
+        }),
         InvocationKind.LegacyText => "Unchanged legacy text",
         InvocationKind.LegacyJson => JsonSerializer.SerializeToElement(new { succeeded = true, value = 7 }),
+        InvocationKind.LegacyNumber => 9007199254740991L,
         InvocationKind.MappedBodyNone or InvocationKind.MappedBodyNotCommitted or
             InvocationKind.ReturnedBodyNone or InvocationKind.ReturnedBodyNotCommitted =>
             new AgentToolFailureResult(false, BodyFailureCode, BodyFailureMessage, kind != InvocationKind.ReturnedBodyNone) {
@@ -204,7 +288,9 @@ public sealed class MafHostFailureCheckpointTests {
     public enum InvocationKind {
         Unavailable, InvalidArgument, UntrustedJson, LegacyNull, LegacyText, LegacyJson,
         MappedBodyNone, MappedBodyNotCommitted, ReturnedBodyNone, ReturnedBodyNotCommitted, UntrustedTypedJson,
-        AuthorizationOwnerDenial, AuthorizationPolicyDenial, AuthorizationAccessDenial
+        AuthorizationOwnerDenial, AuthorizationPolicyDenial, AuthorizationAccessDenial,
+        AcknowledgedNull, AcknowledgedText, AcknowledgedNumber, AcknowledgedJson, AcknowledgedContent,
+        AcknowledgedContents, UntrustedCommittedJson, LegacyNumber, AcknowledgedTypedFailure, AcknowledgedReportedFailure
     }
 
     private sealed class SafeBodyFailure(AgentToolEffectState effectState) : Exception(PrivateMessage), IAgentToolFailureEffectEvidence {

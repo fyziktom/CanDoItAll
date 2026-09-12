@@ -1,4 +1,5 @@
 using CanDoItAll.FileTools.Desktop;
+using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
@@ -29,17 +30,20 @@ public sealed class ProjectStructureLocalFileOpener(
     FileSystemStoragePathPolicy fileSystemPathPolicy,
     IFileApplicationPreferenceService applicationPreferences,
     IDesktopFileLauncher desktopFileLauncher,
-    ILogger<ProjectStructureLocalFileOpener> logger) : IProjectStructureLocalFileOpener
+    ILogger<ProjectStructureLocalFileOpener> logger,
+    IProcessRunFileScopeProvider processFiles) : IProjectStructureLocalFileOpener
 {
     private sealed record LocalPathCandidate(string Path);
 
     public bool IsAvailable => desktopFileLauncher.IsAvailable;
 
     public bool CanOpen(ProjectStructureNode? node)
-        => TryResolveTrustedPath(node, out _, out _);
+        => IsProcessOutput(node)
+            ? IsAvailable && node!.ProjectId != Guid.Empty && ProjectStructureProcessRunOutputFolderPolicy.TryResolve(node, out _)
+            : TryResolveTrustedPath(node, out _, out _);
 
     public bool CanOpenInPreferredApplication(ProjectStructureNode? node)
-        => TryResolveTrustedPath(node, out string fullPath, out _) &&
+        => !IsProcessOutput(node) && TryResolveTrustedPath(node, out string fullPath, out _) &&
             File.Exists(fullPath) &&
             (FileToolsExternalOpenPolicy.IsAllowedSystemAssociatedFile(fullPath) ||
              HasExplicitPreferredApplication(fullPath));
@@ -68,9 +72,24 @@ public sealed class ProjectStructureLocalFileOpener(
         bool usePreferredApplication,
         CancellationToken cancellationToken)
     {
-        if (!TryResolveTrustedPath(node, out var fullPath, out var failureMessage))
-        {
-            return new ProjectStructureLocalFileOpenResult(false, failureMessage);
+        string fullPath;
+        if (IsProcessOutput(node)) {
+            if (!IsAvailable || !ProjectStructureProcessRunOutputFolderPolicy.TryResolve(node, out var root)) {
+                return new(false, "The Process output folder is not available for a local file action.");
+            }
+            try {
+                var binding = await processFiles.ResolveRootAsync(node.ArtifactId!.Value,
+                    root.DirectoryPath, node.ProjectId, cancellationToken);
+                if (!TryResolveLocalPath(binding.Root.Value, out fullPath) || !Directory.Exists(fullPath)) {
+                    return new(false, "The authorized Process output folder is no longer available on disk.");
+                }
+            } catch (FileBrowserProviderException exception) {
+                logger.LogWarning("Process output local action denied. NodeId={NodeId} FailureCode={FailureCode}.",
+                    node.Id, exception.Error.Code);
+                return new(false, exception.Error.Message);
+            }
+        } else if (!TryResolveTrustedPath(node, out fullPath, out var failureMessage)) {
+            return new(false, failureMessage);
         }
 
         if (usePreferredApplication && Directory.Exists(fullPath))
@@ -307,18 +326,13 @@ public sealed class ProjectStructureLocalFileOpener(
         }
     }
 
+    private static bool IsProcessOutput(ProjectStructureNode? node)
+        => node is not null && (string.Equals(node.ArtifactKind,
+            ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind, StringComparison.Ordinal) ||
+            ProjectStructureProcessNodeKeys.TryParseProcessRunOutputNodeKey(node.Id, out _));
+
     private static IEnumerable<LocalPathCandidate> ResolveMetadataPathCandidates(ProjectStructureNode node, ProjectObjectMetadataEnvelope metadata)
     {
-        if (node.ProjectId != Guid.Empty &&
-            ProjectStructureProcessRunOutputFolderPolicy.TryResolve(node, out var outputFolder))
-        {
-            yield return new LocalPathCandidate(
-                ProjectStructureProcessRunOutputFolderPolicy.ResolveProjectScopedDirectoryPath(
-                    node.ProjectId,
-                    outputFolder));
-            yield break;
-        }
-
         switch (node.ObjectType)
         {
             case ProjectObjectType.File:

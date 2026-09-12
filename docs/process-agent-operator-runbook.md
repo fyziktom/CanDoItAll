@@ -89,6 +89,12 @@ The Structure dialog and Processes workspace retain only the launch intent UUID 
 
 An accepted run can still have pending continuation or Structure link delivery. Inspect the saved observation after a connection or queue failure before attempting another launch. The continuation worker retries the original outstanding work; pure status reads do not dispatch or recreate links. A removed link remains removed, and a conflicting target is reported explicitly. Historical acceptance remains observable after project retirement or source revocation; a new effect still requires current authority for its original project lifetime.
 
+## Process Output Files
+
+The Structure output folder and native Process files browser resolve the same Process-owned root. The owner checks the original accepted launch, run identity, canonical profile and project lifetime, then maps the saved managed artifact/output path into the original organization workspace. Opening or downloading a file does not impersonate the executing Agent or renew its launch authority.
+
+A retired or recreated project, mismatched preparation, or historical run without original file-scope evidence is refused explicitly. Preserve the run history and reconcile its provenance; do not redirect the folder to the currently selected project. Reopen an existing Process files view after upgrading: ephemeral `run:v1` scope keys are no longer accepted, and the browser obtains a `run:v2` key bound to the saved preparation.
+
 ## Dispatch
 
 Use manual dispatch only after confirming that the run has ready work and the background worker is not already progressing it. The queue prevents concurrent local dispatch of the same run and delays retry after unexpected dispatch failure. Repeated manual calls are not a substitute for repairing a provider, capability, database, or worker fault.

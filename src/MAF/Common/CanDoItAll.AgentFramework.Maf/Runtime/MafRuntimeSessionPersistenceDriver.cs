@@ -5,6 +5,11 @@ using Microsoft.Agents.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
+internal enum MafRuntimeSessionCapturePurpose {
+    FinalResult,
+    ToolAdmissionCheckpoint
+}
+
 internal interface IMafRuntimeSessionPersistenceDriver
 {
     Task<string?> TrySerializePersistableRuntimeSessionAsync(
@@ -15,11 +20,13 @@ internal interface IMafRuntimeSessionPersistenceDriver
         AgentRuntimeExecutionOptions runtimeOptions,
         IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
         Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        MafRuntimeSessionCapturePurpose purpose = MafRuntimeSessionCapturePurpose.FinalResult);
 
     bool ShouldSkipRuntimeSessionSerialization(
         AgentRuntimeExecutionOptions runtimeOptions,
-        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals);
+        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
+        MafRuntimeSessionCapturePurpose purpose = MafRuntimeSessionCapturePurpose.FinalResult);
 
     string ResolveRuntimeSessionSerializationSkipMessage(AgentRuntimeExecutionOptions runtimeOptions);
 }
@@ -32,13 +39,19 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
 
     public bool ShouldSkipRuntimeSessionSerialization(
         AgentRuntimeExecutionOptions runtimeOptions,
-        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals)
+        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
+        MafRuntimeSessionCapturePurpose purpose = MafRuntimeSessionCapturePurpose.FinalResult)
     {
         ArgumentNullException.ThrowIfNull(runtimeOptions);
         ArgumentNullException.ThrowIfNull(pendingApprovals);
 
+        if (!Enum.IsDefined(purpose)) {
+            throw new ArgumentOutOfRangeException(nameof(purpose));
+        }
+
         return pendingApprovals.Count == 0 &&
-               (runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
+               (purpose == MafRuntimeSessionCapturePurpose.FinalResult &&
+                    runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
                 InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions));
     }
 
@@ -59,7 +72,8 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
         AgentRuntimeExecutionOptions runtimeOptions,
         IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
         Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        MafRuntimeSessionCapturePurpose purpose = MafRuntimeSessionCapturePurpose.FinalResult)
     {
         ArgumentNullException.ThrowIfNull(runtimeAgent);
         ArgumentNullException.ThrowIfNull(runtimeSession);
@@ -69,7 +83,7 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
         ArgumentNullException.ThrowIfNull(pendingApprovals);
         ArgumentNullException.ThrowIfNull(progressCallback);
 
-        if (ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
+        if (ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals, purpose))
         {
             await progressCallback(
                 ExecutionState.Persisting,
@@ -85,7 +99,7 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
             serializedSessionJson = await SerializeRuntimeSessionAsync(
                 runtimeAgent,
                 runtimeSession,
-                runtimeOptions.RequireDurableToolProtocol,
+                purpose == MafRuntimeSessionCapturePurpose.ToolAdmissionCheckpoint || runtimeOptions.RequireDurableToolProtocol,
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

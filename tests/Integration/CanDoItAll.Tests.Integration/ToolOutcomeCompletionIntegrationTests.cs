@@ -19,6 +19,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
         Assert.Contains("did not complete", assessment.FailureSummary, StringComparison.Ordinal);
     }
@@ -43,6 +44,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Completed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
         Assert.Equal(RunOutcome.Succeeded, assessment.Outcome);
         Assert.Empty(assessment.FailureSummary);
     }
@@ -67,6 +69,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
     }
 
@@ -83,6 +86,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
     }
 
@@ -95,6 +99,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.WaitingOnTool, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
         Assert.Null(assessment.Outcome);
     }
 
@@ -111,6 +116,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
     }
 
@@ -123,7 +129,16 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Completed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
         Assert.Equal(RunOutcome.Succeeded, assessment.Outcome);
+        Assert.Empty(assessment.FailureSummary);
+    }
+
+    [Fact]
+    public void Invalid_portable_output_keeps_its_distinct_validation_failure_kind() {
+        var assessment = AgentToolCompletionAssessment.Create([], 0, portableOutputValid: false);
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.PortableOutputValidation, assessment.FailureKind);
         Assert.Empty(assessment.FailureSummary);
     }
 

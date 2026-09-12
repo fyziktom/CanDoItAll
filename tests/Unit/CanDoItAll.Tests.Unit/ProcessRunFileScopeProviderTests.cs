@@ -1,4 +1,7 @@
 using CanDoItAll.FileTools.FileBrowser;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
@@ -9,7 +12,10 @@ namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRunFileScopeProviderTests
 {
-    private static readonly Guid RunId = Guid.Parse("1344fb1f-e6d9-4074-84c0-4c7b7d18a084");
+    private static readonly WorkbenchOwnerInMemoryFixture Owner = new("process-file-scopes");
+    private static readonly ProcessPreparedLaunch Preparation = ProcessPreparedLaunchFixture.Create(
+        ProcessPreparedLaunchFixture.Local(Owner.Admissions.DatabaseProfileId));
+    private static readonly Guid RunId = Preparation.InitialCommit.Mutation.State.RunId.Value;
 
     [Fact]
     public async Task Provider_resolves_current_artifact_and_product_roots_with_disabled_host_cache()
@@ -22,7 +28,7 @@ public sealed class ProcessRunFileScopeProviderTests
                 ["ProductRoot"] = $"output/process-runs/{RunId:D}/calculator"
             })]);
         var catalog = new RecordingStorageCatalog();
-        var provider = new ProcessRunFileScopeProvider(stateStore, assignmentStore, catalog);
+        var provider = CreateProvider(stateStore, assignmentStore, catalog);
 
         ProcessRunFileScopeSet scopeSet = await provider.ResolveAsync(RunId);
         FileToolsSemanticScope productScope = Assert.Single(
@@ -32,7 +38,8 @@ public sealed class ProcessRunFileScopeProviderTests
             .ResolveAsync(productScope);
         FileToolsStorageBinding binding = Assert.Single(bindings);
 
-        Assert.Equal($"output/process-runs/{RunId:D}/calculator", binding.Root.Value);
+        Assert.Equal(WorkspaceScopeDescriptor.Organization(Owner.Admissions.DatabaseProfileId.ToString("N"))
+            .CombineOutputPath("process-runs", RunId.ToString("D"), "calculator"), binding.Root.Value);
         Assert.Equal(FileToolsHostBrowseCacheMode.Disabled, binding.HostCacheMode);
         Assert.Equal(2, scopeSet.Scopes.Count);
         Assert.Equal(1, catalog.EnsureCalls);
@@ -47,7 +54,7 @@ public sealed class ProcessRunFileScopeProviderTests
                 ["ProductRoot"] = $"output/process-runs/{RunId:D}/calculator"
             })]);
         var catalog = new RecordingStorageCatalog();
-        var provider = new ProcessRunFileScopeProvider(new StaticStateStore(CreateState()), assignmentStore, catalog);
+        var provider = CreateProvider(new StaticStateStore(CreateState()), assignmentStore, catalog);
         ProcessRunFileScopeSet initial = await provider.ResolveAsync(RunId);
         FileToolsSemanticScope staleScope = Assert.Single(
             initial.Scopes,
@@ -67,7 +74,7 @@ public sealed class ProcessRunFileScopeProviderTests
     {
         var assignmentStore = new MutableAssignmentStore(
             [CreateAssignment(new Dictionary<string, string>(StringComparer.Ordinal))]);
-        var provider = new ProcessRunFileScopeProvider(
+        var provider = CreateProvider(
             new StaticStateStore(CreateState()),
             assignmentStore,
             new RecordingStorageCatalog());
@@ -92,7 +99,7 @@ public sealed class ProcessRunFileScopeProviderTests
             {
                 ["ExternalTargetRoot"] = @"C:\products\outside"
             })]);
-        var provider = new ProcessRunFileScopeProvider(
+        var provider = CreateProvider(
             new StaticStateStore(CreateState()),
             assignments,
             new RecordingStorageCatalog());
@@ -103,7 +110,7 @@ public sealed class ProcessRunFileScopeProviderTests
         Assert.Equal("Run artifacts", scopeSet.Scopes[0].DisplayName);
 
         var missingAssignments = new MutableAssignmentStore([]);
-        var missingProvider = new ProcessRunFileScopeProvider(
+        var missingProvider = CreateProvider(
             new StaticStateStore(state: null),
             missingAssignments,
             new RecordingStorageCatalog());
@@ -114,18 +121,62 @@ public sealed class ProcessRunFileScopeProviderTests
         Assert.Equal(0, missingAssignments.LoadCalls);
     }
 
+    [Fact]
+    public async Task Provider_refuses_old_unbound_scope_keys_before_catalog_access() {
+        var catalog = new RecordingStorageCatalog();
+        var provider = CreateProvider(new StaticStateStore(CreateState()), new MutableAssignmentStore([]), catalog);
+        var current = Assert.Single((await provider.ResolveAsync(RunId)).Scopes);
+        Assert.Contains("run:v2:", current.Id.Value, StringComparison.Ordinal);
+        var legacy = new FileToolsSemanticScope(FileToolsSemanticScopeKind.ProcessRun,
+            new(current.Id.Value.Replace("run:v2:", "run:v1:", StringComparison.Ordinal)), current.DisplayName);
+        var error = await Assert.ThrowsAsync<FileBrowserProviderException>(() =>
+            ((IFileToolsStorageBindingSource)provider).ResolveAsync(legacy).AsTask());
+        Assert.Equal(FileBrowserErrorCode.InvalidOperation, error.Error.Code);
+        Assert.Equal(0, catalog.EnsureCalls);
+    }
+
+    [Fact]
+    public async Task Provider_binds_cached_scope_to_original_preparation_as_well_as_run_and_root() {
+        var catalog = new RecordingStorageCatalog();
+        var prepared = new PreparedStore();
+        var provider = new ProcessRunFileScopeProvider(new StaticStateStore(CreateState()), new MutableAssignmentStore([]),
+            catalog, prepared, Owner.Admissions);
+        var current = Assert.Single((await provider.ResolveAsync(RunId)).Scopes);
+        prepared.Fingerprint = "sha256:different-original-source";
+        var error = await Assert.ThrowsAsync<FileBrowserProviderException>(() =>
+            ((IFileToolsStorageBindingSource)provider).ResolveAsync(current).AsTask());
+        Assert.Equal(FileBrowserErrorCode.Conflict, error.Error.Code);
+        Assert.Equal(0, catalog.EnsureCalls);
+    }
+
     private static ProcessRuntimeStateSnapshot CreateState()
-        => new(
-            new ProcessRunId(RunId),
-            new ProcessRunId(RunId),
-            ProcessInstancePlanId.New(),
-            "plan-hash",
-            ProcessRuntimeStatus.Active,
-            [],
-            [],
-            [],
-            new HashSet<ArtifactSlotId>(),
-            DateTimeOffset.UtcNow);
+        => Preparation.InitialCommit.Mutation.State with { Status = ProcessRuntimeStatus.Completed };
+
+    private static ProcessRunFileScopeProvider CreateProvider(IProcessRuntimeStateStore states,
+        IProcessRuntimeStepAssignmentStore assignments, IStorageCatalogService catalog)
+        => new(states, assignments, catalog, new PreparedStore(), Owner.Admissions);
+
+    private sealed class PreparedStore : IProcessPreparedLaunchStore {
+        public string Fingerprint { get; set; } = "sha256:retained-owner-test";
+        public Task<ProcessPreparedLaunchSnapshot?> GetAsync(ProcessLaunchAdmissionId admissionId,
+            CancellationToken cancellationToken = default) => Task.FromResult<ProcessPreparedLaunchSnapshot?>(new(
+                Preparation, Fingerprint, 1, ProcessLaunchContinuationState.Started,
+                ProcessProjectAdmissionFixture.Now, true, ProcessLaunchLinkDeliveryState.NotRequested, null, null));
+        public Task<ProcessPreparedLaunchSnapshot?> FindByIntentAsync(ProcessLaunchIntentId intentId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<ProcessPreparedLaunchSnapshot?> FindByRunAsync(ProcessRunId runId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<ProcessPreparedLaunchSnapshot> PrepareAsync(ProcessPreparedLaunch preparation, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<ProcessLaunchContinuationClaim?> ClaimContinuationAsync(ProcessLaunchAdmissionId admissionId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<bool> RenewContinuationAsync(ProcessLaunchContinuationClaim claim, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task CompleteContinuationAsync(ProcessLaunchContinuationClaim claim, ProcessLaunchContinuationState state, string? publicFailure,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<ProcessLaunchAdmissionId>> ListPendingContinuationsAsync(int take, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(IReadOnlyDictionary<string, string> variables)
         => new(

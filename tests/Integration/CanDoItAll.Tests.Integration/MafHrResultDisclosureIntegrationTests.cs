@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -16,7 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
-public sealed class MafHrResultDisclosureIntegrationTests {
+public sealed partial class MafHrResultDisclosureIntegrationTests {
     [Theory]
     [InlineData(HrAgentToolPolicy.HrCrmSearch)]
     [InlineData(HrAgentToolPolicy.HrCrmItemSummaryGet)]
@@ -85,9 +86,18 @@ public sealed class MafHrResultDisclosureIntegrationTests {
         AgentDefinition agent, IReadOnlyList<CapabilityCatalogItem> capabilities, ScriptClient client) {
         var policies = new AgentToolPolicyCatalog(HrAgentToolPolicy.Capabilities);
         var provider = services.GetServices<IAgentRuntimeToolProvider>().OfType<HrAgentRuntimeToolProvider>().Single();
+        var runtimeProvider = fixture.Provider with { Kind = ProviderKind.OpenAi, Transport = ProviderTransportKind.Responses };
+        var model = ManagedSeedProviderFallbacks.ResolveModel(agent, runtimeProvider);
+        runtimeProvider = runtimeProvider with {
+            ConfigurationJson = ProviderModelThinkingConfiguration.Write(runtimeProvider.ConfigurationJson, model,
+                new(model, AgentThinkingEffortSupportStatus.Supported, AgentThinkingEffortControlMode.EffortLevels,
+                    [AgentReasoningEffortLevel.Medium], AgentReasoningEffortLevel.Medium))
+        };
+        Assert.Equal(AgentReasoningEffortLevel.Medium,
+            AgentThinkingEffortPolicy.ResolveEffectiveEffort(runtimeProvider, model, agent.ConfigurationJson));
         var dependencies = MafAgentRuntimeDependencies.FromServices(services);
         dependencies = dependencies with {
-            ProviderAgentFactory = new ScriptAgentFactory(client),
+            ProviderAgentFactory = new ScriptAgentFactory(client, model),
             RuntimeToolProviderComposer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(policies), policies),
             ToolPolicies = policies, ToolAdmissionJournal = fixture.NewJournal(fixture.NewStore()),
             CapabilityDependencies = dependencies.CapabilityDependencies with {
@@ -104,40 +114,80 @@ public sealed class MafHrResultDisclosureIntegrationTests {
                 WorkspaceToolsEnabled = false, ToolCapabilitiesEnabled = true
             }
         };
+        var attachedCapabilityIds = agent.Capabilities.Select(item => item.CapabilityId).ToHashSet();
+        var attachedCapabilities = capabilities.Where(item => attachedCapabilityIds.Contains(item.Id))
+            .Where(item => !AgentCapabilityRequirementEvaluator.IsRetiredCapability(item))
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         return runtime.ExecutionPort.ExecuteAsync(new(agent,
-            fixture.Provider with { Kind = ProviderKind.Ollama, Transport = ProviderTransportKind.ChatCompletions },
-            fixture.Detail.ChatSession!, capabilities, [], "Read the authorized CRM summary.", string.Empty,
+            runtimeProvider,
+            fixture.Detail.ChatSession!, attachedCapabilities, [], "Read the authorized CRM summary.", string.Empty,
             (_, _, _) => Task.CompletedTask, ExecutionOptions: options));
     }
 
-    private sealed class ScriptAgentFactory(ScriptClient client) : IMafProviderAgentFactory {
+    private sealed class ScriptAgentFactory(ScriptClient client, string expectedModel) : IMafProviderAgentFactory {
         public AIAgent CreateFrameworkAgent(ProviderProfile provider, string model, ChatClientAgentOptions options,
             bool frameworkManagedHistory, bool allowBackgroundResponses) {
             Assert.True(frameworkManagedHistory);
             Assert.NotNull(options.ChatHistoryProvider);
-            Assert.Contains(options.ChatOptions!.Tools!, tool => tool.Name == client.ToolName);
+            Assert.Equal(ProviderKind.OpenAi, provider.Kind);
+            Assert.Equal(ProviderTransportKind.Responses, provider.Transport);
+            Assert.Equal(expectedModel, model);
+            Assert.Equal(AgentThinkingEffortCapabilitySource.Configured, AgentThinkingEffortPolicy.ResolveCapability(provider, model).Source);
+            Assert.Equal(ReasoningEffort.Medium, options.ChatOptions!.Reasoning!.Effort);
+            var tool = Assert.Single(options.ChatOptions.Tools!, tool => tool.Name == client.ToolName);
+            if (HrAgentToolPolicy.Capabilities.Single(policy => policy.Name == client.ToolName).RequiresApprovalByDefault) {
+                Assert.IsType<ApprovalRequiredAIFunction>(tool);
+            }
+            client.BindRequest(Assert.IsAssignableFrom<AIFunction>(tool));
             return new ChatClientAgent(new MafToolAdmissionChatClient(client), options);
         }
     }
 
     private sealed class ScriptClient(string toolName, object request, bool stopAfterResult = false) : IChatClient {
+        private object wireRequest = request;
         internal string ToolName => toolName;
         internal int Requests { get; private set; }
+        internal string? ResultErrorCode { get; private set; }
         internal List<string> Inputs { get; } = [];
+
+        internal void BindRequest(AIFunction function) {
+            if (wireRequest is not CrmPartyAffiliationUpsertCommand affiliation) {
+                return;
+            }
+            var serializerOptions = new JsonSerializerOptions(function.JsonSerializerOptions) {
+                DefaultIgnoreCondition = JsonIgnoreCondition.Never
+            };
+            var wire = JsonSerializer.SerializeToElement(affiliation, serializerOptions);
+            Assert.Equal(JsonValueKind.Null, wire.GetProperty("affiliationId").ValueKind);
+            Assert.Equal(affiliation.PersonPartyId, wire.GetProperty("personPartyId").GetGuid());
+            Assert.Equal(affiliation.OrganizationPartyId, wire.GetProperty("organizationPartyId").GetGuid());
+            Assert.Equal(PartyOrganizationAffiliationKind.Employee,
+                wire.GetProperty("affiliationKind").Deserialize<PartyOrganizationAffiliationKind>(function.JsonSerializerOptions));
+            Assert.Equal(affiliation, wire.Deserialize<CrmPartyAffiliationUpsertCommand>(function.JsonSerializerOptions));
+            wireRequest = wire;
+        }
 
         public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
             CancellationToken cancellationToken = default) {
             Requests++;
             var input = messages.ToArray();
             Inputs.Add(JsonSerializer.Serialize(input, MafToolProtocolCodec.SerializationOptions));
-            if (input.SelectMany(message => message.Contents).OfType<FunctionResultContent>().Any()) {
+            var results = input.SelectMany(message => message.Contents).OfType<FunctionResultContent>().ToArray();
+            if (results.Length > 0) {
+                foreach (var result in results) {
+                    var value = JsonSerializer.SerializeToElement(result.Result, MafToolProtocolCodec.SerializationOptions);
+                    if (value.ValueKind == JsonValueKind.Object && value.TryGetProperty("errorCode", out var errorCode)) {
+                        ResultErrorCode = errorCode.GetString();
+                    }
+                }
                 if (stopAfterResult) {
                     throw new IOException("Fixture stops after the durable HR result and before the next response.");
                 }
                 return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "completed")));
             }
             return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,
-                [new FunctionCallContent("diagnostic-hr-read", toolName, new Dictionary<string, object?> { ["request"] = request })])));
+                [new FunctionCallContent("diagnostic-hr-read", toolName, new Dictionary<string, object?> { ["request"] = wireRequest })])));
         }
 
         public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,

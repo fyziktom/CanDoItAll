@@ -56,19 +56,87 @@ public sealed class HrSimpleChatResultDisclosureTests {
     }
 
     [Fact]
-    public async Task Cached_settings_revalidate_the_exact_approved_owner_revision() {
+    public async Task Cached_settings_preserve_the_approved_historical_revision_after_a_later_edit() {
         var fixture = CreateFixture();
+        var disclosure = await ReadSettingsAsync(fixture);
+        var originalJson = disclosure.Result.GetRawText();
+        fixture.Definitions.Current = HrSimpleChatTestFixture.Details(2, 1);
+        var acquire = Callback(fixture, HrSimpleChatOperation.Settings);
+
+        await using (await acquire(disclosure, default)) { }
+
+        Assert.Equal(originalJson, disclosure.Result.GetRawText());
+        var saved = disclosure.Result.Deserialize<HrSimpleChatDefinitionSettings>(HrSimpleChatProposalCodec.SerializerOptions)!;
+        Assert.Equal(1, saved.Summary.Version.Revision);
+        Assert.Equal(0, saved.Summary.Version.ConcurrencyToken);
+        Assert.Equal("private system prompt", saved.Settings.SystemPrompt);
+        Assert.Equal(1, fixture.Definitions.Reads);
+        Assert.Equal(1, fixture.Definitions.HistoricalReads);
+        Assert.Equal(fixture.Profile, fixture.Definitions.ObservedProfile);
+        Assert.Equal(0, fixture.Definitions.Writes);
+    }
+
+    [Theory]
+    [InlineData(SettingsChange.DefinitionId)]
+    [InlineData(SettingsChange.Revision)]
+    [InlineData(SettingsChange.ConcurrencyToken)]
+    [InlineData(SettingsChange.SystemPrompt)]
+    [InlineData(SettingsChange.ModelSettings)]
+    [InlineData(SettingsChange.Name)]
+    [InlineData(SettingsChange.TagsMismatch)]
+    [InlineData(SettingsChange.MissingRevision)]
+    [InlineData(SettingsChange.MissingDefinition)]
+    public async Task Cached_settings_refuse_mismatched_saved_identity_or_missing_owner_history(SettingsChange change) {
+        var fixture = CreateFixture();
+        var disclosure = await ReadSettingsAsync(fixture);
+        var saved = disclosure.Result.Deserialize<HrSimpleChatDefinitionSettings>(HrSimpleChatProposalCodec.SerializerOptions)!;
+        var version = saved.Summary.Version;
+        saved = change switch {
+            SettingsChange.DefinitionId => saved with { Summary = saved.Summary with { Version = new(Guid.NewGuid(), version.Revision, version.ConcurrencyToken) } },
+            SettingsChange.Revision => saved with { Summary = saved.Summary with { Version = new(version.DefinitionId, 2, version.ConcurrencyToken) } },
+            SettingsChange.ConcurrencyToken => saved with { Summary = saved.Summary with { Version = new(version.DefinitionId, version.Revision, 1) } },
+            SettingsChange.SystemPrompt => saved with { Settings = saved.Settings with { SystemPrompt = "Unapproved newer prompt" } },
+            SettingsChange.ModelSettings => saved with { Settings = saved.Settings with { Settings = saved.Settings.Settings with { Temperature = 0.7 } } },
+            SettingsChange.Name => saved with { Summary = saved.Summary with { Name = "Unapproved name" } },
+            SettingsChange.TagsMismatch => saved with { Summary = saved.Summary with { Tags = ["different"] } },
+            _ => saved
+        };
+        fixture.Definitions.MissingDefinition = change == SettingsChange.MissingDefinition;
+        if (change == SettingsChange.MissingRevision) {
+            fixture.Definitions.HistoricalRevision = null;
+        }
+        disclosure = disclosure with { Result = JsonSerializer.SerializeToElement(saved, HrSimpleChatProposalCodec.SerializerOptions) };
+        await Assert.ThrowsAsync<HrSimpleChatAdministrationException>(async () => await Callback(fixture, HrSimpleChatOperation.Settings)(disclosure, default));
+        Assert.Equal(0, fixture.Definitions.Writes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Historical_settings_recheck_current_authority_before_and_after_the_owner_read(bool revokeDuringRead) {
+        var fixture = CreateFixture();
+        var disclosure = await ReadSettingsAsync(fixture);
+        fixture.Definitions.Current = HrSimpleChatTestFixture.Details(2, 1);
+        if (revokeDuringRead) {
+            fixture.Definitions.OnRead = () => fixture.CurrentAuthority = Current(fixture, read: false, mutation: false);
+        } else {
+            fixture.CurrentAuthority = Current(fixture, read: false, mutation: false);
+        }
+        await Assert.ThrowsAsync<HrSimpleChatAdministrationException>(async () => await Callback(fixture, HrSimpleChatOperation.Settings)(disclosure, default));
+        Assert.Equal(revokeDuringRead ? 1 : 0, fixture.Definitions.HistoricalReads);
+        Assert.True(fixture.LeaseFactory.Active!.Disposed);
+        Assert.Equal(0, fixture.Definitions.Writes);
+    }
+
+    public enum SettingsChange { DefinitionId, Revision, ConcurrencyToken, SystemPrompt, ModelSettings, Name, TagsMismatch, MissingRevision, MissingDefinition }
+
+    private static async Task<AgentToolResultDisclosure> ReadSettingsAsync(HrSimpleChatTestFixture fixture) {
         var expected = new HrSimpleChatDefinitionVersion(HrSimpleChatTestFixture.DefinitionId, 1, 0);
         var payload = fixture.Codec.PrepareSettings(expected);
-        var disclosure = new AgentToolResultDisclosure(new(Guid.NewGuid()), payload, AgentToolEffectState.None,
-            JsonSerializer.SerializeToElement(new { privateSettings = "saved" }));
-        var acquire = Callback(fixture, HrSimpleChatOperation.Settings);
-        await using (await acquire(disclosure, default)) { }
-        fixture.Definitions.Current = HrSimpleChatTestFixture.Details(2, 1);
-        var denied = await Assert.ThrowsAsync<HrSimpleChatAdministrationException>(async () => await acquire(disclosure, default));
-        Assert.Equal("hr-simple-chat.revision-conflict", denied.Code);
-        Assert.Equal(2, fixture.Definitions.Reads);
-        Assert.Equal(0, fixture.Definitions.Writes);
+        fixture.Approve(payload);
+        var result = await fixture.Service.SettingsAsync(fixture.Context, expected, default);
+        return new(fixture.Admissions.Invocation!.IntentId, payload, AgentToolEffectState.None,
+            JsonSerializer.SerializeToElement(result, HrSimpleChatProposalCodec.SerializerOptions));
     }
 
     [Fact]
@@ -96,9 +164,7 @@ public sealed class HrSimpleChatResultDisclosureTests {
     [Fact]
     public async Task Profile_switch_during_current_settings_read_blocks_cached_disclosure() {
         var fixture = CreateFixture();
-        var payload = fixture.Codec.PrepareSettings(new(HrSimpleChatTestFixture.DefinitionId, 1, 0));
-        var disclosure = new AgentToolResultDisclosure(new(Guid.NewGuid()), payload, AgentToolEffectState.None,
-            JsonSerializer.SerializeToElement(new { privateSettings = "saved" }));
+        var disclosure = await ReadSettingsAsync(fixture);
         fixture.Definitions.OnRead = () => fixture.LeaseFactory.Active!.Current = false;
         await Assert.ThrowsAsync<LlmChatRuntimeProfileChangedException>(async () =>
             await Callback(fixture, HrSimpleChatOperation.Settings)(disclosure, default));

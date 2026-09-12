@@ -28,6 +28,9 @@ public static class AgentFrameworkWorkflowsChatContextBuilder
     public const string Module = "agent-framework";
     public const string Surface = "workflows";
 
+    private const string WorkflowSourceSegment = "workflow";
+    private const string ProjectSourceSegment = "project";
+
     public static AgentFrameworkWorkflowsChatView ResolveView(int activeTabIndex)
         => activeTabIndex switch
         {
@@ -231,6 +234,25 @@ public static class AgentFrameworkWorkflowsChatContextBuilder
         return selectedEntities;
     }
 
+    internal static bool IsPublishedSourceId(AgentChatContextSourceId sourceId) {
+        if (sourceId.IsEmpty) {
+            return false;
+        }
+        if (Enum.GetValues<AgentFrameworkWorkflowsChatView>().Any(view =>
+            string.Equals(sourceId.Value, ResolveViewToken(view), StringComparison.Ordinal))) {
+            return true;
+        }
+        return sourceId.Value.Split(':') switch {
+            [WorkflowSourceSegment, var definition] => IsNonEmptySourceGuid(definition),
+            [ProjectSourceSegment, var project, WorkflowSourceSegment, var definition]
+                => IsNonEmptySourceGuid(project) && IsNonEmptySourceGuid(definition),
+            _ => false
+        };
+    }
+
+    private static bool IsNonEmptySourceGuid(string value)
+        => Guid.TryParseExact(value, "D", out var id) && id != Guid.Empty;
+
     private static string BuildSourceId(
         string viewToken,
         WorkflowAgentChatProjectSelection? project,
@@ -242,8 +264,8 @@ public static class AgentFrameworkWorkflowsChatContextBuilder
         }
 
         return project is null
-            ? $"workflow:{definitionId.Value.Value:D}"
-            : $"project:{project.ProjectId:D}:workflow:{definitionId.Value.Value:D}";
+            ? $"{WorkflowSourceSegment}:{definitionId.Value.Value:D}"
+            : $"{ProjectSourceSegment}:{project.ProjectId:D}:{WorkflowSourceSegment}:{definitionId.Value.Value:D}";
     }
 
     private static string BuildRoute(

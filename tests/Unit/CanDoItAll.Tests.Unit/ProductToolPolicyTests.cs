@@ -1,9 +1,12 @@
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Agents.Storage;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Memory.Tools;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.Configuration;
@@ -53,14 +56,37 @@ public sealed class ProductToolPolicyTests {
         services.AddAgentFrameworkModule(configuration);
         services.AddWorkbenchModule(configuration);
         services.AddSchedulerPlannerModule(configuration);
+        services.AddCrmHrModule();
+        services.AddCrmHrModule();
         using var provider = services.BuildServiceProvider();
         var catalog = provider.GetRequiredService<AgentToolPolicyCatalog>();
         var registered = provider.GetServices<ToolCapabilityMetadata>().ToArray();
-        Assert.Equal(111, registered.Length);
-        Assert.Equal(111, registered.Select(policy => policy.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        ToolCapabilityMetadata[] expected = [
+            .. MemoryToolPolicy.Capabilities,
+            .. StorageToolPolicy.Capabilities,
+            .. PromptGalleryToolPolicy.Capabilities,
+            .. HrAgentToolPolicy.Capabilities,
+            .. WorkflowToolPolicy.Capabilities,
+            .. WorkflowCuratorToolPolicy.Capabilities,
+            .. CapabilityCuratorToolPolicy.Capabilities,
+            .. ImageGenerationToolPolicy.Capabilities,
+            .. CrmPlanningToolPolicy.Capabilities,
+            .. ProjectStructureToolPolicy.Capabilities,
+            .. SchedulerToolPolicy.Capabilities
+        ];
+        Assert.Equal(expected.OrderBy(policy => policy.Name, StringComparer.Ordinal).Select(Describe),
+            registered.OrderBy(policy => policy.Name, StringComparer.Ordinal).Select(Describe));
+        Assert.Equal(registered.Length, registered.Select(policy => policy.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.All(registered, policy => Assert.True(catalog.TryResolve(policy.Name, out _)));
-        Assert.All(registered.Where(policy => policy.ProtectRuntimeStateOnExport), policy =>
+        var planningNames = CrmPlanningToolPolicy.Capabilities.Select(policy => policy.Name).ToHashSet(StringComparer.Ordinal);
+        Assert.All(registered.Where(policy => policy.ProtectRuntimeStateOnExport && !planningNames.Contains(policy.Name)), policy =>
             Assert.Equal("hr-approval-redacted-v1", policy.BusinessArgumentRetentionScheme));
+        Assert.All(registered.Where(policy => planningNames.Contains(policy.Name)), policy => {
+            Assert.True(policy.ProtectRuntimeStateOnExport);
+            Assert.False(policy.IsStateChanging);
+            Assert.Equal(ToolCapabilitySideEffectKind.InternalDataRead, policy.SideEffectKind);
+            Assert.Null(policy.BusinessArgumentRetentionScheme);
+        });
     }
 
     [Fact]

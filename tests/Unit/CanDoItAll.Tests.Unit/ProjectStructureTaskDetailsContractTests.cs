@@ -1,4 +1,5 @@
 using CanDoItAll.Components.Gantt;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -58,7 +59,13 @@ public sealed class ProjectStructureTaskDetailsContractTests
             null!,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<
                 ProjectStructureTaskResourceAttachmentService>.Instance);
-        var validRequest = CreateAttachRequest();
+        var projectId = Guid.NewGuid();
+        var admission = new ProjectWriteAdmission(Guid.NewGuid(), projectId, Guid.NewGuid());
+        var agent = new ProjectStructureAgentContext(
+            "agent-1", "Fixture agent", "fixture-machine", ".", "fixture-branch", "fixture-session") {
+            ExpectedProjectAdmission = admission
+        };
+        var validRequest = CreateAttachRequest() with { ExpectedProjectAdmission = admission };
         var cases = new[]
         {
             (
@@ -76,10 +83,10 @@ public sealed class ProjectStructureTaskDetailsContractTests
         {
             var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
                 service.AttachAsync(
-                    Guid.NewGuid(),
+                    projectId,
                     "task-1",
                     testCase.Request,
-                    null!));
+                    testCase.Request is null ? null! : agent));
 
             Assert.Equal(400, exception.StatusCode);
             Assert.Equal(testCase.ErrorCode, exception.ErrorCode);

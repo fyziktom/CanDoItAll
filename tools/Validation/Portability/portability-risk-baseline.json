@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-11T21:26:21.926663+00:00",
+  "generated_utc": "2026-09-12T05:12:32.212946+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14662,
+  "allowance_count": 14667,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13031,6 +13031,12 @@
       "path": "src/Integration/CanDoItAll.FileTools.Integration.Abstractions/ProcessRunFileScopeContracts.cs",
       "category": "external-tool",
       "source_fingerprint": "79a10f7dc717b79e235b8b7d6ae118e7eeafe1f881c8aeb2e4baeba49f6ba0d2",
+      "count": 1
+    },
+    {
+      "path": "src/Integration/CanDoItAll.FileTools.Integration.Abstractions/ProcessRunFileScopeContracts.cs",
+      "category": "external-tool",
+      "source_fingerprint": "8273119ec875592776a4a3da02280f9862022d28b7f707e631738d134df9cb77",
       "count": 1
     },
     {
@@ -39802,6 +39808,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/CapabilityCurator/CapabilityCuratorAgentRuntimeToolProvider.cs",
       "category": "mcp",
+      "source_fingerprint": "52be2952f46a488d53fb714c651cb7b522f859321a8be6c835c630f0d607b70b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/CapabilityCurator/CapabilityCuratorAgentRuntimeToolProvider.cs",
+      "category": "mcp",
       "source_fingerprint": "5664841e5f3d8ee750d240cf8b8d45a51742d319ebdf56c18794925a9c847ae9",
       "count": 1
     },
@@ -39828,6 +39840,12 @@
       "category": "mcp",
       "source_fingerprint": "cbbe2273f12f779d4e8a9987bf63df3f28e52eba67801ba3193afa047cf53503",
       "count": 3
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/CapabilityCurator/CapabilityCuratorAgentRuntimeToolProvider.cs",
+      "category": "mcp",
+      "source_fingerprint": "da1c1ba6cc2d5e8605342afd80c31b8eb4843783d309d8cd130234c290241b15",
+      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/CapabilityCurator/CapabilityCuratorAgentRuntimeToolProvider.cs",
@@ -48003,8 +48021,8 @@
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
-      "category": "external-tool",
-      "source_fingerprint": "067e38d9e8617eb6f9ef6b80f6b9298363c65563f7f4209a6d747595d80838af",
+      "category": "case-policy",
+      "source_fingerprint": "2a00f85b808260ba3eba1a0e58c8e816f7d9833f599762f0b6dbd65681a9fef8",
       "count": 1
     },
     {
@@ -48022,7 +48040,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
       "category": "external-tool",
-      "source_fingerprint": "165598671813eb5b6970a8368fbf152d273bafb9d1dd6c79aeab0aead1ae9c7d",
+      "source_fingerprint": "192489a752d07fc75a3afea99247757117e5ab7b24beb6b1e401380714878e30",
       "count": 1
     },
     {
@@ -48046,7 +48064,19 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
       "category": "external-tool",
+      "source_fingerprint": "4b2ec65f6d3eaf448aebb4c1042339d1e4c5c62dd6a954c92f2f881b1a14b555",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
+      "category": "external-tool",
       "source_fingerprint": "54336c1f7e395fe464c2a11a4c0f73472a10e40cde4f10234311fa3d508d09a6",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
+      "category": "external-tool",
+      "source_fingerprint": "6f1e3eae981dd69ed36f718152c816214ebb9afb34fdaf01813dbeee3b96faed",
       "count": 1
     },
     {
@@ -48070,12 +48100,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
       "category": "external-tool",
-      "source_fingerprint": "997677fe66a82347636179a9558f53d54d920fe8d914c695187677b47e86c7fe",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
-      "category": "external-tool",
       "source_fingerprint": "9b310a01cb48ad458243b62462be932301327c9ca801eecba8f39eaf2d8766a5",
       "count": 1
     },
@@ -48089,6 +48113,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
       "category": "external-tool",
       "source_fingerprint": "c0f65b9cd6acba27aed6a47e3d590d18410c005652751f04f531020a3ab2fdeb",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
+      "category": "external-tool",
+      "source_fingerprint": "fd3e5800a0a3fb6a788b5bb39ff9d765658520e0fe6267a0620ea61c73603540",
       "count": 1
     },
     {
@@ -62843,7 +62873,7 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "2d883d01c1a6c2859ce8990ab30ec6258a8286db2597f50bc808edd0d182defa",
-      "count": 2
+      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
@@ -62861,6 +62891,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "4eef6aa80c8034fc4297059d2f8904841766868a66e3e15d6ae5cce14ba767bd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "538bdf6a54ca31ce549909103574503a8fe0ded6c524622d03545bd64711abd5",
       "count": 1
     },
     {
@@ -62945,6 +62981,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
       "category": "external-tool",
       "source_fingerprint": "847ebfddf1cf768157842103081c086d170b7f59b4905aeae8bda065c38c39ff",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
+      "category": "external-tool",
+      "source_fingerprint": "a7a32aa108d5b00c79a0859b00a2710e2b843d89d7732d06e94a12a53fcc2e3a",
       "count": 1
     },
     {
@@ -64073,12 +64115,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessRunOutputFolderPolicy.cs",
       "category": "case-policy",
       "source_fingerprint": "3c0ab5259f2b1b83668cee37d6a709bc8ba1b2a6a678f2ac7f3b937657a9dbb3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessRunOutputFolderPolicy.cs",
-      "category": "case-policy",
-      "source_fingerprint": "92c4e1b605eb350fe18cf383b0932433974ebc754dc79641d5dfd4482c66a988",
       "count": 1
     },
     {

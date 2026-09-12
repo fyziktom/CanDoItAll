@@ -1,4 +1,6 @@
 using System.Xml.Linq;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Persistence;
 
 namespace CanDoItAll.Tests.Unit.Processes;
 
@@ -34,7 +36,7 @@ public sealed class ProcessModuleBoundaryTests
         ["CanDoItAll.Processes.Templates"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core"],
         ["CanDoItAll.Processes.Builder"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Templates", "CanDoItAll.Processes.Drivers.Abstractions"],
         ["CanDoItAll.Processes.Runtime"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Drivers.Abstractions"],
-        ["CanDoItAll.Processes.Persistence"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Projections"],
+        ["CanDoItAll.Processes.Persistence"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Projections", "CanDoItAll.Processes.Application"],
         ["CanDoItAll.Processes.Application"] = ["CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Templates", "CanDoItAll.Processes.Projections", "CanDoItAll.Git", "CanDoItAll.Processes.Drivers.Abstractions"],
         ["CanDoItAll.Components.Git"] = ["CanDoItAll.Git"],
         ["CanDoItAll.Modules.Processes"] = ["CanDoItAll.Processes.Application", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Drivers.Abstractions", "CanDoItAll.Processes.Drivers.Standard", "CanDoItAll.Processes.Persistence", "CanDoItAll.Processes.Projections", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Templates", "CanDoItAll.Components.Git"]
@@ -61,6 +63,8 @@ public sealed class ProcessModuleBoundaryTests
     [Fact]
     public void Process_boundary_projects_only_reference_allowed_inner_layers()
     {
+        Assert.True(typeof(IProcessPreparedLaunchStore).IsAssignableFrom(typeof(EfProcessPreparedLaunchStore)));
+        Assert.True(typeof(IProcessExecutionMutationGuard).IsAssignableFrom(typeof(EfProcessExecutionMutationGuard)));
         var root = FindRepositoryRoot();
         var knownProjects = OrderedProcessBoundaryProjects.ToHashSet(StringComparer.Ordinal);
 

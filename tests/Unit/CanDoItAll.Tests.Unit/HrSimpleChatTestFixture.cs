@@ -216,6 +216,9 @@ internal sealed class HrSimpleChatTestFixture {
 
     public sealed class DefinitionOwner(HrSimpleChatTestFixture fixture) : ILlmChatDefinitionApplicationService {
         public LlmChatDefinitionDetails Current { get; set; } = Details();
+        public LlmChatDefinitionRevision? HistoricalRevision { get; set; } = Details().Revision;
+        public bool MissingDefinition { get; set; }
+        public int HistoricalReads { get; private set; }
         public Action? OnRead { get; set; }
         public TaskCompletionSource? ReadStarted { get; set; }
         public TaskCompletionSource? ReadGate { get; set; }
@@ -250,6 +253,18 @@ internal sealed class HrSimpleChatTestFixture {
 
             OnRead?.Invoke();
             return Result<LlmChatDefinitionDetails>.Success(Current);
+        }
+
+        public Task<Result<LlmChatDefinitionRevision>> GetRevisionAsync(LlmChatDefinitionId definitionId,
+            LlmChatDefinitionRevisionNumber revision, CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+            HistoricalReads++;
+            ObservedProfile = fixture.Scope.Current?.RuntimeIdentity;
+            OnRead?.Invoke();
+            return Task.FromResult(!MissingDefinition && HistoricalRevision is { } original &&
+                original.DefinitionId == definitionId && original.Revision == revision
+                ? Result<LlmChatDefinitionRevision>.Success(original)
+                : Result<LlmChatDefinitionRevision>.Failure(Error.Failure("Original revision unavailable.", LlmChatErrorCodes.StorageCorrupted)));
         }
 
         public Task<Result<IReadOnlyList<LlmChatDefinitionDetails>>> ListAsync(LlmChatDefinitionQuery query, CancellationToken cancellationToken)

@@ -1,7 +1,6 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Components;
 using CanDoItAll.Modules.CrmHr.Pages;
@@ -491,12 +490,12 @@ public sealed class CrmHrWorkspaceFreshnessTests
         DelayedDbContextCreationGate loadGate)
     {
         var factoryDescriptor = services.Last(descriptor =>
-            descriptor.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+            descriptor.ServiceType == typeof(IDbContextFactory<CrmHrDbContext>));
         services.Remove(factoryDescriptor);
         services.Add(new ServiceDescriptor(
-            typeof(IDbContextFactory<AppDbContext>),
+            typeof(IDbContextFactory<CrmHrDbContext>),
             serviceProvider => new DelayedDbContextFactory(
-                (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, factoryDescriptor),
+                (IDbContextFactory<CrmHrDbContext>)CreateService(serviceProvider, factoryDescriptor),
                 loadGate),
             factoryDescriptor.Lifetime));
     }
@@ -527,13 +526,13 @@ public sealed class CrmHrWorkspaceFreshnessTests
     }
 
     private sealed class DelayedDbContextFactory(
-        IDbContextFactory<AppDbContext> innerFactory,
-        DelayedDbContextCreationGate loadGate) : IDbContextFactory<AppDbContext>
+        IDbContextFactory<CrmHrDbContext> innerFactory,
+        DelayedDbContextCreationGate loadGate) : IDbContextFactory<CrmHrDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public CrmHrDbContext CreateDbContext()
             => innerFactory.CreateDbContext();
 
-        public async Task<AppDbContext> CreateDbContextAsync(
+        public async Task<CrmHrDbContext> CreateDbContextAsync(
             CancellationToken cancellationToken = default)
         {
             var wasDelayed = await loadGate.WaitIfFirstArmedCreationAsync();

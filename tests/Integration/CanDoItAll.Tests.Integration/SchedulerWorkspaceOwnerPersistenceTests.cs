@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class SchedulerWorkspaceOwnerPersistenceTests {
+public sealed partial class SchedulerWorkspaceOwnerPersistenceTests {
     [Fact]
     public async Task Owner_models_match_all_canonical_mappings_and_cascades_exclude_foreign_entities() {
         await using var application = await TestApplication.CreateAsync();

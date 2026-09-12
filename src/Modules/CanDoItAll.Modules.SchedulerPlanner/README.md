@@ -26,6 +26,8 @@ A fire freezes its exact Workflow version, canonical input, original correlation
 
 The first-party UI captures local operator authority. The managed Scheduler agent captures only an actual admitted governance ceiling; a legacy context without it remains unable to grant Structure effects. Scheduled execution retains the original authorizer channel and adds a distinct Scheduler fire binding. Current disable/delete/authority replacement is checked by a Scheduler-owned policy, with separate independent and transaction-enlisted APIs. Existing legacy terminal history stays readable. An attempted pre-cutover fire with no immutable snapshot must reconcile its actual saved Workflow lineage before redispatch; current plan input cannot stand in for its historical intent. Reauthorizing a saved plan grants future fires only and does not rewrite historical authority.
 
+An admitted managed Agent in the default Sandbox can schedule a Workflow with an empty project ceiling. Admission, scheduling and result disclosure recheck the original actor, catalog generation, profile and current scheduling/tool permissions. Sandbox authority never adopts current project selection, all-project access, task/asset permissions or a Structure output target; Structure-only admission and status projection remain unavailable.
+
 At actual new Workflow admission, the original Agent catalog lease is acquired before
 SQL. The Scheduler policy locks the current plan row on the Workflow owner's enlisted
 transaction; plan disable, deletion and authority replacement wait until that commit.

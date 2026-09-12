@@ -25,8 +25,9 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var projectId = Guid.NewGuid();
-        var retainedProjectId = Guid.NewGuid();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects, "Bulk revoke project");
+        var retainedProjectId = await CreateProjectAsync(projects, "Retained access project");
         var activeId = await CreateAgentAsync(
             workspaceService,
             "Bulk revoke active",
@@ -105,7 +106,8 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var projectId = Guid.NewGuid();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects, "Atomic revocation project");
         var validAgentId = await CreateAgentAsync(
             workspaceService,
             "Atomic valid agent",
@@ -131,14 +133,19 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
                     : agent)
                 .ToList()
         });
-        var before = (await workspaceService.ListAgentsAsync(includeTemplates: true))
+        var catalogPath = new FileSandboxWorkspaceStorageLayout(
+            application.ActiveProfile.WorkspaceRootPath,
+            workspaceFactory.GetOrganizationScope()).CatalogPath;
+        var beforeBytes = await File.ReadAllBytesAsync(catalogPath);
+        var before = (await store.LoadCatalogAsync()).Agents
             .Where(agent => agent.Id == validAgentId || agent.Id == malformedAgentId)
             .ToDictionary(agent => agent.Id);
 
         await Assert.ThrowsAsync<AgentProjectStructureAccessMetadataException>(() =>
             workspaceService.RevokeProjectStructureAccessFromAllAgentsAsync(projectId));
 
-        var after = (await workspaceService.ListAgentsAsync(includeTemplates: true))
+        Assert.Equal(beforeBytes, await File.ReadAllBytesAsync(catalogPath));
+        var after = (await store.LoadCatalogAsync()).Agents
             .Where(agent => before.ContainsKey(agent.Id))
             .ToDictionary(agent => agent.Id);
         Assert.Equal(before[validAgentId].ConfigurationJson, after[validAgentId].ConfigurationJson);

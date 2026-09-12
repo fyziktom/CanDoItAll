@@ -173,11 +173,15 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
         }
         var required = target is not null ? new[] { target } : checkAdmissionTargets
             ? scope.Projects.Where(project => scope.AdmissionProjectIds.Contains(project.ProjectId)).ToArray() : [];
+        var projectFreeSandbox = governance.WorkspaceScope.IsDefaultSandbox &&
+            use is WorkflowStructureAuthorityUse.Admission or WorkflowStructureAuthorityUse.Schedule or WorkflowStructureAuthorityUse.Disclosure &&
+            target is null && authority.ProjectId == Guid.Empty && !authority.AllProjects && authority.ProjectIds.Count == 0 &&
+            scope.Projects.Count == 0 && scope.AdmissionProjectIds.Count == 0 && !authority.CanCreateTasks && !authority.CanCreateAssets;
         if (governance.WorkspaceScope.Kind == WorkspaceScopeKind.Project &&
                 (!Guid.TryParse(governance.WorkspaceScope.Key, out var projectId) || required.Any(project => project.ProjectId != projectId)) ||
                 governance.WorkspaceScope.Kind == WorkspaceScopeKind.Organization &&
                     (!Guid.TryParse(governance.WorkspaceScope.Key, out var profileId) || profileId != authority.DatabaseProfileId) ||
-                governance.WorkspaceScope.Kind is not (WorkspaceScopeKind.Project or WorkspaceScopeKind.Organization)) {
+                governance.WorkspaceScope.Kind is not (WorkspaceScopeKind.Project or WorkspaceScopeKind.Organization) && !projectFreeSandbox) {
             throw Denied("The selected Workflow projects exceed the original execution workspace scope.");
         }
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);

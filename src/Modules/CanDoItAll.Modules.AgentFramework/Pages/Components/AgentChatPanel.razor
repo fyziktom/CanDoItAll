@@ -1,4 +1,9 @@
 @using CanDoItAll.Modules.Prompts.Components
+@if (sessionStartRejection is not null) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-chat-start-rejected">
+        @sessionStartRejection.Message
+    </Alert>
+}
         <ChatWorkspacePanel Navigation="@NavigationPresentation" NavigationIntent="HandleNavigationIntentAsync" SelectionGeneration="@chatSession.Generation" Agent="@selectedAgent"
                             Session="@workspace?.SelectedSession"
                             ActiveRun="@workspace?.SelectedRun"

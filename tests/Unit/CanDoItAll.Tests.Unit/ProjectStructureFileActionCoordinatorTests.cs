@@ -83,13 +83,21 @@ public sealed class ProjectStructureFileActionCoordinatorTests
                         new() { ProviderKind = DatabaseProviderKind.InMemory },
                         DatabaseProfileResolutionSource.ExplicitOverride,
                         nameof(ProjectStructureFileActionCoordinatorTests)))),
-                new ThrowingStorageCatalog()),
+                new ThrowingStorageCatalog(), new ThrowingProcessFiles()),
             browseSessions,
             new ThrowingBrowseItemActivator(),
             new ThrowingBrowseItemActionService(),
             new ThrowingKnownFileSessionFactory(),
             new NoopKnownFileSessionReleaser(),
             NullLogger<ProjectStructureFileActionCoordinator>.Instance);
+
+    private sealed class ThrowingProcessFiles : IProcessRunFileScopeProvider {
+        public ValueTask<ProcessRunFileScopeSet> ResolveAsync(Guid runId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public ValueTask<FileToolsStorageBinding> ResolveRootAsync(Guid runId, string directoryPath, Guid projectId,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    }
 
     private sealed class ThrowingBrowseItemActionService : IFileToolsBrowseItemActionService
     {

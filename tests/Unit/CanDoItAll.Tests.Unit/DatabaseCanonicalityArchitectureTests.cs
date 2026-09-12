@@ -13,18 +13,17 @@ public sealed class DatabaseCanonicalityArchitectureTests
             NormalizePath(root, "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs"),
             NormalizePath(root, "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs"),
             NormalizePath(root, "src/Modules/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs"),
-            NormalizePath(root, "src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectPackageService.cs")
+            NormalizePath(root, "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferOperationRunner.cs")
         };
 
-        var unexpectedFiles = Directory
+        var actualFiles = Directory
             .EnumerateFiles(Path.Combine(root, "src"), "*.cs", SearchOption.AllDirectories)
             .Where(path => File.ReadAllText(path).Contains("IProfileAppDbContextFactory", StringComparison.Ordinal))
             .Select(path => NormalizePath(path))
-            .Where(path => !allowedFiles.Contains(path))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        Assert.Empty(unexpectedFiles);
+        Assert.Equal(allowedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase), actualFiles);
     }
 
     private static string FindRepositoryRoot()

@@ -936,10 +936,33 @@ public sealed class MafRuntimeArchitectureServicesTests
         });
 
         Assert.True(driver.ShouldSkipRuntimeSessionSerialization(options, []));
+        Assert.True(driver.ShouldSkipRuntimeSessionSerialization(options with { RequireDurableToolProtocol = true }, []));
+        Assert.False(driver.ShouldSkipRuntimeSessionSerialization(options, [], MafRuntimeSessionCapturePurpose.ToolAdmissionCheckpoint));
         Assert.Contains(
             "governed process step",
             driver.ResolveRuntimeSessionSerializationSkipMessage(options),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafRuntimeSessionPersistenceDriver_tool_checkpoint_does_not_persist_request_scoped_attachments() {
+        var driver = new MafRuntimeSessionPersistenceDriver();
+        var options = CreateExecutionOptions(AgentRuntimeContextIntent.Empty with { IsGovernedProcessStep = true },
+            [new AgentRuntimeInputAttachment("private.png", "image/png", [1, 2, 3], string.Empty)]);
+
+        Assert.True(driver.ShouldSkipRuntimeSessionSerialization(options, [], MafRuntimeSessionCapturePurpose.ToolAdmissionCheckpoint));
+    }
+
+    [Theory]
+    [InlineData(false, "{}")]
+    [InlineData(true, null)]
+    public async Task MafRuntimeSessionBuilder_tool_checkpoint_never_creates_a_session_from_unavailable_restore_evidence(
+        bool shouldRestore, string? payload) {
+        var failure = await Assert.ThrowsAsync<AgentToolAdmissionException>(() =>
+            MafRuntimeSessionBuilder.RestoreToolAdmissionSessionAsync(new ThrowingSerializationAgent(),
+                new(shouldRestore, null, payload, null), CancellationToken.None).AsTask());
+
+        Assert.Equal("tool-admission.runtime-denied", failure.Code);
     }
 
     [Fact]

@@ -275,6 +275,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
             AgentFrameworkAgentsExecutionAuthorityProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IAgentExecutionSourceAuthorityProvider,
+            PromptGalleryExecutionAuthorityProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IAgentExecutionSourceAuthorityProvider,
+            WorkflowsExecutionAuthorityProvider>());
         services.AddScoped<IAgentExecutionAuthorityResolver, CanonicalAgentExecutionAuthorityResolver>();
         services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
         services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();

@@ -519,9 +519,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     chatSessionId.Value)
                 : null;
 
-            if (existingSession is not null && TryGetBlockingSessionRun(executionState, existingSession, out _))
-            {
-                throw new InvalidOperationException(DescribeSessionBusyMessage(executionState, existingSession));
+            if (existingSession is not null && TryGetBlockingSessionRun(executionState, existingSession, out var blockingRun)) {
+                throw CreateSessionBlockedException(blockingRun!);
             }
 
             var now = DateTimeOffset.UtcNow;
@@ -684,10 +683,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             },
             cancellationToken).ConfigureAwait(false);
 
-        if (result is ChatBackedRunBlocked blocked)
-        {
-            throw new InvalidOperationException(
-                DescribeSessionBusyMessage(blocked.BlockingRun));
+        if (result is ChatBackedRunBlocked blocked) {
+            throw CreateSessionBlockedException(blocked.BlockingRun);
         }
 
         var started = (ChatBackedRunStarted)result;
@@ -1333,25 +1330,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             : null;
     }
 
-    private static string DescribeSessionBusyMessage(
-        SandboxWorkspaceExecutionState executionState,
-        ChatSessionRecord session)
-    {
-        if (!TryGetBlockingSessionRun(executionState, session, out var blockingRun) || blockingRun is null)
-        {
-            return "This session already has an active execution run. Wait for it to finish before sending a new prompt.";
-        }
-
-        return blockingRun.PendingApprovals.Count > 0 || blockingRun.State == ExecutionState.WaitingOnTool
-            ? "This session has pending tool approvals. Approve or reject them before sending a new prompt."
-            : "This session already has an active execution run. Wait for it to finish before sending a new prompt.";
-    }
-
-    private static string DescribeSessionBusyMessage(ExecutionRunRecord blockingRun)
-    {
-        return blockingRun.PendingApprovals.Count > 0 || blockingRun.State == ExecutionState.WaitingOnTool
-            ? "This session has pending tool approvals. Approve or reject them before sending a new prompt."
-            : "This session already has an active execution run. Wait for it to finish before sending a new prompt.";
+    private static AgentChatSessionBlockedException CreateSessionBlockedException(ExecutionRunRecord run) {
+        var reason = run.PendingApprovals.Count > 0 || run.State == ExecutionState.WaitingOnTool
+            ? AgentChatSessionBlockReason.PendingApproval
+            : ExecutionRunSessionConcurrencyPolicy.BlocksSession(run.State)
+                ? AgentChatSessionBlockReason.ActiveExecution
+                : AgentChatSessionBlockReason.UnresolvedEffects;
+        return new(run.AgentId,
+            run.ChatSessionId ?? throw new InvalidOperationException("A blocking chat run has no thread identifier."),
+            run.Id, reason);
     }
 
     private static bool ExecutionRunBlocksSession(ExecutionRunRecord run)

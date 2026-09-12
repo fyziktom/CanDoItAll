@@ -703,10 +703,16 @@ internal sealed class MafRuntimeAgentFactory
                     ref effectSourceKind,
                     ref effectSourceId);
                 if (classification == ToolInvocationClassification.Mutation &&
-                    effectState == AgentToolEffectState.Committed)
+                    effectState == AgentToolEffectState.Committed &&
+                    outcome == AgentToolInvocationOutcome.Unknown &&
+                    result is not IAgentToolInvocationResultEvidence)
                 {
                     outcome = AgentToolInvocationOutcome.Succeeded;
                     succeeded = true;
+                    if (effectScope.CommittedEffect is not null) {
+                        failureCode = string.Empty;
+                        canRetryWithCorrectedInput = false;
+                    }
                 }
 
                 if (succeeded)

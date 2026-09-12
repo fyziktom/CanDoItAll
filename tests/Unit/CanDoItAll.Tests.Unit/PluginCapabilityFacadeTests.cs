@@ -86,7 +86,11 @@ public sealed class PluginCapabilityFacadeTests
         Assert.Equal(ProjectObjectType.WorkItem, created.Request.ObjectType);
         Assert.Equal("Review plugin boundary", created.Request.Title);
         Assert.Equal("parent-node", created.Request.ParentNodeKey);
-        Assert.Equal("agent-1", created.Agent.AgentId);
+        Assert.Equal("project-structure", created.Effect.StepId.Value);
+        using var metadata = JsonDocument.Parse(created.Request.MetadataJson!);
+        Assert.Equal(created.Effect.Occurrence.RunId.ToString(), metadata.RootElement.GetProperty("workflowRunId").GetString());
+        Assert.Equal(created.Effect.StepId.Value, metadata.RootElement.GetProperty("workflowStepId").GetString());
+        Assert.False(metadata.RootElement.TryGetProperty("agentId", out _));
     }
 
     [Fact]
@@ -226,7 +230,7 @@ public sealed class PluginCapabilityFacadeTests
                 new WorkflowProjectStructureExecutorSettings
                 {
                     Operation = WorkflowProjectStructureOperation.ListProjects
-                }, trustedRead: true));
+                }, trustedOccurrence: true));
 
         Assert.Contains("IProjectStructureRuntimeGateway", exception.Message, StringComparison.Ordinal);
     }
@@ -283,7 +287,7 @@ public sealed class PluginCapabilityFacadeTests
         IProjectStructureRuntimeGateway gateway,
         WorkflowProjectStructureExecutorSettings settings,
         string inputJson = "{}",
-        bool trustedRead = false)
+        bool trustedOccurrence = true)
     {
         var executor = new ProjectStructureWorkflowExecutor(gateway);
         var node = new WorkflowNode(
@@ -325,9 +329,12 @@ public sealed class PluginCapabilityFacadeTests
             executor.Descriptor,
             node.Settings.ExecutorSettingsJson,
             WorkflowExecutorExecutionPolicy.Default);
-        if (trustedRead) {
+        if (trustedOccurrence) {
             var runId = WorkflowRunId.New();
             context = context with { RunId = runId, ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId).Advance(definition.VersionId, node.Id) };
+            if (gateway is RecordingProjectStructureGateway recording) {
+                recording.ExpectedEffect = new(context.ExecutionOccurrence, definition.VersionId, node.Id, 0);
+            }
         }
 
         return await executor.ExecuteAsync(context, new WorkflowNodeInput(inputJson));
@@ -342,9 +349,21 @@ public sealed class PluginCapabilityFacadeTests
 
     private sealed class RecordingProjectStructureGateway : IProjectStructureRuntimeGateway
     {
+        public WorkflowStructureEffectContext? ExpectedEffect { get; set; }
+
         public List<ProjectStructureNodeCreateCall> CreatedNodes { get; } = [];
 
         public List<ProjectStructureAssetCreateCall> CreatedAssets { get; } = [];
+
+        public Task<ProjectStructureRuntimeNodeSummary> CreateNodeAsync(Guid projectId,
+            ProjectStructureRuntimeNodeCreateRequest request, ProjectStructureRuntimeAgentContext agent,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Legacy Agent writes must not serve admitted Workflow outputs.");
+
+        public Task<ProjectStructureRuntimeNodeSummary> CreateAssetAsync(Guid projectId,
+            ProjectStructureRuntimeAssetCreateRequest request, ProjectStructureRuntimeAgentContext agent,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Legacy Agent writes must not serve admitted Workflow outputs.");
 
         public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>([]);
@@ -355,13 +374,15 @@ public sealed class PluginCapabilityFacadeTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(new ProjectStructureRuntimeReadResponse(projectId, "Project", [], [], []));
 
-        public Task<ProjectStructureRuntimeNodeSummary> CreateNodeAsync(
+        public Task<ProjectStructureRuntimeNodeSummary> CreateWorkflowTaskAsync(
             Guid projectId,
             ProjectStructureRuntimeNodeCreateRequest request,
-            ProjectStructureRuntimeAgentContext agent,
+            WorkflowStructureEffectContext effect,
             CancellationToken cancellationToken = default)
         {
-            CreatedNodes.Add(new ProjectStructureNodeCreateCall(projectId, request, agent));
+            var expected = Assert.IsType<WorkflowStructureEffectContext>(ExpectedEffect);
+            Assert.Equal(expected with { Slot = CreatedNodes.Count }, effect);
+            CreatedNodes.Add(new ProjectStructureNodeCreateCall(projectId, request, effect));
             return Task.FromResult(new ProjectStructureRuntimeNodeSummary(
                 $"node-{CreatedNodes.Count}",
                 request.ParentNodeKey,
@@ -396,13 +417,14 @@ public sealed class PluginCapabilityFacadeTests
                 request.DurationSeconds));
         }
 
-        public Task<ProjectStructureRuntimeNodeSummary> CreateAssetAsync(
+        public Task<ProjectStructureRuntimeNodeSummary> CreateWorkflowAssetAsync(
             Guid projectId,
             ProjectStructureRuntimeAssetCreateRequest request,
-            ProjectStructureRuntimeAgentContext agent,
+            WorkflowStructureEffectContext effect,
             CancellationToken cancellationToken = default)
         {
-            CreatedAssets.Add(new ProjectStructureAssetCreateCall(projectId, request, agent));
+            Assert.Equal(Assert.IsType<WorkflowStructureEffectContext>(ExpectedEffect), effect);
+            CreatedAssets.Add(new ProjectStructureAssetCreateCall(projectId, request, effect));
             return Task.FromResult(new ProjectStructureRuntimeNodeSummary(
                 $"asset-{CreatedAssets.Count}",
                 request.ParentNodeKey,
@@ -440,12 +462,12 @@ public sealed class PluginCapabilityFacadeTests
     private sealed record ProjectStructureNodeCreateCall(
         Guid ProjectId,
         ProjectStructureRuntimeNodeCreateRequest Request,
-        ProjectStructureRuntimeAgentContext Agent);
+        WorkflowStructureEffectContext Effect);
 
     private sealed record ProjectStructureAssetCreateCall(
         Guid ProjectId,
         ProjectStructureRuntimeAssetCreateRequest Request,
-        ProjectStructureRuntimeAgentContext Agent);
+        WorkflowStructureEffectContext Effect);
 
     private sealed class RecordingStorageAccessService : IStorageAccessService
     {

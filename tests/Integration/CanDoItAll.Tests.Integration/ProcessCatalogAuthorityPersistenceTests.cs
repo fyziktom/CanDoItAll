@@ -219,8 +219,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         }
         options.Enabled = false;
         await Assert.ThrowsAsync<ProcessLaunchAuthorityRejectedException>(() => fixture.Authority.RequireCurrentAsync(admitted));
-        var local = await fixture.Authority.CaptureLocalAsync(fixture.Project.ProjectId, ProcessLaunchOperatorSurface.UserInterface);
-        Assert.IsType<ProcessLaunchPrincipal.LocalOperator>(local.Principal);
+        var local = await fixture.Authority.CaptureUserInterfaceAsync(fixture.Project.ProjectId);
+        Assert.Equal(ProcessLaunchOperatorSurface.UserInterface, Assert.IsType<ProcessLaunchPrincipal.LocalOperator>(local.Principal).Surface);
         Assert.NotEqual(ProcessLaunchIntentFingerprint.CallerFingerprint(admitted), ProcessLaunchIntentFingerprint.CallerFingerprint(local));
     }
 

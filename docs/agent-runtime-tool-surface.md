@@ -21,6 +21,12 @@ Registration is only the first gate. Actual attachment depends on:
 - project, process, HR, scheduler, memory, or curator authorization scope
 - tool invocation policy and approval requirements
 
+Prompt Gallery, Workflow and Scheduler surfaces resolve execution authority through their
+own source policies. An active ordinary non-template agent retains the supported read-only
+sandbox; mutation requires the exact managed identity and current owner capability. Saved
+read-only authority cannot be upgraded during recovery. These policies read the canonical
+Agent catalog without depending on the workspace service they help authorize.
+
 ## Tool Call Scheduling Policy
 
 CanDoItAll permits a provider to return multiple tool calls in one model response, but the

@@ -61,7 +61,6 @@ public sealed class ProjectStructureWorkflowAuthoritySource {
 public sealed partial class ProjectStructureWorkflowAuthorityService(
     ICanonicalRuntimeDatabase canonicalDatabase,
     IOptionsMonitor<ApiAccessOptions> apiOptions,
-    IAgentFrameworkWorkspaceService workspace,
     IProcessRuntimeStateStore processStates,
     IProcessRuntimeStepAssignmentStore processAssignments,
     TimeProvider timeProvider,
@@ -92,6 +91,9 @@ public sealed partial class ProjectStructureWorkflowAuthorityService(
         }
 
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        if (governance.WorkspaceScope.Kind == WorkspaceScopeKind.Sandbox) {
+            access = new();
+        }
         var projectId = governance.WorkspaceScope.Kind == WorkspaceScopeKind.Project
             ? Guid.Parse(governance.WorkspaceScope.Key) : Guid.Empty;
         return new WorkflowStructureAuthority(WorkflowStructureAuthorityChannel.AgentExecution,
@@ -212,12 +214,18 @@ public sealed partial class ProjectStructureWorkflowAuthorityService(
             return;
         }
 
-        if (authority.Principal.Kind != WorkflowLaunchActorKind.Agent || !Guid.TryParse(authority.Principal.SubjectId, out var agentId)) {
+        if (authority.Principal.Kind != WorkflowLaunchActorKind.Agent || !Guid.TryParse(authority.Principal.SubjectId, out var agentId) || agentId == Guid.Empty) {
             throw Denied("The admitted workflow agent identity is invalid.");
         }
 
-        var agent = (await workspace.ListAgentsAsync(false, cancellationToken)).SingleOrDefault(item => item.Id == agentId);
-        if (agent is null || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active || !agent.Permissions.CanUseTools ||
+        AgentDefinition? agent;
+        await using (var held = await RequireCatalog().AcquireAgentReadLeaseAsync(agentId, cancellationToken)) {
+            if (held.Scope != WorkspaceScopeDescriptor.Organization(authority.DatabaseProfileId.ToString("N"))) {
+                throw Denied("The Workflow Agent catalog belongs to another workspace or database profile.");
+            }
+            agent = held.Agent;
+        }
+        if (agent is null || agent.Id != agentId || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active || !agent.Permissions.CanUseTools ||
             authority.SchedulerAuthority is not null && !agent.Permissions.CanScheduleWork) {
             throw Denied("The workflow agent is no longer active or permitted to use tools.");
         }

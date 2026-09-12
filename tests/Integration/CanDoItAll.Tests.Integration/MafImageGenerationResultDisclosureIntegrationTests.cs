@@ -191,7 +191,7 @@ public sealed class MafImageGenerationResultDisclosureIntegrationTests {
                 Assert.NotNull(await journal.NewStore().GetExecutionRunAsync(journal.Session.ExecutionRunId));
                 var secret = await services.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {
                     Name = "Image disclosure synthetic provider key", Kind = SecretKind.ApiKey,
-                    SecretValue = "sk-test-image-disclosure", Scope = "workspace"
+                    SecretValue = "synthetic-image-disclosure-value", Scope = "workspace"
                 });
                 Assert.True(secret.IsSuccess);
                 var provider = await services.GetRequiredService<IProviderProfileRegistry>().SaveProviderAsync(new() {

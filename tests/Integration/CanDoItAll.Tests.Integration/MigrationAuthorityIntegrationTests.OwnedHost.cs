@@ -32,6 +32,8 @@ public sealed partial class MigrationAuthorityIntegrationTests {
             throw new PlatformNotSupportedException("The owned H host fixture uses current-user DPAPI on Windows.");
         }
         return new Dictionary<string, string?> {
+            ["SecretVault:Provider"] = "Dpapi",
+            ["SecretVault:UsageProfile"] = "Headless",
             ["SecretVault:AllowInsecureDevelopmentProviders"] = "false",
             ["DataProtection:KeyProtection:Provider"] = "Dpapi",
             ["ControlPlane:DataProtectionKeysPath"] = Path.Combine(profile.ProfileRootPath, "data-protection-keys"),

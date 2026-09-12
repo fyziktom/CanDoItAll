@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
@@ -189,8 +190,16 @@ public sealed class HrAgentCompositionTests
                     AllowAllProjects: true,
                     AllowedProjectIds: [Guid.NewGuid()])),
             CancellationToken.None));
-        var firstAllowedProjectId = Guid.NewGuid();
-        var secondAllowedProjectId = Guid.NewGuid();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        async Task<Guid> CreateAllowedProjectAsync(string name) {
+            var project = await projects.GetAsync(null);
+            project.Name = name;
+            var saved = await projects.SaveAsync(project);
+            Assert.True(saved.IsSuccess);
+            return saved.Value;
+        }
+        var firstAllowedProjectId = await CreateAllowedProjectAsync("First allowed HR project");
+        var secondAllowedProjectId = await CreateAllowedProjectAsync("Second allowed HR project");
         await administration.UpdateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentSettingsUpdateInput(

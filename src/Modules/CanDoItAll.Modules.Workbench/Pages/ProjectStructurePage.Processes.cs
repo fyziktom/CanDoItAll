@@ -5,7 +5,6 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
-using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -290,12 +289,12 @@ public partial class ProjectStructurePage
         };
         processStartDialog = dialog;
         try {
-            var caller = await ProcessLaunchAuthorities.CaptureLocalAsync(null, ProcessLaunchOperatorSurface.UserInterface);
+            var caller = await ProcessLaunchAuthorities.CaptureUserInterfaceAsync(null);
             var storageKey = $"candoitall.process-launch.structure:{caller.DatabaseProfileId:D}:{dialog.ProjectId:D}:{dialog.TargetNodeId}:{dialog.ProcessDefinitionId:D}";
             if (await TryRestoreProcessStartAsync(dialog, caller, storageKey)) {
                 return;
             }
-            var authority = await ProcessLaunchAuthorities.CaptureLocalAsync(dialog.ProjectId, ProcessLaunchOperatorSurface.UserInterface);
+            var authority = await ProcessLaunchAuthorities.CaptureUserInterfaceAsync(dialog.ProjectId);
             if (!IsCurrentProcessStart(dialog)) {
                 return;
             }

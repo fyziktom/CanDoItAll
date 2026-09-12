@@ -3,6 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -175,7 +176,7 @@ public sealed class HrSimpleChatAdministration(
             if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
                 switch (operation.Operation) {
                     case HrSimpleChatOperation.Settings:
-                        await ReadExpectedAsync(codec.Read<HrSimpleChatDefinitionVersion>(disclosure.Payload), lease.CancellationToken);
+                        await RequireHistoricalSettingsAsync(disclosure, lease.CancellationToken);
                         break;
                     case HrSimpleChatOperation.Create:
                         var result = disclosure.Result.Deserialize<HrSimpleChatCreateResponse>(HrSimpleChatProposalCodec.SerializerOptions)
@@ -233,6 +234,31 @@ public sealed class HrSimpleChatAdministration(
         EnsureCurrent(lease);
         return result;
     }
+
+    private async Task RequireHistoricalSettingsAsync(AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
+        var expected = codec.Read<HrSimpleChatDefinitionVersion>(disclosure.Payload);
+        var saved = disclosure.Result.Deserialize<HrSimpleChatDefinitionSettings>(HrSimpleChatProposalCodec.SerializerOptions);
+        if (saved?.Summary?.Version != expected || saved.Settings is null || saved.Summary.Tags.IsDefault ||
+            saved.Settings.Tags is null || !saved.Summary.Tags.SequenceEqual(saved.Settings.Tags)) {
+            throw HistoricalSettingsUnavailable();
+        }
+
+        var original = Require(await definitions.GetRevisionAsync(new(expected.DefinitionId), new(expected.Revision), cancellationToken));
+        if (original.DefinitionId.Value != expected.DefinitionId || original.Revision.Value != expected.Revision ||
+            saved.Summary.Name != original.Name || saved.Summary.Summary != original.Summary ||
+            saved.Summary.AvatarImageUrl != original.AvatarImageUrl || !MatchesRevision(saved.Settings, original)) {
+            throw HistoricalSettingsUnavailable();
+        }
+    }
+
+    private static bool MatchesRevision(CreateLlmChatDefinitionCommand saved, LlmChatDefinitionRevision original)
+        => (saved with { Tags = null }) == new CreateLlmChatDefinitionCommand(original.Name, original.Summary,
+            original.AvatarImageUrl, original.SystemPrompt, original.ProviderProfileId, original.Model, original.Settings,
+            original.Timeout, original.ResponseFormat, original.Reason);
+
+    private static HrSimpleChatAdministrationException HistoricalSettingsUnavailable()
+        => new("hr-simple-chat.saved-settings-unavailable",
+            "The saved settings do not match the originally approved owner revision. The recorded result cannot be disclosed.");
 
     private async Task<LlmChatDefinitionDetails> ReadExpectedAsync(HrSimpleChatDefinitionVersion expected, CancellationToken cancellationToken) {
         var current = Require(await definitions.GetAsync(new(expected.DefinitionId), cancellationToken));

@@ -35,12 +35,16 @@ public sealed class CapabilityMigrationCleanupGuardTests
         var accessSource = ReadRepositoryFiles("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities");
         var runtimeProviderComposerSource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeToolProviderComposer.cs");
         var policySource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer.Access.Policies.cs");
+        var processPolicySource = ReadRepositoryFile("src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ToolPolicy/ProcessRuntimeCapabilityPolicyContributor.cs");
 
         Assert.Contains("ICapabilityAccessPolicyEvaluator", accessSource, StringComparison.Ordinal);
         Assert.Contains("RuntimeToolProviderAccessFilter", runtimeProviderComposerSource, StringComparison.Ordinal);
         Assert.Contains("request.AccessPlan.Evaluator.Evaluate", runtimeProviderComposerSource, StringComparison.Ordinal);
         Assert.Contains("result.ToEffectiveSet()", accessSource, StringComparison.Ordinal);
-        Assert.Contains("CapabilitySelector.ByTag(CapabilityTag.Create(\"configured\"))", policySource, StringComparison.Ordinal);
+        Assert.Contains("CapabilitySelector.ByTag(CapabilityTag.Create(\"configured\"))", processPolicySource, StringComparison.Ordinal);
+        Assert.Contains("IAgentRuntimeCapabilityPolicyContributor", processPolicySource, StringComparison.Ordinal);
+        Assert.Contains("contributor.Contribute(contextIntent, toolPolicies ?? AgentToolPolicyCatalog.BuiltIn)", policySource, StringComparison.Ordinal);
+        Assert.Contains("This governed run has no owner runtime-capability policy.", policySource, StringComparison.Ordinal);
         Assert.DoesNotContain("EvaluateRuntimeToolAccess", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AppendRuntimeToolAccessResult", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ShouldExcludeSkillsForProcessStep", accessSource, StringComparison.Ordinal);

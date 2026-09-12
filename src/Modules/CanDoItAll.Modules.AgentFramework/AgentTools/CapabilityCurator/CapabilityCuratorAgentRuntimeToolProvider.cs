@@ -5,6 +5,8 @@ using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using Microsoft.Extensions.AI;
+using CapabilityIdentity = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityIdentity;
+using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 using CapabilitySetupTestResult = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilitySetupTestResult;
 
 namespace CanDoItAll.Modules.AgentFramework;
@@ -298,6 +300,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         ConsumeSetupAttestationIfRequired(request, editor, attestationScopeKey);
 
         var savedId = await workspaceService.SaveCapabilityAsync(editor, cancellationToken);
+        RecordCommitted(CapabilityEffectSourceKind, savedId);
         if (request.CapabilityId.HasValue && savedId != request.CapabilityId.Value)
         {
             throw new InvalidOperationException("Capability update returned a different capability identity.");
@@ -324,6 +327,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
                 CorrelationId = request.CorrelationId?.Trim() ?? string.Empty
             },
             cancellationToken);
+        if (result.IsSuccess) {
+            RecordSetupAcknowledgement(result.Identity, editor, AccessCapabilityKind.Tool, ToolSetupEffectSourceKind);
+        }
         var attestation = result.IsSuccess
             ? setupAttestationStore.Issue(
                 attestationScopeKey,
@@ -350,6 +356,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
                 CorrelationId = request.CorrelationId?.Trim() ?? string.Empty
             },
             cancellationToken);
+        if (result.IsSuccess && result.CleanupCompleted) {
+            RecordSetupAcknowledgement(result.Identity, editor, AccessCapabilityKind.McpServer, McpSetupEffectSourceKind);
+        }
         var attestation = result.IsSuccess
             ? setupAttestationStore.Issue(
                 attestationScopeKey,
@@ -411,6 +420,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         editor.SelectedCapabilityIds = selected;
         editor.ExpectedUpdatedAtUtc = request.ExpectedUpdatedAtUtc;
         var savedId = await workspaceService.SaveAgentAsync(editor, cancellationToken);
+        RecordCommitted(AgentEffectSourceKind, savedId);
         if (savedId != request.AgentId)
         {
             throw new InvalidOperationException("Agent assignment update returned a different agent identity.");
@@ -469,6 +479,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
 
         await LoadExactCapabilityAsync(request.CapabilityId, cancellationToken);
         await workspaceService.VerifyCapabilityAsync(request.AgentId, request.CapabilityId, cancellationToken);
+        RecordCommitted(CapabilityEffectSourceKind, request.CapabilityId);
         var verified = await LoadExactCapabilityAsync(request.CapabilityId, cancellationToken);
         return new CapabilityCuratorVerifyResult(
             request.AgentId,
@@ -728,5 +739,24 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
             throw new UnauthorizedAccessException(
                 $"Template agent '{editor.Id:D}' cannot be inspected or changed by capability assignment tools.");
         }
+    }
+
+    private const string CapabilityEffectSourceKind = "capability-catalog";
+    private const string AgentEffectSourceKind = "agent-catalog";
+    private const string ToolSetupEffectSourceKind = "capability-tool-setup";
+    private const string McpSetupEffectSourceKind = "capability-mcp-setup";
+
+    private static void RecordCommitted(string sourceKind, Guid id) {
+        EnsureNonEmpty(id, nameof(id));
+        AgentToolInvocationEffectScope.RecordCommitted(sourceKind, id.ToString("D"));
+    }
+
+    private static void RecordSetupAcknowledgement(CapabilityIdentity identity, CapabilityEditorModel editor,
+        AccessCapabilityKind expectedKind, string sourceKind) {
+        if (identity is null || identity.Kind != expectedKind ||
+            !string.Equals(identity.Key.Value, editor.Key, StringComparison.Ordinal)) {
+            throw new InvalidOperationException("The setup owner acknowledged a different capability identity.");
+        }
+        AgentToolInvocationEffectScope.RecordCommitted(sourceKind, identity.Key.Value);
     }
 }

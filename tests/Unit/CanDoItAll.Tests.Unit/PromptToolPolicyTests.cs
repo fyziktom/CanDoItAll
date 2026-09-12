@@ -1,11 +1,14 @@
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Agents.Storage;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Memory.Tools;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.CrmHr;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -69,15 +72,29 @@ public sealed class PromptToolPolicyTests {
     }
 
     [Fact]
-    public void Module_composition_resolves_all_seven_policies_without_duplicate_registration() {
+    public void Agent_module_composition_preserves_prompt_policies_and_excludes_Crm_owned_policies() {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder().Build();
         services.AddAgentFrameworkModule(configuration);
         services.AddAgentFrameworkModule(configuration);
         using var provider = services.BuildServiceProvider();
         var policies = provider.GetRequiredService<AgentToolPolicyCatalog>();
-        Assert.Equal(47, provider.GetServices<ToolCapabilityMetadata>().Count());
+        ToolCapabilityMetadata[] expected = [
+            .. MemoryToolPolicy.Capabilities,
+            .. StorageToolPolicy.Capabilities,
+            .. PromptGalleryToolPolicy.Capabilities,
+            .. HrAgentToolPolicy.Capabilities,
+            .. WorkflowToolPolicy.Capabilities,
+            .. WorkflowCuratorToolPolicy.Capabilities,
+            .. CapabilityCuratorToolPolicy.Capabilities,
+            .. ImageGenerationToolPolicy.Capabilities
+        ];
+        var registered = provider.GetServices<ToolCapabilityMetadata>().ToArray();
+        Assert.Equal(expected.Select(policy => policy.Name).Order(StringComparer.Ordinal),
+            registered.Select(policy => policy.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(registered.Length, registered.Select(policy => policy.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.All(PromptGalleryToolPolicy.Capabilities, policy => Assert.True(policies.TryResolve(policy.Name, out _)));
+        Assert.All(CrmPlanningToolPolicy.Capabilities, policy => Assert.False(policies.TryResolve(policy.Name, out _)));
         Assert.Same(policies, provider.GetRequiredService<AgentToolPolicyCatalog>());
     }
 

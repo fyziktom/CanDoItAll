@@ -289,6 +289,22 @@ public sealed class LlmChatDefinitionApplicationService(
             : Result<LlmChatDefinitionDetails>.Success(Map(definition));
     }
 
+    public async Task<Result<LlmChatDefinitionRevision>> GetRevisionAsync(
+        LlmChatDefinitionId definitionId,
+        LlmChatDefinitionRevisionNumber revision,
+        CancellationToken cancellationToken = default) {
+        var definition = await repository.TryGetAsync(definitionId, cancellationToken).ConfigureAwait(false);
+        if (definition is null) {
+            return Result<LlmChatDefinitionRevision>.Failure(LlmChatErrors.DefinitionNotFound());
+        }
+
+        var original = await repository.TryGetRevisionAsync(definitionId, revision, cancellationToken).ConfigureAwait(false);
+        return original is null || original.DefinitionId != definition.Id || original.Revision != revision ||
+            revision.Value > definition.CurrentRevision.Value
+            ? Result<LlmChatDefinitionRevision>.Failure(LlmChatErrors.StorageCorrupted())
+            : Result<LlmChatDefinitionRevision>.Success(original);
+    }
+
     public async Task<Result<IReadOnlyList<LlmChatDefinitionDetails>>> ListAsync(
         LlmChatDefinitionQuery query,
         CancellationToken cancellationToken = default)

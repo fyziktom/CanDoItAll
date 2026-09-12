@@ -224,6 +224,10 @@ public sealed class SchedulerAgentRuntimeToolProvider(
             },
             cancellationToken);
 
+        if (saved.Id == Guid.Empty) {
+            throw new InvalidOperationException("The Scheduler owner returned an empty committed plan identity.");
+        }
+        AgentToolInvocationEffectScope.RecordCommitted(SchedulerPlanEffectSourceKind, saved.Id.ToString("D"));
         return new SchedulerWorkflowScheduleCreateResult(
             saved.Id,
             saved.TargetId,
@@ -300,4 +304,6 @@ public sealed class SchedulerAgentRuntimeToolProvider(
             cancellationToken);
         return await action(cancellationToken);
     }
+
+    private const string SchedulerPlanEffectSourceKind = "scheduler-plan";
 }

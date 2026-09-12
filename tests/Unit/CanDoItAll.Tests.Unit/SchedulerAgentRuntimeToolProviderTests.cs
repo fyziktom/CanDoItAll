@@ -12,7 +12,7 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class SchedulerAgentRuntimeToolProviderTests
+public sealed partial class SchedulerAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -239,6 +239,7 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
                 "Approved workflow schedule"));
 
         Assert.Equal(workflowId, created.WorkflowId);
+        Assert.Equal(schedulerService.SavedPlanId, created.PlanId);
         Assert.Equal(SchedulerPlanTargetKind.Workflow, schedulerService.SavedEditor?.TargetKind);
         Assert.Equal(workflowVersionId, schedulerService.SavedEditor?.TargetVersionId);
         Assert.Equal("0 0 15 ? * MON-FRI", schedulerService.SavedEditor?.CronExpression);
@@ -343,18 +344,21 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
 
     private static async Task<TResult> InvokeAsync<TResult>(AIFunction function, object request)
     {
+        using var capture = AgentToolInvocationEffectScope.Begin();
         var rawResult = await function.InvokeAsync(new AIFunctionArguments
         {
             ["request"] = request
         });
-        return rawResult switch
+        var result = rawResult switch
         {
-            TResult result => result,
+            TResult typed => typed,
             JsonElement element => JsonSerializer.Deserialize<TResult>(element.GetRawText(), JsonOptions)
                 ?? throw new InvalidOperationException("Scheduler Agent runtime tool returned null JSON."),
             _ => throw new InvalidOperationException(
                 $"Unexpected Scheduler Agent runtime tool result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
         };
+        AssertOwnerAcknowledgement(function.Name, result, capture.CommittedEffect);
+        return result;
     }
 
     private sealed record RuntimeHarness(
@@ -366,6 +370,9 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
         SchedulerPlannerWorkspace workspace) : ISchedulerPlannerService
     {
         public SchedulerPlanEditorModel? SavedEditor { get; private set; }
+        public Guid SavedPlanId { get; } = Guid.NewGuid();
+        public bool RejectBeforeSave { get; set; }
+        public bool LoseAcknowledgement { get; set; }
 
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
             SchedulerHistoryQuery? historyQuery = null,
@@ -384,12 +391,15 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             SchedulerPlanEditorModel editor,
             CancellationToken cancellationToken = default)
         {
+            if (RejectBeforeSave) {
+                throw new IOException("Schedule write was not started.");
+            }
             SavedEditor = editor;
             var target = workspace.TargetOptions.Single(item =>
                 item.Kind == SchedulerPlanTargetKind.Workflow &&
                 item.Id == editor.TargetId);
-            return Task.FromResult(new SchedulerPlanSummary(
-                Guid.NewGuid(),
+            var saved = new SchedulerPlanSummary(
+                SavedPlanId,
                 editor.Name,
                 editor.Description,
                 editor.TargetKind,
@@ -406,7 +416,11 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
                 DateTimeOffset.Parse("2026-07-21T15:00:00Z"),
                 null,
                 string.Empty,
-                DateTimeOffset.Parse("2026-07-20T12:00:00Z")));
+                DateTimeOffset.Parse("2026-07-20T12:00:00Z"));
+            if (LoseAcknowledgement) {
+                throw new IOException("Schedule synchronization failed before the acknowledgement returned.");
+            }
+            return Task.FromResult(saved);
         }
 
         public Task SetPlanEnabledAsync(

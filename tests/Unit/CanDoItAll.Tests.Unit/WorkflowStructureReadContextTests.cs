@@ -15,7 +15,14 @@ public sealed class WorkflowStructureReadContextTests {
         var executor = new ProjectStructureWorkflowExecutor(gateway);
         var context = Context(executor, operation);
         var result = await executor.ExecuteAsync(context, new("{\"project\":{\"id\":\"ffffffff-ffff-ffff-ffff-ffffffffffff\"}}"));
-        Assert.Equal(new WorkflowStructureReadContext(context.ExecutionOccurrence!, context.Definition.VersionId, context.Node.Id), gateway.Context);
+        var observed = Assert.IsType<WorkflowStructureReadContext>(gateway.Context);
+        Assert.Equal(context.ExecutionOccurrence, observed.Occurrence);
+        Assert.Equal(context.Definition.VersionId, observed.VersionId);
+        Assert.Equal(context.Node.Id, observed.StepId);
+        Assert.NotNull(observed.CaptureReadEvidence);
+        Assert.Equal<WorkflowProviderReadEvidence>(gateway.Evidence, result.ProviderReadEvidence);
+        Assert.Equal(2, result.ProviderReadEvidence.Count);
+        Assert.DoesNotContain("fixtureOwnerProof", result.PayloadJson, StringComparison.Ordinal);
         Assert.Equal(context.Node.Id, result.NodeId);
         if (operation != WorkflowProjectStructureOperation.ListProjects) {
             Assert.Equal(TargetProject, gateway.ProjectId);
@@ -75,19 +82,31 @@ public sealed class WorkflowStructureReadContextTests {
 
     private sealed class ReadGateway : IProjectStructureRuntimeGateway {
         public WorkflowStructureReadContext? Context { get; private set; }
+        public IReadOnlyList<WorkflowProviderReadEvidence> Evidence { get; private set; } = [];
         public Guid? ProjectId { get; private set; }
         public ProjectStructureRuntimeReadRequest? Request { get; private set; }
         public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListWorkflowProjectsAsync(WorkflowStructureReadContext context,
             CancellationToken cancellationToken = default) {
-            Context = context;
+            Capture(context);
             return Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>([]);
         }
         public Task<ProjectStructureRuntimeReadResponse> ReadWorkflowStructureAsync(Guid projectId, ProjectStructureRuntimeReadRequest request,
             WorkflowStructureReadContext context, CancellationToken cancellationToken = default) {
-            Context = context;
+            Capture(context);
             ProjectId = projectId;
             Request = request;
             return Task.FromResult(new ProjectStructureRuntimeReadResponse(projectId, "Project", [], [], []));
+        }
+        private void Capture(WorkflowStructureReadContext context) {
+            Context = context;
+            Evidence = [
+                new(WorkflowStructureReadContext.DisclosureOwner, 1, context.Occurrence, context.VersionId, context.StepId, "{\"fixtureOwnerProof\":1}"),
+                new(WorkflowStructureReadContext.DisclosureOwner, 1, context.Occurrence, context.VersionId, context.StepId, "{\"fixtureOwnerProof\":2}")
+            ];
+            var capture = Assert.IsType<Action<WorkflowProviderReadEvidence>>(context.CaptureReadEvidence);
+            foreach (var evidence in Evidence) {
+                capture(evidence);
+            }
         }
         public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Manual discovery must not handle an admitted Workflow read.");

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
@@ -241,6 +242,11 @@ public sealed class CrmHrAgentQueryServiceTests
             options.UseInMemoryDatabase(databaseName, databaseRoot);
         });
         services.AddCrmHrModule();
+        services.AddDbContextFactory<ProjectsDbContext>(options => options.UseInMemoryDatabase(databaseName, databaseRoot));
+        services.AddSingleton(CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+            new DatabaseProfileRecord { Id = Guid.NewGuid(), ProviderKind = DatabaseProviderKind.InMemory },
+            DatabaseProfileResolutionSource.ExplicitOverride, databaseName)));
+        services.AddScoped<ProjectRecordQueryService>();
         services.AddSingleton<IDbContextFactory<CrmHrDbContext>>(new PooledDbContextFactory<CrmHrDbContext>(
             new DbContextOptionsBuilder<CrmHrDbContext>()
                 .UseInMemoryDatabase(databaseName, databaseRoot).Options));
@@ -252,6 +258,10 @@ public sealed class CrmHrAgentQueryServiceTests
 
     private static async Task SeedSafeRecordsAsync(IServiceProvider serviceProvider)
     {
+        await using var projects = await serviceProvider.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
+        var project = new Project { Id = Guid.Parse("616d148c-ec16-47db-8787-b45712a20d44"), Name = "Current workforce allocation" };
+        projects.Set<Project>().Add(project);
+        await projects.SaveChangesAsync();
         var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         dbContext.Set<Party>().AddRange(
@@ -277,7 +287,8 @@ public sealed class CrmHrAgentQueryServiceTests
         });
         dbContext.Set<ProjectPartyAssignment>().Add(new ProjectPartyAssignment
         {
-            ProjectId = Guid.Parse("616d148c-ec16-47db-8787-b45712a20d44"),
+            ProjectId = project.Id,
+            ProjectLifetimeId = project.LifetimeId,
             PartyId = WorkforcePartyId,
             AssignmentKind = ProjectPartyAssignmentKind.TeamMember,
             AllocationPercent = 60m,

@@ -19,7 +19,7 @@ using Xunit;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class HrAgentRuntimeToolProviderTests
+public sealed partial class HrAgentRuntimeToolProviderTests
 {
     [Fact]
     public async Task CreateToolsAsync_rejects_id_and_template_spoofs()

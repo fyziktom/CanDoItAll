@@ -16,7 +16,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
-public sealed class ProjectDeletionIntegrationTests
+public sealed partial class ProjectDeletionIntegrationTests
 {
     private const string ProjectDeletionScopeNodeKey = "project";
     private static readonly JsonSerializerOptions JsonOptions =
@@ -308,6 +308,8 @@ public sealed class ProjectDeletionIntegrationTests
         var storageCatalog = scope.ServiceProvider.GetRequiredService<IStorageCatalogService>();
         var partyIntegration = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projects, "Complete project deletion");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var asset = await CreateImageAsync(workbench, projectId, "Project image");
         var note = await workbench.CreateObjectAsync(
             projectId,
@@ -343,6 +345,7 @@ public sealed class ProjectDeletionIntegrationTests
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = createdParty.PartyId,
                 Role = ProjectPartyAssignmentRole.Stakeholder,
                 IsPrimary = true,
@@ -535,6 +538,8 @@ public sealed class ProjectDeletionIntegrationTests
         var workspacePathResolver = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>();
         var registry = scope.ServiceProvider.GetRequiredService<ObservedStorageDriverRegistry>();
         var projectId = await CreateProjectAsync(projects, "Project delete retry");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var asset = await CreateImageAsync(workbench, projectId, "Retry project image");
         var physicalPath = Path.Combine(
             workspacePathResolver.ResolveWorkspaceRoot(),
@@ -554,6 +559,7 @@ public sealed class ProjectDeletionIntegrationTests
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = createdParty.PartyId,
                 Role = ProjectPartyAssignmentRole.Stakeholder,
                 IsPrimary = true,
@@ -624,7 +630,8 @@ public sealed class ProjectDeletionIntegrationTests
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var dbContextFactory = scope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var projectId = Guid.NewGuid();
+        var sourceReference = await CreateRetiredProjectReferenceAsync(scope.ServiceProvider, "Missing dependency cleanup");
+        var projectId = sourceReference.ProjectId;
         var missingDependencyId = Guid.NewGuid();
         var recoveryId = await SeedProjectDeletionMutationAsync(
             dbContextFactory,
@@ -633,7 +640,7 @@ public sealed class ProjectDeletionIntegrationTests
             new DeleteProjectMutationPayload(
                 [],
                 [],
-                OutstandingMutationIds: [missingDependencyId]));
+                OutstandingMutationIds: [missingDependencyId], SourceReference: sourceReference));
 
         var failure = await Assert.ThrowsAsync<ProjectDeletionPartialCommitException>(() =>
             projects.RetryDeletionCleanupAsync(
@@ -678,9 +685,11 @@ public sealed class ProjectDeletionIntegrationTests
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         var processingOptions = scope.ServiceProvider
             .GetRequiredService<ProjectCrossModuleMutationProcessingOptions>();
+        var freshReference = await CreateRetiredProjectReferenceAsync(scope.ServiceProvider, "Fresh processing cleanup");
+        var staleReference = await CreateRetiredProjectReferenceAsync(scope.ServiceProvider, "Stale processing cleanup");
+        var freshProjectId = freshReference.ProjectId;
+        var staleProjectId = staleReference.ProjectId;
         var now = TruncateToPostgreSqlPrecision(DateTimeOffset.UtcNow);
-        var freshProjectId = Guid.NewGuid();
-        var staleProjectId = Guid.NewGuid();
         var freshAttemptAtUtc = now;
         var staleAttemptAtUtc = now - processingOptions.LeaseDuration -
                                 TimeSpan.FromSeconds(1);
@@ -688,7 +697,7 @@ public sealed class ProjectDeletionIntegrationTests
             dbContextFactory,
             freshProjectId,
             ProjectCrossModuleMutationStatus.Processing,
-            new DeleteProjectMutationPayload([], []),
+            new DeleteProjectMutationPayload([], [], SourceReference: freshReference),
             lastAttemptAtUtc: freshAttemptAtUtc,
             attemptCount: 1,
             errorMessage: $"processing:{Guid.NewGuid():N}");
@@ -696,7 +705,7 @@ public sealed class ProjectDeletionIntegrationTests
             dbContextFactory,
             staleProjectId,
             ProjectCrossModuleMutationStatus.Processing,
-            new DeleteProjectMutationPayload([], []),
+            new DeleteProjectMutationPayload([], [], SourceReference: staleReference),
             lastAttemptAtUtc: staleAttemptAtUtc,
             attemptCount: 1,
             errorMessage: $"processing:{Guid.NewGuid():N}");
@@ -760,7 +769,8 @@ public sealed class ProjectDeletionIntegrationTests
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var dbContextFactory = scope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var projectId = Guid.NewGuid();
+        var sourceReference = await CreateRetiredProjectReferenceAsync(scope.ServiceProvider, "Immutable cleanup receipt");
+        var projectId = sourceReference.ProjectId;
         var reference = new StorageObjectReference(
             null,
             StorageProviderKind.Ipfs,
@@ -780,7 +790,7 @@ public sealed class ProjectDeletionIntegrationTests
             new DeleteProjectMutationPayload(
                 [],
                 [reference],
-                ManagedStorageCandidates: [candidate]));
+                ManagedStorageCandidates: [candidate], SourceReference: sourceReference));
 
         var completion = await projects.RetryDeletionCleanupAsync(
             projectId,
@@ -832,86 +842,19 @@ public sealed class ProjectDeletionIntegrationTests
     }
 
     [Fact]
-    public async Task Completed_project_cleanup_with_residual_rows_creates_and_returns_a_durable_follow_up_recovery()
-    {
-        await using var application = await TestApplication.CreateAsync();
-        await using var scope = application.Services.CreateAsyncScope();
-        var dbContextFactory = scope.ServiceProvider
-            .GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var projectId = Guid.NewGuid();
-        var originalRecoveryId = await SeedProjectDeletionMutationAsync(
-            dbContextFactory,
-            projectId,
-            ProjectCrossModuleMutationStatus.Completed,
-            new DeleteProjectMutationPayload([], []));
-        var residualNodeKey = $"custom:{Guid.NewGuid():N}";
-        var timestamp = DateTimeOffset.UtcNow;
-        await using (var setupContext = await dbContextFactory.CreateDbContextAsync())
-        {
-            setupContext.Set<ProjectObjectRecord>().Add(new ProjectObjectRecord
-            {
-                ProjectId = projectId,
-                NodeKey = residualNodeKey,
-                ObjectType = ProjectObjectType.Note,
-                Title = "Residual project row",
-                Notes = "Simulates state discovered after the original terminal mutation.",
-                ParentNodeKey = BuildProjectRootNodeKey(projectId),
-                CreatedAtUtc = timestamp,
-                UpdatedAtUtc = timestamp
-            });
-            await setupContext.SaveChangesAsync();
-        }
-
-        var participant = scope.ServiceProvider
-            .GetServices<IProjectDeletionParticipant>()
-            .Single(candidate => candidate.Id == WorkbenchParticipantId);
-        var completion = await participant.CompleteAsync(
-            new ProjectDeletionParticipantPreparation(projectId, originalRecoveryId));
-
-        Assert.NotEqual(originalRecoveryId, completion.RecoveryId);
-        Assert.Empty(completion.Warnings);
-        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
-        Assert.False(await verificationContext.Set<ProjectObjectRecord>()
-            .AnyAsync(record =>
-                record.ProjectId == projectId &&
-                record.NodeKey == residualNodeKey));
-        var original = await verificationContext.Set<ProjectCrossModuleMutationRecord>()
-            .AsNoTracking()
-            .SingleAsync(record => record.Id == originalRecoveryId);
-        var followUp = await verificationContext.Set<ProjectCrossModuleMutationRecord>()
-            .AsNoTracking()
-            .SingleAsync(record => record.Id == completion.RecoveryId);
-        Assert.Equal(ProjectCrossModuleMutationStatus.Completed, original.Status);
-        Assert.Equal(ProjectCrossModuleMutationStatus.Completed, followUp.Status);
-        Assert.Equal(ProjectCrossModuleMutationKind.DeleteProject, followUp.MutationKind);
-        Assert.Contains(
-            residualNodeKey,
-            Deserialize<DeleteProjectMutationPayload>(followUp.PayloadJson)
-                .DeletedNodeKeys);
-
-        await using var reloadScope = application.Services.CreateAsyncScope();
-        var reloadedProjects = reloadScope.ServiceProvider
-            .GetRequiredService<ProjectsService>();
-        var notice = Assert.Single(
-            await reloadedProjects.ListDeletionCompletionNoticesAsync(),
-            item => item.RecoveryId == completion.RecoveryId);
-        Assert.Equal(ProjectDeletionCompletionOperation.ProjectDeletion, notice.Operation);
-        Assert.Empty(notice.Warnings);
-    }
-
-    [Fact]
     public async Task Concurrent_exact_project_cleanup_callers_observe_one_terminal_mutation()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var setupScope = application.Services.CreateAsyncScope();
         var dbContextFactory = setupScope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var projectId = Guid.NewGuid();
+        var sourceReference = await CreateRetiredProjectReferenceAsync(setupScope.ServiceProvider, "Concurrent exact cleanup");
+        var projectId = sourceReference.ProjectId;
         var recoveryId = await SeedProjectDeletionMutationAsync(
             dbContextFactory,
             projectId,
             ProjectCrossModuleMutationStatus.WorkbenchCommitted,
-            new DeleteProjectMutationPayload([], []));
+            new DeleteProjectMutationPayload([], [], SourceReference: sourceReference));
         await using var firstScope = application.Services.CreateAsyncScope();
         await using var secondScope = application.Services.CreateAsyncScope();
         var firstProjects = firstScope.ServiceProvider.GetRequiredService<ProjectsService>();

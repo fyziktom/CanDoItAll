@@ -138,6 +138,11 @@ public interface ILlmChatDefinitionApplicationService
         LlmChatDefinitionId definitionId,
         CancellationToken cancellationToken = default);
 
+    Task<Result<LlmChatDefinitionRevision>> GetRevisionAsync(
+        LlmChatDefinitionId definitionId,
+        LlmChatDefinitionRevisionNumber revision,
+        CancellationToken cancellationToken = default);
+
     Task<Result<IReadOnlyList<LlmChatDefinitionDetails>>> ListAsync(
         LlmChatDefinitionQuery query,
         CancellationToken cancellationToken = default);

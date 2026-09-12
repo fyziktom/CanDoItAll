@@ -8,6 +8,7 @@ public sealed class AgentEditorDraftPolicyTests {
     [Fact]
     public void Capture_preserves_version_and_owns_nested_mutable_state() {
         var id = Guid.NewGuid();
+        var projectLifetime = new AgentProjectStructureLifetime(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var version = new DateTimeOffset(2026, 9, 4, 12, 0, 0, TimeSpan.Zero);
         var secret = new AgentAllowedSecretReference(Guid.NewGuid(), "Reference", AgentSecretPurposes.GeneralAgentRequest);
         var permissionSecrets = new List<AgentAllowedSecretReference> { secret };
@@ -20,7 +21,9 @@ public sealed class AgentEditorDraftPolicyTests {
             Permissions = AgentPermissionsPolicy.Default with { AllowedSecrets = permissionSecrets },
             AllowedSecretReferences = [secret],
             SelectedCapabilityIds = [Guid.NewGuid()],
-            ProjectStructureAccess = new() { CanRead = true, AllowedProjectIds = [Guid.NewGuid()] },
+            ProjectStructureAccess = new() {
+                CanRead = true, AllowedProjectIds = [projectLifetime.ProjectId], AllowedProjectLifetimes = [projectLifetime]
+            },
             ProcessAccess = new() { CanRead = true, AllowedDefinitionIds = [Guid.NewGuid()] },
             WorkspaceToolAccess = new() { CanReadStorage = true, AllowedStorageCatalogIds = [Guid.NewGuid()] },
             ImageGenerationAccess = new() { CanGenerateImages = true, DefaultModel = "image-model" },
@@ -33,6 +36,7 @@ public sealed class AgentEditorDraftPolicyTests {
         draft.AllowedSecretReferences.Clear();
         draft.SelectedCapabilityIds.Clear();
         draft.ProjectStructureAccess.AllowedProjectIds.Clear();
+        draft.ProjectStructureAccess.AllowedProjectLifetimes.Clear();
         draft.ProcessAccess.AllowedDefinitionIds.Clear();
         draft.WorkspaceToolAccess.AllowedStorageCatalogIds.Clear();
         draft.ImageGenerationAccess.DefaultModel = "later-image";
@@ -46,7 +50,8 @@ public sealed class AgentEditorDraftPolicyTests {
         Assert.Single(request.Permissions.NormalizedAllowedSecrets);
         Assert.Single(request.AllowedSecretReferences);
         Assert.Single(request.SelectedCapabilityIds);
-        Assert.Single(request.ProjectStructureAccess.AllowedProjectIds);
+        Assert.Equal(projectLifetime.ProjectId, Assert.Single(request.ProjectStructureAccess.AllowedProjectIds));
+        Assert.Equal(projectLifetime, Assert.Single(request.ProjectStructureAccess.AllowedProjectLifetimes));
         Assert.Single(request.ProcessAccess.AllowedDefinitionIds);
         Assert.Single(request.WorkspaceToolAccess.AllowedStorageCatalogIds);
         Assert.Equal("image-model", request.ImageGenerationAccess.DefaultModel);

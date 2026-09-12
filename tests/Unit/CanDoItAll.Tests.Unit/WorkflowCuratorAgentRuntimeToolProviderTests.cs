@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
-public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
+public sealed partial class WorkflowCuratorAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
@@ -727,7 +727,8 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
 
     private static RuntimeHarness CreateHarness(
         IEnumerable<string>? capabilityKeys = null,
-        IWorkflowCatalogSearchService? catalogSearch = null)
+        IWorkflowCatalogSearchService? catalogSearch = null,
+        IWorkflowCatalogService? owner = null)
     {
         var now = DateTimeOffset.Parse("2026-07-19T12:00:00Z");
         var keys = (capabilityKeys ?? WorkflowCuratorAgentCapabilityKeys.ToolNameToCapabilityKey.Values)
@@ -805,7 +806,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
             new InMemoryWorkflowCatalogStore(),
             new WorkflowDefinitionValidator());
         var runtimeProvider = new WorkflowCuratorAgentRuntimeToolProvider(
-            catalog,
+            owner ?? catalog,
             catalogSearch ?? catalog,
             catalog,
             WorkflowExecutorCatalog.FromDescriptors([]),
@@ -826,18 +827,21 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
     private static async Task<TResult> InvokeAsync<TResult>(AITool tool, object request)
     {
         var function = Assert.IsAssignableFrom<AIFunction>(tool);
+        using var capture = AgentToolInvocationEffectScope.Begin();
         var rawResult = await function.InvokeAsync(new AIFunctionArguments
         {
             ["request"] = request
         });
-        return rawResult switch
+        var result = rawResult switch
         {
-            TResult result => result,
+            TResult typed => typed,
             JsonElement element => JsonSerializer.Deserialize<TResult>(element.GetRawText(), JsonOptions)
                 ?? throw new InvalidOperationException("Workflow Curator runtime tool returned null JSON."),
             _ => throw new InvalidOperationException(
                 $"Unexpected Workflow Curator runtime tool result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
         };
+        AssertOwnerAcknowledgement(tool.Name, result, capture.CommittedEffect);
+        return result;
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

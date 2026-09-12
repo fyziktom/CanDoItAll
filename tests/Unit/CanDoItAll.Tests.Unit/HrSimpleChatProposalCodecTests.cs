@@ -8,6 +8,8 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Agents.SimpleChats;
 using Xunit;
 
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
+
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class HrSimpleChatProposalCodecTests {
@@ -134,7 +136,8 @@ public sealed class HrSimpleChatProposalCodecTests {
         using var document = JsonDocument.Parse(prepared.ArgumentsJson);
         var arguments = document.RootElement.EnumerateObject().Select(property =>
             new KeyValuePair<string, object?>(property.Name, property.Value.Clone())).ToArray();
-        var redacted = JsonSerializer.Serialize(AgentToolInvocationPolicyMetadata.SanitizeArguments(prepared.ToolName, arguments));
+        Assert.True(AgentToolInvocationPolicyMetadata.HasSensitiveBusinessArguments(prepared.ToolName, ProductToolPolicies));
+        var redacted = JsonSerializer.Serialize(AgentToolInvocationPolicyMetadata.SanitizeArguments(prepared.ToolName, arguments, ProductToolPolicies));
         Assert.DoesNotContain(command.SystemPrompt, redacted);
         Assert.DoesNotContain(command.Settings.ModelParameterConfigurationJson, redacted);
         Assert.DoesNotContain(command.ResponseFormat!.SchemaDescription, redacted);

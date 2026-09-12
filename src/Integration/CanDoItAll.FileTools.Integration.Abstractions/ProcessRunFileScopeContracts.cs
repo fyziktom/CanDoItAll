@@ -50,6 +50,12 @@ public sealed record ProcessRunFileScopeSet
 
 public interface IProcessRunFileScopeProvider
 {
+    ValueTask<FileToolsStorageBinding> ResolveRootAsync(
+        Guid runId,
+        string directoryPath,
+        Guid projectId,
+        CancellationToken cancellationToken = default);
+
     ValueTask<ProcessRunFileScopeSet> ResolveAsync(
         Guid runId,
         CancellationToken cancellationToken = default);

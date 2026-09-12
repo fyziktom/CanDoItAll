@@ -147,8 +147,12 @@ public sealed class WorkflowExecutorCategoryIsolationTests
             ["ExcelDataReader", "Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj",
-            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.Security.Abstractions", "CanDoItAll.SharedKernel"],
+            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.SharedKernel"],
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
+        var httpDependencies = typeof(HttpFetchWorkflowExecutor).GetConstructors()
+            .SelectMany(constructor => constructor.GetParameters()).Select(parameter => parameter.ParameterType).ToArray();
+        Assert.Contains(typeof(IWorkflowHttpSecretHeaderApplier), httpDependencies);
+        Assert.DoesNotContain(httpDependencies, type => type.Namespace?.StartsWith("CanDoItAll.Security", StringComparison.Ordinal) == true);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj",
             ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.Tools.Documents"],

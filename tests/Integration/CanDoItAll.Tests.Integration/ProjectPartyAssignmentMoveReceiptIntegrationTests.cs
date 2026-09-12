@@ -43,8 +43,12 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
         var processor = scope.ServiceProvider
             .GetRequiredService<ProjectCrossModuleMutationProcessor>();
         var now = DateTimeOffset.UtcNow;
-        var sourceProjectId = Guid.NewGuid();
-        var targetProjectId = Guid.NewGuid();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var admissions = scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>();
+        var sourceProjectId = await CreateProjectAsync(projects, "Move source");
+        var targetProjectId = await CreateProjectAsync(projects, "Move target");
+        var sourceAdmission = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(sourceProjectId));
+        var targetAdmission = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(targetProjectId));
         var partyId = Guid.NewGuid();
         var sourceAssignmentId = Guid.NewGuid();
         var staleTargetAssignmentId = Guid.NewGuid();
@@ -60,16 +64,15 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
                 targetProjectId,
                 "node-1",
                 ["node-1"],
-                ["node-1"])),
+                ["node-1"],
+                ProjectAssignmentReference.From(sourceAdmission),
+                targetAdmission)),
             CreatedAtUtc = now,
             UpdatedAtUtc = now
         };
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
-            dbContext.Set<Project>().AddRange(
-                CreateProject(sourceProjectId, "Move source", now),
-                CreateProject(targetProjectId, "Move target", now));
             dbContext.Set<Party>().Add(new Party
             {
                 Id = partyId,
@@ -84,6 +87,7 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
                 {
                     Id = sourceAssignmentId,
                     ProjectId = sourceProjectId,
+                    ProjectLifetimeId = sourceAdmission.LifetimeId,
                     PartyId = partyId,
                     AssignmentKind = ProjectPartyAssignmentKind.TeamMember,
                     NodeKey = "node-1"
@@ -92,6 +96,7 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
                 {
                     Id = staleTargetAssignmentId,
                     ProjectId = targetProjectId,
+                    ProjectLifetimeId = targetAdmission.LifetimeId,
                     PartyId = partyId,
                     AssignmentKind = ProjectPartyAssignmentKind.TeamMember,
                     NodeKey = "node-1"
@@ -103,6 +108,7 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
         Assert.Equal(
             ProjectCrossModuleMutationStatus.Failed,
             await processor.ProcessAsync(mutation.Id));
+        Assert.Equal(1, scope.ServiceProvider.GetRequiredService<CommitThenThrowMoveState>().FailureInjected);
         await AssertMoveStateAsync(
             dbContextFactory,
             mutation.Id,
@@ -111,7 +117,9 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
             partyId,
             sourceAssignmentId,
             staleTargetAssignmentId,
-            ProjectCrossModuleMutationStatus.Failed);
+            ProjectCrossModuleMutationStatus.Failed,
+            sourceAdmission,
+            targetAdmission);
 
         Assert.Equal(
             ProjectCrossModuleMutationStatus.Completed,
@@ -124,21 +132,18 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
             partyId,
             sourceAssignmentId,
             staleTargetAssignmentId,
-            ProjectCrossModuleMutationStatus.Completed);
+            ProjectCrossModuleMutationStatus.Completed,
+            sourceAdmission,
+            targetAdmission);
     }
 
-    private static Project CreateProject(
-        Guid projectId,
-        string name,
-        DateTimeOffset now)
-        => new()
-        {
-            Id = projectId,
-            Name = name,
-            Slug = $"{name.ToLowerInvariant().Replace(' ', '-')}-{projectId:N}",
-            CreatedAtUtc = now,
-            UpdatedAtUtc = now
-        };
+    private static async Task<Guid> CreateProjectAsync(ProjectsService projects, string name) {
+        var draft = await projects.GetAsync(null);
+        draft.Name = name;
+        var saved = await projects.SaveAsync(draft);
+        Assert.True(saved.IsSuccess);
+        return saved.Value;
+    }
 
     private static async Task AssertMoveStateAsync(
         IDbContextFactory<AppDbContext> dbContextFactory,
@@ -148,7 +153,9 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
         Guid partyId,
         Guid sourceAssignmentId,
         Guid staleTargetAssignmentId,
-        ProjectCrossModuleMutationStatus expectedStatus)
+        ProjectCrossModuleMutationStatus expectedStatus,
+        ProjectWriteAdmission sourceAdmission,
+        ProjectWriteAdmission targetAdmission)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var receipts = await dbContext
@@ -160,6 +167,9 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
         Assert.Equal(mutationId, receipt.OperationId);
         Assert.Equal(sourceProjectId, receipt.SourceProjectId);
         Assert.Equal(targetProjectId, receipt.TargetProjectId);
+        Assert.Equal(sourceAdmission.DatabaseProfileId, receipt.DatabaseProfileId);
+        Assert.Equal(sourceAdmission.LifetimeId, receipt.SourceProjectLifetimeId);
+        Assert.Equal(targetAdmission.LifetimeId, receipt.TargetProjectLifetimeId);
         Assert.Equal(BuildNodeSetFingerprint("node-1"), receipt.NodeSetFingerprint);
         var assignments = await dbContext.Set<ProjectPartyAssignment>()
             .AsNoTracking()
@@ -168,6 +178,7 @@ public sealed class ProjectPartyAssignmentMoveReceiptIntegrationTests
         var assignment = Assert.Single(assignments);
         Assert.Equal(sourceAssignmentId, assignment.Id);
         Assert.Equal(targetProjectId, assignment.ProjectId);
+        Assert.Equal(targetAdmission.LifetimeId, assignment.ProjectLifetimeId);
         Assert.Equal(partyId, assignment.PartyId);
         Assert.Equal(ProjectPartyAssignmentKind.TeamMember, assignment.AssignmentKind);
         Assert.Equal("node-1", assignment.NodeKey);

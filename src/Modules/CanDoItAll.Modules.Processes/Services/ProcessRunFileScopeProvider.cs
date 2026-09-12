@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
@@ -11,9 +13,9 @@ namespace CanDoItAll.Modules.Processes;
 
 internal readonly record struct ProcessRunFileScopeKey(Guid RunId, string RootFingerprint)
 {
-    private const string Prefix = "run:v1";
+    private const string Prefix = "run:v2";
 
-    public static ProcessRunFileScopeKey Create(Guid runId, string directoryPath)
+    public static ProcessRunFileScopeKey Create(Guid runId, string directoryPath, string preparationFingerprint)
     {
         if (runId == Guid.Empty)
         {
@@ -21,8 +23,9 @@ internal readonly record struct ProcessRunFileScopeKey(Guid RunId, string RootFi
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(preparationFingerprint);
         string fingerprint = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
-            directoryPath.Trim().ToUpperInvariant())));
+            preparationFingerprint + "\n" + directoryPath.Trim().ToUpperInvariant())));
         return new ProcessRunFileScopeKey(runId, fingerprint);
     }
 
@@ -35,7 +38,7 @@ internal readonly record struct ProcessRunFileScopeKey(Guid RunId, string RootFi
         string[] parts = scopeId.Value.Split(':', StringSplitOptions.TrimEntries);
         if (parts.Length != 4 ||
             !string.Equals(parts[0], "run", StringComparison.Ordinal) ||
-            !string.Equals(parts[1], "v1", StringComparison.Ordinal) ||
+            !string.Equals(parts[1], "v2", StringComparison.Ordinal) ||
             !Guid.TryParseExact(parts[2], "N", out Guid runId) ||
             runId == Guid.Empty ||
             !IsSha256(parts[3]))
@@ -69,7 +72,9 @@ internal readonly record struct ProcessRunFileScopeKey(Guid RunId, string RootFi
 internal sealed class ProcessRunFileScopeProvider(
     IProcessRuntimeStateStore stateStore,
     IProcessRuntimeStepAssignmentStore assignmentStore,
-    IStorageCatalogService storageCatalog)
+    IStorageCatalogService storageCatalog,
+    IProcessPreparedLaunchStore preparedLaunches,
+    ProjectWriteAdmissionService projectAdmissions)
     : IProcessRunFileScopeProvider, IFileToolsStorageBindingSource
 {
     private static readonly FileToolsBrowseWorkLimits WorkLimits = new(
@@ -89,6 +94,22 @@ internal sealed class ProcessRunFileScopeProvider(
         FileToolsSemanticScope[] scopes = roots.Select(root => root.Scope).ToArray();
         string fingerprint = BuildFingerprint(runId, roots);
         return new ProcessRunFileScopeSet(runId, scopes, fingerprint);
+    }
+
+    public async ValueTask<FileToolsStorageBinding> ResolveRootAsync(
+        Guid runId,
+        string directoryPath,
+        Guid projectId,
+        CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty || string.IsNullOrWhiteSpace(directoryPath)) {
+            throw ProviderError(FileBrowserErrorCode.InvalidOperation, "An exact project and Process file root are required.");
+        }
+        var roots = await ResolveRootsAsync(runId, cancellationToken, projectId);
+        var selected = roots.SingleOrDefault(root => string.Equals(root.Root.DirectoryPath, directoryPath, StringComparison.Ordinal));
+        if (selected is null) {
+            throw ProviderError(FileBrowserErrorCode.Conflict, "The Process file root does not match the saved run.");
+        }
+        return await ResolveBindingAsync(selected, cancellationToken);
     }
 
     async ValueTask<IReadOnlyList<FileToolsStorageBinding>> IFileToolsStorageBindingSource.ResolveAsync(
@@ -123,28 +144,24 @@ internal sealed class ProcessRunFileScopeProvider(
             throw ProviderError(FileBrowserErrorCode.Conflict, "The process-run file root is no longer current.");
         }
 
-        StorageCatalogSnapshot storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
-        if (storage.ProviderKind != StorageProviderKind.FileSystem)
-        {
-            throw ProviderError(
-                FileBrowserErrorCode.CorruptProviderResponse,
-                "The managed process-run storage catalog is not a filesystem source.");
-        }
+        return [await ResolveBindingAsync(selected, cancellationToken)];
+    }
 
-        return
-        [
-            new FileToolsStorageBinding(
-                storage.Id,
-                selected.Scope.DisplayName,
-                WorkLimits,
-                new FileToolsStorageRoot(selected.Root.DirectoryPath),
-                FileToolsHostBrowseCacheMode.Disabled)
-        ];
+    private async ValueTask<FileToolsStorageBinding> ResolveBindingAsync(
+        ResolvedProcessRunRoot selected, CancellationToken cancellationToken) {
+        var storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
+        if (storage.Id == Guid.Empty || !storage.IsEnabled || storage.ProviderKind != StorageProviderKind.FileSystem) {
+            throw ProviderError(FileBrowserErrorCode.CorruptProviderResponse,
+                "The managed Process storage catalog is not a usable filesystem source.");
+        }
+        return new FileToolsStorageBinding(storage.Id, selected.Scope.DisplayName, WorkLimits,
+            new FileToolsStorageRoot(selected.WorkspaceRelativePath), FileToolsHostBrowseCacheMode.Disabled);
     }
 
     private async ValueTask<IReadOnlyList<ResolvedProcessRunRoot>> ResolveRootsAsync(
         Guid runId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid? expectedProjectId = null)
     {
         if (runId == Guid.Empty)
         {
@@ -152,10 +169,41 @@ internal sealed class ProcessRunFileScopeProvider(
         }
 
         var typedRunId = new ProcessRunId(runId);
-        if (await stateStore.LoadAsync(typedRunId, cancellationToken) is null)
+        var state = await stateStore.LoadAsync(typedRunId, cancellationToken);
+        if (state is null)
         {
             throw ProviderError(FileBrowserErrorCode.NotFound, "The process run no longer exists.");
         }
+
+        if (state.RunId != typedRunId || state.LaunchAdmissionId is not { } admissionId) {
+            throw ProviderError(FileBrowserErrorCode.Forbidden,
+                "The Process run has no original file-scope evidence; reconciliation is required.");
+        }
+        var saved = await preparedLaunches.GetAsync(admissionId, cancellationToken);
+        if (saved is null || saved.AcceptedAtUtc is null || saved.Execute is null ||
+                saved.Preparation.Authority is not { } authority ||
+                authority.DatabaseProfileId != projectAdmissions.DatabaseProfileId ||
+                saved.Preparation.AdmissionId != admissionId ||
+                saved.Preparation.InitialCommit.Mutation.State.RunId != state.RunId ||
+                saved.Preparation.InitialCommit.Mutation.State.RootRunId != state.RootRunId ||
+                saved.Preparation.InitialCommit.Mutation.State.PlanId != state.PlanId ||
+                saved.Preparation.InitialCommit.Mutation.State.LaunchAdmissionId != admissionId ||
+                saved.Preparation.InitialCommit.Mutation.State.ProjectAdmission != state.ProjectAdmission ||
+                authority.ProjectAdmission != state.ProjectAdmission ||
+                expectedProjectId.HasValue && state.ProjectAdmission?.ProjectId != expectedProjectId) {
+            throw ProviderError(FileBrowserErrorCode.Forbidden,
+                "The Process file scope does not match its original accepted run, profile and project.");
+        }
+        authority.Validate();
+        if (state.ProjectAdmission is { } project) {
+            try {
+                await projectAdmissions.RequireCurrentAsync(
+                    new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId), cancellationToken);
+            } catch (ProjectWriteAdmissionRejectedException) {
+                throw ProviderError(FileBrowserErrorCode.Forbidden, "The original Process project lifetime is no longer current.");
+            }
+        }
+        var workspaceScope = WorkspaceScopeDescriptor.Organization(authority.DatabaseProfileId.ToString("N"));
 
         IReadOnlyList<ProcessRuntimeStepAssignment> assignments = await assignmentStore
             .LoadByRunAsync(typedRunId, cancellationToken);
@@ -175,10 +223,11 @@ internal sealed class ProcessRunFileScopeProvider(
         return roots
             .Select(root =>
             {
-                ProcessRunFileScopeKey key = ProcessRunFileScopeKey.Create(runId, root.DirectoryPath);
+                ProcessRunFileScopeKey key = ProcessRunFileScopeKey.Create(runId, root.DirectoryPath, saved.PreparationFingerprint);
                 return new ResolvedProcessRunRoot(
                     key,
                     root,
+                    ResolveWorkspacePath(workspaceScope, root),
                     new FileToolsSemanticScope(
                         FileToolsSemanticScopeKind.ProcessRun,
                         key.ToScopeId(),
@@ -187,13 +236,27 @@ internal sealed class ProcessRunFileScopeProvider(
             .ToArray();
     }
 
+    private static string ResolveWorkspacePath(WorkspaceScopeDescriptor scope, ProcessRunArtifactRootResolution root) {
+        (string logicalRoot, string scopedRoot) = root.Kind switch {
+            ProcessRunArtifactRootKind.ManagedArtifactRunRoot =>
+                (WorkspaceScopeDescriptor.ArtifactManagedRootName, scope.ArtifactRootRelativePath),
+            ProcessRunArtifactRootKind.ManagedRunRoot or ProcessRunArtifactRootKind.ManagedProductOutputRoot =>
+                (WorkspaceScopeDescriptor.OutputManagedRootName, scope.OutputRootRelativePath),
+            _ => throw ProviderError(FileBrowserErrorCode.Forbidden, "The Process file root is outside its managed namespace.")
+        };
+        if (!root.DirectoryPath.StartsWith(logicalRoot + "/", StringComparison.OrdinalIgnoreCase)) {
+            throw ProviderError(FileBrowserErrorCode.Forbidden, "The Process file root does not match its managed namespace.");
+        }
+        return scopedRoot + root.DirectoryPath[logicalRoot.Length..];
+    }
+
     private static string BuildFingerprint(Guid runId, IReadOnlyList<ResolvedProcessRunRoot> roots)
     {
         string canonical = string.Join('\n',
             [
-                "process-run-files-v1",
+                "process-run-files-v2",
                 runId.ToString("N"),
-                .. roots.Select(root => $"{root.Root.Kind}:{root.Root.DirectoryPath}")
+                .. roots.Select(root => $"{root.Key.RootFingerprint}:{root.WorkspaceRelativePath}")
             ]);
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
@@ -221,5 +284,6 @@ internal sealed class ProcessRunFileScopeProvider(
     private sealed record ResolvedProcessRunRoot(
         ProcessRunFileScopeKey Key,
         ProcessRunArtifactRootResolution Root,
+        string WorkspaceRelativePath,
         FileToolsSemanticScope Scope);
 }

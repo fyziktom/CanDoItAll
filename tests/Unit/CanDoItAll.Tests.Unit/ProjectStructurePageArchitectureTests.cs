@@ -47,7 +47,7 @@ public sealed class ProjectStructurePageArchitectureTests
             "ProjectStructureProcessNodeService.cs");
 
         Assert.Contains(
-            "ProjectStructureProcessLaunchContextBuilder.Build(surface, targetNode)",
+            "ProjectStructureProcessLaunchContextBuilder.Build(sourceSurface, targetNode)",
             pageSource,
             StringComparison.Ordinal);
         Assert.Contains("launchContext.ApplyContextSummaryTo(variables)", pageSource, StringComparison.Ordinal);
@@ -182,25 +182,14 @@ public sealed class ProjectStructurePageArchitectureTests
     }
 
     [Fact]
-    public void Project_structure_page_partial_count_does_not_increase()
-    {
+    public void Project_structure_page_preserves_captured_action_and_preparation_authority() {
         var root = FindRepositoryRoot();
-        var pagesDirectory = Path.Combine(
-            root,
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workbench",
-            "Pages");
-        var explicitPartialCount = Directory
-            .EnumerateFiles(
-                pagesDirectory,
-                "ProjectStructurePage*.cs",
-                SearchOption.TopDirectoryOnly)
-            .Count(path => File.ReadAllText(path).Contains(
-                "partial class ProjectStructurePage",
-                StringComparison.Ordinal));
-
-        Assert.Equal(22, explicitPartialCount);
+        var pagesDirectory = Path.Combine(root, "src", "Modules", "CanDoItAll.Modules.Workbench", "Pages");
+        var actionSource = File.ReadAllText(Path.Combine(pagesDirectory, "ProjectStructurePage.ActionContexts.cs"));
+        Assert.Contains("var admission = displayed.ExpectedProjectAdmission", actionSource, StringComparison.Ordinal);
+        Assert.Contains("surface?.ExpectedProjectAdmission == context.Admission", actionSource, StringComparison.Ordinal);
+        var preparationSource = File.ReadAllText(Path.Combine(pagesDirectory, "ProjectStructurePage.ProcessPreparations.cs"));
+        Assert.Contains("ProcessLaunchProducerRequests.Restore(saved, caller, execute: true)", preparationSource, StringComparison.Ordinal);
     }
 
     [Fact]

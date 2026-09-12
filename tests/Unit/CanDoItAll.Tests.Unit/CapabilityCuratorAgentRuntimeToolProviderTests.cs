@@ -16,7 +16,7 @@ using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
+public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
@@ -1275,18 +1275,21 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
     private static async Task<TResult> InvokeAsync<TResult>(AITool tool, object request)
     {
         var function = Assert.IsAssignableFrom<AIFunction>(tool);
+        using var capture = AgentToolInvocationEffectScope.Begin();
         var rawResult = await function.InvokeAsync(new AIFunctionArguments
         {
             ["request"] = request
         });
-        return rawResult switch
+        var result = rawResult switch
         {
-            TResult result => result,
+            TResult typed => typed,
             JsonElement element => JsonSerializer.Deserialize<TResult>(element.GetRawText(), JsonOptions)
                 ?? throw new InvalidOperationException("Capability Curator runtime tool returned null JSON."),
             _ => throw new InvalidOperationException(
                 $"Unexpected Capability Curator runtime tool result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
         };
+        AssertOwnerAcknowledgement(tool.Name, result, capture.CommittedEffect);
+        return result;
     }
 
     private static JsonSerializerOptions CreateJsonOptions()
@@ -1320,6 +1323,8 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         public List<CapabilityMcpSetupTestRequest> McpRequests { get; } = [];
 
         public bool ToolSetupSucceeds { get; set; } = true;
+        public bool McpCleanupCompleted { get; set; } = true;
+        public bool ReturnDifferentSetupIdentity { get; set; }
 
         public Task<CapabilitySetupTestResult> TestToolSetupAsync(
             CapabilityToolSetupTestRequest request,
@@ -1328,7 +1333,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             ToolRequests.Add(request);
             return Task.FromResult(new CapabilitySetupTestResult(
                 ToolSetupSucceeds,
-                new CapabilityIdentity(AccessCapabilityKind.Tool, CapabilityKey.Create(request.Capability.Key)),
+                new CapabilityIdentity(AccessCapabilityKind.Tool, CapabilityKey.Create(ReturnDifferentSetupIdentity ? "different-owner-key" : request.Capability.Key)),
                 request.CorrelationId,
                 []));
         }
@@ -1342,14 +1347,14 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                 AccessCapabilityKind.McpServer,
                 CapabilityKey.Create(request.Capability.Key));
             return Task.FromResult(new McpSetupTestResult(
-                true,
+                McpCleanupCompleted,
                 identity,
                 McpServerKey.Create(request.Capability.Key),
                 request.CorrelationId,
                 [],
                 [],
                 [],
-                CleanupCompleted: true));
+                CleanupCompleted: McpCleanupCompleted));
         }
 
         public Task<CapabilityAccessPreviewResult> PreviewAccessAsync(
@@ -1365,6 +1370,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         public IReadOnlyList<CapabilityCatalogItem> Capabilities { get; set; } = [];
 
         public int SaveCapabilityCallCount { get; private set; }
+        public CuratorOwnerAcknowledgementFault? AcknowledgementFault { get; set; }
+        public bool WriteCompleted { get; private set; }
+        public void ResetAcknowledgementState() => WriteCompleted = false;
 
         public CapabilityEditorModel? LastSavedCapabilityEditor { get; private set; }
 
@@ -1374,7 +1382,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             {
                 nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
                     Task.FromResult(ListAgents((bool)args![0]!)),
-                nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) => Task.FromResult(Capabilities),
+                nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) =>
+                    WriteCompleted && AcknowledgementFault == CuratorOwnerAcknowledgementFault.AfterReceipt
+                        ? throw new IOException("Read after the owner acknowledgement failed.") : Task.FromResult(Capabilities),
                 nameof(IAgentFrameworkWorkspaceService.GetCapabilityEditorAsync) =>
                     GetCapabilityEditorAsync((Guid?)args![0]),
                 nameof(IAgentFrameworkWorkspaceService.SaveCapabilityAsync) =>
@@ -1392,6 +1402,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 
         private Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId)
         {
+            if (WriteCompleted && AcknowledgementFault == CuratorOwnerAcknowledgementFault.AfterReceipt) {
+                throw new IOException("Read after the owner acknowledgement failed.");
+            }
             var capability = Capabilities.SingleOrDefault(item => item.Id == capabilityId)
                 ?? throw new InvalidOperationException("Capability was not found.");
             var editor = CapabilityEditorModel.FromDefinition(capability);
@@ -1401,6 +1414,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 
         private Task<Guid> SaveCapabilityAsync(CapabilityEditorModel editor)
         {
+            if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeOwner) {
+                throw new IOException("Owner write was not started.");
+            }
             SaveCapabilityCallCount++;
             var current = editor.Id.HasValue
                 ? Capabilities.SingleOrDefault(item => item.Id == editor.Id.Value)
@@ -1436,6 +1452,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                 .Where(item => item.Id != saved.Id)
                 .Append(saved)
                 .ToArray();
+            WriteCompleted = true;
+            if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeReceipt) {
+                throw new IOException("The owner acknowledgement was lost.");
+            }
             return Task.FromResult(saved.Id);
         }
 
@@ -1446,6 +1466,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 
         private Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId)
         {
+            if (WriteCompleted && AcknowledgementFault == CuratorOwnerAcknowledgementFault.AfterReceipt) {
+                throw new IOException("Read after the owner acknowledgement failed.");
+            }
             var agent = Agents.SingleOrDefault(item => item.Id == agentId)
                 ?? throw new InvalidOperationException("Agent was not found.");
             return Task.FromResult(AgentEditorModel.FromDefinition(agent));
@@ -1453,6 +1476,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 
         private Task<Guid> SaveAgentAsync(AgentEditorModel editor)
         {
+            if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeOwner) {
+                throw new IOException("Owner write was not started.");
+            }
             var current = Agents.Single(item => item.Id == editor.Id);
             if (current.UpdatedAtUtc != editor.ExpectedUpdatedAtUtc)
             {
@@ -1468,11 +1494,18 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                 UpdatedAtUtc = current.UpdatedAtUtc.AddMinutes(1)
             };
             Agents = Agents.Select(agent => agent.Id == updated.Id ? updated : agent).ToArray();
+            WriteCompleted = true;
+            if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeReceipt) {
+                throw new IOException("The owner acknowledgement was lost.");
+            }
             return Task.FromResult(updated.Id);
         }
 
         private Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId)
         {
+            if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeOwner) {
+                throw new IOException("Owner write was not started.");
+            }
             var checkedAtUtc = DateTimeOffset.Parse("2026-07-21T13:00:00Z");
             Capabilities = Capabilities.Select(capability => capability.Id == capabilityId
                 ? capability with
@@ -1495,6 +1528,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
                         : assignment).ToArray()
                 }
                 : agent).ToArray();
+            WriteCompleted = true;
+            if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeReceipt) {
+                throw new IOException("The owner acknowledgement was lost.");
+            }
             return Task.CompletedTask;
         }
     }

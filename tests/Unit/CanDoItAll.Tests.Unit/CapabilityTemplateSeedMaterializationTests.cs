@@ -36,6 +36,11 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-plan-summary-get"].Kind);
         Assert.Equal(CreateStableGuid("capabilities/workflows-run-start"), byKey["workflows-run-start"].Id);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["workflows-run-start"].Kind);
+        foreach (var key in new[] { "crm-planning-search", "crm-planning-summary-get" }) {
+            Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey[key].Kind);
+            Assert.Equal(CreateStableGuid($"capabilities/{key}"), byKey[key].Id);
+            Assert.Equal($"tool:{key}:v1", Assert.Single(pack.Capabilities, item => item.Key == key).StableId);
+        }
         Assert.Equal(
             "skill:hr-agent-governance:v2",
             Assert.Single(
@@ -493,6 +498,8 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "candoitall-frontend-theme",
         "candoitall-watch-playwright-loop",
         "concrete-deliverable-delivery-inline-skill",
+        "crm-planning-search",
+        "crm-planning-summary-get",
         "development-image-analysis-guidance-inline-skill",
         "document-spreadsheet-reconciliation-inline-skill",
         "dotnet-app-delivery-inline-skill",

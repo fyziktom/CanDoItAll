@@ -325,7 +325,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 Agent = catalog.Agents.Single(agent => agent.Id == execution.AgentId), Capabilities = capabilities
             };
             var source = new ProjectStructureWorkflowAuthorityService(services.GetRequiredService<ICanonicalRuntimeDatabase>(),
-                services.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>(), services.GetRequiredService<IAgentFrameworkWorkspaceService>(),
+                services.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>(),
                 services.GetRequiredService<IProcessRuntimeStateStore>(), services.GetRequiredService<IProcessRuntimeStepAssignmentStore>(), clock,
                 services.GetRequiredService<IWorkflowScheduledAuthorityPolicy>(), revokeBeforeHeldRead
                     ? new WorkflowReadRace(fixture.Source, () => fixture.RevokeAsync(Revocation.Write)) : fixture.Source,

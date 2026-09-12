@@ -26,8 +26,22 @@ public sealed class ProjectsWorkbenchDbContextTests {
             "Workbench_ProjectProjectionLayouts", "Workbench_ProjectStructureOperationAnalytics",
             "Workbench_ProjectStructureLeases", "Workbench_ProjectNodeBindings", "Workbench_ProjectNodeReferences",
             "Workbench_ProjectNodeLifecycleEvents", "Workbench_ProjectCrossModuleMutations",
-            "Workbench_WorkAssignments", "Workbench_WorkflowAdmissions", "Workbench_WorkflowContributionReceipts"
+            "Workbench_WorkAssignments", "Workbench_WorkflowAdmissions", "Workbench_WorkflowContributionReceipts",
+            "Workbench_ProcessAssetContributions", "Workbench_WorkAssignmentHistory"
         }.Order(), context.Model.GetEntityTypes().Select(entity => entity.GetTableName()).Order());
+        Assert.Equal(new[] {
+            typeof(ProjectObjectRecord), typeof(ProjectObjectLinkRecord), typeof(ProjectWorkbenchViewStateRecord),
+            typeof(ProjectStructureProjectionLayoutRecord), typeof(ProjectStructureOperationAnalyticsRecord),
+            typeof(ProjectStructureLeaseRecord), typeof(ProjectNodeBindingRecord), typeof(ProjectNodeReferenceRecord),
+            typeof(ProjectNodeLifecycleEventRecord), typeof(ProjectCrossModuleMutationRecord),
+            typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord), typeof(ProjectWorkAssignmentRecord),
+            typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord)
+        }.OrderBy(type => type.Name), context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
+        foreach (var retainedType in new[] { typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord) }) {
+            var retained = context.Model.FindEntityType(retainedType)!;
+            Assert.Empty(retained.GetForeignKeys());
+            Assert.Empty(retained.GetReferencingForeignKeys());
+        }
         Assert.Single(context.Model.GetEntityTypes(), entity => entity.ClrType == typeof(ProjectObjectRecord));
         Assert.All(context.Model.GetEntityTypes().SelectMany(entity => entity.GetForeignKeys()),
             relationship => Assert.Equal(typeof(ProjectObjectRecord), relationship.PrincipalEntityType.ClrType));

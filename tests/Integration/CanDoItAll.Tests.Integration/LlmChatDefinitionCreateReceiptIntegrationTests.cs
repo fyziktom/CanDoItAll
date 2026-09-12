@@ -28,7 +28,7 @@ using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManag
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
 
-public sealed class LlmChatDefinitionCreateReceiptIntegrationTests {
+public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
     [Fact]
     public async Task Replay_survives_persisted_provider_disablement_through_the_canonical_resolver() {
         await using var database = ReceiptDatabase.Create("simple-chat-create-provider-change");

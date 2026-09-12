@@ -849,12 +849,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     completionState switch
                     {
                         ExecutionState.Completed => "Completed",
+                        ExecutionState.Failed when toolCompletionAssessment.FailureKind == AgentToolCompletionFailureKind.RequiredMutation => "Tool execution",
                         ExecutionState.Failed => "Output validation",
                         _ => "Approval"
                     },
                     completionState switch
                     {
                         ExecutionState.Completed => "Execution run response persisted after the approval decision.",
+                        ExecutionState.Failed when toolCompletionAssessment.FailureKind == AgentToolCompletionFailureKind.RequiredMutation => "Execution run response and unresolved required mutation were persisted after the approval decision.",
                         ExecutionState.Failed => "Execution run response and portable JSON Schema validation failure were persisted after the approval decision.",
                         _ => "The execution run still requires another approval decision before it can continue."
                     },
@@ -1716,12 +1718,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     completionState switch
                     {
                         ExecutionState.Completed => "Completed",
+                        ExecutionState.Failed when toolCompletionAssessment.FailureKind == AgentToolCompletionFailureKind.RequiredMutation => "Tool execution",
                         ExecutionState.Failed => "Output validation",
                         _ => "Approval"
                     },
                     completionState switch
                     {
                         ExecutionState.Completed => "Execution run response persisted.",
+                        ExecutionState.Failed when toolCompletionAssessment.FailureKind == AgentToolCompletionFailureKind.RequiredMutation => "Execution run response and unresolved required mutation were persisted.",
                         ExecutionState.Failed => "Execution run response and portable JSON Schema validation failure were persisted.",
                         _ => "The execution run is waiting for an approval response before it can continue."
                     },
