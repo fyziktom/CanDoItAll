@@ -438,13 +438,13 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
     }
 
-    private sealed class CommitFault(bool afterCommit) : DbTransactionInterceptor {
+    private sealed class CommitFault(bool afterCommit, Func<bool>? ready = null) : DbTransactionInterceptor {
         public ArgumentException Failure { get; } = new("Injected native receipt acknowledgement failure.");
         public bool SawReceiptInsert { get; set; }
         private bool thrown;
         public override ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction,
             TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default) {
-            if (!afterCommit && SawReceiptInsert && !thrown) {
+            if (!afterCommit && (ready?.Invoke() ?? SawReceiptInsert) && !thrown) {
                 thrown = true;
                 throw Failure;
             }
@@ -454,7 +454,7 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
 
         public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
             CancellationToken cancellationToken = default) {
-            if (afterCommit && SawReceiptInsert && !thrown) {
+            if (afterCommit && (ready?.Invoke() ?? SawReceiptInsert) && !thrown) {
                 thrown = true;
                 throw Failure;
             }
