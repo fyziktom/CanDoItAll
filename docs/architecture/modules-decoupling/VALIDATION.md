@@ -1,5 +1,13 @@
 # Module Decoupling Validation
 
+## Bounded project summary, 2026-09-12
+
+The remaining three point lookups now use `IProjectSummaryQueryService`, implemented by the existing scoped Projects owner. The project, phase and hierarchy reads filter before materialization/aggregation, and CRM receives exactly the target ID. Existing summary mapping, complete list/hierarchy behavior, editor API overloads and missing-project errors remain. Independent source review confirms the alias avoids the basic Projects query/CRM cycle; no foreign persistence or authorization change is introduced.
+
+Projects and Workbench builds pass with zero warnings/errors; Integration/Components builds pass with seven/three existing warnings. Guarded Integration passes **8/8**, zero skipped, at 15:11:12 UTC: four owner persistence cases, both 21-scenario Workflow harness runs and both UI/API operator recovery cases. The new real-PostgreSQL probe verifies exactly three filtered owner commands, target phase/parent/child counts, all current CRM labels, full existing-list equivalence, missing records and cancellation; the existing separate-profile test now also rejects the foreign summary. Workflow scenarios preserve all seven project payload fields with nonempty customer/owner/delivery labels. Components passes **1/1**, zero skipped, at 15:11:38 UTC and retains the rendered CRM project card/filter assertions.
+
+Both runs have unchanged source SHA `2419229d77ba28cd2ff631ba52c9fce6844f877fda4859565b5ce85df7e5ee62`; Integration DLL `c5b15484fa48b84d379e6b0f15d99204723523c52229e94fc067d650c8b64a60`, Components DLL `75e62c7bbe4d115dbf88f9076bf033d8ae459d21ed26517815faa2194a4db4ac` unchanged. Complete regenerated portability covers **6,286 files / 30,280 findings**; final no-write enforcement passes at **14,667 unchanged protected findings**, with no baseline edit. Enforcer6/scanner4 tests pass. Evidence: `artifacts/modules-decoupling/continuation-v10/project-summary-*`. The frozen broad gate and real-host H/E closure remain open.
+
 ## E explicit recovery action, 2026-09-12
 
 The UI uses the existing recovery owner with the original run, chat, profile generation and activity scope. Core/module production builds pass with zero warnings/errors. Unit and Components builds pass with one/three existing warnings. The browser fixture initially lacked its isolated assets file; its own restore and rebuild pass with zero warnings/errors. Unit orchestrator proof passes **15/15**, zero skipped, at 14:54:05 UTC, with source SHA `305d3d8493df0179c6a55c6719d794cfcb25d2449e8ac4e949e1a90b98de6e69` and DLL `6b2eeaff6addd89f6cd3eb2c54c2e741566d58c0bd39ea865b23ee9087febb17` unchanged.

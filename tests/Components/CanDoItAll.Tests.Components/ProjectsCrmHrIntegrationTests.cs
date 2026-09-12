@@ -51,6 +51,16 @@ public sealed class ProjectsCrmHrIntegrationTests
             Source = "component-tests"
         });
 
+        var summary = Assert.IsType<ProjectSummary>(await harness.Context.Services
+            .GetRequiredService<IProjectSummaryQueryService>().GetSummaryAsync(projectId));
+        Assert.Equal("Northwind Customer", summary.PrimaryCustomerName);
+        Assert.Equal("Delivery Guild", summary.PrimaryDeliveryUnitName);
+        Assert.Equal("Jordan Owner", summary.PrimaryOwnerName);
+        Assert.Equal(3, summary.RelatedParties!.Count);
+        Assert.Contains("Northwind Customer", summary.RelatedPartySearchText);
+        Assert.Contains("Delivery Guild", summary.RelatedPartySearchText);
+        Assert.Contains("Jordan Owner", summary.RelatedPartySearchText);
+
         var cut = harness.Context.Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>

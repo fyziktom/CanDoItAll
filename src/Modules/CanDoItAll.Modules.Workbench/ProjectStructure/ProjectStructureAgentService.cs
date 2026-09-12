@@ -10,6 +10,7 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed partial class ProjectStructureAgentService(
     ProjectsService projectsService,
+    IProjectSummaryQueryService projectSummaryQuery,
     ProjectWorkbenchService projectWorkbenchService,
     ProjectStructureSubprojectTransferCoordinator subprojectTransferCoordinator,
     ProjectStructureBatchDeletionCoordinator batchDeletionCoordinator,
@@ -1803,8 +1804,7 @@ public sealed partial class ProjectStructureAgentService(
             throw new ProjectStructureAgentException(500, "ProjectIdMissing", "The project save operation completed without a readable id.");
         }
 
-        var projects = await projectsService.ListAsync(cancellationToken);
-        var summary = projects.FirstOrDefault(project => project.Id == projectId);
+        var summary = await projectSummaryQuery.GetSummaryAsync(projectId, cancellationToken);
         if (summary is null)
         {
             throw new ProjectStructureAgentException(404, "ProjectNotFound", $"Project '{projectId}' was saved but could not be read back.");

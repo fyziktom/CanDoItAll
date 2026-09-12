@@ -270,7 +270,7 @@ public sealed partial class ProjectsService(
     StorageCatalogService storageCatalogService,
     CoordinatedDatabaseTransaction coordinatedTransaction,
     ProjectWriteAdmissionService writeAdmissionService,
-    IProjectCreationCompensationGuard? creationCompensationGuard = null) {
+    IProjectCreationCompensationGuard? creationCompensationGuard = null) : IProjectSummaryQueryService {
     private const string DeleteRetryGuidance =
         "Retry each exact participant and recovery id returned by the deletion recovery; do not create or select a newer project-deletion operation.";
 
@@ -305,6 +305,19 @@ public sealed partial class ProjectsService(
             .OrderByDescending(project => project.UpdatedAtUtc)
             .Select(project => MapProjectSummary(project, phaseCounts, hierarchyMetrics, portfolioContexts.GetValueOrDefault(project.Id)))
             .ToList();
+    }
+
+    public async Task<ProjectSummary?> GetSummaryAsync(Guid projectId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var project = await dbContext.Set<Project>().AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == projectId, cancellationToken);
+        if (project is null) {
+            return null;
+        }
+        var hierarchyMetrics = await LoadHierarchyMetricsAsync(dbContext, cancellationToken, projectId);
+        var phaseCounts = await LoadPhaseCountsAsync(dbContext, cancellationToken, projectId);
+        var portfolioContexts = await projectPartyIntegrationBridge.GetPortfolioContextsAsync([projectId], cancellationToken);
+        return MapProjectSummary(project, phaseCounts, hierarchyMetrics, portfolioContexts.GetValueOrDefault(projectId));
     }
 
     public async Task<IReadOnlyList<ProjectAccessListItem>> ListAccessListAsync(CancellationToken cancellationToken = default)
@@ -1464,17 +1477,27 @@ public sealed partial class ProjectsService(
 
     private static async Task<IReadOnlyDictionary<Guid, int>> LoadPhaseCountsAsync(
         ProjectsDbContext dbContext,
-        CancellationToken cancellationToken)
-        => await dbContext.Set<ProjectPhase>()
+        CancellationToken cancellationToken,
+        Guid? projectId = null) {
+        var phases = dbContext.Set<ProjectPhase>().AsQueryable();
+        if (projectId.HasValue) {
+            phases = phases.Where(phase => phase.ProjectId == projectId.Value);
+        }
+        return await phases
             .GroupBy(phase => phase.ProjectId)
             .Select(group => new { group.Key, Count = group.Count() })
             .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);
+    }
 
     private static async Task<ProjectHierarchyMetrics> LoadHierarchyMetricsAsync(
         ProjectsDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var links = await dbContext.Set<ProjectHierarchyLink>()
+        CancellationToken cancellationToken,
+        Guid? projectId = null) {
+        var query = dbContext.Set<ProjectHierarchyLink>().AsQueryable();
+        if (projectId.HasValue) {
+            query = query.Where(link => link.ParentProjectId == projectId.Value || link.ChildProjectId == projectId.Value);
+        }
+        var links = await query
             .OrderBy(link => link.ParentProjectId)
             .ThenBy(link => link.ChildProjectId)
             .ToListAsync(cancellationToken);

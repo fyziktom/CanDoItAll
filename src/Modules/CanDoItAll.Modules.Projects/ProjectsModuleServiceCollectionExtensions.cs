@@ -20,6 +20,7 @@ public static class ProjectsModuleServiceCollectionExtensions
             IAgentExecutionSourceAuthorityProvider,
             ProjectsExecutionAuthorityProvider>());
         services.AddScoped<ProjectsService>();
+        services.AddScoped<IProjectSummaryQueryService>(provider => provider.GetRequiredService<ProjectsService>());
         services.AddScoped<ProjectWriteAdmissionService>();
         services.AddScoped<ProjectWriteSelectionQuery>();
         services.AddScoped<ProjectRecordQueryService>();

@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class ProjectsOwnerPersistenceTests {
+public sealed partial class ProjectsOwnerPersistenceTests {
     [Fact]
     public async Task Owner_models_match_canonical_mappings_and_keep_the_cross_owner_crm_fk_in_the_complete_model() {
         await using var application = await TestApplication.CreateAsync();
@@ -112,6 +112,7 @@ public sealed class ProjectsOwnerPersistenceTests {
         await using var other = await TestApplication.CreateAsync(new TestHarnessOptions { TestEnvironment = environment, ActiveProfile = otherProfile });
         await using var otherScope = other.Services.CreateAsyncScope();
         Assert.Null(await otherScope.ServiceProvider.GetRequiredService<ProjectRecordQueryService>().GetAsync(project.Id));
+        Assert.Null(await otherScope.ServiceProvider.GetRequiredService<IProjectSummaryQueryService>().GetSummaryAsync(project.Id));
         Assert.Equal(editor.Name, (await queries.GetAsync(project.Id))!.Name);
     }
 

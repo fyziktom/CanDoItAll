@@ -11,7 +11,7 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureWorkflowNodeService(
     ProjectWorkbenchService projectWorkbenchService,
-    ProjectsService projectsService,
+    IProjectSummaryQueryService projectSummaryQuery,
     IWorkflowCatalogService workflowCatalogService,
     IWorkflowLaunchService workflowLaunchService,
     ProjectStructureWorkflowLaunchIntentFactory launchIntentFactory,
@@ -42,8 +42,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             throw new ProjectStructureAgentException(400, "ParentNodeRequired", "A parent project-structure node id is required.");
         }
 
-        var project = (await projectsService.ListAsync(cancellationToken))
-            .FirstOrDefault(item => item.Id == projectId);
+        var project = await projectSummaryQuery.GetSummaryAsync(projectId, cancellationToken);
         if (project is null)
         {
             throw new ProjectStructureAgentException(404, "ProjectNotFound", $"Project '{projectId:D}' was not found.");
@@ -455,8 +454,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         string nodeId,
         CancellationToken cancellationToken)
     {
-        var project = (await projectsService.ListAsync(cancellationToken))
-            .FirstOrDefault(item => item.Id == projectId);
+        var project = await projectSummaryQuery.GetSummaryAsync(projectId, cancellationToken);
         if (project is null)
         {
             throw new ProjectStructureAgentException(404, "ProjectNotFound", $"Project '{projectId:D}' was not found.");
