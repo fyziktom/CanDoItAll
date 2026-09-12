@@ -204,7 +204,7 @@ public static class ProjectStructureAgentApi
                 request,
                 async (agent, cancellationToken) =>
                 {
-                    var expected = RequireTaskAdmission(projectId, request.ExpectedProjectAdmission);
+                    var expected = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission);
                     agent = agent with { ExpectedProjectAdmission = expected };
                     try
                     {
@@ -252,7 +252,7 @@ public static class ProjectStructureAgentApi
                             "The task id in the route must match request.taskId.");
                     }
 
-                    var expected = RequireTaskAdmission(projectId, request.ExpectedProjectAdmission);
+                    var expected = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission);
                     var owner = agent with { ExpectedProjectAdmission = expected };
                     try
                     {
@@ -293,7 +293,7 @@ public static class ProjectStructureAgentApi
                     projectId,
                     taskId,
                     request,
-                    agent with { ExpectedProjectAdmission = RequireTaskAdmission(projectId, request.ExpectedProjectAdmission) },
+                    agent with { ExpectedProjectAdmission = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission) },
                     cancellationToken),
                 cancellationToken));
 
@@ -914,12 +914,19 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.DeleteNodeDetailedAsync(
-                    projectId,
-                    nodeId,
-                    request,
-                    agent,
-                    cancellationToken),
+                (agent, cancellationToken) => {
+                    if (!request.DurableMutationId.HasValue && request.ManagedStorageDisposition is
+                        ProjectStructureManagedStorageDisposition.RetainManagedFiles or
+                        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles) {
+                        agent = agent with { ExpectedProjectAdmission = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission) };
+                    }
+                    return agentService.DeleteNodeDetailedAsync(
+                        projectId,
+                        nodeId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapGet("/projects/{projectId:guid}/deletion-completion-notices", async (
@@ -978,11 +985,18 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.DeleteNodesDetailedAsync(
-                    projectId,
-                    request,
-                    agent,
-                    cancellationToken),
+                (agent, cancellationToken) => {
+                    if (request.ManagedStorageDisposition is
+                        ProjectStructureManagedStorageDisposition.RetainManagedFiles or
+                        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles) {
+                        agent = agent with { ExpectedProjectAdmission = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission) };
+                    }
+                    return agentService.DeleteNodesDetailedAsync(
+                        projectId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/approvals/request", async (
@@ -1639,10 +1653,10 @@ public static class ProjectStructureAgentApi
             projectIdSelector);
     }
 
-    private static ProjectWriteAdmission RequireTaskAdmission(Guid projectId, ProjectWriteAdmission? expected) {
+    private static ProjectWriteAdmission RequireProjectAdmission(Guid projectId, ProjectWriteAdmission? expected) {
         if (expected is null || expected.ProjectId != projectId) {
             throw new ProjectStructureAgentException(StatusCodes.Status409Conflict, ProjectLifetimeRefreshRequiredErrorCode,
-                "Reload the project structure and submit its expectedProjectAdmission with the task mutation.");
+                "Reload the project structure and submit its expectedProjectAdmission with the mutation.");
         }
         return expected;
     }

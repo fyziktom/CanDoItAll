@@ -93,8 +93,8 @@ history and returns the same clean or warning result without repeating external 
 
 | Method and route | Contract |
 |---|---|
-| `POST /api/project-structure/projects/{projectId}/nodes/{nodeId}/delete` | Starts a node deletion with an explicit `managedStorageDisposition`. A body containing the exact `durableMutationId` retries that same deletion and must match its persisted disposition. |
-| `POST /api/project-structure/projects/{projectId}/nodes/delete` | Deletes independent requested branches with one explicit `managedStorageDisposition` and reports every exact recovery when only part of the batch finishes. |
+| `POST /api/project-structure/projects/{projectId}/nodes/{nodeId}/delete` | Starts a node deletion with an explicit `managedStorageDisposition` and the `expectedProjectAdmission` returned by Structure read. Missing admission requires a refresh (409); the owner rejects stale profile/project lifetimes. A body containing the exact `durableMutationId` retries that same deletion and must match its persisted disposition; it uses the original cleanup receipt rather than new deletion admission. |
+| `POST /api/project-structure/projects/{projectId}/nodes/delete` | Deletes independent requested branches with one explicit `managedStorageDisposition` and the displayed `expectedProjectAdmission`, and reports every exact recovery when only part of the batch finishes. Missing or stale admission cannot delete nodes in a recreated project. |
 | `GET /api/project-structure/projects/{projectId}/deletion-cleanups` | Lists non-terminal node cleanup recoveries with lease-aware retry availability. |
 | `GET /api/project-structure/projects/{projectId}/deletion-completion-notices` | Lists retained-warning completion evidence for node cleanup. |
 

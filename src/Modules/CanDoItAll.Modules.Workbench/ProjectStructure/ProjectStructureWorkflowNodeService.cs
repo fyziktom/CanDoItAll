@@ -444,7 +444,6 @@ public sealed class ProjectStructureWorkflowNodeService(
         };
         var status = await BuildStatusAsync(admission.Definition, metadata, run, cancellationToken);
         return status with {
-            Summary = status.Summary with { CreatedFilePaths = metadata.LastCreatedFilePaths },
             IntentId = admission.Binding.IntentId,
             AdmissionSequence = admission.Binding.Sequence,
             Delivery = admission.Delivery
