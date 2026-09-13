@@ -98,7 +98,7 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
 
     private static async Task ConfigureHealthyDemoProvidersAsync(IPage page, string baseUrl)
     {
-        var response = await page.GotoAsync($"{baseUrl}/memory");
+        var response = await page.GotoAsync($"{baseUrl}/memory", new() { WaitUntil = WaitUntilState.DOMContentLoaded });
         Assert.True(response?.Ok);
         await DismissDatabaseProfileDialogAsync(page);
         await page.GetByTestId("memory-ui-zero-provider").WaitForAsync();

@@ -13,6 +13,47 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectStructurePageMoveTests
 {
     [Fact]
+    public async Task Canvas_parent_normalization_reaches_the_initialized_browser_bridge() {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var create = context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true);
+        create.SetResult(true);
+        var appliedStates = new List<string>();
+        context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update", invocation => {
+            appliedStates.Add(Assert.IsType<CanvasWorkbenchSurface>(invocation.Arguments[1]).UiState.ToJson());
+            return true;
+        }).SetResult(true);
+        var surface = new CanvasWorkbenchSurface {
+            SurfaceId = "normalized-owner-state",
+            Nodes = [new() { Id = "anchor" }, new() { Id = "adopted" }],
+            UiState = new() {
+                GroupFrames = [new() { Id = "frame", AnchorNodeIds = ["anchor"] }]
+            }
+        };
+        IRenderedComponent<CanvasWorkbench> canvas = null!;
+        canvas = context.Render<CanvasWorkbench>(parameters => parameters
+            .Add(component => component.Surface, surface)
+            .Add(component => component.StateChanged, (string json) => {
+                surface.UiState = CanvasWorkbenchUiState.Parse(json);
+                surface.UiState.GroupFrames.Single().AnchorNodeIds.Add("adopted");
+                canvas.Render(next => next.Add(component => component.Surface, surface));
+            }));
+        canvas.WaitForAssertion(() => Assert.Single(create.Invocations));
+        appliedStates.Clear();
+        var clientState = CanvasWorkbenchUiState.Parse(surface.UiState.ToJson());
+        clientState.Zoom = 1.25;
+
+        await canvas.InvokeAsync(() => canvas.Instance.OnStateChanged(clientState.ToJson(), dispatchId: 1));
+
+        Assert.Contains("adopted", surface.UiState.GroupFrames.Single().AnchorNodeIds);
+        canvas.WaitForAssertion(() => {
+            var applied = CanvasWorkbenchUiState.Parse(Assert.Single(appliedStates));
+            Assert.Equal(1.25, applied.Zoom);
+            Assert.Contains("adopted", Assert.Single(applied.GroupFrames).AnchorNodeIds);
+        });
+    }
+
+    [Fact]
     public async Task Move_objects_async_batches_multi_node_persistence_into_one_save_transaction()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithSaveCounter);
@@ -66,9 +107,10 @@ public sealed class ProjectStructurePageMoveTests
         Assert.Equal(360d, reloadedSecondNode.Y);
     }
 
-    [Fact]
-    public async Task Nodes_moved_callback_keeps_multi_selection_and_adopts_nodes_into_existing_border()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Nodes_moved_callback_keeps_multi_selection_and_adopts_nodes_into_existing_border(bool clearBorderBeforeClientEcho) {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
@@ -159,6 +201,8 @@ public sealed class ProjectStructurePageMoveTests
             Assert.False(workbench.Instance.Surface.Chrome.TransformHandles.IsEnabled);
         });
 
+        string staleCanvasStateJson = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.ToJson();
+
         await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnNodesMoved(JsonSerializer.Serialize<IReadOnlyList<CanvasWorkbenchNodePositionChange>>(
         [
             new CanvasWorkbenchNodePositionChange(movedTask.Id, 580, 220),
@@ -175,19 +219,47 @@ public sealed class ProjectStructurePageMoveTests
             Assert.False(workbench.Instance.Surface.Chrome.TransformHandles.IsEnabled);
         });
 
+        if (clearBorderBeforeClientEcho) {
+            staleCanvasStateJson = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.ToJson();
+            await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(
+                movedTask.Id, "group-clear-frame", 0, 0));
+        }
+
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnStateChanged(
+            staleCanvasStateJson, dispatchId: 1));
+
+        cut.WaitForAssertion(() => {
+            var uiState = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState;
+            Assert.Equal(2, uiState.SelectedNodeIds.Count);
+            Assert.Contains(movedTask.Id, uiState.SelectedNodeIds);
+            Assert.Contains(movedEvidence.Id, uiState.SelectedNodeIds);
+            if (clearBorderBeforeClientEcho) {
+                Assert.Empty(uiState.GroupFrames);
+            } else {
+                var frame = Assert.Single(uiState.GroupFrames);
+                Assert.Equal(4, frame.AnchorNodeIds.Count);
+                Assert.Contains(movedTask.Id, frame.AnchorNodeIds);
+                Assert.Contains(movedEvidence.Id, frame.AnchorNodeIds);
+            }
+        });
+
         var reloadedSurface = await workbenchService.GetStructureAsync(projectId);
         var movedTaskNode = Assert.Single(reloadedSurface.Nodes, node => string.Equals(node.Id, movedTask.Id, StringComparison.Ordinal));
         var movedEvidenceNode = Assert.Single(reloadedSurface.Nodes, node => string.Equals(node.Id, movedEvidence.Id, StringComparison.Ordinal));
         var persistedUiState = CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson);
-        var frame = Assert.Single(persistedUiState.GroupFrames);
 
         Assert.Equal(580d, movedTaskNode.X);
         Assert.Equal(220d, movedTaskNode.Y);
         Assert.Equal(620d, movedEvidenceNode.X);
         Assert.Equal(260d, movedEvidenceNode.Y);
-        Assert.Contains(movedTask.Id, frame.AnchorNodeIds);
-        Assert.Contains(movedEvidence.Id, frame.AnchorNodeIds);
-
+        if (clearBorderBeforeClientEcho) {
+            Assert.Empty(persistedUiState.GroupFrames);
+        } else {
+            var frame = Assert.Single(persistedUiState.GroupFrames);
+            Assert.Equal(4, frame.AnchorNodeIds.Count);
+            Assert.Contains(movedTask.Id, frame.AnchorNodeIds);
+            Assert.Contains(movedEvidence.Id, frame.AnchorNodeIds);
+        }
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)

@@ -1,21 +1,16 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Playwright;
 
 [Collection(PlaywrightCollection.Name)]
-public sealed class AiAgentFlowTests
-{
-    private readonly PlaywrightAppFixture fixture;
-
-    public AiAgentFlowTests(PlaywrightAppFixture fixture)
-    {
-        this.fixture = fixture;
-    }
-
+public sealed class AiAgentFlowTests(PlaywrightAppFixture fixture, ITestOutputHelper output) {
     [Fact]
     public async Task Agentframework_catalog_projects_agents_into_crm_hr_directory()
     {
@@ -33,9 +28,34 @@ public sealed class AiAgentFlowTests
         var agentName = $"B09 Agent {suffix}";
         await SeedAgentDependenciesAsync(providerName);
 
-        await page.GotoAsync($"{fixture.BaseUrl}/agents?tab=agents");
-        await DismissStartupModalIfPresentAsync(page);
-        await page.GetByTestId("agents-catalog-new").ClickAsync();
+        var catalogUrl = $"{fixture.BaseUrl}/agents?tab=agents";
+        try {
+            var response = await page.GotoAsync(catalogUrl);
+            Assert.NotNull(response);
+            Assert.True(response.Ok, $"Expected the agent catalog to return 2xx, got {response.Status}.");
+            await DismissStartupModalIfPresentAsync(page);
+            Assert.Equal(catalogUrl, page.Url);
+            await page.GetByTestId("agents-catalog-new").ClickAsync();
+        } catch {
+            try {
+                var hostLog = fixture.GetLogSnapshot();
+                output.WriteLine(JsonSerializer.Serialize(new {
+                    Path = new Uri(page.Url).AbsolutePath,
+                    ShellCount = await page.GetByTestId("agents-shell-tabs").CountAsync(),
+                    CatalogCount = await page.GetByTestId("agents-catalog-workspace").CountAsync(),
+                    NewAgentCount = await page.GetByTestId("agents-catalog-new").CountAsync(),
+                    CircuitErrorVisible = await page.Locator("#blazor-error-ui").IsVisibleAsync(),
+                    StartupPromptCount = await page.GetByTestId("database-startup-modal").CountAsync(),
+                    ExceptionTypes = Regex.Matches(hostLog, @"\b(?:CanDoItAll|System|Microsoft|Npgsql)\.(?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*Exception\b")
+                        .Select(match => match.Value).Distinct(StringComparer.Ordinal).Take(32).ToArray(),
+                    StackMethods = Regex.Matches(hostLog, @"(?m)^\s*at\s+(?<method>(?:CanDoItAll|System|Microsoft|Npgsql)\.[A-Za-z0-9_.+<>]+)\(")
+                        .Select(match => match.Groups["method"].Value).Distinct(StringComparer.Ordinal).Take(32).ToArray()
+                }));
+            } catch (Exception diagnosticFailure) {
+                output.WriteLine($"Browser diagnostic capture failed: {diagnosticFailure.GetType().Name}");
+            }
+            throw;
+        }
         await page.GetByTestId("agents-catalog-name").WaitForAsync();
 
         await page.GetByTestId("agents-catalog-name").FillAsync(agentName);

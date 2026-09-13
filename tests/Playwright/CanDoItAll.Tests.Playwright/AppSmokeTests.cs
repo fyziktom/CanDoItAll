@@ -403,6 +403,13 @@ public sealed partial class AppSmokeTests
         await editQuickAction.WaitForAsync();
         Assert.Contains("Edit", await editQuickAction.TextContentAsync(), StringComparison.Ordinal);
         await quickActionDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+        await quickActionDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        noteEditor = page.Locator(".cw-note-editor__input");
+        if (await noteEditor.IsVisibleAsync()) {
+            await Assertions.Expect(noteEditor).ToHaveValueAsync("Second child note");
+            await noteEditor.PressAsync("Escape");
+            await noteEditor.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        }
 
         var editedNoteId = await ResolveCanvasNodeIdAsync(page, ".cw-node:has-text('Second child note')");
         Assert.False(string.IsNullOrWhiteSpace(editedNoteId), "Expected the second child note to stay addressable after opening quick actions.");
@@ -437,13 +444,27 @@ public sealed partial class AppSmokeTests
         await page.Locator(".cw-context-menu__action[data-action-id='marker:question']").WaitForAsync();
         var markerMetrics = await ReadContextMenuActionMetricsAsync(page, "marker:question");
         Assert.True(markerMetrics.Width >= progressMetrics.Width - 2, $"Expected marker presets to stay comparable to progress preset size. Marker={markerMetrics.Width}, progress={progressMetrics.Width}.");
-        await ClickContextMenuActionAsync(page, "marker:money");
-        await WaitForSceneSnapshotAsync(
-            page,
-            snapshot => snapshot.Nodes.Any(node =>
-                string.Equals(node.Id, editedNoteId, StringComparison.Ordinal) &&
-                string.Equals(node.MarkerText, "Budget", StringComparison.Ordinal)),
-            "marker badge metadata for edited child note");
+        try {
+            await page.Locator(".cw-context-menu__action[data-action-id='marker:money']").ClickAsync();
+            await page.Locator(".cw-context-menu").WaitForAsync(new() { State = WaitForSelectorState.Hidden });
+            await WaitForSceneSnapshotAsync(
+                page,
+                snapshot => snapshot.Nodes.Any(node =>
+                    string.Equals(node.Id, editedNoteId, StringComparison.Ordinal) &&
+                    string.Equals(node.MarkerText, "Budget", StringComparison.Ordinal)),
+                "marker badge metadata for edited child note");
+        } catch {
+            try {
+                var scene = await ReadSceneSnapshotAsync(page);
+                var diagnostics = await ReadCanvasDiagnosticsAsync(page);
+                await File.WriteAllTextAsync(Path.Combine(artifactsDir, "structure-marker-failure.json"),
+                    JsonSerializer.Serialize(new { editedNoteId, scene, diagnostics }));
+                await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-marker-failure.png"), FullPage = true });
+            } catch (Exception diagnosticFailure) {
+                Console.Error.WriteLine($"Browser diagnostic capture failed: {diagnosticFailure.GetType().Name}");
+            }
+            throw;
+        }
 
         nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Second child note')");
         Assert.Contains(nodeLabels, label => label.Contains("Priority", StringComparison.OrdinalIgnoreCase));
@@ -1048,7 +1069,12 @@ public sealed partial class AppSmokeTests
         await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "bundle-p0-04-before-drag.png"));
 
         try {
-            await DragCanvasNodeAsync(page, movedTaskId, 560f, 0f);
+            await page.Keyboard.DownAsync("Control");
+            try {
+                await DragCanvasNodeAsync(page, movedTaskId, 560f, 0f, controlModifier: true);
+            } finally {
+                await page.Keyboard.UpAsync("Control");
+            }
             await page.WaitForFunctionAsync(
                 @"payload => {
                     const state = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState;

@@ -88,15 +88,40 @@ public sealed class CrmHrRegressionTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/resources?projectId={seed.ProjectId:D}");
-        await page.GetByTestId("resource-project-select").WaitForAsync();
-        await WaitForSelectOptionAsync(page.GetByTestId("resource-owner-select"), seed.OwnerId.ToString());
-        await WaitForSelectOptionAsync(page.GetByTestId("resource-maintainer-select"), seed.MaintainerId.ToString());
-        await page.GetByTestId("resource-name-input").FillAsync(resourceName);
-        await page.GetByTestId("resource-primary-input").FillAsync($"https://example.test/b13/{suffix}.git");
-        await page.GetByTestId("resource-owner-select").SelectOptionAsync(seed.OwnerId.ToString());
-        await page.GetByTestId("resource-maintainer-select").SelectOptionAsync(seed.MaintainerId.ToString());
-        await page.GetByTestId("resource-save-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Resource saved.");
+        try {
+            await Assertions.Expect(page.GetByRole(AriaRole.Tablist, new() { Name = "Open workspace tabs", Exact = true })
+                .GetByRole(AriaRole.Tab, new() { Name = "Resources", Exact = true }))
+                .ToHaveAttributeAsync("aria-selected", "true");
+            await page.GetByTestId("resource-project-select").WaitForAsync();
+            await page.GetByTestId("resource-plugin-select").SelectOptionAsync(new SelectOptionValue { Label = "Repository resource" });
+            await page.GetByTestId("resource-config-defaultBranch").WaitForAsync();
+            await WaitForSelectOptionAsync(page.GetByTestId("resource-owner-select"), seed.OwnerId.ToString());
+            await WaitForSelectOptionAsync(page.GetByTestId("resource-maintainer-select"), seed.MaintainerId.ToString());
+            await page.GetByTestId("resource-name-input").FillAsync(resourceName);
+            await page.GetByTestId("resource-primary-input").FillAsync($"https://example.test/b13/{suffix}.git");
+            await page.GetByTestId("resource-owner-select").SelectOptionAsync(seed.OwnerId.ToString());
+            await page.GetByTestId("resource-maintainer-select").SelectOptionAsync(seed.MaintainerId.ToString());
+            await page.GetByTestId("resource-save-button").ClickAsync();
+            var saved = page.GetByText("Resource saved.", new() { Exact = true });
+            await saved
+                .Or(page.GetByText("Resource was not saved", new() { Exact = true }))
+                .Or(page.GetByText("Resource save failed", new() { Exact = true }))
+                .Or(page.GetByText("Resource saved; refresh incomplete", new() { Exact = true }))
+                .First.WaitForAsync();
+            Assert.True(await saved.IsVisibleAsync(), await page.Locator("body").InnerTextAsync());
+        } catch {
+            try {
+                await page.ScreenshotAsync(new() {
+                    Path = Path.Combine(evidenceDirectory, "crm-hr-resources-b13-failure.png"),
+                    FullPage = true
+                });
+                await File.WriteAllTextAsync(Path.Combine(evidenceDirectory, "crm-hr-resources-b13-failure.txt"),
+                    await page.Locator("body").InnerTextAsync());
+            } catch (Exception diagnosticFailure) {
+                Console.Error.WriteLine($"Browser diagnostic capture failed: {diagnosticFailure.GetType().Name}");
+            }
+            throw;
+        }
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -105,12 +130,21 @@ public sealed class CrmHrRegressionTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/test-lab?projectId={seed.ProjectId:D}");
+        await Assertions.Expect(page.GetByRole(AriaRole.Tablist, new() { Name = "Open workspace tabs", Exact = true })
+            .GetByRole(AriaRole.Tab, new() { Name = "Test Lab", Exact = true }))
+            .ToHaveAttributeAsync("aria-selected", "true");
         await page.GetByTestId("testlab-project-select").WaitForAsync();
         await WaitForSelectOptionAsync(page.GetByTestId("testlab-responsible-party-select"), seed.OwnerId.ToString());
         await page.GetByTestId("testlab-responsible-party-select").SelectOptionAsync(seed.OwnerId.ToString());
         await page.GetByTestId("testlab-title-input").FillAsync(testPlanTitle);
         await page.GetByTestId("testlab-save-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Test plan saved.");
+        var planSaved = page.GetByText("Test plan saved", new() { Exact = true });
+        await planSaved
+            .Or(page.GetByText("Test plan was not saved", new() { Exact = true }))
+            .Or(page.GetByText("Test plan save failed", new() { Exact = true }))
+            .Or(page.GetByText("Test plan saved; refresh incomplete", new() { Exact = true }))
+            .First.WaitForAsync();
+        Assert.True(await planSaved.IsVisibleAsync(), await page.Locator("body").InnerTextAsync());
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -268,6 +302,8 @@ public sealed class CrmHrRegressionTests
         var savedPlanSummary = Assert.Single(await testLabService.ListAsync(), item => item.Title == testPlanTitle);
         var savedPlan = await testLabService.GetAsync(savedPlanSummary.Id);
         Assert.Equal(testPlanTitle, savedPlan.Title);
+        Assert.Equal(seed.ProjectId, savedPlan.ProjectId);
+        Assert.Equal(seed.OwnerId, savedPlan.ResponsiblePartyId);
 
         var sensitiveParty = await partyDirectoryService.GetPartyAsync(seed.SensitivePartyId);
         Assert.NotNull(sensitiveParty);

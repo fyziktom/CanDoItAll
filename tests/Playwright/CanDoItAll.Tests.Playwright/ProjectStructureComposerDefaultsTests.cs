@@ -1,4 +1,7 @@
 using System.IO;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
@@ -52,30 +55,44 @@ public sealed partial class AppSmokeTests
 
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+        await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
+        await page.GetByTestId("project-structure-object-index-window")
+            .WaitForAsync(new() { State = WaitForSelectorState.Hidden });
         await EnsureStructureToolboxWindowExpandedAsync(page);
         await EnsureStructureToolboxGroupExpandedAsync(page, "work");
 
         await page.GetByTestId("project-structure-toolbox-add-work-task").ClickAsync();
-        await composer.WaitForAsync();
+        var taskDialog = page.GetByTestId("project-structure-task-create-dialog");
+        await taskDialog.WaitForAsync();
 
-        var workItemKindSelect = composer.Locator("select").First;
-        Assert.Equal(
-            "task",
-            await workItemKindSelect.InputValueAsync());
+        await taskDialog.GetByTestId("project-structure-task-create-title").FillAsync("Autoselected Task");
+        await taskDialog.GetByTestId("project-structure-task-create-subtitle").FillAsync("Canvas QA");
+        await taskDialog.GetByTestId("project-structure-task-create-notes").FillAsync("Subtype-specific work-item create should not require a redundant kind selection.");
 
-        await composer.Locator("input[placeholder='Implement export flow']").FillAsync("Autoselected Task");
-        await composer.Locator("input[placeholder='Sprint or owner']").FillAsync("Canvas QA");
-        await composer.Locator("textarea[placeholder='Definition of done or context']").FillAsync("Subtype-specific work-item create should not require a redundant kind selection.");
-
-        var addWorkItemButton = page.GetByRole(AriaRole.Button, new() { Name = "Add work item", Exact = true });
+        var addWorkItemButton = taskDialog.GetByTestId("project-structure-task-create-submit");
         Assert.True(
             await addWorkItemButton.IsEnabledAsync(),
-            "Expected the task composer to be submittable after the visible required fields are filled.");
+            "Expected the task dialog to be submittable after the visible required fields are filled.");
 
         await CapturePrimaryWorkbenchShellAsync(page, Path.Combine(artifactsDir, "bundle-p3-01-structure-composer-defaults.png"));
         await addWorkItemButton.ClickAsync();
+        await taskDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await page.WaitForSelectorAsync("text=Autoselected Task");
+        var taskNode = Assert.Single((await ReadSceneSnapshotAsync(page)).Nodes,
+            node => string.Equals(node.Title, "Autoselected Task", StringComparison.Ordinal));
+        Assert.False(string.IsNullOrWhiteSpace(fixture.DatabaseConnectionString),
+            "Expected the Playwright fixture to expose its isolated database connection.");
+        var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
+            .UseNpgsql(fixture.DatabaseConnectionString)
+            .Options;
+        await using var owner = new WorkbenchDbContext(options);
+        var savedTask = await owner.Set<ProjectObjectRecord>().AsNoTracking()
+            .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == taskNode.Id);
+        Assert.Equal(ProjectObjectType.WorkItem, savedTask.ObjectType);
+        Assert.Equal("task", savedTask.ObjectSubtype);
+        var workItem = ProjectObjectMetadataSerializer.Parse(savedTask.MetadataJson).WorkItem;
+        Assert.NotNull(workItem);
+        Assert.Equal(ProjectWorkItemKind.Task, workItem.WorkItemKind);
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -116,7 +133,9 @@ public sealed partial class AppSmokeTests
         await page.Keyboard.PressAsync("Escape");
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+        await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
+        await page.GetByTestId("project-structure-object-index-window")
+            .WaitForAsync(new() { State = WaitForSelectorState.Hidden });
         await EnsureStructureToolboxWindowExpandedAsync(page);
         await EnsureStructureToolboxGroupExpandedAsync(page, "work");
 

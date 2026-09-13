@@ -1532,7 +1532,9 @@ else
         }
 
         var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson));
-        uiState.WindowStates = ResolveEditableUiState().WindowStates;
+        var ownerUiState = ResolveEditableUiState();
+        uiState.WindowStates = ownerUiState.WindowStates;
+        uiState.GroupFrames = ownerUiState.GroupFrames;
         if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
             surface.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) &&
             uiState.SelectedNodeIds.Count <= 1 &&
