@@ -165,6 +165,8 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
         {
             var services = serviceScope.ServiceProvider;
             var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+            var admission = Assert.IsType<ProjectWriteAdmission>(
+                await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
             var primaryParentNodeId = $"project:{projectId:D}";
             var secondaryParent = await services
                 .GetRequiredService<ProjectWorkbenchService>()
@@ -197,7 +199,8 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
                     ],
                     AgentChatContextScopeAccessMode.AllowListed,
                     AgentChatContextAccessState.Ready,
-                    completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun));
+                    completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+                    observedProjectLifetime: new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId)));
             return new IntegrityFixture(
                 host,
                 contextLease,

@@ -21,7 +21,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var alpha = await CreateProjectAsync(services, "Original failure Alpha");
         var beta = await CreateProjectAsync(services, "Unrelated Beta");
-        await using var fixture = await CreateJournalAsync(services, alpha.ProjectId, requireApproval: true);
+        await using var fixture = await CreateJournalAsync(services, alpha, requireApproval: true);
         var actor = await SaveMetadataActorAsync(services, fixture.Agent, alpha, structureWrite: false, taskWrite: true);
         Assert.True(actor.Permissions.RequiresApprovalForExternalCalls);
         Assert.False(actor.Permissions.AutoApproveExternalCallsByDefault);
@@ -113,7 +113,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Original failed lookup");
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var actor = await SaveActorAsync(services, fixture.Agent, project, canRead: true);
         const string toolName = ProjectStructureToolPolicy.ProjectStructureAssetGet;
         var arguments = MissingAssetArguments(project.ProjectId);
@@ -133,12 +133,24 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         }
         var retry = new ScriptClient(toolName, arguments);
         var denied = await Assert.ThrowsAnyAsync<Exception>(() => ExecuteAsync(fixture, services, actor, retry));
-        Assert.Contains("project-structure.result-disclosure-denied", Codes(denied));
+        var sourceDenied = Assert.IsType<ProjectWriteAdmissionRejectedException>(denied.GetBaseException());
+        Assert.Equal(project, sourceDenied.Admission);
+        await using var lease = await fixture.NewJournal(fixture.NewStore()).AcquireRunAsync(fixture.Session, default);
+        using var bound = lease.Bind();
+        var failedResult = new CanDoItAll.AgentFramework.Tooling.AgentToolResultDisclosure(saved.IntentId, saved.Payload,
+            saved.EffectState, ReadCheckpointValue(saved), saved.DisclosureEvidence);
+        var disclosureDenied = await Assert.ThrowsAsync<AgentToolAdmissionException>(async () => {
+            await using var authorization = await Disclosure(services, fixture).AuthorizeAsync(
+                Context(fixture, actor, project.ProjectId), failedResult, CancellationToken.None);
+        });
+        Assert.Equal("project-structure.result-disclosure-denied", disclosureDenied.Code);
         Assert.Equal(0, retry.Requests);
         Assert.Equal(saved, await ReadProposalAsync(fixture));
         Assert.Contains(project, ProjectStructureDisclosureEvidenceCodec.Read(saved.DisclosureEvidence!).Targets);
         if (recreate) {
             Assert.Equal("Different current project", (await projects.GetAsync(project.ProjectId)).Name);
+        } else {
+            Assert.Null(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(project.ProjectId));
         }
     }
 
@@ -148,7 +160,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Legacy failure provenance");
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var actor = await SaveActorAsync(services, fixture.Agent, project, canRead: true);
         var original = new ScriptClient(ProjectStructureToolPolicy.ProjectStructureAssetGet,
             MissingAssetArguments(project.ProjectId), failAfterResult: true);
@@ -180,7 +192,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Failure capture boundaries");
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var actor = await SaveActorAsync(services, fixture.Agent, project, canRead: true);
         var safe = ProjectStructureAgentException.CreateAgentVisible(404, "FixtureKnownFailure", "Safe fixture failure", true,
             effectState: disposition == FailureDisposition.None ? AgentToolEffectState.None :

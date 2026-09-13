@@ -10,6 +10,9 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectsAgentChatContextProviderTests
 {
+    private readonly Guid databaseProfileId = Guid.NewGuid();
+    private readonly Dictionary<Guid, ProjectWriteAdmission> projectAdmissions = [];
+
     [Fact]
     public async Task Provider_tracks_project_focus_refreshes_matching_source_and_releases_context()
     {
@@ -312,12 +315,15 @@ public sealed class ProjectsAgentChatContextProviderTests
             string.Equals(fragment.ContributorId.Value, contributorId, StringComparison.Ordinal));
     }
 
-    private static ProjectSummary CreateProject(
+    private ProjectSummary CreateProject(
         Guid id,
         string name,
         int parentCount = 0,
-        int childCount = 0)
-    {
+        int childCount = 0) {
+        if (!projectAdmissions.TryGetValue(id, out var admission)) {
+            admission = new(databaseProfileId, id, Guid.NewGuid());
+            projectAdmissions.Add(id, admission);
+        }
         return new ProjectSummary(
             id,
             name,
@@ -326,7 +332,7 @@ public sealed class ProjectsAgentChatContextProviderTests
             PhaseCount: 2,
             ParentCount: parentCount,
             ChildCount: childCount,
-            UpdatedAtUtc: DateTimeOffset.UtcNow);
+            UpdatedAtUtc: DateTimeOffset.UtcNow) { ExpectedProjectAdmission = admission };
     }
 
     private static AgentDefinition CreateAgent(IReadOnlyList<Guid>? allowedProjectIds = null)

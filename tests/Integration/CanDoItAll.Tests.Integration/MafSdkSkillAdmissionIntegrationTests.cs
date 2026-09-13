@@ -446,6 +446,7 @@ public sealed class MafSdkSkillAdmissionIntegrationTests {
                 journal = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding:
                     new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)),
                     transientContext: new("Original SDK source", workspace), storageScope: workspace,
+                    sourceProjectLifetime: project is null ? null : new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId),
                     configureAgent: actor => actor with {
                         Id = Guid.NewGuid(), Name = "SDK skill admission fixture", TemplateKey = string.Empty,
                         IsTemplate = false, Workload = AgentWorkloadKind.General, ConfigurationJson = "{}", Capabilities = []
@@ -651,7 +652,9 @@ public sealed class MafSdkSkillAdmissionIntegrationTests {
             var original = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(journal.Detail.Run.MetadataJson)!;
             var source = AgentTurnContextMetadata.TryReadTurnContextReference(journal.Detail.Run.MetadataJson)!;
             return await scope.ServiceProvider.GetRequiredService<IAgentExecutionAuthorityResolver>().ResolveAsync(new(agent.Id,
-                source.SourceKind, source.SourceId, original.WorkspaceScope, journal.Profile.Generation, UiAccessHint: null));
+                source.SourceKind, source.SourceId, original.WorkspaceScope, journal.Profile.Generation, UiAccessHint: null) {
+                ObservedProjectLifetime = Project is { } current ? new(current.DatabaseProfileId, current.ProjectId, current.LifetimeId) : null
+            });
         }
 
         private async Task SaveSourcesAsync() {

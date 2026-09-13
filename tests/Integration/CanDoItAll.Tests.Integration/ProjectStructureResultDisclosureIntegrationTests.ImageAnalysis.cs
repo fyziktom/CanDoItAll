@@ -20,7 +20,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Metered image analysis");
         var image = await CreateImageAsync(services, project);
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var agent = await SaveImageActorAsync(services, fixture.Agent, project, canRead: true, canTransform: true);
         const string toolName = ProjectStructureToolPolicy.ProjectStructureAssetImageAnalyze;
         var arguments = ImageArguments(project.ProjectId, image.Id);
@@ -59,7 +59,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Acknowledged image analysis");
         var image = await CreateImageAsync(services, project);
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var agent = await SaveImageActorAsync(services, fixture.Agent, project, canRead: true, canTransform: true);
         const string toolName = ProjectStructureToolPolicy.ProjectStructureAssetImageAnalyze;
         var arguments = ImageArguments(project.ProjectId, image.Id);

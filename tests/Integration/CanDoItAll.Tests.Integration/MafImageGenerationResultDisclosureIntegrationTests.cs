@@ -186,7 +186,8 @@ public sealed class MafImageGenerationResultDisclosureIntegrationTests {
                 journal = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding:
                     new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)),
                     transientContext: new("Original admitted image scope", WorkspaceScopeDescriptor.Project(parent.ProjectId.ToString("D"))),
-                    storageScope: WorkspaceScopeDescriptor.Project(parent.ProjectId.ToString("D")));
+                    storageScope: WorkspaceScopeDescriptor.Project(parent.ProjectId.ToString("D")),
+                    sourceProjectLifetime: new(parent.DatabaseProfileId, parent.ProjectId, parent.LifetimeId));
                 Assert.Null(await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().GetExecutionRunAsync(journal.Session.ExecutionRunId));
                 Assert.NotNull(await journal.NewStore().GetExecutionRunAsync(journal.Session.ExecutionRunId));
                 var secret = await services.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {

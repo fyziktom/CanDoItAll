@@ -313,6 +313,7 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             var generation = services.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration();
             var journal = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding: new(profile.Profile.Profile.Id, "process-tool-test", generation),
                 transientContext: new("Original project launch authority", WorkspaceScopeDescriptor.Project(projectId.ToString("D"))),
+                sourceProjectLifetime: new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId),
                 configureAgent: source => source with {
                     Id = Guid.NewGuid(), Name = "Process tool journal source", TemplateKey = string.Empty, Tags = []
                 });

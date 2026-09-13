@@ -116,18 +116,30 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
     [InlineData(true)]
     public async Task Reused_project_scope_cannot_relabel_a_cached_workspace_result(bool duringOperation) {
         await using var fixture = await Fixture.CreateAsync(ToolContractCatalog.WorkspaceConvertDocument);
+        var originalProject = fixture.Project;
         if (duringOperation) {
             fixture.Operations.AfterConversion = fixture.ReplaceProjectAsync;
         }
         await fixture.CompleteThroughLostFinalAcknowledgementAsync();
         var saved = await fixture.ProposalAsync();
+        var evidence = WorkspaceToolResultEvidence.Read(saved.DisclosureEvidence!);
+        var source = CanDoItAll.Modules.AgentFramework.WorkspaceToolSourceEvidence.Read(evidence.Source);
+        Assert.Equal(originalProject, Assert.Single(source.Projects));
+        Assert.Equal(duringOperation ? CanDoItAll.Modules.AgentFramework.WorkspaceToolSourceState.LifetimeChangedDuringOperation
+            : CanDoItAll.Modules.AgentFramework.WorkspaceToolSourceState.Complete, source.State);
         if (!duringOperation) {
             await fixture.ReplaceProjectAsync();
         }
         await fixture.SaveActorAsync();
+        var current = await fixture.CurrentAuthorityAsync();
+        Assert.True(current.ReadAllowed);
+        Assert.Equal(AgentExecutionAuthorityRecord.CurrentSchemaVersion, current.SchemaVersion);
+        Assert.NotEqual(originalProject.LifetimeId, fixture.Project.LifetimeId);
+        Assert.Equal(new AgentProjectStructureLifetime(fixture.Project.DatabaseProfileId, fixture.Project.ProjectId,
+            fixture.Project.LifetimeId), current.SourceProjectLifetime);
         var next = new ToolClient(fixture.ToolName);
         var denied = await Assert.ThrowsAnyAsync<Exception>(() => fixture.ExecuteAsync(next));
-        Assert.Contains(duringOperation ? "workspace.result-authority-unavailable" : "workspace.result-disclosure-denied", Codes(denied));
+        Assert.Contains("workspace.result-disclosure-denied", Codes(denied));
         Assert.Equal(0, next.Requests);
         Assert.Equal(1, fixture.Operations.Conversions);
         Assert.Equal(saved, await fixture.ProposalAsync());
@@ -257,7 +269,8 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
                 var workspace = projectScope ? WorkspaceScopeDescriptor.Project(projectId.ToString("D")) : WorkspaceScopeDescriptor.Sandbox;
                 journal = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding:
                     new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)),
-                    transientContext: new("Original admitted workspace source", workspace), storageScope: workspace);
+                    transientContext: new("Original admitted workspace source", workspace), storageScope: workspace,
+                    sourceProjectLifetime: projectScope ? new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId) : null);
                 Assert.Null(await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().GetExecutionRunAsync(journal.Session.ExecutionRunId));
                 Assert.NotNull(await journal.NewStore().GetExecutionRunAsync(journal.Session.ExecutionRunId));
                 var capability = new CapabilityCatalogItem(Guid.NewGuid(), CapabilityKind.Tool, "reviewed-workspace-result",
@@ -319,7 +332,10 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
             var original = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(journal.Detail.Run.MetadataJson)!;
             var source = AgentTurnContextMetadata.TryReadTurnContextReference(journal.Detail.Run.MetadataJson)!;
             return await Services.GetRequiredService<IAgentExecutionAuthorityResolver>().ResolveAsync(new(agent.Id,
-                source.SourceKind, source.SourceId, original.WorkspaceScope, journal.Profile.Generation, UiAccessHint: null));
+                source.SourceKind, source.SourceId, original.WorkspaceScope, journal.Profile.Generation, UiAccessHint: null) {
+                ObservedProjectLifetime = original.WorkspaceScope.Kind == WorkspaceScopeKind.Project
+                    ? new(Project.DatabaseProfileId, Project.ProjectId, Project.LifetimeId) : null
+            });
         }
 
         internal async Task ReplaceProjectAsync() {

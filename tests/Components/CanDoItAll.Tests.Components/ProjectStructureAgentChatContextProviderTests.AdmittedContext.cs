@@ -2,6 +2,7 @@ using System.Text.Json;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.AgentContext;
 using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
@@ -21,8 +22,10 @@ public sealed partial class ProjectStructureAgentChatContextProviderTests {
         var surface = CreateSurface(projectId, "Original project", [CreateNode("node:original", "Original title")]);
         RegisterProviderServices(context, registry, agent);
         var now = DateTimeOffset.UtcNow;
+        var admission = Assert.IsType<ProjectWriteAdmission>(surface.ExpectedProjectAdmission);
         var observation = new ProjectStructureGanttObservation(projectId, ProjectStructureGanttObservationCompleteness.Ready,
-            7, 4, 2, 1, 0, now, now.AddDays(3), ["Original schedule warning"], "original-row-order", null, now);
+            7, 4, 2, 1, 0, now, now.AddDays(3), ["Original schedule warning"], "original-row-order", null, now,
+            observedProjectLifetime: new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId));
         var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, surface.ProjectName)

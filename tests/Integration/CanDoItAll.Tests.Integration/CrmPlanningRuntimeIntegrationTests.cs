@@ -241,6 +241,7 @@ public sealed class CrmPlanningRuntimeIntegrationTests {
                 journal = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding:
                     new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)),
                     transientContext: sharedContext.Options.TransientContext, storageScope: workspace,
+                    sourceProjectLifetime: new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId),
                     contextAttachmentCodecs: services.GetServices<IAgentChatContextAttachmentCodec>().ToArray(),
                     configureAgent: actor => actor with { Id = actorId, Workload = AgentWorkloadKind.General,
                         IsTemplate = false, TemplateKey = string.Empty, Status = AgentLifecycleStatus.Active,

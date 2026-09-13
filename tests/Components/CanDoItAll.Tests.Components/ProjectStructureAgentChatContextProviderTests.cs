@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
@@ -14,6 +15,9 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed partial class ProjectStructureAgentChatContextProviderTests
 {
+    private readonly Guid databaseProfileId = Guid.NewGuid();
+    private readonly Dictionary<Guid, ProjectWriteAdmission> projectAdmissions = [];
+
     private static readonly DateTimeOffset InitialUtc =
         new(2026, 7, 27, 12, 0, 0, TimeSpan.Zero);
 
@@ -961,6 +965,7 @@ public sealed partial class ProjectStructureAgentChatContextProviderTests
         var projectId = Guid.NewGuid();
         var surface = CreateSurface(projectId, "Delivery project");
         RegisterProviderServices(context, registry, agent);
+        var admission = Assert.IsType<ProjectWriteAdmission>(surface.ExpectedProjectAdmission);
         var observation = new CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservation(
             projectId,
             CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationCompleteness.Ready,
@@ -974,7 +979,8 @@ public sealed partial class ProjectStructureAgentChatContextProviderTests
             topIssueSummaries: ["Warning/ScheduleSynthesized: A schedule was synthesized."],
             rowOrderFingerprint: "row-order-1",
             selectedTaskNodeId: null,
-            capturedAtUtc: DateTimeOffset.UtcNow);
+            capturedAtUtc: DateTimeOffset.UtcNow,
+            observedProjectLifetime: new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId));
 
         var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
@@ -1082,18 +1088,21 @@ public sealed partial class ProjectStructureAgentChatContextProviderTests
             UpdatedAtUtc: timestamp);
     }
 
-    private static ProjectStructureSurface CreateSurface(
+    private ProjectStructureSurface CreateSurface(
         Guid projectId,
         string projectName,
         IReadOnlyList<ProjectStructureNode>? nodes = null,
-        IReadOnlyList<ProjectStructureLink>? links = null)
-    {
+        IReadOnlyList<ProjectStructureLink>? links = null) {
+        if (!projectAdmissions.TryGetValue(projectId, out var admission)) {
+            admission = new(databaseProfileId, projectId, Guid.NewGuid());
+            projectAdmissions.Add(projectId, admission);
+        }
         return new ProjectStructureSurface(
             projectId,
             projectName,
             nodes ?? [],
             links ?? [],
-            null);
+            null) { ExpectedProjectAdmission = admission };
     }
 
     private static ProjectStructureNode CreateNode(

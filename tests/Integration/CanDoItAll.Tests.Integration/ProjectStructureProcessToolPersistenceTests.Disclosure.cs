@@ -178,9 +178,15 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             Assert.True(await scope.ServiceProvider.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(fixture.Input.ProjectId,
                 fixture.Input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId!.Value), ProjectObjectLinkKind.Uses));
         }
-        await using (var held = await callback(disclosure, default)) {
+        await using var context = new ProcessPersistenceDbContext(Options(scope.ServiceProvider));
+        var beforeDisclosure = await ReadDisclosureStateAsync();
+        if (retireProject) {
+            await Assert.ThrowsAsync<ProcessLaunchAuthorityRejectedException>(() => callback(disclosure, default).AsTask());
+        } else {
+            await using var held = await callback(disclosure, default);
             Assert.NotNull(held);
         }
+        Assert.Equal(beforeDisclosure, await ReadDisclosureStateAsync());
         await using var workbench = new WorkbenchDbContext(OwnerOptions<WorkbenchDbContext>(scope.ServiceProvider));
         Assert.False(await workbench.Set<ProjectObjectLinkRecord>().AnyAsync(row => row.ProjectId == fixture.Input.ProjectId &&
             row.SourceNodeKey == fixture.Input.NodeId && row.TargetNodeKey == ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId!.Value)));
@@ -190,6 +196,14 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
         Assert.Equal(ProcessLaunchLinkDeliveryState.Delivered, saved.LinkDeliveryState);
         Assert.Equal(ProcessLaunchLinkDeliveryState.Removed, (await scope.ServiceProvider.GetRequiredService<ProjectProcessLaunchDeliveryService>()
             .GetStatusAsync(saved.Preparation.AdmissionId)).State);
+
+        async Task<string> ReadDisclosureStateAsync() => JsonSerializer.Serialize(new {
+            Receipt = await context.PreparedLaunches.AsNoTracking().SingleAsync(row => row.Id == result.Observation!.AdmissionId.Value),
+            RuntimeState = await context.RuntimeStates.AsNoTracking().SingleAsync(row => row.RunId == result.RunId),
+            RuntimeEvents = await context.RuntimeEvents.AsNoTracking().Where(row => row.RunId == result.RunId)
+                .OrderBy(row => row.GlobalSequence).ToArrayAsync(),
+            Journal = await journal.ReadAsync(lease, default)
+        });
     }
 
     private static AgentDefinition ReadOnlySource(AgentDefinition agent) => ChangeSourceAccess(agent, access => {

@@ -29,7 +29,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var parent = await CreateProjectAsync(services, "Original parent");
         var child = await CreateProjectAsync(services, "Original related child");
         Assert.True((await services.GetRequiredService<ProjectsService>().AddSubprojectAsync(parent.ProjectId, child.ProjectId)).IsSuccess);
-        await using var fixture = await CreateJournalAsync(services, parent.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, parent);
         var agent = await SaveActorAsync(services, fixture.Agent, parent, canRead: true);
         var originalClient = new ScriptClient(toolName, Arguments(toolName, parent.ProjectId), failAfterResult: true);
         var checkpointFailure = await Assert.ThrowsAnyAsync<Exception>(() => ExecuteAsync(fixture, services, agent, originalClient));
@@ -93,7 +93,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var child = await CreateProjectAsync(services, "Retired child");
         var projects = services.GetRequiredService<ProjectsService>();
         Assert.True((await projects.AddSubprojectAsync(parent.ProjectId, child.ProjectId)).IsSuccess);
-        await using var fixture = await CreateJournalAsync(services, parent.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, parent);
         var agent = await SaveActorAsync(services, fixture.Agent, parent, canRead: true);
         const string toolName = ProjectStructureToolPolicy.ProjectStructureHierarchyGet;
         var checkpointFailure = await Assert.ThrowsAnyAsync<Exception>(() => ExecuteAsync(fixture, services, agent,
@@ -111,6 +111,16 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         }
         var next = new ScriptClient(toolName, Arguments(toolName, parent.ProjectId));
         var denied = await Assert.ThrowsAnyAsync<Exception>(() => ExecuteAsync(fixture, services, agent, next));
+        if (!related) {
+            var sourceDenied = Assert.IsType<ProjectWriteAdmissionRejectedException>(denied.GetBaseException());
+            Assert.Equal(original, sourceDenied.Admission);
+            await using var lease = await fixture.NewJournal(fixture.NewStore()).AcquireRunAsync(fixture.Session, default);
+            using var bound = lease.Bind();
+            denied = await Assert.ThrowsAsync<AgentToolAdmissionException>(async () => {
+                await using var authorization = await Disclosure(services, fixture).AuthorizeAsync(
+                    Context(fixture, agent, parent.ProjectId), Disclosure(saved), CancellationToken.None);
+            });
+        }
         Assert.Contains("project-structure.result-disclosure-denied", Codes(denied));
         Assert.Equal(0, next.Requests);
         Assert.Equal(saved, await ReadProposalAsync(fixture));
@@ -128,7 +138,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var parent = await CreateProjectAsync(services, "Read before replacement");
         var child = await CreateProjectAsync(services, "Old projected child");
         Assert.True((await services.GetRequiredService<ProjectsService>().AddSubprojectAsync(parent.ProjectId, child.ProjectId)).IsSuccess);
-        await using var fixture = await CreateJournalAsync(services, parent.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, parent);
         var agent = await SaveActorAsync(services, fixture.Agent, parent, canRead: true);
         var disclosure = Disclosure(services, fixture);
         var context = Context(fixture, agent, parent.ProjectId);
@@ -186,7 +196,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var parent = await CreateProjectAsync(services, "Source parent");
-        await using var fixture = await CreateJournalAsync(services, parent.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, parent);
         var agent = await SaveActorAsync(services, fixture.Agent, parent, canRead: true, canCreate: true);
         var coordinator = services.GetRequiredService<ProjectStructureAgentProjectCreationCoordinator>();
         var owner = services.GetRequiredService<ProjectsService>();
@@ -236,7 +246,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Currently readable project");
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var agent = await SaveActorAsync(services, fixture.Agent, project, canRead: true);
         var journal = fixture.NewJournal(fixture.NewStore());
         AgentToolProposalRecord saved;
@@ -264,12 +274,13 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         return (await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(id))!;
     }
 
-    private static async Task<AgentToolAdmissionJournalFixture> CreateJournalAsync(IServiceProvider services, Guid projectId, bool requireApproval = false) {
+    private static async Task<AgentToolAdmissionJournalFixture> CreateJournalAsync(IServiceProvider services, ProjectWriteAdmission project, bool requireApproval = false) {
         var profile = services.GetRequiredService<IDatabaseRuntimeState>().GetSnapshot();
         var fixture = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding: new(profile.ActiveProfileId!.Value,
             profile.ActiveFingerprint!, new(profile.Generation)), transientContext: new("Admitted Structure scope",
-                workspaceScope: WorkspaceScopeDescriptor.Project(projectId.ToString("D"))),
-            storageScope: WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+                workspaceScope: WorkspaceScopeDescriptor.Project(project.ProjectId.ToString("D"))),
+            storageScope: WorkspaceScopeDescriptor.Project(project.ProjectId.ToString("D")),
+            sourceProjectLifetime: new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId),
             configureAgent: requireApproval ? agent => agent with {
                 Permissions = agent.Permissions with { RequiresApprovalForExternalCalls = true, AutoApproveExternalCallsByDefault = false }
             } : null);

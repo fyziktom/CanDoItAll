@@ -43,7 +43,8 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
         AgentToolProfileBinding? profileBinding = null, AgentRuntimeTransientContext? transientContext = null,
         bool includeRecoveryInput = false, bool managedHr = false, Func<AgentDefinition, AgentDefinition>? configureAgent = null,
         WorkspaceScopeDescriptor? storageScope = null,
-        IReadOnlyList<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null) {
+        IReadOnlyList<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null,
+        AgentProjectStructureLifetime? sourceProjectLifetime = null) {
         var environment = CanDoItAllTestEnvironment.Create($"tool-admission-{Guid.NewGuid():N}");
         try {
             var profile = environment.CreateInMemoryProfile("primary");
@@ -93,7 +94,9 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
             var now = DateTimeOffset.UtcNow;
             var admittedScope = transientContext?.WorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
             var authority = new AgentExecutionAuthorityRecord(AgentExecutionAuthorityId.Create(), agent.Id, binding.ProfileId,
-                binding.Generation, admittedScope, true, true, "fixture-policy", "fixture-authority", now);
+                binding.Generation, admittedScope, true, true, "fixture-policy", "fixture-authority", now,
+                schemaVersion: sourceProjectLifetime is null ? AgentExecutionAuthorityRecord.LegacySchemaVersion : AgentExecutionAuthorityRecord.CurrentSchemaVersion,
+                sourceProjectLifetime: sourceProjectLifetime);
             var context = new AgentTurnContextReference(new(Guid.NewGuid()), new(Guid.NewGuid()), new(admittedScope.Kind == WorkspaceScopeKind.Project ? AgentChatTrustedSourceKinds.ProjectStructure : "agents"),
                 new(admittedScope.Kind == WorkspaceScopeKind.Project ? admittedScope.Key : "agents"),
                 "agents", "chat", 1, "fixture-context", now);

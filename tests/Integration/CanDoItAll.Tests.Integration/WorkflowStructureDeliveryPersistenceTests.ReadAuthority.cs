@@ -108,7 +108,8 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         Assert.Equal(fixture.ProjectId, Assert.Single(source.Authority.ProjectScope!.Projects).ProjectId);
         var read = await SaveReadInvocationAsync(fixture, source.Authority, ReadSettings(WorkflowProjectStructureOperation.ReadTree, other.ProjectId),
             prepareFixedTargets: false);
-        await Assert.ThrowsAsync<WorkflowExecutorInvocationException>(() => InvokeReadAsync(fixture.Services.GetRequiredService<IProjectStructureRuntimeGateway>(), read));
+        var denied = await Assert.ThrowsAsync<WorkflowExecutorInvocationException>(() => InvokeReadAsync(fixture.Services.GetRequiredService<IProjectStructureRuntimeGateway>(), read));
+        Assert.Contains("exact read grants", denied.ToString(), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -260,10 +261,13 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         await writer.UpdateCatalogAsync(current => current with { Agents = [.. current.Agents, agent] });
         var temporary = new ReadAgentSource(agent, null!);
         agent = await SetReadGrantsAsync(services, temporary, projectIds);
+        var sourceAdmission = projectWorkspace ? Assert.IsType<ProjectWriteAdmission>(fixture.Request.ExpectedProjectAdmission) : null;
         var governance = new AgentExecutionGovernanceSnapshot(new(Guid.NewGuid()), agent.Id, profile.Profile.Profile.Id,
             services.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration(), projectWorkspace
                 ? WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D")) : WorkspaceScopeDescriptor.Organization(profile.Profile.Profile.Id.ToString("N")),
-            true, true, "workflow-read-test-v1", "workflow-read-test-policy", [WorkflowToolPolicy.WorkflowsRunStart], [WorkflowRuntimeCapabilityKeys.RunStart]);
+            true, true, "workflow-read-test-v1", "workflow-read-test-policy", [WorkflowToolPolicy.WorkflowsRunStart], [WorkflowRuntimeCapabilityKeys.RunStart],
+            schemaVersion: sourceAdmission is null ? AgentExecutionAuthorityRecord.LegacySchemaVersion : AgentExecutionAuthorityRecord.CurrentSchemaVersion,
+            sourceProjectLifetime: sourceAdmission is null ? null : new(sourceAdmission.DatabaseProfileId, sourceAdmission.ProjectId, sourceAdmission.LifetimeId));
         var authority = await services.GetRequiredService<ProjectStructureWorkflowAuthorityService>().CaptureAgentAsync(agent, governance);
         authority = authority with { ProjectScope = new(authority.ProjectScope!.Projects, authority.ProjectScope.AdmissionProjectIds,
             workflowStartCapabilityId: capability.Id) };

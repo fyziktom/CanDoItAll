@@ -17,7 +17,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Metadata selection");
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var agent = await SaveMetadataActorAsync(services, fixture.Agent, project, structureWrite, taskWrite);
         var context = Context(fixture, agent, project.ProjectId);
         var provider = MetadataProvider(services);
@@ -50,7 +50,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Independent attachments");
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var reader = await SaveMetadataActorAsync(services, fixture.Agent, project, false, false);
         var readContext = Context(fixture, reader, project.ProjectId);
         var writer = await SaveMetadataActorAsync(services, reader, project, true, false);
@@ -83,7 +83,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Cancelled attachment");
-        await using var fixture = await CreateJournalAsync(services, project.ProjectId);
+        await using var fixture = await CreateJournalAsync(services, project);
         var agent = await SaveMetadataActorAsync(services, fixture.Agent, project, false, false);
         var context = Context(fixture, agent, project.ProjectId);
         var provider = MetadataProvider(services);
