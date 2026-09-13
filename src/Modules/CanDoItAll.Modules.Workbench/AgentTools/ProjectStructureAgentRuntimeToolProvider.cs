@@ -313,7 +313,11 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 context.ContextIntent,
                 context.Purpose,
                 ProjectStructureInvocationSnapshotReadContext.Capture(context),
-                context.Governance) { ProviderContext = context };
+                context.Governance) {
+                    ProviderContext = context,
+                    SourceProject = context.Purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation ? null :
+                        await admissionService.CaptureSourceProjectAsync(context.Governance, context.AdmittedToolSession, cancellationToken)
+                };
             if (!accessState.CanRead &&
                 !accessState.CanWrite &&
                 !accessState.CanCreateProjects &&
@@ -3022,7 +3026,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     accessState.CanWriteTasksUnscoped || accessState.ScopedProcessAccess?.CanWrite == true,
                     accessState.CanWrite, accessState.Governance,
                     accessState.ScopedProcessAccess is { } process ? Guid.Parse(process.ProcessRunId) : null,
-                    accessState.ScopedProcessAccess is { } step ? Guid.Parse(step.ProcessStepId) : null)
+                    accessState.ScopedProcessAccess is { } step ? Guid.Parse(step.ProcessStepId) : null,
+                    accessState.ProviderContext?.AdmittedToolSession)
                 : null;
             if (projectId.HasValue &&
                 string.IsNullOrWhiteSpace(branchName) &&
@@ -3045,7 +3050,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 ProcessMutationAdmission = CaptureProcessMutationAdmission(accessState),
                 AgentMutationAdmission = accessState.Purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation ? null :
                     admissionService.CaptureMutationAuthority(agent.Id, SnapshotInvocationAccess(accessState),
-                        accessState.ProviderContext?.Governance, mutationDomain)
+                        accessState.ProviderContext?.Governance, mutationDomain, accessState.SourceProject)
             };
         }
 

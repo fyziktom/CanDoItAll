@@ -11,6 +11,28 @@ namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessToolSourcePersistenceTests {
     [Fact]
+    public void Agent_tool_source_preserves_v2_lifetime_in_both_authority_locations_and_rejects_old_hashes() {
+        var preparation = Create(project => new(new ProcessLaunchPrincipal.AgentExecution(new(Guid.NewGuid(), Guid.NewGuid(), 7,
+            ProcessLaunchSourceScopeKind.Project, project.ProjectId.ToString("D"), true, true, "v2", "bound-source",
+            [], [], [], [], [], ProcessLaunchAgentCeiling.CurrentSchemaVersion, project), ProcessLaunchAgentOperation.StructureStart),
+            project.DatabaseProfileId, project, true, false, "bound-source"));
+        var entity = ProcessPreparedLaunchCodec.ToEntity(preparation);
+        var restored = ProcessPreparedLaunchCodec.Read(entity).Preparation;
+        var source = Assert.IsType<ProcessLaunchPrincipal.AgentExecution>(restored.Authority!.Principal);
+        var nested = Assert.IsType<ProcessLaunchPrincipal.AgentExecution>(restored.ToolSource!.Execution.SourceAuthority!.Principal);
+        Assert.Equal(source.Ceiling.SourceProjectAdmission, nested.Ceiling.SourceProjectAdmission);
+        Assert.Equal(restored.Authority.ProjectAdmission, source.Ceiling.SourceProjectAdmission);
+        Assert.Equal(ProcessLaunchAgentCeiling.CurrentSchemaVersion, nested.Ceiling.EffectiveSchemaVersion);
+        Assert.NotEqual(LegacyHash("process-tool-source-v1\n" + entity.PayloadJson), entity.PreparationFingerprint);
+        entity.PreparationFingerprint = LegacyHash("process-tool-source-v1\n" + entity.PayloadJson);
+        Assert.Throws<InvalidOperationException>(() => ProcessPreparedLaunchCodec.Read(entity));
+        var changed = preparation.Authority! with { Principal = source with { Ceiling = source.Ceiling with {
+            SchemaVersion = null, SourceProjectAdmission = null
+        } } };
+        Assert.Throws<ProcessLaunchIntentConflictException>(() => ProcessPreparedLaunchCodec.ToEntity(preparation with { Authority = changed }));
+    }
+
+    [Fact]
     public void Legacy_preparation_keeps_its_exact_serialized_shape_and_legacy_hash() {
         var preparation = ProcessPreparedLaunchFixture.Create(ProcessPreparedLaunchFixture.Local(Guid.NewGuid()), new(Guid.NewGuid()));
         var entity = ProcessPreparedLaunchCodec.ToEntity(preparation);
@@ -107,9 +129,9 @@ public sealed class ProcessToolSourcePersistenceTests {
         Assert.Equal(preparation.RequestFingerprint, ProcessLaunchIntentFingerprint.Compute(preparation.Request with { ToolSource = observed }));
     }
 
-    private static ProcessPreparedLaunch Create() {
+    private static ProcessPreparedLaunch Create(Func<ProcessProjectAdmission, ProcessLaunchAuthority>? createAuthority = null) {
         var project = new ProcessProjectAdmission(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
-        var authority = ProcessPreparedLaunchFixture.Local(project.DatabaseProfileId, project);
+        var authority = createAuthority is null ? ProcessPreparedLaunchFixture.Local(project.DatabaseProfileId, project) : createAuthority(project);
         var preparation = ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid()));
         var parentRun = new ProcessRunId(Guid.NewGuid());
         var parentStep = new ProcessStepInstanceId(Guid.NewGuid());

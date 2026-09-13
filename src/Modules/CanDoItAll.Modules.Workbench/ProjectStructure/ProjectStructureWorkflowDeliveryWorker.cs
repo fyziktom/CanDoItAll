@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,7 @@ public sealed class ProjectStructureWorkflowDeliveryWorker(
                     receipt = await workbench.FindWorkflowContributionAsync(output.Plan.Identity, cancellationToken);
                 }
                 if (receipt is not null) {
+                    RetainedEvidenceImport.RequireNative(receipt.ImportedHistory);
                     await outputs.CompleteAsync(receipt.Receipt!, cancellationToken);
                 }
             } catch (Exception exception) when (exception is not OperationCanceledException) {

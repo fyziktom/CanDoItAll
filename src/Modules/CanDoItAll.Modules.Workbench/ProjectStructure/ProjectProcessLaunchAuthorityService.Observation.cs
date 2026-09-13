@@ -16,6 +16,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
                 held = await catalog.AcquireAgentReadLeaseAsync(source.Ceiling.AgentId, cancellationToken);
             }
             RequireReadSource(authority, held);
+            await RequireSourceProjectCurrentAsync(authority, cancellationToken);
             return held is null ? CompletedReadCheck.Instance : held;
         } catch {
             if (held is not null) {
@@ -26,12 +27,16 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
     }
 
     public async Task<IAsyncDisposable> AcquireUncommittedResultReadAsync(AgentExecutionGovernanceSnapshot governance,
-        Guid projectId, CancellationToken cancellationToken = default) {
+        Guid projectId, CancellationToken cancellationToken = default, AgentTurnContextReference? originalTurnContext = null) {
         ArgumentNullException.ThrowIfNull(governance);
         if (governance.DatabaseProfileId != database.Profile.Profile.Id) {
             throw Denied("The saved proposal belongs to a different runtime profile.");
         }
-        var project = await CaptureProjectAsync(projectId, cancellationToken);
+        var legacySource = await RequireLegacySourceCaptureAsync(governance, originalTurnContext, cancellationToken);
+        if (legacySource is not null && legacySource.ProjectId != projectId) {
+            throw Denied("The Process result target differs from the proven original source project.");
+        }
+        var project = legacySource ?? await CaptureProjectAsync(projectId, cancellationToken);
         var authority = new ProcessLaunchAuthority(
             new ProcessLaunchPrincipal.AgentExecution(CreateAgentCeiling(governance), ProcessLaunchAgentOperation.StructureStart),
             governance.DatabaseProfileId, project, false, false, governance.PolicyFingerprint);
@@ -47,6 +52,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
                 held = await catalog.AcquireAgentReadLeaseAsync(source.Ceiling.AgentId, cancellationToken);
             }
             RequireReadSource(authority, held);
+            await RequireSourceProjectCurrentAsync(authority, cancellationToken);
             try {
                 RequireSource(authority, authority, held);
                 if (authority.ProjectAdmission is { } project) {
@@ -94,6 +100,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
             throw Denied("The saved Process source Agent no longer permits result disclosure.");
         }
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        RequireSourceProjectGrant(authority, access);
         if (!access.CanRead || !access.AllowAllProjects && (!access.AllowedProjectIds.Contains(project.ProjectId) ||
                 !access.AllowedProjectLifetimes.Contains(new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId)))) {
             throw Denied("Current Agent read policy does not grant the original Process project lifetime.");

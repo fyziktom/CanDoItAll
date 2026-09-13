@@ -26,6 +26,7 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
         if (agent.AgentMutationAdmission is { } original) {
             if (source.Channel != WorkflowStructureAuthorityChannel.AgentExecution || original.AgentId.ToString("D") != source.Principal.SubjectId ||
                     original.DatabaseProfileId != target.DatabaseProfileId || original.Governance is null ||
+                    original.Governance.WorkspaceScope.Kind == WorkspaceScopeKind.Project && original.SourceProject != target ||
                     !original.AllowAllProjects && (!original.ProjectIds.Contains(projectId) ||
                         !original.ProjectLifetimes.Contains(new(target.DatabaseProfileId, target.ProjectId, target.LifetimeId)))) {
                 throw Denied("The original Agent invocation does not cover this Workflow target and lifetime.");
@@ -62,6 +63,8 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
         }
         return authority.AgentGovernance is null || source.Governance is { } governance &&
             governance.AuthorityId == authority.AgentGovernance.AuthorityId &&
+            governance.EffectiveSchemaVersion == authority.AgentGovernance.EffectiveSchemaVersion &&
+            governance.SourceProjectLifetime == authority.AgentGovernance.SourceProjectLifetime &&
             governance.PolicyFingerprint == authority.AgentGovernance.PolicyFingerprint;
     }
 
@@ -97,7 +100,9 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
                 governance = new(new(ceiling.AuthorityId), ceiling.AgentId, source.DatabaseProfileId,
                     new(ceiling.DatabaseProfileGeneration), workspace, ceiling.ReadAllowed, ceiling.MutationAllowed,
                     ceiling.PolicyVersion, ceiling.PolicyFingerprint, ceiling.AllowedOperations, ceiling.AllowedCapabilityKeys,
-                    ceiling.WritableExternalTargetAliases, ceiling.ReadOnlyExternalTargetAliases, ceiling.AllowedManagedArtifactReadRefs);
+                    ceiling.WritableExternalTargetAliases, ceiling.ReadOnlyExternalTargetAliases, ceiling.AllowedManagedArtifactReadRefs,
+                    ceiling.EffectiveSchemaVersion, ceiling.SourceProjectAdmission is { } sourceProject
+                        ? new(sourceProject.DatabaseProfileId, sourceProject.ProjectId, sourceProject.LifetimeId) : null);
                 break;
             case ProcessLaunchPrincipal.LocalOperator local:
                 channel = WorkflowStructureAuthorityChannel.LocalOperator;

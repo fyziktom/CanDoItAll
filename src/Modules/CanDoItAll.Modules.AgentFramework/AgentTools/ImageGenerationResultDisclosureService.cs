@@ -184,7 +184,8 @@ public sealed class ImageGenerationResultDisclosureService(
                 original.AgentId != session.AgentId || original.AuthorityId != session.Reference.AuthorityId ||
                 original.DatabaseProfileId != session.Profile.ProfileId || original.DatabaseProfileGeneration != session.Profile.Generation ||
                 context.Purpose != AgentRuntimeToolProviderPurpose.InteractiveChat ||
-                context.Governance is not { } supplied || supplied.AuthorityId != original.AuthorityId || supplied.WorkspaceScope != original.WorkspaceScope) {
+                context.Governance is not { } supplied || supplied.AuthorityId != original.AuthorityId || supplied.WorkspaceScope != original.WorkspaceScope ||
+                supplied.SchemaVersion != original.SchemaVersion || supplied.SourceProjectLifetime != original.SourceProjectLifetime) {
             throw Denied();
         }
         AgentExecutionAuthorityRecord current;
@@ -194,7 +195,8 @@ public sealed class ImageGenerationResultDisclosureService(
             throw Denied();
         }
         if (!current.ReadAllowed || current.AgentId != session.AgentId || current.DatabaseProfileId != session.Profile.ProfileId ||
-                current.DatabaseProfileGeneration != session.Profile.Generation || current.WorkspaceScope != original.WorkspaceScope) {
+                current.DatabaseProfileGeneration != session.Profile.Generation || current.WorkspaceScope != original.WorkspaceScope ||
+                current.SchemaVersion != original.EffectiveSchemaVersion || current.SourceProjectLifetime != original.SourceProjectLifetime) {
             throw Denied();
         }
         return session;

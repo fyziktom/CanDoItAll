@@ -15,6 +15,10 @@ public sealed record AgentProjectStructureLifetime {
     public Guid DatabaseProfileId { get; }
     public Guid ProjectId { get; }
     public Guid LifetimeId { get; }
+
+    public bool MatchesScope(Guid databaseProfileId, WorkspaceScopeDescriptor? scope)
+        => DatabaseProfileId == databaseProfileId && scope?.Kind == WorkspaceScopeKind.Project &&
+            Guid.TryParse(scope.Key, out var projectId) && ProjectId == projectId;
 }
 
 public sealed record AgentProjectStructureRevocationTarget {

@@ -5,7 +5,8 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.Modules.Workbench.AgentContext;
 
 internal sealed class ProjectStructureGanttObservationCodec : IAgentChatContextAttachmentCodec {
-    private const int PayloadVersion = 1;
+    private const int LegacyPayloadVersion = 1;
+    private const int PayloadVersion = 2;
     public AgentChatContextAttachmentKind Kind => new(ProjectStructureGanttObservationContributor.AttachmentKind);
 
     public AgentToolProtocolEnvelope Capture(AgentChatContextAttachmentEnvelope attachment) {
@@ -21,14 +22,19 @@ internal sealed class ProjectStructureGanttObservationCodec : IAgentChatContextA
             expected.FreshnessFingerprint != attachment.FreshnessFingerprint) {
             throw new InvalidDataException("The Gantt context attachment does not match its captured fingerprints.");
         }
-        return AgentToolProtocolEnvelope.Create(Kind.Value, PayloadVersion, JsonSerializer.Serialize(value.Observation));
+        return AgentToolProtocolEnvelope.Create(Kind.Value,
+            value.Observation.ObservedProjectLifetime is null ? LegacyPayloadVersion : PayloadVersion, JsonSerializer.Serialize(value.Observation));
     }
 
     public IAgentChatContextAttachment Restore(AgentToolProtocolEnvelope payload) {
-        if (payload.Format != Kind.Value || payload.Version != PayloadVersion) {
+        if (payload.Format != Kind.Value || payload.Version is not (LegacyPayloadVersion or PayloadVersion)) {
             throw new InvalidDataException("The saved Gantt context attachment version is unsupported.");
         }
-        return new ProjectStructureGanttObservationAttachment(JsonSerializer.Deserialize<ProjectStructureGanttObservation>(payload.PayloadJson)
-            ?? throw new InvalidDataException("The saved Gantt context attachment is empty."));
+        var observation = JsonSerializer.Deserialize<ProjectStructureGanttObservation>(payload.PayloadJson)
+            ?? throw new InvalidDataException("The saved Gantt context attachment is empty.");
+        if ((payload.Version == PayloadVersion) != (observation.ObservedProjectLifetime is not null)) {
+            throw new InvalidDataException("The saved Gantt attachment lifetime does not match its version.");
+        }
+        return new ProjectStructureGanttObservationAttachment(observation);
     }
 }

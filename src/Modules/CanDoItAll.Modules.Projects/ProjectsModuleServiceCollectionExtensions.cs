@@ -16,7 +16,7 @@ public static class ProjectsModuleServiceCollectionExtensions
         services.AddPooledDbContextFactory<ProjectsDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             ProjectsExecutionAuthorityProvider>());
         services.AddScoped<ProjectsService>();

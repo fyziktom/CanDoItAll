@@ -102,6 +102,10 @@ public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabas
         }
         var projectScopeAllowed = ceiling.WorkspaceScope.Kind == WorkspaceScopeKind.Project &&
             Guid.TryParse(ceiling.WorkspaceScope.Key, out var scopeId) &&
+            admission.SourceProject is { } sourceProject && sourceProject.DatabaseProfileId == profileId && sourceProject.ProjectId == scopeId &&
+            (ceiling.SourceProjectLifetime is null || ceiling.SourceProjectLifetime ==
+                new AgentProjectStructureLifetime(sourceProject.DatabaseProfileId, sourceProject.ProjectId, sourceProject.LifetimeId)) &&
+            target.ExistingProjects.Contains(sourceProject) &&
             target.Purpose is not (ProjectMutationPurpose.ReserveRoot or ProjectMutationPurpose.CreateRoot) &&
             expected.All(project => project.ProjectId == scopeId ||
                 reservation?.ParentProjectId == scopeId && project.ProjectId == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId);

@@ -22,7 +22,7 @@ public sealed class CrmHrRegressionTests
     [Fact]
     public async Task Final_crm_hr_regression_gate_keeps_core_routes_readable_and_persistent()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b13";
+        var evidenceDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "evidence", "crm-hr", "b13");
         Directory.CreateDirectory(evidenceDirectory);
 
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
@@ -41,7 +41,7 @@ public sealed class CrmHrRegressionTests
         var page = await context.NewPageAsync();
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr");
-        await DismissStartupModalIfPresentAsync(page);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("crmhr-home-sensitive-card").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-home-sensitive-card"), seed.SensitivePartyName);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -78,6 +78,7 @@ public sealed class CrmHrRegressionTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.AccountId:D}");
+        await page.GetByTestId("crmhr-crm-tab-interactions").ClickAsync();
         await page.WaitForSelectorAsync($"text={seed.InteractionSubject}");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions
@@ -146,7 +147,8 @@ public sealed class CrmHrRegressionTests
         var sensitivePartyName = $"B13 Sensitive {suffix}";
         var interactionSubject = $"B13 Activity Search {suffix}";
 
-        var projectId = await CreateProjectAsync(projectsService, projectName);
+        var projectAdmission = await CreateProjectAsync(projectsService, projectName);
+        var projectId = projectAdmission.ProjectId;
         var customerId = await CreatePartyAsync(
             partyDirectoryService,
             customerName,
@@ -202,9 +204,9 @@ public sealed class CrmHrRegressionTests
             isSensitive: true,
             confidentialNote: $"Confidential regression note {suffix}");
 
-        await SaveAssignmentAsync(projectPartyBridge, projectId, customerId, ProjectPartyAssignmentRole.Customer, "b13-customer", 100m, true);
-        await SaveAssignmentAsync(projectPartyBridge, projectId, deliveryUnitId, ProjectPartyAssignmentRole.DeliveryUnit, "b13-delivery", 70m, true);
-        await SaveAssignmentAsync(projectPartyBridge, projectId, ownerId, ProjectPartyAssignmentRole.Manager, "b13-owner", 40m, true);
+        await SaveAssignmentAsync(projectPartyBridge, projectAdmission, customerId, ProjectPartyAssignmentRole.Customer, "b13-customer", 100m, true);
+        await SaveAssignmentAsync(projectPartyBridge, projectAdmission, deliveryUnitId, ProjectPartyAssignmentRole.DeliveryUnit, "b13-delivery", 70m, true);
+        await SaveAssignmentAsync(projectPartyBridge, projectAdmission, ownerId, ProjectPartyAssignmentRole.Manager, "b13-owner", 40m, true);
 
         var accountProfileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
@@ -302,10 +304,8 @@ public sealed class CrmHrRegressionTests
             Path.Combine(profileRoot, "manager-artifacts"));
     }
 
-    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
-    {
-        var result = await projectsService.SaveAsync(new ProjectEditorModel
-        {
+    private static async Task<ProjectWriteAdmission> CreateProjectAsync(ProjectsService projectsService, string name) {
+        var result = await projectsService.CreateWithAdmissionAsync(new ProjectEditorModel {
             Name = name,
             Description = $"{name} description",
             Objective = $"{name} objective",
@@ -313,7 +313,7 @@ public sealed class CrmHrRegressionTests
         });
 
         Assert.True(result.IsSuccess);
-        return result.Value;
+        return Assert.IsType<ProjectWriteAdmission>(result.Value);
     }
 
     private static async Task<Guid> CreatePartyAsync(
@@ -375,7 +375,7 @@ public sealed class CrmHrRegressionTests
 
     private static async Task SaveAssignmentAsync(
         IProjectPartyIntegrationBridge projectPartyBridge,
-        Guid projectId,
+        ProjectWriteAdmission projectAdmission,
         Guid partyId,
         ProjectPartyAssignmentRole role,
         string nodeKey,
@@ -384,7 +384,8 @@ public sealed class CrmHrRegressionTests
     {
         var result = await projectPartyBridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
-            ProjectId = projectId,
+            ProjectId = projectAdmission.ProjectId,
+            ExpectedProjectAdmission = projectAdmission,
             PartyId = partyId,
             Role = role,
             NodeKey = nodeKey,
@@ -434,27 +435,6 @@ public sealed class CrmHrRegressionTests
         throw new TimeoutException($"Timed out waiting for select option '{optionValue}'.");
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
-    }
 
     private sealed record SeededScenario(
         Guid ProjectId,

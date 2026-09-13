@@ -395,7 +395,8 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                 "Workflow launch governance does not match the current agent.");
         }
 
-        var capturedAuthority = await structureAuthority.CaptureAgentAsync(context.Agent, governance, cancellationToken);
+        var capturedAuthority = await structureAuthority.CaptureAgentAsync(context.Agent, governance, cancellationToken,
+            context.AdmittedToolSession);
         var startCapability = context.Agent.Capabilities.Single(item => item.Kind == CapabilityKind.Tool &&
             item.CapabilityKey == WorkflowAgentCapabilityKeys.RunStart);
         if (capturedAuthority.ProjectScope is { } projectScope) {

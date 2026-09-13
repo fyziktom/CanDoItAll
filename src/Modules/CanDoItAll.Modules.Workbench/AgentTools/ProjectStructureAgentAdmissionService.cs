@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
@@ -8,10 +9,38 @@ public sealed class ProjectStructureAgentAdmissionService(
     IAgentFrameworkWorkspaceService workspace,
     ProjectWriteAdmissionService projects,
     ProjectAgentSourceMutationAuthority? sourceAuthority = null,
-    ProjectProcessExecutionMutationService? processAuthority = null) {
+    ProjectProcessExecutionMutationService? processAuthority = null,
+    IAgentToolAdmissionVerifier? toolAdmissions = null) {
+    private static readonly JsonSerializerOptions GovernanceJson = new(JsonSerializerDefaults.Web);
+
     internal ProjectAgentMutationAdmission CaptureMutationAuthority(Guid agentId, AgentProjectStructureAccessSettings access,
-        AgentExecutionGovernanceSnapshot? governance, ProjectAgentMutationDomain domain)
-        => new(agentId, projects.DatabaseProfileId, access, governance, domain, AgentRuntimeToolOwnershipContext.Current?.ToolName);
+        AgentExecutionGovernanceSnapshot? governance, ProjectAgentMutationDomain domain, ProjectWriteAdmission? sourceProject = null)
+        => new(agentId, projects.DatabaseProfileId, access, governance, domain, AgentRuntimeToolOwnershipContext.Current?.ToolName, sourceProject);
+
+    internal async Task<ProjectWriteAdmission?> CaptureSourceProjectAsync(AgentExecutionGovernanceSnapshot? governance,
+        AgentToolSessionReference? originalSession, CancellationToken cancellationToken) {
+        if (governance?.WorkspaceScope.Kind != WorkspaceScopeKind.Project) {
+            return null;
+        }
+        if (governance.SourceProjectLifetime is { } source) {
+            var admission = new ProjectWriteAdmission(source.DatabaseProfileId, source.ProjectId, source.LifetimeId);
+            await projects.RequireCurrentAsync(admission, cancellationToken);
+            return admission;
+        }
+        if (governance.EffectiveSchemaVersion != AgentExecutionAuthorityRecord.LegacySchemaVersion ||
+                originalSession is null || originalSession.AuthorityId != governance.AuthorityId || toolAdmissions is null ||
+                !Guid.TryParse(governance.WorkspaceScope.Key, out var projectId)) {
+            throw new ProjectStructureAgentException(403, "ProjectMutationAuthorityDenied", "The legacy Agent source requires its verified original tool session.");
+        }
+        var observation = await toolAdmissions.RequireSessionObservationAsync(originalSession, cancellationToken);
+        if (observation.Session.Reference != originalSession || observation.TurnContext is not { } originalTurn ||
+                JsonSerializer.Serialize(observation.Governance, GovernanceJson) != JsonSerializer.Serialize(governance, GovernanceJson) ||
+                await projects.CaptureObservationAsync(projectId, cancellationToken) is not { } observed ||
+                observed.Admission.DatabaseProfileId != governance.DatabaseProfileId || !observed.ProvesLegacySource(originalTurn.CapturedAtUtc)) {
+            throw Denied(projectId);
+        }
+        return observed.Admission;
+    }
 
     internal ProjectMutationAuthorization? BindProjectSource(ProjectStructureAgentContext owner,
         ProjectProcessProjectOperation operation = ProjectProcessProjectOperation.Update) {

@@ -2,11 +2,27 @@ using CanDoItAll.Processes.Abstractions;
 
 namespace CanDoItAll.Processes.Projections;
 
+public sealed record ProcessProjectionProjectBinding {
+    public ProcessProjectionProjectBinding(Guid databaseProfileId, Guid projectId, Guid lifetimeId) {
+        if (databaseProfileId == Guid.Empty || projectId == Guid.Empty || lifetimeId == Guid.Empty) {
+            throw new ArgumentException("A Process project projection requires a complete profile, project and lifetime binding.");
+        }
+        DatabaseProfileId = databaseProfileId;
+        ProjectId = projectId;
+        LifetimeId = lifetimeId;
+    }
+
+    public Guid DatabaseProfileId { get; }
+    public Guid ProjectId { get; }
+    public Guid LifetimeId { get; }
+}
+
 public sealed record ProcessLiveProcessesQuery(
     DateTimeOffset NowUtc,
     TimeSpan Window,
     int Take,
-    ProcessLiveProcessesLoadOptions? LoadOptions = null);
+    ProcessLiveProcessesLoadOptions? LoadOptions = null,
+    ProcessProjectionProjectBinding? ProjectBinding = null);
 
 public sealed record ProcessLiveProcessesLoadOptions
 {
@@ -44,7 +60,8 @@ public sealed record ProcessRunHistoryQuery(
     DateTimeOffset FromUtc,
     DateTimeOffset ToUtc,
     int Take,
-    int Skip = 0);
+    int Skip = 0,
+    ProcessProjectionProjectBinding? ProjectBinding = null);
 
 public sealed record ProcessRunHistoryResult(
     IReadOnlyList<ProcessTimelineEventProjection> Events,
@@ -64,6 +81,8 @@ public sealed record ProcessRuntimeWorkspaceQuery(
     ProcessRuntimeWorkspaceLoadOptions? LoadOptions = null)
 {
     public IReadOnlyList<ProcessLiveProcessSnapshot>? PreviouslyLoadedRuns { get; init; }
+
+    public ProcessProjectionProjectBinding? ProjectBinding { get; init; }
 }
 
 public sealed record ProcessRuntimeWorkspaceLoadOptions
@@ -107,6 +126,8 @@ public sealed record ProcessRuntimeWorkspaceResult(
 {
     public ProcessRunRecord? SelectedRunRecord { get; init; }
 
+    public IReadOnlySet<ProcessRunId>? ProjectRunIds { get; init; }
+
     public IReadOnlyList<ProcessLiveProcessSnapshot>? ReusableRuns { get; init; }
 
     public ProcessWorkspaceProvenanceVector Provenance { get; init; } =
@@ -120,4 +141,5 @@ public sealed record ProcessProjectionHistoryQuery(
     DateTimeOffset ToUtc,
     int Take,
     long? AfterGlobalSequence = null,
-    int Skip = 0);
+    int Skip = 0,
+    ProcessProjectionProjectBinding? ProjectBinding = null);

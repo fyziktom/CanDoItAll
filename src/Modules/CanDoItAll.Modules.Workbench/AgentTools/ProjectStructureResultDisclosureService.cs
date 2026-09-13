@@ -172,7 +172,8 @@ internal sealed class ProjectStructureResultDisclosureService(
                 original.AgentId != session.AgentId || original.AuthorityId != session.Reference.AuthorityId ||
                 original.DatabaseProfileId != session.Profile.ProfileId || original.DatabaseProfileGeneration != session.Profile.Generation ||
                 context.Governance is not { } supplied || supplied.AuthorityId != original.AuthorityId ||
-                supplied.WorkspaceScope != original.WorkspaceScope) {
+                supplied.WorkspaceScope != original.WorkspaceScope || supplied.SchemaVersion != original.SchemaVersion ||
+                supplied.SourceProjectLifetime != original.SourceProjectLifetime) {
             throw Denied();
         }
         AgentExecutionAuthorityRecord current;
@@ -182,7 +183,8 @@ internal sealed class ProjectStructureResultDisclosureService(
             throw Denied();
         }
         if (!current.ReadAllowed || current.AgentId != session.AgentId || current.DatabaseProfileId != session.Profile.ProfileId ||
-                current.DatabaseProfileGeneration != session.Profile.Generation || current.WorkspaceScope != original.WorkspaceScope) {
+                current.DatabaseProfileGeneration != session.Profile.Generation || current.WorkspaceScope != original.WorkspaceScope ||
+                current.SchemaVersion != original.EffectiveSchemaVersion || current.SourceProjectLifetime != original.SourceProjectLifetime) {
             throw Denied();
         }
         return session;

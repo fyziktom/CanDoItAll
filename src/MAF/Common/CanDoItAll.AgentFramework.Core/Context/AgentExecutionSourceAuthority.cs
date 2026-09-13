@@ -15,6 +15,8 @@ public sealed record AgentExecutionSourceAuthorityRequest(
     Guid CurrentDatabaseProfileId) {
     public AgentExecutionAuthorityRevalidation? Revalidation { get; init; }
 
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; init; }
+
     public bool IsCapturedSandboxRevalidation => Revalidation is { } captured &&
         captured.Source.SourceKind == SourceKind && captured.Source.SourceId == SourceId &&
         captured.Authority.AgentId == Agent.Id && captured.Authority.DatabaseProfileId == CurrentDatabaseProfileId &&
@@ -32,7 +34,9 @@ public sealed record AgentExecutionSourceAuthorityDecision(
     WorkspaceScopeDescriptor WorkspaceScope,
     bool ReadAllowed,
     bool MutationAllowed,
-    string PolicyVersion);
+    string PolicyVersion) {
+    public AgentProjectStructureLifetime? SourceProjectLifetime { get; init; }
+}
 
 public static class AgentExecutionAuthorityPolicyVersions
 {

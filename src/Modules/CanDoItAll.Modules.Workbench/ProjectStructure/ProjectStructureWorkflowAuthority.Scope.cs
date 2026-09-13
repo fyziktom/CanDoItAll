@@ -24,6 +24,28 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
     private IAgentCatalogReadLeaseStore RequireCatalog() => catalog
         ?? throw new InvalidOperationException("Workflow Agent authority requires the held catalog read lease store.");
 
+    private static WorkflowProjectLifetime? ResolveSourceProject(WorkflowStructureAuthority authority) {
+        if (authority.AgentGovernance is not { WorkspaceScope.Kind: WorkspaceScopeKind.Project } governance) {
+            return null;
+        }
+        if (governance.SourceProjectLifetime is { } source) {
+            return new(source.DatabaseProfileId, source.ProjectId, source.LifetimeId);
+        }
+        return governance.EffectiveSchemaVersion == AgentExecutionAuthorityRecord.LegacySchemaVersion &&
+            Guid.TryParse(governance.WorkspaceScope.Key, out var projectId) && authority.ProjectScope?.Find(projectId) is { } original
+            ? original : throw new WorkflowStructureLegacyLineageException();
+    }
+
+    private async Task RequireSourceProjectCurrentAsync(WorkflowStructureAuthority authority, CancellationToken cancellationToken) {
+        if (ResolveSourceProject(authority) is { } source) {
+            try {
+                await RequireProjectAdmissions().RequireCurrentAsync(ToProjectAdmission(source), cancellationToken);
+            } catch (ProjectWriteAdmissionRejectedException) {
+                throw Denied("The original Workflow source project lifetime is no longer current.");
+            }
+        }
+    }
+
     private static WorkflowStructureProjectScope CaptureAgentProjectScope(AgentProjectStructureAccessSettings access,
         AgentExecutionGovernanceSnapshot governance, Guid projectId) {
         var projects = access.AllowedProjectLifetimes
@@ -34,18 +56,39 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
     }
 
     public async Task<WorkflowStructureAuthority> CaptureAgentAsync(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance,
-        CancellationToken cancellationToken = default) {
-        var authority = CaptureAgent(agent, governance);
+        CancellationToken cancellationToken = default, AgentToolSessionReference? originalSession = null) {
+        ProjectWriteAdmission? provenSource = null;
+        if (governance.WorkspaceScope.Kind == WorkspaceScopeKind.Project &&
+                governance.EffectiveSchemaVersion == AgentExecutionAuthorityRecord.LegacySchemaVersion) {
+            if (originalSession is null || originalSession.AuthorityId != governance.AuthorityId || toolAdmissions is null) {
+                throw Denied("A fresh legacy Workflow authority requires its verified original tool session.");
+            }
+            var observation = await toolAdmissions.RequireSessionObservationAsync(originalSession, cancellationToken);
+            if (observation.Session.Reference != originalSession || observation.TurnContext is not { } originalTurn ||
+                    JsonSerializer.Serialize(observation.Governance, ScopeJson) != JsonSerializer.Serialize(governance, ScopeJson) ||
+                    !Guid.TryParse(governance.WorkspaceScope.Key, out var sourceProjectId) ||
+                    await RequireProjectAdmissions().CaptureObservationAsync(sourceProjectId, cancellationToken) is not { } observed ||
+                    observed.Admission.DatabaseProfileId != governance.DatabaseProfileId || !observed.ProvesLegacySource(originalTurn.CapturedAtUtc)) {
+                throw Denied("The original legacy Workflow source cannot be proven for this current project lifetime.");
+            }
+            provenSource = observed.Admission;
+        }
+        var authority = CaptureAgentCore(agent, governance);
+        if (provenSource is not null && authority.ProjectScope!.Find(provenSource.ProjectId) is { } granted &&
+                granted != ToWorkflowLifetime(provenSource)) {
+            throw Denied("The Workflow grant differs from the proven original source project lifetime.");
+        }
         if (authority.ProjectId != Guid.Empty && authority.ProjectScope!.Find(authority.ProjectId) is null) {
             var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
             if (!access.AllowAllProjects) {
                 throw Denied("The Agent's original grant has no exact lifetime for this Workflow project.");
             }
-            var captured = await RequireProjectAdmissions().CaptureAsync(authority.ProjectId, cancellationToken)
+            var captured = provenSource ?? await RequireProjectAdmissions().CaptureAsync(authority.ProjectId, cancellationToken)
                 ?? throw Denied("The selected Workflow project no longer exists.");
             authority = authority with { ProjectScope = new([ToWorkflowLifetime(captured)], [captured.ProjectId]) };
         }
         authority.ProjectScope!.Validate(authority);
+        await RequireSourceProjectCurrentAsync(authority, cancellationToken);
         return authority;
     }
 
@@ -118,6 +161,7 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
                 held = await RequireCatalog().AcquireAgentReadLeaseAsync(governance.AgentId, cancellationToken);
             }
             RequireCurrentSource(authority, use, target, held);
+            await RequireSourceProjectCurrentAsync(authority, cancellationToken);
             RequireHeldProcessSource(dispatch, held, use);
             return new WorkflowSourceLease(this, authority, use, target, held, dispatch);
         } catch {
@@ -132,9 +176,11 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
         WorkflowProjectLifetime? target, IAgentCatalogReadLease? held, bool checkAdmissionTargets = true) {
         var scope = authority.ProjectScope ?? throw new WorkflowStructureLegacyLineageException();
         scope.Validate(authority);
+        var sourceProject = ResolveSourceProject(authority);
         if (!Enum.IsDefined(use) || !Enum.IsDefined(authority.Channel) || !Enum.IsDefined(authority.OperatorSurface) ||
                 authority.DatabaseProfileId != canonicalDatabase.Profile.Profile.Id ||
                 authority.ExpiresAtUtc <= timeProvider.GetUtcNow() || string.IsNullOrWhiteSpace(authority.PolicyFingerprint) ||
+                sourceProject is not null && scope.Find(sourceProject.ProjectId) is { } savedSource && savedSource != sourceProject ||
                 target is not null && (target.DatabaseProfileId != authority.DatabaseProfileId ||
                     scope.Find(target.ProjectId) is { } saved && saved != target ||
                     scope.Find(target.ProjectId) is null && !authority.AllProjects) ||
@@ -171,8 +217,9 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
                     governance.AllowedCapabilityKeys.Count > 0 && !governance.AllowedCapabilityKeys.Contains(WorkflowRuntimeCapabilityKeys.RunStart))) {
             throw Denied("The original Workflow launch capability is no longer assigned or present in the held catalog.");
         }
-        var required = target is not null ? new[] { target } : checkAdmissionTargets
+        var targets = target is not null ? new[] { target } : checkAdmissionTargets
             ? scope.Projects.Where(project => scope.AdmissionProjectIds.Contains(project.ProjectId)).ToArray() : [];
+        var required = targets.Concat(sourceProject is null ? [] : new[] { sourceProject }).Distinct().ToArray();
         var projectFreeSandbox = governance.WorkspaceScope.IsDefaultSandbox &&
             use is WorkflowStructureAuthorityUse.Admission or WorkflowStructureAuthorityUse.Schedule or WorkflowStructureAuthorityUse.Disclosure &&
             target is null && authority.ProjectId == Guid.Empty && !authority.AllProjects && authority.ProjectIds.Count == 0 &&
@@ -239,8 +286,10 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
             await scheduledAuthority.RequireCurrentForMutationAsync(schedule, cancellationToken);
         }
         var scope = authority.ProjectScope!;
+        var sourceProject = ResolveSourceProject(authority);
         var required = scope.Projects.Where(project => scope.AdmissionProjectIds.Contains(project.ProjectId))
-            .Concat(target is null ? [] : new[] { target }).Distinct().Select(ToProjectAdmission).ToArray();
+            .Concat(target is null ? [] : new[] { target })
+            .Concat(sourceProject is null ? [] : new[] { sourceProject }).Distinct().Select(ToProjectAdmission).ToArray();
         await RequireProjectAdmissions().RequireManyUnderMutationGatesAsync(required, cancellationToken);
     }
 

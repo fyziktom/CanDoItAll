@@ -6,7 +6,10 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Persistence;
+using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +20,81 @@ using Npgsql;
 namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed class ProcessProjectAdmissionPersistenceTests {
+    [Fact]
+    public async Task Project_projection_filters_retained_lifetimes_before_pagination_cached_selection_and_terminal_disclosure() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var original = await CreateProjectAsync(services);
+        var foreign = await CreateProjectAsync(services);
+        var coordinator = Coordinator(services);
+        await using var owner = Context(services);
+        var unit = new EfProcessRuntimeUnitOfWork(owner, coordinatedTransaction: coordinator, projectAdmissionPolicy: Policy(services, coordinator));
+        var events = new List<ProcessRuntimeEventEnvelope>();
+        async Task<ProcessRunId> CommitRunAsync(ProcessProjectAdmission? admission) {
+            var initial = ProcessProjectAdmissionFixture.Initial(admission);
+            var committed = await unit.CommitAsync(initial);
+            Assert.True(committed.Succeeded);
+            var cancellation = ProcessProjectAdmissionFixture.Cancel(committed.State);
+            Assert.True((await unit.CommitAsync(cancellation)).Succeeded);
+            events.AddRange(initial.Mutation.Events);
+            events.AddRange(cancellation.Mutation.Events);
+            return committed.State.RunId;
+        }
+        var oldRun = await CommitRunAsync(original);
+        var foreignRun = await CommitRunAsync(foreign);
+        var legacyRun = await CommitRunAsync(null);
+        var projects = services.GetRequiredService<ProjectsService>();
+        await projects.DeleteAsync(original.ProjectId);
+        Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Projection successor" })).IsSuccess);
+        var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId));
+        Assert.NotEqual(original.LifetimeId, admission.LifetimeId);
+        var currentRun = await CommitRunAsync(new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId));
+        var binding = new ProcessProjectionProjectBinding(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId);
+        var clock = new ProjectionLifetimeClock();
+        var store = new EfProcessProjectionStore(owner);
+        var records = new EfProcessRunRecordStore(owner);
+        var projector = new ProcessRuntimeProjectionProjector(store, ProcessProjectionJsonCodec.Default, clock, records);
+        long sequence = 0;
+        foreach (var group in events.GroupBy(item => item.RunId).OrderBy(group => group.Key == currentRun ? 0 : 1)) {
+            long runSequence = 0;
+            foreach (var envelope in group) {
+                clock.Now = clock.Now.AddSeconds(1);
+                await projector.ProjectAsync(new(++sequence, ++runSequence, envelope), new(new("lifetime-test"), clock.Now, sequence));
+            }
+        }
+        var query = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, clock, unit, runRecordStore: records);
+        var now = ProcessProjectAdmissionFixture.Now.AddHours(1);
+        var global = await query.GetLiveProcessesAsync(new(now, TimeSpan.FromDays(1), 10, ProcessLiveProcessesLoadOptions.SnapshotOnly));
+        Assert.Equal(new[] { oldRun, foreignRun, legacyRun, currentRun }.ToHashSet(), global.Runs.Select(run => run.RunId).ToHashSet());
+        Assert.Equal(currentRun, ProcessProjectionJsonCodec.Default.ReadSnapshot<ProcessLiveProcessSnapshot>(Assert.Single(
+            await store.ReadSnapshotsAsync(ProcessRuntimeProjectionProjector.ProjectorName, ProcessRuntimeProjectionKeys.LivePrefix, 1,
+                projectBinding: binding))).RunId);
+        var scoped = await query.GetLiveProcessesAsync(new(now, TimeSpan.FromDays(1), 1, ProcessLiveProcessesLoadOptions.SnapshotOnly, binding));
+        Assert.Equal(currentRun, Assert.Single(scoped.Runs).RunId);
+        var history = await query.GetRunHistoryAsync(new(null, now.AddDays(-1), now, 1, Skip: 1, ProjectBinding: binding));
+        Assert.Equal(currentRun, Assert.Single(history.Events).RunId);
+        var workspaceRequest = new ProcessRuntimeWorkspaceQuery(now, TimeSpan.FromDays(1), 0, 10, 10, currentRun) {
+            ProjectBinding = binding, PreviouslyLoadedRuns = global.Runs
+        };
+        var workspace = await query.GetRuntimeWorkspaceAsync(workspaceRequest);
+        Assert.Equal(currentRun, Assert.Single(workspace.Runs).RunId);
+        Assert.Equal(currentRun, workspace.SelectedRun!.RunId);
+        Assert.Equal(currentRun, Assert.Single(workspace.ProjectRunIds!));
+        Assert.All(workspace.Events, item => Assert.Equal(currentRun, item.RunId));
+        foreach (var excluded in new[] { oldRun, foreignRun, legacyRun }) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => query.GetRuntimeWorkspaceAsync(workspaceRequest with { SelectedRunId = excluded }));
+        }
+        Assert.Equal(oldRun, (await query.GetRunDetailAsync(new(oldRun)))!.RunId);
+        Assert.Empty((await query.GetLiveProcessesAsync(new(now, TimeSpan.FromDays(1), 10, ProjectBinding:
+            new(Guid.NewGuid(), admission.ProjectId, admission.LifetimeId)))).Runs);
+    }
+
+    private sealed class ProjectionLifetimeClock : IProcessProjectionClock {
+        internal DateTimeOffset Now { get; set; } = ProcessProjectAdmissionFixture.Now;
+        public DateTimeOffset GetUtcNow() => Now;
+    }
+
     [Fact]
     public async Task Commit_returns_persisted_timestamp_precision_for_sequential_commands_and_still_rejects_stale_state() {
         await using var application = await TestApplication.CreateAsync();

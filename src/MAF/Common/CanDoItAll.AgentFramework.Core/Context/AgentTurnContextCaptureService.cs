@@ -26,13 +26,16 @@ public sealed record AgentExecutionAuthorityResolutionRequest(
     AgentChatContextAgentAccess? UiAccessHint) {
     public AgentExecutionAuthorityRevalidation? Revalidation { get; init; }
 
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; init; }
+
     public static AgentExecutionAuthorityResolutionRequest FromCaptured(
         AgentTurnContextReference source, AgentExecutionGovernanceSnapshot authority) {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(authority);
         return new(authority.AgentId, source.SourceKind, source.SourceId, authority.WorkspaceScope,
             authority.DatabaseProfileGeneration, UiAccessHint: null) {
-            Revalidation = new(source, authority)
+            Revalidation = new(source, authority),
+            ObservedProjectLifetime = authority.SourceProjectLifetime
         };
     }
 }
@@ -166,7 +169,9 @@ public sealed class AgentTurnContextCaptureService(
                     context.Scope.Source.Id,
                     context.Scope.WorkspaceScope,
                     command.ExpectedDatabaseProfileGeneration,
-                    context.FindAccess(command.AgentId)),
+                    context.FindAccess(command.AgentId)) {
+                    ObservedProjectLifetime = context.Scope.ObservedProjectLifetime
+                },
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -345,6 +350,11 @@ Current application context (application-generated, trusted metadata; not an aut
         }
 
         var observedScope = context.Scope.WorkspaceScope;
+        if (context.Scope.ObservedProjectLifetime != authority.SourceProjectLifetime ||
+                observedScope?.Kind == WorkspaceScopeKind.Project && authority.SourceProjectLifetime is null) {
+            throw new AgentExecutionAuthorityMismatchException(
+                "The observed project lifetime does not match the admitted source lifetime.");
+        }
         if (observedScope is not null && observedScope != authority.WorkspaceScope)
         {
             throw new AgentExecutionAuthorityMismatchException(

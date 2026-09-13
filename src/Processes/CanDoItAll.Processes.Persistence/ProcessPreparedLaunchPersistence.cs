@@ -68,6 +68,7 @@ internal sealed class ProcessPreparedLaunchEntityConfiguration : IEntityTypeConf
 internal static class ProcessPreparedLaunchCodec {
     private const string ToolSourceHashDomain = "process-tool-source-v1\n";
     private const string ProjectMutationHashDomain = "process-project-mutations-v1\n";
+    private const string SourceLifetimeHashDomain = "process-agent-source-lifetime-v2\n";
     private static readonly JsonSerializerOptions Options = ProcessInstancePlanPersistenceMapper.CreateSerializerOptions();
 
     public static ProcessPreparedLaunchEntity ToEntity(ProcessPreparedLaunch preparation) {
@@ -148,6 +149,11 @@ internal static class ProcessPreparedLaunchCodec {
         var sourceDomain = preparation.ToolSource is null ? string.Empty : ToolSourceHashDomain;
         var projectDomain = preparation.Authority?.ProjectMutations is not null ||
             preparation.ToolSource?.Execution.SourceAuthority?.ProjectMutations is not null ? ProjectMutationHashDomain : string.Empty;
-        return Hash(projectDomain + sourceDomain + payload);
+        var lifetimeDomain = HasSourceLifetimeSchema(preparation.Authority) || HasSourceLifetimeSchema(preparation.ToolSource?.Execution.SourceAuthority)
+            ? SourceLifetimeHashDomain : string.Empty;
+        return Hash(lifetimeDomain + projectDomain + sourceDomain + payload);
     }
+
+    private static bool HasSourceLifetimeSchema(ProcessLaunchAuthority? authority)
+        => authority?.Principal is ProcessLaunchPrincipal.AgentExecution { Ceiling.EffectiveSchemaVersion: >= ProcessLaunchAgentCeiling.CurrentSchemaVersion };
 }

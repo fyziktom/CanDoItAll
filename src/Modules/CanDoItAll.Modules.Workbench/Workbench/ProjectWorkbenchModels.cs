@@ -241,7 +241,9 @@ public sealed record ProjectCalendarSurface(
     string ProjectName,
     IReadOnlyList<ProjectCalendarEvent> Events,
     string PreferredView,
-    string? ViewStateJson);
+    string? ViewStateJson) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+}
 
 public sealed record ProjectWorkbenchUnavailableState(
     Guid ProjectId,
@@ -587,7 +589,9 @@ public sealed partial class ProjectWorkbenchService(
             .ToList();
 
         return new ProjectCalendarLoadResult(
-            new ProjectCalendarSurface(project.Id, project.Name, events, preferredView, viewState),
+            new ProjectCalendarSurface(project.Id, project.Name, events, preferredView, viewState) {
+                ExpectedProjectAdmission = mutationScopes.BindSnapshot(project)
+            },
             null);
     }
 

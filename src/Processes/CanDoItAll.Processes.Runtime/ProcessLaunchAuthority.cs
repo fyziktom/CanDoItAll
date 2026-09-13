@@ -67,7 +67,26 @@ public sealed record ProcessLaunchAgentCeiling(
     IReadOnlyList<string> AllowedCapabilityKeys,
     IReadOnlyList<string> WritableExternalTargetAliases,
     IReadOnlyList<string> ReadOnlyExternalTargetAliases,
-    IReadOnlyList<string> AllowedManagedArtifactReadRefs);
+    IReadOnlyList<string> AllowedManagedArtifactReadRefs,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? SchemaVersion = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessProjectAdmission? SourceProjectAdmission = null) {
+    public const int LegacySchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
+
+    [JsonIgnore]
+    public int EffectiveSchemaVersion => SchemaVersion ?? LegacySchemaVersion;
+
+    internal void ValidateSourceBinding(Guid databaseProfileId) {
+        if (EffectiveSchemaVersion is not (LegacySchemaVersion or CurrentSchemaVersion) ||
+                EffectiveSchemaVersion == LegacySchemaVersion && SourceProjectAdmission is not null ||
+                EffectiveSchemaVersion == CurrentSchemaVersion && WorkspaceScopeKind == ProcessLaunchSourceScopeKind.Project && SourceProjectAdmission is null ||
+                SourceProjectAdmission is { } source && (source.DatabaseProfileId != databaseProfileId ||
+                    WorkspaceScopeKind != ProcessLaunchSourceScopeKind.Project ||
+                    !Guid.TryParse(WorkspaceScopeKey, out var sourceProjectId) || sourceProjectId != source.ProjectId)) {
+            throw new InvalidOperationException("The saved Process Agent source has an invalid schema or project lifetime binding.");
+        }
+    }
+}
 
 public sealed record ProcessProjectMutationCeiling(bool CanCreateProjects, bool CanCreateSubprojects,
     bool CanChangeHierarchy, bool CanMoveNodesToSubproject, int SchemaVersion = 1) {
@@ -109,6 +128,7 @@ public sealed record ProcessLaunchAuthority(
                     authenticated.ExpiresAtUtc.Offset == TimeSpan.Zero:
                 break;
             case ProcessLaunchPrincipal.AgentExecution { Ceiling: { } ceiling } source:
+                ceiling.ValidateSourceBinding(DatabaseProfileId);
                 if (!Enum.IsDefined(source.Operation) || ceiling.AuthorityId == Guid.Empty || ceiling.AgentId == Guid.Empty ||
                         !Enum.IsDefined(ceiling.WorkspaceScopeKind) || ceiling.DatabaseProfileGeneration < 0 ||
                         !ceiling.ReadAllowed ||

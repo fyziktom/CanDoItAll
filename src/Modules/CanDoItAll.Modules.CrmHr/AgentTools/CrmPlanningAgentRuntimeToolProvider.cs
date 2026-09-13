@@ -192,6 +192,7 @@ public sealed class CrmPlanningAgentRuntimeToolProvider(ICrmHrAgentQueryService 
         => saved is not null && saved.AuthorityId == supplied.AuthorityId && saved.AgentId == supplied.AgentId &&
             saved.DatabaseProfileId == supplied.DatabaseProfileId && saved.DatabaseProfileGeneration == supplied.DatabaseProfileGeneration &&
             saved.WorkspaceScope == supplied.WorkspaceScope && saved.ReadAllowed == supplied.ReadAllowed &&
+            saved.SchemaVersion == supplied.SchemaVersion && saved.SourceProjectLifetime == supplied.SourceProjectLifetime &&
             saved.MutationAllowed == supplied.MutationAllowed && saved.PolicyVersion == supplied.PolicyVersion &&
             saved.PolicyFingerprint == supplied.PolicyFingerprint && saved.AllowedOperations.SetEquals(supplied.AllowedOperations) &&
             saved.AllowedCapabilityKeys.SetEquals(supplied.AllowedCapabilityKeys) &&

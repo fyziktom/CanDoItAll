@@ -39,11 +39,15 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
 
     public async Task<ProcessLaunchAuthority> CaptureAgentAsync(ProcessProjectAdmission expectedProject,
         AgentExecutionGovernanceSnapshot governance, ProcessLaunchAgentOperation operation,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default, AgentTurnContextReference? originalTurnContext = null) {
         ArgumentNullException.ThrowIfNull(expectedProject);
         ArgumentNullException.ThrowIfNull(governance);
         if (governance.DatabaseProfileId != database.Profile.Profile.Id || expectedProject.DatabaseProfileId != governance.DatabaseProfileId) {
             throw Denied("The process source authority belongs to a different database profile.");
+        }
+        var legacySource = await RequireLegacySourceCaptureAsync(governance, originalTurnContext, cancellationToken);
+        if (legacySource is not null && legacySource != expectedProject) {
+            throw Denied("The Process target differs from the proven original source project lifetime.");
         }
         await using var held = await catalog.AcquireAgentReadLeaseAsync(governance.AgentId, cancellationToken);
         RequireCatalogScope(held);
@@ -58,6 +62,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
                 Allows(ceiling, ProjectStructureToolPolicy.ProjectStructureAssetCreate), governance.PolicyFingerprint,
             CaptureProjectMutationCeiling(access, ceiling));
         RequireSource(authority, authority, held);
+        await RequireSourceProjectCurrentAsync(authority, cancellationToken);
         await projectAdmissions.RequireCurrentAsync(ToProject(expectedProject), cancellationToken);
         return authority;
     }
@@ -73,7 +78,23 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
             governance.AllowedCapabilityKeys.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             governance.WritableExternalTargetAliases.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
             governance.ReadOnlyExternalTargetAliases.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-            governance.AllowedManagedArtifactReadRefs.Order(StringComparer.OrdinalIgnoreCase).ToArray());
+            governance.AllowedManagedArtifactReadRefs.Order(StringComparer.OrdinalIgnoreCase).ToArray(), governance.SchemaVersion,
+            governance.SourceProjectLifetime is { } source ? new(source.DatabaseProfileId, source.ProjectId, source.LifetimeId) : null);
+
+    private async Task<ProcessProjectAdmission?> RequireLegacySourceCaptureAsync(AgentExecutionGovernanceSnapshot governance,
+        AgentTurnContextReference? originalTurnContext, CancellationToken cancellationToken) {
+        if (governance.WorkspaceScope.Kind != WorkspaceScopeKind.Project ||
+                governance.EffectiveSchemaVersion != AgentExecutionAuthorityRecord.LegacySchemaVersion) {
+            return null;
+        }
+        if (originalTurnContext is null || !Guid.TryParse(governance.WorkspaceScope.Key, out var projectId) ||
+                await projectAdmissions.CaptureObservationAsync(projectId, cancellationToken) is not { } observed ||
+                observed.Admission.DatabaseProfileId != governance.DatabaseProfileId ||
+                !observed.ProvesLegacySource(originalTurnContext.CapturedAtUtc)) {
+            throw Denied("A fresh legacy Process admission requires verified original source provenance for the unchanged project lifetime.");
+        }
+        return new(observed.Admission.DatabaseProfileId, observed.Admission.ProjectId, observed.Admission.LifetimeId);
+    }
 
     public async Task<IProcessLaunchAuthorityLease> AcquireAsync(ProcessLaunchAuthority saved, ProcessLaunchAuthority currentCaller,
         CancellationToken cancellationToken = default) {
@@ -84,6 +105,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
                 held = await catalog.AcquireAgentReadLeaseAsync(source.Ceiling.AgentId, cancellationToken);
             }
             RequireSource(saved, currentCaller, held);
+            await RequireSourceProjectCurrentAsync(saved, cancellationToken);
             return new AuthorityLease(this, saved, currentCaller, held);
         } catch {
             if (held is not null) {
@@ -114,6 +136,10 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         caller.Validate();
         if (saved.DatabaseProfileId != database.Profile.Profile.Id || caller.DatabaseProfileId != saved.DatabaseProfileId ||
                 caller.ProjectAdmission != saved.ProjectAdmission ||
+                saved.Principal is ProcessLaunchPrincipal.AgentExecution original &&
+                    (caller.Principal is not ProcessLaunchPrincipal.AgentExecution current ||
+                        original.Ceiling.EffectiveSchemaVersion != current.Ceiling.EffectiveSchemaVersion ||
+                        original.Ceiling.SourceProjectAdmission != current.Ceiling.SourceProjectAdmission) ||
                 ProcessLaunchIntentFingerprint.CallerFingerprint(saved) != ProcessLaunchIntentFingerprint.CallerFingerprint(caller) ||
                 saved.CanCreateTasks && !caller.CanCreateTasks || saved.CanCreateAssets && !caller.CanCreateAssets ||
                 saved.ProjectMutations is { } mutations && (caller.ProjectMutations is null || !mutations.IsWithin(caller.ProjectMutations))) {
@@ -141,6 +167,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
             throw Denied("The process source Agent is no longer active or permitted to use tools.");
         }
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        RequireSourceProjectGrant(saved, access);
         if (!access.CanRead || !ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(access) ||
                 !access.AllowAllProjects && (!access.AllowedProjectIds.Contains(project.ProjectId) ||
                     !access.AllowedProjectLifetimes.Contains(new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId))) ||
@@ -210,8 +237,10 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
     private async Task RequireForMutationAsync(ProcessLaunchAuthority saved, ProcessLaunchAuthority caller,
         IAgentCatalogReadLease? held, ProcessLaunchLinkTarget? linkTarget, CancellationToken cancellationToken) {
         RequireSource(saved, caller, held);
-        if (saved.ProjectAdmission is { } project) {
-            await projectAdmissions.RequireForMutationAsync(ToProject(project), cancellationToken);
+        var required = new[] { saved.ProjectAdmission, ResolveSourceProject(saved) }.OfType<ProcessProjectAdmission>()
+            .Distinct().Select(ToProject).ToArray();
+        foreach (var project in required) {
+            await projectAdmissions.RequireForMutationAsync(project, cancellationToken);
         }
         if (linkTarget is not null) {
             if (saved.ProjectAdmission?.ProjectId != linkTarget.ProjectId) {
@@ -226,6 +255,39 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
 
     private static ProjectWriteAdmission ToProject(ProcessProjectAdmission project)
         => new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId);
+
+    private static ProcessProjectAdmission? ResolveSourceProject(ProcessLaunchAuthority authority) {
+        if (authority.Principal is not ProcessLaunchPrincipal.AgentExecution { Ceiling: var ceiling } ||
+                ceiling.WorkspaceScopeKind != ProcessLaunchSourceScopeKind.Project) {
+            return null;
+        }
+        if (ceiling.SourceProjectAdmission is { } source) {
+            return source;
+        }
+        return ceiling.EffectiveSchemaVersion == ProcessLaunchAgentCeiling.LegacySchemaVersion &&
+            authority.ProjectAdmission is { } original && Guid.TryParse(ceiling.WorkspaceScopeKey, out var projectId) &&
+            original.ProjectId == projectId ? original
+            : throw Denied("The saved Process source has no original project lifetime binding.");
+    }
+
+    private async Task RequireSourceProjectCurrentAsync(ProcessLaunchAuthority authority, CancellationToken cancellationToken) {
+        if (ResolveSourceProject(authority) is not { } source) {
+            return;
+        }
+        try {
+            await projectAdmissions.RequireCurrentAsync(ToProject(source), cancellationToken);
+        } catch (ProjectWriteAdmissionRejectedException) {
+            throw Denied("The original Process source project lifetime is no longer current.");
+        }
+    }
+
+    private static void RequireSourceProjectGrant(ProcessLaunchAuthority authority, AgentProjectStructureAccessSettings access) {
+        if (ResolveSourceProject(authority) is { } source && (!access.CanRead || !access.AllowAllProjects &&
+                (!access.AllowedProjectIds.Contains(source.ProjectId) ||
+                    !access.AllowedProjectLifetimes.Contains(new(source.DatabaseProfileId, source.ProjectId, source.LifetimeId))))) {
+            throw Denied("Current Agent read policy does not grant the original Process source project lifetime.");
+        }
+    }
 
     private static string Hash(string value) => "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 

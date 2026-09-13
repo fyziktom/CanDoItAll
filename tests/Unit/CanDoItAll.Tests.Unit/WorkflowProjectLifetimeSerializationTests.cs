@@ -2,6 +2,8 @@ using CanDoItAll.SharedKernel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Security.Cryptography;
+using System.Text;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 
@@ -20,12 +22,18 @@ public sealed class WorkflowProjectLifetimeSerializationTests {
         var options = Options(stringEnums);
         var legacy = LegacyAuthority.Create(WorkflowStructureAuthorityChannel.AgentExecution);
         var before = JsonSerializer.Serialize(legacy, options);
+        Assert.Equal(stringEnums ? 1982 : 1934, Encoding.UTF8.GetByteCount(before));
+        Assert.Equal(stringEnums ? "FD81CBB97527F1F1F00DC315621D5627DD923A14D0B3A06F199A9F0B449017F4"
+            : "6AB2AE8A76AADD86B843C4B71121B3588FCF2967B47C7A3F07C71701A85A8AAF",
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(before))));
         var read = JsonSerializer.Deserialize<WorkflowStructureAuthority>(before, options)!;
         Assert.Null(read.ProjectScope);
         Assert.Equal(before, JsonSerializer.Serialize(read, options));
         Assert.Equal(ProjectWorkflowContributionFingerprint.Hash(JsonSerializer.Serialize(legacy, Options(false))),
             WorkflowStructureAuthorityFingerprint.Create(read));
         Assert.Equal(Agent, read.AgentGovernance!.AgentId);
+        Assert.Null(read.AgentGovernance.SchemaVersion);
+        Assert.Null(read.AgentGovernance.SourceProjectLifetime);
         Assert.NotEqual(Guid.Empty, read.AgentGovernance.AuthorityId.Value);
         Assert.NotEmpty(read.AgentGovernance.AllowedOperations);
     }

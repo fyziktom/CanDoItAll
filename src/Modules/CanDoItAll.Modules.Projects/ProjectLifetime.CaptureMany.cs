@@ -3,7 +3,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Projects;
 
-public sealed record ProjectLifetimeObservation(ProjectWriteAdmission Admission, bool HasRetiredLifetime);
+public sealed record ProjectLifetimeObservation(ProjectWriteAdmission Admission, bool HasRetiredLifetime,
+    DateTimeOffset CreatedAtUtc = default, bool LegacyAgentAccessBindingEligible = false,
+    DateTimeOffset? NativeReservationConsumedAtUtc = null) {
+    public bool ProvesLegacySource(DateTimeOffset capturedAtUtc)
+        => !HasRetiredLifetime && CreatedAtUtc != default && CreatedAtUtc <= capturedAtUtc &&
+            (LegacyAgentAccessBindingEligible || NativeReservationConsumedAtUtc is { } consumedAtUtc && consumedAtUtc <= capturedAtUtc);
+}
 
 public sealed partial class ProjectWriteAdmissionService {
     public async Task<ProjectLifetimeObservation?> CaptureObservationAsync(Guid projectId,
@@ -12,9 +18,15 @@ public sealed partial class ProjectWriteAdmissionService {
             throw new ArgumentException("A project is required.", nameof(projectId));
         }
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await context.Set<Project>().AsNoTracking().Where(project => project.Id == projectId)
+        return await context.Set<Project>().AsNoTracking().Where(project => project.Id == projectId &&
+                !context.Set<ProjectRetirementRecord>().Any(retirement => retirement.LifetimeId == project.LifetimeId))
             .Select(project => new ProjectLifetimeObservation(new(DatabaseProfileId, project.Id, project.LifetimeId),
-                context.Set<ProjectRetirementRecord>().Any(retirement => retirement.ProjectId == project.Id)))
+                context.Set<ProjectRetirementRecord>().Any(retirement => retirement.ProjectId == project.Id),
+                project.CreatedAtUtc, project.LegacyAgentAccessBindingEligible,
+                context.Set<ProjectCreationReservationRecord>().Where(record => record.DatabaseProfileId == DatabaseProfileId &&
+                    record.ProjectId == project.Id && record.LifetimeId == project.LifetimeId && record.ImportedHistory == null &&
+                    record.State == ProjectCreationReservationState.Consumed && record.ConsumedAtUtc != null)
+                    .OrderBy(record => record.ConsumedAtUtc).Select(record => record.ConsumedAtUtc).FirstOrDefault()))
             .SingleOrDefaultAsync(cancellationToken);
     }
 

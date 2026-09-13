@@ -137,6 +137,7 @@ public sealed class HrSimpleChatRuntimeAuthorization(
             governance.AgentId != admission.AgentId || governance.DatabaseProfileId != profile.ProfileId ||
             governance.DatabaseProfileGeneration.Value != profile.Generation ||
             !string.Equals(governance.PolicyFingerprint, context.Governance!.PolicyFingerprint, StringComparison.Ordinal) ||
+            governance.SchemaVersion != context.Governance.SchemaVersion || governance.SourceProjectLifetime != context.Governance.SourceProjectLifetime ||
             !IsWithinAuthority(governance, operation)) {
             throw Denied("The persisted execution authority does not allow this Simple Chat operation.");
         }
@@ -151,12 +152,13 @@ public sealed class HrSimpleChatRuntimeAuthorization(
         AgentExecutionAuthorityRecord current;
         try {
             current = await resolver.ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(source, governance), cancellationToken);
-        } catch (AgentExecutionAuthorityMismatchException) {
+        } catch (Exception exception) when (exception is AgentExecutionAuthorityMismatchException or AgentChatContextAccessDeniedException) {
             throw Denied("The current source authority no longer permits this HR execution.");
         }
 
         if (current.AgentId != admission.AgentId || current.DatabaseProfileId != profile.ProfileId ||
             current.DatabaseProfileGeneration.Value != profile.Generation || current.WorkspaceScope != governance.WorkspaceScope ||
+            current.SchemaVersion != governance.EffectiveSchemaVersion || current.SourceProjectLifetime != governance.SourceProjectLifetime ||
             !IsWithinAuthority(AgentExecutionGovernanceSnapshot.FromAuthority(current), currentOperation)) {
             throw Denied("The current source authority does not allow this Simple Chat operation.");
         }

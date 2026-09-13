@@ -9,5 +9,6 @@ public interface IWorkflowStructureAuthorityFactory {
         CancellationToken cancellationToken = default);
     WorkflowStructureAuthority CaptureAgent(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance);
     Task<WorkflowStructureAuthority> CaptureAgentAsync(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance,
-        CancellationToken cancellationToken = default) => Task.FromResult(CaptureAgent(agent, governance));
+        CancellationToken cancellationToken = default, AgentToolSessionReference? originalSession = null)
+        => Task.FromResult(CaptureAgent(agent, governance));
 }

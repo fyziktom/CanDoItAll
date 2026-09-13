@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Workbench.ProjectStructure;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal sealed class ProjectStructureExecutionAuthorityProvider
+internal sealed class ProjectStructureExecutionAuthorityProvider(ProjectWriteAdmissionService admissions)
     : IAgentExecutionSourceAuthorityProvider
 {
     public string SourceKind => ProjectStructureAgentChatContextBuilder.SourceKind;
@@ -20,9 +20,6 @@ internal sealed class ProjectStructureExecutionAuthorityProvider
                 "The project-structure source id is not a valid project identifier.");
         }
 
-        return ValueTask.FromResult(ProjectAgentAccessPolicy.ResolveExecutionAuthority(
-            request.Agent,
-            projectId,
-            request.ObservedWorkspaceScope));
+        return ProjectAgentAccessPolicy.ResolveExecutionAuthorityAsync(request, projectId, admissions, cancellationToken);
     }
 }

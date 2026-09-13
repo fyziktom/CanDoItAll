@@ -193,7 +193,10 @@ public sealed record ProjectSummary(
     string PrimaryDeliveryUnitName = "",
     string PrimaryOwnerName = "",
     IReadOnlyList<ProjectPortfolioPartyItem>? RelatedParties = null,
-    string RelatedPartySearchText = "");
+    string RelatedPartySearchText = "") {
+    [JsonIgnore]
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+}
 
 public sealed record ProjectAccessListItem(
     Guid Id,
@@ -1455,7 +1458,7 @@ public sealed partial class ProjectsService(
         }
     }
 
-    private static ProjectSummary MapProjectSummary(
+    private ProjectSummary MapProjectSummary(
         Project project,
         IReadOnlyDictionary<Guid, int> phaseCounts,
         ProjectHierarchyMetrics hierarchyMetrics,
@@ -1473,7 +1476,7 @@ public sealed partial class ProjectsService(
         portfolioContext?.PrimaryDeliveryUnitName ?? string.Empty,
         portfolioContext?.PrimaryOwnerName ?? string.Empty,
         portfolioContext?.Items ?? [],
-        portfolioContext?.SearchText ?? string.Empty);
+        portfolioContext?.SearchText ?? string.Empty) { ExpectedProjectAdmission = writeAdmissionService.Capture(project) };
 
     private static async Task<IReadOnlyDictionary<Guid, int>> LoadPhaseCountsAsync(
         ProjectsDbContext dbContext,

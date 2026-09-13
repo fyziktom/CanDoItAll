@@ -6,7 +6,9 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Processes.AgentChat;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -18,8 +20,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentProjectLifetimePersistenceTests {
-    [Fact]
-    public async Task Delayed_old_cleanup_keeps_recreated_project_grant_and_second_deletion_owns_a_new_recovery() {
+    [Theory]
+    [InlineData(AgentChatTrustedSourceKinds.ProjectStructure, false)]
+    [InlineData(ProjectsAgentChatContextBuilder.SourceKind, false)]
+    [InlineData(ProcessAgentChatContextBuilder.WorkspaceSourceKind, false)]
+    [InlineData(ProcessAgentChatContextBuilder.LiveSourceKind, false)]
+    [InlineData(AgentChatTrustedSourceKinds.ProjectStructure, true)]
+    [InlineData(ProjectsAgentChatContextBuilder.SourceKind, true)]
+    [InlineData(ProcessAgentChatContextBuilder.WorkspaceSourceKind, true)]
+    [InlineData(ProcessAgentChatContextBuilder.LiveSourceKind, true)]
+    public async Task Delayed_old_cleanup_keeps_recreated_project_grant_and_second_deletion_owns_a_new_recovery(string sourceKind, bool allowAll) {
         var gate = new CleanupGate();
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions {
             ConfigureServices = services => {
@@ -39,9 +49,19 @@ public sealed class AgentProjectLifetimePersistenceTests {
         var oldProjects = oldScope.ServiceProvider.GetRequiredService<ProjectsService>();
         var projectId = await CreateProjectAsync(oldProjects, "First lifetime");
         var workspace = oldScope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var agentId = await CreateAgentAsync(workspace, projectId);
+        var agentId = await CreateAgentAsync(workspace, projectId, allowAll);
         var oldLifetime = await CaptureAsync(oldScope.ServiceProvider, projectId);
         await workspace.GrantAgentProjectStructureLifetimeAsync(agentId, oldLifetime);
+        var generation = oldScope.ServiceProvider.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration();
+        var sourceId = sourceKind is ProcessAgentChatContextBuilder.WorkspaceSourceKind or ProcessAgentChatContextBuilder.LiveSourceKind
+            ? $"surface:project:{projectId:D}" : projectId.ToString("D");
+        var oldRequest = new AgentExecutionAuthorityResolutionRequest(agentId, new(sourceKind), new(sourceId),
+            WorkspaceScopeDescriptor.Project(projectId.ToString("D")), generation, UiAccessHint: null) { ObservedProjectLifetime = oldLifetime };
+        var original = await oldScope.ServiceProvider.GetRequiredService<IAgentExecutionAuthorityResolver>().ResolveAsync(oldRequest);
+        Assert.Equal(oldLifetime, original.SourceProjectLifetime);
+        var oldReference = new AgentTurnContextReference(AgentTurnContextId.Create(), AgentContextEpochId.Create(),
+            oldRequest.SourceKind, oldRequest.SourceId, "source", "view", 1, "original-source", DateTimeOffset.UtcNow);
+        var revalidation = AgentExecutionAuthorityResolutionRequest.FromCaptured(oldReference, AgentExecutionGovernanceSnapshot.FromAuthority(original));
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var deletion = oldProjects.DeleteAsync(projectId, deadline.Token);
         try {
@@ -53,12 +73,30 @@ public sealed class AgentProjectLifetimePersistenceTests {
             var newLifetime = await CaptureAsync(newScope.ServiceProvider, projectId);
             Assert.NotEqual(oldLifetime.LifetimeId, newLifetime.LifetimeId);
             var newWorkspace = newScope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+            AssertLifetimeGrant(await ReadAccessAsync(newWorkspace, agentId), oldLifetime, allowAll);
+            var sourceRequest = oldRequest with { ObservedProjectLifetime = newLifetime };
+            var authority = newScope.ServiceProvider.GetRequiredService<IAgentExecutionAuthorityResolver>();
+            if (!allowAll) {
+                await Assert.ThrowsAsync<AgentChatContextAccessDeniedException>(() => authority.ResolveAsync(sourceRequest).AsTask());
+            }
+            await Assert.ThrowsAsync<AgentChatContextAccessDeniedException>(() => authority.ResolveAsync(oldRequest).AsTask());
             await newWorkspace.GrantAgentProjectStructureLifetimeAsync(agentId, newLifetime);
+            var currentAuthority = await authority.ResolveAsync(sourceRequest);
+            Assert.True(currentAuthority.ReadAllowed);
+            Assert.False(currentAuthority.MutationAllowed);
+            Assert.Equal(newLifetime.DatabaseProfileId, currentAuthority.DatabaseProfileId);
+            Assert.Equal(generation, currentAuthority.DatabaseProfileGeneration);
+            Assert.Equal(sourceRequest.ObservedWorkspaceScope, currentAuthority.WorkspaceScope);
+            Assert.Equal(newLifetime, currentAuthority.SourceProjectLifetime);
+            Assert.Equal(AgentExecutionAuthorityRecord.CurrentSchemaVersion, currentAuthority.SchemaVersion);
+            await Assert.ThrowsAsync<AgentChatContextAccessDeniedException>(() => authority.ResolveAsync(oldRequest).AsTask());
+            await Assert.ThrowsAsync<AgentChatContextAccessDeniedException>(() => authority.ResolveAsync(revalidation).AsTask());
+            await Assert.ThrowsAsync<AgentExecutionAuthorityMismatchException>(() => authority.ResolveAsync(
+                revalidation with { ObservedProjectLifetime = newLifetime }).AsTask());
             gate.Released.TrySetResult();
             await deletion.WaitAsync(TimeSpan.FromSeconds(30));
             var access = await ReadAccessAsync(newWorkspace, agentId);
-            Assert.Equal(newLifetime, Assert.Single(access.AllowedProjectLifetimes));
-            Assert.Equal(projectId, Assert.Single(access.AllowedProjectIds));
+            AssertLifetimeGrant(access, newLifetime, allowAll);
             await newProjects.DeleteAsync(projectId, deadline.Token);
             access = await ReadAccessAsync(newWorkspace, agentId);
             Assert.Empty(access.AllowedProjectIds);
@@ -78,6 +116,17 @@ public sealed class AgentProjectLifetimePersistenceTests {
         } finally {
             gate.Released.TrySetResult();
             await deletion.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+    }
+
+    private static void AssertLifetimeGrant(AgentProjectStructureAccessSettings access, AgentProjectStructureLifetime lifetime, bool allowAll) {
+        Assert.Equal(allowAll, access.AllowAllProjects);
+        if (allowAll) {
+            Assert.Empty(access.AllowedProjectLifetimes);
+            Assert.Empty(access.AllowedProjectIds);
+        } else {
+            Assert.Equal(lifetime, Assert.Single(access.AllowedProjectLifetimes));
+            Assert.Equal(lifetime.ProjectId, Assert.Single(access.AllowedProjectIds));
         }
     }
 
@@ -186,14 +235,14 @@ public sealed class AgentProjectLifetimePersistenceTests {
         return new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId);
     }
 
-    private static async Task<Guid> CreateAgentAsync(IAgentFrameworkWorkspaceService workspace, Guid projectId) {
+    private static async Task<Guid> CreateAgentAsync(IAgentFrameworkWorkspaceService workspace, Guid projectId, bool allowAll = false) {
         var editor = await workspace.GetAgentEditorAsync();
         editor.Name = "Lifetime access agent";
         editor.RoleTitle = "Project access specialist";
         editor.Summary = "Validate exact project lifetime access.";
         editor.Instructions = "Stay within explicitly granted project scope.";
         editor.Status = AgentLifecycleStatus.Active;
-        editor.ProjectStructureAccess = new() { CanRead = true, AllowedProjectIds = [projectId] };
+        editor.ProjectStructureAccess = new() { CanRead = true, AllowedProjectIds = [projectId], AllowAllProjects = allowAll };
         return await workspace.SaveAgentAsync(editor);
     }
 

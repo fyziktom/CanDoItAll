@@ -13,6 +13,9 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using CanDoItAll.Tests.Integration.Runtime;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.AI;
@@ -23,6 +26,62 @@ using Microsoft.Extensions.Options;
 namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed partial class ProcessCatalogAuthorityPersistenceTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Legacy_journal_source_retains_proven_lifetime_through_native_and_Workflow_target_capture(bool allowAllProjects) {
+        await using var app = await TestApplication.CreateAsync(OrdinaryHarness());
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var fixture = await Fixture.CreateAsync(services, nativeCreation: true, allowAllProjects: allowAllProjects);
+        var projects = services.GetRequiredService<ProjectWriteAdmissionService>();
+        await using var journalFixture = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding: NativeProfile(services),
+            transientContext: new("Original project source", WorkspaceScopeDescriptor.Project(fixture.Project.ProjectId.ToString("D"))),
+            configureAgent: agent => agent with { Id = fixture.Agent.Id });
+        var journal = journalFixture.NewJournal();
+        await using var lease = await journal.AcquireRunAsync(journalFixture.Session, default);
+        using var bound = lease.Bind();
+        var observation = await journal.RequireSessionObservationAsync(journalFixture.Session, default);
+        var governance = observation.Governance!;
+        Assert.Equal(AgentExecutionAuthorityRecord.LegacySchemaVersion, governance.EffectiveSchemaVersion);
+        Assert.Null(governance.SourceProjectLifetime);
+        var admissions = new ProjectStructureAgentAdmissionService(services.GetRequiredService<IAgentFrameworkWorkspaceService>(),
+            projects, toolAdmissions: journal);
+        var original = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureSourceProjectAsync(governance, journalFixture.Session, default));
+        var owner = OrdinaryOwner(fixture) with {
+            AgentMutationAdmission = admissions.CaptureMutationAuthority(fixture.Agent.Id,
+                AgentProjectStructureAccessMetadata.Read(fixture.Agent.ConfigurationJson), governance, ProjectAgentMutationDomain.NonTaskStructure, original),
+            WorkflowAuthority = ProjectStructureWorkflowAuthoritySource.Agent(fixture.Agent.Id, original.ProjectId, true, true, governance,
+                originalSession: journalFixture.Session)
+        };
+        var workflow = ActivatorUtilities.CreateInstance<ProjectStructureWorkflowAuthorityService>(services, journal);
+        var saved = await workflow.CaptureAgentAsync(fixture.Agent, governance, originalSession: journalFixture.Session);
+        Assert.Equal(original.LifetimeId, saved.ProjectScope!.Find(original.ProjectId)!.LifetimeId);
+        Assert.Equal(original.LifetimeId, (await workflow.CaptureForNodeAsync(original.ProjectId, owner, default)).ProjectScope!.Find(original.ProjectId)!.LifetimeId);
+        Assert.NotNull(await OrdinaryCreateAsync(services, owner));
+        await using (await fixture.Authority.AcquireUncommittedResultReadAsync(governance, original.ProjectId,
+                originalTurnContext: observation.TurnContext)) { }
+
+        var projectService = services.GetRequiredService<ProjectsService>();
+        await projectService.DeleteAsync(original.ProjectId);
+        Assert.True((await projectService.CreateAsync(original.ProjectId, new() { Name = "Recreated during admitted invocation" })).IsSuccess);
+        var replacement = Assert.IsType<ProjectWriteAdmission>(await projects.CaptureAsync(original.ProjectId));
+        Assert.NotEqual(original.LifetimeId, replacement.LifetimeId);
+        var currentAccess = new AgentProjectStructureAccessSettings { CanRead = true, CanWrite = true, AllowAllProjects = allowAllProjects,
+            AllowedProjectIds = [replacement.ProjectId], AllowedProjectLifetimes = [new(replacement.DatabaseProfileId, replacement.ProjectId, replacement.LifetimeId)] };
+        var updated = await fixture.Writer.UpdateCatalogAsync(catalog => catalog with { Agents = catalog.Agents.Select(agent => agent.Id == fixture.Agent.Id
+            ? agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, currentAccess) } : agent).ToArray() });
+        var successorOwner = owner with { ExpectedProjectAdmission = replacement };
+        await Assert.ThrowsAsync<ProjectStructureAgentException>(() => OrdinaryCreateAsync(services, successorOwner));
+        await Assert.ThrowsAsync<ProjectStructureAgentException>(() => workflow.CaptureForNodeAsync(original.ProjectId, successorOwner, default));
+        await Assert.ThrowsAsync<ProjectStructureAgentException>(() => admissions.CaptureSourceProjectAsync(governance, journalFixture.Session, default));
+        await Assert.ThrowsAsync<ProjectStructureAgentException>(() => workflow.CaptureAgentAsync(
+            updated.Agents.Single(agent => agent.Id == fixture.Agent.Id), governance, originalSession: journalFixture.Session));
+        await Assert.ThrowsAsync<ProcessLaunchAuthorityRejectedException>(() => fixture.Authority.AcquireUncommittedResultReadAsync(
+            governance, original.ProjectId, originalTurnContext: observation.TurnContext));
+        await AssertNativeCountAsync(services, original.ProjectId, 0);
+    }
+
     public enum OrdinaryGraphChange { Move, Recompose, Reparent, Link, Unlink, Copy, Delete, Import, PromptCommand, Approval }
     public enum OrdinaryTaskChange { Title, RowOrder, Pricing, Compensation, Assignee }
 

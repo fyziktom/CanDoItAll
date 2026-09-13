@@ -49,6 +49,20 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
             Assert.Equal(recovered.Node.Id, replay.Node.Id);
         }
 
+        var outputs = OutputStore(fixture.Services);
+        Assert.Contains(await outputs.ListPendingAsync(128), output => output.Plan.Identity == fixture.Plan.Identity);
+        var runStore = fixture.Services.GetRequiredService<IWorkflowRunStore>();
+        var runBeforeDelivery = await runStore.GetRunAsync(fixture.Plan.Identity.Occurrence.RunId);
+        using var delivery = ActivatorUtilities.CreateInstance<ProjectStructureWorkflowDeliveryWorker>(app.Services);
+        await delivery.RunBatchAsync();
+        var delivered = Assert.IsType<WorkflowStructureOutput>(await outputs.FindAsync(fixture.Plan.Identity));
+        Assert.Equal(WorkflowStructureOutputState.Applied, delivered.State);
+        Assert.Equal(replay.Receipt, delivered.Receipt);
+        Assert.DoesNotContain(await outputs.ListPendingAsync(128), output => output.Plan.Identity == fixture.Plan.Identity);
+        await delivery.RunBatchAsync();
+        Assert.Equal(replay.Receipt, (await outputs.FindAsync(fixture.Plan.Identity))!.Receipt);
+        Assert.Equivalent(runBeforeDelivery, await runStore.GetRunAsync(fixture.Plan.Identity.Occurrence.RunId));
+
         await using var verified = await fixture.Factory.CreateDbContextAsync();
         Assert.Single(await verified.Set<ProjectWorkflowContributionRecord>()
             .Where(row => row.RunId == fixture.Plan.Identity.Occurrence.RunId.Value).ToListAsync());

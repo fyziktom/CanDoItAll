@@ -530,7 +530,7 @@ public sealed class ProcessDashboardActivityQueryTests
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,
             int take,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, ProcessProjectionProjectBinding? projectBinding = null)
         {
             ReadSnapshotsCallCount++;
             return Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>(

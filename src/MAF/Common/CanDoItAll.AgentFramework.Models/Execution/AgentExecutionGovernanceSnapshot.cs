@@ -31,7 +31,9 @@ public sealed record AgentExecutionGovernanceSnapshot
         IReadOnlyList<string>? allowedCapabilityKeys = null,
         IReadOnlyList<string>? writableExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
-        IReadOnlyList<string>? allowedManagedArtifactReadRefs = null)
+        IReadOnlyList<string>? allowedManagedArtifactReadRefs = null,
+        int schemaVersion = AgentExecutionAuthorityRecord.LegacySchemaVersion,
+        AgentProjectStructureLifetime? sourceProjectLifetime = null)
     {
         if (authorityId.IsEmpty)
         {
@@ -44,6 +46,7 @@ public sealed record AgentExecutionGovernanceSnapshot
         }
 
         ArgumentNullException.ThrowIfNull(workspaceScope);
+        AgentExecutionAuthorityRecord.ValidateSourceLifetime(schemaVersion, sourceProjectLifetime, databaseProfileId, workspaceScope);
         if (mutationAllowed && !readAllowed)
         {
             throw new ArgumentException(
@@ -59,6 +62,8 @@ public sealed record AgentExecutionGovernanceSnapshot
         DatabaseProfileId = databaseProfileId;
         DatabaseProfileGeneration = databaseProfileGeneration;
         WorkspaceScope = workspaceScope;
+        SchemaVersion = schemaVersion == AgentExecutionAuthorityRecord.LegacySchemaVersion ? null : schemaVersion;
+        SourceProjectLifetime = sourceProjectLifetime;
         ReadAllowed = readAllowed;
         MutationAllowed = mutationAllowed;
         PolicyVersion = policyVersion.Trim();
@@ -75,10 +80,12 @@ public sealed record AgentExecutionGovernanceSnapshot
         DatabaseProfileGeneration databaseProfileGeneration, WorkspaceScopeDescriptor workspaceScope, bool readAllowed,
         bool mutationAllowed, string policyVersion, string policyFingerprint, ImmutableHashSet<string>? allowedOperations,
         ImmutableHashSet<string>? allowedCapabilityKeys, ImmutableHashSet<string>? writableExternalTargetAliases,
-        ImmutableHashSet<string>? readOnlyExternalTargetAliases, ImmutableHashSet<string>? allowedManagedArtifactReadRefs)
+        ImmutableHashSet<string>? readOnlyExternalTargetAliases, ImmutableHashSet<string>? allowedManagedArtifactReadRefs,
+        int? schemaVersion = null, AgentProjectStructureLifetime? sourceProjectLifetime = null)
         : this(authorityId, agentId, databaseProfileId, databaseProfileGeneration, workspaceScope, readAllowed, mutationAllowed,
             policyVersion, policyFingerprint, (IReadOnlyList<string>?)allowedOperations?.ToArray(), allowedCapabilityKeys?.ToArray(),
-            writableExternalTargetAliases?.ToArray(), readOnlyExternalTargetAliases?.ToArray(), allowedManagedArtifactReadRefs?.ToArray()) {
+            writableExternalTargetAliases?.ToArray(), readOnlyExternalTargetAliases?.ToArray(), allowedManagedArtifactReadRefs?.ToArray(),
+            schemaVersion ?? AgentExecutionAuthorityRecord.LegacySchemaVersion, sourceProjectLifetime) {
     }
 
     public AgentExecutionAuthorityId AuthorityId { get; }
@@ -90,6 +97,15 @@ public sealed record AgentExecutionGovernanceSnapshot
     public DatabaseProfileGeneration DatabaseProfileGeneration { get; }
 
     public WorkspaceScopeDescriptor WorkspaceScope { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? SchemaVersion { get; }
+
+    [JsonIgnore]
+    public int EffectiveSchemaVersion => SchemaVersion ?? AgentExecutionAuthorityRecord.LegacySchemaVersion;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentProjectStructureLifetime? SourceProjectLifetime { get; }
 
     public bool ReadAllowed { get; }
 
@@ -138,7 +154,9 @@ public sealed record AgentExecutionGovernanceSnapshot
             authority.AllowedOperations,
             authority.AllowedCapabilityKeys,
             authority.AllowedExternalTargetAliases,
-            authority.ReadOnlyExternalTargetAliases);
+            authority.ReadOnlyExternalTargetAliases,
+            schemaVersion: authority.SchemaVersion,
+            sourceProjectLifetime: authority.SourceProjectLifetime);
     }
 
     private sealed class GrantSetJsonConverter : JsonConverter<ImmutableHashSet<string>> {

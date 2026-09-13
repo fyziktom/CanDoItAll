@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-12T18:25:15.605884+00:00",
+  "generated_utc": "2026-09-13T05:37:22.797636+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -60394,13 +60394,13 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.cs",
       "category": "case-policy",
-      "source_fingerprint": "1ced94531ec99fbfdb161dc6d30f7e9592b9974e777a9b39bf7aa62a9417fb4a",
+      "source_fingerprint": "9023c81d3c81c916b44f906b032f15f8ea3e2689f28033673edbf682fc224479",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.cs",
       "category": "case-policy",
-      "source_fingerprint": "9023c81d3c81c916b44f906b032f15f8ea3e2689f28033673edbf682fc224479",
+      "source_fingerprint": "9e03809885e00417f4e456d3354a7306ab9eee5a24e94d09cf95a13df39e10e6",
       "count": 1
     },
     {

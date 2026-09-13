@@ -72,14 +72,16 @@ public sealed partial class ProjectStructureProcessToolAdmission(
     public async ValueTask<IAsyncDisposable?> AuthorizeResultDisclosureAsync(AgentRuntimeToolProviderContext context,
         AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
         var input = codec.Read(disclosure.Payload);
-        var session = await RequireSessionAsync(context, cancellationToken);
+        var observation = await RequireSessionAsync(context, cancellationToken);
+        var session = observation.Session;
         var saved = await preparations.FindByIntentAsync(new(disclosure.IntentId.Value), cancellationToken);
         await RequireSessionAsync(context, cancellationToken);
         if (session.Reference.BackgroundSource is not null) {
             return await AuthorizeBackgroundResultAsync(session, disclosure, input, saved, cancellationToken);
         }
         if (saved is null && disclosure.EffectState == AgentToolEffectState.NotCommitted) {
-            return await authorities.AcquireUncommittedResultReadAsync(context.Governance!, input.ProjectId, cancellationToken);
+            return await authorities.AcquireUncommittedResultReadAsync(observation.Governance!, input.ProjectId, cancellationToken,
+                observation.TurnContext);
         }
         var authority = saved?.Preparation.Authority;
         if (saved is null || saved.Preparation.Request.ProducerInputFingerprint != disclosure.Payload.Digest.Value ||
@@ -111,7 +113,8 @@ public sealed partial class ProjectStructureProcessToolAdmission(
 
     internal async Task<ProjectStructureProcessToolClaim> RequireInvocationAsync(AgentRuntimeToolProviderContext context,
         ProjectStructureProcessStartProposal input, CancellationToken cancellationToken) {
-        var session = await RequireSessionAsync(context, cancellationToken);
+        var observation = await RequireSessionAsync(context, cancellationToken);
+        var session = observation.Session;
         var payload = codec.Prepare(input);
         var admitted = await admissions.RequireInvocationAsync(session.Reference, payload.ToolName, payload.Digest, cancellationToken);
         if (admitted.Session != session.Reference || admitted.IntentId.Value == Guid.Empty || admitted.BatchId.Value == Guid.Empty ||
@@ -121,7 +124,7 @@ public sealed partial class ProjectStructureProcessToolAdmission(
         }
         return session.Reference.BackgroundSource is { } background
             ? new(admitted, null, input.ProjectId, await ReadBackgroundExecutionAsync(session, cancellationToken), background)
-            : new(admitted, context.Governance!, input.ProjectId);
+            : new(admitted, observation.Governance!, input.ProjectId, OriginalTurnContext: observation.TurnContext);
     }
 
     internal async Task<ProjectStructureProcessLaunchInvocation?> FindReplayAsync(ProjectStructureProcessToolClaim claim,
@@ -140,6 +143,9 @@ public sealed partial class ProjectStructureProcessToolAdmission(
                 authority?.Principal is not ProcessLaunchPrincipal.AgentExecution source ||
                 source.Operation != ProcessLaunchAgentOperation.StructureStart ||
                 source.Ceiling.AuthorityId != claim.Governance!.AuthorityId.Value || source.Ceiling.AgentId != claim.Governance.AgentId ||
+                source.Ceiling.EffectiveSchemaVersion != claim.Governance.EffectiveSchemaVersion ||
+                source.Ceiling.SourceProjectAdmission != (claim.Governance.SourceProjectLifetime is { } originalSource
+                    ? new ProcessProjectAdmission(originalSource.DatabaseProfileId, originalSource.ProjectId, originalSource.LifetimeId) : null) ||
                 authority.DatabaseProfileId != claim.Governance.DatabaseProfileId ||
                 authority.ProjectAdmission?.ProjectId != claim.ProjectId) {
             throw new ProcessLaunchIntentConflictException(new(claim.Admitted.IntentId.Value),
@@ -157,28 +163,32 @@ public sealed partial class ProjectStructureProcessToolAdmission(
             return await CaptureBackgroundAsync(claim, expectedProject, cancellationToken);
         }
         var authority = await authorities.CaptureAgentAsync(new(expectedProject.DatabaseProfileId, expectedProject.ProjectId,
-            expectedProject.LifetimeId), claim.Governance!, ProcessLaunchAgentOperation.StructureStart, cancellationToken);
+            expectedProject.LifetimeId), claim.Governance!, ProcessLaunchAgentOperation.StructureStart, cancellationToken,
+            claim.OriginalTurnContext);
         return new(new(claim.Admitted.IntentId.Value), claim.Admitted.Payload.Digest.Value, authority, codec.Read(claim.Admitted.Payload));
     }
 
-    private async Task<AgentToolSessionAdmission> RequireSessionAsync(AgentRuntimeToolProviderContext context,
+    private async Task<AgentToolSessionObservation> RequireSessionAsync(AgentRuntimeToolProviderContext context,
         CancellationToken cancellationToken) {
         if (context.Purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation) {
-            return await RequireBackgroundSessionAsync(context, cancellationToken);
+            return new(await RequireBackgroundSessionAsync(context, cancellationToken), null, null);
         }
         if (!UsesJournal(context) || context.ToolAdmissionSupport != AgentToolAdmissionSupport.Recoverable ||
                 context.Governance is not { ReadAllowed: true } governance || governance.AgentId != context.Agent.Id ||
                 governance.AuthorityId != context.AdmittedToolSession!.AuthorityId) {
             throw Denied("This Process producer requires its retained interactive execution and durable tool proposal.");
         }
-        var admitted = await admissions.RequireSessionAsync(context.AdmittedToolSession, cancellationToken);
+        var observation = await admissions.RequireSessionObservationAsync(context.AdmittedToolSession, cancellationToken);
+        var admitted = observation.Session;
         if (admitted.Reference != context.AdmittedToolSession || admitted.AgentId != governance.AgentId ||
                 admitted.Purpose != AgentRuntimeContextPurpose.InteractiveChat ||
                 admitted.Profile.ProfileId != database.Profile.Profile.Id || admitted.Profile.ProfileId != governance.DatabaseProfileId ||
-                admitted.Profile.Generation != governance.DatabaseProfileGeneration) {
+                admitted.Profile.Generation != governance.DatabaseProfileGeneration || observation.TurnContext is null ||
+                observation.Governance is not { } original ||
+                JsonSerializer.Serialize(original) != JsonSerializer.Serialize(governance)) {
             throw Denied("The Process producer's session, actor or runtime profile does not match its saved execution authority.");
         }
-        return admitted;
+        return observation;
     }
 
     private static ProjectStructureAgentException Denied(string message) => new(403, "ProcessToolAdmissionDenied", message);
@@ -194,7 +204,8 @@ internal sealed record ProjectStructureProcessToolClaim(
     AgentExecutionGovernanceSnapshot? Governance,
     Guid ProjectId,
     ProcessExecutionDispatchAuthority? Execution = null,
-    AgentToolBackgroundSourceBinding? BackgroundSource = null);
+    AgentToolBackgroundSourceBinding? BackgroundSource = null,
+    AgentTurnContextReference? OriginalTurnContext = null);
 
 public sealed record ProjectStructureProcessLaunchInvocation {
     internal ProjectStructureProcessLaunchInvocation(ProcessLaunchIntentId intentId, string inputFingerprint,

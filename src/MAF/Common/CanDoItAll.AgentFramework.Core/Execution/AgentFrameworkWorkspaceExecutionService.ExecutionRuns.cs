@@ -304,8 +304,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw new AgentToolAdmissionException("tool-admission.profile-changed", "The current profile cannot reconcile another profile's cancelled effect.");
             }
 
-            return current.AgentId == original.AgentId && current.ReadAllowed && current.WorkspaceScope == original.WorkspaceScope;
-        } catch (AgentExecutionAuthorityMismatchException) {
+            return current.AgentId == original.AgentId && current.ReadAllowed && current.WorkspaceScope == original.WorkspaceScope &&
+                current.SchemaVersion == original.EffectiveSchemaVersion && current.SourceProjectLifetime == original.SourceProjectLifetime;
+        } catch (Exception exception) when (exception is AgentExecutionAuthorityMismatchException or AgentChatContextAccessDeniedException) {
             return false;
         }
     }

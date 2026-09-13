@@ -128,7 +128,8 @@ public sealed class WorkspaceToolResultSource(IAgentToolAdmissionVerifier admiss
                 original.DatabaseProfileGeneration != session.Profile.Generation ||
                 original.WorkspaceScope is { } savedScope && savedScope != workspaceScope ||
                 context.Governance is not { } supplied || supplied.AuthorityId != original.AuthorityId ||
-                supplied.PolicyFingerprint != original.PolicyFingerprint || supplied.WorkspaceScope != original.WorkspaceScope) {
+                supplied.PolicyFingerprint != original.PolicyFingerprint || supplied.WorkspaceScope != original.WorkspaceScope ||
+                supplied.SchemaVersion != original.SchemaVersion || supplied.SourceProjectLifetime != original.SourceProjectLifetime) {
             throw Denied();
         }
         AgentExecutionAuthorityRecord current;
@@ -138,7 +139,8 @@ public sealed class WorkspaceToolResultSource(IAgentToolAdmissionVerifier admiss
             throw Denied();
         }
         if (!current.ReadAllowed || current.AgentId != session.AgentId || current.DatabaseProfileId != session.Profile.ProfileId ||
-                current.DatabaseProfileGeneration != session.Profile.Generation || current.WorkspaceScope != original.WorkspaceScope) {
+                current.DatabaseProfileGeneration != session.Profile.Generation || current.WorkspaceScope != original.WorkspaceScope ||
+                current.SchemaVersion != original.EffectiveSchemaVersion || current.SourceProjectLifetime != original.SourceProjectLifetime) {
             throw Denied();
         }
         RequireProfile(session.Profile);

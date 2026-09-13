@@ -29,6 +29,7 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
             }
             async Task RequireSourceAsync(CancellationToken ct) {
                 RequireCurrentSource(authority, WorkflowStructureAuthorityUse.Disclosure, null, held, checkAdmissionTargets: false);
+                await RequireSourceProjectCurrentAsync(authority, ct);
                 RequireHeldProcessSource(dispatch, held, WorkflowStructureAuthorityUse.Disclosure);
                 if (authority.Channel == WorkflowStructureAuthorityChannel.AgentExecution &&
                         !AgentProjectStructureAccessMetadata.Read(held!.Agent!.ConfigurationJson).CanRead) {

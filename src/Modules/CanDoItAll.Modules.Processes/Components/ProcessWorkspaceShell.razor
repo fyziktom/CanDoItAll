@@ -12,13 +12,15 @@
 @using CanDoItAll.Processes.Contracts
 @using CanDoItAll.Processes.Runtime
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject IServiceProvider Services
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 @inject IJSRuntime JsRuntime
+@inject ILogger<ProcessWorkspaceShell> Logger
 @inject IDatabaseRuntimeState DatabaseRuntimeState
 @inject TimeProvider TimeProvider
 @inject IAgentChatExecutionOrchestrator ChatExecutionOrchestrator
@@ -316,9 +318,13 @@
     private IReadOnlyList<string> managerChatDraftAttachmentPaths = [];
     private int managerChatComposerKey;
     private bool managerChatIsLoading;
+    private long managerChatLoadGeneration;
+    private Guid managerChatVoiceOwnerId = Guid.NewGuid();
+    private Task managerChatVoiceCleanup = Task.CompletedTask;
     private bool managerChatIsBusy;
     private bool managerChatVoiceModeEnabled;
     private bool managerChatVoiceRecording;
+    private bool managerChatVoiceStarting;
     private bool managerChatVoiceTranscribing;
     private bool managerChatVoiceSpeaking;
     private string? managerChatErrorMessage;
@@ -585,7 +591,8 @@
             AgentChatShell,
             !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
             !HasUnresolvedRouteSelection && eventDetailDialogOpen ? eventDetail : null,
-            AgentChatAccessState);
+            AgentChatAccessState,
+            shell?.ProjectBinding is { } binding ? new(binding.DatabaseProfileId, binding.ProjectId, binding.LifetimeId) : null);
         agentChatPublication = ProcessInvocationSnapshotMapper.BuildWorkspacePublication(
             context,
             new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
@@ -669,7 +676,11 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        var previousRunId = ResolveSelectedManagerChatRunId();
         SynchronizeRouteSelections();
+        if (previousRunId != ResolveSelectedManagerChatRunId()) {
+            ResetManagerChatForSelectedRunChange();
+        }
         searchText = DefinitionSearchText?.Trim() ?? string.Empty;
         pendingSearchText = searchText;
         selectedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
@@ -678,12 +689,12 @@
         await LoadAsync(forceRefresh: false);
     }
 
-    private void SynchronizeRouteSelections()
+    private void SynchronizeRouteSelections(bool force = false)
     {
         var normalizedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
             ? null
             : SelectedDefinitionKey.Trim();
-        if (routeSelectionInitialized &&
+        if (!force && routeSelectionInitialized &&
             routeSelectionProjectId == ProjectId &&
             routeSelectionProcessId == ProcessIdQuery &&
             routeSelectionRunId == RunIdQuery &&
@@ -733,7 +744,7 @@
             var scope = ResolveScope();
             var request = new ProcessWorkspaceShellRequest(
                 scope,
-                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, selectedRuntimeRunId ?? RunIdQuery, LaunchPlanIdQuery),
+                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
                 new ProcessDefinitionCatalogQueryProjection(
                     searchText,
                     string.IsNullOrWhiteSpace(selectedDefinitionKey)
@@ -762,7 +773,7 @@
                         scope,
                         runtimeQueryHistoryWindow)
                 },
-                definitionLoadOptions);
+                definitionLoadOptions) { ProjectBinding = shell?.ProjectBinding };
 
             var loadedShell = await ProjectionClient.GetShellAsync(request);
             if (generation != Volatile.Read(ref workspaceGeneration))
@@ -770,6 +781,10 @@
                 return;
             }
 
+            if (shell?.ProjectBinding != loadedShell.ProjectBinding) {
+                SynchronizeRouteSelections(force: true);
+                ResetManagerChatForSelectedRunChange();
+            }
             shell = loadedShell;
             selectedRuntimeRunId = requiredRouteRunId is { } requestedRunId &&
                 loadedShell.Runtime.SelectedRunId != requestedRunId
@@ -1587,7 +1602,7 @@
                         ButtonStyle="ButtonStyle.Light"
                         Size="ButtonSize.Small"
                         Class="w-full justify-start"
-                        Disabled="@managerChatIsLoading"
+                        Disabled="@ManagerChatReloadDisabled"
                         IsBusy="@managerChatIsLoading"
                         Click="ReloadManagerChatAsync"
                         data-testid="processes-manager-chat-reload" />
@@ -1629,7 +1644,7 @@
                                     ExecutionLog="@managerChatExecutionLog"
                                     DraftPrompt="@managerChatDraftPrompt"
                                     DraftPromptChanged="HandleManagerChatDraftPromptChangedAsync"
-                                    IsBusy="@managerChatIsBusy"
+                                    IsBusy="@(managerChatIsBusy || managerChatVoiceStarting)"
                                     ComposerKey="@managerChatComposerKey"
                                      RunStateText="@managerChatRunStateText"
                                      RunStateTone="@managerChatRunStateTone"
@@ -2443,7 +2458,10 @@
 
     private Task OpenRunDetailDialogAsync(ProcessLiveProcessSnapshot run)
     {
-        runDetailSnapshot = run;
+        if (shell?.Runtime.Runs.FirstOrDefault(current => current.RunId == run.RunId) is not { } currentRun) {
+            return Task.CompletedTask;
+        }
+        runDetailSnapshot = currentRun;
         runDetailDialogOpen = true;
         return Task.CompletedTask;
     }
@@ -2474,7 +2492,10 @@
 
     private Task OpenEventDetailDialogAsync(ProcessTimelineEventProjection runtimeEvent)
     {
-        eventDetail = runtimeEvent;
+        if (shell?.Runtime.Events.FirstOrDefault(current => current.EventId == runtimeEvent.EventId) is not { } currentEvent) {
+            return Task.CompletedTask;
+        }
+        eventDetail = currentEvent;
         eventDetailDialogOpen = true;
         return Task.CompletedTask;
     }
@@ -2494,6 +2515,9 @@
 
     private async Task ReloadManagerChatAsync()
     {
+        if (ManagerChatReloadDisabled) {
+            return;
+        }
         managerChatWorkspace = null;
         managerChatLoadedRunId = null;
         managerChatLoadedAgentId = null;
@@ -2502,7 +2526,11 @@
 
     private async Task EnsureManagerChatLoadedAsync(bool forceReload = false)
     {
+        if (forceReload && ManagerChatOperationActive) {
+            return;
+        }
         var selectedRunId = ResolveSelectedManagerChatRunId();
+        var requestedAgentId = managerChatAgentId;
         if (!forceReload &&
             managerChatWorkspace is not null &&
             managerChatAgent is not null &&
@@ -2526,6 +2554,9 @@
             return;
         }
 
+        var generation = Interlocked.Increment(ref managerChatLoadGeneration);
+        var operationContext = CaptureManagerChatContext();
+        bool IsCurrent() => IsCurrentManagerChatContext(operationContext);
         managerChatIsLoading = true;
         managerChatErrorMessage = null;
 
@@ -2533,9 +2564,11 @@
         {
             var referenceData = await referenceDataProvider.GetAsync(
                 new AgentReferenceDataRequest(AgentReferenceDataSections.Agents));
-            managerChatAgents = referenceData.Agents;
-            managerChatAgentId = ResolveManagerAgentId(managerChatAgents, managerChatAgentId);
-            if (managerChatAgentId is null)
+            if (!IsCurrent()) {
+                return;
+            }
+            var resolvedAgentId = ResolveManagerAgentId(referenceData.Agents, requestedAgentId);
+            if (resolvedAgentId is null)
             {
                 managerChatAgent = null;
                 managerChatWorkspace = null;
@@ -2544,40 +2577,65 @@
                 return;
             }
 
-            managerChatAgent = managerChatAgents.First(agent => agent.Id == managerChatAgentId.Value);
-            ResetManagerChatVoiceIfUnavailable();
-            managerChatSessionId = await ResolveManagerChatSessionIdAsync(workspaceService, managerChatAgentId.Value, selectedRunId);
-            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
-            managerChatSessionId = managerChatWorkspace.SelectedSessionId;
-            TrackManagerChatSessionForRun(managerChatAgentId.Value, selectedRunId, managerChatSessionId);
-            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            var sessionId = await ResolveManagerChatSessionIdAsync(workspaceService, resolvedAgentId.Value, selectedRunId, IsCurrent);
+            if (!IsCurrent()) {
+                return;
+            }
+            var workspace = await workspaceService.GetChatAgentWorkspaceAsync(resolvedAgentId.Value, sessionId);
+            if (!IsCurrent()) {
+                return;
+            }
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(resolvedAgentId.Value, workspace.SelectedSessionId);
+            if (!IsCurrent()) {
+                return;
+            }
+            managerChatAgents = referenceData.Agents;
+            managerChatAgentId = resolvedAgentId;
+            managerChatAgent = managerChatAgents.First(agent => agent.Id == resolvedAgentId.Value);
+            managerChatWorkspace = workspace;
+            managerChatSessionId = workspace.SelectedSessionId;
+            TrackManagerChatSessionForRun(resolvedAgentId.Value, selectedRunId, managerChatSessionId);
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
             managerChatLoadedRunId = selectedRunId;
             managerChatLoadedAgentId = managerChatAgentId;
             ResolveManagerChatRunState();
+            if (!CanUseManagerChatVoiceMode) {
+                ResetManagerChatVoiceState();
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (!IsCurrent()) {
+                return;
+            }
             managerChatErrorMessage = exception.Message;
             managerChatWorkspace = null;
         }
         finally
         {
-            managerChatIsLoading = false;
+            if (generation == Volatile.Read(ref managerChatLoadGeneration)) {
+                managerChatIsLoading = false;
+            }
         }
     }
 
     private async Task SelectManagerChatAgentAsync(ChangeEventArgs args)
     {
+        Interlocked.Increment(ref managerChatLoadGeneration);
+        managerChatDraftAttachmentPaths = [];
+        managerChatIsBusy = false;
+        managerChatPendingPrompt = string.Empty;
+        managerChatExecutionLog = [];
         managerChatAgentId = Guid.TryParse(ReadChangeValue(args), out var parsed) && parsed != Guid.Empty
             ? parsed
             : null;
         managerChatActivityStreamId = null;
         managerChatSessionId = null;
         managerChatWorkspace = null;
+        managerChatAgent = null;
         managerChatLoadedRunId = null;
         managerChatLoadedAgentId = null;
-        ResetManagerChatVoiceState(clearStatus: true);
+        ResetManagerChatVoiceState();
         await EnsureManagerChatLoadedAsync(forceReload: true);
     }
 
@@ -2590,7 +2648,7 @@
     private async Task SendManagerChatMessageAsync()
     {
         var workspaceService = ResolveManagerChatWorkspaceService();
-        if (workspaceService is null || managerChatAgentId is null)
+        if (workspaceService is null || managerChatAgentId is null || managerChatIsBusy || !ManagerChatReady)
         {
             managerChatErrorMessage = "Select a manager agent before sending a message.";
             return;
@@ -2603,6 +2661,7 @@
             return;
         }
 
+        var operationContext = CaptureManagerChatContext();
         managerChatIsBusy = true;
         managerChatPendingPrompt = managerChatDraftPrompt;
         var previousDraft = managerChatDraftPrompt;
@@ -2614,8 +2673,8 @@
             var disableManagerTelemetryTools = ProcessManagerChatPromptClassifier.ShouldDisableRuntimeTools(previousDraft);
             var operation = ChatExecutionOrchestrator.StartSendMessage(
                 new AgentChatSendRequest(
-                    managerChatAgentId.Value,
-                    managerChatSessionId,
+                    operationContext.AgentId!.Value,
+                    operationContext.SessionId,
                     prompt)
                 {
                     AttachmentPaths = managerChatDraftAttachmentPaths,
@@ -2628,11 +2687,21 @@
             managerChatActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);
             var result = await operation.Completion;
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
+            var workspace = await workspaceService.GetChatAgentWorkspaceAsync(operationContext.AgentId.Value, result.ChatSessionId);
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(operationContext.AgentId.Value, result.ChatSessionId);
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             managerChatSessionId = result.ChatSessionId;
-            TrackManagerChatSessionForRun(managerChatAgentId.Value, ResolveSelectedManagerChatRunId(), managerChatSessionId);
+            TrackManagerChatSessionForRun(operationContext.AgentId.Value, operationContext.RunId, managerChatSessionId);
             managerChatDraftAttachmentPaths = [];
-            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
-            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatWorkspace = workspace;
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
             ResolveManagerChatRunState();
             managerChatErrorMessage = null;
@@ -2643,14 +2712,19 @@
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             managerChatDraftPrompt = previousDraft;
             managerChatComposerKey++;
             managerChatErrorMessage = exception.Message;
         }
         finally
         {
-            managerChatPendingPrompt = string.Empty;
-            managerChatIsBusy = false;
+            if (OwnsManagerChatOperation(operationContext)) {
+                managerChatPendingPrompt = string.Empty;
+                managerChatIsBusy = false;
+            }
         }
     }
 
@@ -2669,7 +2743,7 @@
         bool autoApprovePendingToolCalls)
     {
         var workspaceService = ResolveManagerChatWorkspaceService();
-        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
+        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null || managerChatIsBusy || !ManagerChatReady)
         {
             return;
         }
@@ -2691,68 +2765,102 @@
             return;
         }
 
+        var operationContext = CaptureManagerChatContext();
         managerChatIsBusy = true;
         try
         {
             var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
-                managerChatAgentId.Value,
-                managerChatSessionId.Value,
+                operationContext.AgentId!.Value,
+                operationContext.SessionId!.Value,
                 effectiveDecisions,
                 autoApprovePendingToolCalls);
             managerChatActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);
             await operation.Completion;
-            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
-            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
+            var workspace = await workspaceService.GetChatAgentWorkspaceAsync(operationContext.AgentId.Value, operationContext.SessionId);
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(operationContext.AgentId.Value, operationContext.SessionId);
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
+            managerChatWorkspace = workspace;
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
             ResolveManagerChatRunState();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             managerChatErrorMessage = exception.Message;
         }
         finally
         {
-            managerChatIsBusy = false;
+            if (OwnsManagerChatOperation(operationContext)) {
+                managerChatIsBusy = false;
+            }
         }
     }
 
     private async Task RenameManagerChatSessionAsync(string title)
     {
         var workspaceService = ResolveManagerChatWorkspaceService();
-        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
+        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null || managerChatIsBusy || !ManagerChatReady)
         {
             return;
         }
 
+        var operationContext = CaptureManagerChatContext();
         managerChatIsBusy = true;
         try
         {
-            var session = await workspaceService.RenameChatSessionAsync(managerChatAgentId.Value, managerChatSessionId.Value, title);
+            var session = await workspaceService.RenameChatSessionAsync(operationContext.AgentId!.Value, operationContext.SessionId!.Value, title);
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
+            var workspace = await workspaceService.GetChatAgentWorkspaceAsync(operationContext.AgentId.Value, session.Id);
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             managerChatSessionId = session.Id;
-            TrackManagerChatSessionForRun(managerChatAgentId.Value, ResolveSelectedManagerChatRunId(), managerChatSessionId);
-            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+            TrackManagerChatSessionForRun(operationContext.AgentId.Value, operationContext.RunId, managerChatSessionId);
+            managerChatWorkspace = workspace;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             managerChatErrorMessage = exception.Message;
         }
         finally
         {
-            managerChatIsBusy = false;
+            if (OwnsManagerChatOperation(operationContext)) {
+                managerChatIsBusy = false;
+            }
         }
     }
 
     private async Task StageManagerChatRunArtifactsAsync()
     {
         var workspaceService = ResolveManagerChatWorkspaceService();
-        if (workspaceService is null || managerChatWorkspace?.SelectedRun is null)
+        if (workspaceService is null || managerChatWorkspace?.SelectedRun is null || !ManagerChatReady)
         {
             managerChatDraftAttachmentPaths = [];
             return;
         }
 
-        var detail = await workspaceService.GetExecutionRunDetailAsync(managerChatWorkspace.SelectedRun.Id);
+        var operationContext = CaptureManagerChatContext();
+        var executionRunId = managerChatWorkspace.SelectedRun.Id;
+        var detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId);
+        if (!IsCurrentManagerChatContext(operationContext) || managerChatWorkspace?.SelectedRun?.Id != executionRunId) {
+            return;
+        }
         managerChatDraftAttachmentPaths = detail.Artifacts
             .Select(item => item.RelativePath)
             .Where(item => !string.IsNullOrWhiteSpace(item))
@@ -2781,12 +2889,29 @@
     }
 
     private Guid? ResolveSelectedManagerChatRunId()
-        => selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId ?? RunIdQuery;
+        => selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery;
+
+    private readonly record struct ManagerChatOperationContext(long Generation, Guid? ProjectId,
+        ProcessProjectionProjectBinding? ProjectBinding, Guid? RunId, Guid? AgentId, Guid? SessionId, Guid VoiceOwnerId);
+
+    private ManagerChatOperationContext CaptureManagerChatContext()
+        => new(Volatile.Read(ref managerChatLoadGeneration), ProjectId, shell?.ProjectBinding,
+            ResolveSelectedManagerChatRunId(), managerChatAgentId, managerChatSessionId, managerChatVoiceOwnerId);
+
+    private bool OwnsManagerChatOperation(ManagerChatOperationContext context)
+        => !isDisposed && context.Generation == Volatile.Read(ref managerChatLoadGeneration);
+
+    private bool IsCurrentManagerChatContext(ManagerChatOperationContext context)
+        => OwnsManagerChatOperation(context) && shell is not null && context.ProjectId == ProjectId &&
+            context.ProjectBinding == shell.ProjectBinding && context.RunId == ResolveSelectedManagerChatRunId() &&
+            context.AgentId == managerChatAgentId && context.SessionId == managerChatSessionId &&
+            context.VoiceOwnerId == managerChatVoiceOwnerId;
 
     private async Task<Guid?> ResolveManagerChatSessionIdAsync(
         IAgentFrameworkWorkspaceService workspaceService,
         Guid agentId,
-        Guid? selectedRunId)
+        Guid? selectedRunId,
+        Func<bool> isCurrent)
     {
         if (selectedRunId is null)
         {
@@ -2802,6 +2927,9 @@
         var title = BuildManagerChatRunThreadTitle(selectedRunId.Value);
         var existingSession = (await workspaceService.ListChatSessionsAsync(agentId))
             .FirstOrDefault(session => string.Equals(session.Title, title, StringComparison.OrdinalIgnoreCase));
+        if (!isCurrent()) {
+            return null;
+        }
         if (existingSession is not null)
         {
             managerChatSessionIdsByRun[mapKey] = existingSession.Id;
@@ -2809,9 +2937,15 @@
         }
 
         var createdSession = await workspaceService.GetOrCreateChatSessionAsync(agentId);
+        if (!isCurrent()) {
+            return null;
+        }
         var renamedSession = string.Equals(createdSession.Title, title, StringComparison.Ordinal)
             ? createdSession
             : await workspaceService.RenameChatSessionAsync(agentId, createdSession.Id, title);
+        if (!isCurrent()) {
+            return null;
+        }
         managerChatSessionIdsByRun[mapKey] = renamedSession.Id;
         return renamedSession.Id;
     }
@@ -2828,16 +2962,22 @@
 
     private void ResetManagerChatForSelectedRunChange()
     {
+        Interlocked.Increment(ref managerChatLoadGeneration);
+        managerChatIsLoading = false;
+        managerChatIsBusy = false;
+        managerChatPendingPrompt = string.Empty;
+        managerChatDraftAttachmentPaths = [];
         managerChatDraftPrompt = string.Empty;
         managerChatActivityStreamId = null;
         managerChatSessionId = null;
         managerChatWorkspace = null;
+        managerChatAgent = null;
         managerChatExecutionLog = [];
         managerChatLoadedRunId = null;
         managerChatLoadedAgentId = null;
         managerChatRunStateText = string.Empty;
         managerChatRunStateTone = "neutral";
-        ResetManagerChatVoiceState(clearStatus: false);
+        ResetManagerChatVoiceState();
     }
 
     private AgentVoiceAccessSettings ManagerChatVoiceAccess
@@ -2847,6 +2987,16 @@
 
     private bool CanUseManagerChatVoiceMode
         => ManagerChatVoiceAccess.CanUseVoiceMode;
+
+    private bool ManagerChatReloadDisabled
+        => managerChatIsLoading || ManagerChatOperationActive;
+
+    private bool ManagerChatOperationActive
+        => managerChatIsBusy || managerChatVoiceStarting || managerChatVoiceRecording || managerChatVoiceTranscribing || managerChatVoiceSpeaking;
+
+    private bool ManagerChatReady
+        => !isDisposed && !managerChatIsLoading && managerChatWorkspace is not null &&
+            managerChatAgent is not null && managerChatAgent.Id == managerChatAgentId;
 
     private Task HandleManagerChatVoiceModeChangedAsync(bool enabled)
     {
@@ -2863,6 +3013,9 @@
 
     private async Task ToggleManagerChatVoiceRecordingAsync()
     {
+        if (managerChatVoiceStarting || !ManagerChatReady) {
+            return;
+        }
         if (!CanUseManagerChatVoiceMode)
         {
             SetManagerChatVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
@@ -2871,16 +3024,30 @@
 
         if (!managerChatVoiceRecording)
         {
+            var operationContext = CaptureManagerChatContext();
+            managerChatVoiceStarting = true;
+            SetManagerChatVoiceStatus("Requesting microphone", "info");
             try
             {
-                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecordingForOwner", operationContext.VoiceOwnerId.ToString("N"));
+                if (!IsCurrentManagerChatContext(operationContext)) {
+                    return;
+                }
                 managerChatVoiceModeEnabled = true;
                 managerChatVoiceRecording = true;
                 SetManagerChatVoiceStatus("Recording", "danger");
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
+                if (!IsCurrentManagerChatContext(operationContext)) {
+                    return;
+                }
                 SetManagerChatVoiceStatus("Record failed", "danger", exception.Message);
+            }
+            finally {
+                if (OwnsManagerChatOperation(operationContext)) {
+                    managerChatVoiceStarting = false;
+                }
             }
 
             return;
@@ -2891,6 +3058,10 @@
 
     private async Task StopManagerChatRecordingAndSendAsync()
     {
+        if (!ManagerChatReady) {
+            return;
+        }
+        var operationContext = CaptureManagerChatContext();
         managerChatVoiceRecording = false;
         managerChatVoiceTranscribing = true;
         SetManagerChatVoiceStatus("Transcribing", "info");
@@ -2903,8 +3074,14 @@
             }
 
             var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
-                "CanDoItAll.agentFramework.voice.stopRecording");
+                "CanDoItAll.agentFramework.voice.stopRecordingForOwner", operationContext.VoiceOwnerId.ToString("N"));
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             var transcription = await voiceService.TranscribeAsync(recording.ToTranscriptionRequest());
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
 
             managerChatDraftPrompt = transcription.Text;
             managerChatComposerKey++;
@@ -2913,11 +3090,16 @@
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             SetManagerChatVoiceStatus("Voice failed", "danger", exception.Message);
         }
         finally
         {
-            managerChatVoiceTranscribing = false;
+            if (OwnsManagerChatOperation(operationContext)) {
+                managerChatVoiceTranscribing = false;
+            }
         }
     }
 
@@ -2938,6 +3120,9 @@
 
     private async Task SpeakManagerChatTextAsync(string text)
     {
+        if (!ManagerChatReady) {
+            return;
+        }
         if (managerChatAgent is null)
         {
             SetManagerChatVoiceStatus("No agent", "warning", "Select a manager agent before using text-to-speech.");
@@ -2950,38 +3135,58 @@
             return;
         }
 
+        var operationContext = CaptureManagerChatContext();
+        var voiceAccess = ManagerChatVoiceAccess;
+        var suppressIdentifierNotice = ShouldSuppressManagerChatIdentifierOmissionNotice();
         managerChatVoiceSpeaking = true;
         SetManagerChatVoiceStatus("Speaking", "primary");
         try
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueueForOwner", operationContext.VoiceOwnerId.ToString("N"));
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             var queuedChunks = 0;
             await foreach (var synthesis in voiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
                                text,
-                               ManagerChatVoiceAccess,
-                               SuppressIdentifierOmissionNotice: ShouldSuppressManagerChatIdentifierOmissionNotice())))
+                               voiceAccess,
+                               SuppressIdentifierOmissionNotice: suppressIdentifierNotice)))
             {
+                if (!IsCurrentManagerChatContext(operationContext)) {
+                    return;
+                }
                 TrackManagerChatIdentifierOmissionNotice(synthesis);
                 queuedChunks++;
                 await JsRuntime.InvokeVoidAsync(
-                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+                    "CanDoItAll.agentFramework.voice.enqueueAudioForOwner",
+                    operationContext.VoiceOwnerId.ToString("N"),
                     Convert.ToBase64String(synthesis.AudioBytes),
                     synthesis.ContentType);
+                if (!IsCurrentManagerChatContext(operationContext)) {
+                    return;
+                }
                 if (queuedChunks == 1)
                 {
                     SetManagerChatVoiceStatus("Playing", "primary");
                 }
             }
 
-            SetManagerChatVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
+            if (IsCurrentManagerChatContext(operationContext)) {
+                SetManagerChatVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (!IsCurrentManagerChatContext(operationContext)) {
+                return;
+            }
             SetManagerChatVoiceStatus("Speak failed", "danger", exception.Message);
         }
         finally
         {
-            managerChatVoiceSpeaking = false;
+            if (OwnsManagerChatOperation(operationContext)) {
+                managerChatVoiceSpeaking = false;
+            }
         }
     }
 
@@ -3020,29 +3225,28 @@
         managerChatHasVoiceIdentifierOmissionNoticeWithoutSession = true;
     }
 
-    private void ResetManagerChatVoiceIfUnavailable()
+    private void ResetManagerChatVoiceState()
     {
-        if (CanUseManagerChatVoiceMode)
-        {
-            return;
-        }
-
-        ResetManagerChatVoiceState(clearStatus: false);
-    }
-
-    private void ResetManagerChatVoiceState(bool clearStatus)
-    {
+        var previousOwnerId = managerChatVoiceOwnerId;
+        managerChatVoiceOwnerId = Guid.NewGuid();
         managerChatVoiceModeEnabled = false;
         managerChatVoiceRecording = false;
+        managerChatVoiceStarting = false;
         managerChatVoiceTranscribing = false;
         managerChatVoiceSpeaking = false;
-        if (!clearStatus)
-        {
-            return;
-        }
-
         managerChatVoiceStatusText = string.Empty;
         managerChatVoiceStatusTone = "neutral";
+        managerChatVoiceCleanup = Task.WhenAll(managerChatVoiceCleanup, DisposeManagerChatVoiceOwnerAsync(previousOwnerId));
+    }
+
+    private async Task DisposeManagerChatVoiceOwnerAsync(Guid ownerId) {
+        try {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.disposeOwner", ownerId.ToString("N"));
+        } catch (Exception exception) when (exception is JSDisconnectedException or InvalidOperationException) {
+            Logger.LogDebug("Manager chat voice cleanup is unavailable. OwnerId={OwnerId}; FailureType={FailureType}.", ownerId, exception.GetType().Name);
+        } catch (JSException exception) {
+            Logger.LogWarning("Manager chat voice cleanup failed. OwnerId={OwnerId}; FailureType={FailureType}.", ownerId, exception.GetType().Name);
+        }
     }
 
     private void SetManagerChatVoiceStatus(string text, string tone, string? detail = null)
@@ -4078,7 +4282,7 @@
     private static string FormatObservedAt(DateTimeOffset observedAtUtc)
         => observedAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 
-    void IDisposable.Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (isDisposed)
         {
@@ -4088,6 +4292,7 @@
         isDisposed = true;
         agentChatFreshnessLease?.Dispose();
         agentChatFreshnessLease = null;
+        await Task.WhenAll(managerChatVoiceCleanup, DisposeManagerChatVoiceOwnerAsync(managerChatVoiceOwnerId));
     }
 
     private enum ProcessWorkspaceDetailTabKey

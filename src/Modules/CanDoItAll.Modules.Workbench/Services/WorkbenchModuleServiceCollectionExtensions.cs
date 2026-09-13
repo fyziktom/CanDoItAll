@@ -36,7 +36,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddPooledDbContextFactory<WorkbenchDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             ProjectStructureExecutionAuthorityProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAgentChatContextAttachmentCodec,

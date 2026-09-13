@@ -115,16 +115,16 @@ public sealed partial class CanonicalAgentExecutionAuthorityResolverTests {
     [InlineData(2)]
     [InlineData(3)]
     public async Task Selected_project_sources_revalidate_the_exact_scope_and_current_read_grant(int sourceIndex) {
-        IAgentExecutionSourceAuthorityProvider[] providers = [new ProjectsExecutionAuthorityProvider(),
-            new ProjectStructureExecutionAuthorityProvider(), new ProcessesExecutionAuthorityProvider(),
-            new LiveProcessesExecutionAuthorityProvider()];
+        IAgentExecutionSourceAuthorityProvider[] providers = [new ProjectsExecutionAuthorityProvider(CreateProjectAdmissions()),
+            new ProjectStructureExecutionAuthorityProvider(CreateProjectAdmissions()), new ProcessesExecutionAuthorityProvider(CreateProjectAdmissions()),
+            new LiveProcessesExecutionAuthorityProvider(CreateProjectAdmissions())];
         var provider = providers[sourceIndex];
         var agent = CreateAgent(new AgentProjectStructureAccessSettings { CanRead = true, AllowAllProjects = true });
         AgentDefinition[] catalog = [agent];
         var resolver = CreateResolverWithProviders([provider], catalog);
         var sourceId = sourceIndex >= 2 ? $"surface:project:{ProjectId:D}" : ProjectId.ToString("D");
         var request = new AgentExecutionAuthorityResolutionRequest(agent.Id, new(provider.SourceKind), new(sourceId),
-            WorkspaceScopeDescriptor.Project(ProjectId.ToString("D")), new(1), UiAccessHint: null);
+            WorkspaceScopeDescriptor.Project(ProjectId.ToString("D")), new(1), UiAccessHint: null) { ObservedProjectLifetime = ProjectLifetime };
         var admitted = await resolver.ResolveAsync(request);
         var reference = CreateRevalidationReference(request);
         var original = AgentExecutionGovernanceSnapshot.FromAuthority(admitted);
@@ -160,9 +160,9 @@ public sealed partial class CanonicalAgentExecutionAuthorityResolverTests {
         CreateSandboxResolver(SandboxSource source, AgentDefinition agent) {
         IAgentExecutionSourceAuthorityProvider? provider = source switch {
             SandboxSource.Agents => new AgentFrameworkAgentsExecutionAuthorityProvider(),
-            SandboxSource.Projects => new ProjectsExecutionAuthorityProvider(),
-            SandboxSource.Processes => new ProcessesExecutionAuthorityProvider(),
-            SandboxSource.LiveProcesses => new LiveProcessesExecutionAuthorityProvider(),
+            SandboxSource.Projects => new ProjectsExecutionAuthorityProvider(CreateProjectAdmissions()),
+            SandboxSource.Processes => new ProcessesExecutionAuthorityProvider(CreateProjectAdmissions()),
+            SandboxSource.LiveProcesses => new LiveProcessesExecutionAuthorityProvider(CreateProjectAdmissions()),
             SandboxSource.Unknown => null,
             _ => throw new ArgumentOutOfRangeException(nameof(source))
         };

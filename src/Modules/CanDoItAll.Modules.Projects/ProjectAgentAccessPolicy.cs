@@ -4,6 +4,35 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.Modules.Projects;
 
 public static class ProjectAgentAccessPolicy {
+    public static async ValueTask<AgentExecutionSourceAuthorityDecision> ResolveExecutionAuthorityAsync(
+        AgentExecutionSourceAuthorityRequest request, Guid projectId, ProjectWriteAdmissionService admissions,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(admissions);
+        var decision = ResolveExecutionAuthority(request.Agent, projectId, request.ObservedWorkspaceScope);
+        var observation = await admissions.CaptureObservationAsync(projectId, cancellationToken);
+        if (observation is null || observation.Admission.DatabaseProfileId != request.CurrentDatabaseProfileId) {
+            throw new AgentChatContextAccessDeniedException(request.Agent.Id, default);
+        }
+        var current = new AgentProjectStructureLifetime(observation.Admission.DatabaseProfileId,
+            observation.Admission.ProjectId, observation.Admission.LifetimeId);
+        var access = AgentProjectStructureAccessMetadata.Read(request.Agent.ConfigurationJson);
+        if (!access.AllowAllProjects && !access.AllowedProjectLifetimes.Contains(current)) {
+            throw new AgentChatContextAccessDeniedException(request.Agent.Id, default);
+        }
+        if (request.ObservedProjectLifetime is { } observed) {
+            if (observed != current) {
+                throw new AgentChatContextAccessDeniedException(request.Agent.Id, default);
+            }
+            return decision with { SourceProjectLifetime = current };
+        }
+        if (request.Revalidation is { Authority.EffectiveSchemaVersion: AgentExecutionAuthorityRecord.LegacySchemaVersion,
+                Authority.SourceProjectLifetime: null } legacy && observation.ProvesLegacySource(legacy.Source.CapturedAtUtc)) {
+            return decision;
+        }
+        throw new AgentChatContextAccessDeniedException(request.Agent.Id, default);
+    }
+
     public static IReadOnlyList<ContextualAgentAccessSummary> Resolve(IEnumerable<AgentDefinition> agents, Guid? projectId = null)
         => ContextualAgentAccessResolver.Resolve(agents, agent => Resolve(agent, projectId));
 

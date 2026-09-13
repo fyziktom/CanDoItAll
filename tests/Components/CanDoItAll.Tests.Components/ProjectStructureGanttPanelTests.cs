@@ -20,6 +20,36 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureGanttPanelTests
 {
+    [Fact]
+    public async Task Disposed_Gantt_refresh_cannot_overwrite_a_replacement_project_observation() {
+        var projectId = Guid.NewGuid();
+        var pending = new TaskCompletionSource<IReadOnlyList<ProjectPartyAssignmentDetail>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var bridge = new StubProjectPartyIntegrationBridge([], null, pending);
+        using var context = CreateContext(bridge);
+        var first = new ProjectWriteAdmission(Guid.NewGuid(), projectId, Guid.NewGuid());
+        var second = new ProjectWriteAdmission(first.DatabaseProfileId, projectId, Guid.NewGuid());
+        var publishedLifetimes = new List<Guid?>();
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(context, projectId, CreateTask("task-a", "Original")) with { ExpectedProjectAdmission = first })
+            .Add(component => component.ObservationChanged, observation => publishedLifetimes.Add(observation?.ObservedProjectLifetime?.LifetimeId)));
+        var refresh = cut.InvokeAsync(() => cut.Render(parameters => parameters
+            .Add(component => component.Surface, CreateSurface(context, projectId, CreateTask("task-a", "Late original")) with { ExpectedProjectAdmission = first })));
+        await bridge.RefreshRequested.WaitAsync(TimeSpan.FromSeconds(2));
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        using var replacementContext = CreateContext([]);
+        var replacement = replacementContext.Render<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(replacementContext, projectId, CreateTask("task-b", "Successor")) with { ExpectedProjectAdmission = second })
+            .Add(component => component.ObservationChanged, observation => publishedLifetimes.Add(observation?.ObservedProjectLifetime?.LifetimeId)));
+        replacement.WaitForAssertion(() => Assert.Equal(second.LifetimeId, publishedLifetimes.Last()));
+        var publicationsAtDisposal = publishedLifetimes.Count;
+        pending.TrySetResult([]);
+        await refresh;
+        Assert.Equal(publicationsAtDisposal, publishedLifetimes.Count);
+        Assert.Equal(second.LifetimeId, publishedLifetimes.Last());
+    }
+
     private static readonly DateTimeOffset Baseline = new(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
 
     [Fact]

@@ -13,7 +13,8 @@ public enum ProjectAgentMutationDomain { NonTaskStructure, Tasks, ProjectCreatio
 
 public sealed class ProjectAgentMutationAdmission {
     internal ProjectAgentMutationAdmission(Guid agentId, Guid databaseProfileId, AgentProjectStructureAccessSettings access,
-        AgentExecutionGovernanceSnapshot? governance, ProjectAgentMutationDomain domain, string? operation) {
+        AgentExecutionGovernanceSnapshot? governance, ProjectAgentMutationDomain domain, string? operation,
+        ProjectWriteAdmission? sourceProject = null) {
         ArgumentOutOfRangeException.ThrowIfEqual(agentId, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(databaseProfileId, Guid.Empty);
         ArgumentNullException.ThrowIfNull(access);
@@ -32,6 +33,8 @@ public sealed class ProjectAgentMutationAdmission {
         ProjectIds = access.AllowedProjectIds.ToImmutableHashSet();
         ProjectLifetimes = access.AllowedProjectLifetimes.ToImmutableHashSet();
         Governance = governance;
+        SourceProject = sourceProject ?? (governance?.SourceProjectLifetime is { } source
+            ? new(source.DatabaseProfileId, source.ProjectId, source.LifetimeId) : null);
         Operation = operation;
     }
 
@@ -48,6 +51,7 @@ public sealed class ProjectAgentMutationAdmission {
     internal ImmutableHashSet<Guid> ProjectIds { get; }
     internal ImmutableHashSet<AgentProjectStructureLifetime> ProjectLifetimes { get; }
     internal AgentExecutionGovernanceSnapshot? Governance { get; }
+    internal ProjectWriteAdmission? SourceProject { get; }
     internal string? Operation { get; }
 
     internal ProjectAgentMutationAdmission WithCreatedProject(ProjectCreationReservation reservation) {
@@ -59,7 +63,7 @@ public sealed class ProjectAgentMutationAdmission {
             CanRead = CanRead, CanWriteTasks = CanWriteTasks, CanWriteNonTaskStructure = CanWriteStructure,
             CanCreateProjects = CanCreateProjects, CanCreateSubprojects = CanCreateSubprojects, AllowAllProjects = AllowAllProjects,
             AllowedProjectIds = ProjectIds.ToList(), AllowedProjectLifetimes = ProjectLifetimes.ToList()
-        }, Governance, Domain, Operation) { CreatedProjectReservation = reservation };
+        }, Governance, Domain, Operation, SourceProject) { CreatedProjectReservation = reservation };
     }
 }
 

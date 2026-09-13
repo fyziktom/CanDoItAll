@@ -7,6 +7,32 @@ using CanDoItAll.Processes.Runtime;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class GovernanceAdmissionSerializationTests {
+    private const string LegacySchedulerSnapshotJson = """
+        {"planId":"66666666-6666-6666-6666-666666666666","planRunId":"77777777-7777-7777-7777-777777777777","fireId":"88888888-8888-8888-8888-888888888888","correlationId":"99999999-9999-9999-9999-999999999999","firedAtUtc":"2026-09-10T10:00:00+00:00","nextPlannedFireAtUtc":"2026-09-10T10:05:00+00:00","planName":"Saved source","targetKind":1,"targetId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","targetVersionId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","targetName":"Saved target","inputJson":"{}","authority":{"channel":0,"principal":{"kind":1,"subjectId":"44444444-4444-4444-4444-444444444444"},"databaseProfileId":"11111111-1111-1111-1111-111111111111","projectId":"22222222-2222-2222-2222-222222222222","canCreateTasks":true,"canCreateAssets":true,"expiresAtUtc":null,"policyFingerprint":"policy-fixture","operatorSurface":0,"agentGovernance":{"authorityId":{"value":"77777777-7777-7777-7777-777777777777","isEmpty":false},"agentId":"44444444-4444-4444-4444-444444444444","databaseProfileId":"11111111-1111-1111-1111-111111111111","databaseProfileGeneration":{"value":12},"workspaceScope":{"kind":4,"key":"11111111111111111111111111111111","isDefaultSandbox":false,"displayName":"organization/11111111111111111111111111111111","partitionRelativePath":"scopes/organization/11111111111111111111111111111111","dataRootRelativePath":"data/scopes/organization/11111111111111111111111111111111","artifactRootRelativePath":"artifacts/scopes/organization/11111111111111111111111111111111","integrationMapRootRelativePath":"integration-map/scopes/organization/11111111111111111111111111111111","outputRootRelativePath":"output/scopes/organization/11111111111111111111111111111111","managedRootRelativePaths":["data/scopes/organization/11111111111111111111111111111111","artifacts/scopes/organization/11111111111111111111111111111111","integration-map/scopes/organization/11111111111111111111111111111111","output/scopes/organization/11111111111111111111111111111111"]},"readAllowed":true,"mutationAllowed":true,"policyVersion":"fixture-v1","policyFingerprint":"policy-fixture","allowedOperations":["alpha","omega"],"allowedCapabilityKeys":["cap-a","cap-z"],"writableExternalTargetAliases":["write-a","write-z"],"readOnlyExternalTargetAliases":["read-a","read-z"],"allowedManagedArtifactReadRefs":["artifact-a","artifact-z"]},"processAuthority":null,"schedulerAuthority":null,"allProjects":false,"projectIds":["22222222-2222-2222-2222-222222222222"]},"legacyObservationOnly":false}
+        """;
+
+    [Fact]
+    public void Retained_scheduler_row_and_workflow_origin_keep_frozen_legacy_governance_hashes() {
+        const string expectedHash = "07098CB35C081134B3F1DDF8A91AD55A2322095850C1052F3E97B2043B69700E";
+        Assert.Equal(expectedHash, SchedulerFireSnapshot.Hash(LegacySchedulerSnapshotJson));
+        var preparedRunId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var saved = SchedulerFireAdmissionStore.ReadSnapshot(new() {
+            PlanId = Guid.Parse("66666666-6666-6666-6666-666666666666"),
+            Id = Guid.Parse("77777777-7777-7777-7777-777777777777"), PreparedWorkflowRunId = preparedRunId,
+            SnapshotJson = LegacySchedulerSnapshotJson, SnapshotFingerprint = expectedHash
+        });
+        Assert.Equal(LegacySchedulerSnapshotJson, saved.ToJson());
+        Assert.Equal(expectedHash, saved.Fingerprint());
+        Assert.Null(saved.Authority!.AgentGovernance!.SchemaVersion);
+        Assert.Null(saved.Authority.AgentGovernance.SourceProjectLifetime);
+        Assert.Equal("6AB2AE8A76AADD86B843C4B71121B3588FCF2967B47C7A3F07C71701A85A8AAF",
+            SchedulerFireSnapshot.Hash(SchedulerFireSnapshot.SerializeAuthority(saved.Authority)!));
+        var origin = new WorkflowLaunchOrigin.SchedulerPlanRun(saved.PlanId, saved.PlanRunId, new(saved.FireId),
+            saved.FiredAtUtc, new(saved.CorrelationId)) { PreparedRunId = new(preparedRunId), StructureAuthority = saved.Authority };
+        Assert.Equal("68C2438F9A26ACFB354482DBC2C0DBE5C75B84CD3F1F34E2A6554E9F20395C95",
+            WorkflowProviderDisclosureContent.Source(origin).Value);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -96,6 +122,7 @@ public sealed class GovernanceAdmissionSerializationTests {
         private readonly Guid agentId = Guid.NewGuid();
         private readonly Guid profileId = Guid.NewGuid();
         private readonly Guid projectId = Guid.NewGuid();
+        private readonly Guid lifetimeId = Guid.NewGuid();
         private static readonly string[] Operations = ["z.operation", "a.operation", "m.operation"];
         private static readonly string[] Capabilities = ["z.capability", "a.capability", "m.capability"];
         private static readonly string[] WritableAliases = ["z-target", "a-target", "m-target"];
@@ -106,7 +133,8 @@ public sealed class GovernanceAdmissionSerializationTests {
             new(WorkflowLaunchActorKind.Agent, agentId.ToString("D")), profileId, projectId, true, false, null, "policy-fingerprint") {
             AgentGovernance = new(new(authorityId), agentId, profileId, new(7), WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
                 true, true, "policy-version", "policy-fingerprint", Ordered(Operations, reverse), Ordered(Capabilities, reverse),
-                Ordered(WritableAliases, reverse), Ordered(ReadOnlyAliases, reverse), Ordered(ManagedRefs, reverse))
+                Ordered(WritableAliases, reverse), Ordered(ReadOnlyAliases, reverse), Ordered(ManagedRefs, reverse),
+                AgentExecutionAuthorityRecord.CurrentSchemaVersion, new(profileId, projectId, lifetimeId))
         };
 
         public void AssertAuthority(WorkflowStructureAuthority authority) {
@@ -118,6 +146,8 @@ public sealed class GovernanceAdmissionSerializationTests {
             Assert.True(authority.CanCreateTasks);
             Assert.False(authority.CanCreateAssets);
             var governance = Assert.IsType<AgentExecutionGovernanceSnapshot>(authority.AgentGovernance);
+            Assert.Equal(AgentExecutionAuthorityRecord.CurrentSchemaVersion, governance.EffectiveSchemaVersion);
+            Assert.Equal(new AgentProjectStructureLifetime(profileId, projectId, lifetimeId), governance.SourceProjectLifetime);
             Assert.NotEqual(Guid.Empty, governance.AuthorityId.Value);
             Assert.Equal(authorityId, governance.AuthorityId.Value);
             Assert.Equal(agentId, governance.AgentId);

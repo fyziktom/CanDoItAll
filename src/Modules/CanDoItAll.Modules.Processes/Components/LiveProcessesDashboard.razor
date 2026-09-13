@@ -447,7 +447,8 @@
             !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
             HasUnresolvedRouteSelection ? null : filesRunId,
             !HasUnresolvedRouteSelection && agentDetailDialogOpen ? agentDetailAgent : null,
-            AgentChatAccessState);
+            AgentChatAccessState,
+            shell?.ProjectBinding is { } binding ? new(binding.DatabaseProfileId, binding.ProjectId, binding.LifetimeId) : null);
         agentChatPublication = ProcessInvocationSnapshotMapper.BuildLivePublication(
             context,
             new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
@@ -571,9 +572,9 @@
         await LoadAsync(forceRefresh: false);
     }
 
-    private void SynchronizeRouteSelections()
+    private void SynchronizeRouteSelections(bool force = false)
     {
-        if (routeSelectionInitialized &&
+        if (!force && routeSelectionInitialized &&
             routeSelectionProjectId == ProjectId &&
             routeSelectionProcessId == ProcessIdQuery &&
             routeSelectionRunId == RunIdQuery &&
@@ -637,6 +638,10 @@
                 return;
             }
 
+            if (shell?.ProjectBinding != loadedShell.ProjectBinding) {
+                SynchronizeRouteSelections(force: true);
+                mockResolvedOperatorActionStepIds.Clear();
+            }
             shell = loadedShell;
             if (requiredRouteRunId is { } requestedRouteRunId &&
                 loadedShell.Runtime.SelectedRunId != requestedRouteRunId)
@@ -670,6 +675,10 @@
                     return;
                 }
 
+                if (shell.ProjectBinding != filteredShell.ProjectBinding) {
+                    SynchronizeRouteSelections(force: true);
+                    mockResolvedOperatorActionStepIds.Clear();
+                }
                 shell = filteredShell;
             }
             else
@@ -729,19 +738,24 @@
                     scope,
                     runtimeHistoryWindow)
             },
-            ProcessDefinitionWorkspaceLoadOptions.CatalogOnly);
+            ProcessDefinitionWorkspaceLoadOptions.CatalogOnly) { ProjectBinding = shell?.ProjectBinding };
 
         var baseline = await ProjectionClient.GetShellAsync(request).ConfigureAwait(false);
         if (!MockProjectionFactory.TryParseScenario(MockScenarioQuery, out var scenario))
         {
             return baseline;
         }
+        if (request.ProjectBinding != baseline.ProjectBinding) {
+            request = request with { ProjectBinding = baseline.ProjectBinding, RuntimeQuery = request.RuntimeQuery! with {
+                PreviouslyLoadedRuns = null, SelectedRunId = request.Selection.RunId, EventPage = 0
+            } };
+        }
 
         return MockProjectionFactory.CreateShell(
             baseline,
             request,
             scenario,
-            mockResolvedOperatorActionStepIds);
+            shell?.ProjectBinding == baseline.ProjectBinding ? mockResolvedOperatorActionStepIds : new HashSet<Guid>());
     }
 
     private ProcessWorkspaceShellScope ResolveScope()
@@ -2259,7 +2273,10 @@
 
     private Task OpenRunDetailDialogAsync(ProcessLiveProcessSnapshot run)
     {
-        runDetailSnapshot = run;
+        if (shell?.Runtime.Runs.FirstOrDefault(current => current.RunId == run.RunId) is not { } currentRun) {
+            return Task.CompletedTask;
+        }
+        runDetailSnapshot = currentRun;
         runDetailDialogOpen = true;
         return Task.CompletedTask;
     }
@@ -2307,7 +2324,11 @@
 
     private Task OpenAgentDetailDialogAsync(ProcessRuntimeActiveAgentProjection agent)
     {
-        agentDetailAgent = agent;
+        if (shell?.Runtime.ActiveAgents.FirstOrDefault(current => current.RunId == agent.RunId &&
+                current.StepInstanceId == agent.StepInstanceId) is not { } currentAgent) {
+            return Task.CompletedTask;
+        }
+        agentDetailAgent = currentAgent;
         agentDetailDialogOpen = true;
         return Task.CompletedTask;
     }

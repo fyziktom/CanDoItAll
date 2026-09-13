@@ -573,7 +573,7 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,
             int take,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, ProcessProjectionProjectBinding? projectBinding = null)
             => Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>([]);
 
         public Task AppendHistoryAsync(

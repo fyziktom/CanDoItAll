@@ -42,10 +42,17 @@ public static class ProjectStructureAgentChatContextBuilder
         IEnumerable<AgentDefinition> agents,
         AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
         ProjectStructureAgentChatView activeView = ProjectStructureAgentChatView.Canvas,
-        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes = null)
+        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes = null,
+        ProjectWriteAdmission? observedProjectAdmission = null)
     {
         ArgumentNullException.ThrowIfNull(agents);
         ValidateProjectId(projectId);
+        var observedLifetime = observedProjectAdmission is { } admission && admission.ProjectId == projectId
+            ? new AgentProjectStructureLifetime(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId)
+            : null;
+        if (observedLifetime is null && accessState == AgentChatContextAccessState.Ready) {
+            accessState = AgentChatContextAccessState.Loading;
+        }
         var access = ProjectAgentAccessPolicy.Resolve(
                 agents,
                 projectId)
@@ -64,7 +71,8 @@ public static class ProjectStructureAgentChatContextBuilder
             AgentChatContextScopeAccessMode.AllowListed,
             accessState,
             BuildPosition(projectId, projectName, activeView, selectedNodes),
-            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            observedProjectLifetime: observedLifetime);
     }
 
     public static AgentChatSurfacePosition BuildPosition(

@@ -256,12 +256,17 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         public EfProcessPreparedLaunchStore Store => new(new Factory<ProcessPersistenceDbContext>(Options<ProcessPersistenceDbContext>(), static options => new(options)),
             Options<ProcessPersistenceDbContext>(), coordinatedTransaction: Coordinator);
 
-        public static async Task<Fixture> CreateAsync(IServiceProvider services) {
+        public static async Task<Fixture> CreateAsync(IServiceProvider services, bool nativeCreation = false, bool allowAllProjects = false) {
             var result = new Fixture(services);
             var profile = services.GetRequiredService<ICanonicalRuntimeDatabase>();
             var projectId = Guid.NewGuid();
-            Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Process authority fixture" })).IsSuccess);
             var projects = result.Admissions();
+            if (nativeCreation) {
+                var reservation = await projects.ReserveCreationAsync(projectId, Guid.NewGuid(), Guid.NewGuid());
+                Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(reservation, new() { Name = "Process authority fixture" })).IsSuccess);
+            } else {
+                Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Process authority fixture" })).IsSuccess);
+            }
             var project = Assert.IsType<ProjectWriteAdmission>(await projects.CaptureAsync(projectId));
             result.Project = new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId);
             result.Source = new(profile, services.GetRequiredService<IOptions<StorageOptions>>(), services.GetRequiredService<IHostEnvironment>(), projects);
@@ -273,7 +278,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 Id = Guid.NewGuid(), Name = "Process authority source", IsTemplate = false, TemplateKey = string.Empty, Tags = [],
                 Status = AgentLifecycleStatus.Active, Permissions = AgentPermissionsPolicy.Default,
                 ConfigurationJson = AgentProjectStructureAccessMetadata.Write("{}", new() {
-                    CanRead = true, CanWrite = true, AllowedProjectIds = [projectId],
+                    CanRead = true, CanWrite = true, AllowAllProjects = allowAllProjects, AllowedProjectIds = [projectId],
                     AllowedProjectLifetimes = [new(project.DatabaseProfileId, projectId, project.LifetimeId)]
                 })
             };

@@ -327,6 +327,7 @@
         return left.Source == right.Source &&
                string.Equals(left.DisplayName, right.DisplayName, StringComparison.Ordinal) &&
                Equals(left.WorkspaceScope, right.WorkspaceScope) &&
+               left.ObservedProjectLifetime == right.ObservedProjectLifetime &&
                left.AccessMode == right.AccessMode &&
                left.AccessState == right.AccessState &&
                left.AgentAccess.SequenceEqual(right.AgentAccess) &&

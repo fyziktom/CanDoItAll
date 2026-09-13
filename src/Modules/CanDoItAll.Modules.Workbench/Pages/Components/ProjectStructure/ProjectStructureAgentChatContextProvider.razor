@@ -4,6 +4,7 @@
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.Modules.Workbench.AgentContext
 @using CanDoItAll.Modules.Workbench.ProjectStructure
+@using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 @using Microsoft.Extensions.Logging
 @using System.Globalization
@@ -28,6 +29,9 @@
 
     [Parameter]
     public ProjectStructureSurface? Surface { get; set; }
+
+    [Parameter]
+    public ProjectCalendarSurface? CalendarSurface { get; set; }
 
     [Parameter]
     public IReadOnlyList<ProjectStructureNode> SelectedNodes { get; set; } = [];
@@ -113,14 +117,23 @@
             ContextAccessState ?? AgentChatContextAccessState.Ready,
             ActiveView,
             Surface,
-            ProjectId);
+            ProjectId,
+            ObservedProjectAdmission,
+            GanttObservation);
+
+    private ProjectWriteAdmission? ObservedProjectAdmission
+        => ActiveView == ProjectStructureAgentChatView.Calendar
+            ? CalendarSurface?.ExpectedProjectAdmission
+            : Surface?.ExpectedProjectAdmission;
 
     private static AgentChatContextAccessState ResolveEffectiveAccessState(
         AgentChatContextAccessState agentAccessState,
         AgentChatContextAccessState parentAccessState,
         ProjectStructureAgentChatView activeView,
         ProjectStructureSurface? surface,
-        Guid projectId)
+        Guid projectId,
+        ProjectWriteAdmission? observedAdmission,
+        ProjectStructureGanttObservation? ganttObservation)
     {
         var combinedState = (agentAccessState, parentAccessState) switch
         {
@@ -132,13 +145,20 @@
                 => AgentChatContextAccessState.Loading,
             _ => AgentChatContextAccessState.Ready
         };
-        if (combinedState != AgentChatContextAccessState.Ready ||
-            activeView == ProjectStructureAgentChatView.Calendar)
+        if (combinedState != AgentChatContextAccessState.Ready)
         {
             return combinedState;
         }
 
-        return surface is not null && surface.ProjectId == projectId
+        if (observedAdmission is null || observedAdmission.ProjectId != projectId) {
+            return AgentChatContextAccessState.Loading;
+        }
+        if (activeView == ProjectStructureAgentChatView.Gantt && ganttObservation is { } gantt &&
+                gantt.ObservedProjectLifetime != new AgentProjectStructureLifetime(observedAdmission.DatabaseProfileId,
+                    observedAdmission.ProjectId, observedAdmission.LifetimeId)) {
+            return AgentChatContextAccessState.Loading;
+        }
+        return activeView == ProjectStructureAgentChatView.Calendar || surface is not null && surface.ProjectId == projectId
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Loading;
     }
@@ -311,7 +331,7 @@
         {
             var ganttCapturedAtUtc = TimeProvider.GetUtcNow();
             ganttContributor = ProjectStructureGanttObservationContributor.BuildPublication(
-                GanttObservation,
+                EffectiveAccessState == AgentChatContextAccessState.Ready ? GanttObservation : null,
                 new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
                 ganttCapturedAtUtc,
                 ganttCapturedAtUtc.Add(ProjectStructureInvocationSnapshotMapper.FreshnessLifetime));
@@ -359,7 +379,8 @@
                 agents,
                 EffectiveAccessState,
                 ActiveView,
-                selectedEntities),
+                selectedEntities,
+                ObservedProjectAdmission),
             contributors);
     }
 
@@ -368,6 +389,11 @@
     {
         var builder = new StringBuilder();
         AppendKeyPart(builder, publication.Scope.DisplayName);
+        if (publication.Scope.ObservedProjectLifetime is { } lifetime) {
+            AppendKeyPart(builder, lifetime.DatabaseProfileId.ToString("N"));
+            AppendKeyPart(builder, lifetime.ProjectId.ToString("N"));
+            AppendKeyPart(builder, lifetime.LifetimeId.ToString("N"));
+        }
         AppendKeyPart(
             builder,
             ((int)publication.Scope.AccessState).ToString(CultureInfo.InvariantCulture));

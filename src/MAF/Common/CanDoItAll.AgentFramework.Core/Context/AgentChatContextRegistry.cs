@@ -572,7 +572,8 @@ public sealed class AgentChatContextRegistry(TimeProvider timeProvider) : IAgent
             scope.AccessMode,
             scope.AccessState,
             scope.SurfacePosition,
-            scope.CompletionRefreshMode);
+            scope.CompletionRefreshMode,
+            scope.ObservedProjectLifetime);
     }
 
     private static AgentChatContextPublication NormalizePublication(

@@ -18,7 +18,7 @@ public sealed class ProjectStructureWorkflowAuthoritySource {
     private ProjectStructureWorkflowAuthoritySource(WorkflowStructureAuthorityChannel channel,
         WorkflowLaunchActor principal, WorkflowStructureOperatorSurface surface, DateTimeOffset? expiresAtUtc,
         bool tasks, bool assets, AgentExecutionGovernanceSnapshot? governance, Guid? projectId,
-        Guid? processRunId, Guid? processStepId) {
+        Guid? processRunId, Guid? processStepId, AgentToolSessionReference? originalSession = null) {
         Channel = channel;
         Principal = principal;
         Surface = surface;
@@ -29,6 +29,7 @@ public sealed class ProjectStructureWorkflowAuthoritySource {
         ProjectId = projectId;
         ProcessRunId = processRunId;
         ProcessStepId = processStepId;
+        OriginalSession = originalSession;
     }
 
     internal WorkflowStructureAuthorityChannel Channel { get; }
@@ -41,6 +42,7 @@ public sealed class ProjectStructureWorkflowAuthoritySource {
     internal Guid? ProjectId { get; }
     internal Guid? ProcessRunId { get; }
     internal Guid? ProcessStepId { get; }
+    internal AgentToolSessionReference? OriginalSession { get; }
 
     public static ProjectStructureWorkflowAuthoritySource LocalOperator(WorkflowStructureOperatorSurface surface)
         => new(WorkflowStructureAuthorityChannel.LocalOperator,
@@ -52,10 +54,11 @@ public sealed class ProjectStructureWorkflowAuthoritySource {
             expiresAtUtc, true, true, null, null, null, null);
 
     public static ProjectStructureWorkflowAuthoritySource Agent(Guid agentId, Guid projectId, bool tasks, bool assets,
-        AgentExecutionGovernanceSnapshot? governance, Guid? processRunId = null, Guid? processStepId = null)
+        AgentExecutionGovernanceSnapshot? governance, Guid? processRunId = null, Guid? processStepId = null,
+        AgentToolSessionReference? originalSession = null)
         => new(WorkflowStructureAuthorityChannel.AgentExecution,
             new WorkflowLaunchActor(WorkflowLaunchActorKind.Agent, agentId.ToString("D")), default, null,
-            tasks, assets, governance, projectId, processRunId, processStepId);
+            tasks, assets, governance, projectId, processRunId, processStepId, originalSession);
 }
 
 public sealed partial class ProjectStructureWorkflowAuthorityService(
@@ -86,6 +89,14 @@ public sealed partial class ProjectStructureWorkflowAuthorityService(
         => CaptureAsync(Guid.Empty, ProjectStructureWorkflowAuthoritySource.AuthenticatedOperator(subject, expiresAtUtc), cancellationToken);
 
     public WorkflowStructureAuthority CaptureAgent(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance) {
+        if (governance.WorkspaceScope.Kind == WorkspaceScopeKind.Project &&
+                governance.EffectiveSchemaVersion == AgentExecutionAuthorityRecord.LegacySchemaVersion) {
+            throw Denied("A fresh legacy Workflow authority requires verified original journal provenance.");
+        }
+        return CaptureAgentCore(agent, governance);
+    }
+
+    private WorkflowStructureAuthority CaptureAgentCore(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance) {
         if (agent.Id != governance.AgentId || governance.DatabaseProfileId != canonicalDatabase.Profile.Profile.Id) {
             throw Denied("The workflow authority source belongs to another agent or database profile.");
         }
@@ -144,7 +155,7 @@ public sealed partial class ProjectStructureWorkflowAuthorityService(
             await using var held = await RequireCatalog().AcquireAgentReadLeaseAsync(source.Governance?.AgentId
                 ?? throw Denied("The Workflow source has no saved Agent governance."), cancellationToken);
             var agent = held.Agent ?? throw Denied("The Workflow source Agent no longer exists.");
-            var ceiling = CaptureAgent(agent, source.Governance!);
+            var ceiling = await CaptureAgentAsync(agent, source.Governance!, cancellationToken, source.OriginalSession);
             authority = authority with {
                 ProjectScope = ceiling.ProjectScope?.Find(projectId) is { } original
                     ? new([original], [projectId]) : authority.ProjectScope,
@@ -152,6 +163,7 @@ public sealed partial class ProjectStructureWorkflowAuthorityService(
                 CanCreateAssets = authority.CanCreateAssets && ceiling.CanCreateAssets
             };
             RequireCurrentSource(authority, WorkflowStructureAuthorityUse.Admission, null, held);
+            await RequireSourceProjectCurrentAsync(authority, cancellationToken);
             return authority;
         }
         await EnsureCurrentAsync(authority, null, cancellationToken);

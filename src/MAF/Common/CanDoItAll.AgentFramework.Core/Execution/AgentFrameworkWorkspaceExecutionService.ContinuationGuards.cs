@@ -413,7 +413,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentExecutionAuthorityRecord current;
         try {
             current = await resolver.ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(reference, original), cancellationToken);
-        } catch (AgentExecutionAuthorityMismatchException) {
+        } catch (Exception exception) when (exception is AgentExecutionAuthorityMismatchException or AgentChatContextAccessDeniedException) {
             throw new AgentToolAdmissionException("tool-admission.result-read-denied", "Current authorization does not permit reading this completed execution result.");
         }
 
@@ -421,6 +421,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         if (!original.ReadAllowed || !current.ReadAllowed || current.AgentId != original.AgentId ||
             current.DatabaseProfileId != original.DatabaseProfileId || current.DatabaseProfileGeneration != original.DatabaseProfileGeneration ||
             current.WorkspaceScope != original.WorkspaceScope ||
+            current.SchemaVersion != original.EffectiveSchemaVersion || current.SourceProjectLifetime != original.SourceProjectLifetime ||
             !CoversReadCeiling(currentRead.AllowedCapabilityKeys, original.AllowedCapabilityKeys) ||
             !CoversReadCeiling(currentRead.ReadOnlyExternalTargetAliases.Union(currentRead.WritableExternalTargetAliases),
                 original.ReadOnlyExternalTargetAliases.Union(original.WritableExternalTargetAliases))) {
@@ -452,6 +453,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .ResolveAsync(AgentExecutionAuthorityResolutionRequest.FromCaptured(reference, authority), cancellationToken);
         if (current.AgentId != authority.AgentId || current.DatabaseProfileId != authority.DatabaseProfileId ||
             current.DatabaseProfileGeneration != authority.DatabaseProfileGeneration || current.WorkspaceScope != authority.WorkspaceScope ||
+            current.SchemaVersion != authority.EffectiveSchemaVersion || current.SourceProjectLifetime != authority.SourceProjectLifetime ||
             !current.ReadAllowed || authority.MutationAllowed && !current.MutationAllowed ||
             current.PolicyVersion != authority.PolicyVersion || current.PolicyFingerprint != authority.PolicyFingerprint ||
             !authority.AllowedOperations.SetEquals(current.AllowedOperations) ||

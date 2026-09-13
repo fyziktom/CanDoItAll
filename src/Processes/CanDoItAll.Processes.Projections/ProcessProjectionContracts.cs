@@ -153,7 +153,8 @@ public interface IProcessProjectionStore
         ProcessProjectorName projectorName,
         ProcessProjectionKeyPrefix projectionKeyPrefix,
         int take,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ProcessProjectionProjectBinding? projectBinding = null);
 
     Task AppendHistoryAsync(
         ProcessProjectionHistoryRecord history,

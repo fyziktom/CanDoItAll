@@ -140,7 +140,8 @@ public sealed class ProjectStructureInvocationSnapshot : IAgentChatContextAttach
         IReadOnlyList<ProjectStructureInvocationSnapshotNode> nodes,
         IReadOnlyList<ProjectStructureInvocationSnapshotLink> links,
         IReadOnlyList<string> selectedNodeIds,
-        ProjectStructureInvocationSnapshotCoverage coverage)
+        ProjectStructureInvocationSnapshotCoverage coverage,
+        AgentProjectStructureLifetime? observedProjectLifetime = null)
     {
         if (projectId == Guid.Empty)
         {
@@ -161,6 +162,10 @@ public sealed class ProjectStructureInvocationSnapshot : IAgentChatContextAttach
         SelectedNodeIds = selectedNodeIds?.ToImmutableArray()
             ?? throw new ArgumentNullException(nameof(selectedNodeIds));
         Coverage = coverage ?? throw new ArgumentNullException(nameof(coverage));
+        if (observedProjectLifetime is not null && observedProjectLifetime.ProjectId != projectId) {
+            throw new ArgumentException("The snapshot lifetime belongs to a different project.", nameof(observedProjectLifetime));
+        }
+        ObservedProjectLifetime = observedProjectLifetime;
     }
 
     public Guid ProjectId { get; }
@@ -176,6 +181,8 @@ public sealed class ProjectStructureInvocationSnapshot : IAgentChatContextAttach
     public ImmutableArray<string> SelectedNodeIds { get; }
 
     public ProjectStructureInvocationSnapshotCoverage Coverage { get; }
+
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; }
 }
 
 internal sealed record ProjectStructureInvocationSnapshotCapture(
@@ -352,7 +359,10 @@ internal static partial class ProjectStructureInvocationSnapshotMapper
             capturedNodes,
             capturedLinks,
             selectedNodeIds,
-            coverage);
+            coverage,
+            surface.ExpectedProjectAdmission is { } admission
+                ? new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId)
+                : null);
         var contentFingerprint = ComputeContentFingerprint(snapshot);
         var coverageFingerprint = ComputeCoverageFingerprint(snapshot);
         var freshnessFingerprint = ComputeFreshnessFingerprint(
@@ -405,6 +415,11 @@ internal static partial class ProjectStructureInvocationSnapshotMapper
         var builder = new StringBuilder();
         AppendValue(builder, ContentFingerprintVersion);
         AppendValue(builder, snapshot.ProjectId.ToString("D"));
+        if (snapshot.ObservedProjectLifetime is { } lifetime) {
+            AppendValue(builder, lifetime.DatabaseProfileId.ToString("N"));
+            AppendValue(builder, lifetime.ProjectId.ToString("N"));
+            AppendValue(builder, lifetime.LifetimeId.ToString("N"));
+        }
         AppendValue(builder, snapshot.ProjectName);
         AppendValue(builder, ((int)snapshot.ActiveView).ToString(CultureInfo.InvariantCulture));
         foreach (var selectedNodeId in snapshot.SelectedNodeIds.Order(StringComparer.Ordinal))

@@ -47,10 +47,10 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IContextualAgentWorkspacePolicy, ProcessContextualWorkspacePolicy>());
         services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             ProcessesExecutionAuthorityProvider>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             LiveProcessesExecutionAuthorityProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<

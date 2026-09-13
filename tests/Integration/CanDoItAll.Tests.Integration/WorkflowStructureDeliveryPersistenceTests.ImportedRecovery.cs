@@ -39,6 +39,18 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         var output = Assert.IsType<WorkflowStructureOutput>(await OutputStore(fixture.Services).FindAsync(fixture.Plan.Identity));
         Assert.Equal(WorkflowStructureOutputState.Prepared, output.State);
         Assert.Null(output.Receipt);
+        Assert.Contains(await OutputStore(fixture.Services).ListPendingAsync(128), pending => pending.Plan.Identity == fixture.Plan.Identity);
+        var runBeforeDelivery = await runStore.GetRunAsync(fixture.Plan.Identity.Occurrence.RunId);
+        using var delivery = ActivatorUtilities.CreateInstance<ProjectStructureWorkflowDeliveryWorker>(app.Services);
+        await delivery.RunBatchAsync();
+        var afterDelivery = Assert.IsType<WorkflowStructureOutput>(await OutputStore(fixture.Services).FindAsync(fixture.Plan.Identity));
+        Assert.Equal(WorkflowStructureOutputState.Prepared, afterDelivery.State);
+        Assert.Null(afterDelivery.Receipt);
+        var historical = Assert.IsType<ProjectWorkflowContributionResult>(await fixture.Owner.FindWorkflowContributionAsync(fixture.Plan.Identity));
+        Assert.Equal(fault.Provenance, historical.ImportedHistory);
+        Assert.Equal(retained.Receipt, historical.Receipt);
+        Assert.Equal(retained.Node.Id, historical.Node.Id);
+        Assert.Equivalent(runBeforeDelivery, await runStore.GetRunAsync(fixture.Plan.Identity.Occurrence.RunId));
         await using var read = await fixture.Factory.CreateDbContextAsync();
         Assert.Equal(1, await read.Set<ProjectObjectRecord>().CountAsync(row =>
             row.ProjectId == fixture.ProjectId && row.Title == fixture.Request.Title));
