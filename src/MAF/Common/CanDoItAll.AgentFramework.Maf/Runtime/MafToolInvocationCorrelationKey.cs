@@ -25,19 +25,40 @@ internal static class MafToolInvocationCorrelationKey
             ["source_workspace_path"] = "sourceWorkspacePath"
         };
 
+    // Workspace tools address their target by path arguments. The same tool re-invoked for the same target path(s)
+    // is the same operation, so a corrected retry can resolve an earlier no-effect rejection of that target.
+    private const string WorkspaceToolNamePrefix = "workspace_";
+
+    private static readonly IReadOnlyDictionary<string, string> WorkspaceIdentityNames =
+        new Dictionary<string, string>(IdentityNames, StringComparer.OrdinalIgnoreCase)
+        {
+            ["path"] = "path",
+            ["sourcePath"] = "sourcePath",
+            ["source_path"] = "sourcePath",
+            ["destinationPath"] = "destinationPath",
+            ["destination_path"] = "destinationPath",
+            ["workbookPath"] = "workbookPath",
+            ["workbook_path"] = "workbookPath",
+            ["outputWorkbookPath"] = "outputWorkbookPath",
+            ["output_workbook_path"] = "outputWorkbookPath"
+        };
+
     public static string Create(
         string toolName,
         IEnumerable<KeyValuePair<string, object?>> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
+        var identityNames = toolName.StartsWith(WorkspaceToolNamePrefix, StringComparison.OrdinalIgnoreCase)
+            ? WorkspaceIdentityNames
+            : IdentityNames;
         var identities = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var argument in arguments)
         {
-            AddIdentity(argument.Key, argument.Value, identities);
+            AddIdentity(argument.Key, argument.Value, identities, identityNames);
             if (string.Equals(argument.Key, "request", StringComparison.OrdinalIgnoreCase))
             {
-                ReadNestedRequestIdentities(argument.Value, identities);
+                ReadNestedRequestIdentities(argument.Value, identities, identityNames);
             }
         }
 
@@ -63,7 +84,8 @@ internal static class MafToolInvocationCorrelationKey
 
     private static void ReadNestedRequestIdentities(
         object? value,
-        IDictionary<string, string> identities)
+        IDictionary<string, string> identities,
+        IReadOnlyDictionary<string, string> identityNames)
     {
         JsonElement request;
         if (value is JsonElement jsonElement)
@@ -89,16 +111,17 @@ internal static class MafToolInvocationCorrelationKey
 
         foreach (var property in request.EnumerateObject())
         {
-            AddIdentity(property.Name, property.Value, identities);
+            AddIdentity(property.Name, property.Value, identities, identityNames);
         }
     }
 
     private static void AddIdentity(
         string name,
         object? value,
-        IDictionary<string, string> identities)
+        IDictionary<string, string> identities,
+        IReadOnlyDictionary<string, string> identityNames)
     {
-        if (IdentityNames.TryGetValue(name, out var canonicalName) &&
+        if (identityNames.TryGetValue(name, out var canonicalName) &&
             TryReadScalar(value, out var scalar))
         {
             identities[canonicalName] = scalar;
