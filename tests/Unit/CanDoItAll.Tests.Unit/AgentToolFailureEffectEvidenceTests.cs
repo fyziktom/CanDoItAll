@@ -37,56 +37,53 @@ public sealed class AgentToolFailureEffectEvidenceTests
         Assert.True(result.CanRetryWithCorrectedInput);
     }
 
-    public static TheoryData<string, WorkspaceToolAccessDeniedException> GuardDenials()
-        => new()
-        {
-            { "file-read-disabled", WorkspaceToolAccessDeniedException.FileReadDisabled() },
-            { "file-write-disabled", WorkspaceToolAccessDeniedException.FileWriteDisabled() },
-            { "external-target-read-only", WorkspaceToolAccessDeniedException.ExternalTargetReadOnly("external-target/app") },
-            { "external-target-not-authorized", WorkspaceToolAccessDeniedException.ExternalTargetNotAuthorized("external-target/app") },
-            { "recursive-delete-read-only-ancestor", WorkspaceToolAccessDeniedException.RecursiveDeleteReadOnlyAncestor("external-target/app") },
-            { "grounded-target-root-delete", WorkspaceToolAccessDeniedException.GroundedTargetRootDelete("external-target/app") },
-            { "protected-product-directory-delete", WorkspaceToolAccessDeniedException.ProtectedProductDirectoryDelete("external-target/app") },
-            {
-                "read-only-ancestor-mutation",
-                WorkspaceToolAccessDeniedException.ReadOnlyAncestorMutation(
-                    WorkspaceReadOnlyAncestorMutationOperation.CopyOrReplace,
-                    "external-target/app")
-            }
-        };
-
     [Theory]
-    [MemberData(nameof(GuardDenials))]
-    public void Access_guard_denials_raised_before_the_operation_map_to_a_proven_no_effect_failure(
-        string denial,
-        WorkspaceToolAccessDeniedException exception)
+    [InlineData("file-read-disabled")]
+    [InlineData("file-write-disabled")]
+    [InlineData("external-target-read-only")]
+    [InlineData("external-target-not-authorized")]
+    [InlineData("recursive-delete-read-only-ancestor")]
+    [InlineData("grounded-target-root-delete")]
+    [InlineData("protected-product-directory-delete")]
+    [InlineData("read-only-ancestor-mutation")]
+    public void Access_guard_denials_raised_before_the_operation_map_to_a_proven_no_effect_failure(string denial)
     {
-        var mapped = MafAgentToolFailureMapper.TryMap(exception, out var result);
+        var mapped = MafAgentToolFailureMapper.TryMap(CreateAccessDenial(denial), out var result);
 
         Assert.True(mapped, denial);
         Assert.Equal(WorkspaceToolAccessDeniedException.FailureCode, result.ErrorCode);
         Assert.Equal(AgentToolEffectState.None, result.EffectState);
     }
 
-    public static TheoryData<string, WorkspaceToolAccessDeniedException> InProgressDenials()
-        => new()
-        {
-            { "inaccessible-path", WorkspaceToolAccessDeniedException.InaccessiblePath("docs/reports") },
-            { "inaccessible-paths", WorkspaceToolAccessDeniedException.InaccessiblePaths("docs/reports", "docs/archive") }
-        };
-
     [Theory]
-    [MemberData(nameof(InProgressDenials))]
-    public void Access_failures_observed_while_the_operation_ran_keep_an_unknown_effect_state(
-        string denial,
-        WorkspaceToolAccessDeniedException exception)
+    [InlineData("inaccessible-path")]
+    [InlineData("inaccessible-paths")]
+    public void Access_failures_observed_while_the_operation_ran_keep_an_unknown_effect_state(string denial)
     {
-        var mapped = MafAgentToolFailureMapper.TryMap(exception, out var result);
+        var mapped = MafAgentToolFailureMapper.TryMap(CreateAccessDenial(denial), out var result);
 
         Assert.True(mapped, denial);
         Assert.Equal(WorkspaceToolAccessDeniedException.FailureCode, result.ErrorCode);
         Assert.Equal(AgentToolEffectState.Unknown, result.EffectState);
     }
+
+    private static WorkspaceToolAccessDeniedException CreateAccessDenial(string denial)
+        => denial switch
+        {
+            "file-read-disabled" => WorkspaceToolAccessDeniedException.FileReadDisabled(),
+            "file-write-disabled" => WorkspaceToolAccessDeniedException.FileWriteDisabled(),
+            "external-target-read-only" => WorkspaceToolAccessDeniedException.ExternalTargetReadOnly("external-target/app"),
+            "external-target-not-authorized" => WorkspaceToolAccessDeniedException.ExternalTargetNotAuthorized("external-target/app"),
+            "recursive-delete-read-only-ancestor" => WorkspaceToolAccessDeniedException.RecursiveDeleteReadOnlyAncestor("external-target/app"),
+            "grounded-target-root-delete" => WorkspaceToolAccessDeniedException.GroundedTargetRootDelete("external-target/app"),
+            "protected-product-directory-delete" => WorkspaceToolAccessDeniedException.ProtectedProductDirectoryDelete("external-target/app"),
+            "read-only-ancestor-mutation" => WorkspaceToolAccessDeniedException.ReadOnlyAncestorMutation(
+                WorkspaceReadOnlyAncestorMutationOperation.CopyOrReplace,
+                "external-target/app"),
+            "inaccessible-path" => WorkspaceToolAccessDeniedException.InaccessiblePath("docs/reports"),
+            "inaccessible-paths" => WorkspaceToolAccessDeniedException.InaccessiblePaths("docs/reports", "docs/archive"),
+            _ => throw new ArgumentOutOfRangeException(nameof(denial), denial, "Unknown access denial case.")
+        };
 
     [Fact]
     public void Workspace_spreadsheet_retry_for_the_same_workbook_shares_the_operation_identity()
