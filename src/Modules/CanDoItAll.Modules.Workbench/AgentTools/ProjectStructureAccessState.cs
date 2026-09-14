@@ -295,4 +295,26 @@ internal sealed record ProjectStructureScopedProcessAccess(
     ProjectStructureAgentContext? AgentContext,
     ProjectStructureProcessNodeContextDescriptor? ProcessNodeContext,
     ProjectWriteAdmission? ExpectedProjectAdmission = null,
-    ProjectProcessMutationAdmission? ProcessMutationAdmission = null);
+    ProjectProcessMutationAdmission? ProcessMutationAdmission = null) {
+    /// <summary>
+    /// Tool-inventory access for a governed process step that has no saved execution identity yet (the Processes
+    /// module's pre-dispatch preflight). Read and write follow the step's declared operations exactly as the saved
+    /// dispatch grants them later; no project, admission or node context is bound, so the composed tools cannot act
+    /// on any real project, and the actual dispatch resolves its own scoped access from its saved lineage.
+    /// </summary>
+    internal static ProjectStructureScopedProcessAccess ForToolInventory(AgentRuntimeContextIntent contextIntent) {
+        ArgumentNullException.ThrowIfNull(contextIntent);
+        return new(
+            Guid.Empty,
+            contextIntent.ProcessRunId,
+            contextIntent.ProcessStepId,
+            CanRead: HasOperation(contextIntent, ProcessOperationContractNames.ReadProjectStructure),
+            CanWrite: HasOperation(contextIntent, ProcessOperationContractNames.ExecuteExternalAction),
+            AgentContext: null,
+            ProcessNodeContext: null);
+    }
+
+    private static bool HasOperation(AgentRuntimeContextIntent contextIntent, string operationName)
+        => contextIntent.AllowedOperations.Any(operation =>
+            string.Equals(operation, operationName, StringComparison.OrdinalIgnoreCase));
+}

@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.ProjectStructure;
 
 namespace CanDoItAll.Tests.Unit.Projects;
 
@@ -208,6 +209,44 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
             configuredProjectIds,
             sessionCreatedProjectIds,
             projectId));
+    }
+
+    [Theory]
+    [InlineData("ReadProcessContext,ReadProjectStructure", true, false)]
+    [InlineData("ReadProcessContext,ReadProjectStructure,ExecuteExternalAction", true, true)]
+    [InlineData("ReadProcessContext,WriteManagedProcessArtifacts", false, false)]
+    public void Tool_inventory_access_for_a_governed_step_follows_its_declared_operations(
+        string allowedOperations,
+        bool expectedCanRead,
+        bool expectedCanWrite)
+    {
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = "process-step",
+            SourceId = "write-note-node",
+            ProcessRunId = Guid.NewGuid().ToString("D"),
+            ProcessStepId = Guid.NewGuid().ToString("D"),
+            IsGovernedProcessStep = true,
+            AllowedOperations = allowedOperations.Split(',')
+        };
+
+        var access = ProjectStructureScopedProcessAccess.ForToolInventory(intent);
+        var purpose = AgentRuntimeToolProviderPurpose.GovernedProcessAutomation;
+        var state = new ProjectStructureAccessState(
+            new AgentProjectStructureAccessSettings(),
+            access,
+            intent,
+            purpose,
+            new ProjectStructureInvocationSnapshotReadContext(purpose, intent, [], []));
+
+        Assert.Equal(Guid.Empty, access.ProjectId);
+        Assert.Equal(intent.ProcessRunId, access.ProcessRunId);
+        Assert.Equal(intent.ProcessStepId, access.ProcessStepId);
+        Assert.Null(access.ExpectedProjectAdmission);
+        Assert.Null(access.ProcessMutationAdmission);
+        Assert.Equal(expectedCanRead, state.CanRead);
+        Assert.Equal(expectedCanWrite, state.CanWrite);
+        Assert.False(state.IsProjectAllowed(Guid.NewGuid()));
     }
 
     [Fact]

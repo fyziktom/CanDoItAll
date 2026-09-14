@@ -667,7 +667,10 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             RuntimeSessionKey: string.Empty,
             contextIntent,
             Tags: new Dictionary<string, string>(StringComparer.Ordinal)) {
-            WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson)
+            WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson),
+            // The preflight runs before the step's execution run exists: providers compose the inventory they would
+            // offer for this intent, and owners that bind their tools to a saved execution identity must not fail.
+            ToolInventoryOnly = true
         };
     }
 

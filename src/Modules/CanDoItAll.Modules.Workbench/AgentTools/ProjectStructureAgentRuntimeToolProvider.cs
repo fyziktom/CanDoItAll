@@ -3372,6 +3372,11 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             if (context.Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation) {
                 return null;
             }
+            if (context.ToolInventoryOnly) {
+                // Pre-dispatch preflight: the step has no execution run yet. The owner reports the tools it would
+                // compose for the declared operations; the dispatch itself is still bound to its saved lineage below.
+                return ProjectStructureScopedProcessAccess.ForToolInventory(context.ContextIntent);
+            }
             if (WorkspaceExecutionAuditContext.Current is not { } audit || audit.ExecutionRunId == Guid.Empty) {
                 throw new ProjectStructureAgentException(409, "ProcessExecutionReconciliationRequired", "The Process tool context has no saved execution identity.");
             }

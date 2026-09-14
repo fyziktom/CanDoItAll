@@ -137,6 +137,38 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_asks_providers_for_a_tool_inventory_without_an_execution_identity()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.ReadProcessContext, ProcessOperationContractNames.ExecuteExternalAction],
+            ProcessOperationContractNames.ExternalActionControlled);
+        var runtimeProvider = new InventoryObservingRuntimeToolProvider("tests_inventory_tool");
+        var service = new ProcessRuntimeToolPreflightService(
+            [runtimeProvider],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
+            AvailableHostCapabilities);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["tests_inventory_tool"],
+                []),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        var context = Assert.Single(runtimeProvider.Contexts);
+        Assert.True(context.ToolInventoryOnly);
+        Assert.Equal(AgentRuntimeToolProviderPurpose.GovernedProcessAutomation, context.Purpose);
+        Assert.Null(context.AdmittedToolSession);
+        Assert.Equal(assignment.AllowedOperations, context.ContextIntent.AllowedOperations);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_skips_provider_that_does_not_support_governed_process_execution()
     {
         var capability = CreateCatalogCapability(WorkflowAgentCapabilityKeys.DefinitionsList);
@@ -1536,6 +1568,33 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                     }
                 })
         };
+    }
+
+    private sealed class InventoryObservingRuntimeToolProvider(string toolName) : IAgentRuntimeToolProvider
+    {
+        public int Order => 1;
+
+        public List<AgentRuntimeToolProviderContext> Contexts { get; } = [];
+
+        public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(
+            AgentRuntimeToolProviderContext context,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Contexts.Add(context);
+            if (!context.ToolInventoryOnly)
+            {
+                throw new InvalidOperationException("The preflight has no saved execution identity for actual tools.");
+            }
+
+            return ValueTask.FromResult<IReadOnlyList<AITool>>(
+            [
+                AIFunctionFactory.Create(
+                    () => "inventory",
+                    toolName,
+                    "Test inventory-only runtime tool.")
+            ]);
+        }
     }
 
     private sealed class CapabilityBoundRuntimeToolProvider(
