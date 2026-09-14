@@ -1,6 +1,22 @@
 # Module Decoupling Validation
 
-## Current checkpoint, 2026-09-13 19:00 UTC
+## Current checkpoint, 2026-09-14 14:45 UTC
+
+Reconciled retained results (not re-run): `storage-recovery-retry/build-summary.json` PASS on source `e43c6eb5…` = WIP tree; `owning-storage-unit/Execute-result.json` 22/22 PASS (TRX `4f0cee4a…`); `owning-storage-integration/Execute-result.json` 31 executed, 30 PASS, 1 FAIL (TRX `aae92cf7…`, `Core_recovers_original_invalid_Storage_browse…` rejected by `StorageBrowseDriverRegistry.ValidateDriver`); `browser-storage-note1/summary.json` FOCUSED1_FAILED (iframe `src` null after 5 s).
+
+New runners under `source-repair/`: `Prepare-StorageWip.py` (source captures `storage-wip/source-<capture>.json`), `Build-StorageWip.ps1` (incremental entries into `artifacts/mdo-storage`, 30-minute bound, full runtime closure plus `closure-comparison.json`), `Assert-StorageWip.ps1`, `Invoke-StorageWipTests.ps1` (retained filters: `FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.StorageRuntimePluginTests` expecting 22; the four-part Integration filter expecting 31), `Invoke-StorageWipBrowser.ps1` (same solution arguments and child environment as the retained worker), `Publish-StorageWip.ps1`, `Start-ManualStorageCandidate.ps1`, `Stop-ManualStorageCandidate.ps1`.
+
+Executed: `build-integration` (capture initial) PASS, Integration 31/31 discovered, executed 30 PASS/1 FAIL at the untyped-failure assertion because the seeded agent's MCP capability failed to compose (diagnostic runs in the session scratchpad, declared as prior-closure drift in `build-integration-2/build-start.json`); `build-integration-2` (capture fixture2) PASS, Integration Discover 31, Execute **31/31 PASS**, TRX `6d92aa5ea8081e33bff983d1aa85f00905ce8bd50f6871c128edaac589f9d8e3`; `build-unit-playwright` failed to compile Playwright (CS0234, wrong exception namespace; preserved); `build-unit-playwright-2` (capture fixture4) PASS, Unit Discover 22, Execute **22/22 PASS**, TRX `9ee098026190a9a0cedec301fd65357a22a546041b4243eb38b8e949ae03d9e3`; browser `note1` Discover 1, Execute **1/1 PASS**, TRX `78c6c80168390a84e069eca7d29f5e1f86cf085156afdf6ec10ad4de70b7eb89`. All runs used the task PostgreSQL 5439 disposable harness databases and completed owned-process cleanup.
+
+Static: `storage-wip/static-fixture4/` — tooling tests 6 and 4 OK, full `--tracked-only` scan, enforcement `RESULT: PASS (14667 reviewed executable-source findings unchanged)`, no baseline write.
+
+Candidate: `Publish-StorageWip.ps1` PASS (1,946 files, `storage-wip/app-manifest.json` SHA `06cb8502529cb41743d6091458cc4dea7bc66fbd03e416f46b4fb2529d95ad17`); `Start-ManualStorageCandidate.ps1 -EvidenceName manual-host-storage-wip-first` started PID 14652 (identity in `manual-qa-v11/active-host.json`); `Test-ManualHostHttp.ps1` PASS_HTTP_PREFLIGHT (health, access, capabilities, operations 200; anonymous projects 401; both appsettings 404; Ready, databaseAndMigrationsReady true). Live SVG reproduction recorded in `evidence/manual-host-storage-wip-first/svg-preview-manual-reproduction.json`.
+
+Original run recovery: credential set `final-frozen-v11/api/manual/manual-storage-wip-20260914`; pre/post run detail, receipts and approvals bodies retained there; `POST /api/agents/execution-runs/85971e71…/recover` → 500 `agents.run-failed`; analysis and journal delta in `original-run-recovery-attempt.json` (journal SHA `fb042471…` → `9cf4558e…`, only Revision/lease changed). New thread `6ac90565-efef-44f0-8b6c-46ed8084d3b8` run `d0793f09…` Completed: `a-new-run-detail-body.json` SHA `0094a88c…`, receipts `bba5cbdf…`, approvals empty; journal SHA `fa1533b2…`.
+
+Not yet executed on the current binaries: ordinary browser 58 + Dashboard1 + Core1, broad Stable, Linux824, synthetic3, real8, Scenario04one, sibling DotNetWatch, documentation validators for this record edit, and the remaining A–H journeys. Required security findings retain their raw FAIL; no exemption was granted.
+
+## Earlier checkpoint, 2026-09-13 19:00 UTC
 
 At this checkpoint, the direct Storage restore/build passed with zero warnings/errors on source SHA `242b5550bbd95d4ec7547a3a7e3c288cf6b89ab1212a59ef51e8546525f2fbe7`. Product restore passed. Product compilation reached the Web and tool outputs but hit the inherited ten-minute Components-helper limit before a native completion result. This is retained as TIME_BOUND_INTERRUPTION, with no passing product/test claim. Its root and observed matching processes are absent. The incremental successor keeps the supported build graph and source/dependency checks, and uses a30-minute bound. No output reset or dependency substitution is involved.
 

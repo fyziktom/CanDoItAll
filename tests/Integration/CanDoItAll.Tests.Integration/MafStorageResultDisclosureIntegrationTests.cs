@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -36,9 +37,12 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
             profileBinding: new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)));
         var catalogs = services.GetRequiredService<IStorageCatalogService>();
         var target = await catalogs.SaveAsync(Storage("Original browse recovery catalog", fixture.WorkspaceRoot));
+        // The seeded template agent carries catalog capabilities (a local MCP server) that this Core recovery
+        // path would try to compose; the Storage tools under test come from the runtime tool provider instead.
         var agent = await SaveCanonicalAgentAsync(services, fixture.Agent with {
             Permissions = fixture.Agent.Permissions with { CanUseTools = true },
-            ConfigurationJson = Configuration(fixture.Agent.ConfigurationJson, [target.Id])
+            ConfigurationJson = Configuration(fixture.Agent.ConfigurationJson, [target.Id]),
+            Capabilities = []
         });
         await fixture.Store.UpdateCatalogAsync(catalog => catalog with {
             Agents = catalog.Agents.Where(item => item.Id != agent.Id).Append(agent).ToArray()
@@ -48,8 +52,9 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         var provider = CreateProvider(services, new StorageBrowseDriverRegistry([driver]));
         var legacyFailure = new UntypedBrowseFailureProvider(provider);
         var firstClient = new StorageScriptClient(StorageToolPolicy.StorageBrowse, arguments, catalogFirst: true);
+        Exception originalFailure;
         using (var initial = new StorageRecoveryExecution(fixture, services, firstClient, legacyFailure)) {
-            await Assert.ThrowsAnyAsync<Exception>(() => initial.Service.SendMessageAsync(agent.Id, null, "List the catalog, then browse a page.",
+            originalFailure = await Assert.ThrowsAnyAsync<Exception>(() => initial.Service.SendMessageAsync(agent.Id, null, "List the catalog, then browse a page.",
                 new(AgentExecutionOperationId.New(), WorkspaceToolsEnabled: true) {
                     Context = ExecutionInvocationContext.Empty with {
                         SourceKind = "agents", SourceId = "agents", MetadataJson = fixture.Detail.Run.MetadataJson,
@@ -57,7 +62,8 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
                     }
                 }));
         }
-        Assert.True(legacyFailure.ObservedRequestRejection);
+        Assert.True(legacyFailure.ObservedRequestRejection,
+            $"The original run must fail on the untyped browse rejection after {firstClient.Requests} provider request(s); actual failure: {originalFailure}");
         Assert.Equal(2, firstClient.Requests);
         Assert.Equal(0, driver.Calls);
         var original = Assert.Single(await fixture.NewStore().ListExecutionRunsAsync(), run => run.Id != fixture.Detail.Run.Id);
@@ -73,7 +79,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         Assert.Equal(AgentToolEffectState.Unknown, uncertain.EffectState);
         Assert.Equal(AgentToolProposalRecovery.RevalidateAndRead, uncertain.Payload.Recovery);
         Assert.Null(uncertain.Result);
-        var catalogRows = await CatalogRowsAsync(services);
+        var catalogRows = await CatalogRecordsAsync(services);
 
         await SaveCanonicalAgentAsync(services, agent with { ConfigurationJson = Configuration(agent.ConfigurationJson, []) });
         var deniedClient = new StorageScriptClient(StorageToolPolicy.StorageBrowse, arguments, catalogFirst: true);
@@ -131,7 +137,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         Assert.Equal(AgentToolInvocationOutcome.Failed, failureReceipt.InvocationOutcome);
         Assert.Equal(AgentToolEffectState.None, failureReceipt.EffectState);
         Assert.Equal(AgentToolInputValidationException.FailureCode, failureReceipt.FailureCode);
-        Assert.Equal(catalogRows, await CatalogRowsAsync(services));
+        await AssertCatalogUnchangedExceptRootValidationAsync(catalogRows, services);
 
         var finalClient = new StorageScriptClient(StorageToolPolicy.StorageBrowse, arguments, catalogFirst: true);
         using (var replay = new StorageRecoveryExecution(fixture, services, finalClient, provider)) {
@@ -145,7 +151,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         Assert.Equal(JsonSerializer.Serialize(saved.Run.ToolAdmission), JsonSerializer.Serialize(final.Run.ToolAdmission));
         Assert.Equal(saved.ToolReceipts, final.ToolReceipts);
         Assert.Equal(saved.Approvals, final.Approvals);
-        Assert.Equal(catalogRows, await CatalogRowsAsync(services));
+        await AssertCatalogUnchangedExceptRootValidationAsync(catalogRows, services);
         Assert.Equal(2, (await fixture.NewStore().ListExecutionRunsAsync()).Count);
     }
 
@@ -256,10 +262,35 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         HealthStatus = StorageHealthStatus.Healthy
     };
 
-    private static async Task<string> CatalogRowsAsync(IServiceProvider services) {
+    private static async Task<StorageCatalogRecord[]> CatalogRecordsAsync(IServiceProvider services) {
         var factory = services.GetRequiredService<IDbContextFactory<StorageDbContext>>();
         await using var database = await factory.CreateDbContextAsync();
-        return JsonSerializer.Serialize(await database.Set<StorageCatalogRecord>().AsNoTracking().OrderBy(row => row.Id).ToArrayAsync());
+        return await database.Set<StorageCatalogRecord>().AsNoTracking().OrderBy(row => row.Id).ToArrayAsync();
+    }
+
+    private static async Task<string> CatalogRowsAsync(IServiceProvider services)
+        => JsonSerializer.Serialize(await CatalogRecordsAsync(services));
+
+    // Current storage resolution re-validates the host-bound root, which saves the row and advances
+    // RootLastValidatedAtUtc and UpdatedAtUtc. Every other catalog field must stay byte-identical and
+    // neither timestamp may move backwards; the catalog row set itself must not change.
+    private static async Task AssertCatalogUnchangedExceptRootValidationAsync(StorageCatalogRecord[] before, IServiceProvider services) {
+        var after = await CatalogRecordsAsync(services);
+        Assert.Equal(before.Length, after.Length);
+        for (var index = 0; index < before.Length; index++) {
+            Assert.Equal(before[index].Id, after[index].Id);
+            Assert.True(before[index].RootLastValidatedAtUtc is null || after[index].RootLastValidatedAtUtc >= before[index].RootLastValidatedAtUtc,
+                "The current root validation time must not move backwards.");
+            Assert.True(after[index].UpdatedAtUtc >= before[index].UpdatedAtUtc, "The catalog row update time must not move backwards.");
+            Assert.Equal(WithoutRootValidation(before[index]), WithoutRootValidation(after[index]));
+        }
+    }
+
+    private static string WithoutRootValidation(StorageCatalogRecord row) {
+        var node = JsonSerializer.SerializeToNode(row)!.AsObject();
+        node.Remove(nameof(StorageCatalogRecord.RootLastValidatedAtUtc));
+        node.Remove(nameof(StorageCatalogRecord.UpdatedAtUtc));
+        return node.ToJsonString();
     }
 
     private static IEnumerable<string> Codes(Exception exception) {
@@ -371,7 +402,10 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
             browseDrivers ?? services.GetRequiredService<IStorageBrowseDriverRegistry>(), services.GetRequiredService<StorageCatalogService>(),
             services.GetRequiredService<IAgentCatalogReadLeaseStore>(), services.GetRequiredService<IAgentToolAdmissionVerifier>());
 
-    private sealed class CountingBrowseDriver(IStorageBrowseDriver owner) : IStorageBrowseDriver {
+    // The registry validates that a driver implements exactly the operation interfaces its capabilities advertise.
+    // The wrapped FileSystem driver advertises Stat, so the counting wrapper must forward that surface as well.
+    private sealed class CountingBrowseDriver(IStorageBrowseDriver owner) : IStorageBrowseDriver, IStorageBrowseStatDriver {
+        private readonly IStorageBrowseStatDriver statOwner = Assert.IsAssignableFrom<IStorageBrowseStatDriver>(owner);
         public StorageProviderKind ProviderKind => owner.ProviderKind;
         public StorageBrowseCapability Capabilities => owner.Capabilities;
         public StorageBrowseWorkBudget MaximumBudget => owner.MaximumBudget;
@@ -380,6 +414,11 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         public Task<StorageBrowsePage> BrowseAsync(StorageDriverInput storage, StorageBrowseRequest request, CancellationToken cancellationToken = default) {
             Calls++;
             return owner.BrowseAsync(storage, request, cancellationToken);
+        }
+
+        public Task<StorageBrowseEntry> StatAsync(StorageDriverInput storage, StorageBrowseStatRequest request, CancellationToken cancellationToken = default) {
+            Calls++;
+            return statOwner.StatAsync(storage, request, cancellationToken);
         }
     }
 

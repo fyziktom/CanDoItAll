@@ -1,6 +1,14 @@
 # Module Decoupling Coverage
 
-## Current checkpoint, 2026-09-13 19:00 UTC
+## Current checkpoint, 2026-09-14 14:45 UTC
+
+Storage/G same-run recovery: the Core regression now passes on the WIP tree with real catalog/agent owners and a scripted provider (31/31 owning Integration cases, 22/22 Unit cases). Invalid pageSize 0/101/200, valid boundaries 1/100, access denial precedence and driver/cancellation uncertainty are covered; denied recovery changes only Revision and ActiveDispatchLeaseId; Completed replay makes no provider or driver call; catalog rows change only in their root-validation timestamps.
+
+A (floating agent): on the WIP candidate the planning agent, opened from the Resources surface with the selected `Manual v11 planning evidence`, listed catalogs, browsed catalog `dd762740…` with bounded pages and read the returned locator; the reported marker matches the file bytes (run `d0793f09…`, 13 receipts, no approvals). The retained failed run `85971e71…` cannot be recovered because its earlier workspace listing evidence is no longer current; its journal, receipts and approvals are preserved. CRM facts, task/note/asset creation with approvals, dependency/assignment tools and refresh readbacks remain pending on this candidate.
+
+Browser: the one-note/media case passes on the current test binaries (SVG sandboxed blob preview and dropped PNG image view). The 59 other ordinary cases, Dashboard1 and Core1 were last executed on earlier binaries and must be re-executed on `build-unit-playwright-2` before any 60-case claim; the 12 external/specialized cases remain pending. B–F, H and the remaining owner rows are unchanged from the earlier checkpoints below and remain pending on the running candidate.
+
+## Earlier checkpoint, 2026-09-13 19:00 UTC
 
 At this checkpoint, the direct Storage restore/build passed with zero warnings/errors on source SHA `242b5550bbd95d4ec7547a3a7e3c288cf6b89ab1212a59ef51e8546525f2fbe7`. Product restore passed. Product compilation reached the Web and tool outputs but hit the inherited ten-minute Components-helper limit before a native completion result. This is retained as TIME_BOUND_INTERRUPTION, with no passing product/test claim. Its root and observed matching processes are absent. The incremental successor keeps the supported build graph and source/dependency checks, and uses a30-minute bound. No output reset or dependency substitution is involved.
 

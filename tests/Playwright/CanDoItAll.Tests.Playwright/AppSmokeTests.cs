@@ -287,6 +287,8 @@ public sealed partial class AppSmokeTests
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
+        var consoleMessages = new List<string>();
+        page.Console += (_, message) => consoleMessages.Add($"{message.Type}: {message.Text}");
         var artifactsDir = @"C:\repositories\CanDoItAll\output\playwright";
         Directory.CreateDirectory(artifactsDir);
 
@@ -546,6 +548,7 @@ public sealed partial class AppSmokeTests
             page, projectId, "Picker uploaded image", "playwright-picker-image.svg", "image/svg+xml");
         var svgFrame = pickerPreview.GetByTestId("interaction-browser-view").Locator("iframe");
         await Assertions.Expect(svgFrame).ToHaveAttributeAsync("sandbox", string.Empty);
+        await WaitForFileInteractionObjectUrlAsync(page, "playwright-picker-image.svg", "interaction-browser-view", "iframe", "src", consoleMessages);
         await Assertions.Expect(svgFrame).ToHaveAttributeAsync("src", new Regex("^blob:"));
         var svg = pickerPreview.FrameLocator("[data-testid='interaction-browser-view'] iframe").Locator("svg");
         await Assertions.Expect(svg).ToHaveAttributeAsync("viewBox", "0 0 120 90");
@@ -585,6 +588,7 @@ public sealed partial class AppSmokeTests
         await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         var droppedPreview = await OpenCanvasImagePreviewAsync(
             page, projectId, "Playwright dropped image", "playwright-drop-image.png", "image/png");
+        await WaitForFileInteractionObjectUrlAsync(page, "playwright-drop-image.png", "interaction-image-view", "img", "src", consoleMessages);
         var droppedImage = droppedPreview.GetByTestId("interaction-image-view")
             .GetByRole(AriaRole.Img, new() { Name = "playwright-drop-image.png", Exact = true });
         await Assertions.Expect(droppedImage).ToBeVisibleAsync();
@@ -641,6 +645,46 @@ public sealed partial class AppSmokeTests
         Assert.InRange(Math.Abs(maximized.DocumentClientHeight - maximized.ViewportHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.DocumentScrollHeight - maximized.ViewportHeight), 0, 1);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-centered-pan.png"), FullPage = true });
+    }
+
+    // The governed file interaction assigns its object URL through JS interop after the sandboxed element renders.
+    // Wait for that bounded interop instead of relying on the default assertion window, and report the interaction
+    // state and browser console when the object URL never arrives so a real product failure stays diagnosable.
+    private static async Task WaitForFileInteractionObjectUrlAsync(
+        IPage page, string fileName, string surfaceTestId, string targetTag, string attributeName, List<string> consoleMessages) {
+        var arguments = new { fileName, surfaceTestId, targetTag, attributeName };
+        try {
+            await page.WaitForFunctionAsync(
+                @"({ fileName, surfaceTestId, targetTag, attributeName }) => {
+                    const dialog = document.querySelector(`[role='dialog'][aria-label='${fileName} file interaction']`);
+                    const target = dialog?.querySelector(`[data-testid='${surfaceTestId}'] ${targetTag}`);
+                    return target?.getAttribute(attributeName)?.startsWith('blob:') === true;
+                }",
+                arguments,
+                new() { Timeout = 15_000 });
+        } catch (TimeoutException) {
+            var diagnostics = await page.EvaluateAsync<string>(
+                @"({ fileName, surfaceTestId, targetTag, attributeName }) => {
+                    const dialog = document.querySelector(`[role='dialog'][aria-label='${fileName} file interaction']`);
+                    const surface = dialog?.querySelector(`[data-testid='${surfaceTestId}']`);
+                    const targets = surface ? surface.querySelectorAll(targetTag) : [];
+                    return JSON.stringify({
+                        dialog: !!dialog,
+                        interactionState: dialog?.querySelector(`[data-testid='file-interaction']`)?.getAttribute('data-state') ?? null,
+                        surfaceHidden: surface?.hidden ?? null,
+                        targetCount: targets.length,
+                        targetAttribute: targets[0]?.getAttribute(attributeName) ?? null,
+                        emptyFile: !!dialog?.querySelector(`[data-testid='interaction-empty-file']`),
+                        objectFallback: !!dialog?.querySelector(`[data-testid='interaction-object-fallback']`),
+                        interactionError: dialog?.querySelector(`[data-testid='interaction-error']`)?.textContent?.trim() ?? null,
+                        loading: !!dialog?.querySelector(`[data-testid='interaction-loading']`)
+                    });
+                }",
+                arguments);
+            var console = string.Join(Environment.NewLine, consoleMessages.TakeLast(20));
+            throw new Xunit.Sdk.XunitException(
+                $"The {fileName} file interaction never assigned a blob {attributeName} to its {targetTag}. Interaction: {diagnostics}. Recent console:{Environment.NewLine}{console}");
+        }
     }
 
     private async Task<ILocator> OpenCanvasImagePreviewAsync(
