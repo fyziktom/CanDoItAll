@@ -1,4 +1,5 @@
 using CanDoItAll.Agents.Storage;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 
@@ -6,6 +7,73 @@ namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class StorageRuntimePluginTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    [InlineData(200)]
+    public async Task BrowseStorage_InvalidPageSize_ReportsCorrectableFailureWithoutEffects(int pageSize) {
+        var storage = CreateStorage();
+        var driver = new RecordingBrowseDriver();
+        var sut = CreatePlugin(storage, driver, new() { CanReadStorage = true, AllowAllStorageCatalogs = true });
+
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => sut.BrowseStorage(storage.Id, pageSize: pageSize));
+
+        var failure = Assert.IsAssignableFrom<IAgentToolFailureEffectEvidence>(exception);
+        Assert.Equal(AgentToolInputValidationException.FailureCode, failure.ErrorCode);
+        Assert.Equal(AgentToolEffectState.None, failure.EffectState);
+        Assert.True(failure.IsSafeToExpose);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Contains("pageSize between 1 and 100", failure.SafeMessage, StringComparison.Ordinal);
+        Assert.Equal(0, driver.InvocationCount);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(100)]
+    public async Task BrowseStorage_ValidPageSizeBoundary_InvokesDriverWithUnchangedRequest(int pageSize) {
+        var storage = CreateStorage();
+        var driver = new RecordingBrowseDriver();
+        var sut = CreatePlugin(storage, driver, new() { CanReadStorage = true, AllowAllStorageCatalogs = true });
+
+        await sut.BrowseStorage(storage.Id, pageSize: pageSize);
+
+        Assert.Equal(pageSize, driver.LastRequest!.PageSize);
+        Assert.Equal(1, driver.InvocationCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BrowseStorage_InvalidPageSize_DoesNotOverrideAccessDenial(bool canReadStorage) {
+        var storage = CreateStorage();
+        var driver = new RecordingBrowseDriver();
+        var sut = CreatePlugin(storage, driver, new() { CanReadStorage = canReadStorage });
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sut.BrowseStorage(storage.Id, pageSize: 200));
+
+        Assert.Contains("not allowed", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(exception is IAgentToolFailureEffectEvidence);
+        Assert.Equal(0, driver.InvocationCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BrowseStorage_DriverFailure_PreservesOriginalUncertainFailure(bool cancelled) {
+        var storage = CreateStorage();
+        Exception expected = cancelled
+            ? new OperationCanceledException()
+            : new StorageBrowseException(new(StorageBrowseErrorCode.InvalidRequest, "Driver failure."));
+        var driver = new RecordingBrowseDriver(failure: expected);
+        var sut = CreatePlugin(storage, driver, new() { CanReadStorage = true, AllowAllStorageCatalogs = true });
+
+        var exception = await Record.ExceptionAsync(() => sut.BrowseStorage(storage.Id));
+
+        Assert.Same(expected, exception);
+        Assert.False(exception is IAgentToolFailureEffectEvidence);
+        Assert.Equal(1, driver.InvocationCount);
+    }
+
     [Fact]
     public async Task BrowseStorage_AllowedCatalog_MapsBoundedDriverPage()
     {
@@ -243,7 +311,8 @@ public sealed class StorageRuntimePluginTests
         bool includeMetadataCapability = true,
         StorageProviderKind providerKind = StorageProviderKind.FileSystem,
         string entryId = "docs/readme.md",
-        StorageBrowseEntryCapability entryCapabilities = StorageBrowseEntryCapability.Read) : IStorageBrowseDriver
+        StorageBrowseEntryCapability entryCapabilities = StorageBrowseEntryCapability.Read,
+        Exception? failure = null) : IStorageBrowseDriver
     {
         public StorageProviderKind ProviderKind => providerKind;
 
@@ -265,6 +334,9 @@ public sealed class StorageRuntimePluginTests
         {
             InvocationCount++;
             LastRequest = request;
+            if (failure is not null) {
+                throw failure;
+            }
             var entry = new StorageBrowseEntry(
                 new StorageBrowseEntryId(entryId),
                 request.Container,

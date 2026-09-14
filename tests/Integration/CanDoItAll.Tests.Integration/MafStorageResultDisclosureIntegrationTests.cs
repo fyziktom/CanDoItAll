@@ -3,20 +3,152 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Agents.Storage;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.Agents.AI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
 public sealed class MafStorageResultDisclosureIntegrationTests {
+    private const string CatalogCallId = "original-storage-catalog";
+    private const string ReadCallId = "diagnostic-storage-read";
+
+    [Fact]
+    public async Task Core_recovers_original_invalid_Storage_browse_after_current_authority_revalidation_without_driver_dispatch() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var profile = services.GetRequiredService<IDatabaseRuntimeState>().GetSnapshot();
+        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true,
+            profileBinding: new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)));
+        var catalogs = services.GetRequiredService<IStorageCatalogService>();
+        var target = await catalogs.SaveAsync(Storage("Original browse recovery catalog", fixture.WorkspaceRoot));
+        var agent = await SaveCanonicalAgentAsync(services, fixture.Agent with {
+            Permissions = fixture.Agent.Permissions with { CanUseTools = true },
+            ConfigurationJson = Configuration(fixture.Agent.ConfigurationJson, [target.Id])
+        });
+        await fixture.Store.UpdateCatalogAsync(catalog => catalog with {
+            Agents = catalog.Agents.Where(item => item.Id != agent.Id).Append(agent).ToArray()
+        });
+        var arguments = new Dictionary<string, object?> { ["storageId"] = target.Id, ["pageSize"] = 200 };
+        var driver = new CountingBrowseDriver(services.GetRequiredService<IStorageBrowseDriverRegistry>().Resolve(StorageProviderKind.FileSystem));
+        var provider = CreateProvider(services, new StorageBrowseDriverRegistry([driver]));
+        var legacyFailure = new UntypedBrowseFailureProvider(provider);
+        var firstClient = new StorageScriptClient(StorageToolPolicy.StorageBrowse, arguments, catalogFirst: true);
+        using (var initial = new StorageRecoveryExecution(fixture, services, firstClient, legacyFailure)) {
+            await Assert.ThrowsAnyAsync<Exception>(() => initial.Service.SendMessageAsync(agent.Id, null, "List the catalog, then browse a page.",
+                new(AgentExecutionOperationId.New(), WorkspaceToolsEnabled: true) {
+                    Context = ExecutionInvocationContext.Empty with {
+                        SourceKind = "agents", SourceId = "agents", MetadataJson = fixture.Detail.Run.MetadataJson,
+                        Policy = new(FinalizerMode: AgentFinalizerMode.Disabled)
+                    }
+                }));
+        }
+        Assert.True(legacyFailure.ObservedRequestRejection);
+        Assert.Equal(2, firstClient.Requests);
+        Assert.Equal(0, driver.Calls);
+        var original = Assert.Single(await fixture.NewStore().ListExecutionRunsAsync(), run => run.Id != fixture.Detail.Run.Id);
+        var originalDetail = (await fixture.NewStore().GetExecutionRunDetailAsync(original.Id))!;
+        Assert.Equal(ExecutionState.Failed, original.State);
+        Assert.True(original.ToolAdmission!.HasUnresolvedEffects);
+        Assert.Empty(original.PendingApprovals);
+        var originalProposals = original.ToolAdmission.Batches.SelectMany(batch => batch.Proposals).ToArray();
+        var completed = Assert.Single(originalProposals, proposal => proposal.CallId == CatalogCallId);
+        var uncertain = Assert.Single(originalProposals, proposal => proposal.CallId == ReadCallId);
+        Assert.Equal(AgentToolProposalState.Completed, completed.State);
+        Assert.Equal(AgentToolProposalState.ReconciliationRequired, uncertain.State);
+        Assert.Equal(AgentToolEffectState.Unknown, uncertain.EffectState);
+        Assert.Equal(AgentToolProposalRecovery.RevalidateAndRead, uncertain.Payload.Recovery);
+        Assert.Null(uncertain.Result);
+        var catalogRows = await CatalogRowsAsync(services);
+
+        await SaveCanonicalAgentAsync(services, agent with { ConfigurationJson = Configuration(agent.ConfigurationJson, []) });
+        var deniedClient = new StorageScriptClient(StorageToolPolicy.StorageBrowse, arguments, catalogFirst: true);
+        using (var denied = new StorageRecoveryExecution(fixture, services, deniedClient, provider)) {
+            var failure = await Assert.ThrowsAnyAsync<Exception>(() => denied.Service.RecoverExecutionRunAsync(original.Id, AgentExecutionOperationId.New()));
+            Assert.Contains("storage.result-disclosure-denied", Codes(failure));
+        }
+        Assert.Equal(0, deniedClient.Requests);
+        Assert.Equal(0, driver.Calls);
+        var deniedRun = (await fixture.NewStore().GetExecutionRunAsync(original.Id))!;
+        var deniedAdmission = deniedRun.ToolAdmission!;
+        Assert.Equal(original.ToolAdmission.Revision + 1, deniedAdmission.Revision);
+        Assert.NotNull(deniedAdmission.ActiveDispatchLeaseId);
+        Assert.NotEqual(Guid.Empty, deniedAdmission.ActiveDispatchLeaseId);
+        Assert.NotEqual(original.ToolAdmission.ActiveDispatchLeaseId, deniedAdmission.ActiveDispatchLeaseId);
+        Assert.Equal(JsonSerializer.Serialize(original.ToolAdmission with {
+            Revision = deniedAdmission.Revision, ActiveDispatchLeaseId = deniedAdmission.ActiveDispatchLeaseId
+        }), JsonSerializer.Serialize(deniedAdmission));
+
+        await SaveCanonicalAgentAsync(services, agent);
+        var recoveryClient = new StorageScriptClient(StorageToolPolicy.StorageBrowse, arguments, catalogFirst: true);
+        using (var restarted = new StorageRecoveryExecution(fixture, services, recoveryClient, provider)) {
+            var recovered = await restarted.Service.RecoverExecutionRunAsync(original.Id, AgentExecutionOperationId.New());
+            Assert.Equal(original.Id, recovered.ExecutionRunId);
+            Assert.Equal(ExecutionState.Completed, recovered.State);
+        }
+        Assert.Equal(1, recoveryClient.Requests);
+        Assert.Equal(AgentToolInputValidationException.FailureCode, recoveryClient.ReadFailureCode);
+        Assert.Equal(0, driver.Calls);
+        var saved = (await fixture.NewStore().GetExecutionRunDetailAsync(original.Id))!;
+        Assert.Equal(original.ChatSessionId, saved.Run.ChatSessionId);
+        Assert.Equal(original.ToolAdmission.OriginalInput, saved.Run.ToolAdmission!.OriginalInput);
+        Assert.Equal(original.ToolAdmission.RuntimeContext, saved.Run.ToolAdmission.RuntimeContext);
+        Assert.Equal(original.ToolAdmission.Session, saved.Run.ToolAdmission.Session);
+        Assert.Equal(JsonSerializer.Serialize(original.ToolAdmission.Segments), JsonSerializer.Serialize(saved.Run.ToolAdmission.Segments));
+        Assert.False(saved.Run.ToolAdmission.HasUnresolvedEffects);
+        Assert.Empty(saved.Run.PendingApprovals);
+        Assert.Equal(originalDetail.Approvals, saved.Approvals);
+        var proposals = saved.Run.ToolAdmission.Batches.SelectMany(batch => batch.Proposals).ToArray();
+        Assert.Equal(originalProposals.Select(item => item.IntentId), proposals.Select(item => item.IntentId));
+        Assert.Equal(completed, Assert.Single(proposals, proposal => proposal.CallId == CatalogCallId));
+        var read = Assert.Single(proposals, proposal => proposal.CallId == ReadCallId);
+        Assert.Equal(AgentToolProposalState.Completed, read.State);
+        Assert.Equal(AgentToolEffectState.None, read.EffectState);
+        Assert.NotNull(read.Result);
+        Assert.Equal(uncertain with {
+            State = read.State, EffectState = read.EffectState, Result = read.Result, DispatchClaimId = read.DispatchClaimId
+        }, read);
+        foreach (var receipt in originalDetail.ToolReceipts) {
+            Assert.Equal(receipt, Assert.Single(saved.ToolReceipts, item => item.Id == receipt.Id));
+        }
+        var originalReceiptIds = originalDetail.ToolReceipts.Select(item => item.Id).ToHashSet();
+        var failureReceipt = Assert.Single(saved.ToolReceipts,
+            item => item.ToolName == StorageToolPolicy.StorageBrowse && !originalReceiptIds.Contains(item.Id));
+        Assert.Equal(AgentToolInvocationOutcome.Failed, failureReceipt.InvocationOutcome);
+        Assert.Equal(AgentToolEffectState.None, failureReceipt.EffectState);
+        Assert.Equal(AgentToolInputValidationException.FailureCode, failureReceipt.FailureCode);
+        Assert.Equal(catalogRows, await CatalogRowsAsync(services));
+
+        var finalClient = new StorageScriptClient(StorageToolPolicy.StorageBrowse, arguments, catalogFirst: true);
+        using (var replay = new StorageRecoveryExecution(fixture, services, finalClient, provider)) {
+            var result = await replay.Service.RecoverExecutionRunAsync(original.Id, AgentExecutionOperationId.New());
+            Assert.Equal(original.Id, result.ExecutionRunId);
+            Assert.Equal(ExecutionState.Completed, result.State);
+        }
+        Assert.Equal(0, finalClient.Requests);
+        Assert.Equal(0, driver.Calls);
+        var final = (await fixture.NewStore().GetExecutionRunDetailAsync(original.Id))!;
+        Assert.Equal(JsonSerializer.Serialize(saved.Run.ToolAdmission), JsonSerializer.Serialize(final.Run.ToolAdmission));
+        Assert.Equal(saved.ToolReceipts, final.ToolReceipts);
+        Assert.Equal(saved.Approvals, final.Approvals);
+        Assert.Equal(catalogRows, await CatalogRowsAsync(services));
+        Assert.Equal(2, (await fixture.NewStore().ListExecutionRunsAsync()).Count);
+    }
+
     [Theory]
     [InlineData(StorageToolPolicy.StorageReadTextFile, false)]
     [InlineData(StorageToolPolicy.StorageReadTextFile, true)]
@@ -144,10 +276,7 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
     private static (Func<Task<AgentRuntimeResponse>> Execute, RetainedRuntimeToolProvider Provider) CreateExecution(AgentToolAdmissionJournalFixture fixture,
         IServiceProvider services, AgentDefinition agent, StorageScriptClient client) {
         var policies = new AgentToolPolicyCatalog(StorageToolPolicy.Capabilities);
-        var provider = new StorageAgentRuntimeToolProvider(services.GetRequiredService<IStorageCatalogService>(),
-            services.GetRequiredService<IStorageDriverRegistry>(), services.GetRequiredService<IStorageBrowseDriverRegistry>(),
-            services.GetRequiredService<StorageCatalogService>(), services.GetRequiredService<IAgentCatalogReadLeaseStore>(),
-            services.GetRequiredService<IAgentToolAdmissionVerifier>());
+        var provider = CreateProvider(services);
         var retained = new RetainedRuntimeToolProvider(provider);
         var dependencies = MafAgentRuntimeDependencies.FromServices(services);
         dependencies = dependencies with {
@@ -185,10 +314,12 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         }
     }
 
-    private sealed class StorageScriptClient(string toolName, Dictionary<string, object?> arguments, bool failAfterResult = false) : IChatClient {
+    private sealed class StorageScriptClient(string toolName, Dictionary<string, object?> arguments,
+        bool failAfterResult = false, bool catalogFirst = false) : IChatClient {
         internal string ToolName => toolName;
         internal int Requests { get; private set; }
         internal List<string> Inputs { get; } = [];
+        internal string? ReadFailureCode { get; private set; }
         private bool stopAfterResult = failAfterResult;
 
         internal void Reset() {
@@ -202,14 +333,25 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
             Requests++;
             var input = messages.ToArray();
             Inputs.Add(JsonSerializer.Serialize(input, MafToolProtocolCodec.SerializationOptions));
-            if (input.SelectMany(message => message.Contents).OfType<FunctionResultContent>().Any()) {
+            var results = input.SelectMany(message => message.Contents).OfType<FunctionResultContent>().ToArray();
+            if (catalogFirst && !results.Any(item => item.CallId == CatalogCallId)) {
+                return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+                    [new FunctionCallContent(CatalogCallId, StorageToolPolicy.StorageCatalogList, new Dictionary<string, object?>())])));
+            }
+            if (results.SingleOrDefault(item => item.CallId == ReadCallId) is { } readResult) {
                 if (stopAfterResult) {
                     throw new IOException("Fixture stops after the durable tool result and before the final provider response.");
+                }
+                if (catalogFirst) {
+                    var failure = JsonSerializer.SerializeToElement(readResult.Result, MafToolProtocolCodec.SerializationOptions);
+                    ReadFailureCode = failure.GetProperty("errorCode").GetString();
+                    Assert.False(failure.GetProperty("succeeded").GetBoolean());
+                    Assert.Contains("pageSize between 1 and 100", failure.GetProperty("message").GetString(), StringComparison.Ordinal);
                 }
                 return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "completed")));
             }
             return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,
-                [new FunctionCallContent("diagnostic-storage-read", toolName, arguments)])));
+                [new FunctionCallContent(ReadCallId, toolName, arguments)])));
         }
 
         public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
@@ -222,5 +364,117 @@ public sealed class MafStorageResultDisclosureIntegrationTests {
         public object? GetService(Type serviceType, object? serviceKey = null)
             => serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;
         public void Dispose() { }
+    }
+
+    private static StorageAgentRuntimeToolProvider CreateProvider(IServiceProvider services, IStorageBrowseDriverRegistry? browseDrivers = null)
+        => new(services.GetRequiredService<IStorageCatalogService>(), services.GetRequiredService<IStorageDriverRegistry>(),
+            browseDrivers ?? services.GetRequiredService<IStorageBrowseDriverRegistry>(), services.GetRequiredService<StorageCatalogService>(),
+            services.GetRequiredService<IAgentCatalogReadLeaseStore>(), services.GetRequiredService<IAgentToolAdmissionVerifier>());
+
+    private sealed class CountingBrowseDriver(IStorageBrowseDriver owner) : IStorageBrowseDriver {
+        public StorageProviderKind ProviderKind => owner.ProviderKind;
+        public StorageBrowseCapability Capabilities => owner.Capabilities;
+        public StorageBrowseWorkBudget MaximumBudget => owner.MaximumBudget;
+        internal int Calls { get; private set; }
+
+        public Task<StorageBrowsePage> BrowseAsync(StorageDriverInput storage, StorageBrowseRequest request, CancellationToken cancellationToken = default) {
+            Calls++;
+            return owner.BrowseAsync(storage, request, cancellationToken);
+        }
+    }
+
+    private sealed class UntypedBrowseFailureProvider(IAgentRuntimeToolProvider owner) : IAgentRuntimeToolProvider {
+        public int Order => owner.Order;
+        public AgentRuntimeToolProviderDescriptor? Descriptor => owner.Descriptor;
+        internal bool ObservedRequestRejection { get; private set; }
+
+        public AgentRuntimeConfiguredWorkspacePolicy GetConfiguredWorkspacePolicy(AgentWorkspaceToolAccessSettings access,
+            AgentRuntimeContextIntent intent) => owner.GetConfiguredWorkspacePolicy(access, intent);
+
+        public async ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(AgentRuntimeToolProviderContext context, CancellationToken cancellationToken) {
+            var tools = await owner.CreateToolsAsync(context, cancellationToken);
+            return tools.Select(tool => {
+                if (tool is not AIFunction function || tool.Name != StorageToolPolicy.StorageBrowse) {
+                    return tool;
+                }
+                var wrapped = new UntypedBrowseFailureFunction(function, this);
+                Assert.Equal(function.Name, wrapped.Name);
+                Assert.Equal(function.Description, wrapped.Description);
+                Assert.Equal(function.JsonSchema.GetRawText(), wrapped.JsonSchema.GetRawText());
+                return wrapped;
+            }).ToArray();
+        }
+
+        public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(AgentRuntimeToolProviderContext context) => owner.GetToolMetadata(context);
+
+        private sealed class UntypedBrowseFailureFunction(AIFunction inner, UntypedBrowseFailureProvider provider) : DelegatingAIFunction(inner) {
+            protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken) {
+                try {
+                    return await base.InvokeCoreAsync(arguments, cancellationToken);
+                } catch (InvalidOperationException exception) when (!provider.ObservedRequestRejection &&
+                    exception is IAgentToolFailureEffectEvidence { ErrorCode: AgentToolInputValidationException.FailureCode, EffectState: AgentToolEffectState.None } &&
+                    exception.InnerException is StorageBrowseException { Error.Code: StorageBrowseErrorCode.InvalidRequest }) {
+                    provider.ObservedRequestRejection = true;
+                    throw exception.InnerException;
+                }
+            }
+        }
+    }
+
+    private sealed class StorageRecoveryExecution : IDisposable {
+        private readonly AgentExecutionPreparationCache cache = new(AgentExecutionPreparationCachePolicy.Default);
+
+        internal StorageRecoveryExecution(AgentToolAdmissionJournalFixture fixture, IServiceProvider services,
+            StorageScriptClient client, IAgentRuntimeToolProvider provider) {
+            var store = fixture.NewStore();
+            var journal = fixture.NewJournal(store);
+            var policies = new AgentToolPolicyCatalog(StorageToolPolicy.Capabilities);
+            var dependencies = MafAgentRuntimeDependencies.FromServices(services);
+            dependencies = dependencies with {
+                ProviderAgentFactory = new ScriptAgentFactory(client), ToolAdmissionJournal = journal, ToolPolicies = policies,
+                RuntimeToolProviderComposer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(policies), policies),
+                CapabilityDependencies = dependencies.CapabilityDependencies with {
+                    RuntimeToolProviders = [provider], ContextContributors = [], ToolPolicies = policies
+                }
+            };
+            var runtime = new MafAgentRuntime(fixture.WorkspaceRoot, fixture.StorageScope, dependencies);
+            var coordinator = new AgentExecutionActivityCoordinator(new PartitionedSequencedStream<AgentExecutionActivityStreamId,
+                AgentExecutionActivity>(PartitionedSequencedStreamPolicy.Default, TimeProvider.System), TimeProvider.System);
+            Service = new(store, new ZipAgentPackageService(fixture.WorkspaceRoot, fixture.StorageScope), runtime.ExecutionPort,
+                runtime.ContinuationPort, runtime.DiagnosticsPort, runtime.ModelAdministrationPort,
+                new CapabilityProofService(new PhysicalFileSystemPathPolicyFactory()), NullLogger<AgentFrameworkWorkspaceService>.Instance,
+                coordinator, new(fixture.Profile.ProfileId, fixture.StorageScope, fixture.Profile.Generation), cache,
+                new FixedAgentExecutionProfileGenerationSource(fixture.Profile.Generation), new NoProcessLeases(),
+                new ExternalTargetPathRegistryFactory(), toolAdmissionJournal: journal,
+                executionAuthorityResolver: new CurrentAuthority(fixture), toolPolicies: policies);
+        }
+
+        internal AgentFrameworkWorkspaceService Service { get; }
+
+        public void Dispose() {
+            Service.Dispose();
+            cache.Dispose();
+        }
+    }
+
+    private sealed class CurrentAuthority(AgentToolAdmissionJournalFixture fixture) : IAgentExecutionAuthorityResolver {
+        public ValueTask<AgentExecutionAuthorityRecord> ResolveAsync(AgentExecutionAuthorityResolutionRequest request,
+            CancellationToken cancellationToken = default) {
+            var original = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(fixture.Detail.Run.MetadataJson)!;
+            var source = AgentTurnContextMetadata.TryReadTurnContextReference(fixture.Detail.Run.MetadataJson)!;
+            Assert.Equal(fixture.Agent.Id, request.AgentId);
+            Assert.Equal(fixture.Profile.Generation, request.ExpectedDatabaseProfileGeneration);
+            Assert.Equal(original.WorkspaceScope, request.ObservedWorkspaceScope);
+            Assert.Equal(source.SourceKind, request.SourceKind);
+            Assert.Equal(source.SourceId, request.SourceId);
+            return ValueTask.FromResult(new AgentExecutionAuthorityRecord(AgentExecutionAuthorityId.Create(), fixture.Agent.Id,
+                fixture.Profile.ProfileId, fixture.Profile.Generation, original.WorkspaceScope, true, true,
+                original.PolicyVersion, original.PolicyFingerprint, DateTimeOffset.UtcNow));
+        }
+    }
+
+    private sealed class NoProcessLeases : IWorkspaceExecutionRunProcessLeaseCleaner {
+        public Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(Guid executionRunId)
+            => Task.FromResult(WorkspaceExecutionRunProcessCleanupResult.Empty(executionRunId));
     }
 }

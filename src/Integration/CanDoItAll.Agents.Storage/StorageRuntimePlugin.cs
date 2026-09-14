@@ -103,11 +103,16 @@ internal sealed class StorageRuntimePlugin(
         var metadata = includeMetadata
             ? ResolveBrowseMetadata(driver)
             : StorageBrowseMetadataField.None;
-        var request = new StorageBrowseRequest(
-            new StorageBrowseContainer(containerKey ?? string.Empty),
-            pageSize,
-            cursor is null ? null : new StorageBrowseCursor(cursor),
-            metadata: metadata);
+        StorageBrowseRequest request;
+        try {
+            request = new StorageBrowseRequest(
+                new StorageBrowseContainer(containerKey ?? string.Empty),
+                pageSize,
+                cursor is null ? null : new StorageBrowseCursor(cursor),
+                metadata: metadata);
+        } catch (StorageBrowseException exception) when (exception.Error.Code == StorageBrowseErrorCode.InvalidRequest) {
+            throw new InvalidBrowseRequestFailure(exception);
+        }
         var page = await driver.BrowseAsync(storage, request, cancellationToken).ConfigureAwait(false);
 
         return new AgentStorageBrowseResult(
@@ -136,6 +141,17 @@ internal sealed class StorageRuntimePlugin(
             page.NextCursor?.Token,
             page.Metrics.InspectedItems,
             page.Metrics.MetadataProbes);
+    }
+
+    private sealed class InvalidBrowseRequestFailure(StorageBrowseException innerException)
+        : InvalidOperationException(
+            $"The storage browse request is invalid. Use pageSize between 1 and {StorageBrowseWorkBudget.Default.MaximumReturnedItems} and a containerKey no longer than {StorageBrowseContainer.MaximumKeyLength} characters.",
+            innerException), IAgentToolFailureEffectEvidence {
+        public string ErrorCode => AgentToolInputValidationException.FailureCode;
+        public string SafeMessage => Message;
+        public bool IsSafeToExpose => true;
+        public bool CanRetryWithCorrectedInput => true;
+        public AgentToolEffectState EffectState => AgentToolEffectState.None;
     }
 
     public async Task<AgentStorageTextReadResult> ReadStorageTextFile(

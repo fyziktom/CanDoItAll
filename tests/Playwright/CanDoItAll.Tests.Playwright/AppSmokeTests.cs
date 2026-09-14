@@ -7,6 +7,7 @@ using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.SharedKernel;
 using Microsoft.Playwright;
 using Microsoft.EntityFrameworkCore;
 
@@ -489,7 +490,9 @@ public sealed partial class AppSmokeTests
             "priority badge metadata for edited child note");
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-badges-selected.png"), FullPage = true });
 
-        await page.Keyboard.PressAsync("Enter");
+        await WaitForSceneNodeTitleAsync(page, "Second child note", selectedOnly: true);
+        await canvasHost.FocusAsync();
+        await canvasHost.PressAsync("Enter");
         await noteEditor.WaitForAsync();
         await noteEditor.FillAsync("Sibling note from Enter");
         await noteEditor.PressAsync("Enter");
@@ -539,27 +542,27 @@ public sealed partial class AppSmokeTests
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Chooser flow media check");
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the file input upload path");
         await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
-        await WaitForSceneSnapshotAsync(
-            page,
-            snapshot => snapshot.Nodes.Any(node =>
-                node.Selected &&
-                string.Equals(node.Title, "Picker uploaded image", StringComparison.Ordinal) &&
-                string.Equals(node.MediaKind, "image", StringComparison.OrdinalIgnoreCase)),
-            "selected image asset node");
-        await EnsureCanvasSelectionAsync(page, ".cw-node:has-text('Picker uploaded image')");
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-floating-window[data-testid=\"project-structure-selection-window\"] .cw-media-preview')?.tagName === 'IMG'");
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-floating-window[data-testid=\"project-structure-selection-window\"]')?.textContent?.includes('playwright-picker-image.svg') === true");
+        var pickerPreview = await OpenCanvasImagePreviewAsync(
+            page, projectId, "Picker uploaded image", "playwright-picker-image.svg", "image/svg+xml");
+        var svgFrame = pickerPreview.GetByTestId("interaction-browser-view").Locator("iframe");
+        await Assertions.Expect(svgFrame).ToHaveAttributeAsync("sandbox", string.Empty);
+        await Assertions.Expect(svgFrame).ToHaveAttributeAsync("src", new Regex("^blob:"));
+        var svg = pickerPreview.FrameLocator("[data-testid='interaction-browser-view'] iframe").Locator("svg");
+        await Assertions.Expect(svg).ToHaveAttributeAsync("viewBox", "0 0 120 90");
+        await Assertions.Expect(svg.Locator("text")).ToHaveTextAsync("QA");
+        await pickerPreview.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+        await pickerPreview.WaitForAsync(new() { State = WaitForSelectorState.Detached });
 
         await OpenCanvasCreateComposerViaRuntimeAsync(page, projectRootSelector, "Image", "add-image-asset");
         await page.Locator(".cw-canvas-composer__file-trigger").WaitForAsync();
         var imageUploadReady = await page.EvaluateAsync<bool>(
-            @"async () => {
+            @"() => {
                 const dropZone = document.querySelector('.cw-canvas-composer__dropzone');
                 if (!dropZone) {
                     return false;
                 }
 
-                const base64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jmioAAAAASUVORK5CYII=';
+                const base64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
                 const binary = atob(base64);
                 const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
                 const file = new File([bytes], 'playwright-drop-image.png', { type: 'image/png' });
@@ -571,23 +574,27 @@ public sealed partial class AppSmokeTests
                 }
 
                 dropZone.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
-                await new Promise(resolve => setTimeout(resolve, 200));
-                return document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-drop-image.png') === true;
+                return true;
             }");
-        Assert.True(imageUploadReady, "Expected drag/drop image upload to populate the create dialog.");
+        Assert.True(imageUploadReady, "Expected the image composer to accept the file-drop dispatch.");
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-drop-image.png') === true");
 
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Playwright dropped image");
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Regression media check");
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the drag and drop upload path");
         await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-media-preview')?.tagName === 'IMG'");
-        await WaitForSceneSnapshotAsync(
-            page,
-            snapshot => snapshot.Nodes.Any(node =>
-                node.Selected &&
-                string.Equals(node.Title, "Playwright dropped image", StringComparison.Ordinal) &&
-                string.Equals(node.MediaKind, "image", StringComparison.OrdinalIgnoreCase)),
-            "selected dropped image node");
+        var droppedPreview = await OpenCanvasImagePreviewAsync(
+            page, projectId, "Playwright dropped image", "playwright-drop-image.png", "image/png");
+        var droppedImage = droppedPreview.GetByTestId("interaction-image-view")
+            .GetByRole(AriaRole.Img, new() { Name = "playwright-drop-image.png", Exact = true });
+        await Assertions.Expect(droppedImage).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const image = document.querySelector('[data-testid=""interaction-image-view""] img[alt=""playwright-drop-image.png""]');
+                return image?.complete === true && image.naturalWidth > 0 && image.naturalHeight > 0;
+            }");
+        await droppedPreview.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+        await droppedPreview.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await AssertNoCanvasNodeOverlapsAsync(page, "after mixed note/link/image creation");
 
         await EnsureCanvasSelectionAsync(page, ".cw-node.is-inline-text");
@@ -634,6 +641,31 @@ public sealed partial class AppSmokeTests
         Assert.InRange(Math.Abs(maximized.DocumentClientHeight - maximized.ViewportHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.DocumentScrollHeight - maximized.ViewportHeight), 0, 1);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-centered-pan.png"), FullPage = true });
+    }
+
+    private async Task<ILocator> OpenCanvasImagePreviewAsync(
+        IPage page, Guid projectId, string title, string fileName, string contentType) {
+        await WaitForSceneNodeTitleAsync(page, title, selectedOnly: true);
+        var node = Assert.Single((await ReadSceneSnapshotAsync(page)).Nodes,
+            candidate => candidate.Selected && string.Equals(candidate.Title, title, StringComparison.Ordinal));
+        Assert.Empty(node.MediaKind);
+        Assert.Empty(node.MediaPreviewUrl);
+        Assert.False(string.IsNullOrWhiteSpace(fixture.DatabaseConnectionString));
+        await using var owner = new WorkbenchDbContext(new DbContextOptionsBuilder<WorkbenchDbContext>()
+            .UseNpgsql(fixture.DatabaseConnectionString).Options);
+        var savedImage = await owner.Set<ProjectObjectRecord>().AsNoTracking()
+            .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == node.Id);
+        Assert.Equal(ProjectObjectType.ImageAsset, savedImage.ObjectType);
+
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-selection-window");
+        var selectionWindow = page.GetByTestId("project-structure-selection-window");
+        await Assertions.Expect(selectionWindow).ToContainTextAsync(fileName);
+        await Assertions.Expect(selectionWindow).ToContainTextAsync(contentType);
+        await selectionWindow.GetByRole(AriaRole.Button, new() { Name = "Expand preview", Exact = true }).ClickAsync();
+        var dialog = page.GetByRole(AriaRole.Dialog, new() { Name = $"{fileName} file interaction", Exact = true });
+        await dialog.WaitForAsync();
+        await dialog.GetByTestId("project-structure-direct-file-interaction").WaitForAsync();
+        return dialog;
     }
 
     private static async Task EnsureCanvasMaximizedStateAsync(IPage page, bool isMaximized)
