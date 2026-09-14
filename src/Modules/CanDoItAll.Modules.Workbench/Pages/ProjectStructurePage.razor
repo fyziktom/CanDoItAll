@@ -1545,6 +1545,15 @@ else
 
         pendingWorkbenchSelectionId = null;
 
+        if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
+            uiState.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
+        {
+            // The client acknowledged the selection that was pending after a create or reload. Release the guard here as
+            // well, because a state that already equals the persisted state returns below without reaching the later reset,
+            // and an armed guard would reject every later single-node selection.
+            pendingClientSelectionId = null;
+        }
+
         var normalizedStateJson = uiState.ToJson();
         var persistedStateJson = NormalizePersistedCanvasStateJson(currentViewStateJson ?? surface.ViewStateJson);
         if (string.Equals(persistedStateJson, normalizedStateJson, StringComparison.Ordinal))

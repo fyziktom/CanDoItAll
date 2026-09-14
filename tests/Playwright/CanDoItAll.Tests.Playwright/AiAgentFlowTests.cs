@@ -196,27 +196,10 @@ public sealed class AiAgentFlowTests(PlaywrightAppFixture fixture, ITestOutputHe
         throw new TimeoutException($"Timed out waiting for text '{expectedValue}'. Observed: {observed[..Math.Min(observed.Length, 5000)]}");
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
-    }
+    // The startup database prompt is raised by the layout after its asynchronous profile load, which can complete after the
+    // routed page has already rendered; a fixed short poll therefore races it. Use the fixture's startup contract instead.
+    private static Task DismissStartupModalIfPresentAsync(IPage page)
+        => PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
 
     private static async Task WaitForUrlContainsAsync(IPage page, string fragment, int timeoutMs = 10_000)
     {
