@@ -821,6 +821,7 @@ else
     private const int CanvasViewStatePersistDelayMs = 420;
     private CancellationTokenSource? pendingCanvasViewStatePersistCts;
     private string? pendingClientSelectionId;
+    private HashSet<string> pendingClientSelectionPriorIds = new(StringComparer.Ordinal);
     private ProjectStructureNode? previewNode;
     private ProjectStructureKnownFileInteractionSlot? previewInteractionSlot;
     private bool isOpeningAttachmentPreview;
@@ -1188,8 +1189,16 @@ else
             previewNode = reloadedPreview;
             quickActionDialog = nextQuickActionDialog;
             webPreviewDialog = nextWebPreviewDialog;
+            if (nextPendingClientSelectionId is not null)
+            {
+                ArmPendingClientSelection(nextPendingClientSelectionId, selectedNodeIds.Concat(liveSelectionSnapshot ?? []));
+            }
+            else
+            {
+                pendingClientSelectionId = null;
+            }
+
             selectedNodeIds = nextSelectedNodeIds;
-            pendingClientSelectionId = nextPendingClientSelectionId;
             pendingWorkbenchSelectionId = nextPendingWorkbenchSelectionId;
             surface = nextSurface;
             currentViewStateJson = nextSurface.ViewStateJson;
@@ -1332,8 +1341,8 @@ else
                 isUserAuthored: true);
         }
 
+        ArmPendingClientSelection(created.Id, selectedNodeIds);
         selectedNodeIds = [created.Id];
-        pendingClientSelectionId = created.Id;
         pendingWorkbenchSelectionId = created.Id;
 
         var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(currentViewStateJson ?? surface.ViewStateJson));
@@ -1431,12 +1440,31 @@ else
             : null;
     }
 
+    private void ArmPendingClientSelection(string nodeId, IEnumerable<string> priorSelectedNodeIds)
+    {
+        pendingClientSelectionId = nodeId;
+        pendingClientSelectionPriorIds = new HashSet<string>(priorSelectedNodeIds, StringComparer.Ordinal);
+    }
+
+    // A client dispatch that still carries the selection from before a pending adoption (or no selection) is stale and
+    // must not deselect the node the page just created or reloaded. Any other single selection is a deliberate later
+    // choice; discarding it would let the canvas re-synchronize back to the pending selection and lose that choice.
+    private bool IsStaleClientSelectionForPendingAdoption(IReadOnlyCollection<string> selectedNodeIds)
+    {
+        if (string.IsNullOrWhiteSpace(pendingClientSelectionId) ||
+            surface?.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) != true ||
+            selectedNodeIds.Count > 1 ||
+            selectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        return selectedNodeIds.Count == 0 || pendingClientSelectionPriorIds.Contains(selectedNodeIds.First());
+    }
+
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
-        if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
-            surface?.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) == true &&
-            args.SelectedNodeIds.Count <= 1 &&
-            !args.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
+        if (IsStaleClientSelectionForPendingAdoption(args.SelectedNodeIds))
         {
             return;
         }
@@ -1535,24 +1563,16 @@ else
         var ownerUiState = ResolveEditableUiState();
         uiState.WindowStates = ownerUiState.WindowStates;
         uiState.GroupFrames = ownerUiState.GroupFrames;
-        if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
-            surface.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) &&
-            uiState.SelectedNodeIds.Count <= 1 &&
-            !uiState.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
+        if (IsStaleClientSelectionForPendingAdoption(uiState.SelectedNodeIds))
         {
             return;
         }
 
         pendingWorkbenchSelectionId = null;
-
-        if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
-            uiState.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
-        {
-            // The client acknowledged the selection that was pending after a create or reload. Release the guard here as
-            // well, because a state that already equals the persisted state returns below without reaching the later reset,
-            // and an armed guard would reject every later single-node selection.
-            pendingClientSelectionId = null;
-        }
+        // The client either acknowledged the pending selection or made a deliberate different choice. Release the guard
+        // here as well, because a state that already equals the persisted state returns below without reaching the later
+        // reset, and an armed guard would reject every later single-node selection.
+        pendingClientSelectionId = null;
 
         var normalizedStateJson = uiState.ToJson();
         var persistedStateJson = NormalizePersistedCanvasStateJson(currentViewStateJson ?? surface.ViewStateJson);
