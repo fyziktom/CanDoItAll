@@ -2334,10 +2334,44 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     }
                     accessState.EnsureProjectWriteAllowed(projectId);
                     var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
-                    return await agentService.CreateAssetAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
+                    try
+                    {
+                        return await agentService.CreateAssetAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
+                    }
+                    catch (InvalidDataException exception)
+                    {
+                        throw AssetContentRejected(exception, request.ObjectType, request.ObjectSubtype, request.Media);
+                    }
                 },
                 cancellationToken);
         }
+
+        // The Workbench asset storage service validates uploaded content (base64, size, typed text formats, Mermaid) before
+        // any file placement or database write and reports a rejection as InvalidDataException. Surface it as a typed,
+        // correctable, no-effect failure so the model can fix its request instead of the runtime treating the
+        // non-idempotent tool as uncertain and failing the run closed on the next provider replay.
+        private static ProjectStructureAgentException AssetContentRejected(
+            InvalidDataException exception,
+            ProjectObjectType objectType,
+            string? objectSubtype,
+            ProjectObjectMediaPayload? media)
+            => ProjectStructureAgentException.CreateAgentVisible(
+                400,
+                "ProjectAssetContentInvalid",
+                "The asset content was rejected before anything was stored: " + exception.Message +
+                " File subtypes text, json, md, mermaid and log accept only their own text format, file extension and content type. " +
+                "Create SVG, PNG and other images as objectType 'ImageAsset' with objectSubtype 'svg' or the image kind and the image content type; " +
+                "create spreadsheets, documents and other binary files as objectType 'File' with their file subtype and content type.",
+                canRetryWithCorrectedInput: true,
+                diagnosticDetails: new
+                {
+                    ObjectType = objectType.ToString(),
+                    ObjectSubtype = objectSubtype,
+                    FileName = media?.FileName,
+                    ContentType = media?.ContentType,
+                    FailureType = (exception.InnerException ?? exception).GetType().Name
+                },
+                effectState: AgentToolEffectState.None);
 
         private Task<ProjectStructureAssetDescriptor> ProjectStructureAssetCreateRevisionAsync(
             AgentDefinition agent,
@@ -2372,12 +2406,19 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     accessState.EnsureProjectWriteAllowed(projectId);
                     var projectAdmission = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
-                    return await agentService.CreateAssetRevisionAsync(
-                        projectId,
-                        nodeId,
-                        request.ToServiceRequest(),
-                        BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
-                        cancellationToken);
+                    try
+                    {
+                        return await agentService.CreateAssetRevisionAsync(
+                            projectId,
+                            nodeId,
+                            request.ToServiceRequest(),
+                            BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
+                            cancellationToken);
+                    }
+                    catch (InvalidDataException exception)
+                    {
+                        throw AssetContentRejected(exception, ProjectObjectType.File, request.ObjectSubtype, request.Media);
+                    }
                 },
                 cancellationToken);
         }

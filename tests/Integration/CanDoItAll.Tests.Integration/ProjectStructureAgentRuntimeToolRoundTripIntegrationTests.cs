@@ -443,6 +443,70 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
     }
 
     [Fact]
+    public async Task Asset_create_reports_rejected_typed_text_content_as_correctable_no_effect_failure()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var before = await workbench.GetStructureAsync(projectId);
+        const string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><rect width=\"10\" height=\"10\"/></svg>";
+
+        // An SVG offered under the plain-text file subtype is rejected by the owner's typed-text validation before any
+        // placement or database write; the tool must report that as a typed no-effect failure instead of an unexpected
+        // exception that leaves a non-idempotent tool uncertain and fails the run closed on the next provider replay.
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
+            () => InvokeAsync<ProjectStructureNodeSummary>(
+                FindTool(tools, "project_structure_asset_create"),
+                new AIFunctionArguments
+                {
+                    ["projectId"] = projectId,
+                    ["request"] = new ProjectStructureAgentAssetCreateInput(
+                        ProjectObjectType.File,
+                        "Layout option A",
+                        "SVG garden layout",
+                        "Rejected typed-text probe.",
+                        new ProjectObjectMediaPayload(
+                            "layout-option-a.svg",
+                            "image/svg+xml",
+                            Convert.ToBase64String(Encoding.UTF8.GetBytes(svg))),
+                        ParentNodeKey: $"project:{projectId:D}",
+                        ObjectSubtype: "text")
+                }));
+
+        Assert.Equal("ProjectAssetContentInvalid", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.None, exception.EffectState);
+        Assert.Contains("ImageAsset", exception.SafeMessage, StringComparison.Ordinal);
+        var after = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(before.Nodes.Count, after.Nodes.Count);
+
+        var corrected = await InvokeAsync<ProjectStructureNodeSummary>(
+            FindTool(tools, "project_structure_asset_create"),
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureAgentAssetCreateInput(
+                    ProjectObjectType.ImageAsset,
+                    "Layout option A",
+                    "SVG garden layout",
+                    "Corrected request after the typed rejection.",
+                    new ProjectObjectMediaPayload(
+                        "layout-option-a.svg",
+                        "image/svg+xml",
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes(svg))),
+                    ParentNodeKey: $"project:{projectId:D}",
+                    ObjectSubtype: "svg")
+            });
+
+        Assert.Equal(ProjectObjectType.ImageAsset, corrected.ObjectType);
+        Assert.Equal($"project:{projectId:D}", corrected.ParentId);
+    }
+
+    [Fact]
     public async Task Asset_create_round_trips_mermaid_source_as_managed_content()
     {
         await using var application = await TestApplication.CreateAsync();
