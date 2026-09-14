@@ -50,6 +50,51 @@ public sealed class ToolOutcomeCompletionIntegrationTests
     }
 
     [Fact]
+    public void Later_committed_attempt_for_the_same_operation_resolves_a_typed_no_effect_rejection()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a",
+                    failureMessage: "The asset content was rejected before anything was stored."),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Committed,
+                    correlationKey: "operation-a")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Completed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
+        Assert.Equal(RunOutcome.Succeeded, assessment.Outcome);
+        Assert.Empty(assessment.FailureSummary);
+    }
+
+    [Fact]
+    public void Typed_no_effect_rejection_without_a_later_committed_attempt_finishes_failed()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [CreateMutationTrace(
+                sequence: 1,
+                AgentToolInvocationOutcome.Failed,
+                AgentToolEffectState.None,
+                correlationKey: "operation-a",
+                failureMessage: "The asset content was rejected before anything was stored.")],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+        Assert.Equal(RunOutcome.Failed, assessment.Outcome);
+        Assert.Contains("rejected before anything was stored", assessment.FailureSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Later_success_for_an_unrelated_operation_does_not_resolve_the_failure()
     {
         var assessment = AgentToolCompletionAssessment.Create(

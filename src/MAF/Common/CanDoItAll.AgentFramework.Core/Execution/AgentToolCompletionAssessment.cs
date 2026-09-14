@@ -61,7 +61,10 @@ internal sealed record AgentToolCompletionAssessment(
         AgentToolInvocationTrace failedAttempt,
         IReadOnlyList<AgentToolInvocationTrace> traces)
     {
-        if (failedAttempt.EffectState != AgentToolEffectState.NotCommitted ||
+        // A pre-invoke failure (NotCommitted) and a typed rejection with proven no effect (None, for example an owner
+        // refusing invalid asset content before any write) are both resolved when a later attempt of the same tool for
+        // the same operation identity committed. Unknown effect states are never resolved this way.
+        if (failedAttempt.EffectState is not (AgentToolEffectState.NotCommitted or AgentToolEffectState.None) ||
             string.IsNullOrWhiteSpace(failedAttempt.OperationCorrelationKey))
         {
             return false;
