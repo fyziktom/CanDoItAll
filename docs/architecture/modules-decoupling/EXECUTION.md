@@ -12,7 +12,7 @@ Proof: build-fix9 lanes 79/79, 16/16, 10/10, 13/13, 31/31 and the admission and 
 
 Not executed on this head: the browser partition (last executed on `6f52fd58`), Linux824, synthetic3, real8, Scenario04one and the isolated sibling DotNetWatch lane. Operator manual QA NOT_RUN; merge NOT_PERFORMED; no push.
 
-**Next executable action: run the broad Stable gate on the records head (capture `fix11`, `Invoke-StableWipFix11.ps1`) to its end and record it; then decide with the operator whether to re-run the browser partition on the final head, whether the Gantt's Mermaid export should carry dependency clauses, and whether to retry or cancel the blocked Garden process run `d4a6edde…`.**
+**Next executable action: complete the signed test-only commit of the CI workflow guard alignment (its GPG passphrase prompt was pending in the desktop pinentry at the end of the session) and the records commit; then decide with the operator whether to re-run the browser partition on the final head, whether the Gantt's Mermaid export should carry dependency clauses, whether the disposal race of `ProjectStructureAgentChatContextProvider.OnAfterRender` deserves a guard, and whether to retry or cancel the blocked Garden process run `d4a6edde…`.**
 
 ## Earlier checkpoint, 2026-09-15 00:10 UTC
 
