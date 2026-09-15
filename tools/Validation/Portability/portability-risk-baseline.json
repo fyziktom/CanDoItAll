@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-13T05:37:22.797636+00:00",
+  "generated_utc": "2026-09-14T23:58:39.257027+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14667,
+  "allowance_count": 14672,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -4085,6 +4085,18 @@
       "path": "Templates/Processes/processes/oss-intake-supply-chain-governance/validations/validate-license-obligation-coverage.md",
       "category": "process-domain",
       "source_fingerprint": "efd44f7d5652eaf0a58cf32d5f20a5287b65757f64b7bef3b8fe2ccb41f5f6f4",
+      "count": 1
+    },
+    {
+      "path": "Templates/Processes/processes/project-structure-note-writeback/steps/read-selected-node.md",
+      "category": "manager-discovery",
+      "source_fingerprint": "eea9b1f344b1668ec6a3e95ad3bf83b8b7d54455c4a474f73baa53eaea8b1ab5",
+      "count": 1
+    },
+    {
+      "path": "Templates/Processes/processes/project-structure-note-writeback/steps/write-note-node.md",
+      "category": "manager-discovery",
+      "source_fingerprint": "6fc37df2b92a56ea226cfe62fb261f1eec94a91dce4129cbe0715df873958a2c",
       "count": 1
     },
     {
@@ -28499,6 +28511,18 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs",
       "category": "case-policy",
       "source_fingerprint": "6114b4baf882b3e4b288c5245d2ab400d27b71f9cce485eaecd4767048de76b6",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7955a6be742b450af7ae5f32dccc4f6f235386408d5f95befb0d20e4ddee07f5",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafToolInvocationCorrelationKey.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9ea68d6a9e235db3024943d5b17403c7c058c91fb7e03571979620cdf6cbb9fa",
       "count": 1
     },
     {
@@ -58115,6 +58139,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAccessState.cs",
       "category": "case-policy",
       "source_fingerprint": "6b1926f48496528663836b4293e600d4607575224717f2a5e999cad0f0d83f2f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAccessState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d151feaebac1a667f4670634f71b0c0259eda4096b8a6227ccf7f0dd5ebbfae8",
       "count": 1
     },
     {

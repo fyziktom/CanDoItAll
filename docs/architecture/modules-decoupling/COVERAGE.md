@@ -1,6 +1,14 @@
 # Module Decoupling Coverage
 
-## Current checkpoint, 2026-09-14 14:45 UTC
+## Current checkpoint, 2026-09-15 00:10 UTC
+
+Agent tool failures: a typed rejection raised before any effect (`InvalidToolInput`, `ToolConflict`, `ProjectAssetContentInvalid`, the pre-operation workspace access guards) is covered as a proven no-effect failure that the agent corrects in the same run, and the completion contract's resolution of such a rejection by a later committed attempt of the same operation is covered for project-structure identities and for workspace target paths (spreadsheet workbook, file and copy paths); in-progress access failures stay uncertain. Process preflight: the inventory-only provider context and the Workbench inventory derived from a step's declared operations are covered by unit cases; the live cross-module path (Processes preflight → Workbench inventory → dispatch with the saved lineage → node written back under the process-run node) is covered by the Garden run `3427fb50…`. Template pack: the new two-step template loads with the whole pack in the catalog, compatibility and capability-scope cases.
+
+Canvas selection after creation and the agents startup fixtures keep the fix2 coverage; the browser partition was not re-executed on the later heads. Garden scenarios on the candidates: G (structure analysis with SVG image assets, including the corrected `File`/`text` rejection on the fix3 rerun), H (Excel asset with real rows), I (workflow added to and started from a Note node with parent-subtree input), J (process linked to and started from the selected node with writeback; one blocked run retained for the operator's retry decision). The restart-with-retained-data check is covered by each guarded upgrade start (fix2, fix3, fix6, fix7).
+
+Still uncovered: the browser partition on the final head, Linux canonical execution, the shared-provider pairs, the generated-app scenario, the sibling DotNetWatch lane, an operator retry of a blocked process step, and the operator's own manual pass.
+
+## Earlier checkpoint, 2026-09-14 14:45 UTC
 
 Storage/G same-run recovery: the Core regression now passes on the WIP tree with real catalog/agent owners and a scripted provider (31/31 owning Integration cases, 22/22 Unit cases). Invalid pageSize 0/101/200, valid boundaries 1/100, access denial precedence and driver/cancellation uncertainty are covered; denied recovery changes only Revision and ActiveDispatchLeaseId; Completed replay makes no provider or driver call; catalog rows change only in their root-validation timestamps.
 
