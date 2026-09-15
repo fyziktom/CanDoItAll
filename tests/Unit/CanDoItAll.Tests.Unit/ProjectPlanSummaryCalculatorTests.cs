@@ -67,6 +67,53 @@ public sealed class ProjectPlanSummaryCalculatorTests
     }
 
     [Fact]
+    public void Build_uses_the_recorded_execution_state_over_the_status_backed_progress_hint()
+    {
+        // The canvas renders a "Draft" node with a 28 % status-backed hint; the recorded execution state decides the plan.
+        var scheduledStartUtc = AsOfUtc.AddDays(5);
+        var tasks = new[]
+        {
+            CreateTask(
+                "not-started",
+                status: "Draft",
+                progressPercent: 28,
+                startUtc: scheduledStartUtc,
+                endUtc: scheduledStartUtc.AddHours(8),
+                metadataJson: CreateEstimateMetadata(8m, 640m, "USD", ProjectTaskExecutionState.NotStarted)),
+            CreateTask(
+                "started",
+                status: "Draft",
+                progressPercent: 50,
+                startUtc: AsOfUtc.AddDays(-1),
+                endUtc: AsOfUtc.AddDays(1),
+                metadataJson: CreateEstimateMetadata(4m, 100m, "USD", ProjectTaskExecutionState.Started)),
+            CreateTask(
+                "finished",
+                status: "Draft",
+                progressPercent: 28,
+                metadataJson: CreateEstimateMetadata(2m, 50m, "USD", ProjectTaskExecutionState.Completed)),
+            CreateTask(
+                "legacy-hint",
+                status: "Draft",
+                progressPercent: 28,
+                metadataJson: CreateEstimateMetadata(2m, 100m, "USD"))
+        };
+
+        var summary = Build(tasks);
+
+        var usd = Assert.Single(summary.FutureExpectedCostTotals);
+        Assert.Equal("USD", usd.CurrencyCode);
+        Assert.Equal(640m + 50m + 72m, usd.Amount);
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Planned));
+        Assert.Equal(2, StateCount(summary, ProjectPlanTaskState.Running));
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Completed));
+        Assert.Equal(44.5m, summary.TaskWeightedProgressPercent);
+        Assert.Equal(0, summary.Completeness.MissingProgressTaskCount);
+        Assert.Equal(new[] { "started", "legacy-hint" }, summary.RunningTasks.Select(item => item.NodeId).ToArray());
+        Assert.Equal(50, summary.RunningTasks[0].ProgressPercent);
+    }
+
+    [Fact]
     public void Build_projects_only_nonterminal_expected_cost_and_keeps_resource_currency_and_date()
     {
         var scheduledStartUtc = AsOfUtc.AddDays(2);
@@ -253,6 +300,49 @@ public sealed class ProjectPlanSummaryCalculatorTests
         Assert.Contains(
             summary.Warnings,
             warning => warning.Contains("outside the supported 0-100", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildManagerSummary_forecast_keeps_the_full_cost_of_a_not_started_task_despite_the_status_hint()
+    {
+        // The canvas hint marks a "Draft" task as 28 % done; the recorded NotStarted execution state keeps its full cost.
+        var scheduledStartUtc = AsOfUtc.AddDays(5);
+        var snapshot = new ProjectPlanManagerForecastSnapshot(
+            ProjectId,
+            "Planned release",
+            [
+                CreateTask(
+                    "person",
+                    status: "Draft",
+                    progressPercent: 28,
+                    startUtc: scheduledStartUtc,
+                    endUtc: scheduledStartUtc.AddHours(8),
+                    metadataJson: CreateEstimateMetadata(8m, 640m, "USD", ProjectTaskExecutionState.NotStarted)),
+                CreateTask(
+                    "finished",
+                    status: "Draft",
+                    progressPercent: 28,
+                    metadataJson: CreateEstimateMetadata(2m, 50m, "USD", ProjectTaskExecutionState.Completed))
+            ],
+            [
+                new ProjectPlanResourceBindingFact("person", ProjectPlanResourceGroup.Person, "person:1"),
+                new ProjectPlanResourceBindingFact("finished", ProjectPlanResourceGroup.Process, "process:1")
+            ]);
+
+        var summary = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            snapshot,
+            new ProjectPlanManagerSummaryQuery(
+                ProjectPlanManagerSummaryMode.ScheduleAndRemainingCosts,
+                AsOfUtc));
+
+        var person = Assert.Single(summary.FutureExpectedCostTotals);
+        Assert.Equal(ProjectPlanResourceGroup.Person, person.Group);
+        Assert.Equal("USD", person.CurrencyCode);
+        Assert.Equal(640m, person.Amount);
+        var trend = Assert.Single(summary.FutureExpectedCostTrend);
+        Assert.Equal(DateOnly.FromDateTime(scheduledStartUtc.AddHours(8).UtcDateTime), trend.Date);
+        Assert.Equal(640m, trend.Amount);
+        Assert.Equal(0, summary.UnscheduledFutureExpectedCostTaskCount);
     }
 
     [Fact]
@@ -694,7 +784,8 @@ public sealed class ProjectPlanSummaryCalculatorTests
     private static string CreateEstimateMetadata(
         decimal? expectedEffortHours = null,
         decimal? expectedCostAmount = null,
-        string expectedCostCurrencyCode = "")
+        string expectedCostCurrencyCode = "",
+        ProjectTaskExecutionState executionState = ProjectTaskExecutionState.Unknown)
     {
         return ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
         {
@@ -704,7 +795,12 @@ public sealed class ProjectPlanSummaryCalculatorTests
                 ExpectedEffortHours = expectedEffortHours,
                 ExpectedEffortUnit = ProjectWorkItemEffortUnit.Hours,
                 ExpectedCostAmount = expectedCostAmount,
-                ExpectedCostCurrencyCode = expectedCostCurrencyCode
+                ExpectedCostCurrencyCode = expectedCostCurrencyCode,
+                ExecutionState = executionState,
+                ActualStartedAtUtc = executionState is ProjectTaskExecutionState.Started or ProjectTaskExecutionState.Completed
+                    ? AsOfUtc.AddDays(-2)
+                    : null,
+                ActualEndedAtUtc = executionState == ProjectTaskExecutionState.Completed ? AsOfUtc.AddDays(-1) : null
             }
         });
     }

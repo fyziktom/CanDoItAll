@@ -173,11 +173,12 @@ public sealed class ProjectPlanSummaryCalculator
         var unscheduledFutureExpectedCostTaskCount = 0;
         var cancellationCountdown = CancellationCheckInterval;
 
-        foreach (var task in tasksById.Values)
+        foreach (var original in tasksById.Values)
         {
             CheckCancellation(ref cancellationCountdown, cancellationToken);
+            var (task, execution) = ResolveExecutionBackedTask(original);
             var normalizedStatus = NormalizeStatus(task.Status);
-            if (ResolveTerminalState(task, normalizedStatus).HasValue)
+            if (ResolveTerminalState(task, normalizedStatus, execution).HasValue)
             {
                 continue;
             }
@@ -457,16 +458,19 @@ public sealed class ProjectPlanSummaryCalculator
         CancellationToken cancellationToken)
     {
         var statuses = new Dictionary<string, ProjectPlanNormalizedStatus>(tasksById.Count, StringComparer.Ordinal);
+        var executionBackedTasks = new Dictionary<string, ProjectPlanTaskFact>(tasksById.Count, StringComparer.Ordinal);
         var cancellationCountdown = CancellationCheckInterval;
         foreach (var task in tasksById.Values)
         {
             CheckCancellation(ref cancellationCountdown, cancellationToken);
+            var (executionBackedTask, execution) = ResolveExecutionBackedTask(task);
+            executionBackedTasks.Add(task.NodeId, executionBackedTask);
             var normalizedStatus = NormalizeStatus(task.Status);
             statuses.Add(
                 task.NodeId,
                 new ProjectPlanNormalizedStatus(
                     normalizedStatus,
-                    ResolveTerminalState(task, normalizedStatus)));
+                    ResolveTerminalState(executionBackedTask, normalizedStatus, execution)));
         }
 
         var completedTaskIds = new HashSet<string>(StringComparer.Ordinal);
@@ -480,9 +484,10 @@ public sealed class ProjectPlanSummaryCalculator
         }
 
         var evaluations = new List<ProjectPlanTaskEvaluation>(tasksById.Count);
-        foreach (var task in tasksById.Values)
+        foreach (var original in tasksById.Values)
         {
             CheckCancellation(ref cancellationCountdown, cancellationToken);
+            var task = executionBackedTasks[original.NodeId];
             var estimate = ParseEstimate(task.MetadataJson, hoursPerManDay);
             var progress = ParseProgress(task.ProgressPercent);
             var blockingTaskCount = 0;
@@ -960,8 +965,19 @@ public sealed class ProjectPlanSummaryCalculator
 
     private static ProjectPlanTaskState? ResolveTerminalState(
         ProjectPlanTaskFact task,
-        string normalizedStatus)
+        string normalizedStatus,
+        ProjectTaskExecutionState execution)
     {
+        if (execution == ProjectTaskExecutionState.Cancelled)
+        {
+            return ProjectPlanTaskState.Cancelled;
+        }
+
+        if (execution == ProjectTaskExecutionState.Completed)
+        {
+            return ProjectPlanTaskState.Completed;
+        }
+
         if (normalizedStatus is "cancelled" or "canceled" or "archived" or "rejected" or "skipped")
         {
             return ProjectPlanTaskState.Cancelled;
@@ -1035,6 +1051,36 @@ public sealed class ProjectPlanSummaryCalculator
             exception is InvalidOperationException or ArgumentOutOfRangeException or OverflowException)
         {
             return new ProjectPlanEstimateParseResult(ProjectTaskEstimate.Empty(), true);
+        }
+    }
+
+    // Every canvas node carries a status-backed progress hint (a "Draft" task renders as 28 %). For a canonical task the
+    // recorded execution state is the authoritative fact: a task that has not started has no progress and keeps its full
+    // expected cost in the remaining plan, and a completed or cancelled task is terminal whatever the hint says. Tasks
+    // without a recorded execution state keep the hint, as before.
+    private static (ProjectPlanTaskFact Task, ProjectTaskExecutionState Execution) ResolveExecutionBackedTask(
+        ProjectPlanTaskFact task)
+    {
+        var execution = ParseExecutionState(task.MetadataJson);
+        return execution switch
+        {
+            ProjectTaskExecutionState.NotStarted => (task with { ProgressPercent = 0 }, execution),
+            ProjectTaskExecutionState.Completed => (task with { ProgressPercent = 100 }, execution),
+            _ => (task, execution)
+        };
+    }
+
+    private static ProjectTaskExecutionState ParseExecutionState(string metadataJson)
+    {
+        try
+        {
+            return ProjectObjectMetadataSerializer.Parse(metadataJson).WorkItem?.ExecutionState
+                ?? ProjectTaskExecutionState.Unknown;
+        }
+        catch (Exception exception) when (
+            exception is InvalidOperationException or ArgumentOutOfRangeException or OverflowException)
+        {
+            return ProjectTaskExecutionState.Unknown;
         }
     }
 
