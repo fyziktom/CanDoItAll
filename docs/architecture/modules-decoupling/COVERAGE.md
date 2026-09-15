@@ -1,6 +1,14 @@
 # Module Decoupling Coverage
 
-## Current checkpoint, 2026-09-15 00:10 UTC
+## Current checkpoint, 2026-09-15 04:40 UTC
+
+Approval replay: a saved pre-dispatch denial (policy, argument binding or owner source authority) is restored on replay without the owner's result-disclosure check, covered by a checkpoint case with a disclosure authority that refuses missing evidence and by the two corrected workspace disclosure cases (source revocation after approval; an interactive journal without background artifact authority). Plan analytics: a task's recorded execution state overrides the canvas status-backed progress hint for progress, state classification and remaining cost, covered on the full summary and the manager-forecast paths (not-started, started, completed and legacy-hint tasks). CRM planning through agents: the live path Delivery Manager → CRM planning reads (memory scope `Crm`, attached capabilities) → task creation, resource attachment, reparenting and dependency links with approvals → Gantt and Manager Summary is covered by the run `88da172b…` on the fix9 candidate and the re-read on the fix10 candidate; person pricing flows CrmHr → Projects bridge contract → Workbench without a module dependency in the other direction.
+
+Earlier coverage (typed no-effect rejections, completion contract, process preflight inventory, template pack, canvas selection, Garden scenarios G–J, restart with retained data on every guarded upgrade start incl. fix9 and fix10) keeps its status.
+
+Still uncovered: the browser partition on the final head, Linux canonical execution, the shared-provider pairs, the generated-app scenario, the sibling DotNetWatch lane, an operator retry of a blocked process step, dependency clauses in the Gantt's Mermaid export (dates only today), and the operator's own manual pass.
+
+## Earlier checkpoint, 2026-09-15 00:10 UTC
 
 Agent tool failures: a typed rejection raised before any effect (`InvalidToolInput`, `ToolConflict`, `ProjectAssetContentInvalid`, the pre-operation workspace access guards) is covered as a proven no-effect failure that the agent corrects in the same run, and the completion contract's resolution of such a rejection by a later committed attempt of the same operation is covered for project-structure identities and for workspace target paths (spreadsheet workbook, file and copy paths); in-progress access failures stay uncertain. Process preflight: the inventory-only provider context and the Workbench inventory derived from a step's declared operations are covered by unit cases; the live cross-module path (Processes preflight → Workbench inventory → dispatch with the saved lineage → node written back under the process-run node) is covered by the Garden run `3427fb50…`. Template pack: the new two-step template loads with the whole pack in the catalog, compatibility and capability-scope cases.
 
