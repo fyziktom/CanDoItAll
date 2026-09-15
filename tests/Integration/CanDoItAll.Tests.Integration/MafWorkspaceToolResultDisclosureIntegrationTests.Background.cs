@@ -25,9 +25,11 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
         Assert.Equal(original.ProcessRunId, retained.ProcessRunId);
         Assert.Equal(original.ProcessStepId, retained.ProcessStepId);
         var restored = new ToolClient(fixture.ToolName);
-        var denied = await Assert.ThrowsAnyAsync<Exception>(() => fixture.ExecuteAsync(restored));
-        Assert.Contains("workspace.result-authority-unavailable", Codes(denied));
-        Assert.Equal(0, restored.Requests);
+        // The persisted denial is replayed as the same denial without consulting the owner's result disclosure: it
+        // never reached the owner, so there is no owner data to protect and no disclosure evidence to require.
+        await fixture.ExecuteAsync(restored);
+        Assert.Equal(1, restored.Requests);
+        Assert.Contains("workspace.result-disclosure-denied", Assert.Single(restored.Inputs), StringComparison.Ordinal);
         Assert.Equal(saved, await fixture.ProposalAsync());
     }
 

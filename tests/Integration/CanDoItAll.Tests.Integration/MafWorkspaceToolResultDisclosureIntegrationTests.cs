@@ -104,8 +104,11 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
         Assert.Equal((0, 0, 0), fixture.Operations.Counts);
         await fixture.SaveActorAsync();
         var restored = new ToolClient(fixture.ToolName);
-        var denied = await Assert.ThrowsAnyAsync<Exception>(() => fixture.ExecuteAsync(restored));
-        Assert.Contains("workspace.result-authority-unavailable", Codes(denied));
+        // The persisted denial never reached the owner and holds no owner data, so restoring the actor's authority
+        // replays the completed run without consulting the owner's result disclosure, repeating the operation or
+        // asking for disclosure evidence that a pre-dispatch denial cannot have.
+        var replayed = await fixture.ExecuteAsync(restored);
+        Assert.Empty(replayed.PendingApprovals);
         Assert.Equal(0, restored.Requests);
         Assert.Equal((0, 0, 0), fixture.Operations.Counts);
         Assert.Equal(saved, await fixture.ProposalAsync());

@@ -472,13 +472,19 @@ internal sealed class MafToolRunContext {
         if (allowFreshResult && completedInCurrentInvocation.Contains(proposal.IntentId)) {
             return ValueTask.FromResult<IAsyncDisposable?>(null);
         }
+        var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(proposal.Result
+            ?? throw Denied("The completed invocation has no saved result."));
+        if (result.PreDispatchFailure is not null) {
+            // A pre-dispatch denial (policy, argument binding or source authority) never reached its owner: the saved
+            // result is the denial itself and carries no owner data or disclosure evidence, and RestoreResult re-records
+            // the same failure evidence. There is nothing for the owner to re-authorize on replay.
+            return ValueTask.FromResult<IAsyncDisposable?>(null);
+        }
         var authorize = metadata.TryGetValue(proposal.Payload.ToolName, out var descriptor)
             ? descriptor.AuthorizeResultDisclosureAsync : null;
         authorize ??= contextToolRegistrations.SingleOrDefault(registration =>
             registration.ToolNames.Contains(proposal.Payload.ToolName, StringComparer.Ordinal))?.AuthorizeResultDisclosureAsync;
         if (authorize is not null) {
-            var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(proposal.Result
-                ?? throw Denied("The completed invocation has no saved result."));
             return authorize(new(proposal.IntentId, proposal.Payload, proposal.EffectState, result.Value,
                 proposal.DisclosureEvidence) { IsTypedFailure = result.Kind == ResultKind.TypedFailureJson }, cancellationToken);
         }

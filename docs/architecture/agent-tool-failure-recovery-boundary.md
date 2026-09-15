@@ -34,10 +34,14 @@ after journal restart. Tool-supplied JSON cannot create this trusted evidence.
 
 The existing file-journal owner checkpoints the result and its failure evidence in one
 mutation. Restoring that checkpoint also restores the trusted invocation capture, so the
-journal and durable tool trace agree. Ordinary successful results and legacy checkpoints
-keep their existing representation; absent evidence is omitted. Newly distinguished
-private result kinds make older readers explicitly reject these new failure checkpoints
-instead of silently treating their visible text or JSON as successful completion.
+journal and durable tool trace agree. Because a pre-dispatch denial never reached its
+owner, replay restores it without consulting the owner's result-disclosure check: it
+holds no owner data and no disclosure evidence, and a later approval or reauthorization
+in the same session must not fail closed on it. Ordinary successful results and legacy
+checkpoints keep their existing representation; absent evidence is omitted. Newly
+distinguished private result kinds make older readers explicitly reject these new failure
+checkpoints instead of silently treating their visible text or JSON as successful
+completion.
 Resuming such a checkpoint requires a reader that understands its kind. No SQL migration
 or claim of an external effect receipt is implied.
 

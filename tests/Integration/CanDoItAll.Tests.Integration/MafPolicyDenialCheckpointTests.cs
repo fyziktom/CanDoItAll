@@ -105,6 +105,93 @@ public sealed class MafPolicyDenialCheckpointTests {
         Assert.Equal(0, effects);
     }
 
+    [Fact]
+    public async Task Denial_checkpoint_replay_does_not_ask_the_owner_to_disclose_a_pre_dispatch_denial() {
+        // The workspace result disclosure refuses a saved result without disclosure evidence. A policy denial recorded
+        // before dispatch never produced owner data or evidence, so an approval replay must restore the denial without
+        // consulting the owner; before the repair the replay failed closed with 'workspace.result-authority-unavailable'.
+        const string denialText = "PolicyDenied: Current execution policy denied this saved proposal.";
+        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
+        var toolName = ToolContractCatalog.WorkspaceSearch;
+        var arguments = new Dictionary<string, object?> { ["query"] = "d1bbb641", ["maxResults"] = 20 };
+        var json = JsonSerializer.Serialize(arguments, MafToolProtocolCodec.SerializationOptions);
+        var payload = new AgentToolPreparedPayload(toolName, 1, AgentToolProtocolEnvelope.ComputeDigest(json), json,
+            AgentToolProposalEffect.Read, AgentToolProposalRecovery.RevalidateAndRead);
+        var call = new FunctionCallContent("denied-search", toolName, arguments);
+        var request = MafToolProtocolCodec.Digest(new { Stage = "pre-dispatch-denial-replay" });
+        var dispatches = 0;
+        var disclosureChecks = 0;
+        for (var attempt = 0; attempt < 2; attempt++) {
+            var journal = fixture.NewJournal(fixture.NewStore());
+            await using var lease = await journal.AcquireRunAsync(fixture.Session, default);
+            using var bound = lease.Bind();
+            using var client = new NoRequestClient();
+            var function = AIFunctionFactory.Create((string query, int maxResults) => $"{query}:{maxResults}", toolName);
+            var capabilities = new RuntimeCapabilityState();
+            capabilities.Tools.Add(function);
+            capabilities.RuntimeToolMetadata.Add(new("fixture-policy", toolName, AgentRuntimeToolOperationKind.Read, false) {
+                PrepareAdmission = _ => payload,
+                AuthorizeAdmissionAsync = async (_, token) => {
+                    await journal.RequireSessionAsync(fixture.Session, token);
+                    return new EmptyScope();
+                },
+                AuthorizeResultDisclosureAsync = (disclosure, _) => {
+                    disclosureChecks++;
+                    if (disclosure.Evidence is null) {
+                        throw new AgentToolAdmissionException("workspace.result-authority-unavailable",
+                            "The saved workspace result lacks supported original source and path evidence.");
+                    }
+                    return ValueTask.FromResult<IAsyncDisposable?>(new EmptyScope());
+                }
+            });
+            var options = MafChatClientAgentOptionsFactory.Create(new ChatOptions {
+                ModelId = fixture.Provider.DefaultModel,
+                Tools = [function]
+            });
+            options.ChatHistoryProvider = new InMemoryChatHistoryProvider(new InMemoryChatHistoryProviderOptions {
+                JsonSerializerOptions = MafToolProtocolCodec.SerializationOptions
+            });
+            options.RequirePerServiceCallChatHistoryPersistence = true;
+            var runtime = new ChatClientAgent(client, options);
+            var executionOptions = new AgentRuntimeExecutionOptions(null, AgentFinalizerMode.Disabled, true, 0) {
+                AdmittedToolSession = fixture.Session,
+                RequireDurableToolProtocol = true,
+                Governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(fixture.Detail.Run.MetadataJson),
+                AuthorityPolicyFingerprint = "fixture-authority",
+                ToolsetFingerprint = "fixture-toolset",
+                ModelContextDigest = "fixture-context",
+                CapabilityPolicyFingerprint = "fixture-capabilities",
+                HistoryMode = AgentChatHistoryMode.FrameworkManaged,
+                ContextIntent = AgentRuntimeContextIntent.Empty with { Purpose = AgentRuntimeContextPurpose.InteractiveChat }
+            };
+            var opened = await MafToolRunContext.OpenAsync(journal, lease, runtime, await runtime.CreateSessionAsync(),
+                fixture.Agent, fixture.Provider, fixture.Provider.DefaultModel, fixture.Detail.ChatSession!, executionOptions,
+                capabilities, [new(ChatRole.User, "Use the admitted tool.")], new MafRuntimeSessionPersistenceDriver(), false,
+                (_, _, _) => Task.CompletedTask, default);
+            using var active = opened.Context.Bind();
+            if (attempt == 0) {
+                await opened.Context.AdmitResponseAsync(request,
+                    MafToolProtocolCodec.Encode(new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]))), [call], default);
+            } else {
+                Assert.NotNull(await opened.Context.ReplayResponseAsync(request, default));
+            }
+            using var capture = AgentToolInvocationEffectScope.Begin();
+            var result = await opened.Context.InvokeAsync(call, _ => {
+                dispatches++;
+                AgentToolInvocationEffectScope.RecordPreDispatchFailure(new("ToolPolicyDenied", denialText));
+                return ValueTask.FromResult<object?>(denialText);
+            }, capture, default);
+            Assert.Equal(denialText, Assert.IsType<string>(result));
+            Assert.Equal("ToolPolicyDenied", capture.PreDispatchFailure?.FailureCode);
+            var proposal = Assert.Single(Assert.Single((await journal.ReadAsync(lease, default)).Batches).Proposals);
+            Assert.Equal(AgentToolProposalState.Completed, proposal.State);
+            Assert.Equal(AgentToolEffectState.NotCommitted, proposal.EffectState);
+            Assert.Null(proposal.DisclosureEvidence);
+        }
+        Assert.Equal(1, dispatches);
+        Assert.Equal(0, disclosureChecks);
+    }
+
     private sealed class EmptyScope : IAsyncDisposable {
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
