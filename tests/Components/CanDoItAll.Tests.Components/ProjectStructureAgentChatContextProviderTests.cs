@@ -9,6 +9,7 @@ using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
@@ -1054,6 +1055,177 @@ public sealed partial class ProjectStructureAgentChatContextProviderTests
         context.Services.AddSingleton(TimeProvider.System);
     }
 
+    [Fact]
+    public void Provider_stands_down_when_a_newer_provider_supersedes_its_scope()
+    {
+        // The registry keeps one active scope and the last publisher wins. bUnit can leave an earlier page tree alive
+        // while its replacement renders (the Stable run recorded the disposed provider's after-render throwing on an
+        // inactive scope); the superseded provider must neither throw nor overwrite the newer publication.
+        using var context = CreateContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        var firstProjectId = Guid.NewGuid();
+        var secondProjectId = Guid.NewGuid();
+        RegisterProviderServices(context, registry, new RecordingNotificationHub(), agent);
+
+        var first = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, firstProjectId)
+            .Add(component => component.ProjectName, "First project")
+            .Add(component => component.Surface, CreateSurface(firstProjectId, "First project", [CreateNode("project:root", "Root")]))
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+        first.WaitForAssertion(() => Assert.Equal(
+            AgentChatContextAccessState.Ready,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.AccessState));
+        var firstScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+
+        var second = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, secondProjectId)
+            .Add(component => component.ProjectName, "Second project")
+            .Add(component => component.Surface, CreateSurface(secondProjectId, "Second project", [CreateNode("project:root", "Root")]))
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+        second.WaitForAssertion(() => Assert.Equal(
+            AgentChatContextAccessState.Ready,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.AccessState));
+        var secondScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+        Assert.NotEqual(firstScopeId, secondScopeId);
+
+        // A new selection re-renders the superseded provider: parameters set, publication, after-render.
+        var selectedNode = CreateNode("custom:note", "Selected note", parentId: "project:root");
+        first.Render(parameters => parameters
+            .Add(component => component.ProjectId, firstProjectId)
+            .Add(component => component.ProjectName, "First project")
+            .Add(component => component.Surface, CreateSurface(firstProjectId, "First project", [CreateNode("project:root", "Root"), selectedNode]))
+            .Add(component => component.SelectedNodes, [selectedNode])
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.Equal(secondScopeId, snapshot.Scope.Id);
+        Assert.Contains("Second project", snapshot.Scope.DisplayName, StringComparison.Ordinal);
+
+        first.Instance.Dispose();
+        Assert.Equal(secondScopeId, Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id);
+    }
+
+    [Fact]
+    public async Task Provider_dispatches_an_execution_notification_only_to_the_scope_that_admitted_it()
+    {
+        using var context = CreateContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var hub = new ControllableNotificationHub();
+        var agent = CreateAgent();
+        var alphaProjectId = Guid.NewGuid();
+        var betaProjectId = Guid.NewGuid();
+        var refreshed = new List<AgentChatExecutionCompleted>();
+        var refreshRequested = EventCallback.Factory.Create<AgentChatExecutionCompleted>(
+            this,
+            notification => refreshed.Add(notification));
+        RegisterProviderServices(context, registry, hub, agent);
+
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, alphaProjectId)
+            .Add(component => component.ProjectName, "Alpha")
+            .Add(component => component.Surface, CreateSurface(alphaProjectId, "Alpha"))
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready)
+            .Add(component => component.RefreshRequested, refreshRequested));
+        cut.WaitForAssertion(() => Assert.Equal(
+            AgentChatContextAccessState.Ready,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.AccessState));
+        var alphaScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+        var alphaSource = Assert.Single(hub.Sources);
+
+        // Admitted for Alpha while the renderer is busy, then the page switches to Beta before the queued refresh runs.
+        var staleForBeta = await AdmitWhileRendererIsBusyAsync(cut, hub, CreateNotification(alphaScopeId, alphaSource, agent.Id), async () =>
+            await cut.Instance.SetParametersAsync(CreateParameters(betaProjectId, "Beta", refreshRequested)));
+        await staleForBeta;
+        Assert.Empty(refreshed);
+        var betaScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+        var betaSource = Assert.Single(hub.Sources);
+        Assert.NotEqual(alphaSource, betaSource);
+
+        // Admitted for Beta, then Beta is re-activated as Alpha and back to Beta (a new scope for the same project id).
+        var staleForReactivatedBeta = await AdmitWhileRendererIsBusyAsync(cut, hub, CreateNotification(betaScopeId, betaSource, agent.Id), async () =>
+        {
+            await cut.Instance.SetParametersAsync(CreateParameters(alphaProjectId, "Alpha", refreshRequested));
+            await cut.Instance.SetParametersAsync(CreateParameters(betaProjectId, "Beta", refreshRequested));
+        });
+        await staleForReactivatedBeta;
+        Assert.Empty(refreshed);
+        var reactivatedBetaScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+        Assert.NotEqual(betaScopeId, reactivatedBetaScopeId);
+
+        // A notification for the current scope still refreshes the same target exactly once.
+        var current = CreateNotification(reactivatedBetaScopeId, Assert.Single(hub.Sources), agent.Id);
+        await hub.Publish(current);
+        cut.WaitForAssertion(() => Assert.Same(current, Assert.Single(refreshed)));
+
+        // Admitted, then disposed before dispatch.
+        var staleAfterDisposal = await AdmitWhileRendererIsBusyAsync(cut, hub, CreateNotification(reactivatedBetaScopeId, current.Source, agent.Id), () =>
+        {
+            cut.Instance.Dispose();
+            return Task.CompletedTask;
+        });
+        await staleAfterDisposal;
+        Assert.Single(refreshed);
+        Assert.Empty(hub.Sources);
+    }
+
+    private static void RegisterProviderServices(
+        BunitContext context,
+        AgentChatContextRegistry registry,
+        IAgentChatExecutionNotificationHub hub,
+        AgentDefinition agent)
+    {
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton(hub);
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
+    }
+
+    private ParameterView CreateParameters(
+        Guid projectId,
+        string projectName,
+        EventCallback<AgentChatExecutionCompleted> refreshRequested)
+        => ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(ProjectStructureAgentChatContextProvider.ProjectId)] = projectId,
+            [nameof(ProjectStructureAgentChatContextProvider.ProjectName)] = projectName,
+            [nameof(ProjectStructureAgentChatContextProvider.Surface)] = CreateSurface(projectId, projectName),
+            [nameof(ProjectStructureAgentChatContextProvider.ContextAccessState)] = AgentChatContextAccessState.Ready,
+            [nameof(ProjectStructureAgentChatContextProvider.RefreshRequested)] = refreshRequested
+        });
+
+    private static AgentChatExecutionCompleted CreateNotification(
+        AgentChatContextScopeId scopeId,
+        AgentChatContextSource source,
+        Guid agentId)
+        => new(scopeId, source, agentId, Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow);
+
+    // Holds the renderer busy with one work item: the notification is admitted from another thread, so the provider
+    // queues its refresh behind that work item, and the work item then changes the provider's lifetime before the
+    // queued refresh can run. Returns the queued dispatch so the test can await its completion deterministically.
+    private static async Task<Task> AdmitWhileRendererIsBusyAsync(
+        IRenderedComponent<ProjectStructureAgentChatContextProvider> cut,
+        ControllableNotificationHub hub,
+        AgentChatExecutionCompleted notification,
+        Func<Task> changeLifetimeOnRenderer)
+    {
+        Task dispatch = Task.CompletedTask;
+        await cut.InvokeAsync(async () =>
+        {
+            var admission = Task.Factory.StartNew(
+                () => hub.Publish(notification),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
+            dispatch = admission.GetAwaiter().GetResult();
+            await changeLifetimeOnRenderer();
+        });
+        return dispatch;
+    }
+
     private static AgentDefinition CreateAgent()
     {
         var timestamp = DateTimeOffset.UtcNow;
@@ -1214,6 +1386,79 @@ public sealed partial class ProjectStructureAgentChatContextProviderTests
 
         public void Invalidate()
             => invalidated?.Invoke(this, EventArgs.Empty);
+    }
+
+    private sealed class ControllableNotificationHub : IAgentChatExecutionNotificationHub
+    {
+        private readonly object gate = new();
+        private readonly Dictionary<Guid, (AgentChatContextSource Source, Func<AgentChatExecutionCompleted, Task> Handler)> subscriptions = [];
+
+        public IReadOnlyCollection<AgentChatContextSource> Sources
+        {
+            get
+            {
+                lock (gate)
+                {
+                    return subscriptions.Values.Select(item => item.Source).ToArray();
+                }
+            }
+        }
+
+        public IAgentChatExecutionNotificationSubscription Subscribe(
+            AgentChatContextSource source,
+            Func<AgentChatExecutionCompleted, Task> handler)
+        {
+            var id = Guid.NewGuid();
+            lock (gate)
+            {
+                subscriptions.Add(id, (source, handler));
+            }
+
+            return new Subscription(this, id, source);
+        }
+
+        public Task PublishAsync(
+            AgentChatExecutionCompleted notification,
+            CancellationToken cancellationToken = default)
+            => Publish(notification);
+
+        // Invokes the matching handlers on the calling thread and returns their dispatch.
+        public Task Publish(AgentChatExecutionCompleted notification)
+        {
+            Func<AgentChatExecutionCompleted, Task>[] handlers;
+            lock (gate)
+            {
+                handlers = subscriptions.Values
+                    .Where(item => item.Source == notification.Source)
+                    .Select(item => item.Handler)
+                    .ToArray();
+            }
+
+            return Task.WhenAll(handlers.Select(handler => handler(notification)));
+        }
+
+        private void Unsubscribe(Guid id)
+        {
+            lock (gate)
+            {
+                subscriptions.Remove(id);
+            }
+        }
+
+        private sealed class Subscription(
+            ControllableNotificationHub owner,
+            Guid id,
+            AgentChatContextSource source) : IAgentChatExecutionNotificationSubscription
+        {
+            private ControllableNotificationHub? owner = owner;
+
+            public AgentChatContextSource Source { get; } = source;
+
+            public void Dispose()
+            {
+                Interlocked.Exchange(ref owner, null)?.Unsubscribe(id);
+            }
+        }
     }
 
     private sealed class RecordingNotificationHub : IAgentChatExecutionNotificationHub

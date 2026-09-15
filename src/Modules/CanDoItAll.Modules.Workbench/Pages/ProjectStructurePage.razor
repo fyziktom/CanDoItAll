@@ -1738,7 +1738,7 @@ else
                     request.UploadedFile?.Base64Data.Length ?? 0);
                 NotificationService.Error(
                     "Node could not be created",
-                    exception is InvalidDataException or ProjectAssetCreationException
+                    exception is InvalidDataException or ProjectAssetCreationException or ProjectAssetContentValidationException
                         ? exception.Message
                         : "The node could not be saved. Check the application logs for details.");
             }

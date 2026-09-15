@@ -130,6 +130,42 @@ public sealed class AgentToolFailureEffectEvidenceTests
     }
 
     [Fact]
+    public void Different_workspace_tools_on_the_same_target_do_not_share_an_operation_identity()
+    {
+        const string target = "notes/plan.xlsx";
+        var write = MafToolInvocationCorrelationKey.Create(
+            ToolContractCatalog.WorkspaceWriteFile,
+            new AIFunctionArguments { ["path"] = target, ["content"] = "draft" });
+        var delete = MafToolInvocationCorrelationKey.Create(
+            ToolContractCatalog.WorkspaceDeletePath,
+            new AIFunctionArguments { ["path"] = target });
+        var spreadsheet = MafToolInvocationCorrelationKey.Create(
+            ToolContractCatalog.WorkspaceWriteSpreadsheet,
+            CreateSpreadsheetArguments(target, "A1:B2"));
+
+        Assert.NotEmpty(write);
+        Assert.NotEmpty(delete);
+        Assert.NotEmpty(spreadsheet);
+        Assert.NotEqual(write, delete);
+        Assert.NotEqual(write, spreadsheet);
+        Assert.NotEqual(delete, spreadsheet);
+    }
+
+    [Fact]
+    public void Path_spelling_variants_are_distinct_operation_identities()
+    {
+        // The key trims only; separator and case variants stay distinct (a conservative false negative), so a corrected
+        // retry must repeat the exact target spelling to resolve its earlier rejection.
+        static string Key(string path) => MafToolInvocationCorrelationKey.Create(
+            ToolContractCatalog.WorkspaceWriteFile,
+            new AIFunctionArguments { ["path"] = path, ["content"] = "final" });
+
+        Assert.Equal(Key("notes/summary.md"), Key("  notes/summary.md  "));
+        Assert.NotEqual(Key("notes/summary.md"), Key("notes\\summary.md"));
+        Assert.NotEqual(Key("notes/summary.md"), Key("Notes/Summary.md"));
+    }
+
+    [Fact]
     public void Path_arguments_do_not_change_the_identity_of_non_workspace_tools()
     {
         var projectId = Guid.NewGuid();

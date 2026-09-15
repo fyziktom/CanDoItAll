@@ -119,6 +119,83 @@ public sealed class ToolOutcomeCompletionIntegrationTests
     }
 
     [Fact]
+    public void Later_committed_attempt_of_another_tool_does_not_resolve_the_rejection()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a",
+                    toolName: "workspace_write_file"),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Committed,
+                    correlationKey: "operation-a",
+                    toolName: "workspace_delete_path")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+    }
+
+    [Fact]
+    public void Resolved_rejection_does_not_hide_an_unresolved_mutation_elsewhere()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a"),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Committed,
+                    correlationKey: "operation-a"),
+                CreateMutationTrace(
+                    sequence: 3,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Unknown,
+                    correlationKey: "operation-b")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+    }
+
+    [Fact]
+    public void Successful_read_does_not_resolve_an_unresolved_mutation()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a"),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a",
+                    classification: ToolInvocationClassification.Read)
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+    }
+
+    [Fact]
     public void Successful_result_with_unknown_commit_state_finishes_failed()
     {
         var assessment = AgentToolCompletionAssessment.Create(
@@ -192,12 +269,14 @@ public sealed class ToolOutcomeCompletionIntegrationTests
         AgentToolInvocationOutcome outcome,
         AgentToolEffectState effectState,
         string correlationKey,
-        string failureMessage = "")
+        string failureMessage = "",
+        string toolName = "project_structure_asset_create",
+        ToolInvocationClassification classification = ToolInvocationClassification.Mutation)
     {
         var startedAtUtc = DateTimeOffset.UtcNow.AddSeconds(sequence);
         return new AgentToolInvocationTrace(
-            "project_structure_asset_create",
-            ToolInvocationClassification.Mutation,
+            toolName,
+            classification,
             sequence,
             startedAtUtc,
             startedAtUtc.AddMilliseconds(100),

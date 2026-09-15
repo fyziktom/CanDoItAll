@@ -140,12 +140,12 @@ public sealed class ProjectAssetStorageService(
     {
         if (string.IsNullOrWhiteSpace(media.FileName))
         {
-            throw new InvalidDataException("Uploaded project assets require a file name.");
+            throw new ProjectAssetContentValidationException("Uploaded project assets require a file name.");
         }
 
         if (string.IsNullOrWhiteSpace(media.Base64Data))
         {
-            throw new InvalidDataException("Uploaded project assets require file content.");
+            throw new ProjectAssetContentValidationException("Uploaded project assets require file content.");
         }
 
         if (media.Base64Data.Length > ProjectStructureAssetUploadLimits.MaximumBase64Characters)
@@ -160,7 +160,7 @@ public sealed class ProjectAssetStorageService(
         }
         catch (FormatException exception)
         {
-            throw new InvalidDataException(
+            throw new ProjectAssetContentValidationException(
                 "Uploaded project asset content is not valid base64.",
                 exception);
         }
@@ -206,7 +206,7 @@ public sealed class ProjectAssetStorageService(
         }
         catch (ProjectAssetCreationException exception)
         {
-            throw new InvalidDataException(exception.Message, exception);
+            throw new ProjectAssetContentValidationException(exception.Message, exception);
         }
     }
 
@@ -230,11 +230,11 @@ public sealed class ProjectAssetStorageService(
         }
         catch (ProjectAssetCreationException exception)
         {
-            throw new InvalidDataException("Mermaid asset content is invalid.", exception);
+            throw new ProjectAssetContentValidationException("Mermaid asset content is invalid.", exception);
         }
     }
 
-    private static InvalidDataException AssetTooLarge()
+    private static ProjectAssetContentValidationException AssetTooLarge()
         => new(
             $"Uploaded project assets are limited to " +
             $"{ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");

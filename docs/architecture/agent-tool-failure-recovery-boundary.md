@@ -52,6 +52,48 @@ after entering the tool body. Their separate typed result kind preserves the ori
 provenance. Legacy JSON and tool-controlled JSON remain untyped, even when they contain
 fields that imitate this failure contract.
 
+A restored pre-dispatch denial must also agree with its journal outcome: the saved
+proposal carries `NotCommitted`, and a denial checkpoint whose proposal claims any other
+effect state is refused as inconsistent evidence before any owner disclosure check or
+dispatch. The refusal keeps the saved checkpoint for explicit reconciliation; it does
+not rewrite the journal or repeat the tool.
+
+`None` classification of a thrown owner rejection is trusted only where the owner proves
+the phase. The project asset owner raises its own `ProjectAssetContentValidationException`
+from content validation that precedes placement and the database write; the Structure
+tool provider maps only that type to `ProjectAssetContentInvalid` with `None`. Any other
+failure from the asset path, including a later `InvalidDataException`, stays opaque and
+uncertain.
+
+## Process pre-dispatch tool inventory
+
+The Processes preflight asks every runtime tool provider for the tools a governed step
+would receive before the step has an execution run, admission or lease. The provider
+context carries `ToolInventoryOnly`; the Workbench provider answers from the step's
+declared operations (`ProjectStructureScopedProcessAccess.ForToolInventory`) and reports
+the task and project tools the agent's own configuration could compose, because the
+saved launch authority that narrows them exists only at dispatch. The inventory is not a
+grant: the access state allows no project, not even the empty placeholder, and every
+composed tool is wrapped as `ProjectStructureInventoryOnlyTool`, which keeps the name,
+description and schema for matching but refuses invocation with
+`ProcessToolInventoryNotExecutable`. Actual dispatch composes its own tools from the
+saved lineage; a governed context without the flag and without a saved execution still
+fails closed at composition with `ProcessExecutionReconciliationRequired`.
+
+## Agent chat context scope lifetime
+
+The agent chat context registry keeps one active scope per circuit and the last
+publisher wins. A module context provider therefore holds a lease that can end in two
+ways: its own disposal, or supersession by a newer scope or publication. A lease reports
+`IsActive`; a provider synchronizes navigation and publishes only through an active
+lease and stands down otherwise, so a render that completes after supersession neither
+throws nor overwrites the live scope. An execution-completed notification is admitted
+against the scope that is active when it arrives and dispatched on the renderer later;
+the dispatch rechecks that the same scope is still current (disposal, a switch to another
+project or a re-activation of the same project id with a new lifetime ends it), so a
+stale notification never refreshes the page that replaced its scope, while a
+notification for the current scope still refreshes the same target once.
+
 ## Durable invocation and result recovery
 
 The admission journal binds the original provider segment, tool batch, exact arguments,
@@ -169,6 +211,8 @@ overwrite authority.
 | Workspace tool set | Materialize each workspace tool once from configured, plugin, and individual declarations; preserve deterministic descriptions, monotonic approvals, and effective access policy. |
 | Capability composer | Attach the unified workspace tool set once and account for catalog declarations without order-dependent shadowing. |
 | MAF invocation boundary | Expose only typed safe failures; persist safe error evidence; mask unexpected exceptions. |
+| Project asset owner validation | Reject invalid upload content with `ProjectAssetContentValidationException` before placement or persistence; later failures stay opaque and uncertain. |
+| Structure tool inventory | Compose inert, contract-preserving tools for the process preflight without a project, admission or lease; refuse every invocation. |
 | Project asset source resolver | Accept exact target-project paths from every canonical managed root and reject foreign scopes. |
 | Project asset content sanitizer | Inline only bounded safe text; never infer that an unknown small payload is text. |
 | Project-structure context | Require correction/retry, workbook validation, asset registration, and persisted readback before claiming completion. |

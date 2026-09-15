@@ -30,14 +30,16 @@ public static class ProjectsModuleServiceCollectionExtensions
         services.AddScoped<IProjectTransferReferenceQuery, ProjectTransferReferenceQuery>();
         services.AddScoped<IProjectRecordQueryService>(provider => provider.GetRequiredService<ProjectRecordQueryService>());
         services.AddScoped<IRecentProjectActivityQueryService, RecentProjectActivityQueryService>();
-        services.AddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();
+        // Projects owns the bridge contracts and their no-op defaults; the owning modules (Workbench, CrmHr) replace
+        // them, so the defaults never win over an owner whatever the module registration order.
+        services.TryAddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();
         services.TryAddScoped<IProjectNodeDetailsBridge, NoopProjectNodeDetailsBridge>();
-        services.AddScoped<IProjectNodeAssignmentPolicyBridge, NoopProjectNodeAssignmentPolicyBridge>();
+        services.TryAddScoped<IProjectNodeAssignmentPolicyBridge, NoopProjectNodeAssignmentPolicyBridge>();
         services.TryAddScoped<
             IProjectWorkItemAssignmentMutationBridge,
             NoopProjectWorkItemAssignmentMutationBridge>();
-        services.AddScoped<IProjectPartyIntegrationBridge, NoopProjectPartyIntegrationBridge>();
-        services.AddScoped<IProjectPartyCostRateBridge, NoopProjectPartyCostRateBridge>();
+        services.TryAddScoped<IProjectPartyIntegrationBridge, NoopProjectPartyIntegrationBridge>();
+        services.TryAddScoped<IProjectPartyCostRateBridge, NoopProjectPartyCostRateBridge>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IFileToolsStorageBindingSource, ProjectFileToolsStorageBindingSource>());
         services.AddScoped<ProjectFileReadOnlyInteractionFactory>();

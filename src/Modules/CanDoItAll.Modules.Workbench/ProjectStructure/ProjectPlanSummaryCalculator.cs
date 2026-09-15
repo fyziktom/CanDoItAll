@@ -458,13 +458,15 @@ public sealed class ProjectPlanSummaryCalculator
         CancellationToken cancellationToken)
     {
         var statuses = new Dictionary<string, ProjectPlanNormalizedStatus>(tasksById.Count, StringComparer.Ordinal);
-        var executionBackedTasks = new Dictionary<string, ProjectPlanTaskFact>(tasksById.Count, StringComparer.Ordinal);
+        var executionBackedTasks = new Dictionary<string, (ProjectPlanTaskFact Task, ProjectTaskExecutionState Execution)>(
+            tasksById.Count,
+            StringComparer.Ordinal);
         var cancellationCountdown = CancellationCheckInterval;
         foreach (var task in tasksById.Values)
         {
             CheckCancellation(ref cancellationCountdown, cancellationToken);
             var (executionBackedTask, execution) = ResolveExecutionBackedTask(task);
-            executionBackedTasks.Add(task.NodeId, executionBackedTask);
+            executionBackedTasks.Add(task.NodeId, (executionBackedTask, execution));
             var normalizedStatus = NormalizeStatus(task.Status);
             statuses.Add(
                 task.NodeId,
@@ -487,7 +489,7 @@ public sealed class ProjectPlanSummaryCalculator
         foreach (var original in tasksById.Values)
         {
             CheckCancellation(ref cancellationCountdown, cancellationToken);
-            var task = executionBackedTasks[original.NodeId];
+            var (task, execution) = executionBackedTasks[original.NodeId];
             var estimate = ParseEstimate(task.MetadataJson, hoursPerManDay);
             var progress = ParseProgress(task.ProgressPercent);
             var blockingTaskCount = 0;
@@ -508,7 +510,8 @@ public sealed class ProjectPlanSummaryCalculator
                 task,
                 normalizedStatus.Value,
                 blockingTaskCount > 0,
-                asOfUtc);
+                asOfUtc,
+                execution);
             resourceGroupsByTask.TryGetValue(task.NodeId, out var resourceGroups);
             evaluations.Add(new ProjectPlanTaskEvaluation(
                 task,
@@ -646,7 +649,11 @@ public sealed class ProjectPlanSummaryCalculator
                 missingExpectedCostTaskCount++;
             }
 
-            if (evaluation.ProgressPercent.HasValue)
+            if (evaluation.State == ProjectPlanTaskState.Cancelled)
+            {
+                // A cancelled task is outside the plan's progress: its hint is neither progress nor a missing measurement.
+            }
+            else if (evaluation.ProgressPercent.HasValue)
             {
                 progressTotal += evaluation.ProgressPercent.Value;
                 progressTaskCount++;
@@ -978,6 +985,13 @@ public sealed class ProjectPlanSummaryCalculator
             return ProjectPlanTaskState.Completed;
         }
 
+        if (execution is ProjectTaskExecutionState.NotStarted or ProjectTaskExecutionState.Started)
+        {
+            // A recorded non-terminal execution state is authoritative: neither the status text nor the progress
+            // hint can make the task terminal.
+            return null;
+        }
+
         if (normalizedStatus is "cancelled" or "canceled" or "archived" or "rejected" or "skipped")
         {
             return ProjectPlanTaskState.Cancelled;
@@ -999,7 +1013,8 @@ public sealed class ProjectPlanSummaryCalculator
         ProjectPlanTaskFact task,
         string normalizedStatus,
         bool isBlocked,
-        DateTimeOffset asOfUtc)
+        DateTimeOffset asOfUtc,
+        ProjectTaskExecutionState execution)
     {
         if (isBlocked || normalizedStatus is "blocked" or "impeded")
         {
@@ -1011,9 +1026,16 @@ public sealed class ProjectPlanSummaryCalculator
             return ProjectPlanTaskState.Waiting;
         }
 
-        if (normalizedStatus is "running" or "in progress" or "in-progress" or "active" or "started" ||
-            task.ProgressPercent is > 0 and < 100 ||
-            task.StartUtc <= asOfUtc && task.EndUtc > asOfUtc)
+        if (execution == ProjectTaskExecutionState.Started)
+        {
+            return ProjectPlanTaskState.Running;
+        }
+
+        // A recorded not-started task is not running whatever its status text, hint or planned window says.
+        if (execution != ProjectTaskExecutionState.NotStarted &&
+            (normalizedStatus is "running" or "in progress" or "in-progress" or "active" or "started" ||
+             task.ProgressPercent is > 0 and < 100 ||
+             task.StartUtc <= asOfUtc && task.EndUtc > asOfUtc))
         {
             return ProjectPlanTaskState.Running;
         }
@@ -1054,20 +1076,19 @@ public sealed class ProjectPlanSummaryCalculator
         }
     }
 
-    // Every canvas node carries a status-backed progress hint (a "Draft" task renders as 28 %). For a canonical task the
-    // recorded execution state is the authoritative fact: a task that has not started has no progress and keeps its full
-    // expected cost in the remaining plan, and a completed or cancelled task is terminal whatever the hint says. Tasks
-    // without a recorded execution state keep the hint, as before.
+    // The recorded execution state is the authoritative progress fact (ProjectTaskExecutionStatePolicy): a task that
+    // has not started keeps its full expected cost in the remaining plan, a completed or cancelled task is terminal
+    // whatever the hint says, and a task without a recorded execution state keeps the hint, as before.
     private static (ProjectPlanTaskFact Task, ProjectTaskExecutionState Execution) ResolveExecutionBackedTask(
         ProjectPlanTaskFact task)
     {
         var execution = ParseExecutionState(task.MetadataJson);
-        return execution switch
-        {
-            ProjectTaskExecutionState.NotStarted => (task with { ProgressPercent = 0 }, execution),
-            ProjectTaskExecutionState.Completed => (task with { ProgressPercent = 100 }, execution),
-            _ => (task, execution)
-        };
+        var progressPercent = ProjectTaskExecutionStatePolicy.ResolveExecutionBackedProgress(
+            execution,
+            task.ProgressPercent);
+        return progressPercent == task.ProgressPercent
+            ? (task, execution)
+            : (task with { ProgressPercent = progressPercent }, execution);
     }
 
     private static ProjectTaskExecutionState ParseExecutionState(string metadataJson)

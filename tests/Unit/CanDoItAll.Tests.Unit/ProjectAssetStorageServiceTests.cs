@@ -44,7 +44,7 @@ public sealed class ProjectAssetStorageServiceTests
             new ProjectAssetCreationService(),
             CreatePhysicalIdentityPolicy());
 
-        InvalidDataException exception = await Assert.ThrowsAsync<InvalidDataException>(
+        var exception = await Assert.ThrowsAsync<ProjectAssetContentValidationException>(
             () => service.SaveAsync(
                 Guid.NewGuid(),
                 ProjectObjectType.File,

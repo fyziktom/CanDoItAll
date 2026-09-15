@@ -557,6 +557,78 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
     }
 
     [Fact]
+    public async Task Process_tool_inventory_composes_declared_tools_that_cannot_read_or_mutate_any_project()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var provider = scope.ServiceProvider
+            .GetServices<IAgentRuntimeToolProvider>()
+            .OfType<ProjectStructureAgentRuntimeToolProvider>()
+            .Single();
+        var projectId = await CreateProjectAsync(projects);
+        var agent = await CreateAgentAsync(scope.ServiceProvider, projectId);
+        var before = await workbench.GetStructureAsync(projectId);
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = "process-step",
+            SourceId = "write-note-node",
+            ProcessRunId = Guid.NewGuid().ToString("D"),
+            ProcessStepId = Guid.NewGuid().ToString("D"),
+            IsGovernedProcessStep = true,
+            AllowedOperations = [ProcessOperationContractNames.ReadProjectStructure, ProcessOperationContractNames.ExecuteExternalAction]
+        };
+        var governedContext = CreateContext(agent, projectId, AgentRuntimeToolProviderPurpose.GovernedProcessAutomation) with
+        {
+            ContextIntent = intent,
+            RuntimeSessionKey = string.Empty
+        };
+
+        // Without the inventory flag a governed context has no saved execution identity and fails closed at composition.
+        var reconciliation = await Assert.ThrowsAsync<ProjectStructureAgentException>(async () =>
+            await provider.CreateToolsAsync(governedContext, CancellationToken.None));
+        Assert.Equal(409, reconciliation.StatusCode);
+        Assert.Equal("ProcessExecutionReconciliationRequired", reconciliation.ErrorCode);
+
+        var tools = await provider.CreateToolsAsync(governedContext with { ToolInventoryOnly = true }, CancellationToken.None);
+
+        Assert.Contains(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureRead);
+        Assert.Contains(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureNodeCreate);
+        Assert.Contains(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureAssetCreate);
+        foreach (var targetProjectId in new[] { projectId, Guid.Empty, Guid.NewGuid() })
+        {
+            var read = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => InvokeAsync<object>(
+                FindTool(tools, ProjectStructureToolPolicy.ProjectStructureRead),
+                new AIFunctionArguments { ["projectId"] = targetProjectId, ["request"] = new ProjectStructureReadRequest() }));
+            Assert.Equal(403, read.StatusCode);
+            Assert.Equal("ProcessToolInventoryNotExecutable", read.ErrorCode);
+            var create = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => InvokeAsync<object>(
+                FindTool(tools, ProjectStructureToolPolicy.ProjectStructureNodeCreate),
+                new AIFunctionArguments
+                {
+                    ["projectId"] = targetProjectId,
+                    ["request"] = new ProjectStructureNodeCreateInput(
+                        ProjectObjectType.Note,
+                        "Inventory probe",
+                        "Must never be created",
+                        string.Empty,
+                        ParentNodeKey: $"project:{projectId:D}")
+                }));
+            Assert.Equal(403, create.StatusCode);
+            Assert.Equal("ProcessToolInventoryNotExecutable", create.ErrorCode);
+        }
+
+        var list = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => InvokeAsync<object>(
+            FindTool(tools, "project_structure_projects_list"),
+            new AIFunctionArguments()));
+        Assert.Equal("ProcessToolInventoryNotExecutable", list.ErrorCode);
+        var after = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(before.Nodes.Count, after.Nodes.Count);
+        Assert.Equal(before.Nodes.Select(node => node.Id).Order(StringComparer.Ordinal), after.Nodes.Select(node => node.Id).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task Runtime_tools_round_trip_selected_subtree_non_task_node_and_managed_markdown_asset()
     {
         await using var application = await TestApplication.CreateAsync();

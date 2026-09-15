@@ -29,19 +29,25 @@ internal sealed class ProjectStructureAccessState {
         var governanceMutationCeiling = governance?.MutationAllowed ?? true;
         var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
         var governed = purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation && scopedProcessAccess is not null;
+        // A pre-dispatch tool inventory has no saved launch authority yet. The task and project ceilings that the
+        // saved dispatch applies later are reported from the agent's own configuration and the step's declared
+        // operations, and every composed tool is inert (ProjectStructureInventoryOnlyTool), so discovery reports
+        // what the step could compose without inventing an admission.
+        var inventory = governed && scopedProcessAccess!.IsToolInventory;
         ProjectGrantSnapshot = normalized;
         CanRead = (governed ? scopedProcessAccess!.CanRead : normalized.CanRead) && governanceReadCeiling;
         CanWrite = (governed ? scopedProcessAccess!.CanWrite : ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized)) && governanceMutationCeiling;
         CanWriteUnscoped = normalized.CanWrite && governanceMutationCeiling && (!governed || scopedProcessAccess!.CanWrite);
         CanWriteStructureUnscoped = (normalized.CanWrite || normalized.CanWriteNonTaskStructure) && governanceMutationCeiling && (!governed || scopedProcessAccess!.CanWrite);
         CanWriteTasksUnscoped = ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(normalized) && governanceMutationCeiling &&
-            (!governed || scopedProcessAccess!.CanWrite && scopedProcessAccess.ProcessMutationAdmission?.Dispatch.SourceAuthority?.CanCreateTasks == true);
+            (!governed || scopedProcessAccess!.CanWrite &&
+                (inventory || scopedProcessAccess.ProcessMutationAdmission?.Dispatch.SourceAuthority?.CanCreateTasks == true));
         var sourceProjects = scopedProcessAccess?.ProcessMutationAdmission?.Dispatch.SourceAuthority?.ProjectMutations;
         CanCreateProjects = normalized.CanCreateProjects && governanceMutationCeiling &&
-            (!governed || scopedProcessAccess!.CanWrite && sourceProjects?.CanCreateProjects == true);
+            (!governed || scopedProcessAccess!.CanWrite && (inventory || sourceProjects?.CanCreateProjects == true));
         CanCreateSubprojects = normalized.CanCreateSubprojects && governanceMutationCeiling &&
-            (!governed || scopedProcessAccess!.CanWrite && sourceProjects is { } ceiling &&
-                (ceiling.CanCreateSubprojects || ceiling.CanChangeHierarchy || ceiling.CanMoveNodesToSubproject));
+            (!governed || scopedProcessAccess!.CanWrite && (inventory || sourceProjects is { } ceiling &&
+                (ceiling.CanCreateSubprojects || ceiling.CanChangeHierarchy || ceiling.CanMoveNodesToSubproject)));
         RequiresNonTaskWriteGuard = normalized.CanWriteNonTaskStructure &&
             !normalized.CanWrite &&
             scopedProcessAccess?.CanWrite != true;
@@ -53,7 +59,7 @@ internal sealed class ProjectStructureAccessState {
         Purpose = purpose;
         InvocationSnapshotReadContext = invocationSnapshotReadContext;
         Governance = governance;
-        if (scopedProcessAccess is not null) {
+        if (scopedProcessAccess is { IsToolInventory: false }) {
             AllowedProjectIds.Add(scopedProcessAccess.ProjectId);
         }
     }
@@ -195,6 +201,9 @@ internal sealed class ProjectStructureAccessState {
         if (Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation) {
             return true;
         }
+        if (ScopedProcessAccess is { IsToolInventory: true } inventoryAccess) {
+            return inventoryAccess.CanWrite;
+        }
         var ceiling = ScopedProcessAccess?.ProcessMutationAdmission?.Dispatch.SourceAuthority?.ProjectMutations;
         return operation switch {
             ProjectProcessProjectOperation.CreateChild => ceiling?.CanCreateSubprojects == true,
@@ -295,12 +304,14 @@ internal sealed record ProjectStructureScopedProcessAccess(
     ProjectStructureAgentContext? AgentContext,
     ProjectStructureProcessNodeContextDescriptor? ProcessNodeContext,
     ProjectWriteAdmission? ExpectedProjectAdmission = null,
-    ProjectProcessMutationAdmission? ProcessMutationAdmission = null) {
+    ProjectProcessMutationAdmission? ProcessMutationAdmission = null,
+    bool IsToolInventory = false) {
     /// <summary>
     /// Tool-inventory access for a governed process step that has no saved execution identity yet (the Processes
     /// module's pre-dispatch preflight). Read and write follow the step's declared operations exactly as the saved
-    /// dispatch grants them later; no project, admission or node context is bound, so the composed tools cannot act
-    /// on any real project, and the actual dispatch resolves its own scoped access from its saved lineage.
+    /// dispatch grants them later; no project, admission or node context is bound, no project id is allowed (not
+    /// even the empty placeholder), every composed tool is inert, and the actual dispatch resolves its own scoped
+    /// access from its saved lineage.
     /// </summary>
     internal static ProjectStructureScopedProcessAccess ForToolInventory(AgentRuntimeContextIntent contextIntent) {
         ArgumentNullException.ThrowIfNull(contextIntent);
@@ -311,7 +322,8 @@ internal sealed record ProjectStructureScopedProcessAccess(
             CanRead: HasOperation(contextIntent, ProcessOperationContractNames.ReadProjectStructure),
             CanWrite: HasOperation(contextIntent, ProcessOperationContractNames.ExecuteExternalAction),
             AgentContext: null,
-            ProcessNodeContext: null);
+            ProcessNodeContext: null,
+            IsToolInventory: true);
     }
 
     private static bool HasOperation(AgentRuntimeContextIntent contextIntent, string operationName)

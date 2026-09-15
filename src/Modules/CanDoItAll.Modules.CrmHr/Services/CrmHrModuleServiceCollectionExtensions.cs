@@ -51,8 +51,9 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<ICrmHrSourceSnapshotProvider, CrmHrSourceSnapshotProvider>();
         services.AddMemorySourceGatewayAdapter<CrmHrMemorySourceGatewayAdapter>();
         services.AddScoped<IAutomationSignalSource, CrmHrAutomationSignalProvider>();
-        services.AddScoped<IProjectPartyIntegrationBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
-        services.AddScoped<IProjectPartyCostRateBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
+        // CRM/HR is the owner behind the Projects party bridges: replace the Projects no-op defaults whatever the order.
+        services.Replace(ServiceDescriptor.Scoped<IProjectPartyIntegrationBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>()));
+        services.Replace(ServiceDescriptor.Scoped<IProjectPartyCostRateBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>()));
         services.TryAddScoped<IAiTechnicalAgentProjectionStore, AiTechnicalAgentProjectionStore>();
         services.TryAddScoped<IAiTechnicalAgentBridge, LegacyAiTechnicalAgentBridge>();
         return services;

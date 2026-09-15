@@ -26,6 +26,49 @@ public sealed class DatabaseCanonicalityArchitectureTests
         Assert.Equal(allowedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase), actualFiles);
     }
 
+    [Fact]
+    public void Product_modules_do_not_reach_the_global_app_db_context()
+    {
+        // The pooled AppDbContext factory exists for migrations and bounded maintenance composition only. Module
+        // services own their persistence through their own contexts and contracts; a module that injects the global
+        // context or its factory would reacquire every foreign entity as a back door.
+        var root = FindRepositoryRoot();
+        var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            NormalizePath(root, "src/Modules/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs")
+        };
+        string[] forbiddenTokens =
+        [
+            "IDbContextFactory<AppDbContext>",
+            "AppDbContext dbContext",
+            "AppDbContext context",
+            "GetRequiredService<AppDbContext>",
+            "GetService<AppDbContext>"
+        ];
+
+        var actualFiles = Directory
+            .EnumerateFiles(Path.Combine(root, "src", "Modules"), "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsBuildOutput(path))
+            .Where(path =>
+            {
+                var content = File.ReadAllText(path);
+                return forbiddenTokens.Any(token => content.Contains(token, StringComparison.Ordinal));
+            })
+            .Select(path => NormalizePath(path))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Assert.Equal(allowedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase), actualFiles);
+    }
+
+    private static bool IsBuildOutput(string path)
+    {
+        var separators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+        return path.Split(separators).Any(segment =>
+            string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

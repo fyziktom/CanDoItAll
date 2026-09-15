@@ -86,8 +86,12 @@ internal static class ProjectStructureGanttMermaidExporter
         IReadOnlyCollection<GanttDependency> dependencies,
         IReadOnlyDictionary<GanttTaskId, GanttTask> tasksById)
     {
+        // The projection guarantees a closed dependency set; the exporter keeps the invariant local so an
+        // external predecessor can never surface as a missing-key failure here.
         var latestPredecessorEnd = dependencies
-            .Where(dependency => dependency.SuccessorId == task.Id)
+            .Where(dependency =>
+                dependency.SuccessorId == task.Id &&
+                tasksById.ContainsKey(dependency.PredecessorId))
             .Select(dependency => tasksById[dependency.PredecessorId].End)
             .Max();
 

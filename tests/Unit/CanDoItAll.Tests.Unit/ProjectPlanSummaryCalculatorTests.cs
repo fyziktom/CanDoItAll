@@ -745,6 +745,126 @@ public sealed class ProjectPlanSummaryCalculatorTests
                 cancellation.Token));
     }
 
+    [Fact]
+    public void Build_and_forecast_agree_on_remaining_cost_for_every_execution_state()
+    {
+        // Each task costs 100 USD; the canvas hint claims 28 % (or 50 % / 62 %) whatever the recorded state says.
+        var window = (Start: AsOfUtc.AddDays(-1), End: AsOfUtc.AddDays(1));
+        ProjectPlanTaskFact[] Tasks() =>
+        [
+            CreateTask("unknown", status: "Draft", progressPercent: 28, startUtc: window.Start, endUtc: window.End,
+                metadataJson: CreateEstimateMetadata(1m, 100m, "USD")),
+            CreateTask("not-started", status: "Draft", progressPercent: 28, startUtc: window.Start, endUtc: window.End,
+                metadataJson: CreateEstimateMetadata(1m, 100m, "USD", ProjectTaskExecutionState.NotStarted)),
+            CreateTask("started", status: "Draft", progressPercent: 50, startUtc: window.Start, endUtc: window.End,
+                metadataJson: CreateEstimateMetadata(1m, 100m, "USD", ProjectTaskExecutionState.Started)),
+            CreateTask("completed", status: "Draft", progressPercent: 28, startUtc: window.Start, endUtc: window.End,
+                metadataJson: CreateEstimateMetadata(1m, 100m, "USD", ProjectTaskExecutionState.Completed)),
+            CreateTask("cancelled", status: "Draft", progressPercent: 62, startUtc: window.Start, endUtc: window.End,
+                metadataJson: CreateEstimateMetadata(1m, 100m, "USD", ProjectTaskExecutionState.Cancelled))
+        ];
+
+        var summary = Build(Tasks());
+        var forecast = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            new ProjectPlanManagerForecastSnapshot(ProjectId, "Truth", Tasks(), []),
+            new ProjectPlanManagerSummaryQuery(ProjectPlanManagerSummaryMode.ScheduleAndRemainingCosts, AsOfUtc));
+
+        const decimal expectedRemaining = 72m + 100m + 50m;
+        Assert.Equal(expectedRemaining, Assert.Single(summary.FutureExpectedCostTotals).Amount);
+        Assert.Equal(expectedRemaining, forecast.FutureExpectedCostTotals.Sum(total => total.Amount));
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Completed));
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Cancelled));
+        Assert.Equal(2, StateCount(summary, ProjectPlanTaskState.Running));
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Ready));
+        Assert.Equal(
+            new[] { "started", "unknown" },
+            summary.RunningTasks.Select(item => item.NodeId).Order(StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public void Build_excludes_cancelled_hint_progress_from_progress_aggregates()
+    {
+        var tasks = new[]
+        {
+            CreateTask("cancelled", status: "Draft", progressPercent: 62,
+                metadataJson: CreateEstimateMetadata(4m, 100m, "USD", ProjectTaskExecutionState.Cancelled)),
+            CreateTask("running", status: "Draft", progressPercent: 20,
+                metadataJson: CreateEstimateMetadata(4m, 100m, "USD"))
+        };
+
+        var summary = Build(tasks);
+
+        Assert.Equal(20m, summary.TaskWeightedProgressPercent);
+        Assert.Equal(20m, summary.EffortWeightedProgressPercent);
+        Assert.Equal(0, summary.Completeness.MissingProgressTaskCount);
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Cancelled));
+    }
+
+    [Fact]
+    public void Build_keeps_a_recorded_started_task_running_when_the_status_text_maps_to_complete()
+    {
+        // The canvas maps a "Ready" status to a 100 % hint; the recorded Started execution state is authoritative.
+        var tasks = new[]
+        {
+            CreateTask("started", status: "Ready", progressPercent: 100,
+                startUtc: AsOfUtc.AddDays(-1), endUtc: AsOfUtc.AddDays(1),
+                metadataJson: CreateEstimateMetadata(2m, 100m, "USD", ProjectTaskExecutionState.Started))
+        };
+
+        var summary = Build(tasks);
+        var forecast = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            new ProjectPlanManagerForecastSnapshot(ProjectId, "Started", tasks, []),
+            new ProjectPlanManagerSummaryQuery(ProjectPlanManagerSummaryMode.ScheduleAndRemainingCosts, AsOfUtc));
+
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Running));
+        Assert.DoesNotContain(summary.TaskStates, item => item.State == ProjectPlanTaskState.Completed && item.TaskCount > 0);
+        Assert.Equal("started", Assert.Single(summary.RunningTasks).NodeId);
+        Assert.Empty(summary.FutureExpectedCostTotals);
+        Assert.Empty(forecast.FutureExpectedCostTotals);
+    }
+
+    [Fact]
+    public void Build_keeps_a_recorded_not_started_task_out_of_running_and_completed()
+    {
+        // Status text "Done" and a planned window around now would classify the task as Completed or Running; the
+        // recorded NotStarted execution state keeps it planned with its full cost.
+        var tasks = new[]
+        {
+            CreateTask("planned", status: "Done", progressPercent: 28,
+                startUtc: AsOfUtc.AddHours(-1), endUtc: AsOfUtc.AddHours(4),
+                metadataJson: CreateEstimateMetadata(2m, 100m, "USD", ProjectTaskExecutionState.NotStarted))
+        };
+
+        var summary = Build(tasks);
+        var forecast = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            new ProjectPlanManagerForecastSnapshot(ProjectId, "Planned", tasks, []),
+            new ProjectPlanManagerSummaryQuery(ProjectPlanManagerSummaryMode.ScheduleAndRemainingCosts, AsOfUtc));
+
+        Assert.Equal(1, StateCount(summary, ProjectPlanTaskState.Ready));
+        Assert.Empty(summary.RunningTasks);
+        Assert.Equal(100m, Assert.Single(summary.FutureExpectedCostTotals).Amount);
+        Assert.Equal(100m, Assert.Single(forecast.FutureExpectedCostTotals).Amount);
+        Assert.Equal(0m, summary.TaskWeightedProgressPercent);
+    }
+
+    [Fact]
+    public void Build_distinguishes_a_zero_quote_from_a_missing_quote()
+    {
+        var tasks = new[]
+        {
+            CreateTask("free", metadataJson: CreateEstimateMetadata(2m, 0m, "USD")),
+            CreateTask("unpriced", metadataJson: CreateEstimateMetadata(2m))
+        };
+
+        var summary = Build(tasks);
+
+        var total = Assert.Single(summary.ExpectedCostTotals);
+        Assert.Equal(0m, total.Amount);
+        Assert.Equal(1, total.PricedTaskCount);
+        Assert.Empty(summary.FutureExpectedCostTotals);
+        Assert.Equal(1, summary.Completeness.MissingExpectedCostTaskCount);
+    }
+
     private static ProjectPlanSummary Build(
         IReadOnlyList<ProjectPlanTaskFact> tasks,
         IReadOnlyList<ProjectPlanLinkFact>? links = null,

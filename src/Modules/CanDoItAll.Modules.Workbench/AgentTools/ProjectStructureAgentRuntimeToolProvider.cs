@@ -620,11 +620,14 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     "Attaches an exact workflow version or process to a canonical task and commits authoritative expected pricing as one compensated operation. First call project_structure_read with the exact task id in nodeIds and includeMetadata true. Parse the returned metadataJson and copy workItem.executionState, workItem.actualStartedAtUtc, and workItem.actualEndedAtUtc exactly into currentExecution.state, currentExecution.actualStartedAtUtc, and currentExecution.actualEndedAtUtc. Do not infer defaults, reuse a stale snapshot, or use generic workflow, process-link, metadata, or Uses-link tools for canonical task resources."));
             }
 
-            if (accessState.ScopedProcessAccess?.ProcessMutationAdmission?.Dispatch.SourceAuthority?.Principal is ProcessLaunchPrincipal.AgentExecution source &&
-                    source.Ceiling.AllowedOperations.Count != 0) {
-                return WrapResults(context, accessState, tools.Where(tool => source.Ceiling.AllowedOperations.Contains(tool.Name, StringComparer.OrdinalIgnoreCase)).ToArray());
-            }
-            return WrapResults(context, accessState, tools);
+            var composed = accessState.ScopedProcessAccess?.ProcessMutationAdmission?.Dispatch.SourceAuthority?.Principal is ProcessLaunchPrincipal.AgentExecution source &&
+                    source.Ceiling.AllowedOperations.Count != 0
+                ? WrapResults(context, accessState, tools.Where(tool => source.Ceiling.AllowedOperations.Contains(tool.Name, StringComparer.OrdinalIgnoreCase)).ToArray())
+                : WrapResults(context, accessState, tools);
+            // A pre-dispatch inventory keeps every tool contract for name matching but none of them may execute.
+            return accessState.ScopedProcessAccess is { IsToolInventory: true }
+                ? ProjectStructureInventoryOnlyTool.WrapAll(composed)
+                : composed;
         }
 
         private IReadOnlyList<AITool> WrapResults(AgentRuntimeToolProviderContext context, ProjectStructureAccessState accessState,
@@ -2338,8 +2341,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     {
                         return await agentService.CreateAssetAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission }, cancellationToken);
                     }
-                    catch (InvalidDataException exception)
+                    catch (ProjectAssetContentValidationException exception)
                     {
+                        // Only the owner's typed pre-placement validation is a proven no-effect rejection.
                         throw AssetContentRejected(exception, request.ObjectType, request.ObjectSubtype, request.Media);
                     }
                 },
@@ -2351,7 +2355,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         // correctable, no-effect failure so the model can fix its request instead of the runtime treating the
         // non-idempotent tool as uncertain and failing the run closed on the next provider replay.
         private static ProjectStructureAgentException AssetContentRejected(
-            InvalidDataException exception,
+            ProjectAssetContentValidationException exception,
             ProjectObjectType objectType,
             string? objectSubtype,
             ProjectObjectMediaPayload? media)
@@ -2415,7 +2419,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                             cancellationToken);
                     }
-                    catch (InvalidDataException exception)
+                    catch (ProjectAssetContentValidationException exception)
                     {
                         throw AssetContentRejected(exception, ProjectObjectType.File, request.ObjectSubtype, request.Media);
                     }

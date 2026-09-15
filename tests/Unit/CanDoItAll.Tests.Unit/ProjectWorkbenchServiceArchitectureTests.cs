@@ -191,6 +191,39 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
         }
     }
 
+    [Theory]
+    [InlineData(typeof(IProjectNodeScopeBridge), nameof(ProjectNodeScopeBridge))]
+    [InlineData(typeof(IProjectNodeAssignmentPolicyBridge), nameof(ProjectNodeAssignmentPolicyBridge))]
+    public void Workbench_node_scope_and_assignment_policy_bridges_win_regardless_of_module_registration_order(
+        Type bridgeType,
+        string expectedImplementation)
+    {
+        Action<IServiceCollection>[] registrations =
+        [
+            services =>
+            {
+                services.AddProjectsModule();
+                services.AddWorkbenchModule();
+            },
+            services =>
+            {
+                services.AddWorkbenchModule();
+                services.AddProjectsModule();
+            }
+        ];
+
+        foreach (var register in registrations)
+        {
+            var services = new ServiceCollection();
+
+            register(services);
+
+            var descriptor = Assert.Single(services, item => item.ServiceType == bridgeType);
+            Assert.Equal(expectedImplementation, descriptor.ImplementationType?.Name);
+            Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+        }
+    }
+
     [Fact]
     public void Workbench_assignment_mutation_bridge_wins_regardless_of_module_registration_order()
     {

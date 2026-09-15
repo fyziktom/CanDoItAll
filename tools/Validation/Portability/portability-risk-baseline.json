@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-14T23:58:39.257027+00:00",
+  "generated_utc": "2026-09-15T14:09:01.889930+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -58330,12 +58330,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
       "category": "case-policy",
-      "source_fingerprint": "57d400256f118a6a49ad710a903b542210133e787cd4e308167504283a137692",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
-      "category": "case-policy",
       "source_fingerprint": "5c05a9e2e0f1eeaf2848b04478c5250912076ced8b3598513be52e0c6db5a8d6",
       "count": 1
     },
@@ -58373,6 +58367,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
       "category": "case-policy",
       "source_fingerprint": "b963ed2557ffa165b085a94dae68b63ac2146f77fea0ec8b0c73cf913bc67e18",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bc3cbe4212ed55a641013f5a4ef11fb08654f6f30fc37fe5744d28ee46e84153",
       "count": 1
     },
     {

@@ -101,8 +101,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
             ActivatorUtilities.CreateInstance<ProjectWorkbenchService>(
                 serviceProvider,
                 serviceProvider.GetRequiredService<ProjectAssetStorageService>()));
-        services.AddScoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>();
-        services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
+        services.Replace(ServiceDescriptor.Scoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>());
+        services.Replace(ServiceDescriptor.Scoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>());
         services.Replace(ServiceDescriptor.Scoped<IProjectNodeDetailsBridge, ProjectNodeDetailsBridge>());
         services.AddScoped<ProjectStructureLeaseService>();
         services.AddScoped<ProjectStructureAnalyticsService>();

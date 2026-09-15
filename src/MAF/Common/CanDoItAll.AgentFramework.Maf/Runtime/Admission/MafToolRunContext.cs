@@ -576,6 +576,9 @@ internal sealed class MafToolRunContext {
             throw Denied("The saved pre-dispatch denial has incompatible outcome evidence.");
         }
         if (result.PreDispatchFailure is { } failure) {
+            if (savedEffect != AgentToolEffectState.NotCommitted) {
+                throw Denied("The saved pre-dispatch denial does not match its journal outcome.");
+            }
             if (result.Kind == ResultKind.PreDispatchDeniedJson) {
                 var hostFailure = result.Value.Deserialize<AgentToolFailureResult>(MafToolProtocolCodec.SerializationOptions)
                     ?? throw Denied("The saved pre-dispatch host failure is empty.");

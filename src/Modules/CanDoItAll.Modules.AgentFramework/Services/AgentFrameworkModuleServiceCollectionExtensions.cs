@@ -373,7 +373,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
         services.AddScoped<IProviderInferenceRelayRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
-        services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
+        // Agents is the single writer of technical agent facts; the CRM legacy bridge is only a fallback for hosts
+        // without this module and must never remain registered next to it.
+        services.Replace(ServiceDescriptor.Scoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>());
         services.TryAddScoped<IPluginStorageGateway, PluginStorageGateway>();
         services.AddAgentStorageTools();
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
