@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Memory.Persistence.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -108,7 +107,7 @@ public sealed class MemoryWorkerLeaseTests
     {
         var services = new ServiceCollection();
         var databaseName = $"memory-worker-leases-{Guid.NewGuid():N}";
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase(databaseName));
         services.AddGenericMemoryModule();
         return services.BuildServiceProvider(validateScopes: true);

@@ -108,7 +108,7 @@ public sealed class HrAgentAdministrationService(
         ArgumentNullException.ThrowIfNull(input);
         await EnsureAuthorizedActorAsync(
             actorAgentId,
-            AgentToolInvocationPolicyMetadata.HrAgentCreate,
+            HrAgentToolPolicy.HrAgentCreate,
             cancellationToken);
         ValidateCreateInput(input);
         var projectStructureAccess = ApplyProjectStructureAccessPatch(
@@ -202,7 +202,7 @@ public sealed class HrAgentAdministrationService(
         ArgumentNullException.ThrowIfNull(input);
         await EnsureAuthorizedActorAsync(
             actorAgentId,
-            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            HrAgentToolPolicy.HrAgentSettingsUpdate,
             cancellationToken);
         EnsureTargetCanBeManaged(actorAgentId, input.AgentId);
         if (input.ExpectedUpdatedAtUtc == default)

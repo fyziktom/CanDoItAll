@@ -268,7 +268,7 @@ internal static class ProjectNodeBindingStorage
         new HashSet<string>(["markerSet"], StringComparer.OrdinalIgnoreCase);
 
     public static async Task LoadAsync(
-        AppDbContext dbContext,
+        DbContext dbContext,
         IReadOnlyCollection<ProjectObjectRecord> nodes,
         CancellationToken cancellationToken = default)
     {
@@ -303,7 +303,7 @@ internal static class ProjectNodeBindingStorage
     }
 
     public static async Task<ProjectNodeBindingPersistencePlan> PersistAsync(
-        AppDbContext dbContext,
+        DbContext dbContext,
         ProjectObjectRecord node,
         CancellationToken cancellationToken = default)
     {
@@ -433,7 +433,7 @@ internal static class ProjectNodeBindingStorage
     }
 
     private static void UpsertBindingRecord(
-        AppDbContext dbContext,
+        DbContext dbContext,
         ProjectNodeBindingRecord? existingBinding,
         ProjectObjectRecord node,
         ProjectNodeBindingPersistencePlan plan)
@@ -461,7 +461,7 @@ internal static class ProjectNodeBindingStorage
     }
 
     private static void ReplaceReferenceRecords(
-        AppDbContext dbContext,
+        DbContext dbContext,
         ProjectObjectRecord node,
         ProjectNodeBindingPersistencePlan plan,
         IReadOnlyList<ProjectNodeReferenceRecord> existingReferences)

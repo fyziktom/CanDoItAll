@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
@@ -93,7 +94,10 @@ public sealed class AgentTeamCatalogIntegrationTests
         var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
         var agentId = await CreateAgentAsync(workspaceService, "Restricted project creator");
-        var projectId = Guid.NewGuid();
+        var created = await scope.ServiceProvider.GetRequiredService<ProjectsService>()
+            .CreateWithAdmissionAsync(new ProjectEditorModel { Name = "Durable project grant" });
+        Assert.True(created.IsSuccess);
+        var projectId = Assert.IsType<ProjectWriteAdmission>(created.Value).ProjectId;
 
         await workspaceService.GrantAgentProjectStructureAccessAsync(agentId, projectId);
         var firstGrant = Assert.Single(

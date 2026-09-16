@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-internal sealed class DatabaseProviderMutationVerification(IDbContextFactory<AppDbContext> factory) : IProviderMutationVerification {
+internal sealed class DatabaseProviderMutationVerification(IDbContextFactory<ProvidersDbContext> factory) : IProviderMutationVerification {
     public async Task<ProviderMutationVerification> VerifyAsync(
         ProviderMutationAttempt attempt, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(attempt);

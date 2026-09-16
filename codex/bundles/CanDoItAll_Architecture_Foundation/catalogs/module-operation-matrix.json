@@ -1,0 +1,489 @@
+[
+  {
+    "id": "MAT-001",
+    "module_id": "MOD-AGENTS",
+    "read_contract_ids": [
+      "CON-001",
+      "CON-063"
+    ],
+    "command_contract_ids": [
+      "CON-002",
+      "CON-063",
+      "CON-065"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Managed HR tools observed; capability curator documented.",
+    "guardrails": "Technical definitions and protected capability policy remain Agents-owned; no self-escalation.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-002",
+    "module_id": "MOD-PROVIDERS",
+    "read_contract_ids": [
+      "CON-005",
+      "CON-009"
+    ],
+    "command_contract_ids": [
+      "CON-006",
+      "CON-008"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Provider administration exists in the baseline; arbitrary agent administration is not proven.",
+    "guardrails": "Selecting an allowed model is not editing tariffs, publishing providers, or reading secrets. Pricing and sharing writes require dedicated administrative grants.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-003",
+    "module_id": "MOD-CRM",
+    "read_contract_ids": [
+      "CON-010",
+      "CON-057",
+      "CON-059"
+    ],
+    "command_contract_ids": [
+      "CON-058",
+      "CON-059",
+      "CON-060",
+      "CON-012",
+      "CON-013",
+      "CON-014"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "HR safe queries, party create, and affiliation operations observed; broader staffing mutation is an extension.",
+    "guardrails": "Separate safe contact, confidential HR, staffing, participation, reservations, and technical-agent projections. No CRM AI-price/technical-definition master.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-004",
+    "module_id": "MOD-PROJECTS",
+    "read_contract_ids": [
+      "CON-015"
+    ],
+    "command_contract_ids": [
+      "CON-016",
+      "CON-017"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Project/Structure-related paths retained; every new direct tool requires registration discovery.",
+    "guardrails": "Project lifecycle, phases, and portfolio hierarchy owned here. Project creation/deletion requires explicit scope and recovery.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-005",
+    "module_id": "MOD-STRUCTURE",
+    "read_contract_ids": [
+      "CON-018"
+    ],
+    "command_contract_ids": [
+      "CON-019",
+      "CON-020",
+      "CON-021",
+      "CON-022"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Actual Structure tools/executor paths retained.",
+    "guardrails": "Native nodes/links are owner-written; foreign source and runtime state remain projected. Required contribution is not elevated permission.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-006",
+    "module_id": "BND-WORK",
+    "read_contract_ids": [
+      "CON-023",
+      "CON-026"
+    ],
+    "command_contract_ids": [
+      "CON-023",
+      "CON-024",
+      "CON-025",
+      "CON-026"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Task/Gantt paths user-confirmed and evidenced in baseline.",
+    "guardrails": "Task creation, assignments, dependencies, and plan baselines use one writer; staffing reservation and price source are separate.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-007",
+    "module_id": "MOD-PROCESSES",
+    "read_contract_ids": [
+      "CON-028"
+    ],
+    "command_contract_ids": [
+      "CON-027",
+      "CON-028",
+      "CON-068"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "UI/HTTP/governed/Structure bridges; no general first-party direct Process provider documented.",
+    "guardrails": "Definition editing, execution assignment, admission, cancellation, and recovery are different scoped actions.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-008",
+    "module_id": "BND-WORKFLOWS",
+    "read_contract_ids": [
+      "CON-029",
+      "CON-030"
+    ],
+    "command_contract_ids": [
+      "CON-030",
+      "CON-064"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Workflow execution and curator providers documented; exact methods/purposes require current discovery.",
+    "guardrails": "Definition revision edits do not rewrite admitted runs/checkpoints. Executors may call other owners only under their own delegated scope.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-009",
+    "module_id": "BND-SIMPLECHATS",
+    "read_contract_ids": [
+      "CON-061"
+    ],
+    "command_contract_ids": [
+      "CON-062"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Owner definition API observed; HR definition adapter missing/requested.",
+    "guardrails": "Definition management only; no transcript access, tools, agent runtime, implicit project context, or ordinary-turn injection.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-010",
+    "module_id": "MOD-PROMPTS",
+    "read_contract_ids": [
+      "CON-033"
+    ],
+    "command_contract_ids": [
+      "CON-034"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Prompt retrieval and curator providers documented.",
+    "guardrails": "Safe lookup, draft/edit, version publication, and deletion require distinct permissions; preserve pinned use.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-011",
+    "module_id": "MOD-RESOURCES",
+    "read_contract_ids": [
+      "CON-035",
+      "CON-069"
+    ],
+    "command_contract_ids": [
+      "CON-035",
+      "CON-070"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Resource services/catalog paths retained; direct general Resource tool attachment not established.",
+    "guardrails": "Catalog metadata differs from CRM resources and Storage bytes. Supported schema/connector actions are explicit.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-012",
+    "module_id": "BND-STORAGE",
+    "read_contract_ids": [
+      "CON-043",
+      "CON-071"
+    ],
+    "command_contract_ids": [
+      "CON-043"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Authorized file/content paths retained; exact driver capabilities must be discovered.",
+    "guardrails": "Only owner-issued scoped content handles; bounds, use-time access, safe preview, provenance, cleanup, and egress.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-013",
+    "module_id": "MOD-SCHEDULER",
+    "read_contract_ids": [
+      "CON-066"
+    ],
+    "command_contract_ids": [
+      "CON-067",
+      "CON-037"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Managed interactive workflow target/schedule search and schedule creation observed.",
+    "guardrails": "Plan write does not automatically authorize every future target operation. Recheck dispatch authority; process tool support is not implied.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-014",
+    "module_id": "MOD-TESTLAB",
+    "read_contract_ids": [
+      "CON-036"
+    ],
+    "command_contract_ids": [
+      "CON-036",
+      "CON-076"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "TestLab baseline paths retained; no universal runner/tool inferred.",
+    "guardrails": "Evidence/target revision and execution proof required; model text cannot manufacture a PASS or business acceptance.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-015",
+    "module_id": "MOD-MEMORY",
+    "read_contract_ids": [
+      "CON-038"
+    ],
+    "command_contract_ids": [
+      "CON-038",
+      "CON-075"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Provider query/status tools documented; complete ingestion-tool surface not audited.",
+    "guardrails": "Derived nonauthoritative data with provenance, current source access, and retention; no source-master back-write.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-016",
+    "module_id": "MOD-COLLAB",
+    "read_contract_ids": [
+      "CON-050"
+    ],
+    "command_contract_ids": [
+      "CON-050",
+      "CON-074"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Thread/member/message paths are inherited discovery, not a new runtime claim.",
+    "guardrails": "Membership and publication audience apply; Collaboration is not agent or ordinary-chat transcript storage.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-017",
+    "module_id": "MOD-PLUGINS",
+    "read_contract_ids": [
+      "CON-040"
+    ],
+    "command_contract_ids": [
+      "CON-040"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Plugin installation/grant/OAuth/activation exist in baseline; no generic agent administration grant.",
+    "guardrails": "Install, execute, activate, and grant administration are distinct. Privileged changes require explicit human/admin policy, not default automation.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-018",
+    "module_id": "MOD-SECURITY",
+    "read_contract_ids": [
+      "CON-042"
+    ],
+    "command_contract_ids": [
+      "CON-042"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Secret infrastructure exists; raw secret management is not an agent operation by default.",
+    "guardrails": "Return only permitted metadata/references. No generic secret reveal/export/grant/revocation capability; runtime resolves transport-only values.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-019",
+    "module_id": "MOD-WORKSPACE",
+    "read_contract_ids": [
+      "CON-047",
+      "CON-048"
+    ],
+    "command_contract_ids": [
+      "CON-047"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Preferences and control-plane-related UI exist; control-plane writes are not Workspace-owned.",
+    "guardrails": "Do not route provider/security/database administration through a universal settings writer. No ambient current profile for durable work.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-020",
+    "module_id": "BND-CONNECTORS",
+    "read_contract_ids": [
+      "CON-041"
+    ],
+    "command_contract_ids": [
+      "CON-041"
+    ],
+    "automation_callers": [
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "observed_surface": "Manifests/schema integration exists; executable handler coverage remains discovery.",
+    "guardrails": "Descriptor does not establish executable command. Network/secret/egress policy and supported transport must be explicit.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-021",
+    "module_id": "BND-CONVERSATIONS",
+    "read_contract_ids": [],
+    "command_contract_ids": [],
+    "automation_callers": [],
+    "observed_surface": "Neutral presentation only; no direct domain operation grants.",
+    "guardrails": "Emit intent and render state. Product-specific adapters call owners; no privileged tool/DbContext/runtime dependency.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-022",
+    "module_id": "BND-COMPOSITION",
+    "read_contract_ids": [
+      "CON-048"
+    ],
+    "command_contract_ids": [
+      "CON-048",
+      "CON-056"
+    ],
+    "automation_callers": [],
+    "observed_surface": "Host/database control plane exists; not a general agent surface.",
+    "guardrails": "Wire adapters, scope/incarnation, host policy, and transfer. No blanket automated DB migration/profile switching or business-master authority.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-023",
+    "module_id": "BND-MAF",
+    "read_contract_ids": [
+      "CON-051"
+    ],
+    "command_contract_ids": [],
+    "automation_callers": [],
+    "observed_surface": "Neutral runtime composition mechanisms documented.",
+    "guardrails": "Resolve invocation and provider composition; no CRM/SimpleChats all-domain business gateway or owner schemas.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  },
+  {
+    "id": "MAT-024",
+    "module_id": "BND-API",
+    "read_contract_ids": [],
+    "command_contract_ids": [],
+    "automation_callers": [],
+    "observed_surface": "External transport adapter only.",
+    "guardrails": "HTTP authorization and typed transport delegate to owner operations; route reachability is not an agent grant.",
+    "status": "TARGET_COVERAGE_NOT_PERMISSION_MANIFEST",
+    "new_automatic_grants": false,
+    "workflow_process_rule": "Register and prove a distinct typed executor/step adapter with current run delegation; do not borrow interactive managed identity."
+  }
+]

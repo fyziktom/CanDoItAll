@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public sealed class HistoryMaintenanceHostedService(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<ProviderHistoryDbContext> factory,
     IDatabaseRuntimeState runtime,
     IDatabaseRuntimeWriteFence writeFence,
     IEnumerable<IHistorySourceMaintenance> sources,

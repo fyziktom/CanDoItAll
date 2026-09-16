@@ -19,6 +19,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
         Assert.Contains("did not complete", assessment.FailureSummary, StringComparison.Ordinal);
     }
@@ -43,8 +44,54 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Completed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
         Assert.Equal(RunOutcome.Succeeded, assessment.Outcome);
         Assert.Empty(assessment.FailureSummary);
+    }
+
+    [Fact]
+    public void Later_committed_attempt_for_the_same_operation_resolves_a_typed_no_effect_rejection()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a",
+                    failureMessage: "The asset content was rejected before anything was stored."),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Committed,
+                    correlationKey: "operation-a")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Completed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
+        Assert.Equal(RunOutcome.Succeeded, assessment.Outcome);
+        Assert.Empty(assessment.FailureSummary);
+    }
+
+    [Fact]
+    public void Typed_no_effect_rejection_without_a_later_committed_attempt_finishes_failed()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [CreateMutationTrace(
+                sequence: 1,
+                AgentToolInvocationOutcome.Failed,
+                AgentToolEffectState.None,
+                correlationKey: "operation-a",
+                failureMessage: "The asset content was rejected before anything was stored.")],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+        Assert.Equal(RunOutcome.Failed, assessment.Outcome);
+        Assert.Contains("rejected before anything was stored", assessment.FailureSummary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -67,7 +114,85 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
+    }
+
+    [Fact]
+    public void Later_committed_attempt_of_another_tool_does_not_resolve_the_rejection()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a",
+                    toolName: "workspace_write_file"),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Committed,
+                    correlationKey: "operation-a",
+                    toolName: "workspace_delete_path")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+    }
+
+    [Fact]
+    public void Resolved_rejection_does_not_hide_an_unresolved_mutation_elsewhere()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a"),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Committed,
+                    correlationKey: "operation-a"),
+                CreateMutationTrace(
+                    sequence: 3,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.Unknown,
+                    correlationKey: "operation-b")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+    }
+
+    [Fact]
+    public void Successful_read_does_not_resolve_an_unresolved_mutation()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a"),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Succeeded,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-a",
+                    classification: ToolInvocationClassification.Read)
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
     }
 
     [Fact]
@@ -83,6 +208,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
     }
 
@@ -95,6 +221,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.WaitingOnTool, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
         Assert.Null(assessment.Outcome);
     }
 
@@ -111,6 +238,7 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
         Assert.Equal(RunOutcome.Failed, assessment.Outcome);
     }
 
@@ -123,7 +251,16 @@ public sealed class ToolOutcomeCompletionIntegrationTests
             portableOutputValid: true);
 
         Assert.Equal(ExecutionState.Completed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.None, assessment.FailureKind);
         Assert.Equal(RunOutcome.Succeeded, assessment.Outcome);
+        Assert.Empty(assessment.FailureSummary);
+    }
+
+    [Fact]
+    public void Invalid_portable_output_keeps_its_distinct_validation_failure_kind() {
+        var assessment = AgentToolCompletionAssessment.Create([], 0, portableOutputValid: false);
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.PortableOutputValidation, assessment.FailureKind);
         Assert.Empty(assessment.FailureSummary);
     }
 
@@ -132,12 +269,14 @@ public sealed class ToolOutcomeCompletionIntegrationTests
         AgentToolInvocationOutcome outcome,
         AgentToolEffectState effectState,
         string correlationKey,
-        string failureMessage = "")
+        string failureMessage = "",
+        string toolName = "project_structure_asset_create",
+        ToolInvocationClassification classification = ToolInvocationClassification.Mutation)
     {
         var startedAtUtc = DateTimeOffset.UtcNow.AddSeconds(sequence);
         return new AgentToolInvocationTrace(
-            "project_structure_asset_create",
-            ToolInvocationClassification.Mutation,
+            toolName,
+            classification,
             sequence,
             startedAtUtc,
             startedAtUtc.AddMilliseconds(100),

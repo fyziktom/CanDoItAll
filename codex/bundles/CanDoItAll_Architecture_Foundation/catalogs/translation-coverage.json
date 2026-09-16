@@ -1,0 +1,372 @@
+[
+  {
+    "original_path": "CHANGELOG.md",
+    "replacement_path": "CHANGELOG.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "INDEX.md",
+    "replacement_path": "INDEX.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "README.md",
+    "replacement_path": "README.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "START_HERE_FOR_ASTRA.md",
+    "replacement_path": "START_HERE_FOR_ASTRA.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/01-principles-and-decisions.md",
+    "replacement_path": "architecture/01-principles-and-decisions.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/02-domain-glossary.md",
+    "replacement_path": "architecture/02-domain-glossary.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/03-context-map-and-ownership.md",
+    "replacement_path": "architecture/03-context-map-and-ownership.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/04-contract-rules.md",
+    "replacement_path": "architecture/04-contract-rules.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/05-project-structure-and-safe-contributions.md",
+    "replacement_path": "architecture/05-project-structure-and-safe-contributions.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/06-persistence-transactions-and-migrations.md",
+    "replacement_path": "architecture/06-persistence-transactions-and-migrations.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/07-projections-consistency-and-scope.md",
+    "replacement_path": "architecture/07-projections-consistency-and-scope.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/08-execution-and-product-journeys.md",
+    "replacement_path": "architecture/08-execution-and-product-journeys.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/09-assets-files-and-lifecycle.md",
+    "replacement_path": "architecture/09-assets-files-and-lifecycle.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/10-security-authority-and-observability.md",
+    "replacement_path": "architecture/10-security-authority-and-observability.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/11-ui-seams-and-hosting.md",
+    "replacement_path": "architecture/11-ui-seams-and-hosting.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/12-change-governance-and-cutover-gates.md",
+    "replacement_path": "architecture/12-change-governance-and-cutover-gates.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "architecture/13-identity-relations-and-reference-shapes.md",
+    "replacement_path": "architecture/13-identity-relations-and-reference-shapes.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "catalogs/contracts.json",
+    "replacement_path": "catalogs/contracts.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/contracts.md",
+    "replacement_path": "catalogs/contracts.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "catalogs/feature-proof-candidates.json",
+    "replacement_path": "catalogs/feature-proof-candidates.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/features.json",
+    "replacement_path": "catalogs/features.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/features.md",
+    "replacement_path": "catalogs/features.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "catalogs/gaps.json",
+    "replacement_path": "catalogs/gaps.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/glossary.json",
+    "replacement_path": "catalogs/glossary.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/inherited-source-anchors.json",
+    "replacement_path": "catalogs/inherited-source-anchors.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/invariant-proof-plan.json",
+    "replacement_path": "catalogs/invariant-proof-plan.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/invariants.json",
+    "replacement_path": "catalogs/invariants.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/modules.json",
+    "replacement_path": "catalogs/modules.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/modules.md",
+    "replacement_path": "catalogs/modules.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "catalogs/persistence-discovery.json",
+    "replacement_path": "catalogs/persistence-discovery.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/qa-scenarios.json",
+    "replacement_path": "catalogs/qa-scenarios.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/requirements.json",
+    "replacement_path": "catalogs/requirements.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "catalogs/sources.json",
+    "replacement_path": "catalogs/sources.json",
+    "treatment": "ALL_ORIGINAL_IDS_RETAINED_PROSE_TRANSLATED_AND_TARGETED_EXTENSIONS_ADDED"
+  },
+  {
+    "original_path": "checksums.sha256",
+    "replacement_path": "checksums.sha256",
+    "treatment": "REGENERATED_FOR_ENGLISH_REVISION"
+  },
+  {
+    "original_path": "evidence/README.md",
+    "replacement_path": "evidence/README.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "evidence/baseline.md",
+    "replacement_path": "evidence/baseline.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "evidence/gaps-and-future-needs.md",
+    "replacement_path": "evidence/gaps-and-future-needs.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "evidence/persistence-discovery.md",
+    "replacement_path": "evidence/persistence-discovery.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "evidence/sources.md",
+    "replacement_path": "evidence/sources.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "inputs/current-request.txt",
+    "replacement_path": "inputs/current-request.txt",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "inputs/zadani.md",
+    "replacement_path": "inputs/original-requirements.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "manifest.json",
+    "replacement_path": "manifest.json",
+    "treatment": "REGENERATED_FOR_ENGLISH_REVISION"
+  },
+  {
+    "original_path": "modules/BND-API.md",
+    "replacement_path": "modules/BND-API.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-COMPOSITION.md",
+    "replacement_path": "modules/BND-COMPOSITION.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-CONNECTORS.md",
+    "replacement_path": "modules/BND-CONNECTORS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-CONVERSATIONS.md",
+    "replacement_path": "modules/BND-CONVERSATIONS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-MAF.md",
+    "replacement_path": "modules/BND-MAF.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-SIMPLECHATS.md",
+    "replacement_path": "modules/BND-SIMPLECHATS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-STORAGE.md",
+    "replacement_path": "modules/BND-STORAGE.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-WORK.md",
+    "replacement_path": "modules/BND-WORK.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/BND-WORKFLOWS.md",
+    "replacement_path": "modules/BND-WORKFLOWS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-AGENTS.md",
+    "replacement_path": "modules/MOD-AGENTS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-COLLAB.md",
+    "replacement_path": "modules/MOD-COLLAB.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-CRM.md",
+    "replacement_path": "modules/MOD-CRM.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-MEMORY.md",
+    "replacement_path": "modules/MOD-MEMORY.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-PLUGINS.md",
+    "replacement_path": "modules/MOD-PLUGINS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-PROCESSES.md",
+    "replacement_path": "modules/MOD-PROCESSES.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-PROJECTS.md",
+    "replacement_path": "modules/MOD-PROJECTS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-PROMPTS.md",
+    "replacement_path": "modules/MOD-PROMPTS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-PROVIDERS.md",
+    "replacement_path": "modules/MOD-PROVIDERS.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-RESOURCES.md",
+    "replacement_path": "modules/MOD-RESOURCES.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-SCHEDULER.md",
+    "replacement_path": "modules/MOD-SCHEDULER.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-SECURITY.md",
+    "replacement_path": "modules/MOD-SECURITY.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-STRUCTURE.md",
+    "replacement_path": "modules/MOD-STRUCTURE.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-TESTLAB.md",
+    "replacement_path": "modules/MOD-TESTLAB.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "modules/MOD-WORKSPACE.md",
+    "replacement_path": "modules/MOD-WORKSPACE.md",
+    "treatment": "REGENERATED_ENGLISH_CARD_FROM_RETAINED_MODULE_ID_AND_UPDATED_CATALOGS"
+  },
+  {
+    "original_path": "qa/invariants.md",
+    "replacement_path": "qa/invariants.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "qa/proof-levels-and-fixtures.md",
+    "replacement_path": "qa/proof-levels-and-fixtures.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "qa/scenarios.md",
+    "replacement_path": "qa/scenarios.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "qa/traceability.md",
+    "replacement_path": "qa/traceability.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "reviews/package-validation.json",
+    "replacement_path": "reviews/package-validation.json",
+    "treatment": "REGENERATED_FOR_ENGLISH_REVISION"
+  },
+  {
+    "original_path": "reviews/preparation-plan-and-scope.md",
+    "replacement_path": "reviews/preparation-plan-and-scope.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "reviews/review-log.md",
+    "replacement_path": "reviews/review-log.md",
+    "treatment": "TRANSLATED_AND_REVISED_IN_PLACE"
+  },
+  {
+    "original_path": "tools/validate_package.py",
+    "replacement_path": "tools/validate_package.py",
+    "treatment": "REGENERATED_FOR_ENGLISH_REVISION"
+  }
+]

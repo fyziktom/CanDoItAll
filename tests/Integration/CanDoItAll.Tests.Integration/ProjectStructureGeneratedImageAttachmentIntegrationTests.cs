@@ -7,11 +7,13 @@ using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
@@ -43,10 +45,10 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
                 string.Empty,
                 $"project:{projectId:D}",
                 ObjectSubtype: "delivery"));
-        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
-        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var chatProvider = await CreateProviderAsync(services, ProviderProfilePurpose.Chat);
+        var imageProvider = await CreateProviderAsync(services, ProviderProfilePurpose.ImageGeneration);
         var imageService = new RecordingImageGenerationService();
-        var agent = CreateAgent(projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
+        var agent = await CreateAgentAsync(services, projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
         var context = CreateContext(agent, chatProvider, projectId);
         var imageToolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new StaticProviderSource([imageProvider]),
@@ -64,7 +66,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
         try
         {
-            var imageTool = FindTool(imageTools, AgentToolInvocationPolicyMetadata.ImageGenerationCreate);
+            var imageTool = FindTool(imageTools, ImageGenerationToolPolicy.ImageGenerationCreate);
             var imageFunction = Assert.IsAssignableFrom<AIFunction>(imageTool);
             var targetSchema = imageFunction.JsonSchema
                 .GetProperty("properties")
@@ -114,7 +116,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             Assert.Contains("unchanged", generated.ProjectAssetStorageInstruction, StringComparison.OrdinalIgnoreCase);
 
             var assetNode = await InvokeAsync<ProjectStructureNodeSummary>(
-                FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                 new AIFunctionArguments
                 {
                     ["projectId"] = draft.ProjectId,
@@ -163,9 +165,9 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var agentService = services.GetRequiredService<ProjectStructureAgentService>();
         var spreadsheets = services.GetRequiredService<ISpreadsheetDocumentService>();
         var projectId = await CreateProjectAsync(projects);
-        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
-        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
-        var agent = CreateAgent(projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
+        var chatProvider = await CreateProviderAsync(services, ProviderProfilePurpose.Chat);
+        var imageProvider = await CreateProviderAsync(services, ProviderProfilePurpose.ImageGeneration);
+        var agent = await CreateAgentAsync(services, projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
         var projectToolProvider = services
             .GetServices<IAgentRuntimeToolProvider>()
             .OfType<ProjectStructureAgentRuntimeToolProvider>()
@@ -207,7 +209,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             Assert.StartsWith(scopedRoot + "/", source.RelativePath, StringComparison.Ordinal);
 
             var assetNode = await InvokeAsync<ProjectStructureNodeSummary>(
-                FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                 new AIFunctionArguments
                 {
                     ["projectId"] = projectId,
@@ -231,7 +233,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
                     ["nodeId"] = assetNode.Id
                 });
             var runtimeContent = await InvokeAsync<ProjectStructureAssetContentDescriptor>(
-                FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet),
+                FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetContentGet),
                 new AIFunctionArguments
                 {
                     ["projectId"] = projectId,
@@ -282,9 +284,9 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var projectId = await CreateProjectAsync(projects);
         var foreignProjectId = await CreateProjectAsync(projects);
-        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
-        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
-        var agent = CreateAgent(projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
+        var chatProvider = await CreateProviderAsync(services, ProviderProfilePurpose.Chat);
+        var imageProvider = await CreateProviderAsync(services, ProviderProfilePurpose.ImageGeneration);
+        var agent = await CreateAgentAsync(services, projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
         var projectToolProvider = services
             .GetServices<IAgentRuntimeToolProvider>()
             .OfType<ProjectStructureAgentRuntimeToolProvider>()
@@ -309,7 +311,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
             var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
                 () => InvokeAsync<ProjectStructureNodeSummary>(
-                    FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                    FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                     new AIFunctionArguments
                     {
                         ["projectId"] = projectId,
@@ -346,9 +348,9 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var projects = services.GetRequiredService<ProjectsService>();
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var projectId = await CreateProjectAsync(projects);
-        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
-        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
-        var agent = CreateAgent(projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
+        var chatProvider = await CreateProviderAsync(services, ProviderProfilePurpose.Chat);
+        var imageProvider = await CreateProviderAsync(services, ProviderProfilePurpose.ImageGeneration);
+        var agent = await CreateAgentAsync(services, projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
         var projectToolProvider = services
             .GetServices<IAgentRuntimeToolProvider>()
             .OfType<ProjectStructureAgentRuntimeToolProvider>()
@@ -371,7 +373,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
             var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
                 () => InvokeAsync<ProjectStructureNodeSummary>(
-                    FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                    FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                     new AIFunctionArguments
                     {
                         ["projectId"] = projectId,
@@ -408,10 +410,10 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var projects = services.GetRequiredService<ProjectsService>();
         var workspacePaths = services.GetRequiredService<IWorkspacePathResolutionService>();
         var projectId = await CreateProjectAsync(projects);
-        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
-        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var chatProvider = await CreateProviderAsync(services, ProviderProfilePurpose.Chat);
+        var imageProvider = await CreateProviderAsync(services, ProviderProfilePurpose.ImageGeneration);
         var imageService = new RecordingImageGenerationService();
-        var agent = CreateAgent(projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: false);
+        var agent = await CreateAgentAsync(services, projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: false);
         var imageToolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new StaticProviderSource([imageProvider]),
             workspacePaths,
@@ -423,7 +425,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             () => InvokeAsync<ImageGenerationCreateResult>(
-                FindTool(tools, AgentToolInvocationPolicyMetadata.ImageGenerationCreate),
+                FindTool(tools, ImageGenerationToolPolicy.ImageGenerationCreate),
                 new AIFunctionArguments
                 {
                     ["request"] = new ImageGenerationCreateInput(
@@ -450,9 +452,9 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var services = scope.ServiceProvider;
         var projects = services.GetRequiredService<ProjectsService>();
         var projectId = await CreateProjectAsync(projects);
-        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
-        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
-        var agent = CreateAgent(projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: false, canStoreProjectAssets: true);
+        var chatProvider = await CreateProviderAsync(services, ProviderProfilePurpose.Chat);
+        var imageProvider = await CreateProviderAsync(services, ProviderProfilePurpose.ImageGeneration);
+        var agent = await CreateAgentAsync(services, projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: false, canStoreProjectAssets: true);
         var context = CreateContext(agent, chatProvider, projectId);
         var imageToolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new StaticProviderSource([imageProvider]),
@@ -467,11 +469,11 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var imageTools = await imageToolProvider.CreateToolsAsync(context, CancellationToken.None);
         var projectTools = await projectToolProvider.CreateToolsAsync(context, CancellationToken.None);
 
-        Assert.Contains(imageTools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ImageGenerationCreate);
-        Assert.DoesNotContain(projectTools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate);
+        Assert.Contains(imageTools, tool => tool.Name == ImageGenerationToolPolicy.ImageGenerationCreate);
+        Assert.DoesNotContain(projectTools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureAssetCreate);
         Assert.DoesNotContain(
             projectTools,
-            tool => AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Contains(
+            tool => ProjectStructureToolPolicy.MutationTools.Contains(
                 tool.Name,
                 StringComparer.Ordinal));
     }
@@ -485,9 +487,9 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var projects = services.GetRequiredService<ProjectsService>();
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var projectId = await CreateProjectAsync(projects);
-        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
-        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
-        var agent = CreateAgent(projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
+        var chatProvider = await CreateProviderAsync(services, ProviderProfilePurpose.Chat);
+        var imageProvider = await CreateProviderAsync(services, ProviderProfilePurpose.ImageGeneration);
+        var agent = await CreateAgentAsync(services, projectId, chatProvider.Id, imageProvider.Id, canWriteProjectStructure: true, canStoreProjectAssets: true);
         var context = CreateContext(agent, chatProvider, projectId);
         var imageService = new RecordingImageGenerationService();
         var imageToolProvider = new ImageGenerationAgentRuntimeToolProvider(
@@ -506,7 +508,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         try
         {
             var generated = await InvokeAsync<ImageGenerationCreateResult>(
-                FindTool(imageTools, AgentToolInvocationPolicyMetadata.ImageGenerationCreate),
+                FindTool(imageTools, ImageGenerationToolPolicy.ImageGenerationCreate),
                 new AIFunctionArguments
                 {
                     ["request"] = new ImageGenerationCreateInput(
@@ -530,7 +532,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 
             var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
                 () => InvokeAsync<ProjectStructureNodeSummary>(
-                    FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+                    FindTool(projectTools, ProjectStructureToolPolicy.ProjectStructureAssetCreate),
                     new AIFunctionArguments
                     {
                         ["projectId"] = projectId,
@@ -562,54 +564,39 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         return result.Value;
     }
 
-    private static AgentDefinition CreateAgent(
+    private static async Task<AgentDefinition> CreateAgentAsync(
+        IServiceProvider services,
         Guid projectId,
         Guid chatProviderId,
         Guid imageProviderId,
         bool canWriteProjectStructure,
-        bool canStoreProjectAssets)
-    {
-        var configurationJson = AgentProjectStructureAccessMetadata.Write(
-            "{}",
-            new AgentProjectStructureAccessSettings
-            {
+        bool canStoreProjectAssets) {
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agentId = await workspace.SaveAgentAsync(new AgentEditorModel {
+            Name = "Generated Image Attachment Agent",
+            RoleTitle = "Generated image asset writer",
+            Summary = "Exercises the typed image-to-project-asset handoff.",
+            Instructions = "Generate an image, then submit the exact returned asset draft through the governed project-structure asset tool.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = chatProviderId,
+            Model = "gpt-5-mini",
+            ConfigurationJson = "{}",
+            Permissions = AgentPermissionsPolicy.Default,
+            ProjectStructureAccess = new() {
                 CanRead = true,
                 CanWriteNonTaskStructure = canWriteProjectStructure,
                 AllowedProjectIds = [projectId]
-            });
-        configurationJson = AgentImageGenerationAccessMetadata.Write(
-            configurationJson,
-            new AgentImageGenerationAccessSettings
-            {
+            },
+            ImageGenerationAccess = new() {
                 CanGenerateImages = true,
                 PreferredProviderProfileId = imageProviderId,
                 DefaultModel = "gpt-image-1-mini",
                 CanStoreImagesAsProjectAssets = canStoreProjectAssets
-            });
-        var now = DateTimeOffset.UtcNow;
-
-        return new AgentDefinition(
-            Guid.NewGuid(),
-            "Generated Image Attachment Agent",
-            "Generated image asset writer",
-            "Exercises the typed image-to-project-asset handoff.",
-            "Generate an image, then submit the exact returned asset draft through the governed project-structure asset tool.",
-            AgentLifecycleStatus.Active,
-            chatProviderId,
-            "gpt-5-mini",
-            AgentWorkloadKind.General,
-            AgentChatHistoryMode.ProviderDefault,
-            0.2,
-            RequirePerServiceCallChatHistoryPersistence: false,
-            EnableBackgroundResponses: false,
-            configurationJson,
-            IsTemplate: false,
-            TemplateKey: string.Empty,
-            AgentPermissionsPolicy.Default,
-            [],
-            [],
-            now,
-            now);
+            }
+        });
+        var agent = Assert.Single(await workspace.ListAgentsAsync(), item => item.Id == agentId);
+        Assert.Equal(projectId, Assert.Single(AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson).AllowedProjectLifetimes).ProjectId);
+        return agent;
     }
 
     private static AgentRuntimeToolProviderContext CreateContext(
@@ -634,9 +621,8 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             Tags: new Dictionary<string, string>());
     }
 
-    private static ProviderProfile CreateProvider(ProviderProfilePurpose purpose)
-    {
-        return new ProviderProfile(
+    private static async Task<ProviderProfile> CreateProviderAsync(IServiceProvider services, ProviderProfilePurpose purpose) {
+        var provider = new ProviderProfile(
             Guid.NewGuid(),
             purpose == ProviderProfilePurpose.ImageGeneration ? "Integration image provider" : "Integration chat provider",
             ProviderKind.OpenAi,
@@ -655,6 +641,22 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             LastCheckedAtUtc: null,
             SuggestedModels: [],
             purpose);
+        var secret = await services.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {
+            Name = provider.Name,
+            Kind = SecretKind.ApiKey,
+            SecretValue = "synthetic-generated-image-attachment-value",
+            Scope = "workspace"
+        });
+        Assert.True(secret.IsSuccess);
+        var editor = ProviderProfileEditorModel.FromDefinition(provider);
+        if (purpose == ProviderProfilePurpose.Chat) {
+            editor.ModelPrices = [Assert.Single(ProviderPricingDefaults.CreateDefaultEditorModels(provider.Kind, provider.DefaultModel),
+                price => price.Model == provider.DefaultModel)];
+        }
+        editor.ApiKeyEnvironmentVariable = ProviderMetadata.CreateSecretReference(secret.Value);
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        Assert.Equal(provider.Id, await workspace.SaveProviderAsync(editor));
+        return Assert.Single(await workspace.ListProvidersAsync(), item => item.Id == provider.Id);
     }
 
     private static AITool FindTool(IReadOnlyList<AITool> tools, string name)

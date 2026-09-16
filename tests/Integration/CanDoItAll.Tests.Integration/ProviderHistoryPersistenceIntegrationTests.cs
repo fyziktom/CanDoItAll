@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Composition;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.AgentFramework.Models;
@@ -22,7 +23,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await fixture.Capture.BeginAsync(start, new("input", 0), default);
         await fixture.Capture.CompleteAsync(start, fixture.Completion(), "response", default);
         fixture.Clock.Now += TimeSpan.FromDays(31);
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         Assert.Equal(2, await retention.PurgeExpiredDetailAsync(fixture.Partition, 10, default));
         Assert.Equal(1, await retention.PurgeExpiredMetadataAsync(fixture.Partition, 1, default));
         Assert.Equal(1, await retention.PurgeExpiredMetadataAsync(fixture.Partition, 1, default));
@@ -44,7 +45,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await fixture.Capture.BeginAsync(retry, new("input", 0), default);
         await fixture.Capture.CompleteAsync(retry, fixture.Completion(), "retry", default);
         fixture.Clock.Now += TimeSpan.FromDays(26);
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         await retention.PurgeExpiredDetailAsync(fixture.Partition, 10, default);
         Assert.Equal(1, await retention.PurgeExpiredMetadataAsync(fixture.Partition, 10, default));
         await using var db = fixture.Factory.CreateDbContext();
@@ -63,7 +64,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await fixture.Capture.BeginAsync(first, new("input", 0), default);
         await fixture.Capture.CompleteAsync(first, fixture.Completion(), "response", default);
         fixture.Clock.Now += TimeSpan.FromDays(31);
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         await retention.PurgeExpiredDetailAsync(fixture.Partition, 10, default);
         await retention.PurgeExpiredMetadataAsync(fixture.Partition, 1, default);
         var retry = first with { EntryId = HistoryEntryId.New(), AttemptId = ProviderAttemptId.New(), StartedAtUtc = fixture.Clock.Now,
@@ -89,7 +90,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
             await fixture.Capture.CompleteAsync(start, fixture.Completion(), "response", default);
         }
         fixture.Clock.Now += TimeSpan.FromDays(31);
-        var retention = new HistoryRetentionStore(fixture.Factory, fixture.Clock);
+        var retention = new HistoryRetentionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions, fixture.Clock);
         await Assert.ThrowsAsync<ProviderHistoryException>(() => retention.PurgeExpiredMetadataAsync(
             fixture.Partition with { StorageLineageId = Guid.NewGuid() }, 1, default));
         for (var pass = 0; pass < 10; pass++) {
@@ -121,7 +122,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
     [Fact]
     public async Task Partition_identity_is_stable_under_concurrent_bootstrap() {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
-        var partitions = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => new HistoryPartitionStore(fixture.Factory).GetAsync(default)));
+        var partitions = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => new HistoryPartitionStore(fixture.HistoryFactory, fixture.HistoryOptions, fixture.Transactions).GetAsync(default)));
         Assert.All(partitions, partition => Assert.Equal(fixture.Partition, partition));
         await using var db = fixture.Factory.CreateDbContext();
         Assert.Single(await db.Set<HistoryPartitionRow>().ToListAsync());
@@ -160,7 +161,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         Assert.Equal(first.StartedAtUtc.AddDays(7), input.ExpiresAtUtc);
         Assert.DoesNotContain("fixture-secret-token", input.ProtectedText, StringComparison.Ordinal);
         var entry = await db.Set<HistoryEntryRow>().SingleAsync(row => row.Id == second.EntryId.Value);
-        var detail = await fixture.Details.ReadAsync(db, entry, default);
+        var detail = await fixture.Details.ReadAsync(fixture.Partition, new(entry.Id), default);
         Assert.Equal("input [redacted]", detail.Input!.Text);
         Assert.Equal("second response", detail.Response!.Text);
         Assert.Equal(HistoryDetailFlags.Redacted | HistoryDetailFlags.PriorContextNotCaptured, detail.Input.Flags);
@@ -188,7 +189,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         fixture.Clock.Now += TimeSpan.FromDays(8);
         await using var db = fixture.Factory.CreateDbContext();
         var entry = await db.Set<HistoryEntryRow>().SingleAsync();
-        var detail = await fixture.Details.ReadAsync(db, entry, default);
+        var detail = await fixture.Details.ReadAsync(fixture.Partition, new(entry.Id), default);
         Assert.Equal(HistoryDetailState.Expired, detail.State);
         Assert.Null(detail.Input);
         Assert.Single(await db.Set<HistoryDetailRow>().ToListAsync());
@@ -272,13 +273,15 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         var mutation = new HistorySourceMutation(new(source.Partition, HistorySourceKind.SimpleChat, new("chat"), new("turn")),
             new(1), HistorySourceMutationKind.Upsert, null, [HistoryEntryId.New()]);
         await using (var ownerDb = source.Factory.CreateDbContext()) {
-            source.Outbox.Stage(ownerDb, mutation);
-            await ownerDb.SaveChangesAsync();
+            await using var transaction = await ownerDb.Database.BeginTransactionAsync();
+            using var participation = source.Transactions.Enter(ownerDb);
+            await source.Outbox.StageAsync(mutation, default);
+            await transaction.CommitAsync();
         }
         await Assert.ThrowsAsync<ProviderHistoryException>(() => source.Processor.ProcessAsync(source.Partition, 50, default));
         await using var sourceDb = source.Factory.CreateDbContext();
         await using var targetDb = target.Factory.CreateDbContext();
-        var context = new DatabaseTransferContext(Profile("source"), Profile("target"), sourceDb, targetDb, true);
+        var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
         var local = new CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile {
             Name = "Preserved publisher", ConnectorPluginKey = ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0", DefaultModel = "preserved", BaseUrl = "https://example.invalid/v1"
@@ -312,7 +315,10 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         var appliedBefore = (await sourceDb.Database.GetAppliedMigrationsAsync()).ToArray();
         Assert.Equal("20260830104752_AddProviderHistoryExternalReference", appliedBefore.Last());
         await sourceDb.Database.GetService<IMigrator>().MigrateAsync();
-        Assert.Equal(appliedBefore, await sourceDb.Database.GetAppliedMigrationsAsync());
+        var appliedCurrent = (await sourceDb.Database.GetAppliedMigrationsAsync()).ToArray();
+        Assert.Equal(sourceDb.Database.GetMigrations(), appliedCurrent);
+        await sourceDb.Database.GetService<IMigrator>().MigrateAsync();
+        Assert.Equal(appliedCurrent, await sourceDb.Database.GetAppliedMigrationsAsync());
         sourceDb.ChangeTracker.Clear();
         Assert.Equal(publication.PublicId, (await sourceDb.Set<ProviderSharePublication>().SingleAsync()).PublicId);
         Assert.Equal(remote.RemoteInstanceId, (await sourceDb.Set<SharedProviderSource>().SingleAsync()).RemoteInstanceId);
@@ -321,7 +327,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         Assert.Equal(import.RemoteRevision, preservedImport.RemoteRevision);
         Assert.Equal(import.RemoteCatalogSnapshotJson, preservedImport.RemoteCatalogSnapshotJson);
         var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new AiProvidersDatabaseTransferHandler([new SharedProviderDatabaseTransferGuard()]).TransferAsync(context));
+            CreateProviderTransferHandler().TransferAsync(context));
         Assert.Contains("transfer is blocked", blocked.Message);
         Assert.Empty(await targetDb.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>().ToArrayAsync());
         var locator = new AgentHistoryLocator {
@@ -330,7 +336,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         };
         sourceDb.Add(locator);
         await sourceDb.SaveChangesAsync();
-        var result = await new HistoryDatabaseTransferHandler([new AgentHistoryTransferParticipant()]).TransferAsync(context);
+        var result = await CreateTransferHandler().TransferAsync(context);
         var copiedLocator = await targetDb.Set<AgentHistoryLocator>().SingleAsync();
         Assert.Equal(locator.EvidenceId, copiedLocator.EvidenceId);
         Assert.Equal(locator.OwnerId, copiedLocator.OwnerId);
@@ -338,7 +344,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         Assert.Equal(8, copiedLocator.SourceVersion);
         Assert.True(copiedLocator.IsDeleted);
         Assert.True(result.Success);
-        Assert.Equal(source.Partition, await new HistoryPartitionStore(target.Factory).GetAsync(default));
+        Assert.Equal(source.Partition, await new HistoryPartitionStore(target.HistoryFactory, target.HistoryOptions, target.Transactions).GetAsync(default));
         var policy = await targetDb.Set<HistoryPolicyRow>().AsNoTracking().SingleAsync();
         Assert.Equal(1, policy.Version);
         Assert.Equal(policy.UsedDetailBytes, await targetDb.Set<HistoryDetailRow>().SumAsync(row => (long)row.StoredBytes));
@@ -352,8 +358,11 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         Assert.Equal(start.EntryId.Value, (await targetDb.Set<HistoryOwnerRow>().SingleAsync()).EntryId);
         Assert.Equal(1, (await targetDb.Set<HistorySourceRow>().SingleAsync()).Version);
         Assert.Equal(start.StartedAtUtc.AddDays(30), entry.ExpiresAtUtc);
-        Assert.Equal("retained input", (await source.Details.ReadAsync(targetDb, entry, default)).Input!.Text);
-        Assert.Equal(HistoryDetailState.ProtectionUnavailable, (await target.Details.ReadAsync(targetDb, entry, default)).State);
+        var sourceProtectionOnTarget = new HistoryDetailStore(target.HistoryFactory, source.Text, source.Clock,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<HistoryDetailStore>.Instance);
+        Assert.Equal("retained input", (await sourceProtectionOnTarget.ReadAsync(source.Partition, new(entry.Id), default)).Input!.Text);
+        Assert.Equal(HistoryDetailState.ProtectionUnavailable,
+            (await target.Details.ReadAsync(source.Partition, new(entry.Id), default)).State);
     }
 
     [Fact]
@@ -368,11 +377,11 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
             ScopeKind = WorkspaceScopeKind.Project, ScopeKey = project.ToString("D"), ProjectId = project, SourceVersion = 1
         });
         await sourceDb.SaveChangesAsync();
-        var context = new DatabaseTransferContext(Profile("source"), Profile("target"), sourceDb, targetDb, true);
+        var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new HistoryDatabaseTransferHandler([new AgentHistoryTransferParticipant()]).TransferAsync(context));
+            CreateTransferHandler().TransferAsync(context));
         await using var verification = target.Factory.CreateDbContext();
-        Assert.Equal(target.Partition, await new HistoryPartitionStore(target.Factory).GetAsync(default));
+        Assert.Equal(target.Partition, await new HistoryPartitionStore(target.HistoryFactory, target.HistoryOptions, target.Transactions).GetAsync(default));
         Assert.Empty(await verification.Set<AgentHistoryLocator>().ToListAsync());
     }
 
@@ -384,15 +393,25 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await target.Capture.BeginAsync(start, null, default);
         await using var sourceDb = source.Factory.CreateDbContext();
         await using var targetDb = target.Factory.CreateDbContext();
-        var context = new DatabaseTransferContext(Profile("source"), Profile("target"), sourceDb, targetDb, true);
-        var handler = new HistoryDatabaseTransferHandler([]);
+        var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
+        var handler = CreateTransferHandler(includeAgentHistory: false);
         Assert.False((await handler.PreviewAsync(context)).IsAvailable);
         await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(context));
         Assert.Equal(start.EntryId.Value, (await targetDb.Set<HistoryEntryRow>().SingleAsync()).Id);
     }
 
-    private static ResolvedDatabaseProfile Profile(string name) => new(
-        new DatabaseProfileRecord { DisplayName = name }, DatabaseProfileResolutionSource.ExplicitOverride, name);
+    private static AiProvidersDatabaseTransferHandler CreateProviderTransferHandler() {
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        return new(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.Create(sessions), [new SharedProviderDatabaseTransferGuard()]);
+    }
+
+    private static HistoryDatabaseTransferHandler CreateTransferHandler(bool includeAgentHistory = true) {
+        var sessions = new DatabaseTransferOwnerSessionRunner();
+        IHistoryTransferParticipant[] participants = includeAgentHistory
+            ? [new AgentHistoryTransferParticipant(sessions, new CanDoItAll.Modules.Projects.ProjectTransferReferenceQuery(sessions))]
+            : [];
+        return new(participants, sessions, DatabaseTransferTestSupport.Create(sessions));
+    }
 
     [Fact]
     public async Task Retention_preview_is_bounded_and_oversized_apply_rolls_back_atomically() {
@@ -424,7 +443,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
         var initial = await fixture.Policy.GetAsync(default);
         var originalContext = fixture.Access.Context;
-        var factory = fixture.Factory.WithInterceptor(new AfterPolicyFlush(() => {
+        var factory = fixture.HistoryFactory.WithInterceptor(new AfterPolicyFlush(() => {
             if (profileChanged) {
                 fixture.Runtime.Generation++;
                 fixture.Access.Context = originalContext with { Fence = new(fixture.Runtime.Generation, 0) };

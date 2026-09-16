@@ -481,60 +481,9 @@ public sealed class MemoryProviderManagementPlaywrightTests
     private static async Task ExpectTextAsync(IPage page, string text)
         => await Assertions.Expect(page.GetByText(text, new PageGetByTextOptions { Exact = false }).First).ToBeVisibleAsync();
 
-    private static async Task DismissDatabaseProfileDialogAsync(IPage page)
-    {
-        var heading = page.GetByText("Database profiles", new PageGetByTextOptions { Exact = true });
-        if (!await IsVisibleAsync(heading, 500))
-        {
-            return;
-        }
-
-        var continueButton = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions
-        {
-            Name = "Continue",
-            Exact = true
-        });
-        if (await IsVisibleAsync(continueButton, 500))
-        {
-            await continueButton.ClickAsync();
-        }
-        else
-        {
-            await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions
-            {
-                Name = "Close",
-                Exact = false
-            }).First.ClickAsync();
-        }
-
-        await heading.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Hidden,
-            Timeout = 5_000
-        });
-    }
-
-    private static async Task WaitForVisibleWithDialogDismissalAsync(IPage page, string testId)
-    {
-        var locator = page.GetByTestId(testId);
-        var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(30);
-
-        while (DateTimeOffset.UtcNow < timeoutAt)
-        {
-            await DismissDatabaseProfileDialogAsync(page);
-            if (await IsVisibleAsync(locator, 500))
-            {
-                return;
-            }
-
-            await page.WaitForTimeoutAsync(250);
-        }
-
-        await locator.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 1_000
-        });
+    private static async Task WaitForVisibleWithDialogDismissalAsync(IPage page, string testId) {
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await page.GetByTestId(testId).WaitForAsync();
     }
 
     private static async Task SelectTabAsync(IPage page, string tabTestId, string panelTestId)

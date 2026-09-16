@@ -52,7 +52,7 @@ public sealed class SharedProviderProfileDeletionGuard :
     IProviderProfileDeletionGuard
 {
     public async Task EnsureCanDeleteAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid providerProfileId,
         CancellationToken cancellationToken)
     {

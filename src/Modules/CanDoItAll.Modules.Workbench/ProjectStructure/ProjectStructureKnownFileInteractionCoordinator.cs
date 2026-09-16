@@ -22,7 +22,7 @@ internal sealed class ProjectStructureKnownFileInteractionCoordinator(
             projectId,
             nodeId,
             cancellationToken);
-        StorageCatalogRecord? storage = await storageCatalog.GetAsync(
+        StorageDriverInput? storage = await storageCatalog.GetDriverAsync(
             resolved.Occurrence.StorageId,
             cancellationToken);
         if (storage is null ||

@@ -10,9 +10,10 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureFileScopeResolver(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     ProjectStructureAssemblyService assemblyService,
-    IStorageCatalogService storageCatalog)
+    IStorageCatalogService storageCatalog,
+    IProcessRunFileScopeProvider processFiles)
     : IFileToolsStorageBindingSource, IProjectStructureNodeFileScopeProvider
 {
     private static readonly FileToolsBrowseWorkLimits WorkLimits = new(
@@ -72,7 +73,7 @@ internal sealed class ProjectStructureFileScopeResolver(
             return await ResolveProjectedBindingsAsync(key, cancellationToken);
         }
 
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using WorkbenchDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         ProjectObjectRecord node = await ResolvePersistedScopeNodeAsync(
             dbContext,
             key.ProjectObjectId,
@@ -102,7 +103,7 @@ internal sealed class ProjectStructureFileScopeResolver(
         }
 
         string normalizedNodeId = nodeId.Trim();
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using WorkbenchDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         ProjectObjectRecord? node = await dbContext.Set<ProjectObjectRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(
@@ -150,7 +151,7 @@ internal sealed class ProjectStructureFileScopeResolver(
         }
 
         string normalizedNodeId = nodeId.Trim();
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using WorkbenchDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         ProjectObjectRecord? node = await dbContext.Set<ProjectObjectRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(
@@ -186,7 +187,7 @@ internal sealed class ProjectStructureFileScopeResolver(
     }
 
     private static async ValueTask<ProjectNodeBindingState> ResolveBindingAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectObjectId,
         CancellationToken cancellationToken)
     {
@@ -292,7 +293,7 @@ internal sealed class ProjectStructureFileScopeResolver(
                 "The projected project-node file scope identifier is invalid.");
         }
 
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using WorkbenchDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         ProjectObjectRecord? node = await assemblyService.FindNodeAsync(
             dbContext,
             key.ProjectId,
@@ -322,7 +323,7 @@ internal sealed class ProjectStructureFileScopeResolver(
     }
 
     private static async ValueTask<ProjectObjectRecord> ResolvePersistedScopeNodeAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectObjectId,
         CancellationToken cancellationToken)
     {
@@ -431,7 +432,7 @@ internal sealed class ProjectStructureFileScopeResolver(
             throw ProviderError(FileBrowserErrorCode.InvalidOperation, "The infrastructure node metadata is invalid.");
         }
 
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using WorkbenchDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         string[] storageReferenceIds = await dbContext.Set<ProjectNodeReferenceRecord>()
             .AsNoTracking()
             .Where(item =>
@@ -469,20 +470,18 @@ internal sealed class ProjectStructureFileScopeResolver(
                 "The projected node is not an authorized process-run folder collection.");
         }
 
-        Guid storageId = await ResolveWorkspaceStorageIdAsync(cancellationToken);
+        var binding = await processFiles.ResolveRootAsync(node.Binding.ExternalArtifactId!.Value,
+            outputFolder.DirectoryPath, scopeKey.ProjectId, cancellationToken);
         var scope = new FileToolsSemanticScope(
             FileToolsSemanticScopeKind.ProjectNode,
             scopeKey.ToScopeId(),
             node.Title);
-        string scopedDirectoryPath = ProjectStructureProcessRunOutputFolderPolicy.ResolveProjectScopedDirectoryPath(
-            scopeKey.ProjectId,
-            outputFolder);
-        return new NodeCollectionBinding(scope, storageId, node.Title, scopedDirectoryPath);
+        return new NodeCollectionBinding(scope, binding.StorageId, node.Title, binding.Root.Value);
     }
 
     private async ValueTask<Guid> ResolveWorkspaceStorageIdAsync(CancellationToken cancellationToken)
     {
-        StorageCatalogRecord workspaceStorage = await storageCatalog
+        StorageCatalogSnapshot workspaceStorage = await storageCatalog
             .EnsureBootstrapFileSystemStorageAsync(cancellationToken);
         if (workspaceStorage.Id == Guid.Empty ||
             !workspaceStorage.IsEnabled ||

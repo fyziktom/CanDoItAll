@@ -28,6 +28,11 @@ public sealed class ProcessWorkspaceShellProjectionService(
     {
         cancellationToken.ThrowIfCancellationRequested();
         ValidateRequest(request);
+        if (request.ProjectBinding is { } project && (request.Scope.Kind != ProcessWorkspaceScopeKind.Project ||
+                request.Scope.ProjectId != project.ProjectId) ||
+                request.Scope.Kind == ProcessWorkspaceScopeKind.Project && request.ProjectBinding is null && runtimeProjectionQueryService is not null) {
+            throw new InvalidOperationException("A project Process workspace requires its exact observed project lifetime.");
+        }
 
         var observedAtUtc = clock.GetUtcNow();
         var authorization = new ProcessWorkspaceAuthorizationProjection(
@@ -297,7 +302,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
                     runtimeQuery.AutoSelectRun,
                     runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full)
                 {
-                    PreviouslyLoadedRuns = runtimeQuery.PreviouslyLoadedRuns
+                    PreviouslyLoadedRuns = runtimeQuery.PreviouslyLoadedRuns,
+                    ProjectBinding = request.ProjectBinding
                 },
                 cancellationToken)
             .ConfigureAwait(false);
@@ -405,6 +411,9 @@ public sealed class ProcessWorkspaceShellProjectionService(
         }
 
         var runIds = ResolveUsageTelemetryRunIds(runtimeQuery, result);
+        if (result.ProjectRunIds is { } eligible) {
+            runIds.IntersectWith(eligible);
+        }
 
         if (runIds.Count == 0)
         {

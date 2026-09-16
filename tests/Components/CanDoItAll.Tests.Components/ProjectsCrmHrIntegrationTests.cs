@@ -17,6 +17,8 @@ public sealed class ProjectsCrmHrIntegrationTests
         var bridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var projectId = await CreateProjectAsync(projectsService, "CRM-HR Project Card");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await harness.Context.Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var customerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Northwind Customer");
         var deliveryUnitId = await CreatePartyAsync(partyDirectoryService, PartyType.OrganizationUnit, "Delivery Guild");
         var ownerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Jordan Owner");
@@ -24,6 +26,7 @@ public sealed class ProjectsCrmHrIntegrationTests
         await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = customerId,
             Role = ProjectPartyAssignmentRole.Customer,
             IsPrimary = true,
@@ -32,6 +35,7 @@ public sealed class ProjectsCrmHrIntegrationTests
         await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = deliveryUnitId,
             Role = ProjectPartyAssignmentRole.DeliveryUnit,
             IsPrimary = true,
@@ -40,11 +44,22 @@ public sealed class ProjectsCrmHrIntegrationTests
         await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = ownerId,
             Role = ProjectPartyAssignmentRole.Manager,
             IsPrimary = true,
             Source = "component-tests"
         });
+
+        var summary = Assert.IsType<ProjectSummary>(await harness.Context.Services
+            .GetRequiredService<IProjectSummaryQueryService>().GetSummaryAsync(projectId));
+        Assert.Equal("Northwind Customer", summary.PrimaryCustomerName);
+        Assert.Equal("Delivery Guild", summary.PrimaryDeliveryUnitName);
+        Assert.Equal("Jordan Owner", summary.PrimaryOwnerName);
+        Assert.Equal(3, summary.RelatedParties!.Count);
+        Assert.Contains("Northwind Customer", summary.RelatedPartySearchText);
+        Assert.Contains("Delivery Guild", summary.RelatedPartySearchText);
+        Assert.Contains("Jordan Owner", summary.RelatedPartySearchText);
 
         var cut = harness.Context.Render<ProjectsPage>();
 

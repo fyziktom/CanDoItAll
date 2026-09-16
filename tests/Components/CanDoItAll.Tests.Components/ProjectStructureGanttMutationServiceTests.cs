@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -25,7 +26,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             "Proposed title");
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyTitleAsync(fixture.ProjectId, request));
+            fixture.Service.ApplyTitleAsync(fixture.ProjectId, request, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var task = await fixture.FindTaskAsync(request.TaskId.Value);
@@ -51,7 +52,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 TaskId(predecessorC.NodeKey),
                 TaskId(successor.NodeKey)));
 
-        var result = await fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request);
+        var result = await fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request, mutationOwner: fixture.Owner);
 
         Assert.Equal(1, result.AddedDependencyCount);
         var links = await fixture.LoadLinksAsync();
@@ -88,7 +89,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 TaskId(taskA.NodeKey)));
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request));
+            fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.CycleDetected, exception.Code);
         Assert.Equal(2, (await fixture.LoadLinksAsync()).Count);
@@ -111,7 +112,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 TaskId(taskC.NodeKey),
                 TaskId(taskB.NodeKey)));
 
-        await fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request);
+        await fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request, mutationOwner: fixture.Owner);
 
         var persistedLink = Assert.Single(await fixture.LoadLinksAsync());
         Assert.Equal(link.Id, persistedLink.Id);
@@ -159,7 +160,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                             3600,
                             At(1).AddMinutes(1),
                             At(2).AddMinutes(1))
-                    ])));
+                    ]), mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
@@ -186,7 +187,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
 
         var result = await fixture.Service.ApplyScheduleAsync(
             fixture.ProjectId,
-            ScheduleMutation(request, task));
+            ScheduleMutation(request, task), mutationOwner: fixture.Owner);
 
         Assert.Equal([TaskId(task.NodeKey)], result.AffectedTaskIds);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -210,7 +211,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
 
         await fixture.Service.ApplyScheduleAsync(
             fixture.ProjectId,
-            ScheduleMutation(request, task));
+            ScheduleMutation(request, task), mutationOwner: fixture.Owner);
 
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
         Assert.Equal(At(0), persisted.StartUtc);
@@ -235,7 +236,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
 
         await fixture.Service.ApplyScheduleAsync(
             fixture.ProjectId,
-            ScheduleMutation(request, taskA, taskB));
+            ScheduleMutation(request, taskA, taskB), mutationOwner: fixture.Owner);
 
         var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
         var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
@@ -271,7 +272,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
 
         var result = await fixture.Service.ApplyScheduleAsync(
             fixture.ProjectId,
-            ScheduleMutation(request, taskA, taskB));
+            ScheduleMutation(request, taskA, taskB), mutationOwner: fixture.Owner);
 
         Assert.Equal(2, result.AffectedTaskIds.Count);
         var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
@@ -327,7 +328,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                     Snapshot(taskB),
                     Snapshot(taskC),
                     Snapshot(taskD)
-                ]));
+                ]), mutationOwner: fixture.Owner);
 
         Assert.Equal(4, result.AffectedTaskIds.Count);
         var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
@@ -388,7 +389,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
 
         await fixture.Service.ApplyScheduleAsync(
             fixture.ProjectId,
-            ScheduleMutation(request, task));
+            ScheduleMutation(request, task), mutationOwner: fixture.Owner);
 
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
         Assert.Equal(At(0), persisted.StartUtc);
@@ -420,7 +421,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                         null,
                         3600,
                         At(0),
-                        At(1))])));
+                        At(1))]), mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -442,7 +443,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
 
         await fixture.Service.ApplyScheduleAsync(
             fixture.ProjectId,
-            ScheduleMutation(request, task));
+            ScheduleMutation(request, task), mutationOwner: fixture.Owner);
 
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
         Assert.Equal(At(-1), persisted.StartUtc);
@@ -472,7 +473,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 At(1))]);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -503,7 +504,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 At(1))]);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -534,7 +535,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 At(1))]);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -563,7 +564,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 At(1))]);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -595,7 +596,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 At(1))]);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -645,7 +646,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             ]);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
@@ -685,7 +686,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             CurrentDirectAssignmentRevision: 0);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request));
+            fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request with { ExpectedProjectAdmission = fixture.Owner.ExpectedProjectAdmission, MutationOwner = fixture.Owner }));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.ProjectionOnlySchedule, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -710,7 +711,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 TaskId(successor.NodeKey)));
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request));
+            fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request, mutationOwner: fixture.Owner));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.InvalidSchedule, exception.Code);
         Assert.Empty(await fixture.LoadLinksAsync());
@@ -761,7 +762,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             CostBasisChanged: false,
             CurrentDirectAssignmentRevision: 0);
 
-        var result = await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
+        var result = await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request with { ExpectedProjectAdmission = fixture.Owner.ExpectedProjectAdmission, MutationOwner = fixture.Owner });
 
         Assert.Equal(2, result.AffectedTaskIds.Count);
         var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
@@ -805,7 +806,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             CostBasisChanged: false,
             CurrentDirectAssignmentRevision: 0);
 
-        await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
+        await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request with { ExpectedProjectAdmission = fixture.Owner.ExpectedProjectAdmission, MutationOwner = fixture.Owner });
 
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
         Assert.Equal("Tracked", persisted.Title);
@@ -846,7 +847,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             CurrentDirectAssignmentRevision: 0);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
-            fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request));
+            fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request with { ExpectedProjectAdmission = fixture.Owner.ExpectedProjectAdmission, MutationOwner = fixture.Owner }));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
@@ -904,7 +905,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             ],
             [TaskId(taskA.NodeKey), insertedId, TaskId(taskB.NodeKey), TaskId(taskC.NodeKey)]);
 
-        var result = await fixture.Service.ApplyInsertionAsync(fixture.ProjectId, request);
+        var result = await fixture.Service.ApplyInsertionAsync(fixture.ProjectId, request, mutationOwner: fixture.Owner);
 
         Assert.Equal(2, result.AddedDependencyCount);
         Assert.Equal(1, result.RemovedDependencyCount);
@@ -1084,16 +1085,18 @@ public sealed class ProjectStructureGanttMutationServiceTests
         private MutationFixture(
             Guid projectId,
             TestDbContextFactory dbContextFactory,
-            ProjectStructureGanttMutationService service)
+            ProjectStructureGanttMutationService service, ProjectStructureAgentContext owner)
         {
             ProjectId = projectId;
             this.dbContextFactory = dbContextFactory;
             Service = service;
+            Owner = owner;
         }
 
         public Guid ProjectId { get; }
 
         public ProjectStructureGanttMutationService Service { get; }
+        public ProjectStructureAgentContext Owner { get; }
 
         public static Task<MutationFixture> CreateAsync(params ProjectObjectRecord[] tasks)
             => CreateAsync((IReadOnlyList<ProjectObjectRecord>)tasks, []);
@@ -1107,10 +1110,8 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 typeof(Project).Assembly,
                 typeof(ProjectObjectRecord).Assembly
             ]);
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase($"gantt-mutations-{Guid.NewGuid():N}")
-                .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
-                .Options;
+            var owners = new WorkbenchOwnerInMemoryFixture("gantt-mutations", ignoreTransactionWarning: true);
+            var options = owners.CompleteOptions;
             var factory = new TestDbContextFactory(options);
             var projectId = Guid.NewGuid();
             await using (var context = await factory.CreateDbContextAsync())
@@ -1139,10 +1140,17 @@ public sealed class ProjectStructureGanttMutationServiceTests
             }
 
             var service = new ProjectStructureGanttMutationService(
-                factory,
+                owners.WorkbenchFactory,
+                owners.Projects,
+                owners.Transactions,
+                owners.MutationScopes,
                 new FixedClock(Baseline.AddDays(1)),
                 NullLogger<ProjectStructureGanttMutationService>.Instance);
-            return new MutationFixture(projectId, factory, service);
+            var snapshot = Assert.IsType<ProjectRecordQueryItem>(await owners.Projects.GetAsync(projectId));
+            var owner = new ProjectStructureAgentContext("gantt-fixture", "Gantt fixture", "test", "test", "", "gantt-fixture") {
+                ExpectedProjectAdmission = owners.MutationScopes.BindSnapshot(snapshot)
+            };
+            return new MutationFixture(projectId, factory, service, owner);
         }
 
         public async Task<ProjectObjectRecord> FindTaskAsync(string nodeKey)

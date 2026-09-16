@@ -20,7 +20,7 @@ public sealed class DashboardQueryServicesTests
         [
             typeof(ProjectsModuleAssemblyMarker).Assembly
         ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<ProjectsDbContext>()
             .UseInMemoryDatabase($"recent-project-activity-{Guid.NewGuid():N}")
             .Options;
         var factory = new TrackingDbContextFactory(options);
@@ -71,7 +71,7 @@ public sealed class DashboardQueryServicesTests
     [InlineData(RecentProjectActivityQueryLimits.MaximumItemCount + 1)]
     public async Task Recent_project_activity_rejects_an_invalid_item_count(int itemCount)
     {
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<ProjectsDbContext>()
             .UseInMemoryDatabase($"recent-project-activity-validation-{Guid.NewGuid():N}")
             .Options;
         var service = new RecentProjectActivityQueryService(new TrackingDbContextFactory(options));
@@ -205,18 +205,18 @@ public sealed class DashboardQueryServicesTests
     }
 
     private sealed class TrackingDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+        DbContextOptions<ProjectsDbContext> options) : IDbContextFactory<ProjectsDbContext>
     {
         public int TrackedEntityCount { get; private set; }
 
-        public AppDbContext CreateDbContext()
+        public ProjectsDbContext CreateDbContext()
         {
-            var dbContext = new AppDbContext(options);
+            var dbContext = new ProjectsDbContext(options);
             dbContext.ChangeTracker.Tracked += (_, _) => TrackedEntityCount++;
             return dbContext;
         }
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<ProjectsDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());

@@ -21,3 +21,14 @@ Review all added/stale findings, repair genuine portability defects, and regener
 scan after source edits. Refresh intentional, reviewed baseline deltas in the same
 change, inspect the diff, and require final enforcement without `--write-baseline`.
 Report that result alongside the focused tests; do not claim completion while it fails.
+
+<!-- BEGIN active modules-decoupling task -->
+## Active Module Decoupling Task
+
+The active `modules-decoupling` task uses **LIGHTWEIGHT_INCREMENTAL_E2E**, as recorded in
+[the execution record](docs/architecture/modules-decoupling/EXECUTION.md). The operator
+has approved end-to-end implementation in verified slices without legacy bundle or
+subbundle generation and without separate milestone approval. All existing engineering,
+product-preservation, security, compatibility, and validation rules still apply.
+Work only on `modules-decoupling`; no merge is permitted. This note applies to this task.
+<!-- END active modules-decoupling task -->

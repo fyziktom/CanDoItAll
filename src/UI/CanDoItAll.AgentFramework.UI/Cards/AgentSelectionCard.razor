@@ -74,6 +74,10 @@
     [Parameter]
     public string SelectedLabel { get; set; } = "Current agent";
 
+    /// <summary>Disables the card's select control, for example while its host is not yet interactive.</summary>
+    [Parameter]
+    public bool SelectDisabled { get; set; }
+
     [Parameter]
     public string? Class { get; set; }
 
@@ -121,7 +125,8 @@
                 FavoriteTestId,
                 ShowDetailsTooltip,
                 IsPrivateProvider,
-                SelectedLabel));
+                SelectedLabel,
+                SelectDisabled));
     }
 
     private ParticipantCardLayout ResolveLayout()

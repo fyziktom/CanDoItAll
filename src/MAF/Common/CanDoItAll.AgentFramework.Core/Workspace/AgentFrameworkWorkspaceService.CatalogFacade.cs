@@ -4,6 +4,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed partial class AgentFrameworkWorkspaceService
 {
+    public async Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default) {
+        var snapshot = await store.LoadCatalogSnapshotAsync(cancellationToken);
+        return new(activityWorkspaceIdentity, snapshot);
+    }
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(
         bool includeTemplates = true,
         CancellationToken cancellationToken = default)
@@ -35,6 +40,18 @@ public sealed partial class AgentFrameworkWorkspaceService
         => catalogService.RevokeProjectStructureAccessFromAllAgentsAsync(
             projectId,
             cancellationToken);
+
+    public Task GrantAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default)
+        => catalogService.GrantAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
+
+    public Task RevokeAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default)
+        => catalogService.RevokeAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
+
+    public Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
+        CancellationToken cancellationToken = default)
+        => catalogService.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(target, cancellationToken);
 
     public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentAsync(agentId, cancellationToken);

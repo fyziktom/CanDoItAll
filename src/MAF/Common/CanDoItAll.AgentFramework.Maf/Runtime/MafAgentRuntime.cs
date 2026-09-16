@@ -59,7 +59,8 @@ public sealed class MafAgentRuntime
             dependencies.ApprovalContinuationDriver,
             dependencies.SessionPersistenceDriver,
             dependencies.PhysicalPathPolicyFactory,
-            dependencies.ExecutionOutcomeRecoveryPolicies);
+            dependencies.ExecutionOutcomeRecoveryPolicies,
+            dependencies.ToolPolicies);
         var executionAdapter = new MafAgentExecutionAdapter(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,
@@ -69,7 +70,9 @@ public sealed class MafAgentRuntime
             new InputAttachmentPreparer(
                 dependencies.ProviderCredentialService,
                 dependencies.ProviderRuntimeGateway),
-            streamingTurnExecutor);
+            streamingTurnExecutor,
+            dependencies.ToolAdmissionJournal,
+            dependencies.SessionPersistenceDriver);
         var continuationAdapter = new MafAgentContinuationAdapter(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,
@@ -77,7 +80,9 @@ public sealed class MafAgentRuntime
             dependencies.WorkspaceRuntimeServicesFactory,
             runtimeAgentFactory,
             dependencies.ApprovalContinuationDriver,
-            streamingTurnExecutor);
+            streamingTurnExecutor,
+            dependencies.ToolAdmissionJournal,
+            dependencies.SessionPersistenceDriver);
         historyRuntime = new HistoryAgentRuntime(executionAdapter, continuationAdapter);
         diagnosticsAdapter = new MafProviderDiagnosticsAdapter(dependencies.ProviderRuntimeGateway);
         modelAdministrationAdapter = new MafProviderModelAdministrationAdapter(dependencies.ProviderRuntimeGateway);
@@ -93,21 +98,26 @@ public sealed class MafAgentRuntime
         string workspaceRoot,
         IServiceProvider serviceProvider,
         WorkspaceScopeDescriptor? workspaceScope = null,
-        IWorkspaceRuntimeServicesFactory? workspaceRuntimeServicesFactory = null)
+        IWorkspaceRuntimeServicesFactory? workspaceRuntimeServicesFactory = null,
+        AgentToolAdmissionJournal? toolAdmissionJournal = null)
         : this(
             workspaceRoot,
             workspaceScope,
-            CreateDependencies(serviceProvider, workspaceRuntimeServicesFactory))
+            CreateDependencies(serviceProvider, workspaceRuntimeServicesFactory, toolAdmissionJournal))
     {
     }
 
     private static MafAgentRuntimeDependencies CreateDependencies(
         IServiceProvider serviceProvider,
-        IWorkspaceRuntimeServicesFactory? workspaceRuntimeServicesFactoryOverride)
+        IWorkspaceRuntimeServicesFactory? workspaceRuntimeServicesFactoryOverride,
+        AgentToolAdmissionJournal? toolAdmissionJournalOverride)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
         var dependencies = MafAgentRuntimeDependencies.FromServices(serviceProvider);
+        if (toolAdmissionJournalOverride is not null) {
+            dependencies = dependencies with { ToolAdmissionJournal = toolAdmissionJournalOverride };
+        }
         return workspaceRuntimeServicesFactoryOverride is null
             ? dependencies
             : dependencies with { WorkspaceRuntimeServicesFactory = workspaceRuntimeServicesFactoryOverride };

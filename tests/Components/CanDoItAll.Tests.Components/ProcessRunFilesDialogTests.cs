@@ -92,6 +92,9 @@ public sealed class ProcessRunFilesDialogTests
 
     private sealed class RecordingScopeProvider(Guid runId) : IProcessRunFileScopeProvider
     {
+        public ValueTask<FileToolsStorageBinding> ResolveRootAsync(Guid runId, string directoryPath, Guid projectId,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
         private readonly FileToolsSemanticScope scope = new(
             FileToolsSemanticScopeKind.ProcessRun,
             new FileToolsSemanticScopeId($"run:v1:{runId:N}:{new string('a', 64)}"),
@@ -113,6 +116,9 @@ public sealed class ProcessRunFilesDialogTests
 
     private sealed class ThrowingScopeProvider : IProcessRunFileScopeProvider
     {
+        public ValueTask<FileToolsStorageBinding> ResolveRootAsync(Guid runId, string directoryPath, Guid projectId,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
         public int ResolveCalls { get; private set; }
 
         public ValueTask<ProcessRunFileScopeSet> ResolveAsync(

@@ -28,7 +28,7 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
         try
         {
             await ConfigureHealthyDemoProvidersAsync(page, host.BaseUrl);
-            await OpenMemorySettingsAsync(page, host.BaseUrl);
+            await OpenMemorySettingsAsync(page);
 
             var providerPicker = page.GetByTestId("agents-catalog-memory-new-provider");
             await Assertions.Expect(providerPicker.Locator("option[value='provider.business-demo']")).ToHaveCountAsync(1);
@@ -98,7 +98,7 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
 
     private static async Task ConfigureHealthyDemoProvidersAsync(IPage page, string baseUrl)
     {
-        var response = await page.GotoAsync($"{baseUrl}/memory");
+        var response = await page.GotoAsync($"{baseUrl}/memory", new() { WaitUntil = WaitUntilState.DOMContentLoaded });
         Assert.True(response?.Ok);
         await DismissDatabaseProfileDialogAsync(page);
         await page.GetByTestId("memory-ui-zero-provider").WaitForAsync();
@@ -110,20 +110,18 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
         await Assertions.Expect(page.GetByText("Programming demo memory", new PageGetByTextOptions { Exact = true }).First).ToBeVisibleAsync();
     }
 
-    private static async Task OpenMemorySettingsAsync(IPage page, string baseUrl)
-    {
-        var response = await page.GotoAsync($"{baseUrl}/agents?tab=agents");
-        Assert.True(response?.Ok);
-        await DismissDatabaseProfileDialogAsync(page);
-        await page.GetByTestId("agents-catalog-new").WaitForAsync();
+    private static async Task OpenMemorySettingsAsync(IPage page) {
+        await page.GetByTestId("shell-nav-agents").ClickAsync();
+        await page.GetByTestId("agents-shell-tabs").GetByText("Agents", new() { Exact = true }).ClickAsync();
         await page.GetByTestId("agents-catalog-new").ClickAsync();
-        await page.GetByRole(AriaRole.Tab, new PageGetByRoleOptions
-        {
+        var dialog = page.GetByTestId("agents-details-dialog");
+        await Assertions.Expect(dialog).ToBeVisibleAsync();
+        await dialog.GetByTestId("agents-details-tabs").GetByRole(AriaRole.Tab, new() {
             Name = "Memory",
             Exact = true
         }).ClickAsync();
-        await page.GetByTestId("agents-catalog-memory-access").WaitForAsync();
-        await page.GetByTestId("agents-catalog-memory-mode").SelectOptionAsync("Automatic");
+        await dialog.GetByTestId("agents-catalog-memory-access").WaitForAsync();
+        await dialog.GetByTestId("agents-catalog-memory-mode").SelectOptionAsync("Automatic");
     }
 
     private static async Task AddBindingAsync(
@@ -139,28 +137,8 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
         await page.GetByTestId($"agents-catalog-memory-requirement-{alias}").WaitForAsync();
     }
 
-    private static async Task DismissDatabaseProfileDialogAsync(IPage page)
-    {
-        var continueButton = page.GetByTestId("database-startup-continue");
-        try
-        {
-            await continueButton.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = 1_500
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await continueButton.ClickAsync();
-        await continueButton.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Hidden,
-            Timeout = 5_000
-        });
-    }
+    private static Task DismissDatabaseProfileDialogAsync(IPage page)
+        => PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
 
     private static async Task AssertInsideViewportAsync(ILocator locator, float viewportWidth)
     {

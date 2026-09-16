@@ -1,9 +1,0 @@
-# Final visual inspection
-
-The final `browser-SB02-long-green` screenshots were inspected at 1600 x 1000. Normal and every-kind/proof states retain the real tree, cards, avatar, tooltips, filter controls and scoped styles. Parity diagnostic acknowledgement and Fast Curator uncertainty keep the warning and explicit acknowledgement readable in a separate detail row. Failed state remains explicit; the target is not replaced by a fabricated successful selection.
-
-Long-content inspection exposed two real layout defects: the title could consume the statistics column, and card descendants could size beyond the card. The retained browser RED runs precede the two bounded CSS corrections. Final GREEN verifies readable statistics and contained card content in both modes. The three rebuilt application DLLs are byte-identical across this CSS-only correction; the ongoing stable binaries remain current. Measurement source hashes were refreshed before any post-extraction timing began.
-
-The matched top frame is x=125, y=222.59375 after replacing the wrapping specimen controls with the existing Grid component. This corrects measurement geometry without introducing a production scroll owner. The earlier mismatched frame and premature tree assertion remain retained as negative evidence.
-
-The browser harness verifies real control interaction, disabled/busy state, raw access text, search/tags/type/assignment filters and reset, tree expansion, focusable endpoint metadata, acknowledgement, reload/query restoration, replace-history, original catalog compatibility and theme delivery. All 29 scenarios pass in each mode with zero page errors. The sandbox changes controlled samples and its intent log only; real mutation/recovery behavior is separately proven by the production host and lower-level tests.

@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Usage;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -14,8 +16,13 @@ public static class ProviderManagementServiceCollectionExtensions
     public static IServiceCollection AddAgentFrameworkProviderManagement(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.AddPooledDbContextFactory<ProvidersDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
 
         services.AddHttpClient();
+        services.AddSingleton<ProviderDefaultsBootstrapService>();
         services.AddScoped<IProviderAdministrationConnector, OpenAiProviderAdministrationConnector>();
         services.AddScoped<IProviderAdministrationConnector, ScenarioHarnessProviderAdministrationConnector>();
         services.AddScoped<IProviderAdministrationConnector, ProcessMockProviderAdministrationConnector>();
@@ -34,6 +41,11 @@ public static class ProviderManagementServiceCollectionExtensions
             IProviderRuntimeAdministrationService,
             ProviderRuntimeAdministrationService>();
         services.AddScoped<ProviderProfileMapper>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
+            SharedProviderRelayUsageProjectionSource>());
+        services.TryAddSingleton<SharedProviderRuntimeProfileMaterializer>();
+        services.TryAddScoped<SharedProviderProfileMapper>();
+        services.TryAddScoped<IProviderRuntimeProfileSnapshotLoader, DatabaseProviderRuntimeProfileSnapshotLoader>();
         services.AddSingleton<CanonicalProviderRuntimeProfileSnapshotService>();
         services.AddSingleton<IProviderRuntimeProfileSource>(serviceProvider =>
             serviceProvider.GetRequiredService<CanonicalProviderRuntimeProfileSnapshotService>());
@@ -63,6 +75,7 @@ public static class ProviderManagementServiceCollectionExtensions
         services.TryAddScoped<SharedProviderPublicationEligibilityPolicy>();
         services.TryAddScoped<SharedProviderPublicationApplicationService>();
         services.TryAddSingleton<SharedProviderCatalogCache>();
+        services.TryAddScoped<SharedProviderProfileOwnershipQuery>();
         services.TryAddScoped<SharedProviderCatalogQueryService>();
         services.TryAddScoped<ISharedProviderCatalogQueryService>(serviceProvider =>
             serviceProvider.GetRequiredService<SharedProviderCatalogQueryService>());

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
@@ -50,7 +51,7 @@ public sealed class LlmChatProjectStructureReportPersistenceIntegrationTests
             UtcMidnight.AddMinutes(25),
             UtcMidnight.AddMinutes(30));
 
-        await using (var dbContext = database.CreateDbContext())
+        await using (var dbContext = database.CreateSimpleChatsDbContext())
         {
             SeedConversationRoot(dbContext, definitionId, conversationId);
             dbContext.Set<LlmChatOperationRow>().AddRange(
@@ -164,7 +165,7 @@ public sealed class LlmChatProjectStructureReportPersistenceIntegrationTests
             ConcurrencyToken = 0
         };
 
-        await using (var dbContext = database.CreateDbContext())
+        await using (var dbContext = database.CreateSimpleChatsDbContext())
         {
             SeedConversationRoot(dbContext, definitionId, conversationId);
             dbContext.Set<LlmChatOperationRow>().Add(operation);
@@ -190,7 +191,7 @@ public sealed class LlmChatProjectStructureReportPersistenceIntegrationTests
     }
 
     private static void SeedConversationRoot(
-        AppDbContext dbContext,
+        SimpleChatsDbContext dbContext,
         Guid definitionId,
         Guid conversationId)
     {
@@ -298,11 +299,11 @@ public sealed class LlmChatProjectStructureReportPersistenceIntegrationTests
         };
 
     private sealed class TestDbContextFactory(LlmChatsPostgreSqlTestDatabase database) :
-        IDbContextFactory<AppDbContext>
+        IDbContextFactory<SimpleChatsDbContext>
     {
-        public AppDbContext CreateDbContext() => database.CreateDbContext();
+        public SimpleChatsDbContext CreateDbContext() => database.CreateSimpleChatsDbContext();
 
-        public Task<AppDbContext> CreateDbContextAsync(
+        public Task<SimpleChatsDbContext> CreateDbContextAsync(
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();

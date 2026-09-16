@@ -54,6 +54,7 @@ public sealed partial class AppSmokeTests
             failedRequests.Add($"{request.Method} {request.Url}: {request.Failure}");
         page.Request += (_, request) => requestedUrls.Add(request.Url);
 
+        await WaitForInitializedCanvasHostAsync(page);
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         var outlineNode = page.GetByTestId(BuildProjectStructureOutlineNodeTestId(assetNodeId));
         await outlineNode.WaitForAsync(new LocatorWaitForOptions { Timeout = 20_000 });
@@ -115,15 +116,15 @@ public sealed partial class AppSmokeTests
         await dialog.GetByTestId("project-structure-direct-file-interaction").WaitForAsync();
         await Assertions.Expect(dialog.GetByTestId("project-structure-file-interaction-policy"))
             .ToContainTextAsync("bounded, read-only preview");
-        var preview = dialog.GetByTestId("workbench-spreadsheet-preview");
+        var preview = dialog.GetByTestId("spreadsheet-preview");
         await preview.WaitForAsync(new LocatorWaitForOptions { Timeout = 20_000 });
-        Assert.Equal(0, await dialog.GetByTestId("workbench-spreadsheet-preview-unavailable").CountAsync());
+        Assert.Equal(0, await dialog.GetByTestId("spreadsheet-preview-unavailable").CountAsync());
         Assert.Equal(0, await dialog.Locator("iframe").CountAsync());
         Assert.DoesNotContain("managed-files", await dialog.InnerHTMLAsync(), StringComparison.OrdinalIgnoreCase);
 
-        var worksheet = preview.GetByTestId("workbench-spreadsheet-worksheet");
+        var worksheet = preview.GetByTestId("spreadsheet-worksheet-panel");
         await Assertions.Expect(worksheet).ToContainTextAsync("Acceptance");
-        var grid = worksheet.GetByTestId("workbench-spreadsheet-grid");
+        var grid = worksheet.GetByTestId("spreadsheet-grid");
         await grid.WaitForAsync();
         await Assertions.Expect(grid).ToContainTextAsync("Acceptance case");
         await Assertions.Expect(grid).ToContainTextAsync("Project Structure agent hardening");

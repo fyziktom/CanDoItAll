@@ -3,7 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public sealed class HistoryPartitionStore(IDbContextFactory<AppDbContext> factory) : IProviderHistoryPartition {
+public sealed class HistoryPartitionStore(
+    IDbContextFactory<ProviderHistoryDbContext> factory,
+    DbContextOptions<ProviderHistoryDbContext> options,
+    CoordinatedDatabaseTransaction transactions) : IProviderHistoryPartition {
     public async Task<HistoryPartition> GetAsync(CancellationToken cancellationToken) {
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var existing = await ReadAsync(db, cancellationToken);
@@ -18,7 +21,24 @@ public sealed class HistoryPartitionStore(IDbContextFactory<AppDbContext> factor
         return partition;
     }
 
-    public static async Task<HistoryPartition> GetForWriteAsync(AppDbContext ownerContext, CancellationToken cancellationToken) {
+    public async Task<HistoryPartition> GetForWriteAsync(CancellationToken cancellationToken) {
+        await using var db = await transactions.CreateEnlistedAsync(options, static value => new ProviderHistoryDbContext(value), cancellationToken);
+        var partition = await GetForWriteAsync(db, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return partition;
+    }
+
+    public async Task RequireAsync(HistoryPartition partition, CancellationToken cancellationToken) {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        await RequireAsync(db, partition, cancellationToken);
+    }
+
+    public async Task RequireForWriteAsync(HistoryPartition partition, CancellationToken cancellationToken) {
+        await using var db = await transactions.CreateEnlistedAsync(options, static value => new ProviderHistoryDbContext(value), cancellationToken);
+        await RequireAsync(db, partition, cancellationToken);
+    }
+
+    internal static async Task<HistoryPartition> GetForWriteAsync(ProviderHistoryDbContext ownerContext, CancellationToken cancellationToken) {
         if (ownerContext.Database.IsRelational() && ownerContext.Database.CurrentTransaction is null) {
             throw new InvalidOperationException("Canonical history staging requires the owner's active transaction.");
         }
@@ -48,7 +68,7 @@ public sealed class HistoryPartitionStore(IDbContextFactory<AppDbContext> factor
     internal static HistoryPartition ToPartition(HistoryPartitionRow row)
         => new(row.OriginInstanceId, row.Id, row.SecurityPartition);
 
-    public static async Task RequireAsync(AppDbContext db, HistoryPartition partition, CancellationToken cancellationToken) {
+    internal static async Task RequireAsync(ProviderHistoryDbContext db, HistoryPartition partition, CancellationToken cancellationToken) {
         var matches = await db.Set<HistoryPartitionRow>().AnyAsync(row =>
             row.Id == partition.StorageLineageId && row.OriginInstanceId == partition.OriginInstanceId &&
             row.SecurityPartition == partition.SecurityPartition, cancellationToken);
@@ -57,7 +77,7 @@ public sealed class HistoryPartitionStore(IDbContextFactory<AppDbContext> factor
         }
     }
 
-    private static Task<HistoryPartitionRow?> ReadAsync(AppDbContext db, CancellationToken cancellationToken)
+    private static Task<HistoryPartitionRow?> ReadAsync(ProviderHistoryDbContext db, CancellationToken cancellationToken)
         => (from identity in db.Set<HistoryStorageIdentity>().AsNoTracking()
             join partition in db.Set<HistoryPartitionRow>().AsNoTracking() on identity.PartitionId equals partition.Id
             where identity.Id == HistoryStorageIdentity.SingletonId

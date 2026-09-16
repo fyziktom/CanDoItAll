@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -267,11 +268,43 @@ public sealed class ChatWorkspacePanelTests
             cut.Find("[data-testid='chat-pending-hidden-context']").TextContent);
     }
 
+    [Theory]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryCatalogSearch)]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryDraftCreate)]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryDraftUpdate)]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryVersionCreate)]
+    public void Rendered_prompt_approval_uses_the_host_catalog_and_preserves_safe_fields(string toolName) {
+        using var context = CreateContext();
+        var policies = new AgentToolPolicyCatalog(PromptGalleryToolPolicy.Capabilities);
+        context.Services.AddSingleton(policies);
+        var arguments = JsonSerializer.Serialize(new {
+            request = new { promptArtifactId = "item-42", includeArchived = true, content = "test-only-private-prompt-body" }
+        });
+        var expected = AgentToolArgumentDisplayFormatter.DescribeArguments(arguments, toolName, policies);
+        Assert.NotEqual(AgentToolArgumentDisplayFormatter.DescribeArguments(arguments, toolName), expected);
+        var approval = new PendingToolApprovalRecord("approval", "call", toolName, "function", "Review Prompt operation", arguments);
+        var run = CreateRun(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), ExecutionState.WaitingOnTool, DateTimeOffset.UtcNow) with {
+            PendingApprovals = [approval]
+        };
+
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
+            .Add(component => component.DraftPrompt, string.Empty)
+            .Add(component => component.Session, CreateSession(run.AgentId, run.ChatSessionId!.Value, run.Id, run.CreatedAtUtc))
+            .Add(component => component.ActiveRun, run));
+
+        var presentation = cut.FindComponent<AgentChatSurface>().Instance.Presentation;
+        Assert.Equal(expected, Assert.Single(presentation.Approvals).ArgumentSummary);
+        Assert.Contains("item-42", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("test-only-private-prompt-body", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("redacted", cut.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<AgentToolPolicyCatalog>();
         return context;
     }
 

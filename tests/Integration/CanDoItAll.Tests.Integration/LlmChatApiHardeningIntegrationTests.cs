@@ -162,9 +162,8 @@ public sealed class LlmChatApiPrivacyIntegrationTests
 
         await using (var scope = host.App.Services.CreateAsyncScope())
         {
-            var accessor = scope.ServiceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-            var factory = scope.ServiceProvider.GetRequiredService<IProfileAppDbContextFactory>();
-            await using var dbContext = await factory.CreateDbContextForProfileAsync(accessor.ResolveCurrentProfile());
+            var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<SimpleChatsDbContext>>();
+            await using var dbContext = await factory.CreateDbContextAsync();
             var document = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
             LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, document);
             dbContext.Add(new LlmChatTranscriptRow
@@ -420,7 +419,7 @@ public sealed class LlmChatOperationStorageContractIntegrationTests
     public async Task Unknown_persisted_operation_kind_fails_as_storage_corrupted()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatinvalidoperationkind");
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var conversationId = Guid.NewGuid();
         var document = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
         LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, document);

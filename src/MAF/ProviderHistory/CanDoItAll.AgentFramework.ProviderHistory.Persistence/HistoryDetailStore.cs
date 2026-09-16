@@ -5,7 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public sealed class HistoryDetailStore(HistoryTextProtector protector, TimeProvider clock, ILogger<HistoryDetailStore> logger) {
+public sealed class HistoryDetailStore(
+    IDbContextFactory<ProviderHistoryDbContext> factory,
+    HistoryTextProtector protector,
+    TimeProvider clock,
+    ILogger<HistoryDetailStore> logger) {
     internal async Task<(HistoryDetailRow? Row, HistoryDetailState State)> PrepareAsync(
         HistoryAttemptStart start, string? text, HistoryDetailPart part, long inputRevision,
         CancellationToken cancellationToken) {
@@ -37,7 +41,7 @@ public sealed class HistoryDetailStore(HistoryTextProtector protector, TimeProvi
         }
     }
 
-    internal static async Task AttachAsync(AppDbContext db, HistoryEntryRow entry,
+    internal static async Task AttachAsync(ProviderHistoryDbContext db, HistoryEntryRow entry,
         HistoryDetailRow detail, HistoryPolicyRow policy, CancellationToken cancellationToken) {
         var existing = detail.Part == HistoryDetailPart.Input
             ? await db.Set<HistoryDetailRow>().SingleOrDefaultAsync(row =>
@@ -75,7 +79,16 @@ public sealed class HistoryDetailStore(HistoryTextProtector protector, TimeProvi
         row.State = state;
     }
 
-    public async Task<HistoryDetail> ReadAsync(AppDbContext db, HistoryEntryRow entry, CancellationToken cancellationToken) {
+    public async Task<HistoryDetail> ReadAsync(HistoryPartition partition, HistoryEntryId entryId, CancellationToken cancellationToken) {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
+        var entry = await db.Set<HistoryEntryRow>().AsNoTracking().SingleOrDefaultAsync(row =>
+            row.PartitionId == partition.StorageLineageId && row.Id == entryId.Value, cancellationToken);
+        return entry is null ? new(entryId, HistoryDetailState.Unavailable)
+            : await ReadAsync(db, entry, cancellationToken);
+    }
+
+    internal async Task<HistoryDetail> ReadAsync(ProviderHistoryDbContext db, HistoryEntryRow entry, CancellationToken cancellationToken) {
         var now = clock.GetUtcNow();
         if (entry.ExpiresAtUtc <= now) {
             return new(new(entry.Id), HistoryDetailState.Expired);

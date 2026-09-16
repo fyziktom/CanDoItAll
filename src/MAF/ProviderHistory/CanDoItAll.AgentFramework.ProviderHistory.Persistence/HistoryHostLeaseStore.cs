@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public sealed class HistoryHostLeaseStore(IDbContextFactory<AppDbContext> factory, TimeProvider clock) : IDisposable {
+public sealed class HistoryHostLeaseStore(IDbContextFactory<ProviderHistoryDbContext> factory, TimeProvider clock) : IDisposable {
     private readonly Guid hostId = Guid.NewGuid();
     private readonly SemaphoreSlim gate = new(1, 1);
     private DateTimeOffset refreshAfter;

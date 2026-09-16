@@ -3,9 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Resources;
 
-internal sealed class ResourcesProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+internal sealed class ResourcesProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.Resources;
 
@@ -14,10 +13,13 @@ internal sealed class ResourcesProjectTransferTargetStateParticipant
         typeof(ProjectResource)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken)
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<ResourcesDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
+
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        ResourcesDbContext dbContext, CancellationToken cancellationToken)
         => await dbContext.Set<ProjectResource>()
             .AsNoTracking()
             .AnyAsync(cancellationToken)

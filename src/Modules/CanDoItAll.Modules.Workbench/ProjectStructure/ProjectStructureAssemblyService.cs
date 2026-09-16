@@ -45,20 +45,39 @@ public interface IProjectStructureProjectionContributor
 }
 
 public sealed class ProjectStructureProjectionContext(
-    AppDbContext dbContext,
     Guid projectId,
     DateTimeOffset assembledAtUtc,
     IReadOnlyDictionary<string, ProjectStructureProjectionLayoutRecord> layoutOverrides,
-    IReadOnlyList<ProjectObjectRecord>? canonicalNodes = null)
+    IReadOnlyList<ProjectObjectRecord>? canonicalNodes = null,
+    IReadOnlyList<ProjectObjectLinkRecord>? canonicalLinks = null)
 {
     private readonly Dictionary<string, ProjectObjectRecord> _nodesByKey = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ProjectObjectLinkRecord> _linksByKey = new(StringComparer.Ordinal);
 
-    public AppDbContext DbContext => dbContext;
+    public IReadOnlyList<ProjectObjectLinkRecord> CanonicalLinks => canonicalLinks ?? [];
+    private ProjectStructureProjectFacts? projectFacts;
+
+    internal async Task<ProjectStructureProjectFacts> GetProjectFactsAsync(ProjectStructureProjectionQueryService projects,
+        CancellationToken cancellationToken) {
+        if (projectFacts is not null) {
+            return projectFacts;
+        }
+        try {
+            projectFacts = (RequiresCoordinatedOwnerReads
+                ? await projects.GetForMutationAsync(projectId, cancellationToken)
+                : await projects.GetAsync(projectId, cancellationToken))
+                ?? throw new ProjectStructureAgentException(404, "ProjectNotFound", $"Project '{projectId:D}' was not found.");
+        } catch (ProjectStructureProjectionLimitException exception) {
+            throw new ProjectStructureAgentException(413, "ProjectProjectionLimitExceeded", exception.Message);
+        }
+        return projectFacts;
+    }
 
     public Guid ProjectId => projectId;
 
     public DateTimeOffset AssembledAtUtc => assembledAtUtc;
+
+    internal bool RequiresCoordinatedOwnerReads { get; init; }
 
     public IReadOnlyList<ProjectObjectRecord> Nodes => _nodesByKey.Values.ToList();
 
@@ -135,16 +154,26 @@ public sealed class ProjectStructureProjectionContext(
 }
 
 public sealed class ProjectStructureAssemblyService(
+    IDbContextFactory<WorkbenchDbContext> factory,
     IEnumerable<IProjectStructureProjectionContributor> projectionContributors,
-    IClock clock)
+    IClock clock,
+    CoordinatedDatabaseTransaction coordinatedTransaction)
 {
     private readonly IReadOnlyList<IProjectStructureProjectionContributor> _projectionContributors = projectionContributors.ToList();
 
-    public async Task<ProjectStructureAssemblySnapshot> LoadAsync(
-        AppDbContext dbContext,
+    public async Task<ProjectStructureAssemblySnapshot> LoadAsync(Guid projectId, CancellationToken cancellationToken = default) {
+        await using var context = await factory.CreateDbContextAsync(cancellationToken);
+        return await LoadAsync(context, projectId, cancellationToken);
+    }
+
+    internal async Task<ProjectStructureAssemblySnapshot> LoadAsync(
+        WorkbenchDbContext dbContext,
         Guid projectId,
         CancellationToken cancellationToken = default)
     {
+        using var coordinatedRead = dbContext.Database.IsRelational() && dbContext.Database.CurrentTransaction is not null
+            ? coordinatedTransaction.Enter(dbContext)
+            : null;
         var canonicalNodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);
@@ -165,11 +194,12 @@ public sealed class ProjectStructureAssemblyService(
             .ToDictionaryAsync(item => item.NodeKey, StringComparer.Ordinal, cancellationToken);
 
         var context = new ProjectStructureProjectionContext(
-            dbContext,
             projectId,
             clock.GetUtcNow(),
             layoutOverrides,
-            canonicalNodes);
+            canonicalNodes, persistedUserLinks) {
+            RequiresCoordinatedOwnerReads = coordinatedRead is not null
+        };
 
         foreach (var contributor in _projectionContributors)
         {
@@ -197,8 +227,8 @@ public sealed class ProjectStructureAssemblyService(
         return new ProjectStructureAssemblySnapshot(nodes, links);
     }
 
-    public async Task<ProjectObjectRecord?> FindNodeAsync(
-        AppDbContext dbContext,
+    internal async Task<ProjectObjectRecord?> FindNodeAsync(
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken = default)
@@ -212,8 +242,8 @@ public sealed class ProjectStructureAssemblyService(
         return snapshot.Nodes.FirstOrDefault(item => string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal));
     }
 
-    public async Task<IReadOnlyList<string>> UpdatePositionsAsync(
-        AppDbContext dbContext,
+    internal async Task<IReadOnlyList<string>> UpdatePositionsAsync(
+        WorkbenchDbContext dbContext,
         Guid projectId,
         IReadOnlyCollection<ProjectNodeMoveRequest> positions,
         CancellationToken cancellationToken = default)
@@ -316,20 +346,26 @@ public sealed class ProjectStructureAssemblyService(
     }
 
     private static Task SaveChangesAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         CancellationToken cancellationToken)
         => dbContext.SaveChangesAsync(cancellationToken);
 
     private async Task<HashSet<string>> LoadProjectionNodeKeysAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         CancellationToken cancellationToken)
     {
+        using var coordinatedRead = dbContext.Database.IsRelational() && dbContext.Database.CurrentTransaction is not null
+            ? coordinatedTransaction.Enter(dbContext)
+            : null;
         var context = new ProjectStructureProjectionContext(
-            dbContext,
             projectId,
             clock.GetUtcNow(),
-            new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal));
+            new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal),
+            canonicalLinks: await dbContext.Set<ProjectObjectLinkRecord>().AsNoTracking()
+                .Where(link => link.ProjectId == projectId && !link.IsSystemManaged).ToListAsync(cancellationToken)) {
+            RequiresCoordinatedOwnerReads = coordinatedRead is not null
+        };
 
         foreach (var contributor in _projectionContributors)
         {
@@ -413,19 +449,14 @@ internal static class ProjectStructureProjectionBindingFactory
     }
 }
 
-internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IProjectStructureProjectionContributor
+internal sealed class ProjectHierarchyProjectionContributor(IClock clock, ProjectStructureProjectionQueryService projects) : IProjectStructureProjectionContributor
 {
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
-        var project = await context.DbContext.Set<Project>()
-            .FirstAsync(item => item.Id == context.ProjectId, cancellationToken);
-        var phases = await context.DbContext.Set<ProjectPhase>()
-            .Where(item => item.ProjectId == context.ProjectId)
-            .OrderBy(item => item.OrderIndex)
-            .ToListAsync(cancellationToken);
-        var allProjects = await context.DbContext.Set<Project>().ToListAsync(cancellationToken);
-        var allHierarchyLinks = await context.DbContext.Set<ProjectHierarchyLink>().ToListAsync(cancellationToken);
-        var projection = BuildProjectHierarchyProjection(project, allProjects, allHierarchyLinks, clock.GetUtcNow());
+        var facts = await context.GetProjectFactsAsync(projects, cancellationToken);
+        var project = facts.Project;
+        var phases = facts.Phases;
+        var projection = BuildProjectHierarchyProjection(project, facts.Projects, facts.HierarchyLinks, clock.GetUtcNow());
 
         context.AddNode(new ProjectObjectRecord
         {
@@ -508,14 +539,14 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
         return $"project-related-parent:{projectId}";
     }
 
-    private static string ResolveRelatedProjectSubtitle(Project project, string fallbackLabel)
+    private static string ResolveRelatedProjectSubtitle(ProjectStructureProjectFact project, string fallbackLabel)
     {
         return string.IsNullOrWhiteSpace(project.CurrentPhase)
             ? fallbackLabel
             : $"{fallbackLabel} · {project.CurrentPhase}";
     }
 
-    private static string ResolveRelatedProjectNotes(Project project, string fallbackLabel)
+    private static string ResolveRelatedProjectNotes(ProjectStructureProjectFact project, string fallbackLabel)
     {
         return string.Join(
             Environment.NewLine,
@@ -527,7 +558,7 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
             }.Where(item => !string.IsNullOrWhiteSpace(item)));
     }
 
-    private static string ResolveProjectSortKey(Project project)
+    private static string ResolveProjectSortKey(ProjectStructureProjectFact project)
     {
         return string.IsNullOrWhiteSpace(project.Name)
             ? project.Id.ToString("N")
@@ -576,7 +607,7 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
 
     private static ProjectObjectRecord CreateRelatedParentNode(
         Guid projectId,
-        Project parentProject,
+        ProjectStructureProjectFact parentProject,
         string fallbackLabel,
         double x,
         double y,
@@ -601,9 +632,9 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
     }
 
     private static ProjectHierarchyProjection BuildProjectHierarchyProjection(
-        Project project,
-        IReadOnlyList<Project> allProjects,
-        IReadOnlyList<ProjectHierarchyLink> allHierarchyLinks,
+        ProjectStructureProjectFact project,
+        IReadOnlyList<ProjectStructureProjectFact> allProjects,
+        IReadOnlyList<ProjectStructureHierarchyLinkFact> allHierarchyLinks,
         DateTimeOffset updatedAtUtc)
     {
         var projectMap = allProjects.ToDictionary(item => item.Id);
@@ -818,24 +849,18 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
 }
 
 internal sealed class ProjectResourceProjectionContributor(
-    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry) : IProjectStructureProjectionContributor
-{
-    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
-    {
-        var resources = await context.DbContext.Set<ProjectResource>()
-            .Where(item => item.ProjectId == context.ProjectId)
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken);
+    ResourcesService resourcesService) : IProjectStructureProjectionContributor {
+    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken) {
+        var resources = context.RequiresCoordinatedOwnerReads
+            ? await resourcesService.ListProjectProjectionFactsForMutationAsync(context.ProjectId, cancellationToken)
+            : await resourcesService.ListProjectProjectionFactsAsync(context.ProjectId, cancellationToken);
 
-        foreach (var resource in resources.Select((resource, index) => new { Resource = resource, Index = index }))
-        {
-            var connectorPlugin = resourceConnectorPluginRegistry.Resolve(resource.Resource);
-            context.AddNode(new ProjectObjectRecord
-            {
+        foreach (var resource in resources.Select((resource, index) => new { Resource = resource, Index = index })) {
+            context.AddNode(new ProjectObjectRecord {
                 ProjectId = context.ProjectId,
                 NodeKey = $"resource:{resource.Resource.Id}",
-                ObjectType = connectorPlugin.ResolveWorkbenchObjectType(resource.Resource),
-                ObjectSubtype = connectorPlugin.ResolveWorkbenchObjectSubtype(resource.Resource),
+                ObjectType = resource.Resource.ObjectType,
+                ObjectSubtype = resource.Resource.ObjectSubtype,
                 Title = resource.Resource.Name,
                 Subtitle = resource.Resource.LocationOrIdentifier,
                 Status = resource.Resource.ValidationStatus.ToString(),
@@ -852,18 +877,16 @@ internal sealed class ProjectResourceProjectionContributor(
     }
 }
 
-internal sealed class PromptGalleryProjectionContributor : IProjectStructureProjectionContributor
+internal sealed class PromptGalleryProjectionContributor(
+    ProjectStructureProjectionQueryService projects,
+    IPromptArtifactProjectionQueryService promptsQuery) : IProjectStructureProjectionContributor
 {
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
-        var phases = await context.DbContext.Set<ProjectPhase>()
-            .Where(item => item.ProjectId == context.ProjectId)
-            .ToListAsync(cancellationToken);
-        var prompts = (await context.DbContext.Set<PromptArtifact>()
-                .Where(item => item.ProjectId == context.ProjectId && !item.IsArchived)
-                .ToListAsync(cancellationToken))
-            .OrderBy(item => item.CreatedAtUtc)
-            .ToList();
+        var phases = (await context.GetProjectFactsAsync(projects, cancellationToken)).Phases;
+        var prompts = context.RequiresCoordinatedOwnerReads
+            ? await promptsQuery.ListProjectFactsForMutationAsync(context.ProjectId, cancellationToken)
+            : await promptsQuery.ListProjectFactsAsync(context.ProjectId, cancellationToken);
 
         foreach (var prompt in prompts.Select((prompt, index) => new { Prompt = prompt, Index = index }))
         {
@@ -895,20 +918,14 @@ internal sealed class PromptGalleryProjectionContributor : IProjectStructureProj
     }
 }
 
-internal sealed class TestPlanProjectionContributor : IProjectStructureProjectionContributor
-{
-    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
-    {
-        var testPlans = (await context.DbContext.Set<TestPlan>()
-                .Where(item => item.ProjectId == context.ProjectId)
-                .ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToList();
+internal sealed class TestPlanProjectionContributor(TestLabService testLabService) : IProjectStructureProjectionContributor {
+    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken) {
+        var testPlans = context.RequiresCoordinatedOwnerReads
+            ? await testLabService.ListProjectProjectionFactsForMutationAsync(context.ProjectId, cancellationToken)
+            : await testLabService.ListProjectProjectionFactsAsync(context.ProjectId, cancellationToken);
 
-        foreach (var testPlan in testPlans.Select((testPlan, index) => new { TestPlan = testPlan, Index = index }))
-        {
-            context.AddNode(new ProjectObjectRecord
-            {
+        foreach (var testPlan in testPlans.Select((testPlan, index) => new { TestPlan = testPlan, Index = index })) {
+            context.AddNode(new ProjectObjectRecord {
                 ProjectId = context.ProjectId,
                 NodeKey = $"test-plan:{testPlan.TestPlan.Id}",
                 ObjectType = ProjectObjectType.TestPlan,

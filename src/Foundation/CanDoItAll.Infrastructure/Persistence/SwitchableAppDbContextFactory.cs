@@ -99,10 +99,12 @@ public sealed class ProfileAppDbContextFactory : IProfileAppDbContextFactory
     }
 }
 
-public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
-{
-    public AppDbContext CreateDbContext(string[] args)
-    {
+public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext> {
+    private const string CompositionAssemblyName = "CanDoItAll.Composition";
+    private const string ModuleAssembliesTypeName = "CanDoItAll.Composition.ModuleAssemblies";
+    private const string ModuleAssembliesFieldName = "All";
+
+    public AppDbContext CreateDbContext(string[] args) {
         ConfigureModuleAssemblies();
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
@@ -111,38 +113,40 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
         return new AppDbContext(optionsBuilder.Options);
     }
 
-    private static DatabaseOptions BuildDatabaseOptions()
-    {
-        return new DatabaseOptions
-        {
+    private static DatabaseOptions BuildDatabaseOptions() {
+        return new DatabaseOptions {
             Provider = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_PROVIDER") ?? "PostgreSql",
             ConnectionString = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_CONNECTION")
         };
     }
 
-    private static void ConfigureModuleAssemblies()
-    {
+    private static void ConfigureModuleAssemblies() {
         var compositionAssembly = AppDomain.CurrentDomain.GetAssemblies()
-            .FirstOrDefault(assembly => string.Equals(assembly.GetName().Name, "CanDoItAll.Composition", StringComparison.Ordinal))
-            ?? TryLoadCompositionAssembly();
-        var moduleAssembliesField = compositionAssembly?.GetType("CanDoItAll.Composition.ModuleAssemblies", throwOnError: false)
-            ?.GetField("All", BindingFlags.Public | BindingFlags.Static);
-
-        if (moduleAssembliesField?.GetValue(null) is Assembly[] moduleAssemblies && moduleAssemblies.Length > 0)
-        {
-            AppDbContextModelRegistry.ConfigureAssemblies(moduleAssemblies);
-        }
+            .FirstOrDefault(assembly => string.Equals(assembly.GetName().Name, CompositionAssemblyName, StringComparison.Ordinal))
+            ?? LoadCompositionAssembly();
+        ConfigureModuleAssemblies(compositionAssembly);
     }
 
-    private static Assembly? TryLoadCompositionAssembly()
-    {
-        try
-        {
-            return Assembly.Load("CanDoItAll.Composition");
+    internal static void ConfigureModuleAssemblies(Assembly compositionAssembly) {
+        ArgumentNullException.ThrowIfNull(compositionAssembly);
+        var catalog = compositionAssembly.GetType(ModuleAssembliesTypeName, throwOnError: false, ignoreCase: false)
+            ?? throw new InvalidOperationException(
+                $"The complete design-time model requires type '{ModuleAssembliesTypeName}' in assembly '{compositionAssembly.FullName}'.");
+        var field = catalog.GetField(ModuleAssembliesFieldName, BindingFlags.Public | BindingFlags.Static);
+        if (field?.GetValue(null) is not Assembly[] { Length: > 0 } moduleAssemblies || moduleAssemblies.Any(assembly => assembly is null)) {
+            throw new InvalidOperationException(
+                $"The complete design-time model requires '{ModuleAssembliesTypeName}.{ModuleAssembliesFieldName}' to contain a non-empty Assembly[] without null entries.");
         }
-        catch
-        {
-            return null;
+        AppDbContextModelRegistry.ConfigureAssemblies(moduleAssemblies);
+    }
+
+    private static Assembly LoadCompositionAssembly() {
+        try {
+            return Assembly.Load(CompositionAssemblyName);
+        } catch (Exception exception) when (exception is FileNotFoundException or FileLoadException or BadImageFormatException) {
+            throw new InvalidOperationException(
+                $"The complete design-time model requires assembly '{CompositionAssemblyName}'. Run EF with the CanDoItAll.Web startup project and CanDoItAll.Migrations.PostgreSql migrations project, and resolve missing or incompatible dependencies.",
+                exception);
         }
     }
 }

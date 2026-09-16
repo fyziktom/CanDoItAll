@@ -25,7 +25,7 @@ public sealed class SharedProviderRuntimeProfileMaterializerTests(Xunit.Abstract
             LongContextOutputPerMillionTokensUsd = 9.12m
         };
         var graph = CreateGraph(isPrivateProvider: isPrivate, price: price);
-        var profile = new CanDoItAll.Modules.AgentFramework.SharedProviderProfileMapper().Map(Materialize(graph));
+        var profile = new SharedProviderProfileMapper().Map(Materialize(graph));
         var mappedPrice = Assert.Single(profile.ModelPrices);
 
         Assert.Equal(isPrivate, profile.IsPrivateProvider);
@@ -37,7 +37,7 @@ public sealed class SharedProviderRuntimeProfileMaterializerTests(Xunit.Abstract
         Assert.Equal(isPrivate, service.CreateEditor(profile).IsPrivateProvider);
         Assert.Single(service.CreateEditor(profile).ModelPrices);
 
-        var unpriced = new CanDoItAll.Modules.AgentFramework.SharedProviderProfileMapper()
+        var unpriced = new SharedProviderProfileMapper()
             .Map(Materialize(CreateGraph(isPrivateProvider: isPrivate)));
         Assert.Empty(service.CreateEditor(unpriced).ModelPrices);
         Assert.Equal(isPrivate, service.CreateEditor(unpriced).IsPrivateProvider);

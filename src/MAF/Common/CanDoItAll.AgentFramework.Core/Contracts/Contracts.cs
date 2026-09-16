@@ -466,6 +466,9 @@ public interface IAgentFrameworkWorkspaceService :
     Task<AgentUsageDetailSnapshot> GetAgentUsageDetailsAsync(CancellationToken cancellationToken = default);
     Task<ProviderUsageDetailSnapshot> GetProviderUsageDetailsAsync(CancellationToken cancellationToken = default);
     Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default);
+    Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not expose coherent catalog snapshots.");
+
     Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default);
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default);
@@ -488,6 +491,18 @@ public interface IAgentFrameworkWorkspaceService :
         CancellationToken cancellationToken = default)
     {
         throw new NotSupportedException("This workspace does not support bulk durable project-structure access revocation.");
+    }
+    Task GrantAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        throw new NotSupportedException("This workspace does not support project lifetime access grants.");
+    }
+    Task RevokeAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        throw new NotSupportedException("This workspace does not support project lifetime access revocation for an agent.");
+    }
+    Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
+        CancellationToken cancellationToken = default) {
+        throw new NotSupportedException("This workspace does not support project lifetime access revocation.");
     }
     Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);
@@ -556,6 +571,16 @@ public interface IAgentFrameworkWorkspaceService :
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
+    Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support durable cancelled-run reconciliation.");
+
+    Task<ExecutionRunResult> RecoverExecutionRunAsync(
+        Guid executionRunId,
+        AgentExecutionOperationId activityOperationId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support durable admitted-run recovery.");
+
     Task<AgentChatRunResult> SendMessageAsync(
         Guid agentId,
         Guid? chatSessionId,

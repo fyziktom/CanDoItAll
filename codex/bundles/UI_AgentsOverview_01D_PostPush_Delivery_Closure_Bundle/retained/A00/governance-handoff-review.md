@@ -1,9 +1,0 @@
-# Prepared Governance handoff review
-
-This is Phase A read-only prerequisite review, not Governance execution. The prepared requirements, G00-G03 work units, adjudication, boundary/dependency maps, semantic test map, UI composition and current panel/shared-child source were reread while the Phase A stable gate remained active. No Governance source, tests, projects, assets or bundle documents were changed.
-
-The prepared separation remains usable: Module owns session/read/effect lifetime; the real controlled surface stays in Module until G02 closes; G03 collects its own baseline before moving the pure closure into the existing UI project. The two shared children have exactly the two expected source consumers (Governance and AgentRuntimeDetailsDialog). Existing agent-list guarding must be preserved, while manual detail work still has no target fencing. These are source observations, not new behavioral proof.
-
-Before G00 execution, add the latest conditional implementation authorization and retain the old preparation-only instruction. The old ad2ded entry is historical and must not be presented as the execution revision. Refresh the entry against the actual post-A proposed source. The latest owner instruction adds explicit deterministic time/culture coverage and an allowlisted presentation boundary; the prior GOV-07 wording about real sections does not authorize passing entire checkpoint, approval, receipt, session or runtime graphs into the surface. Current LocalDateTime formatting and raw timeline message rendering require the planned direct witnesses and an explicit safe mapping decision.
-
-Keep all new Governance evidence under its now-retainable proof policy, and verify each child manifest before advancing. Existing Overview browser/timing and tests are prerequisites only. No G00 RED, Governance canonical read, extraction, sandbox or measurement result is claimed by this review.

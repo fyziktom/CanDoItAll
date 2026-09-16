@@ -7,7 +7,7 @@ public sealed class HistoryCoverageReader(IEnumerable<IHistorySourceMaintenance>
     private const string ProjectionFailedCode = "ProjectionFailed";
     private readonly HistorySourceKind[] kinds = sources.Select(source => source.Kind).Distinct().Order().ToArray();
 
-    public async Task<HistoryCoverage> ReadAsync(AppDbContext db, HistoryPartition partition, CancellationToken cancellationToken) {
+    internal async Task<HistoryCoverage> ReadAsync(ProviderHistoryDbContext db, HistoryPartition partition, CancellationToken cancellationToken) {
         if (kinds.Length == 0) {
             return new(HistoryCoverageState.Pending, null);
         }

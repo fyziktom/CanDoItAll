@@ -15,11 +15,11 @@ public static class WorkflowAgentCapabilityKeys
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList] = DefinitionsList,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunStart] = RunStart,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet] = RunStatusGet,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunCancel] = RunCancel,
-            [AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit] = ExternalResponseSubmit
+            [WorkflowToolPolicy.WorkflowsDefinitionsList] = DefinitionsList,
+            [WorkflowToolPolicy.WorkflowsRunStart] = RunStart,
+            [WorkflowToolPolicy.WorkflowsRunStatusGet] = RunStatusGet,
+            [WorkflowToolPolicy.WorkflowsRunCancel] = RunCancel,
+            [WorkflowToolPolicy.WorkflowsExternalResponseSubmit] = ExternalResponseSubmit
         }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static IReadOnlySet<string> Keys => WorkflowRuntimeCapabilityKeys.Keys;

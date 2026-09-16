@@ -7,11 +7,11 @@ public static class AgentToolArgumentDisplayFormatter {
     public const int MaximumDisplayLength = 4096;
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
-    public static string DescribeArguments(string? argumentsJson, string? toolName = null) {
+    public static string DescribeArguments(string? argumentsJson, string? toolName = null, AgentToolPolicyCatalog? catalog = null) {
         try {
             return string.IsNullOrWhiteSpace(argumentsJson)
                 ? string.Empty
-                : FormatArgumentSummary(toolName, DeserializeArguments(argumentsJson));
+                : FormatArgumentSummary(toolName, DeserializeArguments(argumentsJson), catalog);
         } catch (ArgumentException) {
             return string.Empty;
         }
@@ -28,12 +28,13 @@ public static class AgentToolArgumentDisplayFormatter {
 
     public static string SummarizeArguments(
         string? toolName,
-        IDictionary<string, object?>? arguments) {
+        IDictionary<string, object?>? arguments,
+        AgentToolPolicyCatalog? catalog = null) {
         if (arguments is null || arguments.Count == 0) {
             return string.Empty;
         }
 
-        return FormatArgumentSummary(toolName, arguments);
+        return FormatArgumentSummary(toolName, arguments, catalog);
     }
 
     public static string FormatArgumentSummary(IEnumerable<KeyValuePair<string, object?>> arguments)
@@ -41,12 +42,14 @@ public static class AgentToolArgumentDisplayFormatter {
 
     public static string FormatArgumentSummary(
         string? toolName,
-        IEnumerable<KeyValuePair<string, object?>> arguments) {
+        IEnumerable<KeyValuePair<string, object?>> arguments,
+        AgentToolPolicyCatalog? catalog = null) {
         ArgumentNullException.ThrowIfNull(arguments);
 
         var sanitizedArguments = AgentToolInvocationPolicyMetadata.SanitizeArgumentsForDisplay(
             toolName,
-            arguments);
+            arguments,
+            catalog);
         var parts = sanitizedArguments
             .Where(item => item.Value is not null)
             .Select(item => $"{item.Key}={FormatArgumentValue(item.Value)}")

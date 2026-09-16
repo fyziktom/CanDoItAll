@@ -40,7 +40,7 @@ internal static class FileSystemStorageBrowseEntryMapper
     }
 
     public static StorageBrowsePage CreatePage(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         IReadOnlyList<StorageBrowseEntry> entries,
         StorageBrowseCompleteness completeness,
@@ -58,7 +58,7 @@ internal static class FileSystemStorageBrowseEntryMapper
             new StorageBrowseConsistencyToken(directoryVersion.ToString(CultureInfo.InvariantCulture)));
 
     public static IReadOnlyList<StorageBrowsePathSegment> BuildPath(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseContainer container)
     {
         var path = new List<StorageBrowsePathSegment>

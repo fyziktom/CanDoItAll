@@ -14,6 +14,7 @@
 @inject TooltipService TooltipService
 @inject Microsoft.JSInterop.IJSRuntime JsRuntime
 @inject ILogger<ContextualAgentWorkspaceWindows> Logger
+@inject ContextualAgentWorkspacePolicyCatalog WorkspacePolicies
 
 @if (WindowState.IsVisible)
 {
@@ -270,10 +271,6 @@
 
 @code {
     private const string DefaultRunStateTone = "neutral";
-    private const string ProjectStructureScopeLabel = "Project structure";
-    private const string ProcessesScopeLabel = "Processes";
-    private const string ProjectStructureSourceKind = "project-structure";
-    private const string ProcessDefinitionSourceKind = "process-definition";
     private const string ContextualWindowRequester = "contextual-agent-window";
     private static readonly TagPaletteEntry[] TagPalette =
     [
@@ -495,7 +492,7 @@
 
     private void ResolveAccessibleAgents()
     {
-        accessibleAgents = ContextualAgentAccessResolver.Resolve(
+        accessibleAgents = WorkspacePolicies.Resolve(
             agents,
             WorkspaceKind,
             ProjectId,
@@ -1615,7 +1612,7 @@ Use these workspace artifacts as input:
     }
 
     private string BuildContextualPrompt(string prompt)
-        => ContextualAgentWorkspaceContextBuilder.BuildPrompt(
+        => WorkspacePolicies.BuildPrompt(
             WorkspaceKind,
             ProjectId,
             ProcessDefinitionId,
@@ -1810,18 +1807,9 @@ Use these workspace artifacts as input:
 
     private ExecutionInvocationContext BuildInvocationContext()
     {
-        var sourceKind = WorkspaceKind switch
-        {
-            ContextualAgentWorkspaceKind.ProjectStructure => ProjectStructureSourceKind,
-            ContextualAgentWorkspaceKind.Processes => ProcessDefinitionSourceKind,
-            _ => "workspace"
-        };
-        var sourceId = WorkspaceKind switch
-        {
-            ContextualAgentWorkspaceKind.ProjectStructure => ProjectId?.ToString("N") ?? string.Empty,
-            ContextualAgentWorkspaceKind.Processes => ProcessDefinitionId?.ToString("N") ?? string.Empty,
-            _ => selectedSessionId?.ToString("N") ?? string.Empty
-        };
+        var policy = WorkspacePolicies.Require(WorkspaceKind);
+        var sourceKind = policy.Descriptor.SourceKind.Value;
+        var sourceId = policy.ResolveScopeId(ProjectId, ProcessDefinitionId)?.ToString("N") ?? string.Empty;
 
         return new ExecutionInvocationContext(
             SourceKind: sourceKind,
@@ -1835,7 +1823,7 @@ Use these workspace artifacts as input:
 
     private bool ShouldAutoApproveContextualRun()
     {
-        return ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+        return WorkspacePolicies.ShouldAutoApproveContextualRun(
             AccessibleAgents,
             WorkspaceKind,
             selectedAgentId,
@@ -1857,7 +1845,7 @@ Use these workspace artifacts as input:
             metadata["projectId"] = ProjectId.Value.ToString("D");
         }
 
-        if (WorkspaceKind == ContextualAgentWorkspaceKind.ProjectStructure)
+        if (WorkspacePolicies.Require(WorkspaceKind).Descriptor.IncludesSelectedNodeMetadata)
         {
             metadata["selectedNodeIdsJson"] = JsonSerializer.Serialize(
                 ContextualAgentWorkspaceContextBuilder.NormalizeSelectedNodeIds(SelectedNodeIds));
@@ -1916,30 +1904,16 @@ Use these workspace artifacts as input:
         => $"{WorkspaceKind}:{ProjectId?.ToString("N") ?? "none"}:{ProcessDefinitionId?.ToString("N") ?? "none"}";
 
     private string ResolveWorkspaceLabel()
-        => WorkspaceKind switch
-        {
-            ContextualAgentWorkspaceKind.ProjectStructure => ProjectStructureScopeLabel,
-            ContextualAgentWorkspaceKind.Processes => ProcessesScopeLabel,
-            _ => "Workspace"
-        };
+        => WorkspacePolicies.Require(WorkspaceKind).Descriptor.WorkspaceLabel;
 
-    private string ResolveScopeLabel()
-        => WorkspaceKind switch
-        {
-            ContextualAgentWorkspaceKind.ProjectStructure when ProjectId.HasValue => "This project",
-            ContextualAgentWorkspaceKind.ProjectStructure => ProjectStructureScopeLabel,
-            ContextualAgentWorkspaceKind.Processes when ProcessDefinitionId.HasValue => "This process",
-            ContextualAgentWorkspaceKind.Processes => ProcessesScopeLabel,
-            _ => "Workspace"
-        };
+    private string ResolveScopeLabel() {
+        var policy = WorkspacePolicies.Require(WorkspaceKind);
+        return policy.ResolveScopeId(ProjectId, ProcessDefinitionId).HasValue
+            ? policy.Descriptor.SelectedScopeLabel : policy.Descriptor.WorkspaceLabel;
+    }
 
     private string ResolveEmptyAccessDescription()
-        => WorkspaceKind switch
-        {
-            ContextualAgentWorkspaceKind.ProjectStructure => "Create or edit an agent with project structure access for this project.",
-            ContextualAgentWorkspaceKind.Processes => "Create or edit an agent with process access for this definition.",
-            _ => "Create or edit an agent with contextual workspace access."
-        };
+        => WorkspacePolicies.Require(WorkspaceKind).Descriptor.EmptyAccessDescription;
 
     private string ResolveChatKicker()
         => $"{ResolveWorkspaceLabel()} chat";

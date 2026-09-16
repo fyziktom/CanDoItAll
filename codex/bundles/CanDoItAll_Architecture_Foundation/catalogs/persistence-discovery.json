@@ -1,0 +1,1158 @@
+[
+  {
+    "id": "DATA-001",
+    "anchor_id": "ANCH-0001",
+    "label": "Project",
+    "source_id": "MAP-01",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:45",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-PROJECTS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-002",
+    "anchor_id": "ANCH-0002",
+    "label": "ProjectPhase",
+    "source_id": "MAP-01",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:68",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-PROJECTS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-003",
+    "anchor_id": "ANCH-0003",
+    "label": "ProjectOptionSelection",
+    "source_id": "MAP-01",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:87",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-PROJECTS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-004",
+    "anchor_id": "ANCH-0004",
+    "label": "ProjectHierarchyLink",
+    "source_id": "MAP-01",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs:100",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-PROJECTS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-005",
+    "anchor_id": "ANCH-0033",
+    "label": "ProjectFileToolsStorageBindingSource",
+    "source_id": "MAP-01",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileToolsStorageBindingSource.cs:10",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-PROJECTS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-006",
+    "anchor_id": "ANCH-0035",
+    "label": "ProjectsProjectTransferTargetStateParticipant",
+    "source_id": "MAP-01",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectTransferTargetStateParticipant.cs:6",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-PROJECTS; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-007",
+    "anchor_id": "ANCH-0036",
+    "label": "ProjectsSchemaInitializer",
+    "source_id": "MAP-01",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Projects/ProjectsSchemaInitializer.cs:5",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-PROJECTS; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-008",
+    "anchor_id": "ANCH-0047",
+    "label": "ProjectObjectRecord (+ProjectObjectRecordConfiguration, table Workbench_ProjectObjects)",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:60-115",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-009",
+    "anchor_id": "ANCH-0048",
+    "label": "ProjectObjectLinkRecord (table Workbench_ProjectObjectLinks)",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:117-139",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-010",
+    "anchor_id": "ANCH-0049",
+    "label": "ProjectWorkbenchViewStateRecord (table Workbench_ViewStates)",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:141-160",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-011",
+    "anchor_id": "ANCH-0050",
+    "label": "ProjectNodeBindingRecord / ProjectNodeReferenceRecord (Workbench_ProjectNodeBindings, Workbench_ProjectNodeReferences) + ProjectNodeBindingStorage",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeBindings.cs:24-86,265",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-012",
+    "anchor_id": "ANCH-0051",
+    "label": "ProjectNodeLifecycleEventRecord (Workbench_ProjectNodeLifecycleEvents)",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeLifecycleHistory.cs:14-45",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-013",
+    "anchor_id": "ANCH-0052",
+    "label": "ProjectStructureProjectionLayoutRecord (Workbench_ProjectProjectionLayouts)",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssemblyService.cs:16-36",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-014",
+    "anchor_id": "ANCH-0053",
+    "label": "ProjectStructureLeaseRecord / ProjectStructureOperationAnalyticsRecord (Workbench_ProjectStructureLeases, Workbench_ProjectStructureOperationAnalytics)",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentModels.cs:7-110",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-015",
+    "anchor_id": "ANCH-0054",
+    "label": "ProjectCrossModuleMutationRecord (Workbench_ProjectCrossModuleMutations) + ProjectCrossModuleMutationCoordinator",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCrossModuleMutations.cs:32-132",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-016",
+    "anchor_id": "ANCH-0056",
+    "label": "ProjectWorkbenchService (partial: Models + Clipboard)",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:423-2056; src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchService.Clipboard.cs",
+    "inherited_kind": "aggregate",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-017",
+    "anchor_id": "ANCH-0085",
+    "label": "DatabaseTransfer: ProjectsDatabaseTransferHandler (IDatabaseTransferHandler), ProjectTransferDataSet, ProjectTransferTargetStateGuard, WorkbenchProjectTransferTargetStateParticipant, ProjectPackageService (IProjectPackageService), ProjectPackageArchive, ProjectPackageStorageExporter/Importer/BindingPolicy/CatalogSnapshot",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectsDatabaseTransferHandler.cs:6-14; src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectTransferDataSet.cs:38-60; src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectPackageService.cs:16-28",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-018",
+    "anchor_id": "ANCH-0089",
+    "label": "ProjectWorkbenchSchemaInitializer / ProjectStructureAgentSchemaInitializer",
+    "source_id": "MAP-02",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchSchemaInitializer.cs:5-12; src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentSchemaInitializer.cs:5-12",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-019",
+    "anchor_id": "ANCH-0144",
+    "label": "ProjectCrossModuleMutationRecord + ProjectCrossModuleMutationCoordinator",
+    "source_id": "MAP-04",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCrossModuleMutations.cs:32",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-020",
+    "anchor_id": "ANCH-0150",
+    "label": "ProjectStructureLeaseRecord / ProjectStructureOperationAnalyticsRecord",
+    "source_id": "MAP-04",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentModels.cs:7",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-STRUCTURE / BND-WORK according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-021",
+    "anchor_id": "ANCH-0173",
+    "label": "FloatingAgentChatSettingsService",
+    "source_id": "MAP-05",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/FloatingAgentChatSettingsService.cs",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-022",
+    "anchor_id": "ANCH-0180",
+    "label": "Persistent workflow stores (catalog/run/checkpoint/idempotency/external-request/usage) + EF entity configurations",
+    "source_id": "MAP-06",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-023",
+    "anchor_id": "ANCH-0181",
+    "label": "Agent history file source / publication store / locator (AgentFramework_HistoryLocators)",
+    "source_id": "MAP-06",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/AgentFileHistorySource.cs",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-024",
+    "anchor_id": "ANCH-0182",
+    "label": "AgentProjectStructureAccessRevocationRecord + AgentProjectStructureAccessDeletionParticipant (AgentFramework_ProjectAccessRevocations)",
+    "source_id": "MAP-06",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/AgentProjectStructureAccessDeletionParticipant.cs",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-025",
+    "anchor_id": "ANCH-0192",
+    "label": "Database transfer participants (AiAgents handler, project transfer target state, history transfer)",
+    "source_id": "MAP-06",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework/DatabaseTransfer/AgentHistoryTransferParticipant.cs",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-026",
+    "anchor_id": "ANCH-0211",
+    "label": "AgentRecruiting* models (Interview, Attempt, HumanReview, CandidateReadiness, commands)",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Recruiting/AgentRecruitingEvidenceModels.cs:11-194",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-027",
+    "anchor_id": "ANCH-0212",
+    "label": "FileSandboxWorkspaceStore.RecruitingEvidence (+ storage layout agent-recruiting/interviews)",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.RecruitingEvidence.cs:5-153",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-028",
+    "anchor_id": "ANCH-0223",
+    "label": "AgentProjectStructureAccessSettings / AgentProjectStructureAccessMetadata",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Access/AgentProjectStructureAccessModels.cs:6-360",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-029",
+    "anchor_id": "ANCH-0224",
+    "label": "AgentProcessAccessSettings / AgentProcessAccessMetadata",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Access/AgentProcessAccessModels.cs:6-60",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-030",
+    "anchor_id": "ANCH-0225",
+    "label": "AgentEditorModel.ProjectStructureAccess",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Editors/EditorModels.cs:27,66",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-031",
+    "anchor_id": "ANCH-0228",
+    "label": "ProjectStructureAgentIdentityDescriptor",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/Execution/ProjectStructureAgentIdentityDescriptor.cs:3-14",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-032",
+    "anchor_id": "ANCH-0229",
+    "label": "ProjectStructureProcessNodeContextDescriptor",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/ProjectStructureProcessNodeContextDescriptor.cs:3-30",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-033",
+    "anchor_id": "ANCH-0231",
+    "label": "HrAgentIdentity / HrAgentExecutionSourceKinds / HrAgentExecutionRetention",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/HrAgentIdentity.cs:5-39",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-034",
+    "anchor_id": "ANCH-0232",
+    "label": "SchedulerAgentIdentity",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/SchedulerAgentIdentity.cs:3-33",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-035",
+    "anchor_id": "ANCH-0233",
+    "label": "ManagedAdministrativeAgentIdentityCatalog (+ PromptsCurator/WorkflowCurator/CapabilityCurator/DeliveryManager identities)",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/ManagedAdministrativeAgentIdentityCatalog.cs:5-15",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-036",
+    "anchor_id": "ANCH-0234",
+    "label": "AgentWorkloadKind (Hr, Sales, Support, Spreadsheet, Mail...) and AgentPermissionsPolicy.CanScheduleWork",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Common/Enums.cs:91-103",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-037",
+    "anchor_id": "ANCH-0235",
+    "label": "SandboxWorkspaceSeedNormalizer HR/Scheduler/ProjectStructure migrations",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs:21-25,552-600,717,765-770,1305,1386-1389",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-038",
+    "anchor_id": "ANCH-0236",
+    "label": "AgentTemplatePackLoader.AgentTemplateProjectStructureAccess / SandboxWorkspaceSeedBuilder access write",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/AgentTemplatePackLoader.cs:286-311",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-039",
+    "anchor_id": "ANCH-0240",
+    "label": "WorkspaceScopeKind {Sandbox, Process, Project, Tenant, Organization} / WorkspaceScopeDescriptor",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workspace/WorkspaceScopeModels.cs:3-70",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-040",
+    "anchor_id": "ANCH-0241",
+    "label": "AgentRuntimeContextIntent (SourceKind, ProcessRunId, ProcessStepId, TargetScope, IsGovernedProcessStep, AllowedOperations)",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Runtime/AgentRuntimeContextAssemblyModels.cs:33-66",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-041",
+    "anchor_id": "ANCH-0245",
+    "label": "WorkflowProjectStructureOperation / WorkflowProjectStructureExecutorSettings / WorkflowExecutorIds.ProjectStructure / BuiltInWorkflowExecutorDescriptors.ProjectStructure",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowExecutorModels.cs:32,60,429-436,865-885",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "BND-WORKFLOWS nebo product adapter podle obsahu",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-042",
+    "anchor_id": "ANCH-0246",
+    "label": "WorkflowLaunchOrigin.SchedulerPlanRun / ProjectStructureNode / ProcessAssignment + WorkflowProcessRunId / WorkflowSchedulerFireId / WorkflowProjectStructureNodeId",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowLaunchModels.cs:77-80,151-154,169-172,183-197,249-335,385-403",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "BND-WORKFLOWS nebo product adapter podle obsahu",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-043",
+    "anchor_id": "ANCH-0247",
+    "label": "WorkflowInputParameterKind (CrmContactEmail, ProjectId, ProjectNodeId, ExternalConnectionId) / WorkflowInputParameterOptionSourceKind (CrmContacts, ProjectStructureProjects, ProjectStructureNodes, Office365Connections)",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowInputParameterModels.cs:3-25",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "BND-WORKFLOWS nebo product adapter podle obsahu",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-044",
+    "anchor_id": "ANCH-0248",
+    "label": "WorkflowFailureSourceKind.Workbench",
+    "source_id": "MAP-07",
+    "source_locations": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/WorkflowFailureDiagnostics.cs:30-43",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "BND-WORKFLOWS nebo product adapter podle obsahu",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-045",
+    "anchor_id": "ANCH-0255",
+    "label": "Party aggregate (Party, PartyRoleAssignment, PartyContactPoint, PartyAddress, PartyRelationship, PartyConfidentialNote, CrmHrAuditEntry, CrmHrLookupOption)",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrFoundationModels.cs:73-176",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-CRM",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-046",
+    "anchor_id": "ANCH-0256",
+    "label": "PartyOrganizationAffiliation",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/PartyOrganizationAffiliation.cs:14",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-CRM",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-047",
+    "anchor_id": "ANCH-0257",
+    "label": "CRM entities (InteractionRecord, InteractionPartyLink, CrmAccountProfile, CrmAccountConnection, CrmAccountConnectionProjectLink, Opportunity, OpportunityPartyLink, OpportunityStageHistory)",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:195-296",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-CRM",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-048",
+    "anchor_id": "ANCH-0258",
+    "label": "HR entities (WorkforceProfile, SkillDefinition, PartySkill, CapacityBlock, StaffingRequest)",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:296-370",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-CRM",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-049",
+    "anchor_id": "ANCH-0259",
+    "label": "Recruiting entities (RecruitmentApplication, RecruitmentInterview, OnboardingTask)",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:370-412",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-CRM",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-050",
+    "anchor_id": "ANCH-0260",
+    "label": "AiAgentProfile (business governance profile of an AI-agent party)",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:412-425",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-CRM",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-051",
+    "anchor_id": "ANCH-0262",
+    "label": "ProjectPartyAssignment + ProjectPartyAssignmentMoveReceipt (canonical party<->project/node assignment)",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Models/CrmHrBusinessModels.cs:427-455",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "CLASSIFY_PARTICIPATION_VS_WORK_ASSIGNMENT_VS_EXECUTION",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-052",
+    "anchor_id": "ANCH-0280",
+    "label": "CrmHrProjectTransferTargetStateParticipant",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/DatabaseTransfer/CrmHrProjectTransferTargetStateParticipant.cs:6-88",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-CRM; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-053",
+    "anchor_id": "ANCH-0281",
+    "label": "CrmHrSchemaInitializer",
+    "source_id": "MAP-08",
+    "source_locations": "src/Modules/CanDoItAll.Modules.CrmHr/Persistence/CrmHrSchemaInitializer.cs:7",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-CRM; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-054",
+    "anchor_id": "ANCH-0317",
+    "label": "AppDatabaseBootstrapper",
+    "source_id": "MAP-10",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:186-1537",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-055",
+    "anchor_id": "ANCH-0332",
+    "label": "WorkspaceSettings (table Workspace_Settings) + WorkspaceService (settings, storage catalog CRUD/test, routing defaults, ListSecretsAsync facade)",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs:12-133; src/Modules/CanDoItAll.Modules.Workspace/Storage/WorkspaceService.Storage.cs:7-275",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-WORKSPACE / BND-COMPOSITION according to semantics",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-056",
+    "anchor_id": "ANCH-0336",
+    "label": "ConnectorCommandRecord/ConnectorCommandAuditRecord (tables via ConnectorCommands.cs), ConnectorCommandProcessor, ConnectorOutboxService, IConnectorCommandHandler, ConnectorCommandSchemaInitializer",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/Connectors/ConnectorCommands.cs:45-226; src/Modules/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:12-987; src/Modules/CanDoItAll.Modules.Workspace/Connectors/ConnectorCommandSchemaInitializer.cs:5-12",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-WORKSPACE / BND-COMPOSITION according to semantics; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-057",
+    "anchor_id": "ANCH-0341",
+    "label": "WorkspaceDefaultProviderDatabaseTransferHandler, WorkspaceProjectTransferTargetStateParticipant",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/WorkspaceDefaultProviderDatabaseTransferHandler.cs:7-84; src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/WorkspaceProjectTransferTargetStateParticipant.cs:6-40",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-WORKSPACE / BND-COMPOSITION according to semantics; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-058",
+    "anchor_id": "ANCH-0342",
+    "label": "ProjectResource (table Resources_ProjectResources) + ResourcesService + ResourceSummary/ResourceEditorModel + legacy ResourceKind enum",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs:70-424; src/Modules/CanDoItAll.Modules.Resources/ResourceKind.Legacy.cs:3-15",
+    "inherited_kind": "entity",
+    "target_owner_candidate": "MOD-RESOURCES",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-059",
+    "anchor_id": "ANCH-0347",
+    "label": "Prompt gallery aggregate: PromptArtifact, PromptVersion, PromptCollection, PromptTag, PromptArtifactTag, PromptSupportedProviderModel, PromptSupportedConsumer, PromptTemplateToken, PromptCompatibilityWarningPreference, PromptUsageRecord (tables Prompts_*)",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Prompts/PromptDomainModels.cs:33-215; src/Modules/CanDoItAll.Modules.Prompts/PromptEntityConfigurations.cs:6-171",
+    "inherited_kind": "aggregate",
+    "target_owner_candidate": "MOD-PROMPTS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-060",
+    "anchor_id": "ANCH-0351",
+    "label": "TestPlan, TestCaseRecord, TestEvidenceRecord, TestRunRecord (tables TestLab_*) + TestLabService + TestLabPage (/test-lab)",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.TestLab/TestLabModels.cs:18-421; src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor:1-438",
+    "inherited_kind": "aggregate",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-061",
+    "anchor_id": "ANCH-0352",
+    "label": "SchedulerPlan, SchedulerPlanRun (tables SchedulerPlanner_Plans/Runs) + ISchedulerPlannerService/SchedulerPlannerService + SchedulerPlannerTriggerScheduler (Quartz) + SchedulerPlannerRunDispatcher + SchedulerTargetLauncher + SchedulerPlannerSchemaInitializer",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerModels.cs:51-187; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs:15-1280; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerScheduling.cs:12-223; src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerSchemaInitializer.cs:6-81",
+    "inherited_kind": "aggregate",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-062",
+    "anchor_id": "ANCH-0356",
+    "label": "Plugins persistence: PluginInstallationRecord, PluginLogRecord, PluginCapabilityGrantRecord, PluginConnectionRecord, PluginOAuthConnectionRecord, PluginOAuthSessionRecord (tables Plugins_*) + PluginSchemaInitializer (raw SQL)",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Plugins/Persistence/PluginRuntimeRecords.cs:7-239; src/Modules/CanDoItAll.Modules.Plugins/Persistence/PluginInstallationRecord.cs:7-54; src/Modules/CanDoItAll.Modules.Plugins/Persistence/PluginSchemaInitializer.cs:5-182",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-063",
+    "anchor_id": "ANCH-0360",
+    "label": "CollaborationThreadRecord, CollaborationParticipantRecord, CollaborationMessageRecord, CollaborationInboxItemRecord (tables Collaboration_*) + CollaborationService (partial: Commands/Queries/Support) + contracts + CollaborationHomePage (/collaboration)",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModels.cs:50-201; src/Modules/CanDoItAll.Modules.Collaboration/CollaborationContracts.cs:5-132; src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.cs:8-18; src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor:1-356",
+    "inherited_kind": "aggregate",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-064",
+    "anchor_id": "ANCH-0361",
+    "label": "Security: SecretRecord/SecretReference (tables Security_SecretRecords/SecretReferences), SecretService (concrete), SecretListItem, SecretKind, ISecretProtector",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs:9-472",
+    "inherited_kind": "aggregate",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-065",
+    "anchor_id": "ANCH-0364",
+    "label": "ProviderManagement: ProviderProfile EF entity (table Workspace_ProviderProfiles) + legacy ProviderKind enum",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderProfile.cs:8-62; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Domain/ProviderKind.Legacy.cs:3-8",
+    "inherited_kind": "ef-entity-or-dbset",
+    "target_owner_candidate": "MOD-PROVIDERS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-066",
+    "anchor_id": "ANCH-0368",
+    "label": "ProviderManagement shared providers: SharedProviderSource, ProviderSharePublication, SharedProviderImport, SharedProviderInvocationRecord, SharedProviderServiceIdentity entities (tables Workspace_SharedProviderSources/Imports/...), publication/eligibility/reconciliation/sync/catalog-cache/query/relay/audit/recovery/history-source services, SharedProviderConnectorManifestSource",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSource.cs:6; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderSourceConfiguration.cs:21; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderImportConfiguration.cs:12; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogQueryService.cs:11-118; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRelayApplicationService.cs:11-478; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderHistorySource.cs:9-79",
+    "inherited_kind": "aggregate",
+    "target_owner_candidate": "MOD-PROVIDERS",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-067",
+    "anchor_id": "ANCH-0369",
+    "label": "ProviderManagement persistence guards: ProviderSecretDeletionReferencePolicy, SharedProviderSourceSecretDeletionReferencePolicy (Security ISecretDeletionReferencePolicy impls), ProviderProfileSecretMutationScope, AiProvidersDatabaseTransferHandler",
+    "source_id": "MAP-11",
+    "source_locations": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderSecretDeletionReferencePolicy.cs:7-33; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderProfileSecretMutationScope.cs:7-81; src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/DatabaseTransfer/AiProvidersDatabaseTransferHandler.cs:8-129",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "MOD-PROVIDERS; schema composition is not a runtime writer",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  },
+  {
+    "id": "DATA-068",
+    "anchor_id": "ANCH-0387",
+    "label": "Schema initializers (static, no interface)",
+    "source_id": "MAP-12",
+    "source_locations": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:297,301,305",
+    "inherited_kind": "persistence",
+    "target_owner_candidate": "CLASSIFY_BEFORE_CHANGE",
+    "status": "INHERITED_DISCOVERY_NOT_VERIFIED_EF_MODEL",
+    "required_checks": [
+      "Verify the type and whether it is persisted; an inherited entity label can refer to a DTO or enum.",
+      "Discover actual tables/schemas, mapping, every writer, and read consumers.",
+      "Establish a single-writer target authority and classify/reconcile mixed meanings.",
+      "Preserve IDs, foreign keys, unique constraints, cascades, concurrency, filters/audit, and serialized legacy payloads."
+    ],
+    "permits_automatic_move": false
+  }
+]

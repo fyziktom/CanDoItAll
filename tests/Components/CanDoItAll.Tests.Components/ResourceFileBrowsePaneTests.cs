@@ -209,7 +209,10 @@ public sealed class ResourceFileBrowsePaneTests
         context.Services.AddSingleton<IFileCatalogChangeSink>(state.Revisions);
         context.Services.AddSingleton<IFileCatalogRevisionReader>(state.Revisions);
         context.Services.AddSingleton<ResourceStorageObjectPromotionService>();
-        context.Services.AddSingleton<IDbContextFactory<AppDbContext>, ThrowingDbContextFactory>();
+        var resourceOptions = new DbContextOptionsBuilder<ResourcesDbContext>()
+            .UseInMemoryDatabase($"resource-browse-{Guid.NewGuid():N}");
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(resourceOptions);
+        context.Services.AddSingleton<IDbContextFactory<ResourcesDbContext>>(new ResourceDbContextFactory(resourceOptions.Options));
         context.Services.AddSingleton<IFileToolsKnownFileActivator, ThrowingKnownFileActivator>();
         context.Services.AddSingleton<IFileToolsKnownFileSessionFactory, ThrowingKnownFileSessionFactory>();
         context.Services.AddSingleton<IFileToolsKnownFileSessionReleaser, NoopKnownFileReleaser>();
@@ -228,7 +231,7 @@ public sealed class ResourceFileBrowsePaneTests
             string fileName,
             string mediaType)
         {
-            Storage = new StorageCatalogRecord
+            Storage = StorageDriverInput.FromDraft(new StorageCatalogSaveRequest
             {
                 Id = Guid.NewGuid(),
                 Name = "Local files",
@@ -236,7 +239,7 @@ public sealed class ResourceFileBrowsePaneTests
                 IsEnabled = true,
                 CapabilityMask = StorageCapability.Read,
                 HealthStatus = StorageHealthStatus.Healthy
-            };
+            });
             var scope = new FileToolsSemanticScope(
                 FileToolsSemanticScopeKind.ResourceSource,
                 ResourceStorageSourceScopeKey.Create(
@@ -253,7 +256,8 @@ public sealed class ResourceFileBrowsePaneTests
                 Storage.ProviderKind,
                 false,
                 Storage.HealthStatus);
-            Project = new ResourcePromotionProject(Guid.NewGuid(), "Target project");
+            var projectId = Guid.NewGuid();
+            Project = new ResourcePromotionProject(projectId, "Target project", new(Guid.NewGuid(), projectId, Guid.NewGuid()));
             SourceCatalog = new StaticSourceCatalog(Source, Project);
             BrowseSessions = new StaticBrowseSessionFactory(supportsLocalOpen, fileName, mediaType);
             ItemActions = new RecordingBrowseItemActionService();
@@ -282,7 +286,7 @@ public sealed class ResourceFileBrowsePaneTests
             Revisions = new RecordingRevisions();
         }
 
-        public StorageCatalogRecord Storage { get; }
+        public StorageDriverInput Storage { get; }
 
         public ResourceFileSourceDescriptor Source { get; }
 
@@ -613,12 +617,11 @@ public sealed class ResourceFileBrowsePaneTests
         }
     }
 
-    private sealed class ThrowingDbContextFactory : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext() => throw new NotSupportedException();
+    private sealed class ResourceDbContextFactory(DbContextOptions<ResourcesDbContext> options) : IDbContextFactory<ResourcesDbContext> {
+        public ResourcesDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        public Task<ResourcesDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResourcesDbContext(options));
     }
 
     private sealed class ThrowingKnownFileActivator : IFileToolsKnownFileActivator

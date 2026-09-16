@@ -25,20 +25,20 @@ public static class HrAgentCapabilityKeys
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.HrAgentsSearch] = AgentsSearch,
-            [AgentToolInvocationPolicyMetadata.HrAgentSettingsGet] = AgentSettingsGet,
-            [AgentToolInvocationPolicyMetadata.HrAgentCreationOptionsGet] = AgentCreationOptionsGet,
-            [AgentToolInvocationPolicyMetadata.HrAgentCreate] = AgentCreate,
-            [AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate] = AgentSettingsUpdate,
-            [AgentToolInvocationPolicyMetadata.HrAgentAvatarGenerate] = AgentAvatarGenerate,
-            [AgentToolInvocationPolicyMetadata.HrAgentUsageGet] = AgentUsageGet,
-            [AgentToolInvocationPolicyMetadata.HrAgentProcessHistoryGet] = AgentProcessHistoryGet,
-            [AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest] = AgentProcessManagerReviewRequest,
-            [AgentToolInvocationPolicyMetadata.HrCrmSearch] = CrmSearch,
-            [AgentToolInvocationPolicyMetadata.HrCrmItemSummaryGet] = CrmItemSummaryGet,
-            [AgentToolInvocationPolicyMetadata.HrCrmPartyCreate] = CrmPartyCreate,
-            [AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList] = CrmPartyAffiliationsList,
-            [AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert] = CrmAffiliationUpsert
+            [HrAgentToolPolicy.HrAgentsSearch] = AgentsSearch,
+            [HrAgentToolPolicy.HrAgentSettingsGet] = AgentSettingsGet,
+            [HrAgentToolPolicy.HrAgentCreationOptionsGet] = AgentCreationOptionsGet,
+            [HrAgentToolPolicy.HrAgentCreate] = AgentCreate,
+            [HrAgentToolPolicy.HrAgentSettingsUpdate] = AgentSettingsUpdate,
+            [HrAgentToolPolicy.HrAgentAvatarGenerate] = AgentAvatarGenerate,
+            [HrAgentToolPolicy.HrAgentUsageGet] = AgentUsageGet,
+            [HrAgentToolPolicy.HrAgentProcessHistoryGet] = AgentProcessHistoryGet,
+            [HrAgentToolPolicy.HrAgentProcessManagerReviewRequest] = AgentProcessManagerReviewRequest,
+            [HrAgentToolPolicy.HrCrmSearch] = CrmSearch,
+            [HrAgentToolPolicy.HrCrmItemSummaryGet] = CrmItemSummaryGet,
+            [HrAgentToolPolicy.HrCrmPartyCreate] = CrmPartyCreate,
+            [HrAgentToolPolicy.HrCrmPartyAffiliationsList] = CrmPartyAffiliationsList,
+            [HrAgentToolPolicy.HrCrmAffiliationUpsert] = CrmAffiliationUpsert
         };
 
     public static IReadOnlySet<string> PrivilegedKeys { get; } = new HashSet<string>(

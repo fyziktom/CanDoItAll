@@ -27,7 +27,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IAgentOutputRepairService? outputRepairService = null,
     IWorkspacePathResolutionService? workspacePathResolutionService = null,
     IEnumerable<IAgentExecutionProviderSelectionPolicy>? providerSelectionPolicies = null,
-    IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null) :
+    IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null,
+    AgentToolAdmissionJournal? toolAdmissionJournal = null,
+    IAgentExecutionAuthorityResolver? executionAuthorityResolver = null,
+    IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
+    AgentToolPolicyCatalog? toolPolicies = null) :
     IDisposable
 {
     private readonly IAgentOutputRepairService outputRepairService =
@@ -57,6 +61,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     private readonly IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner =
         workspaceProcessLeaseCleaner
         ?? throw new ArgumentNullException(nameof(workspaceProcessLeaseCleaner));
+    private readonly AgentToolPolicyCatalog toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
     private readonly ILogger logger = logger;
     private static readonly AgentProviderUsageObservationAssembler UsageObservationAssembler = new();
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =

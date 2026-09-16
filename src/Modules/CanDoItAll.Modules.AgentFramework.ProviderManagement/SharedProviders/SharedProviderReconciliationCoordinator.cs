@@ -10,17 +10,20 @@ public sealed class SharedProviderReconciliationCoordinator
     public const string ImportedConnectorPluginKey = ProviderConnectorKeys.SharedImport;
 
     public const string ImportedConfigurationSchemaVersion = "1.0";
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<ProvidersDbContext> dbContextFactory;
     private readonly IClock clock;
+    private readonly CoordinatedDatabaseTransaction transactions;
     private readonly IReadOnlyList<IProviderProfileCommitObserver> providerProfileCommitObservers;
 
     public SharedProviderReconciliationCoordinator(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<ProvidersDbContext> dbContextFactory,
         IClock clock,
-        IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers)
+        IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers,
+        CoordinatedDatabaseTransaction transactions)
     {
         this.dbContextFactory = dbContextFactory;
         this.clock = clock;
+        this.transactions = transactions;
         this.providerProfileCommitObservers = providerProfileCommitObservers.ToArray();
     }
 
@@ -34,6 +37,7 @@ public sealed class SharedProviderReconciliationCoordinator
             dbContext,
             $"shared-provider-source:{request.SourceId:D}",
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var source = await dbContext.Set<SharedProviderSource>()
             .SingleOrDefaultAsync(item => item.Id == request.SourceId, cancellationToken)
             ?? throw new KeyNotFoundException($"Shared-provider source '{request.SourceId:D}' was not found.");
@@ -65,6 +69,8 @@ public sealed class SharedProviderReconciliationCoordinator
             }
 
             await SaveAndCommitAsync(dbContext, mutationScope, source.Id, cancellationToken);
+
+            coordination.Dispose();
             var affectedIds = imports.Select(import => import.ProviderProfileId).Distinct().ToArray();
             var mismatch = await SharedProviderCommitEffects.NotifySavedAsync(
                 new(SharedProviderChangeKind.SourceAvailability, affectedIds, remoteOwnedFieldsChanged: false),
@@ -161,6 +167,8 @@ public sealed class SharedProviderReconciliationCoordinator
         }
 
         await SaveAndCommitAsync(dbContext, mutationScope, source.Id, cancellationToken);
+
+        coordination.Dispose();
         var committedProviderIds = affectedProviderIds.Order().ToArray();
         var change = await SharedProviderCommitEffects.NotifySavedAsync(
             new(SharedProviderChangeKind.Reconciliation, committedProviderIds, retiredProviderIds,
@@ -210,7 +218,7 @@ public sealed class SharedProviderReconciliationCoordinator
     }
 
     private static async Task SaveAndCommitAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         SerializableMutationScope mutationScope,
         Guid sourceId,
         CancellationToken cancellationToken)

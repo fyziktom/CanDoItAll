@@ -867,8 +867,8 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             [SharedProviderCapability.ChatCompletions]
         ]);
         var recorder = new ProviderQueryRecorder();
-        await using var sourceContext = await fixture.Factory.CreateDbContextAsync();
-        var options = new DbContextOptionsBuilder<AppDbContext>((DbContextOptions<AppDbContext>)sourceContext.GetService<IDbContextOptions>())
+        await using var sourceContext = await fixture.Services.GetRequiredService<IDbContextFactory<ProvidersDbContext>>().CreateDbContextAsync();
+        var options = new DbContextOptionsBuilder<ProvidersDbContext>((DbContextOptions<ProvidersDbContext>)sourceContext.GetService<IDbContextOptions>())
             .AddInterceptors(recorder).Options;
         await using var scope = fixture.Services.CreateAsyncScope();
         var loader = ActivatorUtilities.CreateInstance<DatabaseProviderRuntimeProfileSnapshotLoader>(
@@ -1036,9 +1036,9 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         ImportSelection
     }
 
-    private sealed class RecordingProviderDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext> {
-        public AppDbContext CreateDbContext() => new(options);
+    private sealed class RecordingProviderDbContextFactory(DbContextOptions<ProvidersDbContext> options)
+        : IDbContextFactory<ProvidersDbContext> {
+        public ProvidersDbContext CreateDbContext() => new(options);
     }
 
     private sealed class ProviderQueryRecorder : DbCommandInterceptor {

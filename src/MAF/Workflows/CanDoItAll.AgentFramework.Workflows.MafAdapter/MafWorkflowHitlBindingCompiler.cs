@@ -44,7 +44,9 @@ internal sealed record MafWorkflowHumanInputRequest(
     WorkflowValueShape? ResponseShape,
     WorkflowNodeInput Context);
 
-internal sealed record MafWorkflowHumanInputResponse(string PayloadJson);
+internal sealed record MafWorkflowHumanInputResponse(string PayloadJson) {
+    public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
+}
 
 internal sealed record MafWorkflowApprovalRequest(
     WorkflowExecutorApprovalRequestId RequestId,
@@ -105,7 +107,8 @@ internal sealed record MafWorkflowApprovalContinuation(
     }
 
     public WorkflowExecutorInvocationContext CreateInvocationContext(
-        WorkflowExecutorInvocationContext baseContext)
+        WorkflowExecutorInvocationContext baseContext,
+        string settingsJson)
     {
         ArgumentNullException.ThrowIfNull(baseContext);
         if (baseContext.ExternalResponseAuthorization != ExternalResponseAuthorization)
@@ -114,23 +117,25 @@ internal sealed record MafWorkflowApprovalContinuation(
                 "Workflow approval continuation authorization does not match the reconstructed external-response authorization.");
         }
 
-        return baseContext with
-        {
-            ApprovalAuthorization = new WorkflowExecutorApprovalAuthorization(
-                RequestId,
-                ExpectedToken,
-                PresentedToken,
-                RunId,
-                WorkflowId,
-                WorkflowVersionId,
-                NodeId,
-                ExecutorId,
-                RequiredCapabilities,
-                ApprovalRequirement,
-                InputHash,
-                ExternalResponseAuthorization,
-                Approved,
-                Message)
+        var approval = new WorkflowExecutorApprovalAuthorization(
+            RequestId,
+            ExpectedToken,
+            PresentedToken,
+            RunId,
+            WorkflowId,
+            WorkflowVersionId,
+            NodeId,
+            ExecutorId,
+            RequiredCapabilities,
+            ApprovalRequirement,
+            InputHash,
+            ExternalResponseAuthorization,
+            Approved,
+            Message);
+        return baseContext with {
+            ApprovalAuthorization = approval,
+            ApprovalAdmission = new WorkflowExecutorApprovalAdmission(
+                approval, settingsJson, OriginalInput, baseContext.ResponseLease)
         };
     }
 }
@@ -258,12 +263,12 @@ internal sealed class MafWorkflowHitlBindingCompiler(
                     ? $"Provide input for workflow node '{node.Id}'."
                     : node.Settings.Instructions.Trim(),
                 node.Settings.ResultShape,
-                input);
+                input with { ExecutionOccurrence = input.ExecutionOccurrence?.Advance(definition.VersionId, node.Id) });
 
         static WorkflowNodeInput MapResponse(MafWorkflowHumanInputResponse response)
         {
             ArgumentNullException.ThrowIfNull(response);
-            return new WorkflowNodeInput(response.PayloadJson);
+            return new WorkflowNodeInput(response.PayloadJson) { ExecutionOccurrence = response.ExecutionOccurrence };
         }
 
         var preparation = ((Func<WorkflowNodeInput, MafWorkflowHumanInputRequest>)Prepare)
@@ -347,12 +352,16 @@ internal sealed class MafWorkflowHitlBindingCompiler(
                         continuation.RequestId,
                         continuation.NodeId,
                         continuation.ExecutorId,
-                        continuation.Message)));
+                        continuation.Message))) {
+                    ExecutionOccurrence = continuation.OriginalInput.ExecutionOccurrence?.Advance(definition.VersionId, node.Id)
+                };
             }
 
             if (!invokesExecutor)
             {
-                return continuation.OriginalInput;
+                return continuation.OriginalInput with {
+                    ExecutionOccurrence = continuation.OriginalInput.ExecutionOccurrence?.Advance(definition.VersionId, node.Id)
+                };
             }
 
             return await nodeExecution.ExecuteAsync(
@@ -361,7 +370,9 @@ internal sealed class MafWorkflowHitlBindingCompiler(
                 continuation.OriginalInput,
                 new Dictionary<WorkflowComponentId, LlmCallComponent>(),
                 new Dictionary<WorkflowNodeId, WorkflowPreviewSimulationStep>(),
-                continuation.CreateInvocationContext(invocationContext),
+                continuation.CreateInvocationContext(invocationContext,
+                    string.IsNullOrWhiteSpace(node.Settings.ExecutorSettingsJson)
+                        ? descriptor.DefaultSettingsJson : node.Settings.ExecutorSettingsJson),
                 cancellationToken);
         }
 

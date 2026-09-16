@@ -9,7 +9,7 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
     ProjectWorkbenchService projectWorkbenchService,
-    IDbContextFactory<AppDbContext> dbContextFactory) : IProjectStructureSourceSnapshotProvider
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory) : IProjectStructureSourceSnapshotProvider
 {
     private const string SurfaceKind = "project-structure";
 

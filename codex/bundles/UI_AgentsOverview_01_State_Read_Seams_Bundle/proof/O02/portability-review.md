@@ -1,5 +1,0 @@
-# O02 portability review
-
-The first no-write enforcement reported three added and two stale allowances. Reviewed: case-insensitive URL query-key comparison is the existing external protocol behavior with changed surrounding context; the immutable avatar lookup uses textual provider/agent keys, not filesystem paths; the MCP finding is moved user-facing capability description text, not a command. The new pure presentation copy adds one comparer allowance. No platform behavior, scanner rule or exclusion changed.
-
-After explicit refresh, baseline is 14384 reviewed executable findings. Final no-write enforcement passes. Scanner self-tests: six portability and four secret tests pass. The documentation gate still fails its pre-existing generated/local-file rule: 118 tracked predecessor log paths, one finding category. Those historical proof bytes are preserved by instruction; no new matching tracked path is added and no rule is weakened. This is a known repository documentation limitation, not a passing gate or a merge-readiness claim.

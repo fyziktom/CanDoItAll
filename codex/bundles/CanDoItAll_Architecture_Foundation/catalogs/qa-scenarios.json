@@ -1,0 +1,3506 @@
+[
+  {
+    "id": "QA-001",
+    "title": "Floating agent reads Project Structure",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "BND-CONVERSATIONS"
+    ],
+    "contract_ids": [
+      "CON-003",
+      "CON-018",
+      "CON-044"
+    ],
+    "level": "desktop UI + integration",
+    "priority": "P0",
+    "given": "Project A contains notes, a task, a file, and a source projection; the agent has valid authority.",
+    "when": "Open the floating agent and invoke the actual Structure read tool for selected nodes.",
+    "then": "Correct scoped content and coverage; the window remains usable without a concrete page-instance dependency.",
+    "fault_injection": "Remove the tool registration: explicit unavailable, not a fabricated result.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-002",
+    "title": "Floating agent over Gantt edits the same task",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "BND-WORK",
+      "BND-CONVERSATIONS"
+    ],
+    "contract_ids": [
+      "CON-023",
+      "CON-025",
+      "CON-044"
+    ],
+    "level": "desktop UI + PostgreSQL",
+    "priority": "P0",
+    "given": "A task appears in both graph and Gantt.",
+    "when": "Change an allowed date through the agent, then open the task in the other view.",
+    "then": "Both surfaces show the same identity and owner revision; agent session/history is preserved.",
+    "fault_injection": "Concurrent edit before commit produces conflict, not lost update.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-003",
+    "title": "Native note remains canonical inline content",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-021"
+    ],
+    "level": "integration + UI",
+    "priority": "P0",
+    "given": "A native simple note and a file node with descriptive Notes exist.",
+    "when": "Create/edit a native note through the agent, reload, export, and import.",
+    "then": "Native content survives without forced conversion to a file; file-node notes do not overwrite bytes.",
+    "fault_injection": "Equal text in both fields must retain its two distinct meanings.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-004",
+    "title": "Agent creates a canonical task",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-023",
+      "CON-024"
+    ],
+    "level": "tool + PostgreSQL + UI",
+    "priority": "P0",
+    "given": "Agent has task-creation capability and a valid parent.",
+    "when": "Create a task with a goal and an authorized resource attachment.",
+    "then": "Correct identity, kind policy, assignment, and Gantt/canvas display.",
+    "fault_injection": "Generic node creation with task internals cannot bypass task validators.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-005",
+    "title": "View switch during invocation",
+    "module_ids": [
+      "BND-CONVERSATIONS",
+      "MOD-AGENTS",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-003",
+      "CON-044",
+      "CON-045"
+    ],
+    "level": "desktop UI",
+    "priority": "P0",
+    "given": "A turn was admitted from Structure in project A.",
+    "when": "Switch to Gantt or another A tab and continue the conversation.",
+    "then": "In-flight origin retains A and the original snapshot; a later turn receives explicit current context; no duplicate subscriptions.",
+    "fault_injection": "Delay the old UI load until after the new load completes.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-006",
+    "title": "Project switch cannot retarget a tool write",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "BND-CONVERSATIONS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-044",
+      "CON-051"
+    ],
+    "level": "UI + integration",
+    "priority": "P0",
+    "given": "A turn was admitted with a parent node in A.",
+    "when": "Switch to B before file/task creation completes.",
+    "then": "The effect belongs to A if still authorized, or is blocked; nothing is created in B.",
+    "fault_injection": "Replace current-selection state after admission.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-007",
+    "title": "Database-profile switch invalidates old context",
+    "module_ids": [
+      "MOD-WORKSPACE",
+      "BND-COMPOSITION",
+      "MOD-AGENTS",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-007",
+      "CON-018",
+      "CON-048"
+    ],
+    "level": "UI + integration",
+    "priority": "P0",
+    "given": "D1 and D2 have colliding local IDs.",
+    "when": "Switch profiles while a load/run is active.",
+    "then": "Old DTOs, secrets, preparation, and worker scope are not used in D2; the run remains bound to D1 or is blocked.",
+    "fault_injection": "Deliver a late D1 notification/callback after the new generation.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-008",
+    "title": "Snapshot bounds, expiry, and coverage",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-018",
+      "CON-044"
+    ],
+    "level": "unit + integration",
+    "priority": "P0",
+    "given": "Snapshot reaches actual limits; baseline documentation mentions 512 nodes, 1024 links, and five minutes.",
+    "when": "Request uncovered/expired data or request InvocationSnapshot through HTTP.",
+    "then": "Explicit stale/partial/rejected source result; no silent database fallback or false completeness.",
+    "fault_injection": "Forged fingerprint, missing selection coverage, and clock advance.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-009",
+    "title": "Permission revocation after loading",
+    "module_ids": [
+      "MOD-SECURITY",
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-010",
+      "CON-018",
+      "CON-051"
+    ],
+    "level": "integration + tool",
+    "priority": "P0",
+    "given": "A snapshot exists before project/CRM access is revoked.",
+    "when": "Attempt a new read, mutation, and approval continuation.",
+    "then": "Current policy prevents unauthorized access and mutation; cache lifetime does not defer revocation.",
+    "fault_injection": "Leave the old cache valid without invalidation.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-010",
+    "title": "Forged producer or authority",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-SECURITY",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-051"
+    ],
+    "level": "security integration",
+    "priority": "P0",
+    "given": "Untrusted workflow/tool input supplies another RunId, ProjectId, or admin flag.",
+    "when": "Submit it to the gateway/owner API.",
+    "then": "Resolver rejects mismatches; audit retains the actual actor without escalation.",
+    "fault_injection": "A note asks the caller to skip validation.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-011",
+    "title": "Tool attachment is not an HTTP endpoint list",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-PROCESSES",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-003",
+      "CON-028"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Process HTTP API exists without a general Process tool provider.",
+    "when": "Inspect attached tools and invoke a supported Structure process bridge.",
+    "then": "Only genuinely declared tools appear; the existing bridge works without an invented provider.",
+    "fault_injection": "An unavailable tool request fails explicitly.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-012",
+    "title": "Serial tool ordering and approval barrier",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-SECURITY",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-003",
+      "CON-004"
+    ],
+    "level": "runtime integration",
+    "priority": "P0",
+    "given": "Provider returns a dependent read/write sequence containing an approval.",
+    "when": "Execute the sequence and delay approval.",
+    "then": "Ordering remains intact; later mutations do not cross the barrier; confirmed effects are not repeated.",
+    "fault_injection": "Concurrent cancellation/approval or retry of the same request.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-013",
+    "title": "Tool outcome matches owner receipt",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-STRUCTURE",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-021",
+      "CON-054"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Owner can validate and reject a mutation.",
+    "when": "Return validation, conflict, and committed-with-warning outcomes.",
+    "then": "Tool/UI/API reports neither false success nor false rollback and returns safe correct identity/revision.",
+    "fault_injection": "Exception after DB commit before response.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-014",
+    "title": "File read remains in scope",
+    "module_ids": [
+      "BND-STORAGE",
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "MOD-RESOURCES"
+    ],
+    "contract_ids": [
+      "CON-043",
+      "CON-052"
+    ],
+    "level": "storage integration",
+    "priority": "P0",
+    "given": "A and B have similar filenames under different root bindings.",
+    "when": "A's agent requests B, traversal, an absolute path, or a retargeted path.",
+    "then": "Unauthorized access is denied; allowed A files remain readable with correct content.",
+    "fault_injection": "Retarget the root or change a symlink immediately before I/O.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-015",
+    "title": "Create text/JSON/Markdown/Mermaid/log assets",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-022",
+      "CON-043"
+    ],
+    "level": "integration + UI",
+    "priority": "P0",
+    "given": "Valid storage configuration and no existing file.",
+    "when": "Create each supported text kind and open it in the viewer.",
+    "then": "Actual UTF-8 bytes, matching extension/MIME, correct binding, and content-equivalent export.",
+    "fault_injection": "Invalid JSON or a size-limit violation must not publish a completed asset.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-016",
+    "title": "Media upload and safe preview",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-022",
+      "CON-043"
+    ],
+    "level": "integration + UI",
+    "priority": "P1",
+    "given": "Images/SVG/video and an impermissible active payload are available.",
+    "when": "Upload, preview, and read back.",
+    "then": "Safe MIME/content validation and usable real-file preview; rejected content is explicit.",
+    "fault_injection": "Corrupt base64 or a forged extension.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-017",
+    "title": "Contribution retry returns one identity",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-054"
+    ],
+    "level": "PostgreSQL",
+    "priority": "P0",
+    "given": "Stable key/fingerprint and native-node intent.",
+    "when": "Deliver the same request repeatedly, including after worker restart.",
+    "then": "One effect and the same receipt/NodeKey; no duplicate workflow output.",
+    "fault_injection": "Lose the response after commit.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-018",
+    "title": "Contribution key with a different payload",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-SECURITY"
+    ],
+    "contract_ids": [
+      "CON-021"
+    ],
+    "level": "PostgreSQL",
+    "priority": "P0",
+    "given": "A contribution is committed.",
+    "when": "Reuse its key for another target or content.",
+    "then": "Idempotency conflict without silently changing master data.",
+    "fault_injection": "Rotate only a secret lease token: unchanged semantic intent must not become a different content fingerprint.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-019",
+    "title": "Concurrent contribution instances",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [
+      "CON-021"
+    ],
+    "level": "PostgreSQL concurrency",
+    "priority": "P0",
+    "given": "Two dispatchers or independent services receive the same key.",
+    "when": "Deliver the intent concurrently.",
+    "then": "Durable uniqueness/deduplication retains one effect; in-memory locking is not the only guard.",
+    "fault_injection": "Kill the winning worker after commit but before acknowledgement.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-020",
+    "title": "Retry after the result node was deleted",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-021"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "A contribution created a note that the user later deleted.",
+    "when": "Producer repeats ensure.",
+    "then": "Tombstone/suppressed/target-deleted result without automatic resurrection.",
+    "fault_injection": "Producer attempts an unauthorized new key for the same suppressed managed intent.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-021",
+    "title": "Required versus optional contribution",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-031",
+      "CON-054"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "A run has a required output and a separate optional annotation.",
+    "when": "Reject attachment policy or simulate outage.",
+    "then": "Required delivery remains pending/blocked; optional warning is visible; execution is not needlessly repeated.",
+    "fault_injection": "Destination storage fails after inference has finished.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-022",
+    "title": "Projection rebuild does not create native objects",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-018",
+      "CON-032"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Native notes/tasks and projected entities have separate identities.",
+    "when": "Repeat read, rebuild, and source refresh.",
+    "then": "Native data, layout, counts, and revisions do not change; no new contribution effect.",
+    "fault_injection": "One source owner fails during rebuild.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-023",
+    "title": "Retry does not overwrite later human edits",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-021"
+    ],
+    "level": "PostgreSQL",
+    "priority": "P0",
+    "given": "An agent created a node and a human changed its name/body.",
+    "when": "Replay the original create receipt and then a stale update.",
+    "then": "Create returns the original identity without overwrite; update requires the right revision.",
+    "fault_injection": "Out-of-order delivery after editing.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-024",
+    "title": "Contribution quotas and typed schema",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-SECURITY"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-020",
+      "CON-021"
+    ],
+    "level": "unit + integration",
+    "priority": "P1",
+    "given": "Authorized caller exceeds a limit or supplies an unsupported kind/system field.",
+    "when": "Submit a typed request.",
+    "then": "Bounded rejection without partial native writes; a smaller valid request still succeeds.",
+    "fault_injection": "Excess metadata, graph fan-out, or a forged source reference.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-025",
+    "title": "Structural-relation owner and endpoint scope",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-017",
+      "CON-020",
+      "CON-025"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Projected endpoints and a native note exist; relation kinds have different owners.",
+    "when": "Create a structural link and try to use it to alter project hierarchy or task dependency.",
+    "then": "Structure owns the native link; foreign relation commands are delegated to their owner or rejected.",
+    "fault_injection": "Cross-project endpoint without authorization to both scopes.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-026",
+    "title": "Parent changes during contribution",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-023"
+    ],
+    "level": "PostgreSQL concurrency",
+    "priority": "P0",
+    "given": "Parent was validated before writing.",
+    "when": "Another transaction deletes, reparents, or changes its kind.",
+    "then": "Mutation recheck, revision, or constraint prevents orphaning and invalid task parentage.",
+    "fault_injection": "Barrier between read and commit.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-027",
+    "title": "Workflow launch and result return through Structure",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS",
+      "MOD-AGENTS",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-029",
+      "CON-030",
+      "CON-021",
+      "CON-055"
+    ],
+    "level": "desktop UI + real integration",
+    "priority": "P0",
+    "given": "Versioned workflow with a minimal deterministic executor and asset/task output.",
+    "when": "Launch from a node, observe the run, and open output.",
+    "then": "Same user journey, correct run/version identity, actual content, and intended parent.",
+    "fault_injection": "A separately authorized live-provider smoke test is needed; a fake is not live proof.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-028",
+    "title": "Workflow results without an open page",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS",
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [
+      "CON-030",
+      "CON-021",
+      "CON-045",
+      "CON-055"
+    ],
+    "level": "integration + UI reconnect",
+    "priority": "P0",
+    "given": "Workflow was admitted and the user leaves the page.",
+    "when": "Finish the run and reopen the project.",
+    "then": "Authoritative status/output restoration does not depend on component GetStatus calls.",
+    "fault_injection": "Drop the transient invalidation notification.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-029",
+    "title": "Repeated workflow start",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-030"
+    ],
+    "level": "PostgreSQL/runtime",
+    "priority": "P0",
+    "given": "Same start OperationId and immutable input.",
+    "when": "Double-click or retry after timeout.",
+    "then": "Same RunId/receipt without another paid inference.",
+    "fault_injection": "Lose the launch response after admission.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-030",
+    "title": "Projection failure after workflow admission",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-030",
+      "CON-021",
+      "CON-055"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "Owner has confirmed RunId.",
+    "when": "Fail ApplyStatus or output attachment.",
+    "then": "Preserve the accepted run and separate writeback failure; repair does not restart it.",
+    "fault_injection": "Invalid-operation, serialization, or storage exception after admission.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-031",
+    "title": "Two workflow runs and late completion",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-030",
+      "CON-021",
+      "CON-055"
+    ],
+    "level": "concurrency integration",
+    "priority": "P0",
+    "given": "A reference node starts R1 and R2 under allowed policy.",
+    "when": "Complete R2 first, then R1.",
+    "then": "Both manifests retain lineage; late R1 cannot overwrite R2's selected/latest status.",
+    "fault_injection": "Concurrent human node creation must not be attributed to R1 by set difference.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-032",
+    "title": "Late output after cancellation",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-028",
+      "CON-030",
+      "CON-021",
+      "CON-055"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "Cancellation is accepted before an external executor's late response.",
+    "when": "Deliver output after cancellation.",
+    "then": "Owner state machine decides outcome/attachment; Structure cannot independently declare success.",
+    "fault_injection": "Race completion against cancellation acknowledgement.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-033",
+    "title": "Workflow approval/resume preserves authority",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-SECURITY",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-004",
+      "CON-030",
+      "CON-051"
+    ],
+    "level": "runtime integration",
+    "priority": "P0",
+    "given": "Workflow awaits approval in its original valid scope.",
+    "when": "Restart/reconnect and approve through an authorized actor.",
+    "then": "Correct run/checkpoint resumes with the exact payload; supported approval backends remain usable.",
+    "fault_injection": "Revoked actor or modified payload is denied/expired, not bypassed.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-034",
+    "title": "Invalid workflow backend, version, or input",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-STRUCTURE",
+      "MOD-SCHEDULER"
+    ],
+    "contract_ids": [
+      "CON-029",
+      "CON-030"
+    ],
+    "level": "unit + integration",
+    "priority": "P1",
+    "given": "Inactive version, unsupported backend, or invalid input schema.",
+    "when": "Request start.",
+    "then": "Rejection before admission with no accepted run; a valid baseline workflow still starts.",
+    "fault_injection": "No implicit fallback to another definition/backend.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-035",
+    "title": "Structure workflow executor preserves supported operations",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-STRUCTURE",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-018",
+      "CON-021",
+      "CON-023"
+    ],
+    "level": "runtime integration",
+    "priority": "P0",
+    "given": "Definition uses ListProjects, ReadTree, ReadNode, CreateAsset, and CreateTaskNodes.",
+    "when": "Execute the sequence with scoped input context.",
+    "then": "Every actually declared operation has a typed adapter and real owner read/effect.",
+    "fault_injection": "Input AgentId/RunId cannot become trusted authority.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-036",
+    "title": "Process launch and writeback through Structure",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-027",
+      "CON-028",
+      "CON-031"
+    ],
+    "level": "desktop UI + PostgreSQL/runtime",
+    "priority": "P0",
+    "given": "Small deterministic process step with artifact output.",
+    "when": "Launch, observe, complete, and inspect output/history.",
+    "then": "Correct parent project/run/root, preserved user journey, and authoritative process state.",
+    "fault_injection": "Separately prove the live agent adapter, not only a seeded fixture.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-037",
+    "title": "Subprocess lineage and scope",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-027",
+      "CON-028",
+      "CON-051"
+    ],
+    "level": "runtime integration",
+    "priority": "P0",
+    "given": "Parent runs in A under a bounded output root.",
+    "when": "Create a subprocess/workflow child and publish a result.",
+    "then": "Child has parent/causation and its own RunId without broader scope; artifacts do not land in B.",
+    "fault_injection": "Forged parent-root alias or RunId.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-038",
+    "title": "Process outcome differs from task acceptance",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "BND-WORK",
+      "MOD-STRUCTURE",
+      "MOD-TESTLAB"
+    ],
+    "contract_ids": [
+      "CON-028",
+      "CON-023",
+      "CON-036"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Task has an acceptance gate and process has technical success/failure.",
+    "when": "Complete execution without acceptance criteria or with negative test evidence.",
+    "then": "Task is not automatically accepted; UI distinguishes runtime success from pending acceptance.",
+    "fault_injection": "A textual success event cannot bypass the owner's verdict.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-039",
+    "title": "Process recovery and confirmed effects",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-003",
+      "CON-027",
+      "CON-028"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "A process has a completed step followed by an interrupted step.",
+    "when": "Restart and invoke supported recovery.",
+    "then": "Completed effects are not repeated contrary to owner policy; original scope, receipts, and checkpoints remain.",
+    "fault_injection": "Crash after remote effect before local completion requires reconciliation, not a false exactly-once guarantee.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-040",
+    "title": "Processes execute without the Agents UI assembly",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-AGENTS",
+      "BND-MAF"
+    ],
+    "contract_ids": [
+      "CON-001",
+      "CON-003"
+    ],
+    "level": "architecture + integration",
+    "priority": "P0",
+    "given": "Headless host registers the real execution adapter.",
+    "when": "Evaluate/build the graph and run a process agent step.",
+    "then": "Consumer depends on execution/catalog contracts, not Razor page types; behavior is preserved.",
+    "fault_injection": "Missing implementation fails explicitly.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-041",
+    "title": "Headless direct runtime versus desktop-only actions",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-COMPOSITION",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-048",
+      "CON-052"
+    ],
+    "level": "supported host integration",
+    "priority": "P1",
+    "given": "Headless and desktop hosts declare their actual capabilities.",
+    "when": "Start a direct executable and invoke optional terminal/Explorer actions.",
+    "then": "Supported direct execution works without UI; unsupported desktop actions return typed unavailable without shell fallback/elevation.",
+    "fault_injection": "Unknown runtime/shell or missing executable.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-042",
+    "title": "Shutdown preserves admitted durable operations",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-003",
+      "CON-027",
+      "CON-030",
+      "CON-049"
+    ],
+    "level": "restart integration",
+    "priority": "P0",
+    "given": "Admitted durable operations are running or waiting.",
+    "when": "Perform graceful and forced shutdown/restart.",
+    "then": "Recovery/blocked status remains discoverable; leases for live children of waiting runs are not discarded.",
+    "fault_injection": "Interrupt claim/acknowledgement and profile switching.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-043",
+    "title": "Deferred image generation has a truthful baseline",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROVIDERS",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-022"
+    ],
+    "level": "characterization + failure injection",
+    "priority": "P1",
+    "given": "Inspected baseline uses an in-memory queue, not proven durability.",
+    "when": "Test successful generation and restart after queued/running states.",
+    "then": "Record the baseline gap; a changed durable path proves receipts/recovery or explicitly stays within narrower scope.",
+    "fault_injection": "Provider succeeded but storage or DB update fails.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-044",
+    "title": "Target node deleted before completion",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-030",
+      "CON-031",
+      "CON-054"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "Run has a frozen destination that the user deletes.",
+    "when": "Deliver output.",
+    "then": "Runtime result remains; attachment is blocked/suppressed without current-parent fallback or resurrection.",
+    "fault_injection": "Reattachment requires a new explicitly authorized intent.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-045",
+    "title": "Worker dispatch uses original run scope",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-027",
+      "CON-048",
+      "CON-054"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Two database generations/workspaces and queued work from the old run exist.",
+    "when": "Dispatch after the global UI profile changes.",
+    "then": "Use the original durable scope or reject safely; never automatically select the current connection.",
+    "fault_injection": "Old data incarnation with colliding IDs.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-046",
+    "title": "Deleting project blocks new contributions",
+    "module_ids": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES"
+    ],
+    "contract_ids": [
+      "CON-016",
+      "CON-021"
+    ],
+    "level": "PostgreSQL concurrency",
+    "priority": "P0",
+    "given": "Lifecycle owner moved the project to Deleting.",
+    "when": "A late producer requests node creation or process start.",
+    "then": "Lifecycle fence prevents new effects from undermining cleanup.",
+    "fault_injection": "Race contribution admission against lifecycle commit.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-047",
+    "title": "CRM and canvas edit one WorkAssignment",
+    "module_ids": [
+      "MOD-CRM",
+      "BND-WORK",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-010",
+      "CON-024"
+    ],
+    "level": "UI + PostgreSQL",
+    "priority": "P0",
+    "given": "Same work appears in CRM workload and canvas.",
+    "when": "Change assignee through CRM and then the task dialog.",
+    "then": "One assignment identity/revision and consistent Gantt/workload, not a second AssignedTo copy.",
+    "fault_injection": "Old bridge writer is blocked or adapted after cutover.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-048",
+    "title": "Concurrent assignments and reservations",
+    "module_ids": [
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-013",
+      "CON-024"
+    ],
+    "level": "PostgreSQL concurrency",
+    "priority": "P0",
+    "given": "Two planners share an expected revision under mandatory reservation policy.",
+    "when": "Assign conflicting capacity concurrently.",
+    "then": "One valid commit or explicit conflict/pending; no confirmed task without its required reservation.",
+    "fault_injection": "Roll back the second context after the first context saves.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-049",
+    "title": "Quote becomes stale before plan commit",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "BND-WORK",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-005",
+      "CON-026"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Quote Q references agent configuration/tariff revision 1.",
+    "when": "Change configuration/tariff to 2 before baseline commit.",
+    "then": "Explicit rejection/refresh or an explicitly still-valid pinned quote; never silent repricing.",
+    "fault_injection": "Concurrent resource-mix and router change.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-050",
+    "title": "Unknown versus zero versus partial cost",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "BND-WORK",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-005",
+      "CON-009"
+    ],
+    "level": "unit + integration",
+    "priority": "P0",
+    "given": "Free tariff, missing tariff, missing usage, and partial usage are distinct.",
+    "when": "Calculate query, estimate, and summary.",
+    "then": "Zero means explicitly free; unknown/partial remain visible and are not treated as reliable zero.",
+    "fault_injection": "Omit one usage/token category.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-051",
+    "title": "Historical price does not change",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-PROCESSES",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-007",
+      "CON-009"
+    ],
+    "level": "PostgreSQL",
+    "priority": "P0",
+    "given": "Invocation was priced with a pinned tariff.",
+    "when": "Change/deactivate the profile and catalog price.",
+    "then": "Historical provenance, usage, and cost remain; new quotes may change.",
+    "fault_injection": "Report rebuild must not reprice original evidence.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-052",
+    "title": "Currencies, units, and double counting",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "BND-WORK",
+      "MOD-CRM",
+      "MOD-PROCESSES"
+    ],
+    "contract_ids": [
+      "CON-005",
+      "CON-009",
+      "CON-026"
+    ],
+    "level": "unit + integration",
+    "priority": "P0",
+    "given": "Human hourly rates, token costs, currencies, parent/child runs, and relay usage coexist.",
+    "when": "Build a cost summary.",
+    "then": "Preserve units/basis; no mixed-currency sum without explicit FX; no duplicate invocation counting.",
+    "fault_injection": "Same evidence ID arrives through two feeds.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-053",
+    "title": "Shared-provider publication/import revocation",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-AGENTS",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-006",
+      "CON-007",
+      "CON-008"
+    ],
+    "level": "transport + integration",
+    "priority": "P0",
+    "given": "Published model subset and imported origin identity exist.",
+    "when": "Synchronize/invoke, then remove model/publication.",
+    "then": "Routing identity remains; disallowed model is rejected/unavailable; no secret copied into import.",
+    "fault_injection": "Old catalog cache and upstream timeout.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-054",
+    "title": "Provider snapshot and secrets",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-SECURITY",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-007",
+      "CON-042"
+    ],
+    "level": "integration + inspection",
+    "priority": "P0",
+    "given": "Immutable preparation belongs to D1.",
+    "when": "Change provider secret/configuration and attempt dispatch with the old lease.",
+    "then": "Recheck revision/fingerprint and resolve fresh purpose-limited secrets; none in cache/log/DTO.",
+    "fault_injection": "Snapshot-update failure after canonical save must not report false save failure.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-055",
+    "title": "Provider health does not justify silent fallback",
+    "module_ids": [
+      "MOD-PROVIDERS",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-005",
+      "CON-007"
+    ],
+    "level": "integration",
+    "priority": "P1",
+    "given": "Selected provider is unhealthy or quota-limited.",
+    "when": "Start assigned work.",
+    "then": "Typed unavailable/limit/remediation; fallback only under explicit cost/capability/policy permission.",
+    "fault_injection": "Different billing, rate-limit, and credential failures.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-056",
+    "title": "Agent saved but CRM synchronization fails",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-002",
+      "CON-012"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "Valid Agents save with CRM destination outage.",
+    "when": "Commit the agent, fail synchronization, then restore the projector.",
+    "then": "Agent stays saved with truthful warning; CRM eventually has one binding.",
+    "fault_injection": "Repeated invalidation failures and restart.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-057",
+    "title": "CRM governance survives technical refresh",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-001",
+      "CON-012"
+    ],
+    "level": "PostgreSQL",
+    "priority": "P0",
+    "given": "CRM owns notes, role, and capacity alongside projected technical fields.",
+    "when": "Change technical name/status and publish a new snapshot.",
+    "then": "Only source-owned fields change; personnel facts remain.",
+    "fault_injection": "Deliver an older technical snapshot after a newer one.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-058",
+    "title": "Privacy-safe CRM lookup and confidential detail",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-SECURITY",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-010",
+      "CON-011"
+    ],
+    "level": "security integration",
+    "priority": "P0",
+    "given": "Party has a public label and a confidential note.",
+    "when": "Query agent picklist, workflow contact options, and explicitly authorized confidential detail.",
+    "then": "Each purpose receives only permitted fields; safe pagination without leakage.",
+    "fault_injection": "Narrow-scope user shares a server cache key with an administrator.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-059",
+    "title": "Project participation is not task performance",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-PROJECTS",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-014",
+      "CON-024"
+    ],
+    "level": "migration + integration",
+    "priority": "P0",
+    "given": "Customer/owner/delivery roles and node performer have different meanings.",
+    "when": "Migrate the boundary and read/edit both paths.",
+    "then": "Roles, cardinality, intervals, primary status, and audit survive without heuristic loss.",
+    "fault_injection": "Ambiguous legacy row appears in a reconciliation report.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-060",
+    "title": "ProcessStepAssignment does not overwrite the plan",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "BND-WORK",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-024",
+      "CON-027",
+      "CON-028"
+    ],
+    "level": "integration",
+    "priority": "P1",
+    "given": "Task names agent A; process owns its executor binding.",
+    "when": "Runtime selects an allowed executor/child.",
+    "then": "Runtime evidence and plan remain distinct; only an explicit Work Management command changes the plan.",
+    "fault_injection": "Projection event names a different agent than the plan.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-061",
+    "title": "Gantt dependencies versus row order",
+    "module_ids": [
+      "BND-WORK",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-025"
+    ],
+    "level": "UI + PostgreSQL",
+    "priority": "P0",
+    "given": "Tasks have schedules and a dependency graph.",
+    "when": "Reorder rows, edit dates, and attempt a cyclic dependency.",
+    "then": "Reordering does not change dependencies; policy rejects cycles; drag/undo/conflict is truthful.",
+    "fault_injection": "Concurrent predecessor edit before commit.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-062",
+    "title": "Duplicate scheduler firing",
+    "module_ids": [
+      "MOD-SCHEDULER",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "contract_ids": [
+      "CON-037",
+      "CON-027",
+      "CON-030"
+    ],
+    "level": "Quartz/runtime integration",
+    "priority": "P0",
+    "given": "Plan P has firing F and a supported target.",
+    "when": "Deliver F twice, including after restart.",
+    "then": "One launch receipt/run; history distinguishes retry from a new firing.",
+    "fault_injection": "Crash between target admission and dispatcher acknowledgement.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-063",
+    "title": "Timezone, DST, misfire, and plan disabling",
+    "module_ids": [
+      "MOD-SCHEDULER"
+    ],
+    "contract_ids": [
+      "CON-037"
+    ],
+    "level": "unit + integration",
+    "priority": "P1",
+    "given": "Plan declares timezone and misfire policy.",
+    "when": "Exercise DST, missed firing, and disable during dispatch.",
+    "then": "Declared semantics hold without unexpected duplicate/lost launches.",
+    "fault_injection": "Trigger projection changes during reconciliation.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-064",
+    "title": "Actual scheduler target support",
+    "module_ids": [
+      "MOD-SCHEDULER",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-037"
+    ],
+    "level": "characterization + integration",
+    "priority": "P1",
+    "given": "Rebaseline the actual target registry.",
+    "when": "Exercise every offered UI target through its real launch adapter.",
+    "then": "Record supported/unavailable; do not infer full process support from README or remove it from an older map.",
+    "fault_injection": "Target implementation is absent from the host.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-065",
+    "title": "Memory source revision and revocation",
+    "module_ids": [
+      "MOD-MEMORY",
+      "MOD-CRM",
+      "MOD-RESOURCES",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-038",
+      "CON-039"
+    ],
+    "level": "provider integration",
+    "priority": "P0",
+    "given": "Index contains authorized CRM/resource/Structure snapshots.",
+    "when": "Change/delete source or revoke access, then retrieve.",
+    "then": "Staleness/provenance is visible and current access enforced; Memory cannot rewrite the source master.",
+    "fault_injection": "Lose revocation notification and delay physical index cleanup.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-066",
+    "title": "Prompt-version pinning",
+    "module_ids": [
+      "MOD-PROMPTS",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-033",
+      "CON-030"
+    ],
+    "level": "integration",
+    "priority": "P1",
+    "given": "Run admitted prompt P1.",
+    "when": "Publish P2 during execution and rebuild a projection.",
+    "then": "Run/evidence remains P1; a new explicit use may select P2.",
+    "fault_injection": "Deleted source retains historical reference under retention policy.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-067",
+    "title": "Curator uses owner commands",
+    "module_ids": [
+      "MOD-PROMPTS",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-034",
+      "CON-053"
+    ],
+    "level": "tool + integration",
+    "priority": "P0",
+    "given": "Curator proposes a prompt change.",
+    "when": "Approve/reject and persist the change.",
+    "then": "Prompts performs mutation with revision/audit/approval; no Agents EF writer.",
+    "fault_injection": "Proposal becomes stale after human editing.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-068",
+    "title": "Plugin disable or grant revocation during execution",
+    "module_ids": [
+      "MOD-PLUGINS",
+      "MOD-AGENTS",
+      "BND-WORKFLOWS",
+      "MOD-SECURITY"
+    ],
+    "contract_ids": [
+      "CON-040",
+      "CON-051"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Activated tool initially has a grant.",
+    "when": "Disable/revoke before the next invocation.",
+    "then": "Use-time denial and safe state/receipt; cache invalidation works.",
+    "fault_injection": "Old descriptor remains in floating UI.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-069",
+    "title": "Purpose-limited OAuth and secret access",
+    "module_ids": [
+      "MOD-PLUGINS",
+      "MOD-SECURITY"
+    ],
+    "contract_ids": [
+      "CON-040",
+      "CON-042"
+    ],
+    "level": "security integration",
+    "priority": "P0",
+    "given": "Two plugin connections have distinct purposes.",
+    "when": "Resolve/refresh a secret in another scope or export it.",
+    "then": "Broker denies without value leakage; legitimate refresh still works.",
+    "fault_injection": "Revoked connection or replayed callback under the current OAuth contract.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-070",
+    "title": "Collaboration membership and object references",
+    "module_ids": [
+      "MOD-COLLAB",
+      "MOD-CRM",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-050",
+      "CON-010"
+    ],
+    "level": "integration + UI",
+    "priority": "P1",
+    "given": "Thread has members and a project-object link.",
+    "when": "Add a message, remove a member, then read through references.",
+    "then": "Membership/source access enforced; no substitution of a Simple Chat or agent transcript.",
+    "fault_injection": "Cross-scope ID with the same display label.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-071",
+    "title": "Simple Chats durable turn and window closure",
+    "module_ids": [
+      "BND-SIMPLECHATS",
+      "BND-CONVERSATIONS",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-049"
+    ],
+    "level": "integration + UI/SSE",
+    "priority": "P0",
+    "given": "Ordinary turn with OperationId was admitted.",
+    "when": "Close/reconnect floating view, restart dispatcher, and replay journal.",
+    "then": "One turn with durable transcript/terminal evidence; UI closure does not cancel it.",
+    "fault_injection": "Lose transient signal and replay SSE cursor.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-072",
+    "title": "Simple Chats have no implicit agent capabilities",
+    "module_ids": [
+      "BND-SIMPLECHATS",
+      "MOD-AGENTS",
+      "BND-CONVERSATIONS"
+    ],
+    "contract_ids": [
+      "CON-049",
+      "CON-044"
+    ],
+    "level": "architecture + integration",
+    "priority": "P0",
+    "given": "Ordinary chat shares presentation with an agent chat over a project.",
+    "when": "Open it and send an ordinary prompt.",
+    "then": "No implicit tools, skills, MCP, Project Structure context, or agent-runtime registration.",
+    "fault_injection": "Shared component must not inherit previous agent configuration.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-073",
+    "title": "Simple Chat conversation-create compatibility",
+    "module_ids": [
+      "BND-SIMPLECHATS",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-049"
+    ],
+    "level": "HTTP integration",
+    "priority": "P1",
+    "given": "Current ordinary conversation-create API is documented non-idempotent.",
+    "when": "Compare repeated HTTP create before/after refactor; separately exercise turn OperationId.",
+    "then": "Preserve the real contract; no unsafe global deduplication namespace or invented existing guarantee.",
+    "fault_injection": "Turn retry remains safe and distinct from conversation creation.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-074",
+    "title": "TestLab verdict identifies target revision",
+    "module_ids": [
+      "MOD-TESTLAB",
+      "MOD-STRUCTURE",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-036"
+    ],
+    "level": "integration + UI",
+    "priority": "P1",
+    "given": "Test plan/case references evidence and content V1.",
+    "when": "Save a verdict, change target to V2, and open Test.",
+    "then": "Evidence/verdict remains V1; new test is explicitly targeted or unsupported, not universal success.",
+    "fault_injection": "Evidence bytes are missing.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-075",
+    "title": "Resource promotion and shared storage object",
+    "module_ids": [
+      "MOD-RESOURCES",
+      "MOD-STRUCTURE",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-035",
+      "CON-043",
+      "CON-052"
+    ],
+    "level": "integration",
+    "priority": "P1",
+    "given": "Authorized storage object already has a Structure binding.",
+    "when": "Promote it to Resources and delete one binding.",
+    "then": "Resources owns metadata; bytes are not duplicated/deleted early and access is not broadened.",
+    "fault_injection": "Stale origin scope or retargeted root.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-076",
+    "title": "Export/import native and projected data",
+    "module_ids": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "MOD-PROMPTS",
+      "MOD-RESOURCES",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-016",
+      "CON-046",
+      "CON-056"
+    ],
+    "level": "PostgreSQL + storage integration",
+    "priority": "P0",
+    "given": "Project has note/task/links/references/assets/history.",
+    "when": "Export and import into a clean schema with explicit ID remapping.",
+    "then": "Preserve native bodies, roles, bindings, and history; rebuild projections without creating source masters.",
+    "fault_injection": "Unresolved remote reference is explicit; no secret in export.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-077",
+    "title": "Repeated import and partial transfer",
+    "module_ids": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [
+      "CON-016",
+      "CON-046",
+      "CON-056"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "Transfer has an operation plan and participants.",
+    "when": "Interrupt after one participant commits, then resume.",
+    "then": "Discoverable receipts and correct resume without second writers/duplicate identities; partial status is truthful.",
+    "fault_injection": "One participant has a schema mismatch.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-078",
+    "title": "Move/copy subtree during workflow execution",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-046"
+    ],
+    "level": "concurrency integration",
+    "priority": "P0",
+    "given": "Native subtree includes tasks, links, assets, and a frozen output destination.",
+    "when": "Copy/move/transfer under supported policy while running.",
+    "then": "Explicit identity/remapping and origin rules; no retargeting based on current parent.",
+    "fault_injection": "Late completion after move.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-079",
+    "title": "Retain files, delete owned files, and legacy payload",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-043"
+    ],
+    "level": "integration + UI + tool",
+    "priority": "P0",
+    "given": "Branch has managed content and an old durable deletion payload.",
+    "when": "Exercise both dispositions and process the old payload.",
+    "then": "Explicit choice affects correct files; Unspecified is rejected and legacy meaning is preserved.",
+    "fault_injection": "Retry with changed disposition produces conflict.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-080",
+    "title": "Shared-file references and final deletion",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-022",
+      "CON-043"
+    ],
+    "level": "PostgreSQL + storage concurrency",
+    "priority": "P0",
+    "given": "Two valid bindings reference the same content.",
+    "when": "Delete one, then the last under delete-owned policy.",
+    "then": "First preserves bytes; final deletion requires ownership and liveness checks.",
+    "fault_injection": "New binding races cleanup.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-081",
+    "title": "Multi-root deletion reports partial outcomes",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-043"
+    ],
+    "level": "failure injection + UI",
+    "priority": "P0",
+    "given": "Three independent roots include one ownership failure.",
+    "when": "Batch-delete with explicit disposition.",
+    "then": "Completed roots and safe failures are reported; repeat does not roll back successes; continuation policy is preserved.",
+    "fault_injection": "Unexpected exception after the first commit.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-082",
+    "title": "Confirmation cannot bypass protected run roots",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-028",
+      "CON-043",
+      "CON-052"
+    ],
+    "level": "security integration",
+    "priority": "P0",
+    "given": "Active/waiting process owns an artifact root.",
+    "when": "Agent/admin confirms destructive deletion with a forged path.",
+    "then": "Provenance and liveness protection still applies; a projected branch may only be hidden.",
+    "fault_injection": "Wrong RunId, traversal, and external-target alias.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-083",
+    "title": "Project deletion participants and recovery",
+    "module_ids": [
+      "MOD-PROJECTS",
+      "MOD-CRM",
+      "MOD-STRUCTURE",
+      "MOD-RESOURCES",
+      "MOD-TESTLAB"
+    ],
+    "contract_ids": [
+      "CON-016",
+      "CON-046"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "Several owners have project-dependent data.",
+    "when": "Delete, crash during cleanup, then recover.",
+    "then": "Each owner handles its data; operation is discoverable; a partial inaccessible project is not reported complete.",
+    "fault_injection": "Producer adds a node during Deleting.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-084",
+    "title": "Outbox rollback and commit without publication",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-CRM",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-012",
+      "CON-045"
+    ],
+    "level": "PostgreSQL failure injection",
+    "priority": "P0",
+    "given": "Owner saves state and event together.",
+    "when": "Roll back before commit; separately crash after commit before dispatch.",
+    "then": "Rolled-back changes are not published; committed event is eventually delivered; no silent loss.",
+    "fault_injection": "Lost publish acknowledgement causes a safely handled duplicate.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-085",
+    "title": "Inbox marker is atomic with projection update",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-STRUCTURE",
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [
+      "CON-012",
+      "CON-032"
+    ],
+    "level": "PostgreSQL failure injection",
+    "priority": "P0",
+    "given": "Duplicate event updates a materialized view.",
+    "when": "Crash between marker insert and projection update, in either order.",
+    "then": "Rollback/retry applies the projection once; marker cannot suppress a missing effect.",
+    "fault_injection": "Parallel subscribers process the same event identity.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-086",
+    "title": "Out-of-order deltas and sequence gaps",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "MOD-MEMORY"
+    ],
+    "contract_ids": [
+      "CON-012",
+      "CON-032",
+      "CON-039"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Source emits revisions n, n+1, n+2.",
+    "when": "Deliver n+2 before n+1 and replay n.",
+    "then": "Preserve snapshot/delta semantics; do not discard needed deltas without safe recovery.",
+    "fault_injection": "Expired event retention requires resnapshot, not silently incomplete current data.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-087",
+    "title": "Projection rebuild during concurrent editing",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [
+      "CON-032",
+      "CON-045"
+    ],
+    "level": "PostgreSQL concurrency",
+    "priority": "P0",
+    "given": "New materialized-view generation is being built.",
+    "when": "Edit/delete source entities and a native note concurrently.",
+    "then": "Snapshot/cursor/reconciliation retains updates; note is untouched; read switch is atomic or explicitly partial.",
+    "fault_injection": "Lost cursor or incarnation mismatch.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-088",
+    "title": "Tombstone and old events",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-CRM",
+      "MOD-MEMORY"
+    ],
+    "contract_ids": [
+      "CON-012",
+      "CON-032",
+      "CON-039"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Source agent/resource was deleted or archived.",
+    "when": "Replay an old update and rebuild/refresh cache.",
+    "then": "No source/access resurrection; historical reference follows retention policy.",
+    "fault_injection": "Detect tombstone retention shorter than the supported replay window.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-089",
+    "title": "Migration preserves data and concurrency stamping",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-002",
+      "CON-024",
+      "CON-056"
+    ],
+    "level": "PostgreSQL migration",
+    "priority": "P0",
+    "given": "Representative old DB contains real tokens, constraints, and audit.",
+    "when": "Upgrade to bounded owner contexts, read, and attempt a stale concurrent update.",
+    "then": "Preserve identity/data/hash/constraints; tokens advance correctly and conflicts work.",
+    "fault_injection": "Mapping omits IHasConcurrencyToken stamping.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-090",
+    "title": "Subset host cannot generate destructive migrations",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [
+      "CON-048",
+      "CON-056"
+    ],
+    "level": "schema/architecture",
+    "priority": "P0",
+    "given": "Canonical migration model includes all tables; sandbox only a subset.",
+    "when": "Compare design-time models and schema differences.",
+    "then": "Only the complete model is migration authority; no unintended DropTable from a subset.",
+    "fault_injection": "Missing entity/configuration assembly.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-091",
+    "title": "Runtime contexts do not import foreign entities via navigation",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-CRM",
+      "MOD-STRUCTURE",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-001",
+      "CON-010",
+      "CON-018"
+    ],
+    "level": "architecture + EF model",
+    "priority": "P0",
+    "given": "Contexts have explicit mappings.",
+    "when": "Inspect actual IEntityType models and all write paths.",
+    "then": "No foreign-master writes or global registry scan; ExcludeFromMigrations is not accepted as write protection.",
+    "fault_injection": "Navigation discovery introduces a foreign type.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-092",
+    "title": "Single-writer cutover and rollback",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-024",
+      "CON-046",
+      "CON-056"
+    ],
+    "level": "migration + failure injection",
+    "priority": "P0",
+    "given": "Legacy and new adapters coexist during migration.",
+    "when": "Switch writer, mutate through the old path, and exercise rollback.",
+    "then": "Legacy delegates or blocks, never dual-writes; rollback preserves compatible schema/data and one writer.",
+    "fault_injection": "Old worker accepts queued work after the switch.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-093",
+    "title": "Storage/DB compensation and orphan cleanup",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-022",
+      "CON-043"
+    ],
+    "level": "failure injection",
+    "priority": "P0",
+    "given": "Staging/finalization and DB binding are separate steps.",
+    "when": "Fail at every intermediate boundary, retry, and run cleanup.",
+    "then": "Truthful content states; referenced bytes survive; bounded orphan recovery uses provenance.",
+    "fault_injection": "Cleanup races new finalization/binding.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-094",
+    "title": "Content-edit optimistic concurrency",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE",
+      "MOD-TESTLAB"
+    ],
+    "contract_ids": [
+      "CON-022",
+      "CON-043"
+    ],
+    "level": "storage integration",
+    "priority": "P1",
+    "given": "Two edits start at V1; test evidence references V1.",
+    "when": "Save V2, then submit the stale second write.",
+    "then": "Conflict without content loss; metadata edit does not replace bytes; evidence remains V1.",
+    "fault_injection": "Viewer keeps a stale cache after update.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-095",
+    "title": "Two circuits do not share a tracked context",
+    "module_ids": [
+      "BND-CONVERSATIONS",
+      "BND-COMPOSITION",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-018",
+      "CON-019"
+    ],
+    "level": "concurrency + UI",
+    "priority": "P0",
+    "given": "Two browser circuits and parallel loads exist.",
+    "when": "Read/edit different scopes.",
+    "then": "Per-operation contexts prevent tracking/user leakage; results respect source generation.",
+    "fault_injection": "Slow old load finishes after a newer load.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-096",
+    "title": "DI unavailability versus false success",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-WORKSPACE",
+      "MOD-AGENTS",
+      "MOD-SECURITY"
+    ],
+    "contract_ids": [
+      "CON-007",
+      "CON-042",
+      "CON-048"
+    ],
+    "level": "composition integration",
+    "priority": "P0",
+    "given": "Host lacks an optional reader or a required writer/security service.",
+    "when": "Resolve and invoke actions.",
+    "then": "Optional absence is transparent; required writes/start fail closed or invalidate startup; Noop cannot report committed.",
+    "fault_injection": "Change real/noop registration order; inspect both single and enumerable resolution.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-097",
+    "title": "Backup restore and data incarnation",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-STRUCTURE",
+      "MOD-PROCESSES",
+      "MOD-PROVIDERS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-048",
+      "CON-056"
+    ],
+    "level": "restore integration",
+    "priority": "P0",
+    "given": "Backup contains outbox, checkpoints, and receipts from another continuity.",
+    "when": "Run old cache/worker/replay against the restore.",
+    "then": "Incarnation fence and recovery policy prevent cross-history writes/duplicate external effects.",
+    "fault_injection": "Identical source sequence and ProjectId in the new database.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-098",
+    "title": "URLs, dialogs, and desktop shell",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-CONVERSATIONS"
+    ],
+    "contract_ids": [
+      "CON-044",
+      "CON-045"
+    ],
+    "level": "desktop UI",
+    "priority": "P1",
+    "given": "Existing deep links, tab/dialog selection, and floating overlay are supported.",
+    "when": "Reload/back/forward, open details, and exercise focus after refactoring.",
+    "then": "Preserve existing bookmark states, dialogs, z-index/focus, and navigation; do not invent mobile requirements.",
+    "fault_injection": "Stale entity ID produces safe unavailable without breaking the shell.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-099",
+    "title": "Pagination and batch queries avoid N+1",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS",
+      "MOD-RESOURCES"
+    ],
+    "contract_ids": [
+      "CON-001",
+      "CON-010",
+      "CON-015",
+      "CON-018"
+    ],
+    "level": "performance characterization",
+    "priority": "P1",
+    "given": "Representative production-scale catalog/structure.",
+    "when": "Page/search/scroll/filter and reload a compound projection.",
+    "then": "Deterministic order/coverage and measured queries; no new per-entity query pattern.",
+    "fault_injection": "Slow/unavailable owner cannot be disguised as an empty current projection.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-100",
+    "title": "Build/hot-reload improvement is measured",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "BND-CONVERSATIONS",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-003",
+      "CON-044"
+    ],
+    "level": "build graph + developer-loop measurement",
+    "priority": "P1",
+    "given": "Same recorded hardware/configuration and supported baseline host.",
+    "when": "Measure transitive graph and cold/warm edit loop after extraction.",
+    "then": "Evidence of improvement/non-regression with preserved behavior; no guessed percentages or partial-class quotas.",
+    "fault_injection": "UI still transitively references runtime hosting.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-101",
+    "title": "Unknown source/capability is not an empty catalog",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-STRUCTURE",
+      "MOD-PROVIDERS"
+    ],
+    "contract_ids": [
+      "CON-001",
+      "CON-005",
+      "CON-032"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Provider owner or projection source is unavailable.",
+    "when": "Open planning/view and attempt a source-dependent mutation.",
+    "then": "UI distinguishes stale/unavailable; mutation makes a current decision; no replacement master.",
+    "fault_injection": "Unsupported source schema version.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-102",
+    "title": "Exports, logs, and receipts exclude secrets",
+    "module_ids": [
+      "MOD-SECURITY",
+      "MOD-PROVIDERS",
+      "MOD-PLUGINS",
+      "MOD-CRM",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-009",
+      "CON-042",
+      "CON-046"
+    ],
+    "level": "security inspection + integration",
+    "priority": "P0",
+    "given": "Synthetic canary secret and confidential data exist in authorized stores.",
+    "when": "Trigger errors, export, quote, usage, UI snapshots, and tool receipts.",
+    "then": "Canary is absent from unauthorized outputs/logs; redaction preserves safe correlation.",
+    "fault_injection": "Provider error contains a token/URL or serializer captures the entire configuration.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-103",
+    "title": "Retry and dead-letter operational visibility",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-STRUCTURE",
+      "BND-CONNECTORS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-041",
+      "CON-045"
+    ],
+    "level": "failure injection",
+    "priority": "P1",
+    "given": "Required message repeatedly fails.",
+    "when": "Exhaust bounded retries and reconcile as an operator.",
+    "then": "Durable pending/failed status, correlation, and safe actionable reason; required effect is not discarded as success.",
+    "fault_injection": "Drop transient status notifications.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-104",
+    "title": "Client disconnect and unknown commit",
+    "module_ids": [
+      "BND-API",
+      "MOD-STRUCTURE",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-002",
+      "CON-021"
+    ],
+    "level": "HTTP/tool failure injection",
+    "priority": "P0",
+    "given": "Request has a valid stable OperationId.",
+    "when": "Disconnect during commit and later query/retry.",
+    "then": "Durable receipt resolves Unconfirmed without false cancellation/rollback or duplicate write.",
+    "fault_injection": "Commit acknowledgement times out after actual commit.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-105",
+    "title": "Non-idempotent external effect",
+    "module_ids": [
+      "BND-CONNECTORS",
+      "MOD-PLUGINS",
+      "MOD-PROCESSES"
+    ],
+    "contract_ids": [
+      "CON-041",
+      "CON-028"
+    ],
+    "level": "adapter failure injection",
+    "priority": "P0",
+    "given": "Remote API has neither deduplication nor reliable status lookup.",
+    "when": "Lose response after a possible effect.",
+    "then": "NeedsReconciliation/uncertainty; automatic retry cannot claim exactly one effect.",
+    "fault_injection": "Redeliver the local outbox message.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-106",
+    "title": "Atomic assignment/reservation shares the connection",
+    "module_ids": [
+      "BND-WORK",
+      "MOD-CRM",
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [
+      "CON-013",
+      "CON-024"
+    ],
+    "level": "PostgreSQL integration",
+    "priority": "P0",
+    "given": "Coordinated operation spans two contexts.",
+    "when": "Fail a constraint in the second owner, then retry safely.",
+    "then": "Both effects roll back using the same DbConnection/DbTransaction and a correct overall receipt.",
+    "fault_injection": "Test detects equal connection strings on different connections.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-107",
+    "title": "Project hierarchy owner and cycles",
+    "module_ids": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE"
+    ],
+    "contract_ids": [
+      "CON-017",
+      "CON-020"
+    ],
+    "level": "integration + UI",
+    "priority": "P1",
+    "given": "Projects DAG is displayed by Structure.",
+    "when": "Change hierarchy through the owner; attempt cycle or generic-link overwrite.",
+    "then": "One Projects authority with Structure refresh and correct cycle/cardinality policy.",
+    "fault_injection": "Two concurrent edges jointly form a cycle.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-108",
+    "title": "Identity during rename, copy, and transfer",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS",
+      "MOD-RESOURCES"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-046",
+      "CON-056"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "NodeKeys/source references are used in URLs, receipts, and export.",
+    "when": "Rename and perform supported move/copy/transfer.",
+    "then": "Rename retains identity; copy/remapping follows explicit policy; historical receipts reference origin.",
+    "fault_injection": "Name/path collision after rename.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-109",
+    "title": "Recruiting and onboarding effects",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-011",
+      "CON-002",
+      "CON-012"
+    ],
+    "level": "UI + integration",
+    "priority": "P1",
+    "given": "Application includes interviews, lifecycle/conversion, and personnel data.",
+    "when": "Execute supported conversion/onboarding and reload.",
+    "then": "Preserve owner records, audit/index/activity, and dialogs; create a technical agent only when explicitly requested.",
+    "fault_injection": "Cross-domain partial failure remains discoverable.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-110",
+    "title": "CRM account/opportunity/interaction lifecycle",
+    "module_ids": [
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-010",
+      "CON-011"
+    ],
+    "level": "UI + integration",
+    "priority": "P1",
+    "given": "Account, opportunity participants/stage history, and scoped interactions exist.",
+    "when": "Mutate and query through UI/API with pagination.",
+    "then": "State, history, relationships, and effects match baseline; unaffected features are not dropped behind a new API.",
+    "fault_injection": "Conflict or permission denial on a related party.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-111",
+    "title": "Workspace settings delegate to owners",
+    "module_ids": [
+      "MOD-WORKSPACE",
+      "MOD-PROVIDERS",
+      "BND-COMPOSITION",
+      "MOD-SECURITY",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-006",
+      "CON-042",
+      "CON-047",
+      "CON-048"
+    ],
+    "level": "UI + integration",
+    "priority": "P1",
+    "given": "Settings include storage, provider preference, profile health, and token administration.",
+    "when": "Edit every actually available section.",
+    "then": "Correct owner commands, no foreign Workspace masters, preserved permissions and UI availability.",
+    "fault_injection": "Missing provider catalog adapter or storage driver.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-112",
+    "title": "Resource connector is genuinely executable",
+    "module_ids": [
+      "MOD-RESOURCES",
+      "BND-CONNECTORS",
+      "MOD-WORKSPACE"
+    ],
+    "contract_ids": [
+      "CON-035",
+      "CON-041"
+    ],
+    "level": "integration",
+    "priority": "P1",
+    "given": "Settings/manifest describe supported and unsupported connector kinds.",
+    "when": "Configure, test, use, and browse according to actual capability.",
+    "then": "Form is not false success; supported adapter executes; missing handler is unavailable.",
+    "fault_injection": "Invalid schema, secret reference, or endpoint.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-113",
+    "title": "Projects phases/options/file portfolio",
+    "module_ids": [
+      "MOD-PROJECTS",
+      "MOD-STRUCTURE",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-015",
+      "CON-016",
+      "CON-052"
+    ],
+    "level": "UI + integration",
+    "priority": "P1",
+    "given": "Project has phases/options and read-only/editable portfolio roles.",
+    "when": "Edit/read/search portfolio and open files/related projects.",
+    "then": "Preserve lifecycle/options validation, scope, and read-only policy without a full foreign EF graph.",
+    "fault_injection": "Referenced phase/file scope was deleted.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-114",
+    "title": "Plugin installation and package activation",
+    "module_ids": [
+      "MOD-PLUGINS",
+      "BND-COMPOSITION",
+      "BND-MAF"
+    ],
+    "contract_ids": [
+      "CON-040"
+    ],
+    "level": "integration",
+    "priority": "P1",
+    "given": "Valid/invalid manifests and installed-disabled plugin with a host recipe.",
+    "when": "Install, activate, disable, and restart through supported paths.",
+    "then": "Correct activation, manifest/grant validation, and runtime registration; no ad hoc page assembly loading.",
+    "fault_injection": "Installation crash or unsupported version/capability.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-115",
+    "title": "Prompt Gallery picker/import/search/compatibility",
+    "module_ids": [
+      "MOD-PROMPTS",
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-033",
+      "CON-034"
+    ],
+    "level": "UI + integration",
+    "priority": "P1",
+    "given": "Prompts have versions/tags/tokens and compatibility metadata.",
+    "when": "Search/import and use picker/composer in agent and ordinary chat views.",
+    "then": "Preserve warnings, version selection, order, and correct product boundaries.",
+    "fault_injection": "Malformed import or unavailable search projection yields explicit failure/coverage.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-116",
+    "title": "Memory profile setup and operation views",
+    "module_ids": [
+      "MOD-MEMORY",
+      "MOD-SECURITY",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-038",
+      "CON-039",
+      "CON-042"
+    ],
+    "level": "UI/API + integration",
+    "priority": "P1",
+    "given": "Supported memory profile and diagnostics exist.",
+    "when": "Create/edit/probe/start, observe, and cancel where supported.",
+    "then": "Transport/persistence remains in the Memory owner; Web avoids UI entities and status is truthful.",
+    "fault_injection": "Missing provider/configuration/credentials or revoked source.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-117",
+    "title": "Meeting/recording/transcript kinds and actions",
+    "module_ids": [
+      "MOD-STRUCTURE",
+      "BND-STORAGE",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-019",
+      "CON-020",
+      "CON-022"
+    ],
+    "level": "characterization + UI",
+    "priority": "P1",
+    "given": "Current native kinds expose different metadata/actions.",
+    "when": "Create/edit/link/open every actually offered kind, including participants.",
+    "then": "Preserve inputs and stored data; metadata scaffolds are not claimed as implemented recording/STT runners.",
+    "fault_injection": "Unavailable action returns typed unavailable rather than a misleading generic button.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-118",
+    "title": "Plan analytics and manager summaries",
+    "module_ids": [
+      "BND-WORK",
+      "MOD-STRUCTURE",
+      "MOD-PROJECTS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-015",
+      "CON-018",
+      "CON-026"
+    ],
+    "level": "integration + UI",
+    "priority": "P1",
+    "given": "Plan mixes humans, AI, processes/workflows, and partial costs.",
+    "when": "Change dates, assignments, and costs; refresh summaries.",
+    "then": "Correct coverage, source revisions, and sums; unknown is not zero; UI invalidation does not mutate master data.",
+    "fault_injection": "Lost event or partially unavailable source.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-119",
+    "title": "Audit/index/lifecycle survives API extraction",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-PROMPTS",
+      "MOD-RESOURCES",
+      "MOD-STRUCTURE",
+      "BND-API"
+    ],
+    "contract_ids": [
+      "CON-011",
+      "CON-019",
+      "CON-034",
+      "CON-035"
+    ],
+    "level": "integration",
+    "priority": "P0",
+    "given": "Same operation is available from several surfaces.",
+    "when": "Execute equivalent UI, HTTP, and tool mutations.",
+    "then": "All use the owner application service and consistent audit/effect policy, not a shortcut EF API path.",
+    "fault_injection": "Audit/index failure after business commit has explicit outcome/recovery.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-120",
+    "title": "Bidirectional owner APIs avoid reentrant mutation loops",
+    "module_ids": [
+      "MOD-CRM",
+      "BND-WORK",
+      "MOD-STRUCTURE",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-013",
+      "CON-024",
+      "CON-021",
+      "CON-030",
+      "CON-055"
+    ],
+    "level": "integration + concurrency",
+    "priority": "P0",
+    "given": "CRM changes an assignment needing reservation; workflow projector observes a run.",
+    "when": "Mutate with callbacks/invalidation and concurrent refresh.",
+    "then": "Each owner performs only its effect; no repeated top-level command, deadlock, or launch caused by a query/projection.",
+    "fault_injection": "Deliberately loop a callback into the same intent; detect the cycle rather than retry forever.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-121",
+    "title": "Receipt retention and restore cannot repeat external effects",
+    "module_ids": [
+      "BND-COMPOSITION",
+      "MOD-STRUCTURE",
+      "MOD-AGENTS",
+      "MOD-PROVIDERS"
+    ],
+    "contract_ids": [
+      "CON-021",
+      "CON-048",
+      "CON-054",
+      "CON-056"
+    ],
+    "level": "recovery + integration",
+    "priority": "P0",
+    "given": "Completed external effect is redelivered after retention or restore.",
+    "when": "Retry the original intent after local incarnation changes.",
+    "then": "Find original receipt/provenance or report expired/unknown for reconciliation; do not rerun inference/create replacement assets by changing remote keys.",
+    "fault_injection": "Remote provider lacks idempotency/status support: disclose uncertainty and require a safe decision.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Baseline and post-change: actual discovered tests, observed outcome, owner data/receipt/revision, and the affected UI/API/tool result. Without this evidence the scenario is not PASS."
+  },
+  {
+    "id": "QA-122",
+    "title": "Preserve existing HR CRM party creation",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-063"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Current managed HR with CRM scope and allowed nonsensitive fields.",
+    "when": "Invoke the real existing party-create tool and reload CRM.",
+    "then": "One canonical Party, correct owner audit/activity and safe returned identity; no second Agents writer.",
+    "fault_injection": "Owner rejects validation or CRM fails after admission; tool must retain truthful outcome.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-123",
+    "title": "Preserve affiliation limits and restricted fields",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-059"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Existing affiliation and restricted HR facts.",
+    "when": "List and upsert affiliation through actual HR tool.",
+    "then": "CRM owns the update; restricted fields remain unchanged and endpoints/roles validated.",
+    "fault_injection": "Attempt to smuggle confidential or workforce fields through affiliation metadata.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-124",
+    "title": "Operational agent queries CRM without impersonating HR",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-023"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Ordinary task agent receives only a safe planning-query grant.",
+    "when": "Resolve a person and create an authorized task.",
+    "then": "Useful scoped lookup works; protected HR management stays unavailable.",
+    "fault_injection": "Rename the ordinary agent to HR or submit the real HR AgentId in tool input.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-125",
+    "title": "Query-only capability cannot create a contact",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-058"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Actor has CRM summary read but no create grant.",
+    "when": "Read a permitted person then request party creation.",
+    "then": "Read succeeds and mutation is denied without a new Party.",
+    "fault_injection": "Use a forged descriptor or direct adapter call to bypass tool-list filtering.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-126",
+    "title": "CRM provider-disclosure restriction",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-057"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Actor can view internal personnel data but selected external model is not allowed to receive it.",
+    "when": "Request the agent to summarize those data.",
+    "then": "Enforced disclosure policy withholds/denies sensitive content; no provider request contains the canary.",
+    "fault_injection": "Cached administrator query result or prompt text asks to ignore data-use policy.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-127",
+    "title": "Source read cannot launder confidential data into a task",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-023"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Actor can read a confidential HR detail; project task audience is broader.",
+    "when": "Attempt to write the detail or an equally identifying summary into a task.",
+    "then": "Destination disclosure policy blocks or requires an authorized safe transformation; no silent declassification.",
+    "fault_injection": "Embed the confidential text in a title, attachment, or generated summary.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-128",
+    "title": "Ambiguous person identity and stale eligibility",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-024"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Two people share a name; selected candidate is later deactivated.",
+    "when": "Resolve by typed reference and assign after deactivation.",
+    "then": "No guessing by name; current assignment eligibility is validated and stale use rejected or explicitly handled.",
+    "fault_injection": "Identical IDs in another profile or misleading display label.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-129",
+    "title": "HR reads safe Simple Chats definition settings",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-061"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Authorized managed actor and definition with confidential unrelated conversations.",
+    "when": "Search definitions and retrieve permitted editable settings.",
+    "then": "Only allowed definition fields/token are returned, with bounded pagination and no transcripts.",
+    "fault_injection": "Attempt to use a conversation ID, cached full entity, or another scope.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-130",
+    "title": "HR creates a Simple Chats definition through its owner",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-062"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "New adapter and proven owner-atomic command receipt are implemented in the scoped change.",
+    "when": "Approve typed definition creation and inspect normal Simple Chats UI.",
+    "then": "One ordinary definition/revision; current owner service performs persistence; no agent runtime activation.",
+    "fault_injection": "Disallow provider/model or submit unsupported field; no partial completed definition.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-131",
+    "title": "Simple Chats definition update uses concurrency",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-061",
+      "CON-062"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "HR read token V1; human saves V2.",
+    "when": "Submit approved V1 update.",
+    "then": "Conflict without automatic full-form overwrite; human V2 and revision history survive.",
+    "fault_injection": "Adapter rereads V2 and silently resubmits stale changes; test must catch it.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-132",
+    "title": "Simple Chats approval binds exact payload",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-062"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Definition update has approved provider, prompt, and expected version.",
+    "when": "Change model, system prompt, target, or status after approval.",
+    "then": "Old approval is rejected; materially revised intent requires new review.",
+    "fault_injection": "Only approval ID is checked while payload fingerprint is omitted.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-133",
+    "title": "Simple Chats definition administration does not grant transcript access",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-061",
+      "CON-062",
+      "CON-049"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "HR can edit a definition, but has no conversation grant.",
+    "when": "Try to enumerate/read/edit/delete transcripts or inject a user message.",
+    "then": "These operations are unavailable/denied; definition administration still works.",
+    "fault_injection": "Use shared UI state or definition service response to reach conversation stores.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-134",
+    "title": "Ordinary product remains dependency- and tool-free",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS",
+      "BND-CONVERSATIONS"
+    ],
+    "contract_ids": [
+      "CON-062",
+      "CON-049"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "External HR adapter manages a definition used by floating ordinary chat.",
+    "when": "Build/evaluate dependency graph and send an ordinary turn.",
+    "then": "Product/persistence has no new Agent Core/MAF/tools/process references; ordinary runtime has no tools/implicit context.",
+    "fault_injection": "Shared conversation component retains an earlier agent tool configuration.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-135",
+    "title": "Definition edit does not rewrite admitted turns",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-062",
+      "CON-049"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Ordinary turn was admitted using a definition revision.",
+    "when": "Update or change definition status through HR during dispatch.",
+    "then": "Existing owner pinning/status policy and historical transcript remain; no re-execution or silent config replacement.",
+    "fault_injection": "Delayed provider dispatch uses the mutable latest definition instead of admitted settings.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-136",
+    "title": "Simple Chats create receipt is atomic with effect",
+    "module_ids": [
+      "MOD-AGENTS",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-062"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Two independent instances submit the same legitimate create intent.",
+    "when": "Crash after definition insert at every receipt/commit boundary, then retry.",
+    "then": "Exactly one local canonical definition and recoverable receipt, or explicit uncertain status without unsafe retry if guarantee is unavailable.",
+    "fault_injection": "Post-hoc integration receipt implementation should fail this test.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-137",
+    "title": "Intent collision and changed-payload protection",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-062"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "A contact/chat create has a committed scoped intent.",
+    "when": "Reuse the key with changed payload, another principal, or another owner.",
+    "then": "Correct conflict/isolation; no disclosure or overwrite of another intent.",
+    "fault_injection": "Use equal display names and locally colliding profile IDs.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-138",
+    "title": "Replay after deletion or later manual edit",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-062"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Created contact/chat is later edited, archived, or deleted by a user.",
+    "when": "Replay the original create intent.",
+    "then": "Historical receipt is distinct from current state; no resurrection or overwrite.",
+    "fault_injection": "Producer changes keys to bypass suppression of the same managed intent.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-139",
+    "title": "Workflow creates CRM data without an open page",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-072"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Registered typed CRM executor, bounded run authority, and approval where required.",
+    "when": "Run headlessly and create a permitted contact.",
+    "then": "CRM owns the effect; workflow stores its receipt and scope without a Razor dependency.",
+    "fault_injection": "Missing approval channel or revoked run delegation blocks rather than autoapproves.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-140",
+    "title": "Process step writes a Resource through the owner",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-RESOURCES",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-070",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Typed Resource step has authorized content and original scope.",
+    "when": "Create a Resource and checkpoint its identity.",
+    "then": "Resources owns metadata, Storage bytes, process its checkpoint; explicit content state.",
+    "fault_injection": "Provider succeeds but metadata commit fails; reconcile without orphan deletion of shared content.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-141",
+    "title": "Workflow checkpoint gap after foreign commit",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-072"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Owner command intent was persisted before dispatch.",
+    "when": "Commit Party, crash before workflow checkpoint, restart.",
+    "then": "Recovery queries same owner receipt and records existing Party; no duplicate create.",
+    "fault_injection": "Regenerate a new model tool-call ID during replay.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-142",
+    "title": "Process loop iteration versus retry identity",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Process intentionally creates two contacts in distinct loop iterations.",
+    "when": "Retry one iteration and execute the next.",
+    "then": "Retry deduplicates its original effect while legitimate next iteration has its own effect identity.",
+    "fault_injection": "Key ignores iteration or includes retry counter; detect lost/duplicated work.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-143",
+    "title": "Background adapter cannot borrow interactive managed identity",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-063",
+      "CON-072",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Current HR provider only supports InteractiveChat.",
+    "when": "Try attaching it to a background executor with spoofed HR identity.",
+    "then": "Denied/unavailable; legitimate separate owner-operation adapter can work under its own approved delegation.",
+    "fault_injection": "Set purpose or actor in untrusted workflow JSON.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-144",
+    "title": "Revocation between approval and resumed dispatch",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-072"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Approved contact command waits across restart.",
+    "when": "Revoke actor/grant/scope before resume.",
+    "then": "Current owner authorization blocks mutation; approval is not indefinite authority.",
+    "fault_injection": "Keep old descriptor and approval caches warm.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-145",
+    "title": "Required foreign effect remains a visible obligation",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Technical process work succeeded but required CRM effect is unavailable.",
+    "when": "Exhaust retries then inspect run/task state.",
+    "then": "Required delivery remains blocked/pending or explicitly failed; no false completed business outcome or repeated inference.",
+    "fault_injection": "Drop transient notifications and restart worker.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-146",
+    "title": "Composite failure does not delete pre-existing data",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-024"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Onboarding uses an existing contact and a newly created agent; task assignment then fails.",
+    "when": "Reconcile or compensate the composite.",
+    "then": "Preserve existing contact and subsequent human edits; only explicit owner-authorized compensation is considered.",
+    "fault_injection": "Implement a naive reverse-order delete rollback.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-147",
+    "title": "Scheduler workflow-only managed surface is preserved",
+    "module_ids": [
+      "MOD-SCHEDULER",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-066",
+      "CON-067"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Current managed Scheduler provider and actual host registration.",
+    "when": "Search workflows/schedules and create an approved workflow schedule.",
+    "then": "Supported positive paths work; no saved input JSON disclosure or invented direct process schedule tool.",
+    "fault_injection": "Request unsupported target kind or remove its runtime implementation.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-148",
+    "title": "Schedule dispatch authority survives browser departure safely",
+    "module_ids": [
+      "MOD-SCHEDULER",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-037",
+      "CON-067"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Recurring plan has explicit target/version and bounded approved execution policy.",
+    "when": "Close UI, revoke relevant authority, then fire.",
+    "then": "Dispatch uses durable principal and current policy, not browser identity or unlimited prior approval.",
+    "fault_injection": "Target or input revision changes after plan review.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-149",
+    "title": "Staffing edits cannot change technical agents or AI prices",
+    "module_ids": [
+      "MOD-CRM",
+      "MOD-AGENTS",
+      "MOD-PROVIDERS",
+      "BND-WORK"
+    ],
+    "contract_ids": [
+      "CON-060",
+      "CON-024",
+      "CON-005"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Actor may update selected CRM staffing fields.",
+    "when": "Edit availability, then attempt provider tariff, agent instruction, confidential field, or task performer through same patch.",
+    "then": "Allowed staffing edit succeeds; foreign/forbidden fields are rejected/delegated under separate grants.",
+    "fault_injection": "Open JSON properties or alternate API path bypass the allowlist.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-150",
+    "title": "HR technical administration cannot self-escalate",
+    "module_ids": [
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-063",
+      "CON-065"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Managed HR actor has safe administration and catalog access.",
+    "when": "Attempt self/protected-target edit or privileged capability grant.",
+    "then": "Current protected rules remain enforced; admitted authority cannot widen through definition editing.",
+    "fault_injection": "Create a child/template with forbidden capability then ask it to execute.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-151",
+    "title": "Curator changes remain owner-versioned",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-PROMPTS",
+      "BND-WORKFLOWS"
+    ],
+    "contract_ids": [
+      "CON-034",
+      "CON-064",
+      "CON-065"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Prompt/workflow/capability curators with their actual grants.",
+    "when": "Propose and approve supported edits while an admitted run uses the old version.",
+    "then": "Owner creates validated revisions; admitted run remains pinned; catalog editing does not grant execution.",
+    "fault_injection": "Concurrent human edit or altered proposal after approval.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-152",
+    "title": "Resources metadata is not an unrestricted content grant",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-RESOURCES",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-069",
+      "CON-071"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Visible Resource metadata points to restricted or large content.",
+    "when": "Request bytes through automation.",
+    "then": "Separate current content permission, bounded size/MIME, source version and disclosure policy; no raw locator/secret leak.",
+    "fault_injection": "Root/ACL changes after metadata query or remote URL points to a disallowed endpoint.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-153",
+    "title": "Resource creation and promotion share the canonical owner",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-RESOURCES",
+      "BND-STORAGE"
+    ],
+    "contract_ids": [
+      "CON-035",
+      "CON-070"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Existing content is already attached to Structure.",
+    "when": "Create/promote Resource through automation, then remove one attachment.",
+    "then": "Canonical Resource metadata and shared-byte references; no duplicate store or premature cleanup.",
+    "fault_injection": "Repeat same intent after commit and lose response.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-154",
+    "title": "Cross-module query results resist instruction injection",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "MOD-RESOURCES"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-069",
+      "CON-071"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "CRM text/document says to skip approval, reveal secrets, or change actor.",
+    "when": "Retrieve and process it in an authorized task flow.",
+    "then": "Text is treated as data; deterministic policy still denies unauthorized actions.",
+    "fault_injection": "Malicious instruction is embedded in a label, tool result, or attachment.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-155",
+    "title": "Bounded queries preserve privacy across caches and pages",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-061"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Admin and limited actor share names/scopes but different field permissions.",
+    "when": "Page/filter/get using both identities and reuse cursors.",
+    "then": "Stable bounded results with correct coverage and no confidential leakage through shared cache/cursor.",
+    "fault_injection": "Replay a cursor or operation receipt from the broader actor.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-156",
+    "title": "Collaboration contribution respects the publication audience",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-COLLAB"
+    ],
+    "contract_ids": [
+      "CON-074"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Actor can post to a thread but source content has narrower access.",
+    "when": "Publish an automated summary/attachment.",
+    "then": "Membership plus source-to-destination policy applies; no agent/ordinary transcript substitution.",
+    "fault_injection": "Thread membership changes after preparation or source is confidential.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-157",
+    "title": "Memory ingestion is derived evidence, not master truth",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-MEMORY",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-075",
+      "CON-057"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Agent creates an interpretation of CRM data with source references.",
+    "when": "Ingest and later revoke/delete the source.",
+    "then": "Provenance/trust and current source access are enforced; ingestion does not update CRM facts.",
+    "fault_injection": "Treat generated assertion as verified Party field or bypass revoked source via index.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-158",
+    "title": "TestLab evidence authoring cannot manufacture execution success",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-TESTLAB"
+    ],
+    "contract_ids": [
+      "CON-076"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Agent has evidence-attachment grant but no verdict/acceptance authority.",
+    "when": "Attach a report and state that tests passed.",
+    "then": "Owner stores legitimate evidence with target revision; no fabricated runner PASS or acceptance.",
+    "fault_injection": "Missing evidence bytes or mismatch between tested and current target version.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-159",
+    "title": "Process assistant does not imply nonexistent tools",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-AGENTS"
+    ],
+    "contract_ids": [
+      "CON-068",
+      "CON-028"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Process assistant/template and HTTP operations exist.",
+    "when": "Inspect actual direct tools and invoke only supported bridges/adapters.",
+    "then": "Accurate availability; retained positive bridge/UI/HTTP behavior; no imaginary Process provider.",
+    "fault_injection": "Generate a tool name from an endpoint or prompt capability template.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-160",
+    "title": "Read-only and missing handlers fail truthfully",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "MOD-RESOURCES"
+    ],
+    "contract_ids": [
+      "CON-069",
+      "CON-070",
+      "CON-072",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Descriptor exists but handler is missing or read-only.",
+    "when": "Request a mutation from each claimed surface.",
+    "then": "Explicit unavailable/denied before effect; no empty-success Noop.",
+    "fault_injection": "Host register order accidentally selects a fallback.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-161",
+    "title": "Cross-owner adapters do not introduce assembly cycles",
+    "module_ids": [
+      "MOD-AGENTS",
+      "MOD-CRM",
+      "BND-SIMPLECHATS",
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES"
+    ],
+    "contract_ids": [
+      "CON-062",
+      "CON-072",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Scoped integration implementation is complete.",
+    "when": "Evaluate actual transitive dependencies and EF models.",
+    "then": "Owners avoid foreign implementations/EF entities; neutral UI and Simple Chats retain forbidden-dependency boundaries.",
+    "fault_injection": "Move all domain contracts/policies into neutral MAF to hide the cycle.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-162",
+    "title": "No query or callback reenters the original operation",
+    "module_ids": [
+      "MOD-CRM",
+      "BND-WORK",
+      "MOD-SCHEDULER"
+    ],
+    "contract_ids": [
+      "CON-024",
+      "CON-013",
+      "CON-067"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Multi-owner orchestration publishes completion/invalidation.",
+    "when": "Deliver duplicate/reentrant callbacks and invoke refresh concurrently.",
+    "then": "Distinct owner effects, finite interaction, stable receipts; no new original create/start.",
+    "fault_injection": "Callback explicitly calls the top-level intent or event echoes back indefinitely.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-163",
+    "title": "Receipt replay after restore remains safe for foreign effects",
+    "module_ids": [
+      "MOD-PROCESSES",
+      "MOD-CRM",
+      "BND-SIMPLECHATS"
+    ],
+    "contract_ids": [
+      "CON-058",
+      "CON-062",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "A foreign create completed before backup/restore; old intent is queued.",
+    "when": "Replay under new local incarnation or expired receipt retention.",
+    "then": "Reconcile original provenance or return expired/unknown; never default to a new create/remote key.",
+    "fault_injection": "Remove the receipt but retain external target data.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-164",
+    "title": "Durable checkpoints minimize sensitive query data",
+    "module_ids": [
+      "BND-WORKFLOWS",
+      "MOD-PROCESSES",
+      "MOD-CRM"
+    ],
+    "contract_ids": [
+      "CON-057",
+      "CON-072",
+      "CON-073"
+    ],
+    "level": "owner/cross-owner integration plus actual affected runtime surface",
+    "priority": "P0",
+    "given": "Step reads safe and separately authorized confidential data.",
+    "when": "Persist checkpoint, error, audit, and operator report.",
+    "then": "Store only necessary protected decision evidence; no broad raw CRM dump or secret in logs.",
+    "fault_injection": "Serializer captures entire query object/context or provider exception.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Run baseline and post-change where implemented; inspect actual tool/executor registration, owner records/revisions/receipts, authorization outcomes and durable recovery. An extension remains NOT_RUN until implemented and executed."
+  },
+  {
+    "id": "QA-165",
+    "title": "Language and package traceability remain English",
+    "module_ids": [
+      "BND-COMPOSITION"
+    ],
+    "contract_ids": [],
+    "level": "package language and downstream engineering artifact inspection",
+    "priority": "P0",
+    "given": "English replacement foundation and a future scoped implementation task.",
+    "when": "Inspect instructions, catalogs, templates, comments, and generated artifacts.",
+    "then": "Engineering prose is English; technical IDs and required product localization remain unchanged; no Czech execution instruction survives.",
+    "fault_injection": "Retain the old START_HERE language instruction or untranslated hidden JSON notes.",
+    "execution_status": "NOT_RUN",
+    "required_evidence": "Inspect the produced package and downstream scoped engineering artifacts. Package mechanical checks are separate from application runtime proof."
+  }
+]

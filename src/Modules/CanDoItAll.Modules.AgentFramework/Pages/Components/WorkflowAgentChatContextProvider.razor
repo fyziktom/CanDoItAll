@@ -48,12 +48,27 @@
 
     private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
     {
-        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        if (isDisposed ||
+            activeSource is null ||
+            notification.Source != activeSource ||
+            notificationSubscription is not { } admittedSubscription)
         {
             return Task.CompletedTask;
         }
 
-        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+        // The refresh is dispatched on the renderer later; the same activation must still be current then.
+        return InvokeAsync(async () =>
+        {
+            if (isDisposed ||
+                activeSource is null ||
+                notification.Source != activeSource ||
+                !ReferenceEquals(notificationSubscription, admittedSubscription))
+            {
+                return;
+            }
+
+            await RefreshRequested.InvokeAsync(notification);
+        });
     }
 
     public void Dispose()

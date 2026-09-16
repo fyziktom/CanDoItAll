@@ -16,7 +16,8 @@ internal sealed record DeleteSubtreeMutationPayload(
     IReadOnlyList<ProjectManagedStorageDeletionOutcome>? ManagedStorageOutcomes = null,
     IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null,
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition =
-        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles);
+        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+    ProjectAssignmentReference? SourceReference = null);
 
 internal sealed record ProjectCrossModuleMutationProcessingResult(
     ProjectCrossModuleMutationStatus Status,
@@ -27,14 +28,17 @@ internal sealed record DeleteProjectMutationPayload(
     IReadOnlyList<StorageObjectReference> ManagedStorageObjects,
     IReadOnlyList<ProjectManagedStorageDeletionOutcome>? ManagedStorageOutcomes = null,
     IReadOnlyList<Guid>? OutstandingMutationIds = null,
-    IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null);
+    IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null,
+    ProjectAssignmentReference? SourceReference = null);
 
 internal sealed record MoveDescendantsMutationPayload(
     Guid SourceProjectId,
     Guid TargetProjectId,
     string SourceNodeKey,
     IReadOnlyList<string> MovedNodeKeys,
-    IReadOnlyList<string> MovedRootKeys);
+    IReadOnlyList<string> MovedRootKeys,
+    ProjectAssignmentReference? SourceReference = null,
+    ProjectWriteAdmission? ExpectedTargetAdmission = null);
 
 public sealed record ProjectCrossModuleMutationProcessingOptions(
     TimeSpan LeaseDuration,
@@ -62,7 +66,7 @@ public sealed record ProjectCrossModuleMutationProcessingOptions(
 }
 
 public sealed class ProjectCrossModuleMutationProcessor(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     ProjectManagedStorageDeletionService managedStorageDeletionService,
     ProjectCrossModuleMutationCoordinator mutationCoordinator,
@@ -94,7 +98,6 @@ public sealed class ProjectCrossModuleMutationProcessor(
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
             var current = await dbContext.Set<ProjectCrossModuleMutationRecord>()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.Id == mutationId, cancellationToken);
@@ -216,7 +219,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     internal async Task<bool> TryClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)
@@ -271,7 +274,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private Task ExecuteCommittedMutationAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         CancellationToken cancellationToken)
@@ -304,13 +307,13 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task DeleteSubtreeAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         DeleteSubtreeMutationPayload payload,
         CancellationToken cancellationToken)
     {
-        await DeleteAssignmentsAsync(mutation.ProjectId, payload.DeletedNodeKeys, cancellationToken);
+        await DeleteAssignmentsAsync(mutation.ProjectId, payload.DeletedNodeKeys, cancellationToken, RequireSource(payload.SourceReference, mutation.ProjectId));
         await DeleteStorageObjectsAsync(
             dbContext,
             mutation,
@@ -326,7 +329,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task DeleteProjectAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         DeleteProjectMutationPayload payload,
@@ -334,7 +337,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     {
         await projectPartyIntegrationBridge.DeleteAssignmentsForProjectAsync(
             mutation.ProjectId,
-            cancellationToken);
+            cancellationToken, RequireSource(payload.SourceReference, mutation.ProjectId));
         await DeleteStorageObjectsAsync(
             dbContext,
             mutation,
@@ -350,7 +353,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task DeleteStorageObjectsAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         ProjectCrossModuleMutationRecord mutation,
         string claimToken,
         IReadOnlyCollection<ProjectManagedStorageDeletionCandidate> candidates,
@@ -422,15 +425,22 @@ public sealed class ProjectCrossModuleMutationProcessor(
             .ToArray();
     }
 
+    private static ProjectAssignmentReference RequireSource(ProjectAssignmentReference? reference, Guid projectId) {
+        if (reference is null || reference.ProjectId != projectId || reference.LifetimeId is null) {
+            throw new InvalidOperationException("This retained mutation has no captured source lifetime and requires reconciliation before cleanup.");
+        }
+        return reference;
+    }
+
     private Task DeleteAssignmentsAsync(
         Guid projectId,
         IReadOnlyList<string> deletedNodeKeys,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, ProjectAssignmentReference sourceReference)
     {
         return projectPartyIntegrationBridge.DeleteAssignmentsForNodesAsync(
             projectId,
             BuildNodeReferences(deletedNodeKeys),
-            cancellationToken);
+            cancellationToken, sourceReference);
     }
 
     private Task MoveAssignmentsAsync(
@@ -443,11 +453,12 @@ public sealed class ProjectCrossModuleMutationProcessor(
             payload.SourceProjectId,
             BuildNodeReferences(payload.MovedNodeKeys),
             payload.TargetProjectId,
-            cancellationToken);
+            cancellationToken, RequireSource(payload.SourceReference, payload.SourceProjectId),
+            ProjectAssignmentAdmission.Require(payload.TargetProjectId, payload.ExpectedTargetAdmission));
     }
 
     private async Task RenewClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)
@@ -534,7 +545,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task PersistPayloadCheckpointAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         string payloadJson,
@@ -572,7 +583,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task<ProjectCrossModuleMutationStatus> CompleteClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)
@@ -609,7 +620,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private async Task<bool> FailClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         string safeErrorMessage,
@@ -671,7 +682,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
     }
 
     private static async Task<ProjectCrossModuleMutationRecord> GetOwnedClaimAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid mutationId,
         string claimToken,
         CancellationToken cancellationToken)

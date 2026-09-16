@@ -64,7 +64,7 @@ This host references only the lightweight UI project and renders the real AgentC
 
 Loading, empty and card states use the same components. Avatar fallback demonstrates the card's seeded image and BaseLib's explicit initials mode. A broken image URL is not the Avatar missing-value fallback contract.
 
-The original extraction and managed observation results remain in `codex/bundles/UI_AgentCatalog_01_Extraction_Sandbox_Bundle`. Fresh direct local comparison belongs to `codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle`. It separates SDK update time from local edit-to-visible latency and retains failures. A small project graph or reduced CSS size alone is not a performance result.
+See the [rendering UI boundary](../../UI/CanDoItAll.AgentFramework.UI/README.md) for current ownership and [Testing](../../../docs/testing.md) for maintained validation commands. Historical Catalog extraction and direct-watch reports are not included in this checkout. For new timing evidence, separate SDK update time from local edit-to-visible latency and retain failures. A small project graph or reduced CSS size alone is not a performance result.
 
 ## Reload context
 
@@ -80,7 +80,7 @@ The capability scenario selector has explicit named tokens in CapabilitiesSandbo
 
 The embedded baseline is the public rendering snapshot captured before Capabilities-03 extraction. Search `capa03-benchmark` for the matched three-card timing fixture. Other scenarios use small immutable samples. Clicks update only controlled sample state or the output line; they never register or invoke workspace, persistence, provider, diagnostic, chat or external endpoint services. Recovery eligibility is supplied as presentation flags, not calculated from application outcome types.
 
-Both modes use the same specimens. Fast scans the existing UI/UiSandbox/Conversations roots, with live BaseLib compiled CSS; no Module or broad Components scan root is added. Capabilities correctness, source movement, direct-watch baseline and comparison evidence belong to `codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle`. Small graph size alone is not performance proof.
+Both modes use the same specimens. Fast scans the existing UI/UiSandbox/Conversations roots, with live BaseLib compiled CSS; no Module or broad Components scan root is added. Use the capabilities specimen above for fresh correctness and direct-watch checks; its historical extraction report is not included in this checkout. Small graph size alone is not performance proof.
 
 The themes also import `Tailwind/main/component-layout-utilities.css`, the shared production compatibility rules for BaseLib Split's runtime-composed responsive classes. These rules intentionally remain unlayered to match the live BaseLib cascade. Class generation alone is insufficient here; the browser acceptance verifies actual computed FilterBar layout in both modes.
 
@@ -94,4 +94,4 @@ The scenario selector covers initial loading/failure, stale Overview, empty/read
 
 Both modes use the actual Charts components, Apex chart JavaScript/static assets, isolated Overview CSS, real consumer avatars, icons and tooltips. The Overview controls reserve the observed full-app top offset so its 1600x1000 comparison uses the same rendered chart frame. Small viewports and long labels are separate browser checks.
 
-Overview-specific direct-watch measurements and exact probe/restoration evidence belong to `codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/O03`. Historical Catalog/Capabilities timings are not Overview measurements.
+Record new Overview direct-watch measurements against this specimen, including exact probes and source restoration. The historical Overview evidence is not included in this checkout. Catalog/Capabilities timings are not Overview measurements.

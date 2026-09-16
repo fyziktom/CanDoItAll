@@ -1,7 +1,7 @@
 @using CanDoItAll.Modules.Projects
 @inject IProjectRecordQueryService ProjectRecordQueryService
 
-<PagedRecordPickerDialog TKey="Guid"
+<PagedRecordPickerDialog TKey="ProjectRecordPickerSelection"
                          TFilter="ProjectRecordScope"
                          IsOpen="@IsOpen"
                          Loader="LoadPageAsync"
@@ -9,7 +9,7 @@
                          FilterOptions="@ScopeOptions"
                          ShowTagFilter="false"
                          InitialSelection="@InitialSelection"
-                         SelectionConfirmed="@SelectionConfirmed"
+                         SelectionConfirmed="ConfirmSelectionAsync"
                          OnClose="@OnClose"
                          LoadFailed="@LoadFailed"
                          Eyebrow="Projects"
@@ -42,10 +42,16 @@
     public Guid? SelectedProjectId { get; set; }
 
     [Parameter]
+    public Guid? SelectedProjectLifetimeId { get; set; }
+
+    [Parameter]
     public ProjectRecordScope InitialScope { get; set; } = ProjectRecordScope.Open;
 
     [Parameter]
     public EventCallback<Guid> SelectionConfirmed { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectRecordPickerSelection> SnapshotConfirmed { get; set; }
 
     [Parameter]
     public EventCallback OnClose { get; set; }
@@ -62,11 +68,11 @@
     [Parameter]
     public string DataTestId { get; set; } = "crmhr-project-picker";
 
-    private PagedRecordSelection<Guid>? InitialSelection => SelectedProjectId.HasValue
-        ? new PagedRecordSelection<Guid>(SelectedProjectId.Value)
+    private PagedRecordSelection<ProjectRecordPickerSelection>? InitialSelection => SelectedProjectId.HasValue
+        ? new PagedRecordSelection<ProjectRecordPickerSelection>(new(SelectedProjectId.Value, SelectedProjectLifetimeId))
         : null;
 
-    private async Task<PagedRecordPage<Guid>> LoadPageAsync(
+    private async Task<PagedRecordPage<ProjectRecordPickerSelection>> LoadPageAsync(
         PagedRecordRequest<ProjectRecordScope> request,
         CancellationToken cancellationToken)
     {
@@ -83,17 +89,27 @@
                 request.PageSize),
             cancellationToken);
 
-        return new PagedRecordPage<Guid>(
+        return new PagedRecordPage<ProjectRecordPickerSelection>(
             result.Items.Select(ToOption).ToList(),
             result.PageIndex,
             result.PageSize,
             result.TotalCount);
     }
 
-    private static PagedRecordOption<Guid> ToOption(ProjectRecordQueryItem project)
+    private async Task ConfirmSelectionAsync(ProjectRecordPickerSelection selection) {
+        if (SnapshotConfirmed.HasDelegate) {
+            if (selection.LifetimeId is null) {
+                throw new InvalidOperationException("Select a project row from the current picker results before confirming.");
+            }
+            await SnapshotConfirmed.InvokeAsync(selection);
+        }
+        await SelectionConfirmed.InvokeAsync(selection.ProjectId);
+    }
+
+    private static PagedRecordOption<ProjectRecordPickerSelection> ToOption(ProjectRecordQueryItem project)
     {
-        return new PagedRecordOption<Guid>(
-            project.Id,
+        return new PagedRecordOption<ProjectRecordPickerSelection>(
+            new(project.Id, project.LifetimeId),
             project.Name,
             project.Status.ToString())
         {

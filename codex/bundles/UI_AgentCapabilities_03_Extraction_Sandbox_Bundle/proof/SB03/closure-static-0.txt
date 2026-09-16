@@ -1,6 +1,0 @@
-Scanned files: 6369
-Findings: 43651
-JSON: C:\repositories\CanDoItAll\.mcp-state\capa03\closure-portability.json
-CSV: C:\repositories\CanDoItAll\.mcp-state\capa03\closure-portability.csv
-Markdown: C:\repositories\CanDoItAll\.mcp-state\capa03\closure-portability.md
-RESULT: PASS

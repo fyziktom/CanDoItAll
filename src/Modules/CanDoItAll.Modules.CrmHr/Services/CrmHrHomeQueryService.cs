@@ -42,7 +42,7 @@ public interface ICrmHrHomeQueryService
 }
 
 public sealed class CrmHrHomeQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory) : ICrmHrHomeQueryService
+    IDbContextFactory<CrmHrDbContext> dbContextFactory) : ICrmHrHomeQueryService
 {
     public async Task<CrmHrHomeSnapshotModel> GetAsync(
         CancellationToken cancellationToken = default)

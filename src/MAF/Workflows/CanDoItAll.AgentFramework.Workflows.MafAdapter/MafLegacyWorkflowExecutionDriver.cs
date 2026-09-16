@@ -400,7 +400,9 @@ internal sealed class MafLegacyWorkflowExecutionDriver
         using var progressScope = WorkflowNodeExecutionProgressScope.Push(progressObserver);
         return await InProcessExecution.RunAsync(
             workflow,
-            new WorkflowNodeInput(request.InputJson),
+            new WorkflowNodeInput(request.InputJson) {
+                ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId)
+            },
             runId.ToString(),
             cancellationToken);
     }

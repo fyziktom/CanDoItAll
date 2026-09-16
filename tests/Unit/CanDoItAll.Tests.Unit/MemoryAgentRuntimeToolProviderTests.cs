@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Memory.Abstractions;
@@ -13,6 +14,152 @@ namespace CanDoItAll.Tests.Unit.Memory;
 public sealed class MemoryAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = new(JsonSerializerDefaults.Web);
+
+    [Fact]
+    public void Registration_supplies_the_existing_two_read_policies_once_to_the_real_runtime_catalog() {
+        var services = new ServiceCollection();
+        services.AddAgentFrameworkMemory();
+        services.AddAgentFrameworkMemory();
+        using var provider = services.BuildServiceProvider();
+        var policies = provider.GetRequiredService<AgentToolPolicyCatalog>();
+        Assert.Equal(2, services.Count(descriptor => descriptor.ServiceType == typeof(ToolCapabilityMetadata)));
+        foreach (var name in new[] { MemoryAgentRuntimeToolNames.ContextQuery, MemoryAgentRuntimeToolNames.OperationStatus }) {
+            Assert.True(policies.TryResolve(name, out var policy));
+            Assert.Equal(ToolInvocationClassification.Read, policy.Classification);
+            Assert.False(policy.RequiresApprovalByDefault);
+            Assert.False(policy.IsStateChanging);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cached_result_uses_original_read_capability_and_current_owner_without_query_dispatch(bool statusTool) {
+        var (provider, handler, context, operation, disclosure) = CreateDisclosureFixture(statusTool);
+        var callback = provider.GetToolMetadata(context).Single(item => item.ToolName == disclosure.Payload.ToolName).AuthorizeResultDisclosureAsync!;
+        await ObserveDisclosureAsync(callback, disclosure);
+        var request = Assert.Single(handler.StatusRequests);
+        Assert.Equal(statusTool ? MemoryCapabilityIds.OperationStatus : MemoryCapabilityIds.ContextQuerySync,
+            request.SelectionPolicy.RequiredCapability);
+        Assert.Equal(operation.OperationId, request.Payload.OperationId);
+        Assert.Equal(operation.Requester, request.Caller.Requester);
+        Assert.Equal(operation.ProviderInstanceId, request.SelectionPolicy.ExplicitProviderId);
+        Assert.Empty(handler.QueryRequests);
+        Assert.Empty(handler.SourceCaptureRequests);
+
+        var original = handler.StatusResult!;
+        handler.StatusResult = original with { Status = MemoryOperationHandlerStatus.AccessDenied, OperationRecord = null, Output = null };
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await ObserveDisclosureAsync(callback, disclosure));
+        handler.StatusResult = original;
+        await ObserveDisclosureAsync(callback, disclosure);
+        Assert.Equal(3, handler.StatusRequests.Count);
+        Assert.Empty(handler.QueryRequests);
+        Assert.Equal(AgentToolEffectState.Unknown, disclosure.EffectState);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cached_result_rechecks_provider_grants_source_scope_and_original_workspace(bool statusTool) {
+        var (provider, handler, context, operation, disclosure) = CreateDisclosureFixture(statusTool);
+        var access = AgentMemoryAccessMetadata.Read(context.Agent.ConfigurationJson);
+        access.AllowedCapabilityIds = [MemoryCapabilityIds.IngestionSnapshot];
+        var deniedAgent = context.Agent with {
+            ConfigurationJson = AgentMemoryAccessMetadata.Write(context.Agent.ConfigurationJson, access)
+        };
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await Authorize(context with { Agent = deniedAgent }));
+        Assert.Empty(handler.StatusRequests);
+        access = AgentMemoryAccessMetadata.Read(context.Agent.ConfigurationJson);
+        access.AllowedSourceScopes = [];
+        var narrowed = context.Agent with {
+            ConfigurationJson = AgentMemoryAccessMetadata.Write(context.Agent.ConfigurationJson, access)
+        };
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await Authorize(context with { Agent = narrowed }));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await Authorize(context with {
+            ContextIntent = context.ContextIntent with { WorkspaceScope = WorkspaceScopeDescriptor.Project("different-project") }
+        }));
+        await Authorize(context);
+        Assert.Equal(operation.OperationId, handler.StatusRequests.Last().Payload.OperationId);
+        Assert.Empty(handler.QueryRequests);
+        Assert.Empty(handler.SourceCaptureRequests);
+
+        Task Authorize(AgentRuntimeToolProviderContext current)
+            => ObserveDisclosureAsync(provider.GetToolMetadata(current).Single(item => item.ToolName == disclosure.Payload.ToolName)
+                .AuthorizeResultDisclosureAsync!, disclosure);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cached_result_rejects_missing_or_different_owner_operation_without_replacing_saved_result(bool statusTool) {
+        var (provider, handler, context, _, disclosure) = CreateDisclosureFixture(statusTool);
+        var callback = provider.GetToolMetadata(context).Single(item => item.ToolName == disclosure.Payload.ToolName).AuthorizeResultDisclosureAsync!;
+        var original = handler.StatusResult!;
+        var resultJson = disclosure.Result.GetRawText();
+        handler.StatusResult = original with { OperationRecord = null };
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await ObserveDisclosureAsync(callback, disclosure));
+        handler.StatusResult = original with { OperationRecord = original.OperationRecord! with { OperationId = MemoryOperationId.New() } };
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await ObserveDisclosureAsync(callback, disclosure));
+        handler.StatusResult = original;
+        await ObserveDisclosureAsync(callback, disclosure);
+        Assert.Equal(resultJson, disclosure.Result.GetRawText());
+        Assert.Empty(handler.QueryRequests);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cached_read_without_canonical_authority_is_explicitly_unavailable_while_fresh_tools_remain_attached(bool statusTool) {
+        var (_, handler, context, _, disclosure) = CreateDisclosureFixture(statusTool);
+        var provider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
+        Assert.NotEmpty(await provider.CreateToolsAsync(context, default));
+        var callback = provider.GetToolMetadata(context).Single(item => item.ToolName == disclosure.Payload.ToolName)
+            .AuthorizeResultDisclosureAsync!;
+        var denied = await Assert.ThrowsAsync<AgentToolAdmissionException>(async () => await callback(disclosure, default));
+        Assert.Equal("memory.result-authority-unavailable", denied.Code);
+        Assert.Empty(handler.StatusRequests);
+        Assert.Empty(handler.QueryRequests);
+    }
+
+    private static (MemoryAgentRuntimeToolProvider Provider, RecordingMemoryOperationHandler Handler,
+        AgentRuntimeToolProviderContext Context, MemoryOperationRecord Operation, AgentToolResultDisclosure Disclosure)
+        CreateDisclosureFixture(bool statusTool) {
+        var access = new AgentMemoryAccessSettings {
+            InvocationMode = AgentMemoryInvocationMode.Automatic, CanUseMemoryTools = true,
+            ProviderBindings = [Binding("memory.programming")], AllowedSourceScopes = [MemorySourceScope.Manual],
+            AllowedCapabilityIds = [statusTool ? MemoryCapabilityIds.OperationStatus : MemoryCapabilityIds.ContextQuerySync]
+        };
+        var context = CreateContext(CreateAgent(access)) with {
+            AdmittedToolSession = new(Guid.NewGuid(), Guid.NewGuid(), AgentExecutionAuthorityId.Create())
+        };
+        var operation = MemoryOperationRecord.Create(MemoryOperationRecordId.New(), MemoryOperationId.New(),
+            MemoryProviderInstanceId.Parse("memory.programming"), MemoryCapabilityIds.ContextQuerySync, MemoryOperationKind.ContextQuery,
+            new(context.Agent.Id.ToString("D"), context.Agent.Id.ToString("D"), context.Agent.Workload.ToString(),
+                context.RuntimeSessionKey, "workflow-a", null, "process-a", null),
+            MemoryCorrelationId.New(), MemoryCausationId.New(), [], MemoryMafRetentionPolicyFactory.Create(TimeProvider.System), DateTimeOffset.UtcNow);
+        var originalContext = MemoryRequestContext.Default with {
+            Workspace = new("project-a", "Project", null, WorkspaceScopeKind.Project.ToString(), []),
+            Execution = new("project-a", null, "process-a", null, null, "workflow-a", null, []),
+            Policy = MemoryPolicyContext.InternalDefault with { AllowedSourceScopes = [MemorySourceScope.Manual] }
+        };
+        operation = operation with { Extensions = operation.Extensions.WithMemoryRequestContext(operation, originalContext) };
+        var query = RecordingMemoryOperationHandler.CompletedQuery("Saved context", "Saved private body") with { OperationRecord = operation };
+        var status = new MemoryOperationHandlerResult<MemoryOperationRecord>(MemoryOperationHandlerStatus.Completed,
+            query.Selection, operation, operation, null, null, false, "Current operation read.");
+        var handler = new RecordingMemoryOperationHandler { StatusResult = status };
+        var session = new AgentToolSessionAdmission(context.AdmittedToolSession!, context.Agent.Id,
+            AgentRuntimeContextPurpose.InteractiveChat, new(Guid.NewGuid(), "memory-fixture", new(1)));
+        var provider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System,
+            new DisclosureCatalog(context.Agent, session.Profile.ProfileId), new DisclosureAdmission(session));
+        var name = statusTool ? MemoryAgentRuntimeToolNames.OperationStatus : MemoryAgentRuntimeToolNames.ContextQuery;
+        object input = statusTool ? new MemoryOperationStatusToolInput(operation.OperationId.Value) : new MemoryContextQueryToolInput("Original query");
+        object result = statusTool ? MemoryMafToolResultShaper.ToStatusResult(status) : MemoryMafToolResultShaper.ToQueryResult(query);
+        var json = JsonSerializer.Serialize(new { input }, FunctionResultJsonOptions);
+        var payload = new AgentToolPreparedPayload(name, 1, AgentToolProtocolEnvelope.ComputeDigest(json), json,
+            AgentToolProposalEffect.Read, AgentToolProposalRecovery.RevalidateAndRead);
+        return (provider, handler, context, operation,
+            new(new(Guid.NewGuid()), payload, AgentToolEffectState.Unknown, JsonSerializer.SerializeToElement(result, FunctionResultJsonOptions)));
+    }
 
     [Fact]
     public async Task CreateToolsAsync_returns_memory_tools_and_metadata_when_agent_is_allowed()
@@ -440,6 +587,39 @@ public sealed class MemoryAgentRuntimeToolProviderTests
             now);
     }
 
+    private static async Task ObserveDisclosureAsync(
+        Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>> authorize, AgentToolResultDisclosure disclosure) {
+        await using var held = await authorize(disclosure, CancellationToken.None);
+    }
+
+    private sealed class DisclosureCatalog(AgentDefinition agent, Guid profileId) : IAgentCatalogReadLeaseStore {
+        public Task<IAgentCatalogReadLease> AcquireAgentReadLeaseAsync(Guid agentId, CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            Assert.Equal(agent.Id, agentId);
+            return Task.FromResult<IAgentCatalogReadLease>(new Lease(agent, profileId));
+        }
+
+        private sealed class Lease(AgentDefinition agent, Guid profileId) : IAgentCatalogReadLease {
+            public WorkspaceScopeDescriptor Scope => WorkspaceScopeDescriptor.Organization(profileId.ToString("N"));
+            public CatalogDataRevision Revision => CatalogDataRevision.Initial;
+            public AgentDefinition? Agent => agent;
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class DisclosureAdmission(AgentToolSessionAdmission session) : IAgentToolAdmissionVerifier {
+        public ValueTask<AgentToolSessionAdmission> RequireSessionAsync(AgentToolSessionReference reference,
+            CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            Assert.Equal(session.Reference, reference);
+            return ValueTask.FromResult(session);
+        }
+
+        public ValueTask<AgentToolAdmittedInvocation> RequireInvocationAsync(AgentToolSessionReference reference, string toolName,
+            AgentToolSemanticDigest digest, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Cached result authorization must not claim a new effect.");
+    }
+
     private sealed class RecordingMemoryOperationHandler : IMemoryOperationHandler
     {
         private static readonly MemoryProviderProfile ProgrammingProvider = CreateProvider("memory.programming");
@@ -450,6 +630,9 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         public List<MemoryOperationHandlerRequest<MemoryContextQueryRequest>> QueryRequests { get; } = [];
 
         public List<MemoryOperationHandlerRequest<MemorySourceCaptureOperationRequest>> SourceCaptureRequests { get; } = [];
+
+        public MemoryOperationHandlerResult<MemoryOperationRecord>? StatusResult { get; set; }
+        public List<MemoryOperationHandlerRequest<MemoryOperationStatusRequest>> StatusRequests { get; } = [];
 
         public MemoryOperationHandlerRequest<MemoryContextQueryRequest>? LastQuery => QueryRequests.LastOrDefault();
 
@@ -585,7 +768,11 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         public Task<MemoryOperationHandlerResult<MemoryOperationRecord>> GetStatusAsync(
             MemoryOperationHandlerRequest<MemoryOperationStatusRequest> request,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            StatusRequests.Add(request);
+            return Task.FromResult(StatusResult ?? throw new NotSupportedException());
+        }
 
         public Task<MemoryOperationHandlerResult<MemoryOperationRecord>> CancelAsync(
             MemoryOperationHandlerRequest<MemoryOperationCancellationRequest> request,

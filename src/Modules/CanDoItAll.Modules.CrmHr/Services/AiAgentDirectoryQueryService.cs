@@ -76,7 +76,7 @@ public sealed class AiAgentDirectoryQueryService : IAiAgentDirectoryQueryService
     private static readonly AgentReferenceDataRequest ReferenceDataRequest =
         AgentReferenceDataRequest.AgentsAndProviders(false);
 
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<CrmHrDbContext> dbContextFactory;
     private readonly IAiTechnicalAgentBridge technicalAgentBridge;
     private readonly IAgentReferenceDataProvider referenceDataProvider;
     private readonly IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator;
@@ -86,7 +86,7 @@ public sealed class AiAgentDirectoryQueryService : IAiAgentDirectoryQueryService
     private bool disposed;
 
     public AiAgentDirectoryQueryService(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<CrmHrDbContext> dbContextFactory,
         IAiTechnicalAgentBridge technicalAgentBridge,
         IAgentReferenceDataProvider referenceDataProvider,
         IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator)

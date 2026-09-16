@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -109,10 +110,11 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
         var service = new ProcessRuntimeToolPreflightService(
             [new CapabilityBoundRuntimeToolProvider(
-                AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+                WorkflowToolPolicy.WorkflowsDefinitionsList,
                 capability.Id)],
             [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             AvailableHostCapabilities);
         var resolverCalls = 0;
 
@@ -120,7 +122,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             new ProcessRuntimeToolPreflightRequest(
                 assignment,
                 agent,
-                [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+                [WorkflowToolPolicy.WorkflowsDefinitionsList],
                 CapabilityCatalogResolver: _ =>
                 {
                     resolverCalls++;
@@ -132,6 +134,38 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         Assert.Equal(1, resolverCalls);
         Assert.Empty(result.MissingToolNames);
         Assert.Empty(result.CapabilityDiagnostics);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_asks_providers_for_a_tool_inventory_without_an_execution_identity()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.ReadProcessContext, ProcessOperationContractNames.ExecuteExternalAction],
+            ProcessOperationContractNames.ExternalActionControlled);
+        var runtimeProvider = new InventoryObservingRuntimeToolProvider("tests_inventory_tool");
+        var service = new ProcessRuntimeToolPreflightService(
+            [runtimeProvider],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
+            AvailableHostCapabilities);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["tests_inventory_tool"],
+                []),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        var context = Assert.Single(runtimeProvider.Contexts);
+        Assert.True(context.ToolInventoryOnly);
+        Assert.Equal(AgentRuntimeToolProviderPurpose.GovernedProcessAutomation, context.Purpose);
+        Assert.Null(context.AdmittedToolSession);
+        Assert.Equal(assignment.AllowedOperations, context.ContextIntent.AllowedOperations);
     }
 
     [Fact]
@@ -152,26 +186,27 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ["tests"],
             [AgentRuntimeToolProviderPurpose.InteractiveChat]);
         var runtimeProvider = new CapabilityBoundRuntimeToolProvider(
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+            WorkflowToolPolicy.WorkflowsDefinitionsList,
             capability.Id,
             descriptor);
         var service = new ProcessRuntimeToolPreflightService(
             [runtimeProvider],
             [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             AvailableHostCapabilities);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
                 assignment,
                 agent,
-                [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+                [WorkflowToolPolicy.WorkflowsDefinitionsList],
                 [capability]),
             CancellationToken.None);
 
         Assert.False(result.IsSatisfied);
         Assert.Equal(
-            [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+            [WorkflowToolPolicy.WorkflowsDefinitionsList],
             result.MissingToolNames);
         Assert.Equal(0, runtimeProvider.InvocationCount);
     }
@@ -191,13 +226,14 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [],
             [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             AvailableHostCapabilities);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
                 assignment,
                 agent,
-                [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+                [WorkflowToolPolicy.WorkflowsDefinitionsList],
                 CapabilityCatalog: []),
             CancellationToken.None);
 
@@ -220,23 +256,24 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
         var service = new ProcessRuntimeToolPreflightService(
             [new CapabilityBoundRuntimeToolProvider(
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                WorkflowToolPolicy.WorkflowsRunStart,
                 capability.Id)],
             [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             AvailableHostCapabilities);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
                 assignment,
                 agent,
-                [AgentToolInvocationPolicyMetadata.WorkflowsRunStart],
+                [WorkflowToolPolicy.WorkflowsRunStart],
                 [capability]),
             CancellationToken.None);
 
         Assert.False(result.IsSatisfied);
         Assert.Equal(
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunStart],
+            [WorkflowToolPolicy.WorkflowsRunStart],
             result.MissingToolNames);
         Assert.Empty(result.CapabilityDiagnostics);
     }
@@ -322,6 +359,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [],
             [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             hostCapabilities);
         var resolverCalls = 0;
 
@@ -362,6 +400,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [],
             [],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             hostCapabilities);
 
         var result = await service.EvaluateHostCapabilitiesAsync(
@@ -397,6 +436,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [],
             [],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             hostCapabilities);
 
         var result = await service.EvaluateHostCapabilitiesAsync(
@@ -423,7 +463,8 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         var service = new ProcessRuntimeToolPreflightService(
             [],
             [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
-            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -637,6 +678,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [
                 new BrowserRuntimeToolPreflightContribution()
             ]),
+            ProductToolPolicies,
             snapshotProvider);
 
         var result = await service.EvaluateAsync(
@@ -1211,6 +1253,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [
                 new BrowserRuntimeToolPreflightContribution()
             ]),
+            ProductToolPolicies,
             hostCapabilities ?? AvailableHostCapabilities);
     }
 
@@ -1220,6 +1263,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [],
             [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            ProductToolPolicies,
             AvailableHostCapabilities);
     }
 
@@ -1524,6 +1568,33 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                     }
                 })
         };
+    }
+
+    private sealed class InventoryObservingRuntimeToolProvider(string toolName) : IAgentRuntimeToolProvider
+    {
+        public int Order => 1;
+
+        public List<AgentRuntimeToolProviderContext> Contexts { get; } = [];
+
+        public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(
+            AgentRuntimeToolProviderContext context,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Contexts.Add(context);
+            if (!context.ToolInventoryOnly)
+            {
+                throw new InvalidOperationException("The preflight has no saved execution identity for actual tools.");
+            }
+
+            return ValueTask.FromResult<IReadOnlyList<AITool>>(
+            [
+                AIFunctionFactory.Create(
+                    () => "inventory",
+                    toolName,
+                    "Test inventory-only runtime tool.")
+            ]);
+        }
     }
 
     private sealed class CapabilityBoundRuntimeToolProvider(

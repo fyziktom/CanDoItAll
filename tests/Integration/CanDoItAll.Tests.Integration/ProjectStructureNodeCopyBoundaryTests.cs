@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -40,7 +41,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
         var before = await capture.CaptureAsync(projectId);
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var copyTool = Assert.IsAssignableFrom<AIFunction>(
-            Assert.Single(tools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy));
+            Assert.Single(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureNodesCopy));
         var requiredRequestProperties = copyTool.JsonSchema
             .GetProperty("properties")
             .GetProperty("request")
@@ -53,8 +54,8 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
         Assert.Contains("destinationParentNodeId", requiredRequestProperties);
         Assert.Equal(
             ToolInvocationClassification.Mutation,
-            AgentToolInvocationPolicyMetadata.Classify(copyTool.Name));
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(copyTool.Name));
+            AgentToolInvocationPolicyMetadata.Classify(copyTool.Name, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(copyTool.Name, ProductToolPolicies));
 
         var missingSource = await Assert.ThrowsAsync<ProjectStructureAgentException>(
             () => InvokeAsync<ProjectStructureNodesCopyResult>(
@@ -239,7 +240,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
         var before = await capture.CaptureAsync(projectId);
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var copyTool = Assert.IsAssignableFrom<AIFunction>(
-            Assert.Single(tools, tool => tool.Name == AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy));
+            Assert.Single(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureNodesCopy));
 
         var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
             () => InvokeAsync<ProjectStructureNodesCopyResult>(
@@ -485,9 +486,9 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
             .GetServices<IAgentRuntimeToolProvider>()
             .OfType<ProjectStructureAgentRuntimeToolProvider>()
             .Single();
-        var agent = CreateAgent(projectId);
+        var agent = await CreateAgentAsync(services, projectId);
         var providerProfile = new ProviderProfile(
-            agent.ProviderProfileId!.Value,
+            Guid.NewGuid(),
             "Node-copy integration provider",
             ProviderKind.OpenAi,
             "https://api.openai.com",
@@ -523,39 +524,46 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
             CancellationToken.None);
     }
 
-    private static AgentDefinition CreateAgent(Guid projectId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var configurationJson = AgentProjectStructureAccessMetadata.Write(
-            "{}",
-            new AgentProjectStructureAccessSettings
-            {
+    private static async Task<AgentDefinition> CreateAgentAsync(IServiceProvider services, Guid projectId) {
+        var admission = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId);
+        Assert.NotNull(admission);
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agentId = await workspace.SaveAgentAsync(new AgentEditorModel {
+            Name = "Node Copy Integration Agent",
+            RoleTitle = "Project architect",
+            Summary = "Exercises the governed project-structure copy boundary.",
+            Instructions = "Copy only the explicit selected forest under the explicit destination.",
+            Status = AgentLifecycleStatus.Active,
+            Model = "gpt-5-mini",
+            Workload = AgentWorkloadKind.General,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            Temperature = 0.2,
+            RequirePerServiceCallChatHistoryPersistence = false,
+            EnableBackgroundResponses = false,
+            ConfigurationJson = "{}",
+            Permissions = AgentPermissionsPolicy.Default,
+            ProjectStructureAccess = new() {
                 CanRead = true,
+                CanWrite = false,
                 CanWriteNonTaskStructure = true,
+                CanWriteTasks = false,
+                AllowAllProjects = false,
                 AllowedProjectIds = [projectId]
-            });
-        return new AgentDefinition(
-            Guid.NewGuid(),
-            "Node Copy Integration Agent",
-            "Project architect",
-            "Exercises the governed project-structure copy boundary.",
-            "Copy only the explicit selected forest under the explicit destination.",
-            AgentLifecycleStatus.Active,
-            Guid.NewGuid(),
-            "gpt-5-mini",
-            AgentWorkloadKind.General,
-            AgentChatHistoryMode.ProviderDefault,
-            0.2,
-            RequirePerServiceCallChatHistoryPersistence: false,
-            EnableBackgroundResponses: false,
-            configurationJson,
-            IsTemplate: false,
-            TemplateKey: string.Empty,
-            AgentPermissionsPolicy.Default,
-            [],
-            [],
-            now,
-            now);
+            }
+        });
+        var agent = Assert.Single(await workspace.ListAgentsAsync(), item => item.Id == agentId);
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        Assert.Equal(projectId, Assert.Single(access.AllowedProjectIds));
+        var binding = Assert.Single(access.AllowedProjectLifetimes);
+        Assert.Equal(admission.DatabaseProfileId, binding.DatabaseProfileId);
+        Assert.Equal(admission.ProjectId, binding.ProjectId);
+        Assert.Equal(admission.LifetimeId, binding.LifetimeId);
+        Assert.True(access.CanRead);
+        Assert.True(access.CanWriteNonTaskStructure);
+        Assert.False(access.CanWrite);
+        Assert.False(access.CanWriteTasks);
+        Assert.False(access.AllowAllProjects);
+        return agent;
     }
 
     private static async Task<T> InvokeAsync<T>(AITool tool, AIFunctionArguments arguments)

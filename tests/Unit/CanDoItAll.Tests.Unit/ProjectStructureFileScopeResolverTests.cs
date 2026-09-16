@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -286,7 +287,7 @@ public sealed class ProjectStructureFileScopeResolverTests
 
         Assert.Equal(ResolverFixture.StorageId, binding.StorageId);
         Assert.Equal(
-            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+            WorkspaceScopeDescriptor.Organization(ProcessFileRoots.ProfileId.ToString("N"))
                 .CombineArtifactPath("process-runs", runId.ToString("D")),
             binding.Root.Value);
         Assert.Equal(FileToolsHostBrowseCacheMode.Disabled, binding.HostCacheMode);
@@ -294,7 +295,7 @@ public sealed class ProjectStructureFileScopeResolverTests
     }
 
     [Fact]
-    public async Task ResolveNodeCollectionAsync_maps_projected_product_output_to_the_project_output_scope()
+    public async Task ResolveNodeCollectionAsync_uses_the_Process_owners_exact_product_output_scope()
     {
         Guid runId = Guid.NewGuid();
         string root = $"output/process-runs/{runId:D}/Calculator";
@@ -306,7 +307,7 @@ public sealed class ProjectStructureFileScopeResolverTests
         FileToolsStorageBinding binding = Assert.Single(await fixture.Sut.ResolveAsync(scope));
 
         Assert.Equal(
-            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+            WorkspaceScopeDescriptor.Organization(ProcessFileRoots.ProfileId.ToString("N"))
                 .CombineOutputPath("process-runs", runId.ToString("D"), "Calculator"),
             binding.Root.Value);
     }
@@ -426,14 +427,33 @@ public sealed class ProjectStructureFileScopeResolverTests
         return ProjectWorkbenchNodeMapper.MapStructureNode(record);
     }
 
+    private sealed class ProcessFileRoots(Guid expectedProjectId) : IProcessRunFileScopeProvider {
+        public static readonly Guid ProfileId = Guid.Parse("b7dbe7b7-d62f-4815-a2f2-a2d46d1f8c80");
+        public ValueTask<ProcessRunFileScopeSet> ResolveAsync(Guid runId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public ValueTask<FileToolsStorageBinding> ResolveRootAsync(Guid runId, string directoryPath, Guid projectId,
+            CancellationToken cancellationToken = default) {
+            Assert.Equal(expectedProjectId, projectId);
+            Assert.Contains(runId.ToString("D"), directoryPath, StringComparison.Ordinal);
+            var scope = WorkspaceScopeDescriptor.Organization(ProfileId.ToString("N"));
+            var root = directoryPath.StartsWith("artifacts/", StringComparison.Ordinal)
+                ? scope.ArtifactRootRelativePath + directoryPath["artifacts".Length..]
+                : scope.OutputRootRelativePath + directoryPath["output".Length..];
+            return ValueTask.FromResult(new FileToolsStorageBinding(ResolverFixture.StorageId, "Original Process files",
+                new(50, 2_000, 50, 1, TimeSpan.FromSeconds(5)), new(root), FileToolsHostBrowseCacheMode.Disabled));
+        }
+    }
+
     private sealed class ResolverFixture : IAsyncDisposable
     {
         public static readonly Guid StorageId = Guid.Parse("4a94a2c2-c6df-41ac-91ce-d5c851995303");
-        private readonly DbContextOptions<AppDbContext> options;
+        private readonly DbContextOptions<WorkbenchDbContext> options;
         private readonly MutableProjectionContributor? projectionContributor;
 
         private ResolverFixture(
-            DbContextOptions<AppDbContext> options,
+            DbContextOptions<WorkbenchDbContext> options,
+            string databaseName,
             Guid projectId,
             string nodeKey,
             MutableProjectionContributor? projectionContributor = null)
@@ -447,8 +467,12 @@ public sealed class ProjectStructureFileScopeResolverTests
                 : [projectionContributor];
             Sut = new ProjectStructureFileScopeResolver(
                 new TestDbContextFactory(options),
-                new ProjectStructureAssemblyService(projectionContributors, new SystemClock()),
-                new StaticStorageCatalog(CreateStorage(isReadOnly: false)));
+                new ProjectStructureAssemblyService(new TestDbContextFactory(options), projectionContributors, new SystemClock(),
+                    CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+                        new() { ProviderKind = DatabaseProviderKind.InMemory },
+                        DatabaseProfileResolutionSource.ExplicitOverride,
+                        databaseName))),
+                new StaticStorageCatalog(CreateStorage(isReadOnly: false)), new ProcessFileRoots(projectId));
         }
 
         public Guid ProjectId { get; }
@@ -485,12 +509,13 @@ public sealed class ProjectStructureFileScopeResolverTests
             bool preserveUnvalidatedReference)
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"project-structure-file-scope-{Guid.NewGuid():N}")
+            var databaseName = $"project-structure-file-scope-{Guid.NewGuid():N}";
+            var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
+                .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = $"node:{Guid.NewGuid():N}";
-            await using var dbContext = new AppDbContext(options);
+            await using var dbContext = new WorkbenchDbContext(options);
             var node = new ProjectObjectRecord
             {
                 Id = Guid.NewGuid(),
@@ -515,18 +540,19 @@ public sealed class ProjectStructureFileScopeResolverTests
             }
 
             await dbContext.SaveChangesAsync();
-            return new ResolverFixture(options, projectId, nodeKey);
+            return new ResolverFixture(options, databaseName, projectId, nodeKey);
         }
 
         public static async Task<ResolverFixture> CreateCollectionAsync(string prefix)
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"project-structure-file-collection-{Guid.NewGuid():N}")
+            var databaseName = $"project-structure-file-collection-{Guid.NewGuid():N}";
+            var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
+                .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = $"node:{Guid.NewGuid():N}";
-            await using var dbContext = new AppDbContext(options);
+            await using var dbContext = new WorkbenchDbContext(options);
             var node = new ProjectObjectRecord
             {
                 Id = Guid.NewGuid(),
@@ -550,7 +576,7 @@ public sealed class ProjectStructureFileScopeResolverTests
                 ReferenceId = StorageId.ToString("D")
             });
             await dbContext.SaveChangesAsync();
-            return new ResolverFixture(options, projectId, nodeKey);
+            return new ResolverFixture(options, databaseName, projectId, nodeKey);
         }
 
         public static Task<ResolverFixture> CreateProjectedCollectionAsync(
@@ -559,8 +585,9 @@ public sealed class ProjectStructureFileScopeResolverTests
             Guid? artifactId = null)
         {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
-            var options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"project-structure-projected-file-collection-{Guid.NewGuid():N}")
+            var databaseName = $"project-structure-projected-file-collection-{Guid.NewGuid():N}";
+            var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
+                .UseInMemoryDatabase(databaseName)
                 .Options;
             Guid projectId = Guid.NewGuid();
             string nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId, root);
@@ -585,12 +612,12 @@ public sealed class ProjectStructureFileScopeResolverTests
                     artifactId ?? runId),
                 ParentNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId)
             });
-            return Task.FromResult(new ResolverFixture(options, projectId, nodeKey, contributor));
+            return Task.FromResult(new ResolverFixture(options, databaseName, projectId, nodeKey, contributor));
         }
 
         public async ValueTask DisposeAsync()
         {
-            await using var dbContext = new AppDbContext(options);
+            await using var dbContext = new WorkbenchDbContext(options);
             await dbContext.Database.EnsureDeletedAsync();
         }
     }
@@ -613,12 +640,12 @@ public sealed class ProjectStructureFileScopeResolverTests
         }
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
+    private sealed class TestDbContextFactory(DbContextOptions<WorkbenchDbContext> options)
+        : IDbContextFactory<WorkbenchDbContext>
     {
-        public AppDbContext CreateDbContext() => new(options);
+        public WorkbenchDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(CreateDbContext());
     }
 
@@ -705,26 +732,55 @@ public sealed class ProjectStructureFileScopeResolverTests
 
     private sealed class StaticStorageCatalog(StorageCatalogRecord storage) : IStorageCatalogService
     {
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+        private Task<IReadOnlyList<StorageCatalogRecord>> ReadRecordsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([storage]);
 
-        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord?> ReadRecordAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult(id == storage.Id ? storage : null);
 
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> ReadBootstrapRecordAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(storage);
 
-        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> SaveRecordAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
             => Task.FromResult(record);
 
         public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+        internal Task<IReadOnlyList<StorageRoutingRule>> ReadRoutingRecordsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
 
-        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+        private Task<StorageRoutingRule> SaveRoutingRecordAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
             => Task.FromResult(rule);
+        public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+        public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+        public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+            var row = await ReadRecordAsync(id, cancellationToken);
+            return row is null ? null : new(row.ToSnapshot(), StorageJson.ParseProviderConfiguration(row.ConfigJson));
+        }
+
+        public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+            (await ReadBootstrapRecordAsync(cancellationToken)).ToDriverInput();
+
+        public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRoutingRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRoutingRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
     }
 
     private sealed class StaticStorageDriverRegistry(IStorageDriver driver) : IStorageDriverRegistry
@@ -753,37 +809,37 @@ public sealed class ProjectStructureFileScopeResolverTests
             (revisioned ? StorageCapability.Write | StorageCapability.MutableUpdate : StorageCapability.None);
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageContentRevision?> GetRevisionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageRevisionedWriteResult> ReplaceAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageRevisionedWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

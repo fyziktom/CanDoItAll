@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -6,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Collaboration;
 
 public sealed partial class CollaborationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CollaborationDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ILogger<CollaborationService> logger)

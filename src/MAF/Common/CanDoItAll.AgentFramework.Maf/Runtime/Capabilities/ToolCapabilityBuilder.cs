@@ -15,7 +15,6 @@ internal sealed class ToolCapabilityBuilder(
     WorkspaceFilesystemRuntimePlugin filesystemPlugin,
     WorkspaceRuntimePlugin workspacePlugin,
     WorkspaceSpreadsheetRuntimePlugin spreadsheetPlugin,
-    StorageRuntimePlugin? storagePlugin,
     IWorkspaceCommandExecutionService workspaceCommandExecutionService,
     AgentWorkspaceToolAccessSettings workspaceToolAccess,
     IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies,
@@ -29,8 +28,12 @@ internal sealed class ToolCapabilityBuilder(
         filesystemPlugin,
         workspacePlugin,
         spreadsheetPlugin,
-        storagePlugin,
         capabilityAccessPlan);
+
+    internal IReadOnlyList<AITool> CreateWorkspaceToolsForDisclosure(AgentWorkspaceToolAccessSettings currentAccess,
+        RuntimeCapabilityAccessPlan currentPlan, IReadOnlyList<CapabilityCatalogItem> currentCapabilities)
+        => new WorkspaceToolSet(currentAccess, filesystemPlugin, workspacePlugin, spreadsheetPlugin, currentPlan)
+            .CreateTools(currentCapabilities);
 
         public IReadOnlyList<AITool> CreateTools(
             CapabilityCatalogItem capability,

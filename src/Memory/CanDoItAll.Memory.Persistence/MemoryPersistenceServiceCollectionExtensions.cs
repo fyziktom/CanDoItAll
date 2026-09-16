@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,8 +13,6 @@ public static class MemoryPersistenceServiceCollectionExtensions
         var options = new MemoryModuleOptions();
         configure?.Invoke(options);
         options.Validate();
-
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(MemoryProviderProfileEntity).Assembly]);
 
         services.AddSingleton(options);
         services.AddSingleton(options.WorkerHosting);

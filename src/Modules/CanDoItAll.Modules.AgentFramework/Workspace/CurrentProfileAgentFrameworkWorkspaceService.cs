@@ -116,6 +116,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().GetModelUsageDetailsAsync(cancellationToken);
     }
 
+    public Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
+        => ResolveService().LoadCatalogSnapshotAsync(cancellationToken);
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListAgentsAsync(includeTemplates, cancellationToken);
@@ -175,6 +178,45 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return changedAgentCount;
     }
 
+    public async Task GrantAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(lifetime);
+        var workspace = ResolveProjectLifetimeWorkspace(lifetime.DatabaseProfileId);
+        await workspace.GrantAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
+        await RefreshProjectStructureAccessProjectionsAsync(agentId, lifetime.ProjectId,
+            ProjectStructureAccessChange.Granted, cancellationToken);
+    }
+
+    public async Task RevokeAgentProjectStructureLifetimeAsync(Guid agentId, AgentProjectStructureLifetime lifetime,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(lifetime);
+        var workspace = ResolveProjectLifetimeWorkspace(lifetime.DatabaseProfileId);
+        await workspace.RevokeAgentProjectStructureLifetimeAsync(agentId, lifetime, cancellationToken);
+        await RefreshProjectStructureAccessProjectionsAsync(agentId, lifetime.ProjectId,
+            ProjectStructureAccessChange.Revoked, cancellationToken);
+    }
+
+    public async Task<int> RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(AgentProjectStructureRevocationTarget target,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(target);
+        var workspace = ResolveProjectLifetimeWorkspace(target.DatabaseProfileId);
+        var changedAgentCount = await workspace.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(target, cancellationToken);
+        await RefreshBulkProjectStructureAccessProjectionsAsync(target.ProjectId, changedAgentCount, cancellationToken);
+        return changedAgentCount;
+    }
+
+    private IAgentFrameworkWorkspaceService ResolveProjectLifetimeWorkspace(Guid databaseProfileId) {
+        lock (executionSubscriptionGate) {
+            var identity = ResolvePinnedActivityExecutionIdentity();
+            if (identity.ProfileId != databaseProfileId) {
+                throw new InvalidOperationException("The project access lifetime belongs to another database profile.");
+            }
+            var workspace = workspaceFactory.GetWorkspaceService(identity.WorkspaceScope);
+            EnsurePinnedActivityExecutionIdentity(identity, ResolvePinnedActivityExecutionIdentity());
+            return workspace;
+        }
+    }
+
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteAgentAsync(agentId, cancellationToken);
@@ -211,14 +253,16 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
     {
         var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+            exception => new AgentDirectoryProjectionSynchronizationException(cloneId, exception));
         return cloneId;
     }
 
     public async Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
     {
         var templateId = await ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+            exception => new AgentDirectoryProjectionSynchronizationException(templateId, exception));
         return templateId;
     }
 
@@ -230,7 +274,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public async Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
     {
         var agentId = await ResolveService().ImportAgentAsync(packagePath, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+            exception => new AgentDirectoryProjectionSynchronizationException(agentId, exception));
         return agentId;
     }
 
@@ -242,7 +287,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         var receipt = await ResolveService().ImportAgentPackageAsync(package, command, cancellationToken);
         if (!receipt.Replayed)
         {
-            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, importReceipt: receipt));
         }
 
         return receipt;
@@ -268,7 +314,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             cancellationToken);
         if (!receipt.Replayed)
         {
-            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
         }
 
         return receipt;
@@ -283,7 +330,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             cancellationToken);
         if (!receipt.Replayed)
         {
-            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
         }
 
         return receipt;
@@ -476,6 +524,34 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
+    }
+
+    public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,
+            "Cancelled execution receipt reconciliation accepted.", (service, operation) => service.ReconcileCancelledExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+
+    public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        return DispatchPinnedActivityOperation(operation, expectedAgentId: null, expectedChatSessionId: null,
+            operation.StreamId.OperationId, service => service.ReconcileCancelledExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+    }
+
+    public Task<ExecutionRunResult> RecoverExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,
+            "Execution recovery accepted.", (service, operation) => service.RecoverExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+
+    public Task<ExecutionRunResult> RecoverExecutionRunWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        return DispatchPinnedActivityOperation(operation, expectedAgentId: null, expectedChatSessionId: null,
+            operation.StreamId.OperationId, service => service.RecoverExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
     }
 
     public Task<AgentChatRunResult> SendMessageAsync(

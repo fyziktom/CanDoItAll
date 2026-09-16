@@ -1,3 +1,6 @@
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using CanDoItAll.Memory.Http;
 using CanDoItAll.Memory.Mcp;
 using CanDoItAll.Memory.Mock;
@@ -31,8 +34,10 @@ public static class MemoryRuntimeServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        services.AddGenericMemoryModule(options =>
-        {
+        services.AddPooledDbContextFactory<MemoryDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
+        services.AddGenericMemoryModule(options => {
             options.WorkerHosting = ReadWorkerHostingOptions(configuration);
         });
 

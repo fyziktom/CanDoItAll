@@ -67,7 +67,9 @@ public sealed record ProviderModelPricingRefreshResult(
 }
 
 internal sealed class ProviderAdministrationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    SecretReferenceQuery secretReferences,
+    CoordinatedDatabaseTransaction transactions,
     SecretService secretService,
     ISecretRuntimeResolver secretRuntimeResolver,
     ProviderAdministrationConnectorCatalog providerConnectorCatalog,
@@ -232,6 +234,7 @@ internal sealed class ProviderAdministrationService(
                 model.Id,
                 secretRecordId,
                 cancellationToken);
+        using var coordination = secretMutationScope.HasMutationScope ? transactions.Enter(dbContext) : null;
         var entity = secretMutationScope.Profile;
         var isNewProfile = entity is null;
         if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
@@ -244,11 +247,7 @@ internal sealed class ProviderAdministrationService(
         if (secretRecordId is { } targetSecretRecordId)
         {
             var secretExists = targetSecretRecordId != Guid.Empty &&
-                await dbContext.Set<SecretRecord>()
-                    .AsNoTracking()
-                    .AnyAsync(
-                        secret => secret.Id == targetSecretRecordId,
-                        cancellationToken);
+                await secretReferences.ExistsForMutationAsync(targetSecretRecordId, cancellationToken);
             if (!secretExists)
             {
                 return Result<Guid>.Failure(Error.Validation(
@@ -318,6 +317,7 @@ internal sealed class ProviderAdministrationService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await secretMutationScope.CommitAsync(cancellationToken);
+        coordination?.Dispose();
         await secretMutationScope.DisposeAsync();
 
         foreach (var observer in providerProfileCommitObservers)

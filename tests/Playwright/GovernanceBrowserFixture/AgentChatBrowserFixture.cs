@@ -27,6 +27,11 @@ internal sealed class AgentChatBrowserFixture : IAgentChatExecutionOrchestrator,
     public AgentChatBrowserMode Mode { get; set; }
     public object Counters => new { sends, approvals, creates, renames, uploads, transcriptions, speech, workspaces, favoriteSaves };
 
+    public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunResult> Completion) StartRunRecovery(
+        Guid agentId, Guid chatSessionId, Guid executionRunId, AgentExecutionActivityStreamId rejectedStreamId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This browser fixture does not script original-run recovery.");
+
     public static void Register(IServiceCollection services, AgentChatBrowserFixture fixture) {
         var original = services.Last(item => item.ServiceType == typeof(IAgentFrameworkWorkspaceService));
         services.AddScoped<IAgentFrameworkWorkspaceService>(provider => {

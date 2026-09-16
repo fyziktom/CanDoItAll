@@ -1,0 +1,997 @@
+[
+  {
+    "contract_id": "CON-001",
+    "qa_ids": [
+      "QA-040",
+      "QA-057",
+      "QA-091",
+      "QA-099",
+      "QA-101"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-002",
+    "qa_ids": [
+      "QA-056",
+      "QA-089",
+      "QA-104",
+      "QA-109"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-003",
+    "qa_ids": [
+      "QA-001",
+      "QA-005",
+      "QA-011",
+      "QA-012",
+      "QA-039",
+      "QA-040",
+      "QA-042",
+      "QA-100"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-004",
+    "qa_ids": [
+      "QA-012",
+      "QA-033"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-005",
+    "qa_ids": [
+      "QA-049",
+      "QA-050",
+      "QA-052",
+      "QA-055",
+      "QA-101",
+      "QA-149"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-006",
+    "qa_ids": [
+      "QA-053",
+      "QA-111"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-007",
+    "qa_ids": [
+      "QA-007",
+      "QA-051",
+      "QA-053",
+      "QA-054",
+      "QA-055",
+      "QA-096"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-008",
+    "qa_ids": [
+      "QA-053"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-009",
+    "qa_ids": [
+      "QA-050",
+      "QA-051",
+      "QA-052",
+      "QA-102"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-010",
+    "qa_ids": [
+      "QA-009",
+      "QA-047",
+      "QA-058",
+      "QA-070",
+      "QA-091",
+      "QA-099",
+      "QA-110"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-011",
+    "qa_ids": [
+      "QA-058",
+      "QA-109",
+      "QA-110",
+      "QA-119"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-012",
+    "qa_ids": [
+      "QA-056",
+      "QA-057",
+      "QA-084",
+      "QA-085",
+      "QA-086",
+      "QA-088",
+      "QA-109"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-013",
+    "qa_ids": [
+      "QA-048",
+      "QA-106",
+      "QA-120",
+      "QA-162"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-014",
+    "qa_ids": [
+      "QA-059"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-015",
+    "qa_ids": [
+      "QA-099",
+      "QA-113",
+      "QA-118"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-016",
+    "qa_ids": [
+      "QA-046",
+      "QA-076",
+      "QA-077",
+      "QA-083",
+      "QA-113"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-017",
+    "qa_ids": [
+      "QA-025",
+      "QA-107"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-018",
+    "qa_ids": [
+      "QA-001",
+      "QA-007",
+      "QA-008",
+      "QA-009",
+      "QA-022",
+      "QA-035",
+      "QA-091",
+      "QA-095",
+      "QA-099",
+      "QA-118"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-019",
+    "qa_ids": [
+      "QA-003",
+      "QA-013",
+      "QA-023",
+      "QA-024",
+      "QA-079",
+      "QA-081",
+      "QA-095",
+      "QA-108",
+      "QA-117",
+      "QA-119"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-020",
+    "qa_ids": [
+      "QA-024",
+      "QA-025",
+      "QA-107",
+      "QA-117"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-021",
+    "qa_ids": [
+      "QA-003",
+      "QA-004",
+      "QA-006",
+      "QA-010",
+      "QA-013",
+      "QA-015",
+      "QA-017",
+      "QA-018",
+      "QA-019",
+      "QA-020",
+      "QA-021",
+      "QA-023",
+      "QA-024",
+      "QA-026",
+      "QA-027",
+      "QA-028",
+      "QA-030",
+      "QA-031",
+      "QA-032",
+      "QA-035",
+      "QA-043",
+      "QA-044",
+      "QA-045",
+      "QA-046",
+      "QA-078",
+      "QA-097",
+      "QA-103",
+      "QA-104",
+      "QA-120",
+      "QA-121"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-022",
+    "qa_ids": [
+      "QA-015",
+      "QA-016",
+      "QA-043",
+      "QA-080",
+      "QA-093",
+      "QA-094",
+      "QA-117"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-023",
+    "qa_ids": [
+      "QA-002",
+      "QA-004",
+      "QA-026",
+      "QA-035",
+      "QA-038",
+      "QA-124",
+      "QA-127"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-024",
+    "qa_ids": [
+      "QA-004",
+      "QA-047",
+      "QA-048",
+      "QA-059",
+      "QA-060",
+      "QA-089",
+      "QA-092",
+      "QA-106",
+      "QA-120",
+      "QA-128",
+      "QA-146",
+      "QA-149",
+      "QA-162"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-025",
+    "qa_ids": [
+      "QA-002",
+      "QA-025",
+      "QA-061"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-026",
+    "qa_ids": [
+      "QA-049",
+      "QA-052",
+      "QA-118"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-027",
+    "qa_ids": [
+      "QA-036",
+      "QA-037",
+      "QA-039",
+      "QA-042",
+      "QA-045",
+      "QA-060",
+      "QA-062"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-028",
+    "qa_ids": [
+      "QA-011",
+      "QA-032",
+      "QA-036",
+      "QA-037",
+      "QA-038",
+      "QA-039",
+      "QA-060",
+      "QA-082",
+      "QA-105",
+      "QA-159"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-029",
+    "qa_ids": [
+      "QA-027",
+      "QA-034"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-030",
+    "qa_ids": [
+      "QA-027",
+      "QA-028",
+      "QA-029",
+      "QA-030",
+      "QA-031",
+      "QA-032",
+      "QA-033",
+      "QA-034",
+      "QA-042",
+      "QA-044",
+      "QA-062",
+      "QA-066",
+      "QA-120"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-031",
+    "qa_ids": [
+      "QA-021",
+      "QA-036",
+      "QA-044"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-032",
+    "qa_ids": [
+      "QA-022",
+      "QA-085",
+      "QA-086",
+      "QA-087",
+      "QA-088",
+      "QA-101"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-033",
+    "qa_ids": [
+      "QA-066",
+      "QA-115"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-034",
+    "qa_ids": [
+      "QA-067",
+      "QA-115",
+      "QA-119",
+      "QA-151"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-035",
+    "qa_ids": [
+      "QA-075",
+      "QA-112",
+      "QA-119",
+      "QA-153"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-036",
+    "qa_ids": [
+      "QA-038",
+      "QA-074"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-037",
+    "qa_ids": [
+      "QA-062",
+      "QA-063",
+      "QA-064",
+      "QA-148"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-038",
+    "qa_ids": [
+      "QA-065",
+      "QA-116"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-039",
+    "qa_ids": [
+      "QA-065",
+      "QA-086",
+      "QA-088",
+      "QA-116"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-040",
+    "qa_ids": [
+      "QA-068",
+      "QA-069",
+      "QA-114"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-041",
+    "qa_ids": [
+      "QA-103",
+      "QA-105",
+      "QA-112"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-042",
+    "qa_ids": [
+      "QA-054",
+      "QA-069",
+      "QA-096",
+      "QA-102",
+      "QA-111",
+      "QA-116"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-043",
+    "qa_ids": [
+      "QA-014",
+      "QA-015",
+      "QA-016",
+      "QA-075",
+      "QA-079",
+      "QA-080",
+      "QA-081",
+      "QA-082",
+      "QA-093",
+      "QA-094"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-044",
+    "qa_ids": [
+      "QA-001",
+      "QA-002",
+      "QA-005",
+      "QA-006",
+      "QA-008",
+      "QA-072",
+      "QA-098",
+      "QA-100"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-045",
+    "qa_ids": [
+      "QA-005",
+      "QA-028",
+      "QA-084",
+      "QA-087",
+      "QA-098",
+      "QA-103"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-046",
+    "qa_ids": [
+      "QA-076",
+      "QA-077",
+      "QA-078",
+      "QA-083",
+      "QA-092",
+      "QA-102",
+      "QA-108"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-047",
+    "qa_ids": [
+      "QA-111"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-048",
+    "qa_ids": [
+      "QA-007",
+      "QA-041",
+      "QA-045",
+      "QA-090",
+      "QA-096",
+      "QA-097",
+      "QA-111",
+      "QA-121"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-049",
+    "qa_ids": [
+      "QA-042",
+      "QA-071",
+      "QA-072",
+      "QA-073",
+      "QA-133",
+      "QA-134",
+      "QA-135"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-050",
+    "qa_ids": [
+      "QA-070"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-051",
+    "qa_ids": [
+      "QA-006",
+      "QA-009",
+      "QA-010",
+      "QA-033",
+      "QA-037",
+      "QA-068"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-052",
+    "qa_ids": [
+      "QA-014",
+      "QA-041",
+      "QA-075",
+      "QA-082",
+      "QA-113"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-053",
+    "qa_ids": [
+      "QA-067"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-054",
+    "qa_ids": [
+      "QA-013",
+      "QA-017",
+      "QA-021",
+      "QA-044",
+      "QA-045",
+      "QA-121"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-055",
+    "qa_ids": [
+      "QA-027",
+      "QA-028",
+      "QA-030",
+      "QA-031",
+      "QA-032",
+      "QA-120"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-056",
+    "qa_ids": [
+      "QA-076",
+      "QA-077",
+      "QA-089",
+      "QA-090",
+      "QA-092",
+      "QA-097",
+      "QA-108",
+      "QA-121"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-057",
+    "qa_ids": [
+      "QA-124",
+      "QA-125",
+      "QA-126",
+      "QA-127",
+      "QA-128",
+      "QA-154",
+      "QA-155",
+      "QA-157",
+      "QA-164"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-058",
+    "qa_ids": [
+      "QA-122",
+      "QA-125",
+      "QA-137",
+      "QA-138",
+      "QA-139",
+      "QA-141",
+      "QA-142",
+      "QA-144",
+      "QA-145",
+      "QA-146",
+      "QA-163"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-059",
+    "qa_ids": [
+      "QA-123"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-060",
+    "qa_ids": [
+      "QA-149"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-061",
+    "qa_ids": [
+      "QA-129",
+      "QA-131",
+      "QA-133",
+      "QA-155"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-062",
+    "qa_ids": [
+      "QA-130",
+      "QA-131",
+      "QA-132",
+      "QA-133",
+      "QA-134",
+      "QA-135",
+      "QA-136",
+      "QA-137",
+      "QA-138",
+      "QA-161",
+      "QA-163"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-063",
+    "qa_ids": [
+      "QA-122",
+      "QA-143",
+      "QA-150"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-064",
+    "qa_ids": [
+      "QA-151"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-065",
+    "qa_ids": [
+      "QA-150",
+      "QA-151"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-066",
+    "qa_ids": [
+      "QA-147"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-067",
+    "qa_ids": [
+      "QA-147",
+      "QA-148",
+      "QA-162"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-068",
+    "qa_ids": [
+      "QA-159"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-069",
+    "qa_ids": [
+      "QA-152",
+      "QA-154",
+      "QA-160"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-070",
+    "qa_ids": [
+      "QA-140",
+      "QA-153",
+      "QA-160"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-071",
+    "qa_ids": [
+      "QA-152",
+      "QA-154"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-072",
+    "qa_ids": [
+      "QA-139",
+      "QA-141",
+      "QA-143",
+      "QA-144",
+      "QA-160",
+      "QA-161",
+      "QA-164"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-073",
+    "qa_ids": [
+      "QA-140",
+      "QA-142",
+      "QA-143",
+      "QA-145",
+      "QA-160",
+      "QA-161",
+      "QA-163",
+      "QA-164"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-074",
+    "qa_ids": [
+      "QA-156"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-075",
+    "qa_ids": [
+      "QA-157"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  },
+  {
+    "contract_id": "CON-076",
+    "qa_ids": [
+      "QA-158"
+    ],
+    "mapping": "EXPLICIT_SCENARIO_CONTRACT_REFERENCES_NOT_ACTUAL_TEST_DISCOVERY",
+    "status": "PLANNED_NOT_RUN",
+    "required_gate": "Verify exact current methods, caller surface, registration/purpose, scope/authority, input/result serialization, owner effects and relevant failure points. Add tests for uncovered semantics before cutover."
+  }
+]

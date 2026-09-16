@@ -44,6 +44,29 @@ public sealed class ProjectStructureTaskResourceCostServiceTests
     }
 
     [Fact]
+    public async Task Person_quote_summary_does_not_disclose_the_hourly_rate()
+    {
+        // The quote reaches agents through the task resource tools; the CRM rate stays privacy-filtered there.
+        var service = new ProjectStructureTaskResourceCostService(
+        [
+            new ProjectStructurePersonTaskResourceCostStrategy(
+                new StaticPartyCostRateBridge(new ProjectPartyCostRate(PartyId, 80m, ProjectResourceRateUnit.Hour, "USD")),
+                new FixedTimeProvider(Now))
+        ]);
+
+        var quote = await service.GetQuoteAsync(CreateRequest(
+            ProjectStructureTaskResourceKind.Person,
+            PartyId,
+            new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, null, string.Empty)));
+
+        Assert.True(quote.IsAvailable);
+        Assert.Equal(640m, quote.Amount);
+        Assert.DoesNotContain("80", quote.Summary, StringComparison.Ordinal);
+        Assert.Contains("8 hour(s)", quote.Summary, StringComparison.Ordinal);
+        Assert.Contains("CRM workforce rate", quote.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Person_strategy_does_not_invent_a_price_when_CRM_has_no_rate()
     {
         var service = new ProjectStructureTaskResourceCostService(

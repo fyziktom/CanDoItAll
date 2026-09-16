@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Projects;
+
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureTaskDetailsService(
@@ -23,6 +25,10 @@ public sealed class ProjectStructureTaskDetailsService(
             CancellationToken cancellationToken = default)
     {
         Validate(projectId, request);
+        var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
+        if (request.MutationOwner?.ExpectedProjectAdmission != expected) {
+            throw new InvalidOperationException("Task details require the captured native mutation context.");
+        }
         var expectedState = new ProjectStructureTaskEditState(
             ProjectTaskEstimatePolicy.ValidateAndNormalize(
                 request.CurrentEstimate),
@@ -38,7 +44,7 @@ public sealed class ProjectStructureTaskDetailsService(
                 request.ProposedExecution,
                 request.AssigneeChanged,
                 request.ProposedAssignee,
-                AssignmentSource);
+                AssignmentSource, request.MutationOwner);
 
         try
         {
@@ -63,7 +69,7 @@ public sealed class ProjectStructureTaskDetailsService(
                             commit.ProposedCostBasis !=
                                 commit.CurrentState.CostBasis,
                             commit.CurrentState
-                                .DirectAssignmentRevision);
+                                .DirectAssignmentRevision) { ExpectedProjectAdmission = expected, MutationOwner = request.MutationOwner };
                     return ganttMutationService.ApplyTaskDetailsAsync(
                         projectId,
                         mutationRequest,

@@ -5,7 +5,8 @@ namespace CanDoItAll.AgentFramework.Core;
 internal sealed record AgentToolCompletionAssessment(
     ExecutionState State,
     RunOutcome? Outcome,
-    string FailureSummary)
+    string FailureSummary,
+    AgentToolCompletionFailureKind FailureKind = AgentToolCompletionFailureKind.None)
 {
     public static AgentToolCompletionAssessment Create(
         IReadOnlyList<AgentToolInvocationTrace> traces,
@@ -27,7 +28,8 @@ internal sealed record AgentToolCompletionAssessment(
             return new AgentToolCompletionAssessment(
                 ExecutionState.Failed,
                 RunOutcome.Failed,
-                FailureSummary: string.Empty);
+                FailureSummary: string.Empty,
+                AgentToolCompletionFailureKind.PortableOutputValidation);
         }
 
         var unresolvedMutation = traces
@@ -51,14 +53,18 @@ internal sealed record AgentToolCompletionAssessment(
         return new AgentToolCompletionAssessment(
             ExecutionState.Failed,
             RunOutcome.Failed,
-            $"Required mutation '{unresolvedMutation.ToolName}' did not complete: {reason}");
+            $"Required mutation '{unresolvedMutation.ToolName}' did not complete: {reason}",
+            AgentToolCompletionFailureKind.RequiredMutation);
     }
 
     internal static bool IsResolvedByLaterCommittedAttempt(
         AgentToolInvocationTrace failedAttempt,
         IReadOnlyList<AgentToolInvocationTrace> traces)
     {
-        if (failedAttempt.EffectState != AgentToolEffectState.NotCommitted ||
+        // A pre-invoke failure (NotCommitted) and a typed rejection with proven no effect (None, for example an owner
+        // refusing invalid asset content before any write) are both resolved when a later attempt of the same tool for
+        // the same operation identity committed. Unknown effect states are never resolved this way.
+        if (failedAttempt.EffectState is not (AgentToolEffectState.NotCommitted or AgentToolEffectState.None) ||
             string.IsNullOrWhiteSpace(failedAttempt.OperationCorrelationKey))
         {
             return false;
@@ -78,3 +84,4 @@ internal sealed record AgentToolCompletionAssessment(
                 StringComparison.Ordinal));
     }
 }
+internal enum AgentToolCompletionFailureKind { None, PortableOutputValidation, RequiredMutation }

@@ -10,7 +10,6 @@ internal static class ProjectStructureGanttTaskMetricProjection
         ICollection<ProjectStructureGanttProjectionIssue> issues)
     {
         var taskId = new GanttTaskId(node.Id);
-        var progressPercent = BuildProgressPercent(node.ProgressPercent, taskId, issues);
         ProjectWorkItemMetadata? workItem;
         try
         {
@@ -22,9 +21,17 @@ internal static class ProjectStructureGanttTaskMetricProjection
                 ProjectStructureGanttProjectionIssueCode.InvalidTaskEstimate,
                 $"Task '{taskId}' has invalid metadata; its expected effort and cost are omitted.",
                 taskId));
-            return ProjectStructureGanttTaskMetrics.Empty(progressPercent);
+            return ProjectStructureGanttTaskMetrics.Empty(BuildProgressPercent(node.ProgressPercent, taskId, issues));
         }
 
+        // The Gantt bar shows the same progress truth as the plan summary: the recorded execution state wins over
+        // the canvas status-backed hint.
+        var progressPercent = BuildProgressPercent(
+            ProjectTaskExecutionStatePolicy.ResolveExecutionBackedProgress(
+                workItem?.ExecutionState ?? ProjectTaskExecutionState.Unknown,
+                node.ProgressPercent),
+            taskId,
+            issues);
         if (workItem is null)
         {
             return ProjectStructureGanttTaskMetrics.Empty(progressPercent);

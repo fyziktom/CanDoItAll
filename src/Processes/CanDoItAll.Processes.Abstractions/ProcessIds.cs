@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.Processes.Abstractions;
 
 public readonly record struct ProcessDefinitionId
@@ -56,10 +58,9 @@ public readonly record struct ProcessInstanceId
     public override string ToString() => Value.ToString("D");
 }
 
-public readonly record struct ProcessRunId
-{
-    public ProcessRunId(Guid value)
-    {
+public readonly record struct ProcessRunId {
+    [JsonConstructor]
+    public ProcessRunId(Guid value) {
         Value = ProcessIdentifierValidation.RequireGuid(value, nameof(value));
     }
 

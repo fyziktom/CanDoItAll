@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Security.Abstractions;
@@ -101,7 +102,8 @@ public sealed class SecretRuntimeAuthorizationTests
             protector,
             new TestClock(new DateTimeOffset(2026, 5, 13, 12, 0, 0, TimeSpan.Zero)),
             new NullActivityStream(),
-            []);
+            [],
+            factory.Transactions);
         var saveResult = await secretService.SaveAsync(new SecretEditorModel
         {
             Name = "Plugin API",
@@ -126,12 +128,12 @@ public sealed class SecretRuntimeAuthorizationTests
 
     private static TestDbContextFactory CreateDbContextFactory()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(SecretRecord).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"secret-runtime-authorization-{Guid.NewGuid():N}")
+        var databaseName = $"secret-runtime-authorization-{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<SecurityDbContext>()
+            .UseInMemoryDatabase(databaseName)
             .Options;
 
-        return new TestDbContextFactory(options);
+        return new TestDbContextFactory(options, databaseName);
     }
 
     private sealed record SecretAuthorizationFixture(
@@ -139,13 +141,18 @@ public sealed class SecretRuntimeAuthorizationTests
         SecretService SecretService,
         SecretRuntimeResolver Resolver);
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
+    private sealed class TestDbContextFactory(DbContextOptions<SecurityDbContext> options, string databaseName) : IDbContextFactory<SecurityDbContext> {
+        public CoordinatedDatabaseTransaction Transactions { get; } = CoordinatedDatabaseTransaction.ForProfile(
+            new(new DatabaseProfileRecord {
+                ProviderKind = DatabaseProviderKind.InMemory,
+                SourceKind = DatabaseProfileSourceKind.InMemory
+            }, DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+
+        public SecurityDbContext CreateDbContext()
             => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new AppDbContext(options));
+        public Task<SecurityDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new SecurityDbContext(options));
     }
 
     private sealed class TestSecretProtector : ISecretProtector

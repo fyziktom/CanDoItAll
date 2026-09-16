@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -25,7 +26,27 @@ public sealed record ProjectStructureAgentContext(
     string MachineName,
     string RepositoryRoot,
     string BranchName,
-    string SessionId);
+    string SessionId) {
+    [JsonIgnore]
+    public ProjectStructureWorkflowAuthoritySource? WorkflowAuthority { get; init; }
+    [JsonIgnore]
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+    [JsonIgnore]
+    public System.Collections.Immutable.ImmutableArray<ProjectWriteAdmission> ExpectedProjectAdmissions { get; init; } = [];
+
+    [JsonIgnore]
+    public ProjectProcessMutationAdmission? ProcessMutationAdmission { get; init; }
+
+    [JsonIgnore]
+    public ProjectAgentMutationAdmission? AgentMutationAdmission { get; init; }
+
+    [JsonIgnore]
+    public ProjectStructureProcessLaunchInvocation? ProcessLaunchInvocation { get; init; }
+
+    [JsonIgnore]
+    public ProjectProcessAssetInvocation? ProcessAssetInvocation { get; init; }
+}
 
 [JsonConverter(typeof(FlexibleProjectStructureLeaseScopeKindJsonConverter))]
 public enum ProjectStructureLeaseScopeKind
@@ -225,6 +246,9 @@ public sealed record ProjectStructureNodeSummary(
     string IAgentToolInvocationResultEvidence.SafeMessage => string.Empty;
 
     bool IAgentToolInvocationResultEvidence.CanRetryWithCorrectedInput => false;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectProcessAssetReceiptObservation? ProcessAssetReceipt { get; init; }
 }
 
 public sealed record ProjectStructureLinkSummary(
@@ -238,7 +262,10 @@ public sealed record ProjectStructureReadResponse(
     string ProjectName,
     IReadOnlyList<ProjectStructureNodeSummary> Nodes,
     IReadOnlyList<ProjectStructureLinkSummary> Links,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+}
 
 public sealed record ProjectStructureNodeCatalogResponse(
     IReadOnlyList<ProjectStructureNodeCatalogItem> Items,
@@ -425,12 +452,16 @@ public sealed record ProjectStructureNodeParentInput(
 public sealed record ProjectStructureNodeDeleteInput(
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
     string? LeaseToken = null,
-    Guid? DurableMutationId = null);
+    Guid? DurableMutationId = null) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+}
 
 public sealed record ProjectStructureNodeDeleteBatchInput(
     IReadOnlyList<string> NodeIds,
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+}
 
 public sealed record ProjectStructureLinkInput(
     string SourceNodeId,
@@ -566,7 +597,8 @@ public sealed record ProjectStructureWorkflowNodeStartInput(
     WorkflowRuntimeBackendKind? RequestedBackend = null,
     string RequestedBy = "project-structure",
     string? LeaseToken = null,
-    IReadOnlyList<string>? SimulatedNodeIds = null);
+    IReadOnlyList<string>? SimulatedNodeIds = null,
+    Guid? IntentId = null);
 
 public sealed record ProjectStructureWorkflowRunEventSummary(
     WorkflowEventKind Kind,
@@ -607,7 +639,11 @@ public sealed record ProjectStructureWorkflowRunStatus(
     int StepCount,
     string Message,
     ProjectStructureWorkflowExecutionSummary Summary,
-    IReadOnlyList<ProjectStructureWorkflowRunEventSummary> RecentEvents);
+    IReadOnlyList<ProjectStructureWorkflowRunEventSummary> RecentEvents) {
+    public ProjectWorkflowDeliveryState Delivery { get; init; } = ProjectWorkflowDeliveryState.LegacyObservation;
+    public Guid? IntentId { get; init; }
+    public long? AdmissionSequence { get; init; }
+}
 
 public sealed record ProjectStructureWorkflowNodeStartResult(
     Guid ProjectId,
@@ -617,7 +653,15 @@ public sealed record ProjectStructureWorkflowNodeStartResult(
     WorkflowRunId RunId,
     string Route,
     ProjectStructureWorkflowRunStatus Status,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings) {
+    public Guid IntentId { get; init; }
+    public bool CallerSuppliedIntent { get; init; }
+    public bool RunAdmissionObserved { get; init; }
+    [JsonIgnore]
+    public Exception? ObservationException { get; init; }
+    [JsonIgnore]
+    public Exception? ReceiptObservationException { get; init; }
+}
 
 public sealed record ProjectStructureNodeCommandInput(
     ProjectStructureCommandKind CommandKind,
@@ -723,7 +767,10 @@ public sealed record ProjectStructureAssetDescriptor(
     string MediaOriginalFileName,
     string MetadataJson,
     bool IsReadonly,
-    string? RevisionParentNodeId);
+    string? RevisionParentNodeId) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectProcessAssetReceiptObservation? ProcessAssetReceipt { get; init; }
+}
 
 public sealed record ProjectStructureAssetContentDescriptor(
     ProjectStructureAssetDescriptor Asset,
@@ -878,7 +925,12 @@ public sealed record ProjectStructureProcessNodeStartResult(
     string Stage,
     string Route,
     object? LaunchPlan,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings) : IAgentToolOwnerObservationEvidence {
+    public ProcessLaunchObservation? Observation { get; init; }
+
+    [JsonIgnore]
+    public bool RequiresOwnerReconciliation => Observation?.ContinuationState == ProcessLaunchContinuationState.ReconciliationRequired;
+}
 
 public sealed record ProjectStructureProcessSubprocessLaunchInput(
     string DefinitionKey,

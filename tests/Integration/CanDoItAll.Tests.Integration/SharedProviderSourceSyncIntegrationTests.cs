@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
@@ -793,7 +794,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
             var clock = new FixedClock(Now);
             var vault = new InMemorySecretVault();
             var secretResolver = new SecretRuntimeResolver(
-                database.Factory,
+                database.SecurityFactory,
                 vault,
                 new UnusedSecretProtector());
             var handler = new ScriptedCatalogHttpHandler();
@@ -807,16 +808,19 @@ public sealed class SharedProviderSourceSyncIntegrationTests
                 accessContext);
             var observer = new RecordingProfileObserver(database.Factory);
             var sourceService = new SharedProviderSourceService(
-                database.Factory,
+                database.ProvidersFactory,
                 clock,
                 [observer],
-                uriPolicy);
+                uriPolicy,
+                database.SecretReferences,
+                database.Transactions);
             var reconciliation = new SharedProviderReconciliationCoordinator(
-                database.Factory,
+                database.ProvidersFactory,
                 clock,
-                [observer]);
+                [observer],
+                database.Transactions);
             var sync = new SharedProviderSourceSyncService(
-                database.Factory,
+                database.ProvidersFactory,
                 sourceService,
                 reconciliation,
                 catalogClient,
@@ -1172,9 +1176,29 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         {
             this.lease = lease;
             Factory = new SharedProviderDbContextFactory(lease.CreateAppDbContextOptions());
+            var profile = new ResolvedDatabaseProfile(new DatabaseProfileRecord {
+                DisplayName = "Shared provider source synchronization fixture",
+                ProviderKind = DatabaseProviderKind.PostgreSql,
+                SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+                PostgreSql = new() { DatabaseName = lease.DatabaseName }
+            }, DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
+            Transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
+            var providerOptions = new DbContextOptionsBuilder<ProvidersDbContext>();
+            AppDbContextOptionsConfigurator.Configure(providerOptions, profile);
+            var ownedProviderOptions = providerOptions.Options;
+            ProvidersFactory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(ownedProviderOptions));
+            var securityOptions = new DbContextOptionsBuilder<SecurityDbContext>();
+            AppDbContextOptionsConfigurator.Configure(securityOptions, profile);
+            var ownedSecurityOptions = securityOptions.Options;
+            SecurityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(ownedSecurityOptions));
+            SecretReferences = new(SecurityFactory, ownedSecurityOptions, Transactions);
         }
 
         public SharedProviderDbContextFactory Factory { get; }
+        public IDbContextFactory<ProvidersDbContext> ProvidersFactory { get; }
+        public IDbContextFactory<SecurityDbContext> SecurityFactory { get; }
+        public CoordinatedDatabaseTransaction Transactions { get; }
+        public SecretReferenceQuery SecretReferences { get; }
 
         public static async Task<SourceSyncTestDatabase> CreateAsync(string key)
         {
@@ -1186,6 +1210,16 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         }
 
         public ValueTask DisposeAsync() => lease.DisposeAsync();
+    }
+
+    private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>
+        where TContext : DbContext {
+        public TContext CreateDbContext() => create();
+
+        public Task<TContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateDbContext());
+        }
     }
 
     private sealed class SharedProviderDbContextFactory(DbContextOptions<AppDbContext> options)

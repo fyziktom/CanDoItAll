@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public sealed class HistoryOutboxProcessor(
-    IDbContextFactory<AppDbContext> factory, TimeProvider clock, ILogger<HistoryOutboxProcessor> logger) {
+    IDbContextFactory<ProviderHistoryDbContext> factory, TimeProvider clock, ILogger<HistoryOutboxProcessor> logger) {
     public async Task<int> ProcessAsync(HistoryPartition partition, int maximumItems, CancellationToken cancellationToken) {
         if (maximumItems is < 1 or > 1000) {
             throw new ArgumentOutOfRangeException(nameof(maximumItems));

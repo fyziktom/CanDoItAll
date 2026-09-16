@@ -1,0 +1,1372 @@
+[
+  {
+    "id": "FEAT-001",
+    "module_id": "MOD-AGENTS",
+    "title": "Agent and provider catalogs, governed execution, agent chat, usage, and technical-agent integration.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-009"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-002",
+    "module_id": "MOD-AGENTS",
+    "title": "Agent chat accepts an execution activity before context preparation completes and exposes an observable stream.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-009"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-003",
+    "module_id": "MOD-AGENTS",
+    "title": "Immutable preparation and provider snapshots are fenced by database profile, generation, and revision.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-009"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-004",
+    "module_id": "MOD-AGENTS",
+    "title": "Source-authority registry validates Projects, Workbench, and Processes context during restoration and rejects mismatches.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-009"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-005",
+    "module_id": "MOD-AGENTS",
+    "title": "Tool availability depends on purpose, permissions, capability assignments, and approval; registration alone is insufficient.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-006",
+    "module_id": "MOD-AGENTS",
+    "title": "Serial execution of tool calls preserves provider order and approval barriers.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-007",
+    "module_id": "MOD-AGENTS",
+    "title": "Capabilities, templates, validation, MCP/A2A, lifecycle status, and governance editors.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-05",
+      "MAP-06"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-008",
+    "module_id": "MOD-AGENTS",
+    "title": "User-confirmed floating agent over Project Structure/Gantt can read and create files and create tasks.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-001"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-009",
+    "module_id": "MOD-AGENTS",
+    "title": "Voice, attachments, image generation, HR, and curator-adjacent tabs require rebaselining of their actual delivered surfaces.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-05",
+      "MAP-06"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-010",
+    "module_id": "MOD-PROVIDERS",
+    "title": "Provider administration, publishing, source/import management, catalog routing, and audit history.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-022"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-011",
+    "module_id": "MOD-PROVIDERS",
+    "title": "Model transport, purpose, driver, and registration do not establish endpoint health.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-007"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-012",
+    "module_id": "MOD-PROVIDERS",
+    "title": "Input/output, cache, and long-context prices distinguish missing pricing from a zero price.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-007"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-013",
+    "module_id": "MOD-PROVIDERS",
+    "title": "Shared provider subsets retain provenance and routing information.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-007"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-014",
+    "module_id": "MOD-PROVIDERS",
+    "title": "Invocations freeze tariff information and application-observed attempts; not every SDK retry is independently observed.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-007"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-015",
+    "module_id": "MOD-PROVIDERS",
+    "title": "ProviderConnectorManifestSource, secret deletion guards, and database transfer integration.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-016",
+    "module_id": "MOD-CRM",
+    "title": "CRM directory, workforce, CRM, and recruiting surfaces with pagination and detail dialogs.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-010"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-017",
+    "module_id": "MOD-CRM",
+    "title": "The Agents route projects technical Agents identities through AiResourceBinding.TechnicalAgentId and governance information.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-010"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-018",
+    "module_id": "MOD-CRM",
+    "title": "Agent edits use a composite snapshot with invalidation and a bounded cache lifetime.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-010"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-019",
+    "module_id": "MOD-CRM",
+    "title": "The /api/crm-hr surface uses application services for audit, indexing, activity, and lifecycle behavior.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-010"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-020",
+    "module_id": "MOD-CRM",
+    "title": "Parties, contact points, addresses, relationships, affiliations, confidential notes, and audit.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-08"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-021",
+    "module_id": "MOD-CRM",
+    "title": "Accounts, interactions, opportunities, participants, and status history.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-08"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-022",
+    "module_id": "MOD-CRM",
+    "title": "Workforce skills, capacity, staffing, applications, interviews, and onboarding.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-08"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-023",
+    "module_id": "MOD-CRM",
+    "title": "ProjectPartyAssignment, project roles, node relations, rates, and Gantt transfer/move receipts.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-08"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-024",
+    "module_id": "MOD-CRM",
+    "title": "Privacy-safe agent queries and a Memory source gateway.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-08"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-025",
+    "module_id": "MOD-PROJECTS",
+    "title": "Projects, portfolios, phases, options, hierarchy, parties, and files.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-011"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-026",
+    "module_id": "MOD-PROJECTS",
+    "title": "Canonical Project Structure nodes and mutations in Workbench are consumed through a Projects bridge.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-011"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-027",
+    "module_id": "MOD-PROJECTS",
+    "title": "Hierarchy summaries, deterministic queries, recent activity, and access checks.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-01"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-028",
+    "module_id": "MOD-PROJECTS",
+    "title": "Coordinated project deletion with participant effects, receipts, and cleanup.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-01"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-029",
+    "module_id": "MOD-PROJECTS",
+    "title": "Export/import manifests, transfer participants, files, and portfolios.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-01"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-030",
+    "module_id": "MOD-PROJECTS",
+    "title": "ProjectParty and WorkAssignment bridge transaction coupling.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-01"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-031",
+    "module_id": "MOD-PROJECTS",
+    "title": "Project-sourced agent-chat context.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-01"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-032",
+    "module_id": "MOD-STRUCTURE",
+    "title": "User-confirmed native notes and relations exist only in Project Structure.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-001"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-033",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Gateway operations for reads, node/asset creation, leases, parent/root validation, and media validation.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-025"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-034",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Workflow nodes retain definition/version references, launch, status, and results.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-026"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-035",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Invocation snapshots have bounded coverage, profile, and freshness with explicit source selection and no silent fallback.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-008"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-036",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Managed text, JSON, Markdown, Mermaid, and log files; file-node notes are not the file body.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-004"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-037",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Run folders and FileTools use trusted desktop execution where supported.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-004",
+      "SRC-008"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-038",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Deletion distinguishes retaining files from deleting owned files, including multiple roots and partial outcomes.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-005"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-039",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Typed runtime requests for direct process start with optional terminal and elevation behavior.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-008"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-040",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Deferred image generation uses a bounded in-memory channel and later media/state updates.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-024"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-041",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Canonical task creation/editing, resources, estimates, prices, checklists, dependencies, and Gantt operations.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-02"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-042",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Canvas, Gantt, inspector, selection/layout, clipboard/subtree, and subproject dialogs.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-02",
+      "MAP-03"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-043",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Process launch, subprocesses, run projections, roots, and reports.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-02",
+      "MAP-04"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-044",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Meeting, recording, transcript, participant, repository, infrastructure, and secret-reference nodes have typed metadata and a registry.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-02"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-045",
+    "module_id": "MOD-STRUCTURE",
+    "title": "Plan analytics, manager summaries, and Memory durable records.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-02",
+      "MAP-04"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-046",
+    "module_id": "MOD-PROCESSES",
+    "title": "Process definitions, launch, assignment, observation, recovery, and project context.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-012"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-047",
+    "module_id": "MOD-PROCESSES",
+    "title": "Processes use HTTP, governed execution, and Project Structure bridges; no universal direct runtime process tool is established.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-048",
+    "module_id": "MOD-PROCESSES",
+    "title": "Agent and Workflow execution adapters implement process-step execution.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-09"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-049",
+    "module_id": "MOD-PROCESSES",
+    "title": "Launch resolution, variable preparation, readiness, and source authority.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-09"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-050",
+    "module_id": "MOD-PROCESSES",
+    "title": "Subprocess parentage, artifact roots, policy, and outputs.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-09",
+      "MAP-02"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-051",
+    "module_id": "MOD-PROCESSES",
+    "title": "Process run-record search, history, summary, and graph UI require backend coverage rebaselining.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-09"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-052",
+    "module_id": "MOD-PROCESSES",
+    "title": "User-confirmed process launch from Project Structure and result writeback.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-001"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-053",
+    "module_id": "MOD-PROMPTS",
+    "title": "Prompt library artifacts are available to users and agents.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-015"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-054",
+    "module_id": "MOD-PROMPTS",
+    "title": "Prompt artifacts, versions, collections, tags, provider compatibility, consumer tokens, and warnings.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-055",
+    "module_id": "MOD-PROMPTS",
+    "title": "Prompt imports, search, usage, seed data, and search indexing.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-056",
+    "module_id": "MOD-PROMPTS",
+    "title": "Prompt picker, editor, composer, and warning surfaces.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-057",
+    "module_id": "MOD-PROMPTS",
+    "title": "Runtime prompt retrieval and authorized curation use separate providers.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-058",
+    "module_id": "MOD-PROMPTS",
+    "title": "PromptCuratorLauncher is a consumer-owned port rather than embedded runtime knowledge.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-059",
+    "module_id": "MOD-RESOURCES",
+    "title": "Resource records and reusable workspace materials.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-014"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-060",
+    "module_id": "MOD-RESOURCES",
+    "title": "ProjectResource kinds and CRUD operations.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-061",
+    "module_id": "MOD-RESOURCES",
+    "title": "Connector kinds include Webhook, StorageObject, and legacy forms.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-062",
+    "module_id": "MOD-RESOURCES",
+    "title": "File catalog, bindings, browsing, and promotion.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-063",
+    "module_id": "MOD-RESOURCES",
+    "title": "Resources page and floating-agent context.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-064",
+    "module_id": "MOD-RESOURCES",
+    "title": "Resource snapshots are provided to Memory.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-065",
+    "module_id": "MOD-SCHEDULER",
+    "title": "Scheduler plans, run history, cron, and Quartz/scheduler integration.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-013"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-066",
+    "module_id": "MOD-SCHEDULER",
+    "title": "Dispatcher deduplication and lifecycle transitions.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-013"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-067",
+    "module_id": "MOD-SCHEDULER",
+    "title": "Managed Scheduler agent discovers workflow targets and schedules and creates workflow schedules.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-068",
+    "module_id": "MOD-SCHEDULER",
+    "title": "Workflow versions, schemas, and options integrate CRM, Projects, Structure, and connections.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-09",
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-069",
+    "module_id": "MOD-SCHEDULER",
+    "title": "Workflow launching and process-slot discovery do not demonstrate complete target parity.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-070",
+    "module_id": "MOD-MEMORY",
+    "title": "Memory providers, diagnostics, operations, navigation, services, and contracts.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-018"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-071",
+    "module_id": "MOD-MEMORY",
+    "title": "Memory tools expose provider-backed context queries and operation status.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-072",
+    "module_id": "MOD-MEMORY",
+    "title": "Neutral Memory operation model with HTTP, MCP, mock-service, and driver integration.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-07",
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-073",
+    "module_id": "MOD-MEMORY",
+    "title": "Memory source gateways for CRM, Resources, and Workbench ingress.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-02",
+      "MAP-08",
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-074",
+    "module_id": "MOD-MEMORY",
+    "title": "Memory provider configuration, UI, controller, and registry dependencies require API/UI boundary verification.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-075",
+    "module_id": "MOD-PLUGINS",
+    "title": "Plugin catalog, installation, grants, OAuth, logs, activation, runtime-host tools, and settings.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-019"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-076",
+    "module_id": "MOD-PLUGINS",
+    "title": "Grant evaluation distinguishes disabled, missing, undeclared, and ungranted capabilities.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-019"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-077",
+    "module_id": "MOD-PLUGINS",
+    "title": "Bundled src/plugins are activated by manifest/registrar, not by page-level assembly loading.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-019"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-078",
+    "module_id": "MOD-PLUGINS",
+    "title": "Persistence for plugin installations, logs, and OAuth sessions.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-079",
+    "module_id": "MOD-PLUGINS",
+    "title": "Plugin secret broker versus raw-vault access requires boundary verification.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-080",
+    "module_id": "MOD-SECURITY",
+    "title": "Security runtime and UI.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-017"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-081",
+    "module_id": "MOD-SECURITY",
+    "title": "HTTP bearer authority is not an agent capability grant.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-082",
+    "module_id": "MOD-SECURITY",
+    "title": "Provider preparation excludes secret values; secrets are resolved at dispatch.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-009"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-083",
+    "module_id": "MOD-SECURITY",
+    "title": "Secret metadata, vault service, resolver, protectors, startup migration, and wrapping key.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-084",
+    "module_id": "MOD-SECURITY",
+    "title": "Plugin secret broker, storage resolver, and deletion guards.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-085",
+    "module_id": "MOD-COLLAB",
+    "title": "Collaboration UI concepts and runtime.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-020"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-086",
+    "module_id": "MOD-COLLAB",
+    "title": "Threads, participants, messages, and inbox services.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-087",
+    "module_id": "MOD-COLLAB",
+    "title": "Collaboration shell/page integration and object links.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-088",
+    "module_id": "MOD-WORKSPACE",
+    "title": "Workspace records, state, and currently centralized cross-module services.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-021"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-089",
+    "module_id": "MOD-WORKSPACE",
+    "title": "DefaultProviderProfileId is an opaque Workspace preference.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-090",
+    "module_id": "MOD-WORKSPACE",
+    "title": "Settings cover database/schema health, transfer, storage, provider history, file applications, vault, and API tokens.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-091",
+    "module_id": "MOD-WORKSPACE",
+    "title": "Connector registry, schema UI, and storage components.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-092",
+    "module_id": "MOD-WORKSPACE",
+    "title": "Connector outbox infrastructure exists; actual production handlers remain unverified.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-093",
+    "module_id": "MOD-WORKSPACE",
+    "title": "Provider-consumer ports and transfer handlers.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-094",
+    "module_id": "MOD-TESTLAB",
+    "title": "TestLab concepts for validation and testing.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-016"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-095",
+    "module_id": "MOD-TESTLAB",
+    "title": "TestPlan, TestCaseRecord, TestEvidenceRecord, TestRunRecord, and TestLabService.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-096",
+    "module_id": "MOD-TESTLAB",
+    "title": "TestLab page, project links, and transfer participant.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-097",
+    "module_id": "MOD-TESTLAB",
+    "title": "Project Structure documentation treats test-plan forms and evidence attachments as follow-up work, not a completed universal Test action.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-004"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-098",
+    "module_id": "BND-SIMPLECHATS",
+    "title": "Simple Chats admission commits user message and operation; durable leases drive dispatch, completion commits, and committed SSE journal replay.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-006"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-099",
+    "module_id": "BND-SIMPLECHATS",
+    "title": "Simple Chats has floating/workspace UI without agent tools; closing the surface does not cancel an admitted turn.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-006"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-100",
+    "module_id": "BND-SIMPLECHATS",
+    "title": "HTTP conversation creation is documented as non-idempotent; turn admission uses a caller operation ID.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-006"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-101",
+    "module_id": "BND-CONVERSATIONS",
+    "title": "The floating agent remains over different work views and supports contextual work.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-001"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-102",
+    "module_id": "BND-STORAGE",
+    "title": "New/uploaded text assets, authorized folder browsing, ownership-aware cleanup, and platform-specific open actions.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-004",
+      "SRC-005",
+      "SRC-008"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-103",
+    "module_id": "BND-WORKFLOWS",
+    "title": "The ProjectStructure executor exposes ListProjects, ReadTree, ReadNode, CreateAsset, and CreateTaskNodes through the runtime gateway.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-027"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-104",
+    "module_id": "BND-WORKFLOWS",
+    "title": "Workflows can be launched from Project Structure and write results back.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-001"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-105",
+    "module_id": "BND-WORK",
+    "title": "Tasks/Gantt, resource-cost strategies, assignment revisions, and plan analytics form the existing work plan.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-02"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-106",
+    "module_id": "BND-CONNECTORS",
+    "title": "Connector manifest sources and schema renderers integrate Resources, Providers, and Workspace.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-11"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-107",
+    "module_id": "BND-COMPOSITION",
+    "title": "Runtime host profiles, control-plane database sources, hosted workers, bootstrap, and web adapters.",
+    "evidence_level": "MAP",
+    "source_ids": [
+      "MAP-10"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-108",
+    "module_id": "BND-MAF",
+    "title": "RuntimeToolProviderComposer evaluates descriptors, purposes, and effective invocation context.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-109",
+    "module_id": "BND-API",
+    "title": "HTTP and runtime tools use distinct admission authority and owner-controlled typed operations.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-003",
+      "SRC-006"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve evidenced semantics; characterize actual behavior before change. DOC and MAP are not runtime proof."
+  },
+  {
+    "id": "FEAT-110",
+    "module_id": "MOD-AGENTS",
+    "title": "HR provider performs managed-identity and CRM-scope checks at attachment and again at invocation.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-029"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "OBSERVED_CODE_NOT_RUNTIME_PROVEN"
+  },
+  {
+    "id": "FEAT-111",
+    "module_id": "MOD-CRM",
+    "title": "HR already invokes canonical CRM party creation for nonsensitive people, organizations, and organization units.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-029"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "OBSERVED_CODE_NOT_RUNTIME_PROVEN"
+  },
+  {
+    "id": "FEAT-112",
+    "module_id": "MOD-CRM",
+    "title": "HR already lists and upserts bounded CRM affiliations while preserving restricted HR fields.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-029"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "OBSERVED_CODE_NOT_RUNTIME_PROVEN"
+  },
+  {
+    "id": "FEAT-113",
+    "module_id": "MOD-CRM",
+    "title": "Typed CRM agent summaries declare redaction, untrusted-business-text status, bounded query, record kind, and availability.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-032"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "OBSERVED_CODE_NOT_RUNTIME_PROVEN"
+  },
+  {
+    "id": "FEAT-114",
+    "module_id": "BND-SIMPLECHATS",
+    "title": "Existing definition API supports create, update, status, get, and paged query with concurrency tokens for changes.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-034"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "OBSERVED_CODE_NOT_RUNTIME_PROVEN"
+  },
+  {
+    "id": "FEAT-115",
+    "module_id": "BND-SIMPLECHATS",
+    "title": "HR administration of Simple Chats definitions through a new owner-backed, approved runtime adapter.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-002",
+      "SRC-034"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "REQUIRED_EXTENSION_NOT_DELIVERED"
+  },
+  {
+    "id": "FEAT-116",
+    "module_id": "MOD-SCHEDULER",
+    "title": "Managed Scheduler tools are interactive and workflow-only: discover targets/schedules and create a schedule.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-031"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "OBSERVED_CODE_NOT_RUNTIME_PROVEN"
+  },
+  {
+    "id": "FEAT-117",
+    "module_id": "MOD-PROCESSES",
+    "title": "No general first-party Process tool provider is documented; existing process UI/HTTP/governed/Structure paths remain separate.",
+    "evidence_level": "DOC",
+    "source_ids": [
+      "SRC-028"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "DOCUMENTED_SURFACE_LIMIT"
+  },
+  {
+    "id": "FEAT-118",
+    "module_id": "BND-WORKFLOWS",
+    "title": "Workflow steps can use authorized target-owner operations beyond Structure through explicitly registered typed adapters.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-002"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "TARGET_PROTOCOL_NOT_BLANKET_DELIVERY"
+  },
+  {
+    "id": "FEAT-119",
+    "module_id": "MOD-PROCESSES",
+    "title": "Process steps can use authorized target-owner operations beyond Structure with durable per-step receipts.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-002"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "TARGET_PROTOCOL_NOT_BLANKET_DELIVERY"
+  },
+  {
+    "id": "FEAT-120",
+    "module_id": "MOD-AGENTS",
+    "title": "Scoped operational agents can query CRM/Resources for task planning without impersonating managed HR.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-002"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "REQUIRED_EXTENSION_WHERE_NOT_ALREADY_SUPPORTED"
+  },
+  {
+    "id": "FEAT-121",
+    "module_id": "MOD-CRM",
+    "title": "Optional CRM-specialist preset uses the same CRM-owned commands and separately granted capabilities, not a second CRM writer.",
+    "evidence_level": "USER",
+    "source_ids": [
+      "USER-002"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "OPTIONAL_FUTURE_PRESET"
+  },
+  {
+    "id": "FEAT-122",
+    "module_id": "MOD-AGENTS",
+    "title": "HR agent administration filters privileged capabilities, creates drafts, and distinguishes saved agent from downstream CRM/team warnings.",
+    "evidence_level": "CODE",
+    "source_ids": [
+      "SRC-030"
+    ],
+    "runtime_proof": "NOT_RUN",
+    "retention": "Preserve current evidenced behavior. Required/optional extensions are explicitly labeled and need separate implementation scope.",
+    "delivery_state": "TARGETED_CODE_READ_NOT_FULL_HELPER_AUDIT"
+  }
+]

@@ -73,7 +73,7 @@ public interface IPartyRecordQueryService
 }
 
 public sealed class PartyRecordQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IPartyRecordQueryService
+    IDbContextFactory<CrmHrDbContext> dbContextFactory) : IPartyRecordQueryService
 {
     public async Task<PartyRecordQueryItem?> GetAsync(
         Guid partyId,

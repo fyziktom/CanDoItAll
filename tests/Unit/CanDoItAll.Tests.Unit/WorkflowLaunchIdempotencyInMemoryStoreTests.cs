@@ -88,10 +88,8 @@ public sealed class WorkflowLaunchIdempotencyInMemoryStoreTests
 
     private static PersistentWorkflowLaunchIdempotencyStore CreateStore()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([
-            typeof(PersistentWorkflowLaunchIdempotencyStore).Assembly
-        ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-launch-idempotency-{Guid.NewGuid():N}")
             .Options;
         return new PersistentWorkflowLaunchIdempotencyStore(

@@ -9,7 +9,7 @@ using Npgsql;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowLaunchIdempotencyStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) :
+    IDbContextFactory<WorkflowDbContext> dbContextFactory) :
     IWorkflowLaunchIdempotencyStore,
     IWorkflowLaunchIdempotencyQueryStore
 {
@@ -339,7 +339,7 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
     }
 
     private static IQueryable<WorkflowLaunchIdempotencyRecordEntity> ClaimQuery(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowLaunchIdempotencyScope scope)
     {
         if (scope.OriginKind == WorkflowLaunchOriginKind.Api)

@@ -1,1 +1,0 @@
-{"scope": "All proposed Git text, tracked plus untracked, all suffixes, without size truncation", "textFiles": 6628, "binaryFiles": 1155, "totalMatches": 245, "added": [], "removed": []}

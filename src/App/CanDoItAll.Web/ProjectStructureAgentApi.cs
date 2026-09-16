@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.AgentFramework.Models;
 using System.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workbench;
@@ -14,6 +16,7 @@ namespace CanDoItAll.Web;
 
 public static class ProjectStructureAgentApi
 {
+    private const string ProjectLifetimeRefreshRequiredErrorCode = "ProjectLifetimeRefreshRequired";
     private const string ReadSourceUnavailableErrorCode =
         "ProjectStructureReadSourceUnavailable";
     private const string ReadSourceInvalidErrorCode =
@@ -201,6 +204,8 @@ public static class ProjectStructureAgentApi
                 request,
                 async (agent, cancellationToken) =>
                 {
+                    var expected = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission);
+                    agent = agent with { ExpectedProjectAdmission = expected };
                     try
                     {
                         return await taskCreationService.CreateAsync(
@@ -237,7 +242,7 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                async (_, cancellationToken) =>
+                async (agent, cancellationToken) =>
                 {
                     if (!string.Equals(taskId, request.TaskId.Value, StringComparison.Ordinal))
                     {
@@ -247,11 +252,13 @@ public static class ProjectStructureAgentApi
                             "The task id in the route must match request.taskId.");
                     }
 
+                    var expected = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission);
+                    var owner = agent with { ExpectedProjectAdmission = expected };
                     try
                     {
                         return await taskDetailsService.UpdateAsync(
                             projectId,
-                            request,
+                            request with { MutationOwner = owner },
                             cancellationToken);
                     }
                     catch (ProjectStructureTaskDetailsException exception)
@@ -286,7 +293,7 @@ public static class ProjectStructureAgentApi
                     projectId,
                     taskId,
                     request,
-                    agent,
+                    agent with { ExpectedProjectAdmission = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission) },
                     cancellationToken),
                 cancellationToken));
 
@@ -907,12 +914,19 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.DeleteNodeDetailedAsync(
-                    projectId,
-                    nodeId,
-                    request,
-                    agent,
-                    cancellationToken),
+                (agent, cancellationToken) => {
+                    if (!request.DurableMutationId.HasValue && request.ManagedStorageDisposition is
+                        ProjectStructureManagedStorageDisposition.RetainManagedFiles or
+                        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles) {
+                        agent = agent with { ExpectedProjectAdmission = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission) };
+                    }
+                    return agentService.DeleteNodeDetailedAsync(
+                        projectId,
+                        nodeId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapGet("/projects/{projectId:guid}/deletion-completion-notices", async (
@@ -971,11 +985,18 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.DeleteNodesDetailedAsync(
-                    projectId,
-                    request,
-                    agent,
-                    cancellationToken),
+                (agent, cancellationToken) => {
+                    if (request.ManagedStorageDisposition is
+                        ProjectStructureManagedStorageDisposition.RetainManagedFiles or
+                        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles) {
+                        agent = agent with { ExpectedProjectAdmission = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission) };
+                    }
+                    return agentService.DeleteNodesDetailedAsync(
+                        projectId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/approvals/request", async (
@@ -1445,22 +1466,32 @@ public static class ProjectStructureAgentApi
             stopwatch.Stop();
             var warnings = ExtractWarnings(response);
             var effectiveProjectId = projectId ?? projectIdSelector?.Invoke(response);
-            await analyticsService.RecordAsync(
-                new ProjectStructureAnalyticsWriteRequest(
-                    operationName,
-                    effectiveProjectId,
-                    nodeId,
-                    scopeKind,
-                    scopeKey,
-                    agent,
-                    true,
-                    stopwatch.ElapsedMilliseconds,
-                    warnings,
-                    null,
-                    null,
-                    ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                    ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
-                cancellationToken);
+            try {
+                await analyticsService.RecordAsync(
+                    new ProjectStructureAnalyticsWriteRequest(
+                        operationName,
+                        effectiveProjectId,
+                        nodeId,
+                        scopeKind,
+                        scopeKey,
+                        agent,
+                        true,
+                        stopwatch.ElapsedMilliseconds,
+                        warnings,
+                        null,
+                        null,
+                        ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
+                        ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
+                    cancellationToken);
+            } catch (Exception exception) when (response is ProjectStructureWorkflowNodeStartResult) {
+                var admitted = (ProjectStructureWorkflowNodeStartResult)(object)response;
+                httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ProjectStructureWorkflowLaunch")
+                    .LogWarning(exception, "Workflow {RunId} retained its admission; analytics acknowledgement failed.", admitted.RunId);
+                return Results.Json(admitted with {
+                    Warnings = [.. admitted.Warnings, "The workflow admission is retained; analytics acknowledgement remains pending."],
+                    ObservationException = admitted.ObservationException ?? exception
+                }, ProjectStructureHttpJsonContract.SerializerOptions);
+            }
             return Results.Json(
                 response,
                 ProjectStructureHttpJsonContract.SerializerOptions);
@@ -1497,7 +1528,7 @@ public static class ProjectStructureAgentApi
                 ProjectStructureHttpJsonContract.SerializerOptions,
                 statusCode: ex.StatusCode);
         }
-        catch (Exception ex) when (SerializableMutationScope.IsConflict(ex))
+        catch (Exception ex) when (SerializableMutationScope.IsConflict(ex) || ex is ProjectWriteAdmissionRejectedException)
         {
             const string errorCode = "ProjectStructureConcurrentMutation";
             const string message =
@@ -1622,6 +1653,14 @@ public static class ProjectStructureAgentApi
             projectIdSelector);
     }
 
+    private static ProjectWriteAdmission RequireProjectAdmission(Guid projectId, ProjectWriteAdmission? expected) {
+        if (expected is null || expected.ProjectId != projectId) {
+            throw new ProjectStructureAgentException(StatusCodes.Status409Conflict, ProjectLifetimeRefreshRequiredErrorCode,
+                "Reload the project structure and submit its expectedProjectAdmission with the mutation.");
+        }
+        return expected;
+    }
+
     private static ProjectStructureAgentContext ResolveAgentContext(HttpContext httpContext)
     {
         if (httpContext.User.Identity?.IsAuthenticated == true)
@@ -1641,6 +1680,8 @@ public static class ProjectStructureAgentApi
                             httpContext.User.FindFirstValue(ClaimTypes.Name) ??
                             httpContext.User.FindFirstValue("name") ??
                             agentId;
+            var hasExpiry = long.TryParse(httpContext.User.FindFirstValue("exp"), System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var expiresAt);
 
             return new ProjectStructureAgentContext(
                 agentId,
@@ -1648,7 +1689,11 @@ public static class ProjectStructureAgentApi
                 Environment.MachineName,
                 string.Empty,
                 string.Empty,
-                sessionId);
+                sessionId) {
+                WorkflowAuthority = hasExpiry
+                    ? ProjectStructureWorkflowAuthoritySource.AuthenticatedOperator(agentId, DateTimeOffset.FromUnixTimeSeconds(expiresAt))
+                    : null
+            };
         }
 
         return new ProjectStructureAgentContext(
@@ -1657,7 +1702,9 @@ public static class ProjectStructureAgentApi
             Environment.MachineName,
             string.Empty,
             string.Empty,
-            $"runtime-{Environment.ProcessId}");
+            $"runtime-{Environment.ProcessId}") {
+            WorkflowAuthority = ProjectStructureWorkflowAuthoritySource.LocalOperator(WorkflowStructureOperatorSurface.Api)
+        };
     }
 
     private static IReadOnlyList<string> ExtractWarnings<T>(T response)

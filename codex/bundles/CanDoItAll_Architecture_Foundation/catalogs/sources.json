@@ -1,0 +1,594 @@
+[
+  {
+    "id": "SRC-001",
+    "kind": "repository_inventory",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules",
+    "url": "https://github.com/fyziktom/CanDoItAll/tree/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules",
+    "read_scope": "Inventory of 15 directories verified through GitHub tree; not an audit of every file. Observation retained from the original audit at its recorded commit.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-002",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "docs/architecture/internal-communication.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/docs/architecture/internal-communication.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-003",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "docs/agent-runtime-tool-surface.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/docs/agent-runtime-tool-surface.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-004",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "docs/architecture/project-structure-asset-authoring-and-folder-actions.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/docs/architecture/project-structure-asset-authoring-and-folder-actions.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-005",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "docs/architecture/project-structure-node-deletion-disposition.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/docs/architecture/project-structure-node-deletion-disposition.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-006",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "docs/architecture/llm-chats-boundary-and-handoffs.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/docs/architecture/llm-chats-boundary-and-handoffs.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-007",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "docs/provider-capability-and-pricing.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/docs/provider-capability-and-pricing.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-008",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Workbench/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Workbench/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-009",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.AgentFramework/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-010",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.CrmHr/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.CrmHr/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-011",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Projects/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Projects/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-012",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Processes/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Processes/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-013",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.SchedulerPlanner/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-014",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Resources/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Resources/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-015",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Prompts/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Prompts/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-016",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.TestLab/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.TestLab/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-017",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Security/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Security/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-018",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Memory/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Memory/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-019",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Plugins/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Plugins/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-020",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Collaboration/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Collaboration/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-021",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Workspace/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Workspace/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-022",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/README.md",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-023",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Foundation/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs",
+    "read_scope": "File read during the original foundation audit; not executed and not automatically reverified by the English revision.",
+    "note": "",
+    "blob_sha": "2d459199323ce0098f9f69b1d6cd6d7422d80a45"
+  },
+  {
+    "id": "SRC-024",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletion.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletion.cs",
+    "read_scope": "Queue, worker, processor, and metadata read; other recovery paths were not tested. Observation retained from the original audit at its recorded commit.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-025",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureRuntimeGateway.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureRuntimeGateway.cs",
+    "read_scope": "Targeted read of read/CreateNode/CreateAsset, idempotency lock/metadata, parent/root guards, and media source. Not a complete caller audit. Observation retained from the original audit at its recorded commit.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-026",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs",
+    "read_scope": "Targeted read of GetAddOptions, Create, Start, GetStatus/ApplyStatus, and launch/result-projection call sites. Not a complete helper audit. Observation retained from the original audit at its recorded commit.",
+    "note": "",
+    "blob_sha": null
+  },
+  {
+    "id": "SRC-027",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "e9fb82be7a43f843303cbd81233450acb6d24dd0",
+    "path": "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/ProjectStructureWorkflowExecutor.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/e9fb82be7a43f843303cbd81233450acb6d24dd0/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/ProjectStructureWorkflowExecutor.cs",
+    "read_scope": "This partial file was read; other partial files were not read in that pass. Observation retained from the original audit at its recorded commit.",
+    "note": "",
+    "blob_sha": "3cfb8a7b306d5fffcd83ef383d9ffd589a667314"
+  },
+  {
+    "id": "EXT-001",
+    "kind": "external_primary_documentation",
+    "url": "https://learn.microsoft.com/en-us/ef/core/saving/transactions",
+    "note": "Cross-context transactions share both DbConnection and DbTransaction; retry coordination must cover the intended transaction.",
+    "retrieved_on": "2026-09-08"
+  },
+  {
+    "id": "EXT-002",
+    "kind": "external_primary_documentation",
+    "url": "https://learn.microsoft.com/en-us/ef/core/modeling/entity-types",
+    "note": "ExcludeFromMigrations does not restrict runtime writes.",
+    "retrieved_on": "2026-09-08"
+  },
+  {
+    "id": "EXT-003",
+    "kind": "external_primary_documentation",
+    "url": "https://learn.microsoft.com/en-us/aspnet/core/blazor/blazor-ef-core?view=aspnetcore-10.0",
+    "note": "DbContext lifetime in server-side Blazor.",
+    "retrieved_on": "2026-09-08"
+  },
+  {
+    "id": "EXT-004",
+    "kind": "external_primary_documentation",
+    "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html",
+    "note": "Atomic state plus outbox; repeatable delivery and idempotent processing.",
+    "retrieved_on": "2026-09-08"
+  },
+  {
+    "id": "EXT-005",
+    "kind": "external_primary_documentation",
+    "url": "https://microservices.io/patterns/communication-style/idempotent-consumer.html",
+    "note": "Message deduplication and atomic recording of processing.",
+    "retrieved_on": "2026-09-08"
+  },
+  {
+    "id": "EXT-006",
+    "kind": "external_primary_documentation",
+    "url": "https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/",
+    "note": "Migrations and model snapshots; verify against the repository-pinned EF version.",
+    "retrieved_on": "2026-09-08"
+  },
+  {
+    "id": "POL-001",
+    "kind": "repository_policy",
+    "repository": "fyziktom/CanDoItAll.SharedInfo",
+    "commit": null,
+    "path": "codex/skills/bundles/candoitall-bundle-preparation/SKILL.md",
+    "url": "https://github.com/fyziktom/CanDoItAll.SharedInfo/blob/main/codex/skills/bundles/candoitall-bundle-preparation/SKILL.md",
+    "note": "Moving main was read on 2026-09-08 during original preparation. Implementation-bundle scaffolding is not applied to this shared non-executable foundation."
+  },
+  {
+    "id": "INPUT-001",
+    "kind": "user_supplied_architecture_input",
+    "filename": "Module_Boundaries_Cross_Module_Contracts_Bundle.zip",
+    "sha256": "81c83083be1b2b6de7c0b8ff0a3c51981b747ad97f8a08c12317da02366f1e99",
+    "note": "Historical input, not normative when it conflicts with this foundation. Original implementation subbundles are not adopted. The filename is an immutable provenance label, not package prose."
+  },
+  {
+    "id": "INPUT-002",
+    "kind": "user_supplied_architecture_input",
+    "filename": "CanDoItAll_Domenove_Hranice_Navrh_2026-09-08.md",
+    "sha256": "ec994b10130f776754aeba71070b1f2c47fc3b298722fcb7466704062c583db7",
+    "note": "Historical input, not normative when it conflicts with this foundation. Original implementation subbundles are not adopted. The filename is an immutable provenance label, not package prose."
+  },
+  {
+    "id": "USER-001",
+    "kind": "user_requirement",
+    "path": "inputs/original-requirements.md",
+    "note": "Explicit product requirements and user-confirmed scenarios from the conversation, translated into English."
+  },
+  {
+    "id": "MAP-01",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/01-src-modules-candoitall-modules-projects.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-02",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/02-workbench-business-layer-src-modules-candoitall-modules-work.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-03",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/03-workbench-ui-src-modules-candoitall-modules-workbench-pages-.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-04",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/04-workbench-agent-facing-and-cross-module-surfaces-agenttools-.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-05",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/05-agents-consumption-surfaces-agent-projection-listing-launchi.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-06",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/06-src-modules-candoitall-modules-agentframework-outbound-depen.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-07",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/07-maf-core-product-leaks.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-08",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/08-src-modules-candoitall-modules-crmhr-crm-hr-module-parties-c.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-09",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/09-processes-and-workflows-coupling.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-10",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/10-host-composition-and-dev-loop.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-11",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/11-satellite-modules-workspace-resources-prompts-testlab-schedu.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "MAP-12",
+    "kind": "inherited_static_analysis",
+    "input_id": "INPUT-001",
+    "path": "evidence/reader-maps/12-patterns-and-docs-vs-reality-catalog-of-cross-module-communi.json",
+    "baseline_commit": "d446dc2bad461c7e753cceb53a7969d6ff6b9cb2",
+    "note": "Secondary source: reverify line numbers and claims. Not proof of current behavior and not normative instructions. Path refers to the original INPUT-001 archive, not a missing file in this package."
+  },
+  {
+    "id": "SRC-028",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "docs/agent-runtime-tool-surface.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/docs/agent-runtime-tool-surface.md",
+    "blob_sha": "3b39cef6fa35c613a332f16ba35624fdc3c970fa",
+    "read_scope": "Complete document read. Runtime surface/purpose rules and absence of a general first-party Process provider are documentation evidence, not an executed inventory.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-029",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/Hr/HrAgentRuntimeToolProvider.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/Hr/HrAgentRuntimeToolProvider.cs",
+    "blob_sha": "07f65f60de9f0ef3fc854ed7ec401e88a181bd5b",
+    "read_scope": "Complete provider read in two ranges. Actual typed tool wiring, interactive purpose, scoped per-call authorization, CRM create/affiliation and safe queries observed; no runtime execution.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-030",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentAdministrationService.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentAdministrationService.cs",
+    "blob_sha": null,
+    "read_scope": "Targeted read of search/settings/options, draft creation, updates, capability filtering, and saved-with-projection-warning behavior; the large response was truncated. Not a complete authorization-helper audit.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-031",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs",
+    "blob_sha": "608f5bd9a72ac8109a83e3e0580cd959c6e509dc",
+    "read_scope": "Complete provider read. Interactive identity-bound workflow-target/schedule discovery and workflow schedule creation observed. Descriptor explicitly excludes process scheduling pending refactoring.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-032",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrAgentQueryService.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/src/Modules/CanDoItAll.Modules.CrmHr/Services/CrmHrAgentQueryService.cs",
+    "blob_sha": "048c6e8aa43c1c0a1b95c914cc1bbe9cd8a554ed",
+    "read_scope": "Lines 1-240 read: typed record kinds, bounded queries, safe-summary/redaction/trust fields and owner persistence access. Not a complete privacy/security audit.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-033",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "docs/architecture/llm-chats-boundary-and-handoffs.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/docs/architecture/llm-chats-boundary-and-handoffs.md",
+    "blob_sha": "89c3e4c0c83491a3ebe1084f1e45339459059cff",
+    "read_scope": "Complete boundary document read. Ordinary product, durable turn lifecycle, no tools/implicit context, and non-idempotent HTTP conversation creation.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-034",
+    "kind": "source_code",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/Application/LlmChatDefinitionContracts.cs",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/Application/LlmChatDefinitionContracts.cs",
+    "blob_sha": "5380f92628715fe2ecbb9136b440121f9e4d57ce",
+    "read_scope": "Complete contracts file read. Existing create/update/status/query API, expected concurrency token on update/status, and no operation ID in definition-create/update request shapes. Does not prove internal transactional idempotency.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-035",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "src/Modules/CanDoItAll.Modules.Processes/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/src/Modules/CanDoItAll.Modules.Processes/README.md",
+    "blob_sha": "8a573ca7dc88ead753282cd8856c40b6721cb7fb",
+    "read_scope": "Complete short README read. Module responsibility statement only; not evidence that every operation is attached as an agent tool.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-036",
+    "kind": "repository_documentation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "src/Modules/CanDoItAll.Modules.Resources/README.md",
+    "url": "https://github.com/fyziktom/CanDoItAll/blob/504c47d8f3fa085085b3fdbf955b69b9fdfb8856/src/Modules/CanDoItAll.Modules.Resources/README.md",
+    "blob_sha": "3bcbd7faca9a3c313ce60727140847938396c9a2",
+    "read_scope": "Complete short README read. Generic module purpose, not proof of a direct Resource runtime tool.",
+    "note": "Targeted revision audit; application behavior not executed."
+  },
+  {
+    "id": "SRC-037",
+    "kind": "repository_ref_observation",
+    "repository": "fyziktom/CanDoItAll",
+    "commit": "504c47d8f3fa085085b3fdbf955b69b9fdfb8856",
+    "path": "components-decoupling",
+    "url": "https://api.github.com/repos/fyziktom/CanDoItAll/branches/components-decoupling",
+    "note": "Observed branch HEAD: agents diagnostics, 2026-09-08T16:54:30Z; parent e9fb82be7a43f843303cbd81233450acb6d24dd0. This is not a claim that every historical source was reread at HEAD."
+  },
+  {
+    "id": "EXT-007",
+    "kind": "external_primary_documentation",
+    "url": "https://learn.microsoft.com/en-us/aspnet/core/security/authorization/resource-based?view=aspnetcore-10.0",
+    "retrieved_on": "2026-09-08",
+    "note": "Resource-based authorization must evaluate the actual resource and operation, not merely route authentication. Applied here as a design principle; not a claim of current full enforcement."
+  },
+  {
+    "id": "USER-002",
+    "kind": "user_requirement",
+    "path": "inputs/revision-request.md",
+    "note": "The user requests safe reads/writes across modules for agents, workflows, and processes, HR administration of Simple Chats definitions, and a complete English replacement package."
+  },
+  {
+    "id": "INPUT-003",
+    "kind": "previous_foundation",
+    "filename": "CanDoItAll_Architecture_Foundation_2026-09-08.zip",
+    "note": "Original v1.0 foundation retained as provenance only; all original catalog IDs are retained and their prose translated in this replacement.",
+    "sha256": "75000c675115e76885b369b4e4fc902488dae041b8a9fdbcfaa1c88c2565f8e5"
+  }
+]

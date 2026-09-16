@@ -24,4 +24,4 @@ The script starts and stops only its own host/browser. Web uses port 5285; its l
 
 For the same Governance Surface in the existing sandbox, build that project with `CatalogAssetMode=Parity` or `Fast`, prepare the corresponding assets, then pass `Parity` or `Fast` instead of `web`. These runs use ports 5395/5396 and one screenshot each. They register no production services.
 
-`smoke.cjs` runs the explicitly frozen lightweight watch protocol. Its plan and final summary are described in the [Governance closure](../../../codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/report.md). It restores exact edited bytes, stops owned process trees, and rejects concurrent source changes. Run it sequentially without parallel builds or tests.
+`smoke.cjs` is a task-specific watch harness driven by the ignored `.artifacts/governance-final/smoke-plan.json`. Its historical closure report is not included in this checkout. It restores exact edited bytes, stops owned process trees, and rejects concurrent source changes. Run it sequentially without parallel builds or tests. Use [Testing](../../../docs/testing.md) for the maintained acceptance commands.

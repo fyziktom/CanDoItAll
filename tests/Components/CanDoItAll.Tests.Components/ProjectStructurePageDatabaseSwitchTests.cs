@@ -502,15 +502,15 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
     private static void RegisterDelayedDbContextFactory(IServiceCollection services)
     {
         var descriptor = services.Last(candidate =>
-            candidate.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+            candidate.ServiceType == typeof(IDbContextFactory<WorkbenchDbContext>));
         services.Remove(descriptor);
         services.Add(new ServiceDescriptor(
             typeof(DelayedFirstDbContextFactory),
             serviceProvider => new DelayedFirstDbContextFactory(
-                (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, descriptor)),
+                (IDbContextFactory<WorkbenchDbContext>)CreateService(serviceProvider, descriptor)),
             descriptor.Lifetime));
         services.Add(new ServiceDescriptor(
-            typeof(IDbContextFactory<AppDbContext>),
+            typeof(IDbContextFactory<WorkbenchDbContext>),
             serviceProvider => serviceProvider.GetRequiredService<DelayedFirstDbContextFactory>(),
             descriptor.Lifetime));
     }
@@ -539,7 +539,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
     }
 
     private sealed class DelayedFirstDbContextFactory(
-        IDbContextFactory<AppDbContext> innerFactory) : IDbContextFactory<AppDbContext>
+        IDbContextFactory<WorkbenchDbContext> innerFactory) : IDbContextFactory<WorkbenchDbContext>
     {
         private readonly TaskCompletionSource firstDelayedRequest = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -557,10 +557,10 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         public void ReleaseFirstDelayedRequest()
             => releaseFirstDelayedRequest.TrySetResult();
 
-        public AppDbContext CreateDbContext()
+        public WorkbenchDbContext CreateDbContext()
             => innerFactory.CreateDbContext();
 
-        public async Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public async Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             if (Volatile.Read(ref armed) != 0 &&
                 Interlocked.Increment(ref delayedRequestCount) == 1)

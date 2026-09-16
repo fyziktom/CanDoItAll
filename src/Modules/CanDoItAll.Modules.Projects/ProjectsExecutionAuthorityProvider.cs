@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Projects;
 
-internal sealed class ProjectsExecutionAuthorityProvider
+internal sealed class ProjectsExecutionAuthorityProvider(ProjectWriteAdmissionService admissions)
     : IAgentExecutionSourceAuthorityProvider
 {
     public string SourceKind => ProjectsAgentChatContextBuilder.SourceKind;
@@ -15,13 +15,10 @@ internal sealed class ProjectsExecutionAuthorityProvider
         ArgumentNullException.ThrowIfNull(request);
         if (Guid.TryParse(request.SourceId.Value, out var projectId) && projectId != Guid.Empty)
         {
-            return ValueTask.FromResult(ProjectScopedExecutionAuthority.Resolve(
-                request.Agent,
-                projectId,
-                request.ObservedWorkspaceScope));
+            return ProjectAgentAccessPolicy.ResolveExecutionAuthorityAsync(request, projectId, admissions, cancellationToken);
         }
 
-        if (request.ObservedWorkspaceScope is not null)
+        if (request.ObservedWorkspaceScope is not null && !request.IsCapturedSandboxRevalidation)
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"The projects source '{request.SourceId.Value}' published workspace scope '{request.ObservedWorkspaceScope.DisplayName}' without a selected project.");

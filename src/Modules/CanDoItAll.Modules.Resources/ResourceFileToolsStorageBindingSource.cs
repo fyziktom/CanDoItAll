@@ -31,7 +31,7 @@ internal sealed class ResourceFileToolsStorageBindingSource(
                 "The Resources storage-source scope identifier is invalid.");
         }
 
-        StorageCatalogRecord storage = await storageCatalog.GetAsync(storageId, cancellationToken)
+        StorageCatalogSnapshot storage = await storageCatalog.GetAsync(storageId, cancellationToken)
             ?? throw ProviderError(
                 FileBrowserErrorCode.NotFound,
                 "The Resources storage source no longer exists.");

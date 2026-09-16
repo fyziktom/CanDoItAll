@@ -8,6 +8,10 @@ public interface IAgentChatContextScopeLease : IDisposable
 {
     AgentChatContextScopeId ScopeId { get; }
 
+    // True while this registration is the registry's active scope; disposal or a newer
+    // scope or publication ends it, and the holder must then stop updating or synchronizing.
+    bool IsActive { get; }
+
     void Update(AgentChatContextScope scope);
 
     void SynchronizeNavigation(AgentChatNavigationIdentity navigationIdentity);
@@ -25,6 +29,10 @@ public interface IAgentChatContextFragmentLease : IDisposable
 public interface IAgentChatContextPublicationLease : IDisposable
 {
     AgentChatContextScopeId ScopeId { get; }
+
+    // True while this registration is the registry's active scope; disposal or a newer
+    // scope or publication ends it, and the holder must then stop updating or synchronizing.
+    bool IsActive { get; }
 
     void Update(AgentChatContextPublication publication);
 
@@ -385,6 +393,16 @@ public sealed class AgentChatContextRegistry(TimeProvider timeProvider) : IAgent
         }
     }
 
+    private bool IsScopeRegistrationActive(AgentChatContextScopeId scopeId, Guid registrationToken)
+    {
+        lock (gate)
+        {
+            return activeScope is not null &&
+                activeScope.Scope.Id == scopeId &&
+                activeScope.RegistrationToken == registrationToken;
+        }
+    }
+
     private void DeactivateScope(AgentChatContextScopeId scopeId, Guid registrationToken)
     {
         var changed = false;
@@ -572,7 +590,8 @@ public sealed class AgentChatContextRegistry(TimeProvider timeProvider) : IAgent
             scope.AccessMode,
             scope.AccessState,
             scope.SurfacePosition,
-            scope.CompletionRefreshMode);
+            scope.CompletionRefreshMode,
+            scope.ObservedProjectLifetime);
     }
 
     private static AgentChatContextPublication NormalizePublication(
@@ -702,6 +721,10 @@ public sealed class AgentChatContextRegistry(TimeProvider timeProvider) : IAgent
 
         public AgentChatContextScopeId ScopeId { get; } = scopeId;
 
+        public bool IsActive
+            => owner is { } currentOwner &&
+               currentOwner.IsScopeRegistrationActive(ScopeId, registrationToken);
+
         public void Update(AgentChatContextScope scope)
         {
             var currentOwner = owner ?? throw new ObjectDisposedException(nameof(ScopeLease));
@@ -764,6 +787,10 @@ public sealed class AgentChatContextRegistry(TimeProvider timeProvider) : IAgent
         private AgentChatContextRegistry? owner = owner;
 
         public AgentChatContextScopeId ScopeId { get; } = scopeId;
+
+        public bool IsActive
+            => owner is { } currentOwner &&
+               currentOwner.IsScopeRegistrationActive(ScopeId, registrationToken);
 
         public void Update(AgentChatContextPublication publication)
         {

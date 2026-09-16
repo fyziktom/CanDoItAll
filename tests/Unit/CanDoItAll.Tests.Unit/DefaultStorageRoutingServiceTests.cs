@@ -42,7 +42,7 @@ public sealed class DefaultStorageRoutingServiceTests
                     Reason = "Node-scoped preview content uses the evidence gateway."
                 }
             ]);
-        var sut = new DefaultStorageRoutingService(catalogService);
+        var sut = new DefaultStorageRoutingService(catalogService, catalogService.ReadRoutingRecordsAsync);
 
         var recommendation = await sut.RecommendAsync(new StorageSelectionContext(
             "evidence.pdf",
@@ -87,7 +87,7 @@ public sealed class DefaultStorageRoutingServiceTests
                     Reason = "Publish operations use the release mirror."
                 }
             ]);
-        var sut = new DefaultStorageRoutingService(catalogService);
+        var sut = new DefaultStorageRoutingService(catalogService, catalogService.ReadRoutingRecordsAsync);
 
         var recommendation = await sut.RecommendAsync(new StorageSelectionContext(
             "notes.md",
@@ -133,7 +133,7 @@ public sealed class DefaultStorageRoutingServiceTests
                     Reason = "Previewable evidence prefers an inline-preview store."
                 }
             ]);
-        var sut = new DefaultStorageRoutingService(catalogService);
+        var sut = new DefaultStorageRoutingService(catalogService, catalogService.ReadRoutingRecordsAsync);
 
         var recommendation = await sut.RecommendAsync(new StorageSelectionContext(
             "proof.png",
@@ -173,25 +173,54 @@ public sealed class DefaultStorageRoutingServiceTests
         IReadOnlyList<StorageCatalogRecord> storages,
         IReadOnlyList<StorageRoutingRule> rules) : IStorageCatalogService
     {
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+        private Task<IReadOnlyList<StorageCatalogRecord>> ReadRecordsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(storages);
 
-        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord?> ReadRecordAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult(storages.FirstOrDefault(item => item.Id == id));
 
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> ReadBootstrapRecordAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(storages.First());
 
-        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> SaveRecordAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+        internal Task<IReadOnlyList<StorageRoutingRule>> ReadRoutingRecordsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(rules);
 
-        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+        private Task<StorageRoutingRule> SaveRoutingRecordAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+        public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+        public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+        public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+            var row = await ReadRecordAsync(id, cancellationToken);
+            return row is null ? null : new(row.ToSnapshot(), StorageJson.ParseProviderConfiguration(row.ConfigJson));
+        }
+
+        public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+            (await ReadBootstrapRecordAsync(cancellationToken)).ToDriverInput();
+
+        public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRoutingRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRoutingRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
     }
 }

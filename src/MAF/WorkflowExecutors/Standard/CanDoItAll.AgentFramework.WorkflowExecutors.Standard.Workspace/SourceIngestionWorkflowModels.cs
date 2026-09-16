@@ -10,7 +10,9 @@ internal sealed record WorkflowSourceCandidate(
 internal sealed record WorkflowSourceIngestionFile(
     string FullPath,
     string DisplayPath,
-    string FileName);
+    string FileName,
+    string? ReadRoot = null,
+    WorkflowWorkspaceReadPathOrigin Origin = WorkflowWorkspaceReadPathOrigin.Workspace);
 
 internal sealed record WorkflowSourceReadResult(
     string Text,

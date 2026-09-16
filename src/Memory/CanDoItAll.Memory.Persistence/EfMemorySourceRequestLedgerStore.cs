@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Memory.Persistence;
 
 public sealed class EfMemorySourceRequestLedgerStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IMemorySourceRequestLedgerStore
+    IDbContextFactory<MemoryDbContext> dbContextFactory) : IMemorySourceRequestLedgerStore
 {
     public async Task EnqueueAsync(
         MemorySourceIngestionJobRecord record,

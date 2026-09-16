@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -10,6 +11,8 @@ public static class AgentFrameworkUiServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddCascadingAuthenticationState();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        services.TryAddSingleton<ContextualAgentWorkspacePolicyCatalog>();
         services.TryAddScoped<IAgentsWorkspaceQuery, AgentsWorkspaceQuery>();
         services.TryAddScoped<IAgentGovernanceReads, AgentGovernanceReads>();
         services.TryAddScoped<IAgentDiagnosticsReads, AgentDiagnosticsReads>();

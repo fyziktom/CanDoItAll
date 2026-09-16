@@ -1,0 +1,9 @@
+English translation of the original full-package request:
+
+Some Project Structure items are projections, but others exist only there, including simple-note nodes, other native items, and links between structure items. Agents, processes, and workflows must retain a safe way to require creation of a node or asset.
+
+Create a detailed shared architecture ZIP. Assume the ongoing Agents component decoupling reaches a stable checkpoint; then prioritize this domain/data refactoring before continuing large UI decoupling, correcting the sequence if necessary. Define a complete domain glossary, responsibilities, necessary module communication, and guidance for GPT-6 Astra xhigh.
+
+Preserve product operation: a floating agent works over Project Structure and Gantt, reads/creates files, creates tasks, and performs effective contextual operations. Workflows and processes can start from Structure and write results back. Map each module's evidenced capabilities and likely future needs. Plan and inspect the full scope rather than omit inconvenient features.
+
+Before final ZIP creation, review as senior architect and QA, resolve missing or concerning details, and repeat review/correction as needed. This translation is a source requirement, not proof that every stated behavior was independently executed during preparation.

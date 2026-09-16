@@ -27,6 +27,8 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             physicalPathPolicyFactory,
             workspaceScope,
             externalTargetRegistry);
+        ExecutionScope = new WorkspaceExecutionScope(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope,
+            rootCaseSensitivity: physicalPathPolicyFactory.Create(pathPolicy.WorkspaceRoot).CaseSensitivity);
         receiptWriter = new WorkspaceFileReceiptWriter(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope);
         var textContentGuard = new WorkspaceTextContentGuard();
 
@@ -34,6 +36,8 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         destinationContentPlacementPolicy = new WorkspaceDestinationContentPlacementPolicy(pathPolicy);
         mutationService = new WorkspaceFileMutationService(pathPolicy, receiptWriter, destinationContentPlacementPolicy);
     }
+
+    public WorkspaceExecutionScope ExecutionScope { get; }
 
     public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100)
         => queryService.ListDirectory(relativePath, maxResults);

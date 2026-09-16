@@ -426,6 +426,101 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
         Assert.Equal(new GanttTaskId(first.Id), issue.RelatedTaskId);
     }
 
+    [Fact]
+    public void Mermaid_export_anchors_a_fully_synthesized_task_after_all_of_its_emitted_predecessors()
+    {
+        var projectId = Guid.NewGuid();
+        var first = CreateTask("task-a", "First", ProjectionOrigin, ProjectionOrigin.AddHours(2));
+        var second = CreateTask("task-b", "Second", ProjectionOrigin, ProjectionOrigin.AddHours(3));
+        var successor = CreateTask("task-c", "Successor", durationSeconds: 60 * 60);
+        var surface = CreateSurface(
+            projectId,
+            [first, second, successor],
+            [
+                new ProjectStructureLink(successor.Id, first.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid()),
+                new ProjectStructureLink(successor.Id, second.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid())
+            ]);
+        var projection = Build(surface);
+
+        var source = ProjectStructureGanttMermaidExporter.Build("Gantt test", projection);
+        var taskLines = source
+            .Split('\n', StringSplitOptions.TrimEntries)
+            .Where(line => line.Contains(" :", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(3, taskLines.Length);
+        Assert.Equal("Successor :task3, after task1 task2, 1h", taskLines[2]);
+        Assert.Equal((ProjectionOrigin.AddHours(3), ProjectionOrigin.AddHours(4)), Dates(projection, successor.Id));
+    }
+
+    [Fact]
+    public void Mermaid_export_keeps_the_pinned_date_of_a_canonical_successor_with_dependencies()
+    {
+        // A persisted schedule is a pinned date: the export never rewrites it as a dependency anchor, because a
+        // Mermaid task line carries either a start date or `after`, never both.
+        var projectId = Guid.NewGuid();
+        var predecessor = CreateTask("task-a", "Predecessor", ProjectionOrigin, ProjectionOrigin.AddHours(2));
+        var successor = CreateTask("task-b", "Successor", ProjectionOrigin.AddHours(2), ProjectionOrigin.AddHours(3));
+        var surface = CreateSurface(
+            projectId,
+            [predecessor, successor],
+            [new ProjectStructureLink(successor.Id, predecessor.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid())]);
+        var projection = Build(surface);
+
+        var source = ProjectStructureGanttMermaidExporter.Build("Gantt test", projection);
+        var taskLines = source
+            .Split('\n', StringSplitOptions.TrimEntries)
+            .Where(line => line.Contains(" :", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(2, taskLines.Length);
+        Assert.Single(projection.Dependencies);
+        Assert.Equal("Successor :task2, 2026-07-14 10:00:00, 1h", taskLines[1]);
+        Assert.DoesNotContain("after", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Task_metrics_use_the_recorded_execution_state_over_the_status_hint()
+    {
+        var projectId = Guid.NewGuid();
+        var notStarted = CreateTask("task-a", "Not started", ProjectionOrigin, ProjectionOrigin.AddHours(1),
+            metadataJson: CreateExecutionMetadata(ProjectTaskExecutionState.NotStarted), progressPercent: 28);
+        var completed = CreateTask("task-b", "Completed", ProjectionOrigin, ProjectionOrigin.AddHours(1),
+            metadataJson: CreateExecutionMetadata(ProjectTaskExecutionState.Completed), progressPercent: 28);
+        var cancelled = CreateTask("task-c", "Cancelled", ProjectionOrigin, ProjectionOrigin.AddHours(1),
+            metadataJson: CreateExecutionMetadata(ProjectTaskExecutionState.Cancelled), progressPercent: 62);
+        var legacy = CreateTask("task-d", "Legacy hint", ProjectionOrigin, ProjectionOrigin.AddHours(1),
+            metadataJson: CreateExecutionMetadata(ProjectTaskExecutionState.Unknown), progressPercent: 40);
+        var surface = CreateSurface(projectId, [notStarted, completed, cancelled, legacy], []);
+
+        var result = Build(surface);
+
+        Assert.True(result.IsValid);
+        Assert.Equal(0, result.Tasks.Single(task => task.Id.Value == notStarted.Id).ProgressPercent);
+        Assert.Equal(100, result.Tasks.Single(task => task.Id.Value == completed.Id).ProgressPercent);
+        Assert.Null(result.Tasks.Single(task => task.Id.Value == cancelled.Id).ProgressPercent);
+        Assert.Equal(40, result.Tasks.Single(task => task.Id.Value == legacy.Id).ProgressPercent);
+        Assert.DoesNotContain(
+            result.Issues,
+            issue => issue.Code == ProjectStructureGanttProjectionIssueCode.InvalidTaskProgress);
+    }
+
+    private static string CreateExecutionMetadata(ProjectTaskExecutionState executionState)
+    {
+        return ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            WorkItem = new ProjectWorkItemMetadata
+            {
+                WorkItemKind = ProjectWorkItemKind.Task,
+                ExecutionState = executionState,
+                ActualStartedAtUtc = executionState is ProjectTaskExecutionState.Started or ProjectTaskExecutionState.Completed
+                    ? ProjectionOrigin
+                    : null,
+                ActualEndedAtUtc = executionState == ProjectTaskExecutionState.Completed ? ProjectionOrigin.AddHours(1) : null
+            }
+        });
+    }
+
     private static ProjectStructureGanttProjectionResult Build(
         ProjectStructureSurface surface,
         IReadOnlyCollection<ProjectPartyAssignmentDetail>? assignments = null,

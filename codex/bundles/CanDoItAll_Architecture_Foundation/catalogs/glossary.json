@@ -1,0 +1,882 @@
+[
+  {
+    "id": "TERM-001",
+    "term": "Domain / bounded context",
+    "owner": "Specific domain owner",
+    "definition": "A boundary with its own vocabulary, authority and invariants.",
+    "distinction": "Not automatically an assembly, deployment or UI tab.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-002",
+    "term": "Module / feature package",
+    "owner": "Composition and domain",
+    "definition": "A physical unit of code or feature composition; it may currently contain several logical boundaries.",
+    "distinction": "The location of a class does not determine its rightful authority.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-003",
+    "term": "Canonical fact",
+    "owner": "Domain owner",
+    "definition": "A current fact that can be changed only through its owner's operation.",
+    "distinction": "A read-model copy does not become a second master.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-004",
+    "term": "Projection",
+    "owner": "Projection consumer",
+    "definition": "A derived view carrying source references, versions and freshness information.",
+    "distinction": "It has no independent authority to change source values.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-005",
+    "term": "Historical snapshot",
+    "owner": "Decision or evidence owner",
+    "definition": "An immutable record of the values used at the time of a decision or execution.",
+    "distinction": "It does not change when today's price list or definition changes.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-006",
+    "term": "Local enrichment",
+    "owner": "Enrichment owner",
+    "definition": "A new locally owned fact attached to a foreign identity, such as a CRM note.",
+    "distinction": "It does not overwrite a technical agent field.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-007",
+    "term": "EntityReference",
+    "owner": "Owner of the referenced entity kind",
+    "definition": "A typed reference containing owner, kind, stable identity and the required source scope.",
+    "distinction": "Not a UI path, display name or implicit permission.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-008",
+    "term": "NodeId / NodeKey",
+    "owner": "Project Structure",
+    "definition": "A stable identity for a particular node or occurrence in the graph; preserve the existing key format.",
+    "distinction": "Not necessarily a GUID, and not the same as AgentId.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-009",
+    "term": "Source revision",
+    "owner": "Source owner",
+    "definition": "A content or configuration version issued by its owner.",
+    "distinction": "Not the time of the last render.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-010",
+    "term": "Concurrency token",
+    "owner": "Aggregate owner",
+    "definition": "An opaque value used to compare the expected state before a mutation.",
+    "distinction": "A random GUID is not an ordered event sequence.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-011",
+    "term": "Profile generation",
+    "owner": "Control plane",
+    "definition": "The activation generation of a database profile, used to invalidate preparation and caches.",
+    "distinction": "Not an entity revision or an authorization grant.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-012",
+    "term": "Database incarnation",
+    "owner": "Control plane",
+    "definition": "The identity of a particular continuity of stored data; a restore or clone must not be mistaken for the old event stream.",
+    "distinction": "More than a connection string or profile name.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-013",
+    "term": "Workspace (domain)",
+    "owner": "Workspace",
+    "definition": "A bounded working environment and its preferences.",
+    "distinction": "Not an open editor, circuit or filesystem root.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-014",
+    "term": "Organization/work scope",
+    "owner": "Security and domain owner",
+    "definition": "The business access boundary actually supported by the product.",
+    "distinction": "Does not automatically introduce a new TenantId.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-015",
+    "term": "Workspace root",
+    "owner": "Storage and runtime host",
+    "definition": "An authorized root of a file or execution environment.",
+    "distinction": "Not the domain identity of a project.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-016",
+    "term": "Editor session",
+    "owner": "UI application adapter",
+    "definition": "One open editor instance and its local changes.",
+    "distinction": "Must not retain master entities or a long-lived database context.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-017",
+    "term": "Invocation context",
+    "owner": "Agents and owner adapters",
+    "definition": "Verified immutable context for one invocation, including purpose, scope and provenance.",
+    "distinction": "Text from a floating window cannot grant itself authority.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-018",
+    "term": "Invocation snapshot",
+    "owner": "Source owner",
+    "definition": "A bounded contextual copy captured for one invocation with coverage and freshness constraints.",
+    "distinction": "Neither a durable master nor permission for a later mutation.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-019",
+    "term": "Effective authority",
+    "owner": "Security and source owner",
+    "definition": "The intersection of valid actor authority, delegation, capabilities, scope and current policy.",
+    "distinction": "Not an old screenshot, UI selection or bearer string supplied by a model.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-020",
+    "term": "AgentDefinition",
+    "owner": "Agents",
+    "definition": "The technical identity and configuration of a particular agent.",
+    "distinction": "Not a CRM party or a live runtime object.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-021",
+    "term": "AgentTemplate",
+    "owner": "Agents",
+    "definition": "A template used to create or govern agent definitions.",
+    "distinction": "Not automatically a schedulable worker.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-022",
+    "term": "AgentRun / Execution",
+    "owner": "Agents runtime",
+    "definition": "One execution with identity, input, policy and result.",
+    "distinction": "Not AgentDefinition; its lifetime is not the window lifetime.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-023",
+    "term": "Capability",
+    "owner": "Capability owner and Agents policy",
+    "definition": "A declared ability and the restrictions on using it.",
+    "distinction": "Registering a capability does not prove that an executable tool is available.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-024",
+    "term": "Runtime tool",
+    "owner": "Domain adapter",
+    "definition": "A typed operation actually attached to a particular invocation.",
+    "distinction": "An HTTP endpoint or prompt list does not create a runtime tool.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-025",
+    "term": "Tool receipt",
+    "owner": "Operation owner and runtime evidence",
+    "definition": "Evidence that a specific operation was accepted, applied or rejected.",
+    "distinction": "Not an arbitrary assistant statement that it is done.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-026",
+    "term": "ProviderProfile",
+    "owner": "Agents / Providers",
+    "definition": "Access, models, transport, purpose, routing and secret-reference configuration.",
+    "distinction": "Not a resolved secret or a CRM price list.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-027",
+    "term": "Provider publication",
+    "owner": "Agents / Providers",
+    "definition": "An authorized offer of selected provider capabilities to other instances.",
+    "distinction": "Not a copy of the source credentials.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-028",
+    "term": "Provider import",
+    "owner": "Agents / Providers",
+    "definition": "A local profile linked to a foreign publication while retaining its origin identity.",
+    "distinction": "Must not forge local ownership or ignore upstream revocation.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-029",
+    "term": "Tariff",
+    "owner": "Agents / Providers",
+    "definition": "A versioned price for a kind of consumption, with unit and currency.",
+    "distinction": "Not always a per-token price; a model may use other billing units.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-030",
+    "term": "CostQuote",
+    "owner": "Agents / Providers",
+    "definition": "An estimate for a specific workload, including assumptions, version and uncertainty.",
+    "distinction": "Not an invoice or permission to spend a budget.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-031",
+    "term": "UsageRecord",
+    "owner": "Execution and Providers evidence",
+    "definition": "Observed consumption for a particular invocation, with provenance.",
+    "distinction": "Missing usage is not zero usage.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-032",
+    "term": "CostActual",
+    "owner": "Providers evidence",
+    "definition": "Valuation of observed usage using a frozen tariff; it may be partial or estimated.",
+    "distinction": "Not automatically the amount actually invoiced upstream.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-033",
+    "term": "Budget baseline",
+    "owner": "Work Management / Projects",
+    "definition": "An approved historical cost plan.",
+    "distinction": "Not a cache of current prices.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-034",
+    "term": "Party",
+    "owner": "CRM",
+    "definition": "A personnel, organizational or commercial identity.",
+    "distinction": "A technical agent has its own Agents identity.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-035",
+    "term": "AiResourceBinding",
+    "owner": "CRM",
+    "definition": "A CRM-owned link from a resource or party to a technical agent identity.",
+    "distinction": "Does not contain an independent agent definition.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-036",
+    "term": "ResourceProfile (staffing)",
+    "owner": "CRM",
+    "definition": "Personnel and planning properties of a resource.",
+    "distinction": "Not a catalog ProjectResource or ProviderProfile.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-037",
+    "term": "ProjectParticipation",
+    "owner": "CRM",
+    "definition": "A project's commercial or staffing relationship and role, referencing ProjectId.",
+    "distinction": "Not assignment of an executor to a particular task.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-038",
+    "term": "Human rate",
+    "owner": "CRM",
+    "definition": "A person's price or rate with explicit unit and effective period.",
+    "distinction": "Not an AI provider tariff.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-039",
+    "term": "CapacityReservation",
+    "owner": "CRM / Staffing",
+    "definition": "A reservation of staffing or planning capacity for a period.",
+    "distinction": "Not a task assignment or runtime admission lease.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-040",
+    "term": "RuntimeAdmission",
+    "owner": "Agents / Processes / Workflows",
+    "definition": "Technical acceptance of a particular execution under current limits and permissions.",
+    "distinction": "A planned reservation does not guarantee a healthy provider.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-041",
+    "term": "Project",
+    "owner": "Projects",
+    "definition": "A project's portfolio and lifecycle identity, including phases.",
+    "distinction": "More than a root node in a graph.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-042",
+    "term": "ProjectHierarchy",
+    "owner": "Projects",
+    "definition": "Project-to-project relationships and their rules.",
+    "distinction": "A drawn Project Structure edge must not become their alternative master.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-043",
+    "term": "Project Structure",
+    "owner": "Project Structure",
+    "definition": "A native authoring graph connected to projections from source domains.",
+    "distinction": "Neither merely a cache nor the owner of every domain.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-044",
+    "term": "NativeNode",
+    "owner": "Project Structure",
+    "definition": "A node whose own content and lifecycle originate in Project Structure.",
+    "distinction": "Being created by an agent does not transfer it to Agents ownership.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-045",
+    "term": "SimpleNote",
+    "owner": "Project Structure",
+    "definition": "A native inline text note whose body is canonical content here.",
+    "distinction": "Not a file-node description or lazy file storage.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-046",
+    "term": "ProjectedNode",
+    "owner": "Source owner and projection adapter",
+    "definition": "A read model of a foreign entity or event.",
+    "distinction": "Not an independently editable copy of the source object.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-047",
+    "term": "ReferenceNode / occurrence",
+    "owner": "Project Structure",
+    "definition": "A locally owned placement of an EntityReference, optionally with a local alias or annotation.",
+    "distinction": "Removing an occurrence does not delete the source.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-048",
+    "term": "StructuralLink",
+    "owner": "Project Structure",
+    "definition": "A locally owned semantic structural relationship between allowed endpoints.",
+    "distinction": "Not automatically a task dependency or process edge.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-049",
+    "term": "Projection edge",
+    "owner": "Source owner",
+    "definition": "A display of a relationship that is canonical elsewhere.",
+    "distinction": "Must not be changed through a generic Link command.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-050",
+    "term": "WorkItem / Task",
+    "owner": "Work Management",
+    "definition": "Canonical planned work with a goal, constraints and acceptance conditions.",
+    "distinction": "Not every node, and not a ProcessStep.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-051",
+    "term": "WorkAssignment",
+    "owner": "Work Management",
+    "definition": "Selection of an executor, role or resource for work, with revision and scope.",
+    "distinction": "Not a CRM duplicate AssignedTo field or a run start.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-052",
+    "term": "TaskDependency",
+    "owner": "Work Management",
+    "definition": "A predecessor/successor relationship with planning rules.",
+    "distinction": "Not an arbitrary visual line.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-053",
+    "term": "Schedule (work plan)",
+    "owner": "Work Management",
+    "definition": "Planned dates, durations and constraints of work.",
+    "distinction": "Not a cron SchedulerPlan.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-054",
+    "term": "Gantt",
+    "owner": "UI and Work Management",
+    "definition": "A view of the same work plan and an adapter for its mutations.",
+    "distinction": "Not a separate task database.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-055",
+    "term": "Milestone",
+    "owner": "Work Management or Structure, according to kind",
+    "definition": "A planning point with typed temporal meaning.",
+    "distinction": "Its date is not merely free-form subtitle text.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-056",
+    "term": "Acceptance",
+    "owner": "Work owner",
+    "definition": "A decision that a result satisfies the assignment and may close the task.",
+    "distinction": "An exit code or a Completed run alone is not acceptance.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-057",
+    "term": "Asset",
+    "owner": "Content owner and Structure binding",
+    "definition": "A content artifact with identity, version, MIME type and provenance that can be attached to the graph.",
+    "distinction": "Not merely a path or a base64 note without storage identity.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-058",
+    "term": "StorageObject",
+    "owner": "Storage",
+    "definition": "Managed physical bytes and their logical locator and revision.",
+    "distinction": "Need not belong exclusively to one Project Structure node.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-059",
+    "term": "ProjectResource",
+    "owner": "Resources",
+    "definition": "A reusable catalog material or connector reference.",
+    "distinction": "Not every generated asset must automatically become a catalog resource.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-060",
+    "term": "ArtifactManifest",
+    "owner": "Execution owner",
+    "definition": "An inventory of one run's outputs, including identities, roles and provenance.",
+    "distinction": "A UI node set-difference is not reliable evidence of authorship.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-061",
+    "term": "AssetBinding",
+    "owner": "Reference owner",
+    "definition": "A relationship from a domain object to an asset or content.",
+    "distinction": "Does not confer ownership of all bytes behind a URL.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-062",
+    "term": "Managed output root",
+    "owner": "Processes/runtime and Storage",
+    "definition": "A run's output namespace with scope and liveness policy.",
+    "distinction": "An external target alias or absolute path is not authority.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-063",
+    "term": "Contribution",
+    "owner": "Project Structure API",
+    "definition": "An authorized request to create, attach or update specific content or a relationship in Project Structure.",
+    "distinction": "Not a direct foreign-table write or unrestricted command injection; see ModuleOperation for the general cross-module case.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-064",
+    "term": "EnsureContribution",
+    "owner": "Project Structure API",
+    "definition": "Idempotent creation of a traceable result for a specific producer intent identity.",
+    "distinction": "Not perpetual recreation of a node the user deleted.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-065",
+    "term": "ContributionReceipt",
+    "owner": "Project Structure",
+    "definition": "A durable acceptance or application result with created identities and revision.",
+    "distinction": "Not merely an in-memory TaskCompletionSource.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-066",
+    "term": "Required contribution",
+    "owner": "Orchestration owner",
+    "definition": "A required completion effect whose rejection or pending state must be visible.",
+    "distinction": "Required grants no additional permission, quota or priority.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-067",
+    "term": "Producer lineage",
+    "owner": "Runtime and destination receipt",
+    "definition": "Origin run, step and output identity established by trusted orchestration.",
+    "distinction": "Not a field a model may rewrite without verification.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-068",
+    "term": "ProcessDefinition",
+    "owner": "Processes",
+    "definition": "A versioned or otherwise explicitly identified process orchestration definition.",
+    "distinction": "Not an agent workflow or a task.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-069",
+    "term": "ProcessRun",
+    "owner": "Processes",
+    "definition": "A particular persisted process instance under runtime authority.",
+    "distinction": "A Structure status label cannot write its state.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-070",
+    "term": "ProcessStep",
+    "owner": "Processes",
+    "definition": "A part of process execution and its lifecycle.",
+    "distinction": "May be projected beside a task, but is not the task's second identity.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-071",
+    "term": "ProcessStepAssignment",
+    "owner": "Processes",
+    "definition": "Binding of one runtime step to a selected executor.",
+    "distinction": "Not an editable replacement work plan.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-072",
+    "term": "Subprocess",
+    "owner": "Processes",
+    "definition": "A separate run with explicit parent/run lineage and allocated authority.",
+    "distinction": "Not an unrelated process with a similar name.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-073",
+    "term": "WorkflowDefinition / Version",
+    "owner": "Agents / Workflows",
+    "definition": "A technical AI pipeline definition with a specific version.",
+    "distinction": "Live editing must not alter a run already accepted.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-074",
+    "term": "WorkflowRun",
+    "owner": "Workflow runtime",
+    "definition": "Execution of a compiled definition with backend, checkpoints and result.",
+    "distinction": "Not a single LastRunId in node metadata.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-075",
+    "term": "WorkflowExecutor",
+    "owner": "Execution capability owner",
+    "definition": "A typed implementation of a workflow node.",
+    "distinction": "The generic runtime need not know every product executor.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-076",
+    "term": "LaunchIntent",
+    "owner": "Caller and execution owner",
+    "definition": "A verified start request, including inputs, versions, origin and idempotency identity.",
+    "distinction": "Not an acceptance result or proof of a started run.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-077",
+    "term": "LaunchReceipt",
+    "owner": "Execution owner",
+    "definition": "Confirmation that an existing or new run was accepted, including run identity.",
+    "distinction": "A Project Structure writeback failure cannot retroactively make it Rejected.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-078",
+    "term": "Writeback",
+    "owner": "Destination owner",
+    "definition": "Attaching an execution result to its destination domain.",
+    "distinction": "Not repeating the inference or business action itself.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-079",
+    "term": "Approval",
+    "owner": "Policy and execution owner",
+    "definition": "A decision about exact scope, action and relevant revision.",
+    "distinction": "Not a permanent blanket grant or bypass of security checks.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-080",
+    "term": "SchedulerPlan",
+    "owner": "SchedulerPlanner",
+    "definition": "A temporal rule for invoking a target operation.",
+    "distinction": "Not a Gantt task plan.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-081",
+    "term": "SchedulerFire",
+    "owner": "SchedulerPlanner",
+    "definition": "One identified firing with deduplication and dispatch state.",
+    "distinction": "Redelivery of a trigger must not create another run.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-082",
+    "term": "SimpleChat",
+    "owner": "Simple Chats",
+    "definition": "An ordinary LLM conversation without agent tool orchestration.",
+    "distinction": "Not an agent with disabled buttons.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-083",
+    "term": "CollaborationThread",
+    "owner": "Collaboration",
+    "definition": "A human discussion with its own membership and lifecycle.",
+    "distinction": "Not a Simple Chat transcript or agent execution journal.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-084",
+    "term": "Plugin",
+    "owner": "Plugins",
+    "definition": "An installed extension with manifest, activation and grants.",
+    "distinction": "Not necessarily a connector or runtime tool.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-085",
+    "term": "Connector",
+    "owner": "Connectors or owning integration",
+    "definition": "An external-system adapter with typed configuration and purpose-specific operations.",
+    "distinction": "A configuration form or manifest alone is not a working integration.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-086",
+    "term": "SecretReference",
+    "owner": "Security",
+    "definition": "An opaque secret identity usable only for an authorized purpose.",
+    "distinction": "Not its resolved value, a password-bearing URL or plaintext.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-087",
+    "term": "OperationId",
+    "owner": "Operation owner",
+    "definition": "An intent or operation identity stable across safe retries in a defined scope.",
+    "distinction": "Not a new GUID generated for every retry.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-088",
+    "term": "Idempotency key",
+    "owner": "Owner",
+    "definition": "A scoped key that returns the original effect or receipt for the same normalized request.",
+    "distinction": "The same key with different payload is a conflict, not silent success.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-089",
+    "term": "Outbox",
+    "owner": "Source owner",
+    "definition": "A durable publication intent stored with the source change.",
+    "distinction": "Not an exactly-once guarantee for an external effect.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-090",
+    "term": "Inbox / dedupe ledger",
+    "owner": "Destination owner",
+    "definition": "Processing evidence stored atomically with its local effect.",
+    "distinction": "An in-memory lock cannot replace it across restarts or instances.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-091",
+    "term": "Tombstone",
+    "owner": "Lifecycle owner",
+    "definition": "A traceable deletion or suppression preventing old messages from resurrecting an identity.",
+    "distinction": "More than a missing row that an ensure operation can ignore.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-092",
+    "term": "Committed / Accepted / Unconfirmed",
+    "owner": "Result owner and transport",
+    "definition": "Committed confirms a write; Accepted confirms operation admission; Unconfirmed describes observer uncertainty.",
+    "distinction": "None automatically means business success.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-093",
+    "term": "Projection watermark",
+    "owner": "Source and projector",
+    "definition": "A confirmed processing position for a specific source and generation.",
+    "distinction": "There is no automatic global watermark across all modules.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-094",
+    "term": "Migration authority",
+    "owner": "Schema composition",
+    "definition": "One controlling history and source of schema definition for each table.",
+    "distinction": "Runtime modules must not independently create the same tables.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-095",
+    "term": "Compatibility adapter",
+    "owner": "Integration owner",
+    "definition": "A temporary mapping from an old API to the single new writer.",
+    "distinction": "Not a second independent engine or dual-write path.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-096",
+    "term": "CapabilityUnavailable",
+    "owner": "Owner and host",
+    "definition": "An explicitly absent or disallowed functional path.",
+    "distinction": "Not an empty success or a fake production implementation.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-097",
+    "term": "Owner operation",
+    "owner": "Target domain",
+    "definition": "Typed query or command with owner-defined semantics, scope, validation, and outcome.",
+    "distinction": "Not arbitrary CRUD or a tool name implying authority.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-098",
+    "term": "Runtime tool adapter",
+    "owner": "Product integration",
+    "definition": "Registered mapping from governed model invocation to a typed owner operation.",
+    "distinction": "Not the owner of destination data or an HTTP route.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-099",
+    "term": "Workflow owner-operation executor",
+    "owner": "Workflow integration",
+    "definition": "Typed executor invoking a destination owner under persisted run/step authority and effect identity.",
+    "distinction": "Not an impersonated HR interactive tool session.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-100",
+    "term": "Process owner-operation step",
+    "owner": "Process integration",
+    "definition": "Registered step using owner operations and process-owned checkpoint/recovery.",
+    "distinction": "Not direct foreign context access.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-101",
+    "term": "Managed agent identity",
+    "owner": "Agents",
+    "definition": "Technical identity with host-approved purpose and capabilities for a managed preset.",
+    "distinction": "Display name/system prompt is not identity or privilege.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-102",
+    "term": "Definition administration",
+    "owner": "Definition-owning domain",
+    "definition": "Validated create/update/status control of a versioned definition.",
+    "distinction": "Not running the definition, reading transcripts, or rewriting history.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-103",
+    "term": "Command intent versus attempt",
+    "owner": "Originating coordinator and target owner",
+    "definition": "Logical intended effect survives retries; attempts identify transport/worker executions.",
+    "distinction": "A new attempt does not authorize a new contact or chat.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-104",
+    "term": "Owner operation receipt",
+    "owner": "Destination owner",
+    "definition": "Durable evidence of admission/commit and exact effects, recoverable under current access policy.",
+    "distinction": "Post-hoc logging alone cannot establish atomic idempotency.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-105",
+    "term": "Execution disclosure permission",
+    "owner": "Source/security policy at integration",
+    "definition": "Permission to send selected data to the actual LLM/provider/tool in the current purpose.",
+    "distinction": "Not implied by permission to view the same data in UI.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-106",
+    "term": "Destination disclosure permission",
+    "owner": "Source and destination policy",
+    "definition": "Permission to persist/publish data to a specific audience/location.",
+    "distinction": "Summarization is not automatic declassification.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-107",
+    "term": "Runtime surface observation",
+    "owner": "Evidence catalog",
+    "definition": "Pinned code/documentation observation of an actual provider/API/executor surface.",
+    "distinction": "Not a runtime PASS or an automatic grant.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-108",
+    "term": "Staffing resource versus catalog Resource",
+    "owner": "CRM versus Resources",
+    "definition": "Staffing resource represents planning capacity/personnel; catalog Resource represents reusable information/materials.",
+    "distinction": "Neither is synonymous with Storage bytes.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-109",
+    "term": "Step effect slot",
+    "owner": "Execution owner",
+    "definition": "Stable occurrence/iteration/action/output key persisted before retriable dispatch.",
+    "distinction": "Not a random tool call identifier or retry counter.",
+    "current_alias": ""
+  },
+  {
+    "id": "TERM-110",
+    "term": "Required domain effect",
+    "owner": "Business orchestration owner",
+    "definition": "An explicit obligation whose application, authorized waiver, or safe compensation is needed for business completion.",
+    "distinction": "Not a privilege override or proof technical execution failed.",
+    "current_alias": ""
+  }
+]

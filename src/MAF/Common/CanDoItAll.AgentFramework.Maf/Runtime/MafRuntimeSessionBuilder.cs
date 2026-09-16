@@ -44,7 +44,8 @@ internal static class MafRuntimeSessionBuilder
 
         if (evaluation.ShouldRestore)
         {
-            return await DeserializeSerializedSessionAsync(runtimeAgent, evaluation.RestorePayloadJson!, cancellationToken);
+            return await DeserializeSerializedSessionAsync(runtimeAgent, evaluation.RestorePayloadJson!,
+                runtimeOptions.RequireDurableToolProtocol, cancellationToken);
         }
 
         if (evaluation.FailClosedReason is { } failClosedReason)
@@ -79,6 +80,24 @@ internal static class MafRuntimeSessionBuilder
         RuntimeStateCompatibilityDecision? Decision,
         string? RestorePayloadJson,
         string? FailClosedReason);
+
+    internal static async ValueTask<AgentSession> RestoreToolAdmissionSessionAsync(
+        AIAgent runtimeAgent,
+        RestoreEvaluation evaluation,
+        CancellationToken cancellationToken,
+        Func<ExecutionState, string, string, Task>? progressCallback = null) {
+        ArgumentNullException.ThrowIfNull(runtimeAgent);
+        ArgumentNullException.ThrowIfNull(evaluation);
+        if (!evaluation.ShouldRestore || string.IsNullOrWhiteSpace(evaluation.RestorePayloadJson)) {
+            throw new AgentToolAdmissionException("tool-admission.runtime-denied",
+                "The saved SDK checkpoint is unavailable or incompatible; an admitted restart cannot create a replacement session.");
+        }
+        if (evaluation.Decision is { } decision && progressCallback is not null) {
+            await progressCallback(ExecutionState.Preparing, "Session compatibility", DescribeCompatibilityDecision(decision));
+        }
+        return await DeserializeSerializedSessionAsync(runtimeAgent, evaluation.RestorePayloadJson,
+            hasToolAdmission: true, cancellationToken);
+    }
 
     internal static RestoreEvaluation ResolveRestoreEvaluation(
         AgentDefinition agent,
@@ -188,10 +207,12 @@ internal static class MafRuntimeSessionBuilder
     private static async ValueTask<AgentSession> DeserializeSerializedSessionAsync(
         AIAgent runtimeAgent,
         string serializedSessionStateJson,
+        bool hasToolAdmission,
         CancellationToken cancellationToken)
     {
         using var document = JsonDocument.Parse(serializedSessionStateJson);
-        return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
+        return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(),
+            hasToolAdmission ? MafToolProtocolCodec.SerializationOptions : null, cancellationToken: cancellationToken);
     }
 
     private static async ValueTask<AgentSession> FailClosedOrCreateSessionAsync(

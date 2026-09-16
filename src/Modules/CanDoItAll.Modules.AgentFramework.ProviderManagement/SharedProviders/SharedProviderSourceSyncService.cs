@@ -9,14 +9,14 @@ public sealed class SharedProviderSourceSyncService
 {
     private const int MaximumSelectedPublications = 256;
 
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<ProvidersDbContext> dbContextFactory;
     private readonly SharedProviderSourceService sourceService;
     private readonly SharedProviderReconciliationCoordinator reconciliationCoordinator;
     private readonly ISharedProviderCatalogClient catalogClient;
     private readonly ISecretRuntimeResolver secretRuntimeResolver;
 
     public SharedProviderSourceSyncService(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<ProvidersDbContext> dbContextFactory,
         SharedProviderSourceService sourceService,
         SharedProviderReconciliationCoordinator reconciliationCoordinator,
         ISharedProviderCatalogClient catalogClient,

@@ -191,6 +191,7 @@ public sealed class CrmHrCrossModuleIntegrationTests
         var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
             OwnerPartyId = ownerId,
             MaintainerPartyId = maintainerId,
             ConnectorPluginKey = "resource.folder",
@@ -210,6 +211,7 @@ public sealed class CrmHrCrossModuleIntegrationTests
         var testPlanResult = await testLabService.SaveAsync(new TestPlanEditorModel
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
             ResponsiblePartyId = ownerId,
             Title = "CRM-HR cross-module proof",
             Phase = "B11",

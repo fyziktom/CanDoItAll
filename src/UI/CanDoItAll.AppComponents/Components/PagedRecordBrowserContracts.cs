@@ -97,10 +97,15 @@ public sealed record PagedRecordFilterOption<TFilter>(
 public sealed record PagedRecordSelection<TKey>(TKey Key)
     where TKey : notnull;
 
+/// <param name="IsInteractive">
+/// False while the browser is prerendered or statically rendered; templated select controls must stay disabled until
+/// it is true, otherwise a user's early click is dropped without feedback.
+/// </param>
 public sealed record PagedRecordItemTemplateContext<TKey>(
     PagedRecordOption<TKey> Option,
     bool IsSelected,
-    Func<Task> SelectAsync)
+    Func<Task> SelectAsync,
+    bool IsInteractive = true)
     where TKey : notnull;
 
 public delegate Task<PagedRecordPage<TKey>> PagedRecordLoader<TKey, TFilter>(

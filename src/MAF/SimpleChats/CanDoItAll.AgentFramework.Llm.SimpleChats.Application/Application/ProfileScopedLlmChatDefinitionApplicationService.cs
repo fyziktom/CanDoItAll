@@ -1,16 +1,27 @@
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 
 internal sealed class ProfileScopedLlmChatDefinitionApplicationService(
     LlmChatDefinitionApplicationService inner,
-    LlmChatProfileScopeRunner scopeRunner) : ILlmChatDefinitionApplicationService
+    LlmChatProfileScopeRunner scopeRunner) : ILlmChatDefinitionApplicationService, ILlmChatDefinitionCreateReceiptService
 {
     public Task<Result<LlmChatDefinitionDetails>> CreateAsync(
         CreateLlmChatDefinitionCommand command,
         CancellationToken cancellationToken = default)
         => ExecuteAsync(token => inner.CreateAsync(command, token), cancellationToken);
+
+    public Task<Result<LlmChatDefinitionCreateResponse>> CreateOnceAsync(
+        CreateLlmChatDefinitionOnceCommand command,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(token => inner.CreateOnceAsync(command, token), cancellationToken);
+
+    public Task<Result<LlmChatDefinitionCreateReceipt?>> FindReceiptAsync(
+        LlmChatDefinitionCreateKey key,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(token => inner.FindReceiptAsync(key, token), cancellationToken);
 
     public Task<Result<LlmChatDefinitionDetails>> UpdateAsync(
         UpdateLlmChatDefinitionCommand command,
@@ -26,6 +37,12 @@ internal sealed class ProfileScopedLlmChatDefinitionApplicationService(
         LlmChatDefinitionId definitionId,
         CancellationToken cancellationToken = default)
         => ExecuteAsync(token => inner.GetAsync(definitionId, token), cancellationToken);
+
+    public Task<Result<LlmChatDefinitionRevision>> GetRevisionAsync(
+        LlmChatDefinitionId definitionId,
+        LlmChatDefinitionRevisionNumber revision,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(token => inner.GetRevisionAsync(definitionId, revision, token), cancellationToken);
 
     public Task<Result<IReadOnlyList<LlmChatDefinitionDetails>>> ListAsync(
         LlmChatDefinitionQuery query,

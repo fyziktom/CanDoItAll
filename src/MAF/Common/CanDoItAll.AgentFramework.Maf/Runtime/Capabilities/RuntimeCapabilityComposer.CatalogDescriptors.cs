@@ -14,8 +14,8 @@ using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed class RuntimeCapabilityDescriptorCatalog
-{
+internal sealed class RuntimeCapabilityDescriptorCatalog(AgentToolPolicyCatalog? toolPolicies = null) {
+    private readonly AgentToolPolicyCatalog toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
     public CapabilityExposureDescriptor CreateCatalogCapabilityDescriptor(CapabilityCatalogItem capability)
         => capability.Kind switch
         {
@@ -36,7 +36,7 @@ internal sealed class RuntimeCapabilityDescriptorCatalog
         var classifications = ResolveRuntimeToolOperationClassifications(runtimeToolName.Value.Value);
         var tags = ResolveCatalogTags(capability, runtimeToolName, classifications);
         var sideEffectProfile = ResolveRuntimeToolSideEffectProfile(runtimeToolName.Value.Value);
-        ToolDescriptor descriptor = ToolCapabilityRegistry.Classify(runtimeToolName.Value.Value) == ToolInvocationClassification.HostedProviderNative
+        ToolDescriptor descriptor = toolPolicies.Classify(runtimeToolName.Value.Value) == ToolInvocationClassification.HostedProviderNative
             ? ToolDescriptorFactory.ProviderNative(
                 CapabilityKey.Create(capability.Key),
                 runtimeToolName.Value,
@@ -402,7 +402,7 @@ internal sealed class RuntimeCapabilityDescriptorCatalog
         RuntimeToolName? runtimeToolName)
     {
         if (runtimeToolName is not null &&
-            ToolCapabilityRegistry.TryResolve(runtimeToolName.Value.Value, out var metadata))
+            toolPolicies.TryResolve(runtimeToolName.Value.Value, out var metadata))
         {
             return new CapabilitySideEffectProfile(
                 MapSideEffectKind(metadata.SideEffectKind),
@@ -482,11 +482,11 @@ internal sealed class RuntimeCapabilityDescriptorCatalog
                    argument.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase)) ?? false);
     }
 
-    private static IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(string runtimeToolName)
-        => RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolOperationClassifications(runtimeToolName);
+    private IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(string runtimeToolName)
+        => RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolOperationClassifications(runtimeToolName, toolPolicies);
 
-    private static CapabilitySideEffectProfile ResolveRuntimeToolSideEffectProfile(string runtimeToolName)
-        => RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolSideEffectProfile(runtimeToolName);
+    private CapabilitySideEffectProfile ResolveRuntimeToolSideEffectProfile(string runtimeToolName)
+        => RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolSideEffectProfile(runtimeToolName, toolPolicies);
 
     private static CapabilitySideEffectKind MapSideEffectKind(ToolCapabilitySideEffectKind sideEffectKind)
         => RuntimeToolCapabilityDescriptorFactory.MapSideEffectKind(sideEffectKind);

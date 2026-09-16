@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
@@ -41,13 +42,19 @@ public static class ProjectStructureAgentChatContextBuilder
         IEnumerable<AgentDefinition> agents,
         AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
         ProjectStructureAgentChatView activeView = ProjectStructureAgentChatView.Canvas,
-        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes = null)
+        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes = null,
+        ProjectWriteAdmission? observedProjectAdmission = null)
     {
         ArgumentNullException.ThrowIfNull(agents);
         ValidateProjectId(projectId);
-        var access = ContextualAgentAccessResolver.Resolve(
+        var observedLifetime = observedProjectAdmission is { } admission && admission.ProjectId == projectId
+            ? new AgentProjectStructureLifetime(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId)
+            : null;
+        if (observedLifetime is null && accessState == AgentChatContextAccessState.Ready) {
+            accessState = AgentChatContextAccessState.Loading;
+        }
+        var access = ProjectAgentAccessPolicy.Resolve(
                 agents,
-                ContextualAgentWorkspaceKind.ProjectStructure,
                 projectId)
             .Select(item => new AgentChatContextAgentAccess(
                 item.Agent.Id,
@@ -64,7 +71,8 @@ public static class ProjectStructureAgentChatContextBuilder
             AgentChatContextScopeAccessMode.AllowListed,
             accessState,
             BuildPosition(projectId, projectName, activeView, selectedNodes),
-            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            observedProjectLifetime: observedLifetime);
     }
 
     public static AgentChatSurfacePosition BuildPosition(
@@ -117,13 +125,10 @@ public static class ProjectStructureAgentChatContextBuilder
     public static AgentChatContextFragment BuildBaseFragment(Guid projectId)
     {
         ValidateProjectId(projectId);
-        // Durable operational guidance moved to the registered runtime
-        // contributor ProjectStructureRuntimeGuidanceContributor; this UI
-        // fragment carries factual, time-varying context only.
         return new AgentChatContextFragment(
             new AgentChatContextContributorId(BaseContributorId),
             order: 100,
-            ContextualAgentWorkspaceContextBuilder.BuildProjectStructureBaseContext(projectId));
+            ProjectStructureContextualWorkspacePolicy.BuildProjectStructureBaseContext(projectId));
     }
 
     public static AgentChatContextFragment BuildSelectionFragment(

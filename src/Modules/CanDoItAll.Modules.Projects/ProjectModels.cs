@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
@@ -11,6 +12,9 @@ namespace CanDoItAll.Modules.Projects;
 public static class ProjectErrorCodes
 {
     public const string NotFound = "projects.not-found";
+    public const string LifetimeChanged = "projects.lifetime-changed";
+    public const string ReservedIdConflict = "projects.reserved-id-conflict";
+    public const string ReservationClosed = "projects.reservation-closed";
 }
 
 public enum ProjectStatus
@@ -45,6 +49,19 @@ public enum ProjectOptionCategory
 public sealed class Project
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    [JsonIgnore]
+    public Guid LifetimeId { get; private set; } = Guid.NewGuid();
+
+    [JsonIgnore]
+    public bool LegacyAgentAccessBindingEligible { get; private set; }
+
+    internal void BindReservedLifetime(Guid lifetimeId) {
+        if (lifetimeId == Guid.Empty) {
+            throw new ArgumentException("A nonempty reserved lifetime is required.", nameof(lifetimeId));
+        }
+        LifetimeId = lifetimeId;
+    }
 
     public string Name { get; set; } = string.Empty;
 
@@ -114,6 +131,8 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
     {
         builder.ToTable("Projects_Projects");
         builder.HasKey(project => project.Id);
+        builder.Property(project => project.LifetimeId).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(project => project.LegacyAgentAccessBindingEligible).HasDefaultValue(false);
         builder.Property(project => project.Name).HasMaxLength(200).IsRequired();
         builder.Property(project => project.Slug).HasMaxLength(200).IsRequired();
         builder.Property(project => project.Description).HasColumnType("TEXT");
@@ -174,7 +193,10 @@ public sealed record ProjectSummary(
     string PrimaryDeliveryUnitName = "",
     string PrimaryOwnerName = "",
     IReadOnlyList<ProjectPortfolioPartyItem>? RelatedParties = null,
-    string RelatedPartySearchText = "");
+    string RelatedPartySearchText = "") {
+    [JsonIgnore]
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+}
 
 public sealed record ProjectAccessListItem(
     Guid Id,
@@ -220,6 +242,8 @@ public sealed class ProjectEditorModel
 {
     public Guid? Id { get; set; }
 
+    public Guid? ExpectedLifetimeId { get; set; }
+
     public string Name { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
@@ -237,15 +261,19 @@ public sealed class ProjectEditorModel
     public List<ProjectOptionEditorModel> Options { get; set; } = [];
 }
 
-public sealed class ProjectsService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+public sealed partial class ProjectsService(
+    IDbContextFactory<ProjectsDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     IEnumerable<IProjectDeletionParticipant> deletionParticipants,
-    ILogger<ProjectsService> logger)
-{
+    ILogger<ProjectsService> logger,
+    SearchIndexService searchMutationService,
+    StorageCatalogService storageCatalogService,
+    CoordinatedDatabaseTransaction coordinatedTransaction,
+    ProjectWriteAdmissionService writeAdmissionService,
+    IProjectCreationCompensationGuard? creationCompensationGuard = null) : IProjectSummaryQueryService {
     private const string DeleteRetryGuidance =
         "Retry each exact participant and recovery id returned by the deletion recovery; do not create or select a newer project-deletion operation.";
 
@@ -280,6 +308,19 @@ public sealed class ProjectsService(
             .OrderByDescending(project => project.UpdatedAtUtc)
             .Select(project => MapProjectSummary(project, phaseCounts, hierarchyMetrics, portfolioContexts.GetValueOrDefault(project.Id)))
             .ToList();
+    }
+
+    public async Task<ProjectSummary?> GetSummaryAsync(Guid projectId, CancellationToken cancellationToken = default) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var project = await dbContext.Set<Project>().AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == projectId, cancellationToken);
+        if (project is null) {
+            return null;
+        }
+        var hierarchyMetrics = await LoadHierarchyMetricsAsync(dbContext, cancellationToken, projectId);
+        var phaseCounts = await LoadPhaseCountsAsync(dbContext, cancellationToken, projectId);
+        var portfolioContexts = await projectPartyIntegrationBridge.GetPortfolioContextsAsync([projectId], cancellationToken);
+        return MapProjectSummary(project, phaseCounts, hierarchyMetrics, portfolioContexts.GetValueOrDefault(projectId));
     }
 
     public async Task<IReadOnlyList<ProjectAccessListItem>> ListAccessListAsync(CancellationToken cancellationToken = default)
@@ -337,7 +378,8 @@ public sealed class ProjectsService(
     public async Task<Result> AddSubprojectAsync(
         Guid parentProjectId,
         Guid childProjectId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectMutationAuthorization? authorization = null)
     {
         if (parentProjectId == childProjectId)
         {
@@ -345,12 +387,13 @@ public sealed class ProjectsService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
             dbContext,
             BuildProjectHierarchyMutationScopeKeys(
                 parentProjectId,
                 childProjectId),
-            cancellationToken);
+            ProjectMutationPurpose.HierarchyWrite, childProjectId, [parentProjectId, childProjectId], authorization,
+            writeAdmissionService, coordinatedTransaction, cancellationToken);
         var projects = await dbContext.Set<Project>()
             .Where(project => project.Id == parentProjectId || project.Id == childProjectId)
             .ToDictionaryAsync(project => project.Id, cancellationToken);
@@ -408,15 +451,17 @@ public sealed class ProjectsService(
     public async Task<Result> RemoveSubprojectAsync(
         Guid parentProjectId,
         Guid childProjectId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectMutationAuthorization? authorization = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
             dbContext,
             BuildProjectHierarchyMutationScopeKeys(
                 parentProjectId,
                 childProjectId),
-            cancellationToken);
+            ProjectMutationPurpose.HierarchyWrite, childProjectId, [parentProjectId, childProjectId], authorization,
+            writeAdmissionService, coordinatedTransaction, cancellationToken);
         var link = await dbContext.Set<ProjectHierarchyLink>()
             .FirstOrDefaultAsync(
                 item => item.ParentProjectId == parentProjectId && item.ChildProjectId == childProjectId,
@@ -458,7 +503,8 @@ public sealed class ProjectsService(
         Guid childProjectId,
         Guid currentParentProjectId,
         Guid newParentProjectId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectMutationAuthorization? authorization = null)
     {
         if (currentParentProjectId == newParentProjectId)
         {
@@ -466,13 +512,14 @@ public sealed class ProjectsService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
             dbContext,
             BuildProjectHierarchyMutationScopeKeys(
                 childProjectId,
                 currentParentProjectId,
                 newParentProjectId),
-            cancellationToken);
+            ProjectMutationPurpose.HierarchyWrite, childProjectId, [childProjectId, currentParentProjectId, newParentProjectId], authorization,
+            writeAdmissionService, coordinatedTransaction, cancellationToken);
         var currentLink = await dbContext.Set<ProjectHierarchyLink>()
             .FirstOrDefaultAsync(
                 link => link.ParentProjectId == currentParentProjectId && link.ChildProjectId == childProjectId,
@@ -590,6 +637,7 @@ public sealed class ProjectsService(
         return new ProjectEditorModel
         {
             Id = project.Id,
+            ExpectedLifetimeId = project.LifetimeId,
             Name = project.Name,
             Description = project.Description,
             Objective = project.Objective,
@@ -601,10 +649,42 @@ public sealed class ProjectsService(
         };
     }
 
+    public async Task<Result<ProjectWriteAdmission>> CreateWithAdmissionAsync(ProjectEditorModel model,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(model);
+        if (model.Id.HasValue) {
+            return Result<ProjectWriteAdmission>.Failure(Error.Validation("A new project cannot edit an existing project."));
+        }
+        var result = await SaveWithReceiptCoreAsync(model, parentProjectId: null, newProjectId: null, cancellationToken);
+        return result.IsSuccess
+            ? Result<ProjectWriteAdmission>.Success(result.Value?.CreationReceipt?.Project
+                ?? throw new InvalidOperationException("The project commit returned no lifetime receipt."))
+            : Result<ProjectWriteAdmission>.Failure(result.Errors.ToArray());
+    }
+
     public Task<Result<Guid>> SaveAsync(
         ProjectEditorModel model,
-        CancellationToken cancellationToken = default)
-        => SaveCoreAsync(model, parentProjectId: null, newProjectId: null, cancellationToken);
+        CancellationToken cancellationToken = default,
+        ProjectMutationAuthorization? authorization = null)
+        => SaveCoreAsync(model, parentProjectId: null, newProjectId: null, cancellationToken, authorization: authorization);
+
+    public Task<Result<Guid>> CreateAsync(ProjectCreationReservation reservation, ProjectEditorModel model,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        if (model.Id.HasValue) {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new project cannot use an existing project id.")));
+        }
+        return SaveCoreAsync(model, parentProjectId: null, reservation.ProjectId, cancellationToken, reservation);
+    }
+
+    public Task<Result<Guid>> CreateSubprojectAsync(Guid parentProjectId, ProjectCreationReservation reservation,
+        ProjectEditorModel model, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        if (parentProjectId == Guid.Empty || model.Id.HasValue) {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new subproject requires a parent and cannot edit an existing project.")));
+        }
+        return SaveCoreAsync(model, parentProjectId, reservation.ProjectId, cancellationToken, reservation);
+    }
 
     public Task<Result<Guid>> CreateAsync(
         Guid newProjectId,
@@ -678,33 +758,41 @@ public sealed class ProjectsService(
             cancellationToken);
     }
 
-    private async Task<Result<Guid>> SaveCoreAsync(
+    private async Task<Result<Guid>> SaveCoreAsync(ProjectEditorModel model, Guid? parentProjectId, Guid? newProjectId,
+        CancellationToken cancellationToken, ProjectCreationReservation? reservation = null, ProjectMutationAuthorization? authorization = null) {
+        var result = await SaveWithReceiptCoreAsync(model, parentProjectId, newProjectId, cancellationToken, reservation, authorization);
+        return result.IsSuccess
+            ? Result<Guid>.Success(result.Value!.Id)
+            : Result<Guid>.Failure(result.Errors);
+    }
+
+    private async Task<Result<ProjectSaveOutcome>> SaveWithReceiptCoreAsync(
         ProjectEditorModel model,
         Guid? parentProjectId,
         Guid? newProjectId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectCreationReservation? reservation = null,
+        ProjectMutationAuthorization? authorization = null)
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
-            return Result<Guid>.Failure(Error.Validation("Project name is required."));
+            return Result<ProjectSaveOutcome>.Failure(Error.Validation("Project name is required."));
         }
 
         var targetProjectId = model.Id ?? newProjectId ?? Guid.NewGuid();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
             dbContext,
-            parentProjectId.HasValue
-                ? BuildProjectHierarchyMutationScopeKeys(
-                    targetProjectId,
-                    parentProjectId)
-                : BuildProjectMutationScopeKeys(targetProjectId),
-            cancellationToken);
+            parentProjectId.HasValue ? BuildProjectHierarchyMutationScopeKeys(targetProjectId, parentProjectId) : BuildProjectMutationScopeKeys(targetProjectId),
+            model.Id.HasValue ? ProjectMutationPurpose.ExistingWrite : parentProjectId.HasValue ? ProjectMutationPurpose.CreateChild : ProjectMutationPurpose.CreateRoot,
+            targetProjectId, model.Id.HasValue ? [targetProjectId] : parentProjectId.HasValue ? [parentProjectId.Value] : [],
+            authorization, writeAdmissionService, coordinatedTransaction, cancellationToken, reservation);
         if (newProjectId.HasValue && await dbContext.Set<Project>()
                 .AnyAsync(project => project.Id == newProjectId.Value, cancellationToken))
         {
-            return Result<Guid>.Failure(Error.Failure(
+            return Result<ProjectSaveOutcome>.Failure(Error.Failure(
                 "The reserved project id is already in use.",
-                "projects.reserved-id-conflict"));
+                ProjectErrorCodes.ReservedIdConflict));
         }
 
         Project? parentProject = null;
@@ -714,7 +802,7 @@ public sealed class ProjectsService(
                 .FirstOrDefaultAsync(project => project.Id == parentProjectId.Value, cancellationToken);
             if (parentProject is null)
             {
-                return Result<Guid>.Failure(Error.Validation("The selected parent project could not be found."));
+                return Result<ProjectSaveOutcome>.Failure(Error.Validation("The selected parent project could not be found."));
             }
         }
 
@@ -724,19 +812,34 @@ public sealed class ProjectsService(
 
         if (model.Id.HasValue && entity is null)
         {
-            return Result<Guid>.Failure(Error.Failure(
+            return Result<ProjectSaveOutcome>.Failure(Error.Failure(
                 "The project no longer exists.",
                 ProjectErrorCodes.NotFound));
         }
 
+        if (entity is not null && model.ExpectedLifetimeId.HasValue && model.ExpectedLifetimeId.Value != entity.LifetimeId) {
+            return Result<ProjectSaveOutcome>.Failure(Error.Failure(
+                "This project belongs to a different lifetime. Reload it before saving changes.", ProjectErrorCodes.LifetimeChanged));
+        }
+
         if (entity is null)
         {
+            if (reservation is null && await dbContext.Set<ProjectCreationReservationRecord>().AnyAsync(record =>
+                    record.ProjectId == targetProjectId && record.State == ProjectCreationReservationState.Reserved && record.ImportedHistory == null, cancellationToken)) {
+                return Result<ProjectSaveOutcome>.Failure(Error.Failure("The project id belongs to a pending creation reservation.", ProjectErrorCodes.ReservedIdConflict));
+            }
+            if (reservation is not null && !await writeAdmissionService.TryConsumeCreationAsync(dbContext, reservation, parentProjectId, cancellationToken)) {
+                return Result<ProjectSaveOutcome>.Failure(Error.Failure("The exact project creation reservation is closed or its parent lifetime has changed.", ProjectErrorCodes.ReservationClosed));
+            }
             entity = new Project
             {
                 Id = targetProjectId,
                 CreatedAtUtc = clock.GetUtcNow()
             };
 
+            if (reservation is not null) {
+                entity.BindReservedLifetime(reservation.LifetimeId);
+            }
             await dbContext.Set<Project>().AddAsync(entity, cancellationToken);
         }
 
@@ -823,11 +926,15 @@ public sealed class ProjectsService(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        var admission = writeAdmissionService.Capture(entity);
+        var creationReceipt = model.Id.HasValue ? null : new ProjectCreationReceipt(admission, reservation,
+            await ReadCreationFingerprintAsync(dbContext, admission, cancellationToken), authorization);
         await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.DisposeAsync();
         await RunPostCommitActionAsync(
             "search-index-upsert",
             entity.Id,
-            () => searchIndexService.UpsertAsync(new SearchDocumentInput(
+            () => UpsertAdmittedSearchProjectionAsync(admission, new SearchDocumentInput(
                 "project",
                 entity.Id.ToString(),
                 "Projects",
@@ -864,7 +971,19 @@ public sealed class ProjectsService(
                     Route: $"/projects?projectId={entity.Id}"), cancellationToken));
         }
 
-        return Result<Guid>.Success(entity.Id);
+        return Result<ProjectSaveOutcome>.Success(new(entity.Id, creationReceipt));
+    }
+
+    private async Task UpsertAdmittedSearchProjectionAsync(ProjectWriteAdmission admission, SearchDocumentInput input,
+        CancellationToken cancellationToken) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext, ProjectMutationScopeKeys.ForProject(admission.ProjectId), cancellationToken);
+        await writeAdmissionService.RequireAsync(dbContext, admission, cancellationToken);
+        using (coordinatedTransaction.Enter(dbContext)) {
+            await searchIndexService.UpsertForMutationAsync(input, cancellationToken);
+        }
+        await mutationScope.CommitAsync(cancellationToken);
     }
 
     private static string[] BuildProjectMutationScopeKeys(
@@ -918,9 +1037,13 @@ public sealed class ProjectsService(
         };
     }
 
-    public async Task<ProjectDeletionResult> DeleteAsync(
-        Guid id,
-        CancellationToken cancellationToken = default)
+    public async Task<ProjectDeletionResult> DeleteAsync(Guid id, CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null)
+        => await DeleteCoreAsync(id, cancellationToken, expectedProjectAdmission: expectedProjectAdmission)
+            ?? throw new InvalidOperationException("An ordinary project deletion returned a creation-compensation refusal.");
+
+    private async Task<ProjectDeletionResult?> DeleteCoreAsync(Guid id, CancellationToken cancellationToken,
+        ProjectCreationReceipt? creationReceipt = null, ProjectWriteAdmission? expectedProjectAdmission = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var orderedParticipants = GetOrderedDeletionParticipants();
@@ -930,62 +1053,71 @@ public sealed class ProjectsService(
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToArray();
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
-            dbContext,
-            mutationScopeKeys,
-            cancellationToken);
+        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(dbContext, mutationScopeKeys,
+            creationReceipt?.Reservation?.ParentProjectId is not null ? ProjectMutationPurpose.CreateChild :
+                creationReceipt is not null ? ProjectMutationPurpose.CreateRoot : ProjectMutationPurpose.ExistingWrite,
+            id, creationReceipt?.Authorization?.ExpectedProjects.Select(project => project.ProjectId).ToArray() ?? [],
+            creationReceipt?.Authorization, writeAdmissionService, coordinatedTransaction, cancellationToken, creationReceipt?.Reservation);
         var project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (expectedProjectAdmission is not null) {
+            ProjectAssignmentAdmission.Require(id, expectedProjectAdmission);
+            await writeAdmissionService.RequireAsync(dbContext, expectedProjectAdmission, cancellationToken);
+        }
+        if (creationReceipt is not null && !await CanCompensateCreationAsync(dbContext, creationReceipt, cancellationToken)) {
+            return null;
+        }
         var preparedParticipants = new List<(
             IProjectDeletionParticipant Participant,
             ProjectDeletionParticipantPreparation Preparation)>();
-        foreach (var participant in orderedParticipants)
-        {
-            var preparation = await participant.PrepareAsync(dbContext, id, cancellationToken);
-            if (preparation is null)
+        using (coordinatedTransaction.Enter(dbContext)) {
+            foreach (var participant in orderedParticipants)
             {
-                continue;
+                var preparation = await participant.PrepareAsync(id, cancellationToken);
+                if (preparation is null)
+                {
+                    continue;
+                }
+
+                if (preparation.RecoveryId == Guid.Empty)
+                {
+                    throw new InvalidOperationException(
+                        $"Project deletion participant '{participant.Id}' returned an empty recovery id.");
+                }
+
+                if (preparation.ProjectId != id)
+                {
+                    throw new InvalidOperationException(
+                        $"Project deletion participant '{participant.Id}' returned recovery state for another project.");
+                }
+
+                preparedParticipants.Add((participant, preparation));
             }
 
-            if (preparation.RecoveryId == Guid.Empty)
+            if (creationReceipt?.Reservation is { } originalReservation) {
+                await writeAdmissionService.CancelConsumedCreationForCompensationAsync(dbContext, originalReservation, cancellationToken);
+            }
+            await ProjectWriteAdmissionService.CancelCreationForDeletionAsync(dbContext, id, cancellationToken);
+            if (project is not null)
             {
-                throw new InvalidOperationException(
-                    $"Project deletion participant '{participant.Id}' returned an empty recovery id.");
+                var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
+                var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
+                var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
+                    .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
+                    .ToListAsync(cancellationToken);
+                dbContext.RemoveRange(phases);
+                dbContext.RemoveRange(options);
+                dbContext.RemoveRange(hierarchyLinks);
+                dbContext.Add(new ProjectRetirementRecord {
+                    ProjectId = project.Id, LifetimeId = project.LifetimeId, RetiredAtUtc = clock.GetUtcNow()
+                });
+                dbContext.Remove(project);
             }
 
-            if (preparation.ProjectId != id)
-            {
-                throw new InvalidOperationException(
-                    $"Project deletion participant '{participant.Id}' returned recovery state for another project.");
-            }
+            await searchMutationService.DeleteProjectSearchForMutationAsync(id, cancellationToken);
+            await storageCatalogService.DeleteProjectRoutingForMutationAsync(id, cancellationToken);
 
-            preparedParticipants.Add((participant, preparation));
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
-
-        if (project is not null)
-        {
-            var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-            var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-            var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
-                .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
-                .ToListAsync(cancellationToken);
-            dbContext.RemoveRange(phases);
-            dbContext.RemoveRange(options);
-            dbContext.RemoveRange(hierarchyLinks);
-            dbContext.Remove(project);
-        }
-
-        var searchDocuments = await dbContext.Set<SearchDocument>()
-            .Where(document =>
-                document.ProjectId == id ||
-                (document.SourceType == "project" && document.SourceKey == id.ToString()))
-            .ToListAsync(cancellationToken);
-        var storageRoutingRules = await dbContext.Set<StorageRoutingRule>()
-            .Where(rule => rule.ProjectId == id)
-            .ToListAsync(cancellationToken);
-        dbContext.RemoveRange(searchDocuments);
-        dbContext.RemoveRange(storageRoutingRules);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
         await mutationScope.CommitAsync(cancellationToken);
         await mutationScope.DisposeAsync();
 
@@ -1326,7 +1458,7 @@ public sealed class ProjectsService(
         }
     }
 
-    private static ProjectSummary MapProjectSummary(
+    private ProjectSummary MapProjectSummary(
         Project project,
         IReadOnlyDictionary<Guid, int> phaseCounts,
         ProjectHierarchyMetrics hierarchyMetrics,
@@ -1344,21 +1476,31 @@ public sealed class ProjectsService(
         portfolioContext?.PrimaryDeliveryUnitName ?? string.Empty,
         portfolioContext?.PrimaryOwnerName ?? string.Empty,
         portfolioContext?.Items ?? [],
-        portfolioContext?.SearchText ?? string.Empty);
+        portfolioContext?.SearchText ?? string.Empty) { ExpectedProjectAdmission = writeAdmissionService.Capture(project) };
 
     private static async Task<IReadOnlyDictionary<Guid, int>> LoadPhaseCountsAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-        => await dbContext.Set<ProjectPhase>()
+        ProjectsDbContext dbContext,
+        CancellationToken cancellationToken,
+        Guid? projectId = null) {
+        var phases = dbContext.Set<ProjectPhase>().AsQueryable();
+        if (projectId.HasValue) {
+            phases = phases.Where(phase => phase.ProjectId == projectId.Value);
+        }
+        return await phases
             .GroupBy(phase => phase.ProjectId)
             .Select(group => new { group.Key, Count = group.Count() })
             .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);
+    }
 
     private static async Task<ProjectHierarchyMetrics> LoadHierarchyMetricsAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var links = await dbContext.Set<ProjectHierarchyLink>()
+        ProjectsDbContext dbContext,
+        CancellationToken cancellationToken,
+        Guid? projectId = null) {
+        var query = dbContext.Set<ProjectHierarchyLink>().AsQueryable();
+        if (projectId.HasValue) {
+            query = query.Where(link => link.ParentProjectId == projectId.Value || link.ChildProjectId == projectId.Value);
+        }
+        var links = await query
             .OrderBy(link => link.ParentProjectId)
             .ThenBy(link => link.ChildProjectId)
             .ToListAsync(cancellationToken);
@@ -1377,7 +1519,7 @@ public sealed class ProjectsService(
     }
 
     private static async Task<Error?> ValidateHierarchyConnectionAsync(
-        AppDbContext dbContext,
+        ProjectsDbContext dbContext,
         Guid parentProjectId,
         Guid childProjectId,
         CancellationToken cancellationToken)

@@ -1187,6 +1187,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         return new ProjectEditorModel
         {
             Id = source.Id,
+            ExpectedLifetimeId = source.ExpectedLifetimeId,
             Name = source.Name,
             Description = source.Description,
             Objective = source.Objective,

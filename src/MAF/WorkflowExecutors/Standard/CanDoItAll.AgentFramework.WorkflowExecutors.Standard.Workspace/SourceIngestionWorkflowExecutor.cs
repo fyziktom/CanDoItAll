@@ -41,7 +41,10 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
         this.contentIdentityResolver = contentIdentityResolver ?? throw new ArgumentNullException(nameof(contentIdentityResolver));
     }
 
-    public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.SourceIngestion;
+    public static WorkflowExecutorDescriptor DisclosureDescriptor { get; } = BuiltInWorkflowExecutorDescriptors.SourceIngestion with {
+        ProviderReadOwner = WorkflowWorkspaceProviderReadEvidence.Owner
+    };
+    public WorkflowExecutorDescriptor Descriptor => DisclosureDescriptor;
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
         WorkflowExecutorExecutionContext context,
@@ -50,6 +53,7 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
     {
         cancellationToken.ThrowIfCancellationRequested();
         var settings = WorkflowExecutorJson.Deserialize<WorkflowSourceIngestionExecutorSettings>(context.SettingsJson);
+        var capture = WorkflowWorkspaceReadCapture.Begin(context, input, () => fileResolver.ExecutionScope);
         using var document = JsonDocument.Parse(input.PayloadJson);
         var root = document.RootElement;
         var allowedExtensions = NormalizeExtensions(settings.AllowedExtensions);
@@ -106,6 +110,7 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
                         .EnsureUnchangedAsync(file, contentIdentity, cancellationToken)
                         .ConfigureAwait(false);
                     var loadedDocument = CreateDocument(candidate, file, readResult);
+                    capture?.CaptureIngested(file, contentIdentity);
                     loaded.Add(loadedDocument);
                     visitedContent.Add(contentIdentity.Key);
                     remainingCharacters -= loadedDocument.Text.Length;
@@ -146,7 +151,9 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
             isTruncated = truncated
         };
 
-        return WorkflowExecutorJson.Result(context, result);
+        return WorkflowExecutorJson.Result(context, result) with {
+            ProviderReadEvidence = capture?.Complete() ?? []
+        };
     }
 
     private static WorkflowSourceIngestionDocument CreateDocument(

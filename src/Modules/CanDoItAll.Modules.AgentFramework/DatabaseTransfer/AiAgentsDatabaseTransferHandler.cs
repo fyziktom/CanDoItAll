@@ -5,8 +5,7 @@ using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver workspacePathResolver) : IDatabaseTransferHandler
-{
+public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver workspacePathResolver) : IDatabaseTransferHandler {
     public DatabaseTransferItemDescriptor Descriptor { get; } = new(
         "ai-agents",
         "AI agents",
@@ -14,9 +13,8 @@ public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver works
         SortOrder: 30);
 
     public async Task<DatabaseTransferItemPreview> PreviewAsync(
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken = default)
-    {
+        DatabaseTransferOperation context,
+        CancellationToken cancellationToken = default) {
         var sourceCatalog = await CreateStore(context.SourceProfile).LoadCatalogAsync(cancellationToken);
         var targetCatalog = await CreateStore(context.TargetProfile).LoadCatalogAsync(cancellationToken);
 
@@ -30,12 +28,10 @@ public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver works
     }
 
     public async Task<DatabaseTransferItemResult> TransferAsync(
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken = default)
-    {
+        DatabaseTransferOperation context,
+        CancellationToken cancellationToken = default) {
         var sourceCatalog = await CreateStore(context.SourceProfile).LoadCatalogAsync(cancellationToken);
-        if (sourceCatalog.Agents.Count == 0)
-        {
+        if (sourceCatalog.Agents.Count == 0) {
             return new DatabaseTransferItemResult(Descriptor.Key, Descriptor.Label, false, "The source database profile has no AI agents to transfer.", 0);
         }
 
@@ -46,8 +42,7 @@ public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver works
                 sourceCatalog.Agents,
                 targetCatalog.Providers,
                 sourceCatalog.Capabilities,
-                targetCatalog.Memory)
-            {
+                targetCatalog.Memory) {
                 AgentTeams = sourceCatalog.AgentTeams
             },
             cancellationToken);
@@ -60,8 +55,7 @@ public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver works
             sourceCatalog.Agents.Count + sourceCatalog.AgentTeams.Count + sourceCatalog.Capabilities.Count);
     }
 
-    private FileSandboxWorkspaceStore CreateStore(ResolvedDatabaseProfile databaseProfile)
-    {
+    private FileSandboxWorkspaceStore CreateStore(ResolvedDatabaseProfile databaseProfile) {
         var workspaceRoot = string.IsNullOrWhiteSpace(databaseProfile.Profile.Storage.WorkspaceRoot)
             ? workspacePathResolver.ResolveWorkspaceRoot()
             : databaseProfile.Profile.Storage.WorkspaceRoot;

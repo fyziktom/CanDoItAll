@@ -14,7 +14,7 @@ using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Processes.Application;
 
-public sealed class ProcessLaunchApplicationService(
+public sealed partial class ProcessLaunchApplicationService(
     ProcessTemplatePackLoader templatePackLoader,
     IProcessProjectionClock clock,
     IProcessLaunchDriverCatalogProvider driverCatalogProvider,
@@ -28,7 +28,9 @@ public sealed class ProcessLaunchApplicationService(
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
     ILaunchVariableTemplateResolver launchVariableTemplateResolver,
-    IExternalTargetPathRegistry externalTargetPathRegistry)
+    IExternalTargetPathRegistry externalTargetPathRegistry,
+    IProcessPreparedLaunchStore? preparedLaunchStore = null,
+    IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null)
 {
     private const string ProcessRunNodePrefix = "process-run:";
     private const string ProcessRunIdVariableName = "ProcessRunId";
@@ -57,6 +59,10 @@ public sealed class ProcessLaunchApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (UsesPreparedPreview(request)) {
+            RequirePreparedStore();
+            return await PreviewPreparedLaunchAsync(request, cancellationToken).ConfigureAwait(false);
+        }
 
         var nowUtc = NormalizeUtc(clock.GetUtcNow());
         var preparation = await PrepareLaunchAsync(request, nowUtc, cancellationToken).ConfigureAwait(false);
@@ -89,7 +95,16 @@ public sealed class ProcessLaunchApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (preparedLaunchStore is not null) {
+            return await LaunchPreparedAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        if (UsesPreparedPreview(request)) {
+            RequirePreparedStore();
+        }
 
+        if (request.ProjectAdmission is { } admission && request.ProjectId != admission.ProjectId) {
+            throw new InvalidOperationException("The prepared process project admission does not match the launch project.");
+        }
         var nowUtc = NormalizeUtc(clock.GetUtcNow());
         var preparation = await PrepareLaunchAsync(request, nowUtc, cancellationToken).ConfigureAwait(false);
         if (preparation.EarlyResult is not null)
@@ -107,7 +122,7 @@ public sealed class ProcessLaunchApplicationService(
             selected.Definition,
             assignments,
             request.RootRunIdOverride,
-            nowUtc);
+            nowUtc) with { ProjectAdmission = request.ProjectAdmission };
         var createContext = CreateContext(request.RequestedBy, nowUtc);
         var createMutation = CreateAppliedMutation(
             initialState,
@@ -142,105 +157,9 @@ public sealed class ProcessLaunchApplicationService(
                 createCommit.Diagnostics.Select(diagnostic => diagnostic.Message).ToArray());
         }
 
-        var artifactRoot = BuildManagedProcessArtifactRoot(initialState.RunId);
-        var engine = new ProcessRuntimeEngine(unitOfWork);
-        try
-        {
-            await artifactInitializer.InitializeAsync(
-                new ProcessLaunchArtifactInitializationRequest(
-                    initialState.RunId,
-                    plan.Definition.DefinitionId,
-                    plan.Header.PlanId,
-                    selected.Definition.Key,
-                    request.ProjectId,
-                    artifactRoot),
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            var diagnostics = new List<string>
-            {
-                $"Failed to initialize managed process artifact root '{artifactRoot}': {exception.Message}"
-            };
-            diagnostics.AddRange(await TryCancelFailedLaunchAsync(
-                engine,
-                initialState.RunId,
-                request.RequestedBy,
-                cancellationToken).ConfigureAwait(false));
-            diagnostics.AddRange(await TryCatchUpFailedLaunchProjectionAsync(cancellationToken).ConfigureAwait(false));
-            return new ProcessLaunchResult(
-                plan.Definition.DefinitionId,
-                plan.Header.PlanId,
-                initialState.RunId,
-                ProcessLaunchStage.Failed,
-                BuildRunRoute(initialState.RunId, request.ProjectId),
-                launchPlan,
-                diagnostics);
-        }
-
-        var activeCommit = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
-            initialState.RunId,
-            reloadedState => engine.ActivateAsync(
-                reloadedState,
-                CreateContext(request.RequestedBy, NormalizeUtc(clock.GetUtcNow())),
-                cancellationToken),
-            cancellationToken).ConfigureAwait(false);
-        if (!activeCommit.Succeeded)
-        {
-            return await BuildFailedLifecycleLaunchResultAsync(
-                plan,
-                launchPlan,
-                request,
-                engine,
-                activeCommit,
-                "activation",
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        var scheduled = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
-            initialState.RunId,
-            reloadedState => engine.ScheduleReadyAsync(
-                reloadedState,
-                CreateContext(request.RequestedBy, NormalizeUtc(clock.GetUtcNow())),
-                cancellationToken),
-            cancellationToken).ConfigureAwait(false);
-        if (!scheduled.Succeeded)
-        {
-            return await BuildFailedLifecycleLaunchResultAsync(
-                plan,
-                launchPlan,
-                request,
-                engine,
-                scheduled,
-                "ready-step scheduling",
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-
-        var activeState = scheduled.State;
-        var stage = MapLaunchStage(activeState.Status);
-        if (request.Execute &&
-            stage == ProcessLaunchStage.Running &&
-            activeState.Status == ProcessRuntimeStatus.Active)
-        {
-            await dispatchQueue.EnqueueAsync(
-                new ProcessRuntimeDispatchQueueRequest(activeState.RunId, request.RequestedBy),
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        return new ProcessLaunchResult(
-            plan.Definition.DefinitionId,
-            plan.Header.PlanId,
-            activeState.RunId,
-            stage,
-            BuildRunRoute(activeState.RunId, request.ProjectId),
-            launchPlan,
-            launchPlan.ReadinessFindings
-                .Where(finding => finding.Severity != ProcessLaunchReadinessSeverity.Info)
-                .Select(finding => finding.Message)
-                .ToArray());
+        return await ContinueInitialLaunchAsync(plan, launchPlan, request, initialState, cancellationToken).ConfigureAwait(false);
     }
+
 
     public async Task<ProcessLaunchResult?> FindExistingLaunchAsync(
         ProcessExistingLaunchLookupRequest request,

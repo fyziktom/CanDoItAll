@@ -22,7 +22,7 @@ public sealed class CrmHrRegressionTests
     [Fact]
     public async Task Final_crm_hr_regression_gate_keeps_core_routes_readable_and_persistent()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b13";
+        var evidenceDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "evidence", "crm-hr", "b13");
         Directory.CreateDirectory(evidenceDirectory);
 
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
@@ -41,7 +41,7 @@ public sealed class CrmHrRegressionTests
         var page = await context.NewPageAsync();
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr");
-        await DismissStartupModalIfPresentAsync(page);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("crmhr-home-sensitive-card").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-home-sensitive-card"), seed.SensitivePartyName);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -78,6 +78,7 @@ public sealed class CrmHrRegressionTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.AccountId:D}");
+        await page.GetByTestId("crmhr-crm-tab-interactions").ClickAsync();
         await page.WaitForSelectorAsync($"text={seed.InteractionSubject}");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions
@@ -87,15 +88,40 @@ public sealed class CrmHrRegressionTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/resources?projectId={seed.ProjectId:D}");
-        await page.GetByTestId("resource-project-select").WaitForAsync();
-        await WaitForSelectOptionAsync(page.GetByTestId("resource-owner-select"), seed.OwnerId.ToString());
-        await WaitForSelectOptionAsync(page.GetByTestId("resource-maintainer-select"), seed.MaintainerId.ToString());
-        await page.GetByTestId("resource-name-input").FillAsync(resourceName);
-        await page.GetByTestId("resource-primary-input").FillAsync($"https://example.test/b13/{suffix}.git");
-        await page.GetByTestId("resource-owner-select").SelectOptionAsync(seed.OwnerId.ToString());
-        await page.GetByTestId("resource-maintainer-select").SelectOptionAsync(seed.MaintainerId.ToString());
-        await page.GetByTestId("resource-save-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Resource saved.");
+        try {
+            await Assertions.Expect(page.GetByRole(AriaRole.Tablist, new() { Name = "Open workspace tabs", Exact = true })
+                .GetByRole(AriaRole.Tab, new() { Name = "Resources", Exact = true }))
+                .ToHaveAttributeAsync("aria-selected", "true");
+            await page.GetByTestId("resource-project-select").WaitForAsync();
+            await page.GetByTestId("resource-plugin-select").SelectOptionAsync(new SelectOptionValue { Label = "Repository resource" });
+            await page.GetByTestId("resource-config-defaultBranch").WaitForAsync();
+            await WaitForSelectOptionAsync(page.GetByTestId("resource-owner-select"), seed.OwnerId.ToString());
+            await WaitForSelectOptionAsync(page.GetByTestId("resource-maintainer-select"), seed.MaintainerId.ToString());
+            await page.GetByTestId("resource-name-input").FillAsync(resourceName);
+            await page.GetByTestId("resource-primary-input").FillAsync($"https://example.test/b13/{suffix}.git");
+            await page.GetByTestId("resource-owner-select").SelectOptionAsync(seed.OwnerId.ToString());
+            await page.GetByTestId("resource-maintainer-select").SelectOptionAsync(seed.MaintainerId.ToString());
+            await page.GetByTestId("resource-save-button").ClickAsync();
+            var saved = page.GetByText("Resource saved.", new() { Exact = true });
+            await saved
+                .Or(page.GetByText("Resource was not saved", new() { Exact = true }))
+                .Or(page.GetByText("Resource save failed", new() { Exact = true }))
+                .Or(page.GetByText("Resource saved; refresh incomplete", new() { Exact = true }))
+                .First.WaitForAsync();
+            Assert.True(await saved.IsVisibleAsync(), await page.Locator("body").InnerTextAsync());
+        } catch {
+            try {
+                await page.ScreenshotAsync(new() {
+                    Path = Path.Combine(evidenceDirectory, "crm-hr-resources-b13-failure.png"),
+                    FullPage = true
+                });
+                await File.WriteAllTextAsync(Path.Combine(evidenceDirectory, "crm-hr-resources-b13-failure.txt"),
+                    await page.Locator("body").InnerTextAsync());
+            } catch (Exception diagnosticFailure) {
+                Console.Error.WriteLine($"Browser diagnostic capture failed: {diagnosticFailure.GetType().Name}");
+            }
+            throw;
+        }
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -104,12 +130,21 @@ public sealed class CrmHrRegressionTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/test-lab?projectId={seed.ProjectId:D}");
+        await Assertions.Expect(page.GetByRole(AriaRole.Tablist, new() { Name = "Open workspace tabs", Exact = true })
+            .GetByRole(AriaRole.Tab, new() { Name = "Test Lab", Exact = true }))
+            .ToHaveAttributeAsync("aria-selected", "true");
         await page.GetByTestId("testlab-project-select").WaitForAsync();
         await WaitForSelectOptionAsync(page.GetByTestId("testlab-responsible-party-select"), seed.OwnerId.ToString());
         await page.GetByTestId("testlab-responsible-party-select").SelectOptionAsync(seed.OwnerId.ToString());
         await page.GetByTestId("testlab-title-input").FillAsync(testPlanTitle);
         await page.GetByTestId("testlab-save-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Test plan saved.");
+        var planSaved = page.GetByText("Test plan saved", new() { Exact = true });
+        await planSaved
+            .Or(page.GetByText("Test plan was not saved", new() { Exact = true }))
+            .Or(page.GetByText("Test plan save failed", new() { Exact = true }))
+            .Or(page.GetByText("Test plan saved; refresh incomplete", new() { Exact = true }))
+            .First.WaitForAsync();
+        Assert.True(await planSaved.IsVisibleAsync(), await page.Locator("body").InnerTextAsync());
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -146,7 +181,8 @@ public sealed class CrmHrRegressionTests
         var sensitivePartyName = $"B13 Sensitive {suffix}";
         var interactionSubject = $"B13 Activity Search {suffix}";
 
-        var projectId = await CreateProjectAsync(projectsService, projectName);
+        var projectAdmission = await CreateProjectAsync(projectsService, projectName);
+        var projectId = projectAdmission.ProjectId;
         var customerId = await CreatePartyAsync(
             partyDirectoryService,
             customerName,
@@ -202,9 +238,9 @@ public sealed class CrmHrRegressionTests
             isSensitive: true,
             confidentialNote: $"Confidential regression note {suffix}");
 
-        await SaveAssignmentAsync(projectPartyBridge, projectId, customerId, ProjectPartyAssignmentRole.Customer, "b13-customer", 100m, true);
-        await SaveAssignmentAsync(projectPartyBridge, projectId, deliveryUnitId, ProjectPartyAssignmentRole.DeliveryUnit, "b13-delivery", 70m, true);
-        await SaveAssignmentAsync(projectPartyBridge, projectId, ownerId, ProjectPartyAssignmentRole.Manager, "b13-owner", 40m, true);
+        await SaveAssignmentAsync(projectPartyBridge, projectAdmission, customerId, ProjectPartyAssignmentRole.Customer, "b13-customer", 100m, true);
+        await SaveAssignmentAsync(projectPartyBridge, projectAdmission, deliveryUnitId, ProjectPartyAssignmentRole.DeliveryUnit, "b13-delivery", 70m, true);
+        await SaveAssignmentAsync(projectPartyBridge, projectAdmission, ownerId, ProjectPartyAssignmentRole.Manager, "b13-owner", 40m, true);
 
         var accountProfileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
@@ -266,6 +302,8 @@ public sealed class CrmHrRegressionTests
         var savedPlanSummary = Assert.Single(await testLabService.ListAsync(), item => item.Title == testPlanTitle);
         var savedPlan = await testLabService.GetAsync(savedPlanSummary.Id);
         Assert.Equal(testPlanTitle, savedPlan.Title);
+        Assert.Equal(seed.ProjectId, savedPlan.ProjectId);
+        Assert.Equal(seed.OwnerId, savedPlan.ResponsiblePartyId);
 
         var sensitiveParty = await partyDirectoryService.GetPartyAsync(seed.SensitivePartyId);
         Assert.NotNull(sensitiveParty);
@@ -302,10 +340,8 @@ public sealed class CrmHrRegressionTests
             Path.Combine(profileRoot, "manager-artifacts"));
     }
 
-    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
-    {
-        var result = await projectsService.SaveAsync(new ProjectEditorModel
-        {
+    private static async Task<ProjectWriteAdmission> CreateProjectAsync(ProjectsService projectsService, string name) {
+        var result = await projectsService.CreateWithAdmissionAsync(new ProjectEditorModel {
             Name = name,
             Description = $"{name} description",
             Objective = $"{name} objective",
@@ -313,7 +349,7 @@ public sealed class CrmHrRegressionTests
         });
 
         Assert.True(result.IsSuccess);
-        return result.Value;
+        return Assert.IsType<ProjectWriteAdmission>(result.Value);
     }
 
     private static async Task<Guid> CreatePartyAsync(
@@ -375,7 +411,7 @@ public sealed class CrmHrRegressionTests
 
     private static async Task SaveAssignmentAsync(
         IProjectPartyIntegrationBridge projectPartyBridge,
-        Guid projectId,
+        ProjectWriteAdmission projectAdmission,
         Guid partyId,
         ProjectPartyAssignmentRole role,
         string nodeKey,
@@ -384,7 +420,8 @@ public sealed class CrmHrRegressionTests
     {
         var result = await projectPartyBridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
-            ProjectId = projectId,
+            ProjectId = projectAdmission.ProjectId,
+            ExpectedProjectAdmission = projectAdmission,
             PartyId = partyId,
             Role = role,
             NodeKey = nodeKey,
@@ -434,27 +471,6 @@ public sealed class CrmHrRegressionTests
         throw new TimeoutException($"Timed out waiting for select option '{optionValue}'.");
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
-    }
 
     private sealed record SeededScenario(
         Guid ProjectId,

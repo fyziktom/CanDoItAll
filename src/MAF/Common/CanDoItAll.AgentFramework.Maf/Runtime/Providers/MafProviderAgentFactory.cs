@@ -328,6 +328,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
             options: new OpenAIClientOptions
             {
                 Endpoint = ResolveAzureOpenAiEndpoint(provider, model),
+                RetryPolicy = new MafNativeRequestRetryPolicy(),
                 NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
             });
 
@@ -438,12 +439,12 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 
         chatClient = new ProviderHistoryChatClient(chatClient, provider, model, history, clock);
         var logger = loggerFactory.CreateLogger<EmptyCompletionRetryChatClient>();
-        return new EmptyCompletionRetryChatClient(
+        return new MafToolAdmissionChatClient(new EmptyCompletionRetryChatClient(
             chatClient,
             provider,
             model,
             allowBackgroundResponses,
-            logger);
+            logger));
     }
 
     private IChatClient AddProviderTransportBoundary(
@@ -497,6 +498,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 
         var options = new OpenAIClientOptions
         {
+            RetryPolicy = new MafNativeRequestRetryPolicy(),
             NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
         };
         if (!MafProviderRuntimeSettings.ShouldUseDefaultOpenAiEndpoint(provider.BaseUrl))

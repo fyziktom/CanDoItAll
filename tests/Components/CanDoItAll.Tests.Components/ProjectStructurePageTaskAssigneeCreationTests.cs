@@ -28,6 +28,8 @@ public sealed class ProjectStructurePageTaskAssigneeCreationTests
         var projectId = await CreateProjectAsync(
             projectsService,
             TaskCreateEntryPoint.CreateActionInvoked);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var primaryPersonId = await CreatePartyAsync(
             partyDirectoryService,
             "Morgan Lee",
@@ -60,23 +62,24 @@ public sealed class ProjectStructurePageTaskAssigneeCreationTests
                             ExpectedEffortHours = 8m,
                             ExpectedEffortUnit = ProjectWorkItemEffortUnit.Hours
                         }
-                    })));
+                    })) { ExpectedProjectAdmission = admission });
         var assignmentResult = await partyBridge.ReplaceNodeAssignmentsAsync(
             projectId,
             new ProjectNodeReference(task.Id),
             [
                 CreateAssignment(
-                    projectId,
+                    admission,
                     task.Id,
                     primaryPersonId,
                     isPrimary: true),
                 CreateAssignment(
-                    projectId,
+                    admission,
                     task.Id,
                     supportingAgentId,
                     isPrimary: false)
             ],
-            [ProjectPartyAssignmentRole.WorkItemAssignee]);
+            [ProjectPartyAssignmentRole.WorkItemAssignee],
+            expectedProjectAdmission: admission);
         Assert.True(assignmentResult.IsSuccess);
         var assignmentsBefore = await ReadDirectAssignmentsAsync(
             partyBridge,
@@ -373,13 +376,14 @@ public sealed class ProjectStructurePageTaskAssigneeCreationTests
     }
 
     private static ProjectPartyAssignmentUpsertRequest CreateAssignment(
-        Guid projectId,
+        ProjectWriteAdmission admission,
         string taskNodeId,
         Guid partyId,
         bool isPrimary)
         => new()
         {
-            ProjectId = projectId,
+            ProjectId = admission.ProjectId,
+            ExpectedProjectAdmission = admission,
             PartyId = partyId,
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = taskNodeId,

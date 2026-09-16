@@ -1,5 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
-
 namespace CanDoItAll.Modules.Security;
 
 public static class SecretMutationScopeKeys
@@ -48,7 +46,6 @@ public sealed record SecretDeletionReference
 public interface ISecretDeletionReferencePolicy
 {
     Task<SecretDeletionReference?> FindReferenceAsync(
-        AppDbContext dbContext,
         Guid secretRecordId,
         CancellationToken cancellationToken);
 }

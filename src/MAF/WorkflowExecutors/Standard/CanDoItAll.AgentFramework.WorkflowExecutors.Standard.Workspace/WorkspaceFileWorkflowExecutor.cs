@@ -1,12 +1,16 @@
+using System.Collections.Immutable;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using System.Text.RegularExpressions;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
-public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) : IWorkflowExecutor
+public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files, IWorkspacePathResolutionService? paths = null) : IWorkflowExecutor
 {
-    public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.StorageFile;
+    public static WorkflowExecutorDescriptor DisclosureDescriptor { get; } = BuiltInWorkflowExecutorDescriptors.StorageFile with {
+        ProviderReadOwner = WorkflowWorkspaceProviderReadEvidence.Owner
+    };
+    public WorkflowExecutorDescriptor Descriptor => DisclosureDescriptor;
 
     public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
         WorkflowExecutorExecutionContext context,
@@ -15,6 +19,16 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
     {
         cancellationToken.ThrowIfCancellationRequested();
         var settings = WorkflowExecutorJson.Deserialize<WorkflowStorageFileExecutorSettings>(context.SettingsJson);
+        var capture = WorkflowWorkspaceProviderReadEvidence.RequiresFileEvidence(settings)
+            ? WorkflowWorkspaceReadCapture.Begin(context, input, () => files.ExecutionScope) : null;
+        if (capture is not null) {
+            capture.RequireSameScope((paths ?? throw new InvalidOperationException(
+                "Protected Workflow file reads require the actual owner's path resolver.")).ExecutionScope);
+            capture.CapturePath(paths, WorkflowWorkspaceReadCapture.RequestedPath(settings), allowMissing: true);
+            if (settings.Operation == WorkflowStorageFileOperation.DiffText) {
+                capture.CapturePath(paths, settings.DestinationPath, allowMissing: true);
+            }
+        }
         object result = settings.Operation switch
         {
             WorkflowStorageFileOperation.List => EnsureSucceeded(FilterList(files.ListFiles(EmptyToNull(settings.Path), settings.SearchPattern, settings.MaxResults), settings)),
@@ -39,7 +53,13 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
             _ => throw new InvalidOperationException($"Workspace file operation '{settings.Operation}' is not supported.")
         };
 
-        return ValueTask.FromResult(WorkflowExecutorJson.Result(context, result));
+        if (capture is not null) {
+            capture.RevalidatePaths(paths!);
+            capture.CaptureFileResult(paths!, result, settings);
+        }
+        return ValueTask.FromResult(WorkflowExecutorJson.Result(context, result) with {
+            ProviderReadEvidence = capture?.Complete() ?? []
+        });
     }
 
     private static WorkspaceFileListResult FilterList(
@@ -52,15 +72,21 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
             return result;
         }
 
-        var entries = result.Entries
-            .Where(entry => settings.IncludeGlobs.Count == 0 || settings.IncludeGlobs.Any(pattern => MatchesGlob(entry.RelativePath, pattern)))
-            .Where(entry => settings.ExcludeGlobs.All(pattern => !MatchesGlob(entry.RelativePath, pattern)))
+        var selected = result.Entries.Select((entry, index) => (Entry: entry, Index: index))
+            .Where(item => settings.IncludeGlobs.Count == 0 || settings.IncludeGlobs.Any(pattern => MatchesGlob(item.Entry.RelativePath, pattern)))
+            .Where(item => settings.ExcludeGlobs.All(pattern => !MatchesGlob(item.Entry.RelativePath, pattern)))
             .ToArray();
+        var selection = result.ReadSelection;
+        if (selection is not null && selection.Count != result.Entries.Count) {
+            throw new InvalidOperationException("The Workflow file owner's selected targets do not match its listing.");
+        }
 
         return result with
         {
-            Entries = entries,
-            IsTruncated = result.IsTruncated || entries.Length < result.Entries.Count
+            Entries = selected.Select(item => item.Entry).ToArray(),
+            ReadSelection = selection is null ? null : new(selection.GetRootPath(), selection.IsWorkspacePath,
+                selected.Select(item => selection.GetSelectedPaths()[item.Index]).ToImmutableArray()),
+            IsTruncated = result.IsTruncated || selected.Length < result.Entries.Count
         };
     }
 

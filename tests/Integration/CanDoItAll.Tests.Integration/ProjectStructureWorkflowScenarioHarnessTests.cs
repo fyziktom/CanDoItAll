@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -118,6 +119,30 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 "Validates workflow nodes, input preview, result-node projection, and file-summary artifacts.",
                 "Validation",
                 ProjectStatus.Active));
+        await using (var scope = host.App.Services.CreateAsyncScope()) {
+            var services = scope.ServiceProvider;
+            var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(project.Id));
+            foreach (var (partyType, role, name) in new[] {
+                (PartyType.Organization, ProjectPartyAssignmentRole.Customer, "Scenario customer"),
+                (PartyType.OrganizationUnit, ProjectPartyAssignmentRole.DeliveryUnit, "Scenario delivery"),
+                (PartyType.Person, ProjectPartyAssignmentRole.Manager, "Scenario owner")
+            }) {
+                var party = await services.GetRequiredService<PartyDirectoryService>().SavePartyAsync(new PartyEditorModel {
+                    PartyType = partyType, DisplayName = name, LifecycleStatus = PartyLifecycleStatus.Active,
+                    LastChangedBy = "workflow-summary-test"
+                });
+                Assert.True(party.IsSuccess);
+                var assignment = await services.GetRequiredService<IProjectPartyIntegrationBridge>().SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest {
+                    ProjectId = project.Id, ExpectedProjectAdmission = admission, PartyId = party.Value,
+                    Role = role, IsPrimary = true, Source = "workflow-summary-test"
+                });
+                Assert.True(assignment.IsSuccess);
+            }
+            project = Assert.IsType<ProjectSummary>(await services.GetRequiredService<IProjectSummaryQueryService>().GetSummaryAsync(project.Id));
+            Assert.Equal("Scenario customer", project.PrimaryCustomerName);
+            Assert.Equal("Scenario delivery", project.PrimaryDeliveryUnitName);
+            Assert.Equal("Scenario owner", project.PrimaryOwnerName);
+        }
         var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
             host.Client,
             "/api/project-structure/leases/acquire",
@@ -427,7 +452,14 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
 
         using var payload = JsonDocument.Parse(options.Preview.InputJson);
         var root = payload.RootElement;
-        Assert.Equal(project.Id, root.GetProperty("project").GetProperty("id").GetGuid());
+        var projectPayload = root.GetProperty("project");
+        Assert.Equal(project.Id, projectPayload.GetProperty("id").GetGuid());
+        Assert.Equal(project.Name, projectPayload.GetProperty("name").GetString());
+        Assert.Equal(project.Status.ToString(), projectPayload.GetProperty("status").GetString());
+        Assert.Equal(project.CurrentPhase, projectPayload.GetProperty("currentPhase").GetString());
+        Assert.Equal(project.PrimaryCustomerName, projectPayload.GetProperty("customerName").GetString());
+        Assert.Equal(project.PrimaryOwnerName, projectPayload.GetProperty("ownerName").GetString());
+        Assert.Equal(project.PrimaryDeliveryUnitName, projectPayload.GetProperty("deliveryUnitName").GetString());
         Assert.Equal(parent.Id, root.GetProperty("parentNode").GetProperty("id").GetString());
         Assert.Equal(scenario.Id, root.GetProperty("manualInput").GetProperty("scenarioId").GetString());
 

@@ -11,8 +11,8 @@ public static class StandardWorkspaceWorkflowExecutorServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddWorkflowExecutorContribution<WorkspaceFileWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.StorageFile, executorLifetime);
-        services.AddWorkflowExecutorContribution<SourceIngestionWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.SourceIngestion, executorLifetime);
+        services.AddWorkflowExecutorContribution<WorkspaceFileWorkflowExecutor>(WorkspaceFileWorkflowExecutor.DisclosureDescriptor, executorLifetime);
+        services.AddWorkflowExecutorContribution<SourceIngestionWorkflowExecutor>(SourceIngestionWorkflowExecutor.DisclosureDescriptor, executorLifetime);
 
         return services;
     }

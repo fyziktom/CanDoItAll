@@ -45,7 +45,8 @@ internal sealed record ProcessWorkspaceAgentChatContext(
     ProcessWorkspaceShellProjection? Shell,
     ProcessLiveProcessSnapshot? FocusedRun,
     ProcessTimelineEventProjection? FocusedEvent,
-    AgentChatContextAccessState AccessState);
+    AgentChatContextAccessState AccessState,
+    AgentProjectStructureLifetime? ObservedProjectLifetime = null);
 
 internal sealed record LiveProcessesAgentChatContext(
     string NavigationUri,
@@ -58,7 +59,8 @@ internal sealed record LiveProcessesAgentChatContext(
     ProcessLiveProcessSnapshot? FocusedRun,
     Guid? FilesRunId,
     ProcessRuntimeActiveAgentProjection? FocusedAgent,
-    AgentChatContextAccessState AccessState);
+    AgentChatContextAccessState AccessState,
+    AgentProjectStructureLifetime? ObservedProjectLifetime = null);
 
 internal static class ProcessAgentChatContextBuilder
 {
@@ -139,7 +141,8 @@ internal static class ProcessAgentChatContextBuilder
                 facts),
             ResolveWorkspaceScope(context.ProjectId),
             accessMode: AgentChatContextScopeAccessMode.Unrestricted,
-            accessState: context.AccessState);
+            accessState: ResolveAccessState(context.ProjectId, context.ObservedProjectLifetime, context.AccessState),
+            observedProjectLifetime: context.ObservedProjectLifetime);
     }
 
     public static AgentChatContextSurface BuildLiveSurface(
@@ -205,8 +208,16 @@ internal static class ProcessAgentChatContextBuilder
                 facts),
             ResolveWorkspaceScope(context.ProjectId),
             accessMode: AgentChatContextScopeAccessMode.Unrestricted,
-            accessState: context.AccessState);
+            accessState: ResolveAccessState(context.ProjectId, context.ObservedProjectLifetime, context.AccessState),
+            observedProjectLifetime: context.ObservedProjectLifetime);
     }
+
+    private static AgentChatContextAccessState ResolveAccessState(Guid? projectId, AgentProjectStructureLifetime? lifetime,
+        AgentChatContextAccessState state)
+        => state == AgentChatContextAccessState.Ready && projectId.HasValue &&
+            (lifetime is null || lifetime.ProjectId != projectId)
+                ? AgentChatContextAccessState.Loading
+                : state;
 
     private static AgentChatContextSource BuildSource(
         string sourceKind,

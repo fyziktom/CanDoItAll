@@ -1,3 +1,0 @@
-CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests.Unchanged_provider_lease_preserves_fingerprint_and_allows_proof_publication
-Expected discovery: 1
-Frozen before lease-copy correction.

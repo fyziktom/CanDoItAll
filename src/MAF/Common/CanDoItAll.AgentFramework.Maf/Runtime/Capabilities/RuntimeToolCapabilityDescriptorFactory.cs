@@ -12,14 +12,14 @@ internal static class RuntimeToolCapabilityDescriptorFactory
         string description,
         IReadOnlyList<string> sourceTags,
         IReadOnlySet<CapabilityOperationClassification>? operationClassifications = null,
-        ImplementationKey? implementationKey = null)
-    {
+        ImplementationKey? implementationKey = null,
+        AgentToolPolicyCatalog? toolPolicies = null) {
         if (!TryCreateRuntimeToolName(toolName, out var runtimeToolName))
         {
             throw new InvalidOperationException($"Runtime tool name '{toolName}' cannot be represented as a capability descriptor.");
         }
 
-        var classifications = operationClassifications ?? ResolveRuntimeToolOperationClassifications(runtimeToolName.Value);
+        var classifications = operationClassifications ?? ResolveRuntimeToolOperationClassifications(runtimeToolName.Value, toolPolicies);
         var tags = new HashSet<CapabilityTag>
         {
             CapabilityTag.Create("tool")
@@ -40,7 +40,7 @@ internal static class RuntimeToolCapabilityDescriptorFactory
             implementationKey ?? ImplementationKey.Create($"maf.{runtimeToolName.Value}"),
             tags,
             classifications,
-            ResolveRuntimeToolSideEffectProfile(runtimeToolName.Value));
+            ResolveRuntimeToolSideEffectProfile(runtimeToolName.Value, toolPolicies));
         return ToolExposureDescriptorFactory.Create(descriptor) with
         {
             DisplayName = displayName,
@@ -50,11 +50,9 @@ internal static class RuntimeToolCapabilityDescriptorFactory
     }
 
     public static IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(
-        string runtimeToolName)
-    {
-        if (!ToolCapabilityRegistry.TryResolve(runtimeToolName, out var metadata))
-        {
-            var classification = ToolCapabilityRegistry.Classify(runtimeToolName);
+        string runtimeToolName, AgentToolPolicyCatalog? toolPolicies = null) {
+        if (!(toolPolicies ?? AgentToolPolicyCatalog.BuiltIn).TryResolve(runtimeToolName, out var metadata)) {
+            var classification = (toolPolicies ?? AgentToolPolicyCatalog.BuiltIn).Classify(runtimeToolName);
             return classification switch
             {
                 ToolInvocationClassification.Read => ToClassificationSet(CapabilityOperationClassification.Read),
@@ -93,13 +91,8 @@ internal static class RuntimeToolCapabilityDescriptorFactory
             return ToClassificationSet(CapabilityOperationClassification.Read);
         }
 
-        var operationClassifications = metadata.OperationRequirements
-            .SelectMany(requirement => requirement.AnyOf)
-            .SelectMany(ProcessAllowedOperationsCapabilityPolicyCompiler.ResolveClassifications)
-            .ToHashSet();
-        if (operationClassifications.Count > 0)
-        {
-            return operationClassifications;
+        if (metadata.OperationClassifications.Count > 0) {
+            return metadata.OperationClassifications.ToHashSet();
         }
 
         return metadata.Classification switch
@@ -125,10 +118,8 @@ internal static class RuntimeToolCapabilityDescriptorFactory
         params CapabilityOperationClassification[] classifications)
         => classifications.ToHashSet();
 
-    public static CapabilitySideEffectProfile ResolveRuntimeToolSideEffectProfile(string runtimeToolName)
-    {
-        if (ToolCapabilityRegistry.TryResolve(runtimeToolName, out var metadata))
-        {
+    public static CapabilitySideEffectProfile ResolveRuntimeToolSideEffectProfile(string runtimeToolName, AgentToolPolicyCatalog? toolPolicies = null) {
+        if ((toolPolicies ?? AgentToolPolicyCatalog.BuiltIn).TryResolve(runtimeToolName, out var metadata)) {
             return new CapabilitySideEffectProfile(
                 MapSideEffectKind(metadata.SideEffectKind),
                 metadata.RequiresApprovalByDefault,

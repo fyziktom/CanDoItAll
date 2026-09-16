@@ -53,7 +53,7 @@ public interface ICrmFinancialSnapshotQueryService
 }
 
 public sealed class CrmFinancialSnapshotQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory) : ICrmFinancialSnapshotQueryService
+    IDbContextFactory<CrmHrDbContext> dbContextFactory) : ICrmFinancialSnapshotQueryService
 {
     public async Task<CrmAccountFinancialSnapshot> GetAsync(
         Guid accountPartyId,

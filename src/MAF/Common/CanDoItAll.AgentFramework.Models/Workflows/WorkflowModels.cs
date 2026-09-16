@@ -325,7 +325,8 @@ public enum WorkflowEventKind
     WaitingForInput,
     Completed,
     Cancelled,
-    Unknown
+    Unknown,
+    ProviderReadEvidence
 }
 
 public enum WorkflowArtifactKind
@@ -705,7 +706,16 @@ public sealed record WorkflowEventRecord(
     WorkflowNodeId? NodeId,
     string Message,
     string PayloadJson,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc) {
+    [JsonIgnore]
+    public WorkflowRunDisclosureDeclaration? DisclosureDeclaration { get; init; }
+
+    [JsonIgnore]
+    public WorkflowNodeCompletionProof? CompletionProof { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyList<WorkflowProviderReadEvidence> ProviderReadEvidence { get; init; } = [];
+}
 
 public enum WorkflowEventPayloadSource
 {
@@ -790,13 +800,19 @@ public sealed record WorkflowArtifactRecord(
     string Summary,
     DateTimeOffset CreatedAtUtc);
 
-public sealed record WorkflowNodeInput(string PayloadJson);
+public sealed record WorkflowNodeInput(string PayloadJson) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowExecutionOccurrence? ExecutionOccurrence { get; init; }
+}
 
 public sealed record WorkflowNodeExecutionResult(
     WorkflowNodeId NodeId,
     string PayloadJson,
     WorkflowValueShape ResultShape)
 {
+    [JsonIgnore]
+    public IReadOnlyList<WorkflowProviderReadEvidence> ProviderReadEvidence { get; init; } = [];
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public WorkflowUsageMetrics? Usage { get; init; }
 

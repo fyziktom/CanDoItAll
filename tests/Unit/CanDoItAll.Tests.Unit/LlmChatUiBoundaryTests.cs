@@ -265,6 +265,10 @@ public sealed class LlmChatDefinitionUiGatewayTests
             return Task.FromResult(result);
         }
 
+        public Task<Result<LlmChatDefinitionRevision>> GetRevisionAsync(LlmChatDefinitionId definitionId,
+            LlmChatDefinitionRevisionNumber revision, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The UI fixture does not authorize historical settings disclosure.");
+
         public Task<Result<IReadOnlyList<LlmChatDefinitionDetails>>> ListAsync(
             LlmChatDefinitionQuery query,
             CancellationToken cancellationToken = default)

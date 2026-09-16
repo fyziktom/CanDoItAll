@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
@@ -27,8 +28,7 @@ internal interface IMafApprovalContinuationDriver
     string ResolveResponseText(AgentResponse response, IReadOnlyList<PendingToolApprovalRecord> pendingApprovals);
 }
 
-internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDriver
-{
+internal sealed class MafApprovalContinuationDriver(AgentToolPolicyCatalog? toolPolicies = null) : IMafApprovalContinuationDriver {
     /// <summary>
     /// Cache bound: the durable session compatibility records remain the
     /// source of truth for pending approvals, so this in-memory cache is a
@@ -182,7 +182,7 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
             Environment.NewLine,
             pendingApprovals.Select(item =>
             {
-                var argumentSummary = MafToolInvocationArgumentFormatter.DescribeArguments(item.ArgumentsJson, item.ToolName);
+                var argumentSummary = MafToolInvocationArgumentFormatter.DescribeArguments(item.ArgumentsJson, item.ToolName, toolPolicies);
                 return item.ToolKind == "mcp"
                     ? $"- Approval required for MCP tool '{item.ToolName}' on server '{item.Details}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}."
                     : $"- Approval required for tool '{item.ToolName}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}.";

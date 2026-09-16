@@ -10,12 +10,14 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 public sealed class AgentChatSession(
     IAgentFrameworkWorkspaceService workspaceService,
     IProviderRuntimeAdministrationService providerService,
+    IAgentExecutionProfileGenerationSource profileGenerationSource,
     ILogger logger) : IDisposable {
     private CancellationTokenSource targetLifetime = new();
     private CancellationTokenSource? catalogRead;
     private CancellationTokenSource? workspaceRead;
     private string agentObservation = "";
     private bool disposed;
+    private DatabaseProfileGeneration profileGeneration = profileGenerationSource.GetGeneration();
 
     public long Generation { get; private set; }
     public long Revision { get; private set; }
@@ -35,20 +37,25 @@ public sealed class AgentChatSession(
     public string ProviderWarning { get; private set; } = "";
     public CancellationToken TargetCancellation => targetLifetime.Token;
 
-    public bool IsCurrent(long generation) => !disposed && Generation == generation;
+    public bool IsCurrent(long generation) => !disposed && Generation == generation &&
+        profileGeneration == profileGenerationSource.GetGeneration();
 
-    public bool MatchesAccepted(Guid? agentId, Guid? sessionId) => !disposed && Agent?.Id == agentId
+    public bool MatchesAccepted(Guid? agentId, Guid? sessionId) => IsCurrent(Generation) && Agent?.Id == agentId
         && Workspace is not null && Workspace.SelectedSessionId == sessionId;
 
     public async Task<bool> LoadAsync(Guid? agentId, Guid? sessionId, bool focused,
-        AgentDefinition? preferredAgent = null, bool refreshCatalog = true, Guid? runId = null) {
+        AgentDefinition? preferredAgent = null, bool refreshCatalog = true, Guid? runId = null,
+        DatabaseProfileGeneration? expectedProfileGeneration = null) {
         if (disposed) {
             return false;
         }
         var agentChanged = DesiredAgentId != agentId;
         var selectionChanged = agentChanged || DesiredSessionId != sessionId;
-        ReplaceLifetime();
+        ReplaceLifetime(expectedProfileGeneration);
         var generation = Generation;
+        if (!IsCurrent(generation)) {
+            return false;
+        }
         DesiredAgentId = agentId;
         DesiredSessionId = sessionId;
         Focused = focused;
@@ -234,8 +241,9 @@ public sealed class AgentChatSession(
             SelectedRun = value.SelectedRun is { } run ? run with { PendingApprovals = run.PendingApprovals.ToImmutableArray() } : null
         };
 
-    private void ReplaceLifetime() {
+    private void ReplaceLifetime(DatabaseProfileGeneration? expectedProfileGeneration) {
         Generation++;
+        profileGeneration = expectedProfileGeneration ?? profileGenerationSource.GetGeneration();
         var previous = targetLifetime;
         targetLifetime = new();
         catalogRead = null;

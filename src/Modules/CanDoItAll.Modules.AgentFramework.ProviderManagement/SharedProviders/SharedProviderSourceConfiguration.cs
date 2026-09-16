@@ -9,6 +9,15 @@ namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 internal sealed class SharedProviderSourceConfiguration
     : IEntityTypeConfiguration<SharedProviderSource>
 {
+    private readonly bool includeSecurityRelationship;
+
+    public SharedProviderSourceConfiguration() : this(includeSecurityRelationship: true) {
+    }
+
+    internal SharedProviderSourceConfiguration(bool includeSecurityRelationship) {
+        this.includeSecurityRelationship = includeSecurityRelationship;
+    }
+
     public void Configure(EntityTypeBuilder<SharedProviderSource> builder)
     {
         var sourceInstanceIdConverter = new ValueConverter<SharedProviderSourceInstanceId, Guid>(
@@ -40,9 +49,12 @@ internal sealed class SharedProviderSourceConfiguration
             source.Status,
             source.UpdatedAtUtc
         });
-        builder.HasOne<SecretRecord>()
-            .WithMany()
-            .HasForeignKey(source => source.ApiTokenSecretId)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(source => source.ApiTokenSecretId);
+        if (includeSecurityRelationship) {
+            builder.HasOne<SecretRecord>()
+                .WithMany()
+                .HasForeignKey(source => source.ApiTokenSecretId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
     }
 }

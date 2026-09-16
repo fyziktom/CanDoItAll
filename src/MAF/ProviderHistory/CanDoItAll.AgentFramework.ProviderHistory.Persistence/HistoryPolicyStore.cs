@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public sealed class HistoryPolicyStore(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<ProviderHistoryDbContext> factory,
     IProviderHistoryAccess access,
     TimeProvider clock,
     HistoryAuthorizedOperation operations,
@@ -72,7 +72,7 @@ public sealed class HistoryPolicyStore(
         return Snapshot(row);
     }
 
-    internal static Task<HistoryPolicyRow> LockAsync(AppDbContext db, Guid partitionId, CancellationToken cancellationToken)
+    internal static Task<HistoryPolicyRow> LockAsync(ProviderHistoryDbContext db, Guid partitionId, CancellationToken cancellationToken)
         => db.Set<HistoryPolicyRow>().FromSqlInterpolated(
             $"""SELECT * FROM "ProviderHistory_Policies" WHERE "PartitionId" = {partitionId} FOR UPDATE""")
             .SingleAsync(cancellationToken);

@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "validator_scope": "PACKAGE_ONLY_NOT_APPLICATION_TESTS",
+  "application_validation": "NOT_RUN",
+  "catalog_counts": {
+    "baseline-inventory": 13,
+    "contract-proof-plan": 76,
+    "contracts": 76,
+    "feature-proof-candidates": 122,
+    "features": 122,
+    "gaps": 41,
+    "glossary": 110,
+    "inherited-source-anchors": 392,
+    "invariant-proof-plan": 52,
+    "invariants": 52,
+    "managed-agent-profiles": 8,
+    "module-operation-matrix": 24,
+    "modules": 24,
+    "persistence-discovery": 68,
+    "qa-scenarios": 165,
+    "requirements": 22,
+    "runtime-surfaces": 11,
+    "sources": 62,
+    "translation-coverage": 74
+  },
+  "checked_groups": [
+    "JSON shape and record identity uniqueness",
+    "Manifest counts, language, and evidence status",
+    "All original catalog IDs and file replacements retained",
+    "Catalog cross-references resolve",
+    "Module coverage, explicit grants, and neutral UI/ordinary-product boundaries",
+    "Scenario completeness, truthful proof status, and proof mapping consistency",
+    "English-remnant scan and local Markdown links",
+    "Catalog identifiers used in Markdown resolve"
+  ],
+  "hash_verification": "NOT_REQUESTED",
+  "errors": [],
+  "notes": [
+    "Language scanning is a remnant detector, not complete automated linguistic verification.",
+    "Retained identity checks do not by themselves prove semantic translation quality.",
+    "Source claims and runtime behavior require the recorded human/implementation review gates."
+  ]
+}

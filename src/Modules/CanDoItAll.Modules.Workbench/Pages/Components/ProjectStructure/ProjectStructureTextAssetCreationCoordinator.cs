@@ -258,7 +258,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
     }
 
     private static string ResolveUserMessage(Exception exception)
-        => exception is InvalidDataException or ProjectAssetCreationException
+        => exception is InvalidDataException or ProjectAssetCreationException or ProjectAssetContentValidationException
             ? exception.Message
             : "The file could not be saved. Check the application logs for details.";
 

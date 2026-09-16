@@ -48,6 +48,9 @@ public partial class WorkflowsPage : IDisposable {
     public IWorkflowTestRunner TestRunner { get; set; } = default!;
 
     [Inject]
+    public IWorkflowStructureAuthorityFactory StructureAuthority { get; set; } = default!;
+
+    [Inject]
     public WorkflowExampleCatalogSeedService ExampleCatalogSeedService { get; set; } = default!;
 
     [Inject]
@@ -1259,13 +1262,18 @@ public partial class WorkflowsPage : IDisposable {
             PreviewSimulationPlan = simulationPlan with { Steps = simulationPlan.Steps.ToImmutableArray() }
         };
         try {
+            request = request with {
+                StructureAuthority = await StructureAuthority.CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.UserInterface)
+            };
             var result = await TestRunner.RunAsync(request);
             if (!Owns(owner) || activeTestOperation != operation) {
                 return;
             }
 
             testResult = result;
-            if (!result.Succeeded) {
+            if (!result.DetailsComplete) {
+                NotificationService.Warning("Workflow run recorded", "The run is recorded. Its detailed status is not available yet.");
+            } else if (!result.Succeeded) {
                 errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(result.ErrorMessage);
                 NotificationService.Error("Workflow test failed", errorMessage);
             } else {

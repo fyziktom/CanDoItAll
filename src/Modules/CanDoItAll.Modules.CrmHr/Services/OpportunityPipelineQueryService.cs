@@ -57,7 +57,7 @@ public interface IOpportunityPipelineQueryService
 }
 
 public sealed class OpportunityPipelineQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IOpportunityPipelineQueryService
+    IDbContextFactory<CrmHrDbContext> dbContextFactory) : IOpportunityPipelineQueryService
 {
     public async Task<OpportunityPipelinePage> SearchAsync(
         OpportunityPipelineQuery query,

@@ -17,7 +17,9 @@ public sealed record SharedProviderPublicationChangeRequest(
     Guid? ExpectedConcurrencyToken);
 
 public sealed class SharedProviderPublicationApplicationService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    SecretReferenceQuery secretReferences,
+    CoordinatedDatabaseTransaction transactions,
     IProviderManifestCatalog providerManifestCatalog,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     IActivityStream activityStream,
@@ -44,6 +46,7 @@ public sealed class SharedProviderPublicationApplicationService(
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var mutation = await SerializableMutationScope.BeginAsync(
             db, $"shared-provider-publication:{request.ProviderProfileId:D}", cancellationToken);
+        using var coordination = transactions.Enter(db);
         var profile = await db.Set<ProviderProfile>().AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == request.ProviderProfileId, cancellationToken)
             ?? throw new KeyNotFoundException("The provider profile was not found.");
@@ -64,8 +67,7 @@ public sealed class SharedProviderPublicationApplicationService(
         }
         if (publish) {
             var secretExists = profile.ApiKeySecretId.HasValue &&
-                await db.Set<SecretRecord>().AsNoTracking().AnyAsync(
-                    secret => secret.Id == profile.ApiKeySecretId.Value, cancellationToken);
+                await secretReferences.ExistsForMutationAsync(profile.ApiKeySecretId.Value, cancellationToken);
             var eligibility = eligibilityPolicy.Evaluate(profile,
                 providerManifestCatalog.ResolveManifest(profile.ConnectorPluginKey, profile.ProviderKind), secretExists);
             if (!eligibility.IsEligible) {
@@ -91,6 +93,7 @@ public sealed class SharedProviderPublicationApplicationService(
             committed = db.Database.CurrentTransaction is null;
             await mutation.CommitAsync(cancellationToken);
             committed = true;
+            coordination.Dispose();
             await mutation.DisposeAsync();
         } catch (Exception) when (committed) {
             change = change with { Warning = "The publication is saved, but transaction cleanup needs attention." };

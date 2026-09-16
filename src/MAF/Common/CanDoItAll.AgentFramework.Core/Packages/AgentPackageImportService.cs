@@ -53,6 +53,13 @@ internal sealed class AgentPackageImportService(
                 ExpectedPackageSha256 = command.ExpectedPackageSha256
             },
             cancellationToken);
+        if (imported.Runs.Any(run => run.ToolAdmission is not null)) {
+            throw new AgentPackageImportException(
+                AgentPackageImportFailureKind.InvalidRequest,
+                "agent-package.runtime-admission-not-portable",
+                "Portable Agent history cannot carry an executable tool admission journal.");
+        }
+
         var requestFingerprint = CreateRequestFingerprint(command, imported.PackageSha256);
         AgentPackageImportReceipt? result = null;
 

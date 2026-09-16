@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Security;
 
 public sealed class SecretRuntimeResolver(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SecurityDbContext> dbContextFactory,
     ISecretVault vault,
     ISecretProtector legacyProtector) : ISecretRuntimeResolver
 {
@@ -98,7 +98,7 @@ public sealed class SecretRuntimeResolver(
     }
 
     private static async Task AuthorizeAsync(
-        AppDbContext dbContext,
+        SecurityDbContext dbContext,
         SecretRuntimeRequest request,
         SecretRuntimeAuthorization authorization,
         CancellationToken cancellationToken)

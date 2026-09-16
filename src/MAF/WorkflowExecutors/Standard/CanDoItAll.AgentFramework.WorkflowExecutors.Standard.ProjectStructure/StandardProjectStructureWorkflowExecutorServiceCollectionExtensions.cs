@@ -13,7 +13,7 @@ public static class StandardProjectStructureWorkflowExecutorServiceCollectionExt
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAdd(ServiceDescriptor.Describe(typeof(IProjectStructureRuntimeGateway), typeof(UnavailableProjectStructureRuntimeGateway), executorLifetime));
-        services.AddWorkflowExecutorContribution<ProjectStructureWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.ProjectStructure, executorLifetime);
+        services.AddWorkflowExecutorContribution<ProjectStructureWorkflowExecutor>(ProjectStructureWorkflowExecutor.ReadAwareDescriptor, executorLifetime);
 
         return services;
     }

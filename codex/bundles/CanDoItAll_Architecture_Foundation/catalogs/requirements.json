@@ -1,0 +1,310 @@
+[
+  {
+    "id": "REQ-001",
+    "requirement": "Refactor rather than perform a complete rewrite.",
+    "primary_document": "architecture/01-principles-and-decisions.md",
+    "planned_qa_ids": [
+      "QA-092",
+      "QA-100"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-002",
+    "requirement": "Provide a shared architectural foundation without implementation subbundles or blanket execution.",
+    "primary_document": "START_HERE_FOR_ASTRA.md",
+    "planned_qa_ids": [],
+    "status": "PACKAGE_REQUIREMENT",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-003",
+    "requirement": "Stabilize the current Agents checkpoint; defer new broad UI extraction until the affected boundaries are correct.",
+    "primary_document": "architecture/11-ui-seams-and-hosting.md",
+    "planned_qa_ids": [
+      "QA-098",
+      "QA-100"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-004",
+    "requirement": "Agents owns technical definitions and Provider/AI pricing; CRM owns its projection and staffing facts.",
+    "primary_document": "architecture/03-context-map-and-ownership.md",
+    "planned_qa_ids": [
+      "QA-049",
+      "QA-050",
+      "QA-051",
+      "QA-056",
+      "QA-057"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-005",
+    "requirement": "Project Structure owns notes, native items, and relationships, not only projections.",
+    "primary_document": "architecture/05-project-structure-and-safe-contributions.md",
+    "planned_qa_ids": [
+      "QA-003",
+      "QA-022",
+      "QA-025"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-006",
+    "requirement": "Agents, processes, and workflows may safely request or require node, asset, and task creation.",
+    "primary_document": "architecture/05-project-structure-and-safe-contributions.md",
+    "planned_qa_ids": [
+      "QA-004",
+      "QA-017",
+      "QA-018",
+      "QA-019",
+      "QA-020",
+      "QA-021",
+      "QA-035"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-007",
+    "requirement": "Preserve floating agents over Structure/Gantt and effective contextual operations.",
+    "primary_document": "architecture/08-execution-and-product-journeys.md",
+    "planned_qa_ids": [
+      "QA-001",
+      "QA-002",
+      "QA-005",
+      "QA-006",
+      "QA-007",
+      "QA-008"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-008",
+    "requirement": "Preserve file reading and creation without losing security/storage semantics.",
+    "primary_document": "architecture/09-assets-files-and-lifecycle.md",
+    "planned_qa_ids": [
+      "QA-014",
+      "QA-015",
+      "QA-016",
+      "QA-075",
+      "QA-093",
+      "QA-094"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-009",
+    "requirement": "Preserve workflow launch from Structure and result writeback.",
+    "primary_document": "architecture/08-execution-and-product-journeys.md",
+    "planned_qa_ids": [
+      "QA-027",
+      "QA-028",
+      "QA-029",
+      "QA-030",
+      "QA-031",
+      "QA-033",
+      "QA-035"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-010",
+    "requirement": "Preserve process launch from Structure, writeback, subprocesses, and recovery.",
+    "primary_document": "architecture/08-execution-and-product-journeys.md",
+    "planned_qa_ids": [
+      "QA-036",
+      "QA-037",
+      "QA-038",
+      "QA-039",
+      "QA-044",
+      "QA-045"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-011",
+    "requirement": "Define precise terminology, interface ownership, and communication direction.",
+    "primary_document": "architecture/04-contract-rules.md",
+    "planned_qa_ids": [
+      "QA-040",
+      "QA-059",
+      "QA-072",
+      "QA-091"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-012",
+    "requirement": "Split the shared DbContext without duplicate truth or lost guarantees.",
+    "primary_document": "architecture/06-persistence-transactions-and-migrations.md",
+    "planned_qa_ids": [
+      "QA-084",
+      "QA-085",
+      "QA-089",
+      "QA-090",
+      "QA-091",
+      "QA-092",
+      "QA-106"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-013",
+    "requirement": "Map current capabilities of every module and identify future needs and gaps.",
+    "primary_document": "catalogs/modules.md",
+    "planned_qa_ids": [
+      "QA-109",
+      "QA-110",
+      "QA-111",
+      "QA-112",
+      "QA-113",
+      "QA-114",
+      "QA-115",
+      "QA-116",
+      "QA-117",
+      "QA-118",
+      "QA-119"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-014",
+    "requirement": "Preserve the product, not merely a cleaner reference graph; do not pretend runtime certainty.",
+    "primary_document": "qa/proof-levels-and-fixtures.md",
+    "planned_qa_ids": [
+      "QA-096",
+      "QA-098",
+      "QA-099",
+      "QA-100",
+      "QA-101",
+      "QA-119"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-015",
+    "requirement": "Perform architectural and QA reviews, correct findings, and repeat review before producing the ZIP.",
+    "primary_document": "reviews/review-log.md",
+    "planned_qa_ids": [],
+    "status": "PACKAGE_REQUIREMENT",
+    "proof_note": "References identify a plan or description, not an executed test."
+  },
+  {
+    "id": "REQ-016",
+    "requirement": "Provide safe read and write paths from agents/workflows/processes to appropriate owners beyond Structure.",
+    "primary_document": "architecture/14-cross-module-operations-and-runtime-adapters.md",
+    "planned_qa_ids": [
+      "QA-122",
+      "QA-124",
+      "QA-139",
+      "QA-140",
+      "QA-161"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "Requirement mapping is a plan, not proof of execution."
+  },
+  {
+    "id": "REQ-017",
+    "requirement": "Preserve HR agent administration and actual existing CRM contact/affiliation tools; support a possible CRM-specialist without duplicate ownership.",
+    "primary_document": "architecture/15-managed-agents-and-simple-chats-administration.md",
+    "planned_qa_ids": [
+      "QA-122",
+      "QA-123",
+      "QA-149",
+      "QA-150"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "Requirement mapping is a plan, not proof of execution."
+  },
+  {
+    "id": "REQ-018",
+    "requirement": "Add the missing governed HR integration for Simple Chats definition management without making Simple Chats an agent.",
+    "primary_document": "architecture/15-managed-agents-and-simple-chats-administration.md",
+    "planned_qa_ids": [
+      "QA-129",
+      "QA-130",
+      "QA-131",
+      "QA-132",
+      "QA-133",
+      "QA-134",
+      "QA-135",
+      "QA-136"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "Requirement mapping is a plan, not proof of execution."
+  },
+  {
+    "id": "REQ-019",
+    "requirement": "Define reverse queries for CRM people and Resources, including identity, privacy, provider disclosure, and task use.",
+    "primary_document": "architecture/16-cross-module-queries-and-context-use.md",
+    "planned_qa_ids": [
+      "QA-124",
+      "QA-126",
+      "QA-127",
+      "QA-128",
+      "QA-152",
+      "QA-154",
+      "QA-155"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "Requirement mapping is a plan, not proof of execution."
+  },
+  {
+    "id": "REQ-020",
+    "requirement": "Distinguish actual Scheduler/Process runtime surfaces from new intended extensions.",
+    "primary_document": "catalogs/runtime-surfaces.md",
+    "planned_qa_ids": [
+      "QA-143",
+      "QA-147",
+      "QA-148",
+      "QA-159",
+      "QA-160"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "Requirement mapping is a plan, not proof of execution."
+  },
+  {
+    "id": "REQ-021",
+    "requirement": "Define safe cross-owner retries, receipts, approval continuation, compensation, and workflow/process checkpoint recovery.",
+    "primary_document": "architecture/17-operation-protocol-and-multi-owner-journeys.md",
+    "planned_qa_ids": [
+      "QA-136",
+      "QA-137",
+      "QA-138",
+      "QA-141",
+      "QA-142",
+      "QA-144",
+      "QA-145",
+      "QA-146",
+      "QA-162",
+      "QA-163"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "Requirement mapping is a plan, not proof of execution."
+  },
+  {
+    "id": "REQ-022",
+    "requirement": "Translate the entire replacement package and require downstream engineering documentation/bundles/comments to be English.",
+    "primary_document": "LANGUAGE_POLICY.md",
+    "planned_qa_ids": [
+      "QA-165"
+    ],
+    "status": "DESIGN_ADDRESSED_RUNTIME_PROOF_NOT_RUN",
+    "proof_note": "Requirement mapping is a plan, not proof of execution."
+  }
+]

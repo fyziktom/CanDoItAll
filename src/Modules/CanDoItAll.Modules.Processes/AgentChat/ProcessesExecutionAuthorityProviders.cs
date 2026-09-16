@@ -1,9 +1,10 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Processes.AgentChat;
 
-internal sealed class ProcessesExecutionAuthorityProvider
+internal sealed class ProcessesExecutionAuthorityProvider(ProjectWriteAdmissionService admissions)
     : IAgentExecutionSourceAuthorityProvider
 {
     public string SourceKind => ProcessAgentChatContextBuilder.WorkspaceSourceKind;
@@ -11,10 +12,10 @@ internal sealed class ProcessesExecutionAuthorityProvider
     public ValueTask<AgentExecutionSourceAuthorityDecision> ResolveAsync(
         AgentExecutionSourceAuthorityRequest request,
         CancellationToken cancellationToken = default)
-        => ProcessesExecutionAuthority.ResolveAsync(request);
+        => ProcessesExecutionAuthority.ResolveAsync(request, admissions, cancellationToken);
 }
 
-internal sealed class LiveProcessesExecutionAuthorityProvider
+internal sealed class LiveProcessesExecutionAuthorityProvider(ProjectWriteAdmissionService admissions)
     : IAgentExecutionSourceAuthorityProvider
 {
     public string SourceKind => ProcessAgentChatContextBuilder.LiveSourceKind;
@@ -22,7 +23,7 @@ internal sealed class LiveProcessesExecutionAuthorityProvider
     public ValueTask<AgentExecutionSourceAuthorityDecision> ResolveAsync(
         AgentExecutionSourceAuthorityRequest request,
         CancellationToken cancellationToken = default)
-        => ProcessesExecutionAuthority.ResolveAsync(request);
+        => ProcessesExecutionAuthority.ResolveAsync(request, admissions, cancellationToken);
 }
 
 internal static class ProcessesExecutionAuthority
@@ -30,7 +31,7 @@ internal static class ProcessesExecutionAuthority
     private const string ProjectSegmentMarker = ":project:";
 
     public static ValueTask<AgentExecutionSourceAuthorityDecision> ResolveAsync(
-        AgentExecutionSourceAuthorityRequest request)
+        AgentExecutionSourceAuthorityRequest request, ProjectWriteAdmissionService admissions, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var sourceId = request.SourceId.Value;
@@ -45,13 +46,10 @@ internal static class ProcessesExecutionAuthority
                     "A process-run workspace scope has no canonical per-run authority rule; run process work through the governed process execution path.");
             }
 
-            return ValueTask.FromResult(ProjectScopedExecutionAuthority.Resolve(
-                request.Agent,
-                projectId,
-                request.ObservedWorkspaceScope));
+            return ProjectAgentAccessPolicy.ResolveExecutionAuthorityAsync(request, projectId, admissions, cancellationToken);
         }
 
-        if (request.ObservedWorkspaceScope is not null)
+        if (request.ObservedWorkspaceScope is not null && !request.IsCapturedSandboxRevalidation)
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"The processes source '{sourceId}' published workspace scope '{request.ObservedWorkspaceScope.DisplayName}', which has no canonical authority rule for a global processes surface.");

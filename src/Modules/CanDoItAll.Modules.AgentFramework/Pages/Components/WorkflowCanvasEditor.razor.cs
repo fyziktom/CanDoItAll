@@ -48,6 +48,9 @@ public partial class WorkflowCanvasEditor
     public IWorkflowTestRunner TestRunner { get; set; } = default!;
 
     [Inject]
+    public IWorkflowStructureAuthorityFactory StructureAuthority { get; set; } = default!;
+
+    [Inject]
     public IProjectStructureRuntimeGateway ProjectStructureGateway { get; set; } = default!;
 
     [Inject]
@@ -985,12 +988,18 @@ public partial class WorkflowCanvasEditor
                     RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
                     ValidateOnly: false)
                 {
-                    PreviewSimulationPlan = simulationPlan
+                    PreviewSimulationPlan = simulationPlan,
+                    StructureAuthority = await StructureAuthority.CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.UserInterface)
                 });
             validationIssues = testResult.Validation.Issues;
             if (testResult.Run is not null)
             {
                 await PreviewRunCompleted.InvokeAsync(testResult.Run);
+            }
+
+            if (!testResult.DetailsComplete) {
+                NotificationService.Warning("Workflow run recorded", "The run is recorded. Its detailed status is not available yet.");
+                return;
             }
 
             if (!testResult.Succeeded)

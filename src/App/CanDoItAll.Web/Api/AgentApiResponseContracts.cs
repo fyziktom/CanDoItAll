@@ -18,6 +18,25 @@ internal sealed record AgentPendingApprovalApiResponse(
     string ToolName,
     string ToolKind);
 
+internal sealed record AgentCommittedEffectApiResponse(string SourceKind, string SourceId);
+
+internal sealed record AgentToolCancellationOutcomeApiResponse(
+    Guid IntentId,
+    string ToolName,
+    AgentToolEffectState EffectState,
+    AgentToolCancellationDisposition? Disposition,
+    AgentToolCancellationReason? Reason,
+    AgentCommittedEffectApiResponse? CommittedEffect);
+
+internal sealed record AgentCancellationReconciliationApiResponse(
+    Guid ExecutionRunId,
+    Guid ChatSessionId,
+    bool HasUnknownEffects,
+    IReadOnlyList<AgentToolCancellationOutcomeApiResponse> Outcomes,
+    IReadOnlyList<AgentProviderDispatchOutcomeApiResponse> ProviderDispatches);
+
+internal sealed record AgentProviderDispatchOutcomeApiResponse(Guid DispatchId, AgentToolProviderDispatchState State);
+
 internal sealed record AgentChatMessageApiResponse(
     Guid Id,
     ChatMessageRole Role,
@@ -221,6 +240,17 @@ internal sealed record AgentStructuredOutputApiResponse(
 
 internal static class AgentApiResponseMapper
 {
+    public static AgentCancellationReconciliationApiResponse ToCancellationReconciliation(AgentToolRunCancellationReconciliation source) {
+        ArgumentNullException.ThrowIfNull(source);
+        return new(source.ExecutionRunId, source.ChatSessionId, source.HasUnknownEffects,
+            source.Outcomes.Select(outcome => new AgentToolCancellationOutcomeApiResponse(
+                outcome.IntentId.Value, outcome.ToolName, outcome.EffectState,
+                outcome.Cancellation?.Disposition, outcome.Cancellation?.Reason,
+                outcome.Cancellation?.CommittedEffect is { } effect ? new(effect.SourceKind, effect.SourceId) : null)).ToArray(),
+            (source.ProviderDispatches ?? []).Select(dispatch => new AgentProviderDispatchOutcomeApiResponse(
+                dispatch.Id.Value, dispatch.State)).ToArray());
+    }
+
     public static AgentChatPageBootstrapApiResponse ToChatPageBootstrap(ChatPageBootstrapSnapshot source)
     {
         ArgumentNullException.ThrowIfNull(source);

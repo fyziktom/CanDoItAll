@@ -5,12 +5,14 @@ using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
@@ -135,7 +137,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     {
         await using var fixture = await CreateFixtureAsync("workflowhitllegacyboundary");
         var seeded = await SeedWaitingRequestAsync(fixture, createBoundary: false);
-        var store = new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory);
+        var store = new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
 
         var legacy = await store.ReadAsync(seeded.Request.Id);
         Assert.Equal(WorkflowExternalRequestBoundaryReadOutcome.LegacyNonResumable, legacy.Outcome);
@@ -148,7 +150,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         await using var fixture = await CreateFixtureAsync("workflowhitlinitiallink");
         var seeded = await SeedWaitingRequestAsync(fixture, createBoundary: true);
 
-        var read = await new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory)
+        var read = await new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory))
             .ReadAsync(seeded.Request.Id);
         Assert.Equal(WorkflowExternalRequestBoundaryReadOutcome.Found, read.Outcome);
         Assert.Equal(CreateBoundary(seeded.Request), read.Boundary);
@@ -197,7 +199,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             duplicateRequest,
             duplicateCheckpointValue);
 
-        var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory);
+        var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
         var rejected = await boundaryStore.UpsertAsync(CreateBoundary(duplicateRequest));
         Assert.Equal(WorkflowExternalRequestBoundarySaveOutcome.VersionConflict, rejected.Outcome);
         await AssertNativeCheckpointRequestLinkAsync(
@@ -292,7 +294,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
 
         var interceptor = new NativeRequestPrecheckBarrierInterceptor();
         var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(
-            fixture.Factory.WithInterceptor(interceptor));
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory.WithInterceptor(interceptor)));
         var results = await Task.WhenAll(
             boundaryStore.UpsertAsync(CreateBoundary(firstRequest)),
             boundaryStore.UpsertAsync(CreateBoundary(secondRequest)));
@@ -694,9 +696,10 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         await Assert.ThrowsAsync<WorkflowExternalResponsePayloadCorruptException>(
             () => store.GetAsync(created.Operation!.Id));
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory),
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(),
+            fixture.History.Transactions);
         await Assert.ThrowsAsync<WorkflowExternalResponsePayloadCorruptException>(
             () => resumeStore.LoadAsync(new WorkflowResumeBoundaryLoadRequest(created.Operation!.Id)));
     }
@@ -727,9 +730,10 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
                 new WorkflowLaunchCorrelationId("load-failure-classification"),
                 TestTime));
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory),
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(),
+            fixture.History.Transactions);
         var loadRequest = new WorkflowResumeBoundaryLoadRequest(created.Operation!.Id);
         var loaded = await resumeStore.LoadAsync(loadRequest);
         Assert.Equal(WorkflowResumeBoundaryLoadOutcome.Found, loaded.Outcome);
@@ -911,9 +915,10 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.Equal(WorkflowExternalResponseOperationMutationOutcome.Updated, terminal.Outcome);
 
         var resumeStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory),
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(),
+            fixture.History.Transactions);
         var cancelled = await resumeStore.TryCancelAsync(
             new WorkflowResumeBoundaryCancellationRequest(
                 seeded.Run.RunId,
@@ -931,12 +936,25 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task PostgreSql_ResumeBoundary_CommitsEntireConsecutiveWaitOrNothing(bool rollback)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task PostgreSql_ResumeBoundary_CommitsEntireConsecutiveWaitOrNothing(bool rollback, bool mappedOrigin)
     {
         await using var fixture = await CreateFixtureAsync("workflowhitlatomicresume");
-        var seeded = await SeedWaitingRequestAsync(fixture, createBoundary: true);
+        var seeded = await SeedWaitingRequestAsync(fixture, createBoundary: true, captureDisclosure: !mappedOrigin);
+        if (mappedOrigin) {
+            var original = new WorkflowLaunchOrigin.ProcessDispatchAssignment(new(Guid.NewGuid(), new(Guid.NewGuid()), new(Guid.NewGuid()),
+                new(Guid.NewGuid()), Guid.NewGuid(), "sha256:mapped-owner", "sha256:outcome-contract", seeded.Run.WorkflowId,
+                seeded.Run.VersionId, "sha256:mapped-input"), new("mapped-resume"));
+            seeded = seeded with { Run = seeded.Run with { Origin = original } };
+            await using var maintenance = fixture.Factory.CreateDbContext();
+            var row = await maintenance.Set<WorkflowRunRecordEntity>().SingleAsync(item => item.RunId == seeded.Run.RunId.Value);
+            row.OriginJson = WorkflowRunRecordEntity.SerializeOrigin(original);
+            row.SetOriginProjection(original);
+            await maintenance.SaveChangesAsync();
+        }
         var operationStore = fixture.CreateOperationStore();
         var actor = new WorkflowLaunchActor(WorkflowLaunchActorKind.User, "atomic-operator");
         var fingerprint = WorkflowExternalResponseFingerprintFactory.Create(
@@ -1067,9 +1085,10 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             Summary = "Waiting again.",
             UpdatedAtUtc = TestTime.AddSeconds(3)
         };
+        var completedRead = mappedOrigin ? null : CreateDisclosureCompletion(seeded.Run, nextRequest.NodeId);
         var backendResult = new WorkflowBackendStartResult(
             backendRun,
-            [workflowEvent],
+            completedRead is null ? [workflowEvent] : [workflowEvent, completedRead],
             [nextRequest],
             [artifact])
         {
@@ -1087,9 +1106,10 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         };
         var saveFailure = new FailAfterResumeHistorySave(rollback);
         var boundaryStore = new PersistentWorkflowResumeBoundaryStore(
-            fixture.Factory.WithInterceptor(saveFailure),
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory.WithInterceptor(saveFailure)),
             fixture.CreateDataProtectionProvider(),
-            new WorkflowHistoryProjection(new HistoryOutboxWriter(TimeProvider.System)));
+            fixture.CreateHistoryProjection(saveFailure),
+            fixture.History.Transactions);
         var invalid = await boundaryStore.TryCommitAsync(
             new WorkflowResumeBoundaryCommitRequest(
                 created.Operation.Id,
@@ -1125,6 +1145,17 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
                 backendResult,
                 finalResult,
                 TestTime.AddSeconds(5));
+        if (mappedOrigin) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => boundaryStore.TryCommitAsync(commitRequest with {
+                BackendResult = backendResult with { Run = backendResult.Run with { Origin = null } }
+            }));
+            Assert.False(saveFailure.Failed);
+            await AssertResumeBoundaryUnchangedAsync(fixture.Factory, seeded, created.Operation.Id, nextRequest.Id);
+            await AssertNativeCheckpointRequestLinkAsync(fixture.Factory, nativeCheckpointValue.Index.Link.CheckpointId, expectedLink: null);
+            await using var unchanged = fixture.Factory.CreateDbContext();
+            var original = await unchanged.Set<WorkflowRunRecordEntity>().AsNoTracking().SingleAsync(item => item.RunId == seeded.Run.RunId.Value);
+            Assert.Equal(seeded.Run.Origin, original.ToSnapshot().Origin);
+        }
         if (rollback) {
             await Assert.ThrowsAsync<InvalidOperationException>(() => boundaryStore.TryCommitAsync(commitRequest));
             Assert.True(saveFailure.Failed);
@@ -1132,6 +1163,13 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             await using var rolledBack = fixture.Factory.CreateDbContext();
             Assert.Empty(await rolledBack.Set<HistoryOutboxRow>().ToListAsync());
             Assert.Empty(await rolledBack.Set<HistoryStorageIdentity>().ToListAsync());
+            if (completedRead is not null) {
+                var restored = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
+                var disclosure = await restored.ReadProviderDisclosureAsync(seeded.Run.RunId);
+                Assert.NotNull(disclosure.Declaration);
+                Assert.Empty(disclosure.Completions);
+                Assert.Single(await restored.ListEventsAsync(seeded.Run.RunId));
+            }
             return;
         }
         var committed = await boundaryStore.TryCommitAsync(commitRequest);
@@ -1157,13 +1195,14 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.Equal(TestTime.AddSeconds(5), sourceRequest.RespondedAtUtc);
         Assert.Equal((int)WorkflowExternalRequestState.Responded, sourceBoundary.State);
         Assert.Equal(WorkflowRunState.WaitingForInput, persistedRun.State);
+        Assert.Equal(seeded.Run.Origin, persistedRun.ToSnapshot().Origin);
         Assert.True(await dbContext.Set<WorkflowEventRecordEntity>().AnyAsync(item => item.Id == workflowEvent.Id));
         Assert.True(await dbContext.Set<WorkflowArtifactRecordEntity>().AnyAsync(item => item.Id == artifact.Id.Value));
         Assert.True(await dbContext.Set<WorkflowCheckpointRecordEntity>().AnyAsync(item => item.Id == checkpointMetadata.Id.Value));
         Assert.True(await dbContext.Set<WorkflowUsageObservationRecordEntity>().AnyAsync(item => item.Id == usageObservation.Id.Value));
         var queued = Assert.Single(await dbContext.Set<HistoryOutboxRow>().ToListAsync());
         Assert.Equal(usageObservation.Id.Value, queued.Mutation.Entry!.Id.Value);
-        var processor = new HistoryOutboxProcessor(fixture.Factory, TimeProvider.System,
+        var processor = new HistoryOutboxProcessor(fixture.HistoryFactory, TimeProvider.System,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<HistoryOutboxProcessor>.Instance);
         Assert.Equal(1, await processor.ProcessAsync(queued.Mutation.Source.Partition, 10, default));
         var history = Assert.Single(await dbContext.Set<HistoryEntryRow>().AsNoTracking().ToListAsync());
@@ -1174,6 +1213,32 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.Equal(nextRequest.Id.Value, persistedNativeCheckpoint.ExternalRequestId);
         Assert.Equal(nextBackendLink.BackendRequestId.Value, persistedNativeCheckpoint.BackendRequestId);
         Assert.Equal(nextBackendLink.BackendRequestPortId.Value, persistedNativeCheckpoint.BackendRequestPortId);
+        if (completedRead is not null) {
+            var restored = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
+            var disclosure = await restored.ReadProviderDisclosureAsync(seeded.Run.RunId);
+            var completion = Assert.Single(disclosure.Completions);
+            Assert.Equal(completedRead.CompletionProof, completion.Proof);
+            Assert.Equal(completedRead.ProviderReadEvidence[0], Assert.Single(completion.Evidence));
+            var visible = await restored.ListEventsAsync(seeded.Run.RunId);
+            Assert.Equal(3, visible.Count);
+            Assert.All(visible, value => Assert.Null(value.CompletionProof));
+        }
+    }
+
+    private static WorkflowRunDisclosureDeclaration CreateDisclosureDeclaration(WorkflowRunSnapshot run) => new(
+        run.RunId, run.WorkflowId, run.VersionId, WorkflowExecutionContentHash.Compute("hitl-resume-definition"),
+        WorkflowProviderDisclosureContent.Source(run.Origin), WorkflowProviderDisclosureProtocol.Current);
+
+    private static WorkflowEventRecord CreateDisclosureCompletion(WorkflowRunSnapshot run, WorkflowNodeId node) {
+        var declaration = CreateDisclosureDeclaration(run);
+        var occurrence = WorkflowExecutionOccurrence.Start(run.RunId).Advance(run.VersionId, node);
+        var hash = WorkflowExecutionContentHash.Compute("exact resumed read");
+        var proof = new WorkflowNodeCompletionProof(Guid.NewGuid(), occurrence, run.WorkflowId, run.VersionId, node, null,
+            declaration.DefinitionHash, hash, hash, hash, declaration.SourceHash, declaration.CompilerVersion);
+        return new(Guid.NewGuid(), run.RunId, WorkflowEventKind.ExecutorCompleted, node, "Read completed", "{}", TestTime.AddSeconds(3)) {
+            CompletionProof = proof,
+            ProviderReadEvidence = [new(new("fixture.read"), 1, occurrence, run.VersionId, node, "{\"original\":true}")]
+        };
     }
 
     private static async Task<WorkflowHitlPersistenceFixture> CreateFixtureAsync(string databaseName)
@@ -1191,7 +1256,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     }
 
     private static async Task<WorkflowRunSnapshot> SeedRunAsync(
-        WorkflowHitlDbContextFactory factory)
+        WorkflowHitlDbContextFactory factory, bool captureDisclosure = false)
     {
         var run = new WorkflowRunSnapshot(
             WorkflowRunId.New(),
@@ -1203,6 +1268,12 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             "Waiting for input.",
             TestTime,
             TestTime);
+        if (captureDisclosure) {
+            var owner = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory));
+            await owner.CreateRunWithStartedEventAsync(run, new WorkflowEventRecord(Guid.NewGuid(), run.RunId,
+                WorkflowEventKind.Started, null, "Started", "{}", TestTime) { DisclosureDeclaration = CreateDisclosureDeclaration(run) });
+            return run;
+        }
         await using var dbContext = factory.CreateDbContext();
         dbContext.Set<WorkflowRunRecordEntity>().Add(WorkflowRunRecordEntity.FromSnapshot(run));
         await dbContext.SaveChangesAsync();
@@ -1211,9 +1282,9 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
 
     private static async Task<SeededExternalRequest> SeedWaitingRequestAsync(
         WorkflowHitlPersistenceFixture fixture,
-        bool createBoundary)
+        bool createBoundary, bool captureDisclosure = false)
     {
-        var run = await SeedRunAsync(fixture.Factory);
+        var run = await SeedRunAsync(fixture.Factory, captureDisclosure);
         WorkflowExternalRequestRecord request;
         WorkflowCheckpointRecord? checkpointMetadata = null;
         if (createBoundary)
@@ -1252,7 +1323,7 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
 
         if (createBoundary)
         {
-            var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(fixture.Factory);
+            var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(fixture.Factory));
             var saved = await boundaryStore.UpsertAsync(CreateBoundary(request));
             Assert.True(saved.Succeeded);
         }
@@ -1463,20 +1534,33 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     {
         public WorkflowHitlDbContextFactory Factory { get; } = factory;
 
+        public HistoryPersistenceTestDatabase.HistoryTestFactory HistoryFactory { get; } = new(
+            new DbContextOptionsBuilder<ProviderHistoryDbContext>().UseNpgsql(database.ConnectionString).Options);
+
+        public HistoryTargetWriteSession History { get; } = new(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection
+        }, DatabaseProfileResolutionSource.ExplicitOverride, database.ConnectionString), TimeProvider.System);
+
+        public WorkflowHistoryProjection CreateHistoryProjection(IInterceptor? interceptor = null) {
+            var historyFactory = interceptor is null ? HistoryFactory : HistoryFactory.WithInterceptor(interceptor);
+            return new(History.Partitions, new(historyFactory.Options, History.Transactions, TimeProvider.System));
+        }
+
         public PersistentWorkflowBackendCheckpointPayloadStore CreateCheckpointStore(
             bool reconstructDataProtectionProvider = false)
             => new(
-                Factory,
+                WorkflowOwnerPersistenceTestFactory.FromCanonical(Factory),
                 keyDirectory.CreateProvider(),
                 TimeProvider.System);
 
         public PersistentWorkflowExternalResponseOperationStore CreateOperationStore(
             bool reconstructDataProtectionProvider = false)
-            => new(Factory, keyDirectory.CreateProvider());
+            => new(WorkflowOwnerPersistenceTestFactory.FromCanonical(Factory), keyDirectory.CreateProvider());
 
         public PersistentWorkflowExternalResponseOperationStore CreateOperationStore(
             IInterceptor interceptor)
-            => new(Factory.WithInterceptor(interceptor), keyDirectory.CreateProvider());
+            => new(WorkflowOwnerPersistenceTestFactory.FromCanonical(Factory.WithInterceptor(interceptor)), keyDirectory.CreateProvider());
 
         public string ConnectionString => database.ConnectionString;
 
@@ -1582,13 +1666,19 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     }
 
     private sealed class FailAfterResumeHistorySave(bool enabled) : SaveChangesInterceptor {
+        private DbTransaction? outboxTransaction;
         public bool Failed { get; private set; }
 
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData,
             int result, CancellationToken cancellationToken = default) {
-            if (enabled && eventData.Context is { } db &&
+            if (eventData.Context is ProviderHistoryDbContext history &&
+                history.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
+                outboxTransaction = history.Database.CurrentTransaction?.GetDbTransaction();
+            }
+            if (enabled && eventData.Context is WorkflowDbContext db &&
                 db.ChangeTracker.Entries<WorkflowUsageObservationRecordEntity>().Any() &&
-                db.ChangeTracker.Entries<HistoryOutboxRow>().Any() && db.Database.CurrentTransaction is not null) {
+                db.Database.CurrentTransaction is { } transaction && outboxTransaction is not null &&
+                ReferenceEquals(transaction.GetDbTransaction(), outboxTransaction)) {
                 Failed = true;
                 throw new InvalidOperationException("Injected failure after resume source and outbox flush.");
             }
