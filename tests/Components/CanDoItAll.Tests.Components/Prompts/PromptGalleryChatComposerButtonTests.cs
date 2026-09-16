@@ -596,6 +596,41 @@ public sealed class PromptGalleryChatComposerButtonTests
     }
 
     [Fact]
+    public void Provider_and_model_resolving_after_the_picker_opened_keep_the_same_target_picker_open()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        PromptGalleryConsumerContext? evaluated = null;
+        gallery.EvaluateCompatibility = (_, context) =>
+        {
+            evaluated = context;
+            return Task.FromResult(Result<PromptCompatibilityResult>.Success(new PromptCompatibilityResult([])));
+        };
+        using var context = CreateContext(gallery);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var host = context.Render<DialogHost>();
+        var inserted = new List<string>();
+        // The owner names its target before it has resolved a provider or model for it (the workflow canvas loads
+        // its provider options asynchronously).
+        var cut = RenderComposer(context, inserted, targetKey: "new-component", provider: null, model: null);
+
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']");
+        var opened = Assert.Single(dialogService.Dialogs);
+
+        RenderComposer(cut, inserted, targetKey: "new-component", provider: Provider, model: Model);
+
+        Assert.Same(opened, Assert.Single(dialogService.Dialogs));
+        Assert.False(opened.Result.IsCompleted);
+
+        host.Find("[data-testid='prompt-gallery-select']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(["Loaded content"], inserted));
+
+        // The selection is checked against the provider and model current at selection time.
+        Assert.Equal(Provider, evaluated?.Provider);
+        Assert.Equal(Model, evaluated?.Model);
+    }
+
+    [Fact]
     public void Same_context_rerender_keeps_the_current_interaction_and_a_duplicate_admission_is_rejected()
     {
         var gallery = new ScriptedPromptGalleryService();

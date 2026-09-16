@@ -78,7 +78,7 @@
 
     protected override void OnParametersSet()
     {
-        var next = new PickerContext(Consumer, Provider, Model, TargetKey);
+        var next = ResolveContext();
         if (observed && next.Equals(observedContext))
         {
             return;
@@ -91,6 +91,15 @@
         contextGeneration++;
         RetireInteraction();
     }
+
+    // The interaction identity. An owner that supplies a TargetKey names its target explicitly, and the provider or
+    // model it resolves for that target may settle after the picker opened (the workflow canvas loads its provider
+    // options asynchronously); such a change is a parameter update, not a new target. Without a TargetKey the
+    // provider and model are the only identity the owner offers.
+    private PickerContext ResolveContext()
+        => TargetKey is null
+            ? new PickerContext(Consumer, Provider, Model, TargetKey: null)
+            : new PickerContext(Consumer, Provider: null, Model: null, TargetKey);
 
     // Cancels the current interaction and releases its ownership slot, so the next context can start its own
     // interaction while the retired one is still unwinding. The retired operation keeps its own token source and

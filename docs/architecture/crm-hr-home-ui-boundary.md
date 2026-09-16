@@ -173,7 +173,13 @@ value is a separate measurement recorded below.
   default ports; they were repeated with the profile quoted. No result was reused between
   the runs.
 - Broad Stable gate: `CanDoItAll.slnx` gained two projects and the Components test project
-  references the new sandbox, which is a named build-graph trigger. The gate is executed once
-  at the frozen checkpoint after the commits; its outcome is recorded in the closing bullet
-  below. The historical `SecretScanningTests` failure on ignored retained artifacts is not
-  cleared by this task.
+  references the new sandbox, which is a named build-graph trigger. A first run at the
+  checkpoint `b18ce6699` built the product solution (restore and build exit 0) and the Stable
+  test solution (restore and build exit 0) and then failed three `WorkflowsPageTests` facts
+  within the first minutes; they select a Gallery prompt through the real picker and failed
+  deterministically in isolation. That is a regression of the earlier Gallery interaction
+  pass (its downstream filter had not covered the workflow page), not of the Home change; it
+  was corrected in the picker's context rule (see the Prompt Gallery record) and the gate
+  was aborted and rerun from the corrected checkpoint. The rerun is recorded in the closing
+  bullet below. The historical `SecretScanningTests` failure on ignored retained artifacts is
+  not cleared by this task.
