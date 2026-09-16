@@ -67,6 +67,7 @@
 </Dialog>
 
 @code {
+    private readonly CancellationTokenSource lifetime = new();
     private PromptGallerySearchHost? searchHost;
     private Guid? selectedItemId;
     private Guid? observedPromptIdQuery;
@@ -76,6 +77,7 @@
     private bool isOpeningCurator;
     private bool isLoadingCuratorPresentation;
     private bool curatorContextFailed;
+    private bool disposed;
     private PromptGalleryCuratorPresentation? curatorPresentation;
     private IPromptGalleryCuratorContextLease? curatorContextLease;
 
@@ -108,7 +110,7 @@
 
     private void SynchronizeCurator()
     {
-        if (!CuratorLauncher.IsAvailable || curatorContextFailed)
+        if (disposed || !CuratorLauncher.IsAvailable || curatorContextFailed)
         {
             return;
         }
@@ -126,6 +128,7 @@
             return;
         }
 
+        // The presentation read runs beside the gallery, never ahead of promptId handling or the first render.
         _ = LoadCuratorPresentationAsync();
     }
 
@@ -147,7 +150,7 @@
 
     private async Task OpenCuratorAsync()
     {
-        if (isOpeningCurator || isLoadingCuratorPresentation || !CuratorLauncher.IsAvailable)
+        if (disposed || isOpeningCurator || isLoadingCuratorPresentation || !CuratorLauncher.IsAvailable)
         {
             return;
         }
@@ -156,27 +159,42 @@
         try
         {
             await LoadCuratorPresentationAsync();
-            if (curatorPresentation is null)
+            if (disposed || curatorPresentation is null)
             {
                 return;
             }
 
-            await CuratorLauncher.OpenAsync();
+            await CuratorLauncher.OpenAsync(lifetime.Token);
+            if (disposed)
+            {
+                // The chat may already exist; only this page's stale presentation of that fact is suppressed.
+                return;
+            }
+
             Notifications.Success("Chat ready", "Opened a new chat with Prompts Curator Agent.");
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
         }
         catch (Exception exception)
         {
-            Notifications.Error("Unable to open Prompts Curator", exception.Message);
+            if (!disposed)
+            {
+                Notifications.Error("Unable to open Prompts Curator", exception.Message);
+            }
         }
         finally
         {
-            isOpeningCurator = false;
+            if (!disposed)
+            {
+                isOpeningCurator = false;
+            }
         }
     }
 
     private async Task LoadCuratorPresentationAsync()
     {
-        if (curatorPresentation is not null || isLoadingCuratorPresentation)
+        if (disposed || curatorPresentation is not null || isLoadingCuratorPresentation)
         {
             return;
         }
@@ -184,18 +202,54 @@
         isLoadingCuratorPresentation = true;
         try
         {
-            curatorPresentation = await CuratorLauncher.GetPresentationAsync();
+            var presentation = await CuratorLauncher.GetPresentationAsync(lifetime.Token);
+            if (disposed)
+            {
+                return;
+            }
+
+            curatorPresentation = presentation;
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+            return;
         }
         catch (Exception exception)
         {
+            if (disposed)
+            {
+                return;
+            }
+
+            // A transient failure keeps the action available; the next click retries the read.
             Notifications.Error("Unable to load Prompts Curator", exception.Message);
         }
         finally
         {
-            isLoadingCuratorPresentation = false;
+            if (!disposed)
+            {
+                isLoadingCuratorPresentation = false;
+            }
         }
 
-        await InvokeAsync(StateHasChanged);
+        await RenderIfAliveAsync();
+    }
+
+    private async Task RenderIfAliveAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception) when (disposed)
+        {
+            // The page went away while the render was queued; there is nothing left to show.
+        }
     }
 
     private Task HandleCommittedAsync(PromptGalleryEditorCommit commit)
@@ -210,7 +264,7 @@
     {
         editorOpen = false;
         selectedItemId = null;
-        if (!editorDirty)
+        if (disposed || !editorDirty)
         {
             return;
         }
@@ -225,7 +279,14 @@
 
     public void Dispose()
     {
-        curatorContextLease?.Dispose();
-        curatorContextLease = null;
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+        Interlocked.Exchange(ref curatorContextLease, null)?.Dispose();
     }
 }

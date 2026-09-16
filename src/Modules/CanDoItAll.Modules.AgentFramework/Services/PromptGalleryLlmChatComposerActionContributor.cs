@@ -24,6 +24,10 @@ public sealed class PromptGalleryLlmChatComposerActionContributor : ILlmChatComp
                 3,
                 nameof(PromptGalleryChatComposerButton.ContentSelected),
                 context.ContentSelected);
+            builder.AddAttribute(
+                4,
+                nameof(PromptGalleryChatComposerButton.TargetKey),
+                context.TargetKey);
             builder.CloseComponent();
         };
     }

@@ -15,7 +15,10 @@
 
 @code {
     private readonly CancellationTokenSource lifetime = new();
-    private bool isOpen;
+    private CancellationTokenSource? interaction;
+    private PickerContext observedContext;
+    private long contextGeneration;
+    private bool observed;
     private bool disposed;
 
     [Parameter]
@@ -51,6 +54,11 @@
     [Parameter]
     public string? Model { get; set; }
 
+    // Identity of the target the selection is inserted into; a change makes an open picker obsolete even when
+    // provider and model stay the same.
+    [Parameter]
+    public object? TargetKey { get; set; }
+
     [Parameter]
     public bool ShowActualChatModelFilter { get; set; }
 
@@ -63,19 +71,39 @@
     [Parameter]
     public EventCallback<Guid> EditRequested { get; set; }
 
+    // True while a picker interaction started by this button is still open.
+    public bool HasOpenInteraction => interaction is not null;
+
     private string EffectiveAriaLabel => string.IsNullOrWhiteSpace(AriaLabel) ? Text : AriaLabel;
 
-    private async Task OpenAsync()
+    protected override void OnParametersSet()
     {
-        if (disposed || isOpen)
+        var next = new PickerContext(Consumer, Provider, Model, TargetKey);
+        if (observed && next.Equals(observedContext))
         {
             return;
         }
 
-        isOpen = true;
+        // A genuine context transition invalidates the interaction started under the previous context: its dialog
+        // closes and its result is dropped. A same-context rerender changes nothing.
+        observed = true;
+        observedContext = next;
+        contextGeneration++;
+        interaction?.Cancel();
+    }
+
+    private async Task OpenAsync()
+    {
+        if (disposed || interaction is not null)
+        {
+            return;
+        }
+
+        var generation = contextGeneration;
+        using var current = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        interaction = current;
         try
         {
-            // The picker dialog belongs to this button's lifetime; disposing the button closes it and drops its result.
             var result = await DialogService.OpenAsync<PromptGalleryPickerDialog>(
                 "Prompt gallery",
                 new Dictionary<string, object?>
@@ -96,8 +124,8 @@
                     TestId = "prompt-gallery-picker-dialog",
                     AriaLabel = "Browse prompt gallery"
                 },
-                lifetime.Token);
-            if (disposed)
+                current.Token);
+            if (!IsCurrent(generation))
             {
                 return;
             }
@@ -107,21 +135,27 @@
                 await Selected.InvokeAsync(selection);
             }
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (current.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
-            if (!disposed)
+            if (IsCurrent(generation))
             {
                 Notifications.Error("Prompt gallery could not be opened", exception.Message);
             }
         }
         finally
         {
-            isOpen = false;
+            if (ReferenceEquals(interaction, current))
+            {
+                interaction = null;
+            }
         }
     }
+
+    private bool IsCurrent(long generation)
+        => !disposed && generation == contextGeneration;
 
     public void Dispose()
     {
@@ -131,7 +165,10 @@
         }
 
         disposed = true;
+        interaction?.Cancel();
         lifetime.Cancel();
         lifetime.Dispose();
     }
+
+    private readonly record struct PickerContext(PromptGalleryConsumer Consumer, string? Provider, string? Model, object? TargetKey);
 }

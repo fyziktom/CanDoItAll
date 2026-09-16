@@ -72,7 +72,8 @@ public sealed record PromptGalleryEditorPresentation(
     IReadOnlyList<PromptWarningSuppression> WarningSuppressions,
     bool IsBusy,
     string? FailureMessage,
-    string? Warning)
+    string? Warning,
+    string? ExternalChange = null)
 {
     public static PromptGalleryEditorPresentation CreateNew(long generation)
         => new(
@@ -103,6 +104,9 @@ public sealed record PromptGalleryEditorPresentation(
     public bool IsPersisted => Target.HasValue && Phase == PromptGalleryEditorPhase.Ready;
 
     public bool ShowsForm => Phase is PromptGalleryEditorPhase.New or PromptGalleryEditorPhase.Ready && Source is not null;
+
+    // Another actor changed the persisted editable content; the draft is kept and the user must decide.
+    public bool HasExternalChange => !string.IsNullOrWhiteSpace(ExternalChange);
 
     public string StatusLabel => IsPersisted
         ? IsArchived ? "Archived Gallery item" : "Saved Gallery item"

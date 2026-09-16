@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Prompts.UI.Editor;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Components.Prompts;
@@ -164,12 +165,15 @@ internal sealed class ScriptedPromptGalleryService : IPromptGalleryService
         int? totalCount = null)
         => new(items, query.PageIndex, query.PageSize, totalCount ?? items.Count);
 
+    // Persisted details; when a submission is supplied the editable content mirrors that submission the way the
+    // persistence owner normalizes it (trimmed scalars), so a read-back of an own write can be scripted exactly.
     public static PromptGalleryItemDetails Details(
         Guid id,
         DateTimeOffset? updatedAtUtc = null,
         int currentVersionNumber = 0,
         bool isArchived = false,
-        IReadOnlyList<PromptWarningSuppression>? suppressions = null)
+        IReadOnlyList<PromptWarningSuppression>? suppressions = null,
+        PromptGalleryEditorSubmission? content = null)
     {
         var updated = updatedAtUtc ?? DateTimeOffset.UnixEpoch;
         var versions = Enumerable.Range(1, currentVersionNumber)
@@ -179,20 +183,20 @@ internal sealed class ScriptedPromptGalleryService : IPromptGalleryService
             id,
             ProjectId: null,
             CollectionId: null,
-            "Loaded prompt",
-            "Loaded summary",
-            PromptGalleryItemKind.FullPrompt,
-            "workflow",
+            content?.Title.Trim() ?? "Loaded prompt",
+            content?.Summary.Trim() ?? "Loaded summary",
+            content?.Kind ?? PromptGalleryItemKind.FullPrompt,
+            content?.Phase.Trim() ?? "workflow",
             currentVersionNumber > 0 ? PromptArtifactStatus.Final : PromptArtifactStatus.Draft,
             isArchived,
-            "Loaded content",
+            content?.Content ?? "Loaded content",
             currentVersionNumber,
-            Tags: ["workflow"],
+            Tags: content?.Tags ?? ["workflow"],
             TemplateTokens: [],
-            SupportedModels: [new PromptProviderModel("OpenAI", "gpt-5.4-mini", IsPreferred: true)],
-            SupportedConsumers: [PromptGalleryConsumer.Workflow],
+            SupportedModels: content?.SupportedModels ?? [new PromptProviderModel("OpenAI", "gpt-5.4-mini", IsPreferred: true)],
+            SupportedConsumers: content?.SupportedConsumers ?? [PromptGalleryConsumer.Workflow],
             WarningSuppressions: suppressions ?? [],
-            new PromptModelRecommendations(0.2, 800, 0.9),
+            content?.Recommendations ?? new PromptModelRecommendations(0.2, 800, 0.9),
             new PromptGallerySourceInfo(PromptArtifactProvenance.User, null, null, null, null, null, null),
             versions,
             updated,

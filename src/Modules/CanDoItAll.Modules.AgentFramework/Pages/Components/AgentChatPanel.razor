@@ -42,6 +42,7 @@
                 @{ var composerOwner = chatSession.Generation; }
                 <PromptGalleryChatComposerButton Provider="@SelectedAgentProviderKind"
                                                  Model="@selectedAgent?.Model"
+                                                 TargetKey="@composerOwner"
                                                  ContentSelected="@(content => InsertPromptGalleryContentAsync(content, composerOwner))" />
             </ComposerActions>
             <HeaderActions>

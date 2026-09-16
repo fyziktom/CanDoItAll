@@ -18,6 +18,12 @@ public sealed class PromptGalleryEditorSessionTests
         [PromptGalleryConsumer.Chat],
         new PromptModelRecommendations(0.2, 800, 0.9));
 
+    private static readonly PromptGalleryEditorSubmission ForeignSubmission = Submission with
+    {
+        Title = "Changed by someone else",
+        Content = "Foreign content"
+    };
+
     [Fact]
     public async Task New_target_starts_an_empty_draft_without_reading()
     {
@@ -157,7 +163,9 @@ public sealed class PromptGalleryEditorSessionTests
         Assert.True(session.Presentation.IsPersisted);
         Assert.Same(sourceBeforeSave, session.Presentation.Source);
         Assert.False(session.Presentation.IsBusy);
+        Assert.Equal(token, session.AcceptedToken);
         Assert.Contains("could not be re-read", session.Presentation.Warning, StringComparison.Ordinal);
+        Assert.False(session.Presentation.HasExternalChange);
         Assert.Equal(new PromptGalleryEditorCommit(savedId, PromptGalleryEditorCommitKind.DraftSaved), Assert.Single(commits));
         Assert.Contains(notices, notice => notice.Summary == "Prompt draft saved");
 
@@ -219,6 +227,7 @@ public sealed class PromptGalleryEditorSessionTests
         Assert.Same(source, session.Presentation.Source);
         Assert.Equal(itemId, session.Presentation.Target);
         Assert.Single(gallery.GetItemCalls);
+        Assert.True(session.Presentation.HasExternalChange);
         Assert.Equal(2, notices.Count);
         Assert.All(notices, notice =>
         {
@@ -232,9 +241,12 @@ public sealed class PromptGalleryEditorSessionTests
     {
         var gallery = new ScriptedPromptGalleryService();
         var savedId = Guid.NewGuid();
-        gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, DateTimeOffset.UnixEpoch.AddMinutes(1))));
+        var receiptToken = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, receiptToken)));
         gallery.CreateVersion = (_, _) => Task.FromResult(Result<PromptVersionSnapshot>.Failure(
             Error.Validation("Prompt content is required before creating a version.", "prompts.version.content-required")));
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
+            ScriptedPromptGalleryService.Details(id, receiptToken, content: Submission)));
         var commits = new List<PromptGalleryEditorCommit>();
         var notices = new List<PromptGalleryNotice>();
         await using var session = new PromptGalleryEditorSession(gallery)
@@ -248,12 +260,14 @@ public sealed class PromptGalleryEditorSessionTests
 
         Assert.Equal(new PromptGalleryEditorCommit(savedId, PromptGalleryEditorCommitKind.DraftSaved), Assert.Single(commits));
         Assert.Equal(savedId, Assert.Single(gallery.VersionRequests).ItemId);
-        Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(1), gallery.VersionRequests[0].Request.ExpectedUpdatedAtUtc);
+        Assert.Equal(receiptToken, gallery.VersionRequests[0].Request.ExpectedUpdatedAtUtc);
         var notice = Assert.Single(notices);
         Assert.Equal("Final version was not created", notice.Summary);
         Assert.Contains("The draft was saved, but", notice.Detail, StringComparison.Ordinal);
         Assert.Contains("content is required", notice.Detail, StringComparison.Ordinal);
         Assert.Equal(savedId, session.Presentation.Target);
+        Assert.Equal(receiptToken, session.AcceptedToken);
+        Assert.Null(session.Presentation.Warning);
         Assert.False(session.Presentation.IsBusy);
         Assert.Equal([savedId], gallery.GetItemCalls);
     }
@@ -266,8 +280,9 @@ public sealed class PromptGalleryEditorSessionTests
         var receiptToken = DateTimeOffset.UnixEpoch.AddMinutes(1);
         var refreshedToken = DateTimeOffset.UnixEpoch.AddMinutes(2);
         gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, receiptToken)));
+        // Finalization advanced the token without touching editable content: the read-back is this editor's own revision.
         gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
-            ScriptedPromptGalleryService.Details(id, refreshedToken, currentVersionNumber: 1)));
+            ScriptedPromptGalleryService.Details(id, refreshedToken, currentVersionNumber: 1, content: Submission)));
         var commits = new List<PromptGalleryEditorCommit>();
         await using var session = new PromptGalleryEditorSession(gallery)
         {
@@ -284,6 +299,8 @@ public sealed class PromptGalleryEditorSessionTests
         Assert.All(commits, commit => Assert.Equal(savedId, commit.ItemId));
         Assert.Single(session.Presentation.Versions);
         Assert.Same(source, session.Presentation.Source);
+        Assert.False(session.Presentation.HasExternalChange);
+        Assert.Equal(refreshedToken, session.AcceptedToken);
 
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
         Assert.Equal(refreshedToken, gallery.SavedDrafts[1].ExpectedUpdatedAtUtc);
@@ -388,9 +405,148 @@ public sealed class PromptGalleryEditorSessionTests
         Assert.True(session.Presentation.IsArchived);
         Assert.Equal(new PromptGalleryEditorCommit(itemId, PromptGalleryEditorCommitKind.Archived), Assert.Single(commits));
         Assert.Same(source, session.Presentation.Source);
+        Assert.False(session.Presentation.HasExternalChange);
 
         await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
         Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(2), Assert.Single(gallery.SavedDrafts).ExpectedUpdatedAtUtc);
+    }
+
+    [Fact]
+    public async Task Own_archive_after_a_foreign_content_change_keeps_the_accepted_token_and_flags_the_conflict()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var itemId = Guid.NewGuid();
+        var loadedToken = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        var archivedToken = DateTimeOffset.UnixEpoch.AddMinutes(3);
+        var reads = 0;
+        // Read 1: the revision this editor loads. Read 2 (after the own archive): another actor's content at a newer token.
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(++reads == 1
+            ? ScriptedPromptGalleryService.Details(id, loadedToken, content: Submission)
+            : ScriptedPromptGalleryService.Details(id, archivedToken, isArchived: true, content: ForeignSubmission)));
+        gallery.SaveDraft = draft => Task.FromResult(draft.ExpectedUpdatedAtUtc == archivedToken
+            ? Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(draft.Id!.Value, archivedToken.AddMinutes(1)))
+            : Result<PromptDraftSaveReceipt>.Failure(Error.Failure("The Prompt Gallery item changed after it was loaded. Reload it before saving.", "prompts.gallery.concurrency-conflict")));
+        var commits = new List<PromptGalleryEditorCommit>();
+        var notices = new List<PromptGalleryNotice>();
+        await using var session = new PromptGalleryEditorSession(gallery)
+        {
+            Committed = commit => { commits.Add(commit); return Task.CompletedTask; },
+            NoticeRaised = notice => { notices.Add(notice); return Task.CompletedTask; }
+        };
+        await session.SetTargetAsync(itemId);
+        var source = session.Presentation.Source;
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(session.Presentation.Generation));
+
+        Assert.True(session.Presentation.IsArchived);
+        Assert.True(session.Presentation.HasExternalChange);
+        Assert.Equal(loadedToken, session.AcceptedToken);
+        Assert.Same(source, session.Presentation.Source);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
+
+        var draft = Assert.Single(gallery.SavedDrafts);
+        Assert.Equal(loadedToken, draft.ExpectedUpdatedAtUtc);
+        Assert.Equal(new[] { PromptGalleryEditorCommitKind.Archived }, commits.Select(commit => commit.Kind));
+        Assert.Contains(notices, notice => notice.Summary == "Prompt draft was not saved");
+        Assert.Same(source, session.Presentation.Source);
+        Assert.True(session.Presentation.HasExternalChange);
+        Assert.Single(gallery.SavedDrafts);
+    }
+
+    [Fact]
+    public async Task Foreign_change_between_the_save_receipt_and_the_read_back_keeps_the_receipt_token()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var savedId = Guid.NewGuid();
+        var receiptToken = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        var foreignToken = DateTimeOffset.UnixEpoch.AddMinutes(2);
+        gallery.SaveDraft = draft => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(draft.Id ?? savedId, receiptToken)));
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
+            ScriptedPromptGalleryService.Details(id, foreignToken, content: ForeignSubmission)));
+        await using var session = new PromptGalleryEditorSession(gallery);
+        await session.SetTargetAsync(null);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
+
+        Assert.Equal(receiptToken, session.AcceptedToken);
+        Assert.True(session.Presentation.HasExternalChange);
+        Assert.Equal(savedId, session.Presentation.Target);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
+
+        Assert.Equal(2, gallery.SavedDrafts.Count);
+        Assert.Equal(receiptToken, gallery.SavedDrafts[1].ExpectedUpdatedAtUtc);
+        Assert.NotEqual(foreignToken, gallery.SavedDrafts[1].ExpectedUpdatedAtUtc);
+    }
+
+    [Fact]
+    public async Task Own_finalize_and_archive_without_a_foreign_change_adopt_each_newer_token()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var itemId = Guid.NewGuid();
+        var token = DateTimeOffset.UnixEpoch;
+        // Every read-back returns this editor's own content at whatever token the last own command produced.
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
+            ScriptedPromptGalleryService.Details(id, token, content: Submission)));
+        gallery.SaveDraft = draft =>
+        {
+            token = token.AddMinutes(1);
+            return Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(draft.Id!.Value, token)));
+        };
+        gallery.CreateVersion = (id, _) =>
+        {
+            token = token.AddMinutes(1);
+            return Task.FromResult(Result<PromptVersionSnapshot>.Success(ScriptedPromptGalleryService.Snapshot(id, 1)));
+        };
+        gallery.Archive = (_, _) =>
+        {
+            token = token.AddMinutes(1);
+            return Task.FromResult(Result.Success());
+        };
+        await using var session = new PromptGalleryEditorSession(gallery);
+        await session.SetTargetAsync(itemId);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.CreateVersion(session.Presentation.Generation, Submission));
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(2), session.AcceptedToken);
+        await session.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(session.Presentation.Generation));
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(3), session.AcceptedToken);
+        await session.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(session.Presentation.Generation));
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(4), session.AcceptedToken);
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
+
+        Assert.False(session.Presentation.HasExternalChange);
+        Assert.Equal(
+            [DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddMinutes(4)],
+            gallery.SavedDrafts.Select(draft => draft.ExpectedUpdatedAtUtc));
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddMinutes(5), session.AcceptedToken);
+    }
+
+    [Fact]
+    public async Task Reload_after_a_conflict_discards_the_draft_and_accepts_the_latest_revision()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var itemId = Guid.NewGuid();
+        var latestToken = DateTimeOffset.UnixEpoch.AddMinutes(9);
+        var reads = 0;
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(++reads == 1
+            ? ScriptedPromptGalleryService.Details(id, DateTimeOffset.UnixEpoch, content: Submission)
+            : ScriptedPromptGalleryService.Details(id, latestToken, content: ForeignSubmission)));
+        await using var session = new PromptGalleryEditorSession(gallery);
+        await session.SetTargetAsync(itemId);
+        var staleSource = session.Presentation.Source;
+        await session.ApplyAsync(new PromptGalleryEditorIntent.ToggleArchive(session.Presentation.Generation));
+        Assert.True(session.Presentation.HasExternalChange);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.Retry(session.Presentation.Generation));
+
+        Assert.False(session.Presentation.HasExternalChange);
+        Assert.NotSame(staleSource, session.Presentation.Source);
+        Assert.Equal("Changed by someone else", session.Presentation.Source?.Title);
+        Assert.Equal(latestToken, session.AcceptedToken);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, ForeignSubmission));
+        Assert.Equal(latestToken, Assert.Single(gallery.SavedDrafts).ExpectedUpdatedAtUtc);
     }
 
     [Fact]
@@ -461,5 +617,173 @@ public sealed class PromptGalleryEditorSessionTests
 
         Assert.Empty(gallery.SavedDrafts);
         Assert.Empty(gallery.ArchiveWrites);
+    }
+
+    [Fact]
+    public async Task Committed_callback_failure_after_a_valid_receipt_keeps_the_saved_identity_and_reports_only_the_effect()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var savedId = Guid.NewGuid();
+        var receiptToken = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, receiptToken)));
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
+            ScriptedPromptGalleryService.Details(id, receiptToken, content: Submission)));
+        var notices = new List<PromptGalleryNotice>();
+        await using var session = new PromptGalleryEditorSession(gallery)
+        {
+            Committed = _ => throw new InvalidOperationException("Owner refresh exploded."),
+            NoticeRaised = notice => { notices.Add(notice); return Task.CompletedTask; }
+        };
+        await session.SetTargetAsync(null);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
+
+        Assert.Equal(savedId, session.Presentation.Target);
+        Assert.Equal(receiptToken, session.AcceptedToken);
+        Assert.Equal(PromptGalleryEditorPhase.Ready, session.Presentation.Phase);
+        Assert.Null(session.Presentation.Warning);
+        Assert.False(session.Presentation.IsBusy);
+        Assert.Equal(["Prompt draft saved", "Editor update failed"], notices.Select(notice => notice.Summary));
+        Assert.Contains("Owner refresh exploded.", notices[1].Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain(notices, notice => notice.Summary == "Final version request failed");
+        Assert.Empty(gallery.VersionRequests);
+        Assert.Single(gallery.SavedDrafts);
+    }
+
+    [Fact]
+    public async Task Owner_callback_failure_after_a_successful_version_keeps_the_version_known()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var savedId = Guid.NewGuid();
+        var receiptToken = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, receiptToken)));
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
+            ScriptedPromptGalleryService.Details(id, receiptToken.AddMinutes(1), currentVersionNumber: 1, content: Submission)));
+        var commits = new List<PromptGalleryEditorCommit>();
+        var notices = new List<PromptGalleryNotice>();
+        await using var session = new PromptGalleryEditorSession(gallery)
+        {
+            Committed = commit =>
+            {
+                commits.Add(commit);
+                return commit.Kind == PromptGalleryEditorCommitKind.VersionCreated
+                    ? throw new InvalidOperationException("Catalog refresh exploded.")
+                    : Task.CompletedTask;
+            },
+            NoticeRaised = notice => { notices.Add(notice); return Task.CompletedTask; }
+        };
+        await session.SetTargetAsync(null);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.CreateVersion(session.Presentation.Generation, Submission));
+
+        Assert.Equal(
+            [PromptGalleryEditorCommitKind.DraftSaved, PromptGalleryEditorCommitKind.VersionCreated],
+            commits.Select(commit => commit.Kind));
+        Assert.Single(session.Presentation.Versions);
+        Assert.Single(gallery.VersionRequests);
+        Assert.Equal(receiptToken.AddMinutes(1), session.AcceptedToken);
+        Assert.Null(session.Presentation.Warning);
+        Assert.Equal(["Final version created", "Editor update failed"], notices.Select(notice => notice.Summary));
+        Assert.False(session.Presentation.IsBusy);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Version_result_failure_and_thrown_version_request_are_distinct_outcomes(bool thrown)
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var savedId = Guid.NewGuid();
+        var receiptToken = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, receiptToken)));
+        gallery.CreateVersion = (_, _) => thrown
+            ? Task.FromException<Result<PromptVersionSnapshot>>(new IOException("Connection dropped during finalization."))
+            : Task.FromResult(Result<PromptVersionSnapshot>.Failure(Error.Failure("Archived Gallery items cannot create new versions.", "prompts.version.artifact-archived")));
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
+            ScriptedPromptGalleryService.Details(id, receiptToken, content: Submission)));
+        var commits = new List<PromptGalleryEditorCommit>();
+        var notices = new List<PromptGalleryNotice>();
+        await using var session = new PromptGalleryEditorSession(gallery)
+        {
+            Committed = commit => { commits.Add(commit); return Task.CompletedTask; },
+            NoticeRaised = notice => { notices.Add(notice); return Task.CompletedTask; }
+        };
+        await session.SetTargetAsync(null);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.CreateVersion(session.Presentation.Generation, Submission));
+
+        Assert.Equal([PromptGalleryEditorCommitKind.DraftSaved], commits.Select(commit => commit.Kind));
+        Assert.Equal(savedId, session.Presentation.Target);
+        Assert.Equal(receiptToken, session.AcceptedToken);
+        Assert.Single(gallery.VersionRequests);
+        var notice = Assert.Single(notices);
+        if (thrown)
+        {
+            Assert.Equal("Final version request failed", notice.Summary);
+            Assert.Contains("unknown result", session.Presentation.Warning, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Equal("Final version was not created", notice.Summary);
+            Assert.Contains("The draft was saved, but", notice.Detail, StringComparison.Ordinal);
+            Assert.Null(session.Presentation.Warning);
+        }
+    }
+
+    [Fact]
+    public async Task Target_transition_during_a_suspended_commit_callback_issues_no_further_write()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var savedId = Guid.NewGuid();
+        gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, DateTimeOffset.UnixEpoch.AddMinutes(1))));
+        var suspendedCommit = new TaskCompletionSource();
+        var notices = new List<PromptGalleryNotice>();
+        await using var session = new PromptGalleryEditorSession(gallery)
+        {
+            Committed = _ => suspendedCommit.Task,
+            NoticeRaised = notice => { notices.Add(notice); return Task.CompletedTask; }
+        };
+        await session.SetTargetAsync(null);
+        var replacement = Guid.NewGuid();
+
+        var finalize = session.ApplyAsync(new PromptGalleryEditorIntent.CreateVersion(session.Presentation.Generation, Submission));
+        await session.SetTargetAsync(replacement);
+        var noticesAtTransition = notices.Count;
+        suspendedCommit.SetResult();
+        await finalize;
+
+        Assert.Empty(gallery.VersionRequests);
+        Assert.Equal(replacement, session.Presentation.Target);
+        Assert.Equal(noticesAtTransition, notices.Count);
+        Assert.False(session.Presentation.IsBusy);
+        Assert.Equal([replacement], gallery.GetItemCalls);
+    }
+
+    [Fact]
+    public async Task Reentrant_target_change_during_the_busy_publication_cancels_the_command_before_any_write()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        PromptGalleryEditorSession session = null!;
+        var replacement = Guid.NewGuid();
+        var redirected = false;
+        session = new PromptGalleryEditorSession(gallery)
+        {
+            Changed = async () =>
+            {
+                if (!redirected && session.Presentation.IsBusy)
+                {
+                    redirected = true;
+                    await session.SetTargetAsync(replacement);
+                }
+            }
+        };
+        await session.SetTargetAsync(null);
+
+        await session.ApplyAsync(new PromptGalleryEditorIntent.SaveDraft(session.Presentation.Generation, Submission));
+
+        Assert.Empty(gallery.SavedDrafts);
+        Assert.Equal(replacement, session.Presentation.Target);
+        Assert.Equal(PromptGalleryEditorPhase.Ready, session.Presentation.Phase);
+        await session.DisposeAsync();
     }
 }

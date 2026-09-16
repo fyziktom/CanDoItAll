@@ -193,6 +193,130 @@ public sealed class PromptGalleryPageTests
         Assert.Single(gallery.Queries);
     }
 
+    [Fact]
+    public async Task Slow_curator_presentation_blocks_neither_the_gallery_nor_the_promptId_request()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var knownId = Guid.NewGuid();
+        var launcher = new ControllableCuratorLauncher();
+        using var context = CreateContext(gallery, launcher);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/prompt-gallery?promptId={knownId:D}");
+
+        var cut = context.Render<PromptGalleryPage>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
+        Assert.Equal([knownId], gallery.GetItemCalls);
+        Assert.Equal(1, launcher.PresentationCount);
+        var button = cut.Find("[data-testid='prompt-gallery-prompts-curator-open']");
+        Assert.True(button.HasAttribute("disabled"));
+        Assert.Equal("Open Prompts Curator Agent", button.GetAttribute("aria-label"));
+
+        await cut.InvokeAsync(() => launcher.Presentation.SetResult(launcher.KnownPresentation));
+
+        cut.WaitForAssertion(() =>
+        {
+            var ready = cut.Find("[data-testid='prompt-gallery-prompts-curator-open']");
+            Assert.False(ready.HasAttribute("disabled"));
+            Assert.Equal($"Open {launcher.KnownPresentation.Name}", ready.GetAttribute("aria-label"));
+        });
+    }
+
+    [Theory]
+    [InlineData("success", false)]
+    [InlineData("failure", false)]
+    [InlineData("cancelled", true)]
+    public async Task Late_presentation_outcome_after_disposal_is_suppressed_and_the_lease_is_released_once(string outcome, bool honorsCancellation)
+    {
+        var launcher = new ControllableCuratorLauncher { HonorsCancellation = honorsCancellation };
+        using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var cut = context.Render<PromptGalleryPage>();
+        cut.WaitForAssertion(() => Assert.Equal(1, launcher.PresentationCount));
+        var page = cut.Instance;
+
+        // The real render/dispose cycle runs through the renderer; the lease goes with the page.
+        await context.DisposeComponentsAsync();
+        Assert.Equal(1, launcher.ContextLease.DisposeCount);
+
+        switch (outcome)
+        {
+            case "success":
+                launcher.Presentation.SetResult(launcher.KnownPresentation);
+                break;
+            case "failure":
+                launcher.Presentation.SetException(new InvalidOperationException("Late presentation failure."));
+                break;
+            default:
+                // A cancellation-honouring launcher already observed the page lifetime token.
+                Assert.True(launcher.LastPresentationToken.IsCancellationRequested);
+                launcher.Presentation.SetResult(launcher.KnownPresentation);
+                break;
+        }
+
+        await Task.Yield();
+        // A second dispose of the same instance is idempotent: the lease is released exactly once.
+        page.Dispose();
+
+        Assert.Empty(notifications.Messages);
+        Assert.Equal(1, launcher.ContextLease.DisposeCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Late_open_outcome_after_disposal_publishes_nothing(bool fail)
+    {
+        var launcher = new ControllableCuratorLauncher();
+        launcher.Presentation.SetResult(launcher.KnownPresentation);
+        using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var cut = context.Render<PromptGalleryPage>();
+        var button = cut.WaitForElement("[data-testid='prompt-gallery-prompts-curator-open']:not([disabled])");
+
+        button.Click();
+        cut.WaitForAssertion(() => Assert.Equal(1, launcher.OpenCount));
+        Assert.Empty(notifications.Messages);
+
+        await context.DisposeComponentsAsync();
+        if (fail)
+        {
+            launcher.Open.SetException(new InvalidOperationException("Late open failure."));
+        }
+        else
+        {
+            launcher.Open.SetResult();
+        }
+
+        await Task.Yield();
+
+        Assert.Empty(notifications.Messages);
+        Assert.Equal(1, launcher.ContextLease.DisposeCount);
+    }
+
+    [Fact]
+    public async Task Open_failure_while_alive_is_reported_and_the_next_click_retries()
+    {
+        var launcher = new ControllableCuratorLauncher();
+        launcher.Presentation.SetResult(launcher.KnownPresentation);
+        using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var cut = context.Render<PromptGalleryPage>();
+        cut.WaitForElement("[data-testid='prompt-gallery-prompts-curator-open']:not([disabled])").Click();
+        cut.WaitForAssertion(() => Assert.Equal(1, launcher.OpenCount));
+
+        await cut.InvokeAsync(() => launcher.Open.SetException(new InvalidOperationException("Chat host offline.")));
+
+        cut.WaitForAssertion(() => Assert.Single(notifications.Messages, message => message.Summary == "Unable to open Prompts Curator"));
+        launcher.ResetOpen();
+        cut.WaitForElement("[data-testid='prompt-gallery-prompts-curator-open']:not([disabled])").Click();
+        cut.WaitForAssertion(() => Assert.Equal(2, launcher.OpenCount));
+        await cut.InvokeAsync(() => launcher.Open.SetResult());
+
+        cut.WaitForAssertion(() => Assert.Single(notifications.Messages, message => message.Summary == "Chat ready"));
+        Assert.Equal(0, launcher.ContextLease.DisposeCount);
+    }
+
     private static BunitContext CreateContext(ScriptedPromptGalleryService gallery, IPromptGalleryCuratorLauncher launcher)
     {
         var context = new BunitContext();
@@ -273,6 +397,47 @@ public sealed class PromptGalleryPageTests
             Events.Add("open");
             return Task.CompletedTask;
         }
+    }
+
+    // Launcher whose presentation read and chat open complete only when the test says so.
+    private sealed class ControllableCuratorLauncher : IPromptGalleryCuratorLauncher
+    {
+        public bool IsAvailable => true;
+
+        public bool HonorsCancellation { get; init; }
+
+        public int PresentationCount { get; private set; }
+
+        public int OpenCount { get; private set; }
+
+        public CancellationToken LastPresentationToken { get; private set; }
+
+        public TaskCompletionSource<PromptGalleryCuratorPresentation> Presentation { get; } = new();
+
+        public TaskCompletionSource Open { get; private set; } = new();
+
+        public PromptGalleryCuratorPresentation KnownPresentation { get; } = new(
+            "Canonical Prompts Curator",
+            "/images/agents/canonical-prompts-curator.png");
+
+        public RecordingCuratorContextLease ContextLease { get; } = new();
+
+        public IPromptGalleryCuratorContextLease ActivateContext() => ContextLease;
+
+        public Task<PromptGalleryCuratorPresentation> GetPresentationAsync(CancellationToken cancellationToken = default)
+        {
+            PresentationCount++;
+            LastPresentationToken = cancellationToken;
+            return HonorsCancellation ? Presentation.Task.WaitAsync(cancellationToken) : Presentation.Task;
+        }
+
+        public Task OpenAsync(CancellationToken cancellationToken = default)
+        {
+            OpenCount++;
+            return HonorsCancellation ? Open.Task.WaitAsync(cancellationToken) : Open.Task;
+        }
+
+        public void ResetOpen() => Open = new TaskCompletionSource();
     }
 
     private sealed class RecordingCuratorContextLease : IPromptGalleryCuratorContextLease

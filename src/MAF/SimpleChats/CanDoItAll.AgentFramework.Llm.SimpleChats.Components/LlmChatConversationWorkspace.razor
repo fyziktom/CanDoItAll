@@ -16,7 +16,8 @@
         @if (controller?.SelectedConversation is { } selected) {
             var generation = controller.SelectionGeneration;
             var context = new LlmChatComposerActionContext(selected.ProviderModel,
-                EventCallback.Factory.Create<string>(this, content => InsertPromptAsync(content, generation)));
+                EventCallback.Factory.Create<string>(this, content => InsertPromptAsync(content, generation)),
+                TargetKey: generation);
             @foreach (var contributor in ComposerActionContributors) {
                 @contributor.Render(context)
             }

@@ -138,6 +138,73 @@ public sealed class PromptGalleryItemEditorHostTests
         cut.WaitForAssertion(() => Assert.Equal(2, gallery.GetItemCalls.Count));
     }
 
+    [Fact]
+    public async Task Foreign_change_before_an_own_archive_is_surfaced_as_a_conflict_and_reload_accepts_the_latest_revision()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var itemId = Guid.NewGuid();
+        var loaded = DateTimeOffset.UnixEpoch.AddHours(1);
+        var foreign = loaded.AddMinutes(5);
+        var archived = foreign.AddMinutes(1);
+        var foreignContent = new PromptGalleryEditorSubmission(
+            "Changed by someone else",
+            "Foreign summary",
+            PromptGalleryItemKind.FullPrompt,
+            "workflow",
+            "Foreign content",
+            ["workflow"],
+            [new PromptProviderModel("OpenAI", "gpt-5.4-mini", IsPreferred: true)],
+            [PromptGalleryConsumer.Workflow],
+            new PromptModelRecommendations(0.2, 800, 0.9));
+        var persistedToken = loaded;
+        var persistedContent = (PromptGalleryEditorSubmission?)null;
+        var persistedArchived = false;
+        gallery.GetItem = id => Task.FromResult(Result<PromptGalleryItemDetails>.Success(
+            ScriptedPromptGalleryService.Details(id, persistedToken, isArchived: persistedArchived, content: persistedContent)));
+        gallery.Archive = (_, value) =>
+        {
+            persistedArchived = value;
+            persistedToken = archived;
+            return Task.FromResult(Result.Success());
+        };
+        gallery.SaveDraft = draft => draft.ExpectedUpdatedAtUtc == persistedToken
+            ? Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(itemId, persistedToken.AddMinutes(1))))
+            : Task.FromResult(Result<PromptDraftSaveReceipt>.Failure(Error.Failure("The item changed elsewhere.", "prompts.gallery.concurrency-conflict")));
+        using var context = CreateContext(gallery);
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var cut = context.Render<PromptGalleryItemEditorHost>(parameters => parameters.Add(component => component.ItemId, itemId));
+        cut.WaitForAssertion(() => Assert.Equal("Loaded prompt", cut.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value")));
+        cut.Find("[data-testid='prompt-gallery-editor-title']").Change("My unsaved edit");
+
+        // Someone else saves a newer revision, then this editor archives: the read-back carries foreign content.
+        persistedToken = foreign;
+        persistedContent = foreignContent;
+        await cut.Find("[data-testid='prompt-gallery-editor-archive']").ClickAsync();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-conflict']")));
+        Assert.Equal("My unsaved edit", cut.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value"));
+        Assert.Contains("Restore", cut.Find("[data-testid='prompt-gallery-editor-archive']").TextContent, StringComparison.Ordinal);
+
+        await cut.Find("form").SubmitAsync();
+
+        cut.WaitForAssertion(() => Assert.Single(gallery.SavedDrafts));
+        Assert.Equal(loaded, gallery.SavedDrafts[0].ExpectedUpdatedAtUtc);
+        Assert.Contains(notifications.Messages, message => message.Summary == "Prompt draft was not saved");
+        Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-conflict']"));
+
+        cut.Find("[data-testid='prompt-gallery-editor-reload']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("Changed by someone else", cut.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value")));
+        Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-editor-conflict']"));
+        cut.Find("[data-testid='prompt-gallery-editor-title']").Change("Merged edit");
+        await cut.Find("form").SubmitAsync();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, gallery.SavedDrafts.Count));
+        Assert.Equal(archived, gallery.SavedDrafts[1].ExpectedUpdatedAtUtc);
+        Assert.Equal("Merged edit", gallery.SavedDrafts[1].Title);
+        Assert.Contains(notifications.Messages, message => message.Summary == "Prompt draft saved");
+    }
+
     private static BunitContext CreateContext(ScriptedPromptGalleryService gallery)
     {
         var context = new BunitContext();

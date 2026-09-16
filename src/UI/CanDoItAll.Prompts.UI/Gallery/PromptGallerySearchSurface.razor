@@ -1,11 +1,13 @@
 <Stack GapScale="LayoutGap.Medium"
        Class="prompt-gallery-search-list"
        data-testid="prompt-gallery-search-list">
-    <FilterBar ResultText="@ResultText">
+    @* The bar spans the list column: an auto-fit rail repeats once under fit-content sizing and would collapse otherwise. *@
+    <FilterBar ResultText="@ResultText" Class="w-full">
         <Grid Gap="LayoutGap.Small"
               AlignItems="AlignItems.Center"
-              ColumnTemplate="@FilterColumnTemplate"
-              Class="min-w-0 flex-1"
+              ColumnTemplate="@NarrowFilterColumnTemplate"
+              ColumnTemplateXl="@FilterColumnTemplate"
+              Class="min-w-0 flex-1 prompt-gallery-search-list__rail"
               data-testid="prompt-gallery-filter-rail">
             <TextBox Value="@Filters.Text"
                      ValueChanged="HandleSearchChangedAsync"
@@ -228,6 +230,7 @@
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Click="@(() => EditAsync(item.Id))"
+                                        data-item-id="@item.Id"
                                         data-testid="prompt-gallery-edit" />
                             }
                         </Cluster>
@@ -283,9 +286,13 @@
         ? "Searching"
         : $"{Presentation.TotalCount:N0} matching item(s)";
 
+    // Desktop rail: fixed tracks for the inputs, intrinsic tracks for the checkbox labels and the clear action so they never wrap.
     private string FilterColumnTemplate => Compact
-        ? "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.2fr) auto auto"
-        : "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.25fr) minmax(9rem,.8fr) minmax(10rem,.9fr) auto auto auto";
+        ? "minmax(16rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(12rem,1.2fr) max-content max-content"
+        : "minmax(14rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(11rem,1.25fr) minmax(8rem,.8fr) minmax(8rem,.9fr) max-content max-content max-content";
+
+    // Constrained containers wrap the same controls into as many rows as needed instead of overflowing.
+    private const string NarrowFilterColumnTemplate = "repeat(auto-fit, minmax(11rem, 1fr))";
 
     private string PageText => Presentation.TotalPages == 0
         ? "No pages"

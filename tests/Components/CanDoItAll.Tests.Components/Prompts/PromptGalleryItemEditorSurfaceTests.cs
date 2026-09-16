@@ -156,6 +156,79 @@ public sealed class PromptGalleryItemEditorSurfaceTests
         Assert.IsType<PromptGalleryEditorIntent.ToggleArchive>(intents[1]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Invalid_numeric_input_blocks_save_and_finalize_until_the_input_is_corrected(bool finalizeAfterCorrection)
+    {
+        var intents = new List<PromptGalleryEditorIntent>();
+        using var context = CreateContext();
+        var cut = context.Render<PromptGalleryItemEditorSurface>(parameters => parameters
+            .Add(component => component.Presentation, PromptGalleryEditorPresentation.CreateNew(5))
+            .Add(component => component.Intent, EventCallback.Factory.Create<PromptGalleryEditorIntent>(this, intents.Add)));
+        cut.Find("[data-testid='prompt-gallery-editor-title']").Change("Numeric guard");
+        cut.Find("[data-testid='prompt-gallery-editor-content']").Change("Body");
+        var form = cut.Instance.CurrentForm;
+
+        // A real input change the InputNumber cannot parse (int overflow) leaves a parsing error in the edit context.
+        cut.Find("[data-testid='prompt-gallery-editor-max-output-tokens']").Change("99999999999");
+
+        cut.Find("form").Submit();
+        Assert.Empty(intents);
+        Assert.Contains("Correct the highlighted fields", cut.Find("[data-testid='prompt-gallery-editor-validation']").TextContent, StringComparison.Ordinal);
+        Assert.NotEmpty(cut.FindAll(".validation-message"));
+
+        cut.Find("[data-testid='prompt-gallery-editor-finalize']").Click();
+        Assert.Empty(intents);
+        Assert.Same(form, cut.Instance.CurrentForm);
+
+        cut.Find("[data-testid='prompt-gallery-editor-max-output-tokens']").Change("1200");
+        if (finalizeAfterCorrection)
+        {
+            cut.Find("[data-testid='prompt-gallery-editor-finalize']").Click();
+        }
+        else
+        {
+            cut.Find("form").Submit();
+        }
+
+        var intent = Assert.Single(intents);
+        var submission = finalizeAfterCorrection
+            ? Assert.IsType<PromptGalleryEditorIntent.CreateVersion>(intent).Submission
+            : Assert.IsType<PromptGalleryEditorIntent.SaveDraft>(intent).Submission;
+        Assert.Equal(1200, submission.Recommendations.MaxOutputTokens);
+        Assert.Equal("Numeric guard", submission.Title);
+        Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-editor-validation']"));
+        Assert.Empty(cut.FindAll(".validation-message"));
+        Assert.Same(form, cut.Instance.CurrentForm);
+    }
+
+    [Fact]
+    public void External_change_shows_the_conflict_alert_and_reload_emits_retry_for_the_current_generation()
+    {
+        var itemId = Guid.NewGuid();
+        var intents = new List<PromptGalleryEditorIntent>();
+        using var context = CreateContext();
+        var presentation = Ready(itemId, ScriptedPromptGalleryService.Details(itemId)) with
+        {
+            Generation = 4,
+            ExternalChange = "This item was changed elsewhere after your draft was loaded."
+        };
+        var cut = context.Render<PromptGalleryItemEditorSurface>(parameters => parameters
+            .Add(component => component.Presentation, presentation)
+            .Add(component => component.Intent, EventCallback.Factory.Create<PromptGalleryEditorIntent>(this, intents.Add)));
+
+        cut.Find("[data-testid='prompt-gallery-editor-title']").Change("Local edit kept until reload");
+        var conflict = cut.Find("[data-testid='prompt-gallery-editor-conflict']");
+        Assert.Contains("changed elsewhere", conflict.TextContent, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='prompt-gallery-editor-reload']").Click();
+
+        Assert.Equal(4, Assert.IsType<PromptGalleryEditorIntent.Retry>(Assert.Single(intents)).Generation);
+        // The surface only asks; the draft stays until the owner replaces the source.
+        Assert.Equal("Local edit kept until reload", cut.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value"));
+    }
+
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();

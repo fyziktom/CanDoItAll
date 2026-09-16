@@ -15,11 +15,27 @@ else if (Presentation.Phase == PromptGalleryEditorPhase.Failed)
         </Actions>
     </EmptyState>
 }
-else if (form is not null)
+else if (form is not null && editContext is not null)
 {
-    <EditForm Model="form" OnValidSubmit="SaveAsync">
+    <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" OnInvalidSubmit="ShowValidationMessages">
         <fieldset class="prompt-gallery-item-editor__fieldset" disabled="@Presentation.IsBusy" aria-busy="@(Presentation.IsBusy ? "true" : "false")">
         <Stack GapScale="LayoutGap.XXLarge" data-testid="prompt-gallery-item-editor">
+            @if (Presentation.HasExternalChange)
+            {
+                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="prompt-gallery-editor-conflict">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock Value="@Presentation.ExternalChange" />
+                        <Cluster Gap="LayoutGap.Small">
+                            <Button Text="Reload latest and discard my draft"
+                                    Icon="refresh"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="RetryAsync"
+                                    data-testid="prompt-gallery-editor-reload" />
+                        </Cluster>
+                    </Stack>
+                </Alert>
+            }
             @if (!string.IsNullOrWhiteSpace(Presentation.Warning))
             {
                 <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="prompt-gallery-editor-warning">
@@ -204,19 +220,25 @@ else if (form is not null)
                                      class="cda-input"
                                      min="0"
                                      max="2"
-                                     step="0.1" />
+                                     step="0.1"
+                                     data-testid="prompt-gallery-editor-temperature" />
+                        <ValidationMessage For="@(() => form.Temperature)" />
                     </FormField>
                     <FormField Text="Top-p">
                         <InputNumber @bind-Value="form.TopP"
                                      class="cda-input"
                                      min="0"
                                      max="1"
-                                     step="0.05" />
+                                     step="0.05"
+                                     data-testid="prompt-gallery-editor-top-p" />
+                        <ValidationMessage For="@(() => form.TopP)" />
                     </FormField>
                     <FormField Text="Maximum output tokens">
                         <InputNumber @bind-Value="form.MaxOutputTokens"
                                      class="cda-input"
-                                     min="1" />
+                                     min="1"
+                                     data-testid="prompt-gallery-editor-max-output-tokens" />
+                        <ValidationMessage For="@(() => form.MaxOutputTokens)" />
                     </FormField>
                 </Grid>
             </FormSection>
@@ -298,6 +320,7 @@ else if (form is not null)
     ];
 
     private PromptGalleryEditorForm? form;
+    private EditContext? editContext;
     private PromptGalleryEditorSource? acceptedSource;
     private string providerToAdd = string.Empty;
     private string modelToAdd = string.Empty;
@@ -320,9 +343,10 @@ else if (form is not null)
             return;
         }
 
-        // A new source reference means a new editing target; the same reference keeps the in-progress draft.
+        // A new source reference means a new editing target; the same reference keeps the draft and its edit context.
         acceptedSource = Presentation.Source;
         form = acceptedSource is null ? null : PromptGalleryEditorForm.FromSource(acceptedSource);
+        editContext = form is null ? null : new EditContext(form);
         providerToAdd = string.Empty;
         modelToAdd = string.Empty;
         validationMessage = null;
@@ -335,10 +359,17 @@ else if (form is not null)
     private Task CreateVersionAsync()
         => SubmitAsync(submission => new PromptGalleryEditorIntent.CreateVersion(Presentation.Generation, submission));
 
+    // Both mutation entry points pass through the same edit context, so parsing errors block finalization as well.
     private Task SubmitAsync(Func<PromptGalleryEditorSubmission, PromptGalleryEditorIntent> createIntent)
     {
-        if (form is null || Presentation.IsBusy)
+        if (form is null || editContext is null || Presentation.IsBusy)
         {
+            return Task.CompletedTask;
+        }
+
+        if (!editContext.Validate())
+        {
+            ShowValidationMessages();
             return Task.CompletedTask;
         }
 
@@ -350,6 +381,14 @@ else if (form is not null)
 
         validationMessage = null;
         return Intent.InvokeAsync(createIntent(form.ToSubmission()));
+    }
+
+    private void ShowValidationMessages()
+    {
+        var messages = editContext?.GetValidationMessages().ToArray() ?? [];
+        validationMessage = messages.Length == 0
+            ? RequiredValuesMessage
+            : "Correct the highlighted fields before saving: " + string.Join(" ", messages);
     }
 
     private Task CancelAsync()

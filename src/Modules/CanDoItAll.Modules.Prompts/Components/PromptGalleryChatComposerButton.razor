@@ -11,6 +11,7 @@
                            Consumer="PromptGalleryConsumer.Chat"
                            Provider="@Provider"
                            Model="@Model"
+                           TargetKey="@TargetKey"
                            ShowActualChatModelFilter="true"
                            Disabled="@Disabled"
                            AllowEdit="@AllowEdit"
@@ -18,9 +19,9 @@
 
 @code {
     private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? interaction;
+    private ComposerContext observedContext;
     private long contextGeneration;
-    private string? observedProvider;
-    private string? observedModel;
     private bool observed;
     private bool disposed;
 
@@ -29,6 +30,11 @@
 
     [Parameter]
     public string? Model { get; set; }
+
+    // Identity of the conversation or composer the content is inserted into; provider/model equality alone is not
+    // target equality, so owners pass their own key when they reuse this instance across targets.
+    [Parameter]
+    public object? TargetKey { get; set; }
 
     [Parameter]
     public bool Disabled { get; set; }
@@ -41,28 +47,34 @@
 
     protected override void OnParametersSet()
     {
-        if (observed &&
-            string.Equals(observedProvider, Provider, StringComparison.Ordinal) &&
-            string.Equals(observedModel, Model, StringComparison.Ordinal))
+        var next = new ComposerContext(Provider, Model, TargetKey);
+        if (observed && next.Equals(observedContext))
         {
             return;
         }
 
-        // A changed chat provider/model invalidates any selection still being evaluated against the previous context.
+        // A changed chat target invalidates the whole interaction still running against the previous context; the
+        // picker itself is cancelled by the nested button, this cancels the compatibility step and its dialog.
         observed = true;
-        observedProvider = Provider;
-        observedModel = Model;
+        observedContext = next;
         contextGeneration++;
+        interaction?.Cancel();
     }
 
     private async Task HandleSelectionAsync(PromptGallerySelection selection)
     {
-        if (disposed)
+        if (disposed || interaction is not null)
         {
             return;
         }
 
+        // The picker only reports a selection while its own context is current, so this generation is the one the
+        // picker was opened under.
         var generation = contextGeneration;
+        var provider = Provider;
+        var model = Model;
+        using var current = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        interaction = current;
         try
         {
             var compatibilityResult = await PromptGallery.EvaluateCompatibilityAsync(
@@ -70,9 +82,9 @@
                 new PromptGalleryConsumerContext(
                     PromptGalleryConsumer.Chat,
                     PromptGalleryCompatibilityPurpose.Selection,
-                    Provider: Provider,
-                    Model: Model),
-                lifetime.Token);
+                    Provider: provider,
+                    Model: model),
+                current.Token);
             if (!IsCurrent(generation))
             {
                 return;
@@ -90,12 +102,14 @@
             var decision = PromptCompatibilityWarningDecision.InsertAnyway;
             if (!compatibility.CanUse || compatibility.HasVisibleWarnings)
             {
-                var decided = await AskAsync(new PromptCompatibilityWarningPresentation(
-                    selection.Title,
-                    selection.Summary,
-                    selection.Kind,
-                    selection.VersionNumber,
-                    compatibility));
+                var decided = await AskAsync(
+                    new PromptCompatibilityWarningPresentation(
+                        selection.Title,
+                        selection.Summary,
+                        selection.Kind,
+                        selection.VersionNumber,
+                        compatibility),
+                    current.Token);
                 if (!IsCurrent(generation))
                 {
                     return;
@@ -106,6 +120,17 @@
                     return;
                 }
 
+                if (!compatibility.CanUse)
+                {
+                    // A blocking error is enforced by this host, whatever decision a dialog or callback path supplied.
+                    Notifications.Warning(
+                        "Prompt is not compatible",
+                        string.Join(" ", compatibility.Issues
+                            .Where(issue => issue.Severity == PromptCompatibilitySeverity.Error)
+                            .Select(issue => issue.Message)));
+                    return;
+                }
+
                 decision = selectedDecision;
             }
 
@@ -113,23 +138,9 @@
             {
                 foreach (var issue in compatibility.Issues.Where(issue => !issue.IsSuppressed && issue.IsSuppressible))
                 {
-                    var suppression = await PromptGallery.SetWarningSuppressionAsync(
-                        selection.ArtifactId,
-                        PromptGalleryConsumer.Chat,
-                        issue.Code,
-                        suppressed: true,
-                        lifetime.Token);
-                    if (!IsCurrent(generation))
+                    if (!await TryPersistSuppressionAsync(selection.ArtifactId, issue.Code, generation, current.Token))
                     {
                         return;
-                    }
-
-                    // A rejected preference is reported on its own; the consented insertion still proceeds.
-                    if (suppression.IsFailure)
-                    {
-                        Notifications.Warning(
-                            "Warning preference was not saved",
-                            PromptGalleryNotices.DescribeErrors(suppression.Errors, "The Prompt Gallery did not return a result."));
                     }
                 }
             }
@@ -141,23 +152,78 @@
                 return;
             }
 
+            if (!IsCurrent(generation))
+            {
+                return;
+            }
+
             await ContentSelected.InvokeAsync(content);
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (current.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
-            if (!disposed)
+            if (IsCurrent(generation))
             {
                 Notifications.Error("Prompt could not be inserted", exception.Message);
             }
         }
+        finally
+        {
+            if (ReferenceEquals(interaction, current))
+            {
+                interaction = null;
+            }
+        }
     }
 
-    private async Task<PromptCompatibilityWarningDecision?> AskAsync(PromptCompatibilityWarningPresentation presentation)
+    // An optional preference write never decides the consented insertion: a rejected or thrown write is reported as a
+    // preference problem and is not replayed. Only a cancelled interaction stops the chain.
+    private async Task<bool> TryPersistSuppressionAsync(Guid artifactId, PromptCompatibilityIssueCode issueCode, long generation, CancellationToken token)
     {
-        // The warning surface is rendered inline; the decision closes exactly this dialog reference.
+        try
+        {
+            var suppression = await PromptGallery.SetWarningSuppressionAsync(
+                artifactId,
+                PromptGalleryConsumer.Chat,
+                issueCode,
+                suppressed: true,
+                token);
+            if (!IsCurrent(generation))
+            {
+                return false;
+            }
+
+            if (suppression.IsFailure)
+            {
+                Notifications.Warning(
+                    "Warning preference was not saved",
+                    PromptGalleryNotices.DescribeErrors(suppression.Errors, "The Prompt Gallery did not return a result."));
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrent(generation))
+            {
+                return false;
+            }
+
+            Notifications.Warning("Warning preference was not saved", exception.Message);
+            return true;
+        }
+    }
+
+    private async Task<PromptCompatibilityWarningDecision?> AskAsync(PromptCompatibilityWarningPresentation presentation, CancellationToken token)
+    {
+        // The warning surface is rendered inline; the decision closes exactly this dialog reference, and the interaction
+        // token closes it when the target changes or the owner is disposed.
         var result = await DialogService.OpenAsync(
             "Prompt compatibility",
             dialog => builder =>
@@ -181,7 +247,7 @@
                 TestId = "prompt-gallery-chat-compatibility-dialog",
                 AriaLabel = "Prompt compatibility warning"
             },
-            lifetime.Token);
+            token);
         return result as PromptCompatibilityWarningDecision?;
     }
 
@@ -196,7 +262,10 @@
         }
 
         disposed = true;
+        interaction?.Cancel();
         lifetime.Cancel();
         lifetime.Dispose();
     }
+
+    private readonly record struct ComposerContext(string? Provider, string? Model, object? TargetKey);
 }
