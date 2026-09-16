@@ -13,6 +13,18 @@ public enum PromptGalleryEditorCommitKind
 // Reports a persisted change together with the identity the owner should adopt.
 public sealed record PromptGalleryEditorCommit(Guid ItemId, PromptGalleryEditorCommitKind Kind);
 
+// One supported provider/model declaration in the persistence owner's normalized form. The fields stay separate so
+// two declarations can only compare equal when provider, model and preference each match; a joined string would let
+// a delimiter inside a provider or model name make different declarations indistinguishable.
+public readonly record struct PromptGalleryModelKey(string Provider, string Model, bool IsPreferred)
+{
+    public static PromptGalleryModelKey From(PromptProviderModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        return new PromptGalleryModelKey(model.Provider.Trim().ToUpperInvariant(), model.Model.Trim().ToUpperInvariant(), model.IsPreferred);
+    }
+}
+
 // Normalized editable content of one persisted revision. Two revisions with matching content differ only by
 // non-editable commands (archive, restore, finalize), so their token can be adopted without a lost update.
 public sealed record PromptGalleryPersistedContent(
@@ -22,7 +34,7 @@ public sealed record PromptGalleryPersistedContent(
     string Phase,
     string Content,
     IReadOnlyList<string> TagKeys,
-    IReadOnlyList<string> ModelKeys,
+    IReadOnlyList<PromptGalleryModelKey> ModelKeys,
     IReadOnlyList<PromptGalleryConsumer> Consumers,
     PromptModelRecommendations Recommendations)
 {
@@ -65,7 +77,7 @@ public sealed record PromptGalleryPersistedContent(
                string.Equals(Phase, other.Phase, StringComparison.Ordinal) &&
                string.Equals(Content, other.Content, StringComparison.Ordinal) &&
                TagKeys.SequenceEqual(other.TagKeys, StringComparer.Ordinal) &&
-               ModelKeys.SequenceEqual(other.ModelKeys, StringComparer.Ordinal) &&
+               ModelKeys.SequenceEqual(other.ModelKeys) &&
                Consumers.SequenceEqual(other.Consumers) &&
                Recommendations.Temperature == other.Recommendations.Temperature &&
                Recommendations.MaxOutputTokens == other.Recommendations.MaxOutputTokens &&
@@ -94,9 +106,11 @@ public sealed record PromptGalleryPersistedContent(
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(tag => tag, StringComparer.Ordinal)
                 .ToArray(),
-            models.Select(model => $"{model.Provider.Trim().ToUpperInvariant()}|{model.Model.Trim().ToUpperInvariant()}|{model.IsPreferred}")
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(key => key, StringComparer.Ordinal)
+            models.Select(PromptGalleryModelKey.From)
+                .Distinct()
+                .OrderBy(key => key.Provider, StringComparer.Ordinal)
+                .ThenBy(key => key.Model, StringComparer.Ordinal)
+                .ThenBy(key => key.IsPreferred)
                 .ToArray(),
             consumers.Distinct().OrderBy(consumer => consumer).ToArray(),
             recommendations);
@@ -623,8 +637,18 @@ public sealed class PromptGalleryEditorSession : IAsyncDisposable
         var content = PromptGalleryPersistedContent.FromDetails(item);
         if (ownToken.HasValue && item.UpdatedAtUtc == ownToken.Value)
         {
-            // The read-back is exactly the revision this editor wrote; its normalized content becomes the baseline.
-            AdoptBaseline(item, content);
+            // The header carries this editor's own receipt token, but the owner assembles the collections with separate
+            // queries, so the header alone does not prove that every returned value belongs to that revision. The
+            // accepted baseline therefore stays the content this editor submitted; only the identity metadata is taken
+            // from the read-back. Content that differs from the submission can only come from another actor's revision,
+            // which makes that conflict visible now instead of at the next command.
+            projectId = item.ProjectId;
+            collectionId = item.CollectionId;
+            if (baselineContent is not null && !content.Matches(baselineContent))
+            {
+                externalChange = ExternalChangeMessage;
+            }
+
             return;
         }
 
