@@ -4,8 +4,29 @@
     {
       "name": "candoitall-web",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "src/App/CanDoItAll.Web", "-c", "Release", "--no-build"],
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/App/CanDoItAll.Web",
+        "-c",
+        "Release",
+        "--no-build"
+      ],
       "port": 5032
+    },
+    {
+      "name": "prompts-sandbox",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Sandboxes/CanDoItAll.Prompts.UiSandbox",
+        "-c",
+        "Debug",
+        "--launch-profile",
+        "Prompts sandbox"
+      ],
+      "port": 5395
     }
   ]
 }

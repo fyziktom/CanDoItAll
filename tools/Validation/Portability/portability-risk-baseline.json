@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-15T14:09:01.889930+00:00",
+  "generated_utc": "2026-09-16T10:53:47.572250+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14672,
+  "allowance_count": 14681,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -54542,51 +54542,39 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryItemEditor.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Prompts.Contracts/PromptGalleryCompatibility.cs",
       "category": "case-policy",
-      "source_fingerprint": "490d77fe4d59d5278f0a243ba87ce42065481819cfe988faae55d7929e3ef4a1",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryItemEditor.razor",
-      "category": "case-policy",
-      "source_fingerprint": "50925f2afc73a4f5d96e7e48bcf4a08c4cd8d20cedacd5577e2349a49f9db063",
+      "source_fingerprint": "0addb4cb499acc4f8dc38c961e4806a8b8628146e5336bbe1fb76b684a8edba9",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryItemEditor.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Prompts.Contracts/PromptGalleryCompatibility.cs",
       "category": "case-policy",
-      "source_fingerprint": "cefa2feb789e5c8b26047c54868e9fa566b41a97ef4316e88196bc2b5e5483a3",
+      "source_fingerprint": "e10a0062efd9efe717f6301f690c2240896e09767a04e8e1fdb6ed170cef9500",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGalleryItemEditor.razor",
-      "category": "case-policy",
-      "source_fingerprint": "e7117d5f4b92fdfd9004b9b09ebbed20502265deb777ed0308c7b2b26bdaf17b",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGallerySearchList.razor",
-      "category": "case-policy",
-      "source_fingerprint": "5eb86221b7c3328568e01de050885ad6c6ca8fbc05fbee7ceb69a79d2520a47d",
+      "path": "src/Modules/CanDoItAll.Modules.Prompts.Contracts/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "487e7b8d725134eadd80769a19eb04c5837c77a5fe9701fe0a1628c3bd10f424",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGallerySearchList.razor",
-      "category": "case-policy",
-      "source_fingerprint": "824597b3c7545455adaedcea7200c392c2d6ca6c16f3420eb77b0b8ac5ff987a",
+      "path": "src/Modules/CanDoItAll.Modules.Prompts.Contracts/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "a41b47bbfc742edd9bbb181b4d0a1520025a977dfe506ce3e4880815bffc2f25",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/PromptGalleryCompatibility.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGallerySearchSession.cs",
       "category": "case-policy",
-      "source_fingerprint": "0889ea86b69696c0b1f2d639045375ee203aa45a838c2fb06f1ca11782bca327",
+      "source_fingerprint": "35014715745cf07736a6aa70820d4512a2b575eabedf37d2c7d66834f579881c",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Prompts/PromptGalleryCompatibility.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGallerySearchSession.cs",
       "category": "case-policy",
-      "source_fingerprint": "353cc417eec2a026a8cf854bab0670a332a6d1a459d80892b2fe43dbd6f66f75",
+      "source_fingerprint": "e99af614a89d3e61ffad39d8cde61271556beaa5ceabbecfee585a37515c8c0f",
       "count": 1
     },
     {
@@ -71468,6 +71456,60 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "045fb3b188e78611edef23b1fbbaf276a91eec062066163a1d1b9e8e3a90b012",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "45279e485972d465f25da750981ecf7235da5f68e1e55922de8c9e641417d6fa",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "8b98b19e732e16abd15403cb0b5f0d8ee192ddee53c35c8c1ab5d7eb5864c035",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9dec66890fe98e2630f256532572694a929841778348ef8477c9fbce3c7a8998",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a2eef2fcff462dadbc0bcdf52f0dd9358b43e7b8ef37f130c4051b1ecc762f24",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c7cdc91dd1a4ec36453c6d266d712564534df31b5b866fca5e5477497fe8206d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cc6d25f19a74aba39ebfb9910c2d78ce394bf560b455fccd890c035a476e07bb",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e4ad7b062aa0e253b3f74fa425b4a20a4020f3c75db46ddbe99677f19e384e05",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/README.md",
+      "category": "external-tool",
+      "source_fingerprint": "09ae2574ec342e8b9524865ca37c3d1343b67cebe957c636742e79f847a89431",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
       "category": "mcp",
       "source_fingerprint": "0b30ee0cf769125b0f899d53c9ac256a40b6ab76433ebc04e5eb1221f3772821",
@@ -72341,6 +72383,30 @@
       "path": "src/UI/CanDoItAll.Conversations.Shell/README.md",
       "category": "windows-executable",
       "source_fingerprint": "132e2f75bebe5426882ad3f8a6396245fec9651e112d3685b62cc69792fb5f90",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryEditorForm.cs",
+      "category": "case-policy",
+      "source_fingerprint": "454ab7684b7f89907cf1aefee5cdbb85f77b36f484e4c9842556b8a05f8916da",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryEditorForm.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c84ec238123b147c28125e56fe6d8a5a118d9c74441a52380b6964da96bcd641",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryEditorForm.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c9694054e8fed0cbe0e60f218963fa7d3650a2247645c4eee0bae669ba2a26ad",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryEditorForm.cs",
+      "category": "case-policy",
+      "source_fingerprint": "fb897889ce1a2d60c88d3cc0c53ebba26c31c481f0ce044eb1913ce3a5e03dd9",
       "count": 1
     },
     {

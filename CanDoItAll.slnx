@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/Sandboxes/">
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Prompts.UiSandbox/CanDoItAll.Prompts.UiSandbox.csproj" />
   </Folder>
   <Folder Name="/src/App/">
     <Project Path="src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" />
@@ -40,6 +41,7 @@
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj" />
+    <Project Path="src/UI/CanDoItAll.Prompts.UI/CanDoItAll.Prompts.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj" />
   </Folder>
   <Folder Name="/src/MAF/Common/">
@@ -118,6 +120,7 @@
     <Project Path="src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Prompts.Contracts/CanDoItAll.Modules.Prompts.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj" />

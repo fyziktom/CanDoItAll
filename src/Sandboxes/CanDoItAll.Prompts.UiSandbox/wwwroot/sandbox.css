@@ -1,0 +1,49 @@
+html,
+body {
+    min-height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}
+
+a {
+    color: inherit;
+}
+
+.prompts-sandbox__controls {
+    box-sizing: border-box;
+    padding: 24px max(24px, calc((100vw - 1350px) / 2));
+}
+
+.prompts-sandbox__frame {
+    margin: 0 24px 24px;
+}
+
+/* Reproduces the application shell offsets so a 1600x1000 capture matches the production page frame. */
+.prompts-sandbox__frame--matched {
+    width: calc(100vw - 181px);
+    margin-left: 125px;
+    margin-right: 56px;
+}
+
+/* A deliberately constrained container for wrapping, clamping and filter-rail behavior. */
+.prompts-sandbox__frame--narrow {
+    max-width: 960px;
+    margin-inline: auto;
+}
+
+@media (max-width: 1023px) {
+    .prompts-sandbox__frame--matched {
+        width: auto;
+        margin-inline: 24px;
+    }
+}

@@ -10,7 +10,11 @@
     "catalog:css:build": "npm --prefix Tailwind run catalog:build",
     "catalog:css:watch": "npm --prefix Tailwind run catalog:watch",
     "catalog:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile \"Catalog sandbox\" --property:CatalogAssetMode=Parity",
-    "catalog:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile \"Catalog sandbox Fast\" --property:CatalogAssetMode=Fast"
+    "catalog:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile \"Catalog sandbox Fast\" --property:CatalogAssetMode=Fast",
+    "prompts:css:build": "npm --prefix Tailwind run prompts:build",
+    "prompts:css:watch": "npm --prefix Tailwind run prompts:watch",
+    "prompts:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.Prompts.UiSandbox --launch-profile \"Prompts sandbox\" --property:PromptsAssetMode=Parity",
+    "prompts:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.Prompts.UiSandbox --launch-profile \"Prompts sandbox Fast\" --property:PromptsAssetMode=Fast"
   },
   "repository": {
     "type": "git",

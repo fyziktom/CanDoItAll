@@ -38,7 +38,7 @@
     </Header>
 
     <ChildContent>
-        <PromptGallerySearchList @key="listKey"
+        <PromptGallerySearchHost @ref="searchHost"
                                  PageSize="25"
                                  Compact="false"
                                  AllowEdit="true"
@@ -57,20 +57,25 @@
         TestId="prompt-gallery-editor-dialog"
         OnClose="CloseEditorAsync">
     <ChildContent>
-        <PromptGalleryItemEditor ItemId="@selectedItemId"
-                                 Saved="HandleSavedAsync"
-                                 Cancelled="CloseEditorAsync" />
+        @if (editorOpen)
+        {
+            <PromptGalleryItemEditorHost ItemId="@selectedItemId"
+                                         Committed="HandleCommittedAsync"
+                                         Cancelled="CloseEditorAsync" />
+        }
     </ChildContent>
 </Dialog>
 
 @code {
-    private Guid listKey = Guid.NewGuid();
+    private PromptGallerySearchHost? searchHost;
     private Guid? selectedItemId;
-    private Guid? openedQueryItemId;
+    private Guid? observedPromptIdQuery;
+    private bool promptIdObserved;
     private bool editorDirty;
     private bool editorOpen;
     private bool isOpeningCurator;
     private bool isLoadingCuratorPresentation;
+    private bool curatorContextFailed;
     private PromptGalleryCuratorPresentation? curatorPresentation;
     private IPromptGalleryCuratorContextLease? curatorContextLease;
 
@@ -81,25 +86,47 @@
 
     private string CuratorDisplayName => curatorPresentation?.Name ?? "Prompts Curator Agent";
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        if (CuratorLauncher.IsAvailable)
-        {
-            curatorContextLease ??= CuratorLauncher.ActivateContext();
-            curatorContextLease.SynchronizeNavigation();
+        SynchronizeCurator();
 
-            await LoadCuratorPresentationAsync();
-        }
-
-        if (!PromptIdQuery.HasValue || openedQueryItemId == PromptIdQuery)
+        // A changed promptId request opens the editor; the same value echoed by a rerender never reopens a closed one.
+        if (promptIdObserved && observedPromptIdQuery == PromptIdQuery)
         {
             return;
         }
 
-        openedQueryItemId = PromptIdQuery;
-        selectedItemId = PromptIdQuery;
-        editorDirty = false;
-        editorOpen = true;
+        promptIdObserved = true;
+        observedPromptIdQuery = PromptIdQuery;
+        if (PromptIdQuery.HasValue)
+        {
+            selectedItemId = PromptIdQuery;
+            editorDirty = false;
+            editorOpen = true;
+        }
+    }
+
+    private void SynchronizeCurator()
+    {
+        if (!CuratorLauncher.IsAvailable || curatorContextFailed)
+        {
+            return;
+        }
+
+        try
+        {
+            curatorContextLease ??= CuratorLauncher.ActivateContext();
+            curatorContextLease.SynchronizeNavigation();
+        }
+        catch (Exception exception)
+        {
+            // The Curator integration is optional; its failure never blocks the gallery itself.
+            curatorContextFailed = true;
+            Notifications.Error("Unable to prepare Prompts Curator", exception.Message);
+            return;
+        }
+
+        _ = LoadCuratorPresentationAsync();
     }
 
     private Task CreateNewAsync()
@@ -167,26 +194,33 @@
         {
             isLoadingCuratorPresentation = false;
         }
+
+        await InvokeAsync(StateHasChanged);
     }
 
-    private Task HandleSavedAsync(Guid itemId)
+    private Task HandleCommittedAsync(PromptGalleryEditorCommit commit)
     {
-        selectedItemId = itemId;
+        // The editor reports the identity it owns; the page echoes it back as the requested target.
+        selectedItemId = commit.ItemId;
         editorDirty = true;
         return Task.CompletedTask;
     }
 
-    private Task CloseEditorAsync()
+    private async Task CloseEditorAsync()
     {
         editorOpen = false;
         selectedItemId = null;
-        if (editorDirty)
+        if (!editorDirty)
         {
-            listKey = Guid.NewGuid();
-            editorDirty = false;
+            return;
         }
 
-        return Task.CompletedTask;
+        // Persisted changes invalidate the catalog data in place; filters and paging are preserved.
+        editorDirty = false;
+        if (searchHost is not null)
+        {
+            await searchHost.RefreshAsync();
+        }
     }
 
     public void Dispose()

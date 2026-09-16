@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject IPromptGalleryService PromptGallery
 @inject DialogService DialogService
 @inject NotificationService Notifications
@@ -16,6 +17,13 @@
                            Selected="HandleSelectionAsync" />
 
 @code {
+    private readonly CancellationTokenSource lifetime = new();
+    private long contextGeneration;
+    private string? observedProvider;
+    private string? observedModel;
+    private bool observed;
+    private bool disposed;
+
     [Parameter]
     public string? Provider { get; set; }
 
@@ -31,83 +39,164 @@
     [Parameter, EditorRequired]
     public EventCallback<string> ContentSelected { get; set; }
 
-    private async Task HandleSelectionAsync(PromptGallerySelection selection)
+    protected override void OnParametersSet()
     {
-        var compatibilityResult = await PromptGallery.EvaluateCompatibilityAsync(
-            selection.ArtifactId,
-            new PromptGalleryConsumerContext(
-                PromptGalleryConsumer.Chat,
-                PromptGalleryCompatibilityPurpose.Selection,
-                Provider: Provider,
-                Model: Model));
-        if (compatibilityResult.IsFailure || compatibilityResult.Value is null)
+        if (observed &&
+            string.Equals(observedProvider, Provider, StringComparison.Ordinal) &&
+            string.Equals(observedModel, Model, StringComparison.Ordinal))
         {
-            Notifications.Warning(
-                "Prompt compatibility unavailable",
-                DescribeErrors(compatibilityResult.Errors));
             return;
         }
 
-        var compatibility = compatibilityResult.Value;
-        var decision = PromptCompatibilityWarningDecision.InsertAnyway;
-        if (!compatibility.CanUse || compatibility.HasVisibleWarnings)
+        // A changed chat provider/model invalidates any selection still being evaluated against the previous context.
+        observed = true;
+        observedProvider = Provider;
+        observedModel = Model;
+        contextGeneration++;
+    }
+
+    private async Task HandleSelectionAsync(PromptGallerySelection selection)
+    {
+        if (disposed)
         {
-            var dialogResult = await DialogService.OpenAsync<PromptCompatibilityWarningDialog>(
-                "Prompt compatibility",
-                new Dictionary<string, object?>
-                {
-                    [nameof(PromptCompatibilityWarningDialog.Selection)] = selection,
-                    [nameof(PromptCompatibilityWarningDialog.Compatibility)] = compatibility
-                },
-                new DialogOptions
-                {
-                    Eyebrow = "Provider and model check",
-                    Subtitle = "Review declared compatibility before inserting this prompt.",
-                    Size = ModalSize.Medium,
-                    DenseChrome = true,
-                    TestId = "prompt-gallery-chat-compatibility-dialog",
-                    AriaLabel = "Prompt compatibility warning"
-                });
-            if (dialogResult is not PromptCompatibilityWarningDecision selectedDecision ||
-                selectedDecision == PromptCompatibilityWarningDecision.Cancel)
+            return;
+        }
+
+        var generation = contextGeneration;
+        try
+        {
+            var compatibilityResult = await PromptGallery.EvaluateCompatibilityAsync(
+                selection.ArtifactId,
+                new PromptGalleryConsumerContext(
+                    PromptGalleryConsumer.Chat,
+                    PromptGalleryCompatibilityPurpose.Selection,
+                    Provider: Provider,
+                    Model: Model),
+                lifetime.Token);
+            if (!IsCurrent(generation))
             {
                 return;
             }
 
-            decision = selectedDecision;
-        }
-
-        if (decision == PromptCompatibilityWarningDecision.InsertAndSuppress)
-        {
-            foreach (var issue in compatibility.Issues.Where(issue =>
-                         !issue.IsSuppressed && issue.IsSuppressible))
+            if (compatibilityResult.IsFailure || compatibilityResult.Value is null)
             {
-                var suppression = await PromptGallery.SetWarningSuppressionAsync(
-                    selection.ArtifactId,
-                    PromptGalleryConsumer.Chat,
-                    issue.Code,
-                    suppressed: true);
-                if (suppression.IsFailure)
+                Notifications.Warning(
+                    "Prompt compatibility unavailable",
+                    PromptGalleryNotices.DescribeErrors(compatibilityResult.Errors, "The Prompt Gallery did not return a result."));
+                return;
+            }
+
+            var compatibility = compatibilityResult.Value;
+            var decision = PromptCompatibilityWarningDecision.InsertAnyway;
+            if (!compatibility.CanUse || compatibility.HasVisibleWarnings)
+            {
+                var decided = await AskAsync(new PromptCompatibilityWarningPresentation(
+                    selection.Title,
+                    selection.Summary,
+                    selection.Kind,
+                    selection.VersionNumber,
+                    compatibility));
+                if (!IsCurrent(generation))
                 {
-                    Notifications.Warning(
-                        "Warning preference was not saved",
-                        DescribeErrors(suppression.Errors));
+                    return;
+                }
+
+                if (decided is not { } selectedDecision || selectedDecision == PromptCompatibilityWarningDecision.Cancel)
+                {
+                    return;
+                }
+
+                decision = selectedDecision;
+            }
+
+            if (decision == PromptCompatibilityWarningDecision.InsertAndSuppress)
+            {
+                foreach (var issue in compatibility.Issues.Where(issue => !issue.IsSuppressed && issue.IsSuppressible))
+                {
+                    var suppression = await PromptGallery.SetWarningSuppressionAsync(
+                        selection.ArtifactId,
+                        PromptGalleryConsumer.Chat,
+                        issue.Code,
+                        suppressed: true,
+                        lifetime.Token);
+                    if (!IsCurrent(generation))
+                    {
+                        return;
+                    }
+
+                    // A rejected preference is reported on its own; the consented insertion still proceeds.
+                    if (suppression.IsFailure)
+                    {
+                        Notifications.Warning(
+                            "Warning preference was not saved",
+                            PromptGalleryNotices.DescribeErrors(suppression.Errors, "The Prompt Gallery did not return a result."));
+                    }
                 }
             }
-        }
 
-        var content = selection.Content.Trim();
-        if (content.Length == 0)
+            var content = selection.Content.Trim();
+            if (content.Length == 0)
+            {
+                Notifications.Warning("Prompt is empty", "The selected Gallery item has no content to insert.");
+                return;
+            }
+
+            await ContentSelected.InvokeAsync(content);
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
         {
-            Notifications.Warning("Prompt is empty", "The selected Gallery item has no content to insert.");
+        }
+        catch (Exception exception)
+        {
+            if (!disposed)
+            {
+                Notifications.Error("Prompt could not be inserted", exception.Message);
+            }
+        }
+    }
+
+    private async Task<PromptCompatibilityWarningDecision?> AskAsync(PromptCompatibilityWarningPresentation presentation)
+    {
+        // The warning surface is rendered inline; the decision closes exactly this dialog reference.
+        var result = await DialogService.OpenAsync(
+            "Prompt compatibility",
+            dialog => builder =>
+            {
+                builder.OpenComponent<PromptCompatibilityWarningSurface>(0);
+                builder.AddAttribute(1, nameof(PromptCompatibilityWarningSurface.Presentation), presentation);
+                builder.AddAttribute(
+                    2,
+                    nameof(PromptCompatibilityWarningSurface.Decision),
+                    EventCallback.Factory.Create<PromptCompatibilityWarningDecision>(
+                        this,
+                        (PromptCompatibilityWarningDecision decision) => dialog.CloseAsync(decision)));
+                builder.CloseComponent();
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Provider and model check",
+                Subtitle = "Review declared compatibility before inserting this prompt.",
+                Size = ModalSize.Medium,
+                DenseChrome = true,
+                TestId = "prompt-gallery-chat-compatibility-dialog",
+                AriaLabel = "Prompt compatibility warning"
+            },
+            lifetime.Token);
+        return result as PromptCompatibilityWarningDecision?;
+    }
+
+    private bool IsCurrent(long generation)
+        => !disposed && generation == contextGeneration;
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
             return;
         }
 
-        await ContentSelected.InvokeAsync(content);
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
     }
-
-    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
-        => errors.Count == 0
-            ? "The Prompt Gallery did not return a result."
-            : string.Join(" ", errors.Select(error => error.Message));
 }

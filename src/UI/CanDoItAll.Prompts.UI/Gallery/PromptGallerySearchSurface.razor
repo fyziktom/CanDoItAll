@@ -1,0 +1,344 @@
+<Stack GapScale="LayoutGap.Medium"
+       Class="prompt-gallery-search-list"
+       data-testid="prompt-gallery-search-list">
+    <FilterBar ResultText="@ResultText">
+        <Grid Gap="LayoutGap.Small"
+              AlignItems="AlignItems.Center"
+              ColumnTemplate="@FilterColumnTemplate"
+              Class="min-w-0 flex-1"
+              data-testid="prompt-gallery-filter-rail">
+            <TextBox Value="@Filters.Text"
+                     ValueChanged="HandleSearchChangedAsync"
+                     Placeholder="Search names, prompt text, or tags"
+                     Immediate="true"
+                     aria-label="Search prompt gallery"
+                     data-testid="prompt-gallery-search" />
+            <InputSelect TValue="PromptGalleryItemKind?"
+                         Value="@Filters.Kind"
+                         ValueChanged="HandleKindChangedAsync"
+                         ValueExpression="@(() => Filters.Kind)"
+                         class="cda-input"
+                         aria-label="Prompt kind"
+                         data-testid="prompt-gallery-kind-filter">
+                <option value="">All kinds</option>
+                @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
+                {
+                    <option value="@option">@PromptGalleryText.FormatKind(option)</option>
+                }
+            </InputSelect>
+            <InputSelect TValue="PromptArtifactStatus?"
+                         Value="@Filters.Status"
+                         ValueChanged="HandleStatusChangedAsync"
+                         ValueExpression="@(() => Filters.Status)"
+                         class="cda-input"
+                         aria-label="Prompt status"
+                         data-testid="prompt-gallery-status-filter">
+                <option value="">All statuses</option>
+                @foreach (var option in Enum.GetValues<PromptArtifactStatus>())
+                {
+                    <option value="@option">@option</option>
+                }
+            </InputSelect>
+            <TagEditor Value="@Filters.Tags"
+                       ValueChanged="HandleTagsChangedAsync"
+                       Suggestions="@Presentation.AvailableTags"
+                       Placeholder="Filter by tags"
+                       MaxTags="20"
+                       TestId="prompt-gallery-tag-filter"
+                       InputTestId="prompt-gallery-tag-filter-input" />
+            @if (!Compact)
+            {
+                <TextBox Value="@Filters.ProviderFilter"
+                         ValueChanged="HandleProviderFilterChangedAsync"
+                         Placeholder="Any provider"
+                         Immediate="true"
+                         aria-label="Filter by supported provider"
+                         data-testid="prompt-gallery-provider-filter" />
+                <TextBox Value="@Filters.ModelFilter"
+                         ValueChanged="HandleModelFilterChangedAsync"
+                         Placeholder="Any model"
+                         Immediate="true"
+                         aria-label="Filter by supported model"
+                         data-testid="prompt-gallery-model-filter" />
+            }
+            <label class="prompt-gallery-search-list__choice">
+                <CheckBox TValue="bool"
+                          Value="@Filters.FavoritesOnly"
+                          ValueChanged="HandleFavoritesOnlyChangedAsync"
+                          aria-label="Show favorite prompt items only"
+                          data-testid="prompt-gallery-favorites-filter" />
+                <span>Favorites</span>
+            </label>
+            @if (!Compact)
+            {
+                <label class="prompt-gallery-search-list__choice">
+                    <CheckBox TValue="bool"
+                              Value="@Filters.IncludeArchived"
+                              ValueChanged="HandleIncludeArchivedChangedAsync"
+                              aria-label="Include archived prompt items"
+                              data-testid="prompt-gallery-archived-filter" />
+                    <span>Include archived items</span>
+                </label>
+            }
+            <Button Text=""
+                    Icon="filter_alt_off"
+                    ButtonStyle="ButtonStyle.Light"
+                    Variant="Variant.Text"
+                    Size="ButtonSize.Small"
+                    Click="ClearFiltersAsync"
+                    aria-label="Clear prompt gallery filters"
+                    title="Clear filters"
+                    data-testid="prompt-gallery-clear-filters" />
+        </Grid>
+    </FilterBar>
+
+    @if (Presentation.OffersActualChatModelFilter)
+    {
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
+            <label class="prompt-gallery-search-list__choice">
+                <CheckBox TValue="bool"
+                          Value="@Filters.ActualChatModelOnly"
+                          ValueChanged="HandleActualChatModelFilterChangedAsync"
+                          aria-label="Show actual chat model only"
+                          data-testid="prompt-gallery-actual-model-filter" />
+                <span>Show actual chat model only</span>
+            </label>
+            @if (Presentation.HasContextProvider)
+            {
+                <StatusBadge Tone="info" Text="@Presentation.ContextProvider" />
+            }
+            <StatusBadge Tone="accent" Text="@Presentation.ContextModel" />
+        </Cluster>
+    }
+    else if (Presentation.ShowsContextBadges)
+    {
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Compatibility filter" />
+            @if (Presentation.HasContextProvider)
+            {
+                <StatusBadge Tone="info" Text="@Presentation.ContextProvider" />
+            }
+            @if (Presentation.HasContextModel)
+            {
+                <StatusBadge Tone="accent" Text="@Presentation.ContextModel" />
+            }
+        </Cluster>
+    }
+
+    @if (Presentation.IsLoading)
+    {
+        <LoadingState Eyebrow="Prompt gallery"
+                      Title="Searching reusable prompts"
+                      Description="Loading the requested page from the configured search driver." />
+    }
+    else if (!string.IsNullOrWhiteSpace(Presentation.LoadError))
+    {
+        <EmptyState Eyebrow="Gallery unavailable"
+                    Title="Prompt items could not be loaded"
+                    Description="@Presentation.LoadError">
+            <Actions>
+                <Button Text="Retry" Icon="refresh" Click="RetryAsync" data-testid="prompt-gallery-retry" />
+            </Actions>
+        </EmptyState>
+    }
+    else if (Presentation.Items.Count == 0)
+    {
+        <EmptyState Eyebrow="No matches"
+                    Title="No prompt items match these filters"
+                    Description="Clear one or more filters or create a new gallery item." />
+    }
+    else
+    {
+        <DataGrid TItem="PromptGallerySearchItem"
+                  Data="@Presentation.Items"
+                  AllowPaging="false"
+                  data-testid="prompt-gallery-grid">
+            <Columns>
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Prompt item">
+                    <Template Context="item">
+                        <Stack GapScale="LayoutGap.Tiny" Class="prompt-gallery-search-list__identity">
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@item.Title" />
+                            <TextBlock Value="@PromptGalleryText.Excerpt(item)" />
+                        </Stack>
+                    </Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Kind / status">
+                    <Template Context="item">
+                        <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="accent" Text="@PromptGalleryText.FormatKind(item.Kind)" NoWrap="true" />
+                            <StatusBadge Tone="@PromptGalleryText.StatusTone(item)" Text="@PromptGalleryText.StatusLabel(item)" NoWrap="true" />
+                            @if (item.CurrentVersionNumber > 0)
+                            {
+                                <StatusBadge Tone="neutral" Text="@($"v{item.CurrentVersionNumber}")" NoWrap="true" />
+                            }
+                        </Cluster>
+                    </Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Tags">
+                    <Template Context="item">
+                        <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                            @foreach (var tag in item.Tags.Take(5))
+                            {
+                                <StatusBadge Tone="neutral" Text="@tag" NoWrap="true" />
+                            }
+                            @if (item.Tags.Count > 5)
+                            {
+                                <StatusBadge Tone="info" Text="@($"+{item.Tags.Count - 5}")" NoWrap="true" />
+                            }
+                        </Cluster>
+                    </Template>
+                </DataGridColumn>
+                @if (!Compact)
+                {
+                    <DataGridColumn TItem="PromptGallerySearchItem" Title="Model guidance">
+                        <Template Context="item">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <TextBlock Value="@PromptGalleryText.ModelSummary(item)" />
+                                <TextBlock Value="@PromptGalleryText.RecommendationSummary(item.Recommendations)" />
+                            </Stack>
+                        </Template>
+                    </DataGridColumn>
+                }
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Actions">
+                    <Template Context="item">
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap">
+                            <Button Text=""
+                                    Icon="@(item.IsFavorite ? "star" : "star_border")"
+                                    ButtonStyle="@(item.IsFavorite ? ButtonStyle.Warning : ButtonStyle.Light)"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@(Presentation.FavoriteBusyItemId == item.Id)"
+                                    Click="@(() => ToggleFavoriteAsync(item))"
+                                    aria-label="@(item.IsFavorite ? "Remove favorite" : "Mark favorite")"
+                                    aria-pressed="@(item.IsFavorite ? "true" : "false")"
+                                    title="@(item.IsFavorite ? "Remove favorite" : "Mark favorite")"
+                                    data-testid="prompt-gallery-favorite" />
+                            @if (ShowSelectAction)
+                            {
+                                <Button Text="@SelectText"
+                                        Icon="add_circle"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => SelectAsync(item))"
+                                        data-testid="prompt-gallery-select" />
+                            }
+                            @if (AllowEdit)
+                            {
+                                <Button Text="Details"
+                                        Icon="edit"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => EditAsync(item.Id))"
+                                        data-testid="prompt-gallery-edit" />
+                            }
+                        </Cluster>
+                    </Template>
+                </DataGridColumn>
+            </Columns>
+        </DataGrid>
+
+        <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Center">
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Previous"
+                        Icon="chevron_left"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(Presentation.PageIndex <= 0)"
+                        Click="PreviousPageAsync"
+                        data-testid="prompt-gallery-previous-page" />
+                <Button Text="Next"
+                        Icon="chevron_right"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(Presentation.PageIndex + 1 >= Presentation.TotalPages)"
+                        Click="NextPageAsync"
+                        data-testid="prompt-gallery-next-page" />
+            </Cluster>
+            <StatusBadge Tone="neutral" Text="@PageText" />
+        </Split>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public PromptGallerySearchPresentation Presentation { get; set; } = PromptGallerySearchPresentation.Initial;
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public bool AllowEdit { get; set; } = true;
+
+    [Parameter]
+    public bool ShowSelectAction { get; set; } = true;
+
+    [Parameter]
+    public string SelectText { get; set; } = "Select";
+
+    [Parameter]
+    public EventCallback<PromptGallerySearchIntent> Intent { get; set; }
+
+    private PromptGalleryFilterValues Filters => Presentation.Filters;
+
+    private string ResultText => Presentation.IsLoading
+        ? "Searching"
+        : $"{Presentation.TotalCount:N0} matching item(s)";
+
+    private string FilterColumnTemplate => Compact
+        ? "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.2fr) auto auto"
+        : "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.25fr) minmax(9rem,.8fr) minmax(10rem,.9fr) auto auto auto";
+
+    private string PageText => Presentation.TotalPages == 0
+        ? "No pages"
+        : $"Page {Presentation.PageIndex + 1:N0} of {Presentation.TotalPages:N0} · {Presentation.TotalCount:N0} item(s)";
+
+    private Task HandleSearchChangedAsync(string? value)
+        => ChangeAsync(Filters with { Text = value ?? string.Empty }, debounce: true);
+
+    private Task HandleTagsChangedAsync(IReadOnlyList<string> value)
+        => ChangeAsync(Filters with { Tags = value.ToArray() }, debounce: false);
+
+    private Task HandleKindChangedAsync(PromptGalleryItemKind? value)
+        => ChangeAsync(Filters with { Kind = value }, debounce: false);
+
+    private Task HandleStatusChangedAsync(PromptArtifactStatus? value)
+        => ChangeAsync(Filters with { Status = value }, debounce: false);
+
+    private Task HandleProviderFilterChangedAsync(string? value)
+        => ChangeAsync(Filters with { ProviderFilter = value ?? string.Empty }, debounce: true);
+
+    private Task HandleModelFilterChangedAsync(string? value)
+        => ChangeAsync(Filters with { ModelFilter = value ?? string.Empty }, debounce: true);
+
+    private Task HandleIncludeArchivedChangedAsync(bool value)
+        => ChangeAsync(Filters with { IncludeArchived = value }, debounce: false);
+
+    private Task HandleFavoritesOnlyChangedAsync(bool value)
+        => ChangeAsync(Filters with { FavoritesOnly = value }, debounce: false);
+
+    private Task HandleActualChatModelFilterChangedAsync(bool value)
+        => ChangeAsync(Filters with { ActualChatModelOnly = value }, debounce: false);
+
+    private Task ChangeAsync(PromptGalleryFilterValues filters, bool debounce)
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.ChangeFilters(filters, debounce));
+
+    private Task ClearFiltersAsync()
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.ClearFilters());
+
+    private Task RetryAsync()
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.Retry());
+
+    private Task PreviousPageAsync()
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.LoadPage(Math.Max(0, Presentation.PageIndex - 1)));
+
+    private Task NextPageAsync()
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.LoadPage(Presentation.PageIndex + 1));
+
+    private Task ToggleFavoriteAsync(PromptGallerySearchItem item)
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.ToggleFavorite(item));
+
+    private Task SelectAsync(PromptGallerySearchItem item)
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.Select(item));
+
+    private Task EditAsync(Guid itemId)
+        => Intent.InvokeAsync(new PromptGallerySearchIntent.Edit(itemId));
+}

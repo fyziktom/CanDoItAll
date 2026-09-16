@@ -72,6 +72,27 @@ list before the queued disposal reads it, leaving old components and their scope
 registrations alive. The helper dispatches the entire operation; its regression test
 holds the renderer busy to verify that disposal still releases the rendered components.
 
+### Prompt Gallery UI slice
+
+For changes under `src/UI/CanDoItAll.Prompts.UI`, `src/Modules/CanDoItAll.Modules.Prompts.Contracts`,
+the Prompt Gallery hosts in `src/Modules/CanDoItAll.Modules.Prompts` or the
+`src/Sandboxes/CanDoItAll.Prompts.UiSandbox` host, build the changed production projects and run
+the owning slices with a stated discovery count:
+
+```powershell
+dotnet build ./src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj --configuration Release /m:1
+dotnet build ./src/Sandboxes/CanDoItAll.Prompts.UiSandbox/CanDoItAll.Prompts.UiSandbox.csproj --configuration Release /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts." /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts." /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.Prompts." /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.Prompts." /m:1
+```
+
+The trailing dot keeps the unrelated `PromptsDbContextTests` out of the Unit filter. Browser
+evidence for the production page is `FullyQualifiedName~PromptGalleryBrowserTests` in the
+Playwright project; the sandbox is exercised through `PromptsSandboxTests` and manually via
+[its README](../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/README.md).
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

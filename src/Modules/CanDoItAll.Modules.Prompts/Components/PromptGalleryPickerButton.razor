@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject DialogService DialogService
 @inject NotificationService Notifications
 
@@ -13,6 +14,10 @@
         data-testid="prompt-gallery-picker-button" />
 
 @code {
+    private readonly CancellationTokenSource lifetime = new();
+    private bool isOpen;
+    private bool disposed;
+
     [Parameter]
     public string Text { get; set; } = "Browse prompt gallery";
 
@@ -62,8 +67,15 @@
 
     private async Task OpenAsync()
     {
+        if (disposed || isOpen)
+        {
+            return;
+        }
+
+        isOpen = true;
         try
         {
+            // The picker dialog belongs to this button's lifetime; disposing the button closes it and drops its result.
             var result = await DialogService.OpenAsync<PromptGalleryPickerDialog>(
                 "Prompt gallery",
                 new Dictionary<string, object?>
@@ -83,15 +95,43 @@
                     DenseChrome = true,
                     TestId = "prompt-gallery-picker-dialog",
                     AriaLabel = "Browse prompt gallery"
-                });
+                },
+                lifetime.Token);
+            if (disposed)
+            {
+                return;
+            }
+
             if (result is PromptGallerySelection selection)
             {
                 await Selected.InvokeAsync(selection);
             }
         }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
         catch (Exception exception)
         {
-            Notifications.Error("Prompt gallery could not be opened", exception.Message);
+            if (!disposed)
+            {
+                Notifications.Error("Prompt gallery could not be opened", exception.Message);
+            }
         }
+        finally
+        {
+            isOpen = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
     }
 }

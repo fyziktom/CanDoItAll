@@ -54,6 +54,15 @@ remain unchanged. Workbench's remaining direct Prompt reads/staged caller cutove
 project lifetime admission, the explicit global transfer-maintenance adapter and
 product-specific tool policy in Core remain dependent boundaries.
 
+## Prompt Gallery UI boundary
+
+The public Gallery contracts live in [CanDoItAll.Modules.Prompts.Contracts](../CanDoItAll.Modules.Prompts.Contracts/README.md)
+and the rendering surfaces in [CanDoItAll.Prompts.UI](../../UI/CanDoItAll.Prompts.UI/README.md).
+This module keeps the effect owners: `PromptGallerySearchSession`/`PromptGallerySearchHost`,
+`PromptGalleryEditorSession`/`PromptGalleryItemEditorHost`, `PromptGalleryPickerDialog`,
+`PromptGalleryPickerButton`, `PromptGalleryChatComposerButton` and `PromptGalleryPage`.
+See [Prompt Gallery UI boundary](../../../docs/architecture/prompt-gallery-ui-boundary.md).
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

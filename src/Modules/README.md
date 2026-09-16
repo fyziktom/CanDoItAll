@@ -13,6 +13,7 @@ services, and module-specific tool providers.
 | [Processes](CanDoItAll.Modules.Processes/README.md) | Process authoring, launch, monitoring, and recovery |
 | [Projects](CanDoItAll.Modules.Projects/README.md) | Project portfolio, hierarchy, planning, and files |
 | [Prompts](CanDoItAll.Modules.Prompts/README.md) | Prompt catalog and curation |
+| [Prompts contracts](CanDoItAll.Modules.Prompts.Contracts/README.md) | Public Prompt Gallery value contracts, enums and ports shared with the rendering UI |
 | [Resources](CanDoItAll.Modules.Resources/README.md) | Reusable workspace resources |
 | [Scheduler Planner](CanDoItAll.Modules.SchedulerPlanner/README.md) | Scheduled process and workflow launches |
 | [Security](CanDoItAll.Modules.Security/README.md) | Application security contracts |

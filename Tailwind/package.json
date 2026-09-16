@@ -9,6 +9,8 @@
     "build": "tailwindcss -i ./input.css -o ../src/App/CanDoItAll.Web/wwwroot/css/output.css",
     "watch": "tailwindcss -i ./input.css -o ../src/App/CanDoItAll.Web/wwwroot/css/output.css --watch",
     "catalog:build": "tailwindcss -i ./catalog-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css",
-    "catalog:watch": "tailwindcss -i ./catalog-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css --watch"
+    "catalog:watch": "tailwindcss -i ./catalog-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css --watch",
+    "prompts:build": "tailwindcss -i ./prompts-fast.css -o ../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css",
+    "prompts:watch": "tailwindcss -i ./prompts-fast.css -o ../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css --watch"
   }
 }
