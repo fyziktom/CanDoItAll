@@ -180,6 +180,24 @@ value is a separate measurement recorded below.
   deterministically in isolation. That is a regression of the earlier Gallery interaction
   pass (its downstream filter had not covered the workflow page), not of the Home change; it
   was corrected in the picker's context rule (see the Prompt Gallery record) and the gate
-  was aborted and rerun from the corrected checkpoint. The rerun is recorded in the closing
-  bullet below. The historical `SecretScanningTests` failure on ignored retained artifacts is
-  not cleared by this task.
+  was aborted and rerun from the corrected checkpoint `2c11031fc`, with the documented
+  commands and filter, Release, `/m:1`: product solution restore and build exit 0, Stable
+  test solution restore and build exit 0, filtered test run exit 1 (3 h 06 m end to end).
+
+  | Assembly | Result |
+  |---|---|
+  | `CanDoItAll.Tests.Components` | 2134 passed, 1 failed (30 m 05 s) |
+  | `CanDoItAll.Tests.Integration` | 3010 passed, 0 failed (2 h 32 m) |
+  | `CanDoItAll.AgentFramework.Memory.Tests` | 22 passed, 0 failed |
+  | `CanDoItAll.Memory.Tests` | 203 passed, 0 failed |
+  | `CanDoItAll.Tests.Unit` | 8733 passed, 1 failed (2 m 44 s) |
+
+  The Components failure is
+  `WorkflowsPageTests.Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes`,
+  a canvas preview fact that does not touch the Gallery picker or Home; it passed in isolation
+  and inside the whole 43-fact class minutes earlier and failed once under the full gate's
+  load on a bUnit wait, so it is reported as a load-sensitive failure, not as a pass. The Unit
+  failure is the historical `SecretScanningTests.Repository_contains_no_realistic_provider_keys`
+  on the git-ignored retained drafts under `artifacts/modules-decoupling/drafts/**` (47 copies
+  of the fixture file are still present there); no reported path belongs to this change and
+  the gate is therefore not green on this workstation and is reported as such.
