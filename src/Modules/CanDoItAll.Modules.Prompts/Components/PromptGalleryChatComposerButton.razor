@@ -58,7 +58,17 @@
         observed = true;
         observedContext = next;
         contextGeneration++;
-        interaction?.Cancel();
+        RetireInteraction();
+    }
+
+    // Cancels the current interaction and releases its ownership slot, so the next context can insert while the
+    // retired chain (a compatibility read or preference write that ignores cancellation) is still unwinding. The
+    // retired chain keeps its own token source and clears the slot only if it still owns it.
+    private void RetireInteraction()
+    {
+        var retired = interaction;
+        interaction = null;
+        retired?.Cancel();
     }
 
     private async Task HandleSelectionAsync(PromptGallerySelection selection)

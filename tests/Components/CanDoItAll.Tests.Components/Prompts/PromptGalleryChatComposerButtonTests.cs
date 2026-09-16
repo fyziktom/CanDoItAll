@@ -411,6 +411,213 @@ public sealed class PromptGalleryChatComposerButtonTests
         Assert.Null(selectedContent);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task New_target_inserts_while_the_retired_compatibility_request_is_still_pending_and_its_late_outcome_is_inert(bool lateFailure)
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var pendingA = new TaskCompletionSource<Result<PromptCompatibilityResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var compatibilityCalls = 0;
+        // The first (target A) compatibility request ignores cancellation; every later one succeeds at once.
+        gallery.EvaluateCompatibility = (_, _) => ++compatibilityCalls == 1
+            ? pendingA.Task
+            : Task.FromResult(Result<PromptCompatibilityResult>.Success(new PromptCompatibilityResult([])));
+        using var context = CreateContext(gallery);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var host = context.Render<DialogHost>();
+        var inserted = new List<string>();
+        var cut = RenderComposer(context, inserted, targetKey: "conversation-a");
+        var picker = cut.FindComponent<PromptGalleryPickerButton>();
+
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(1, compatibilityCalls));
+        Assert.Empty(dialogService.Dialogs);
+
+        // Target B must be admitted while A's chain is still unresolved.
+        RenderComposer(cut, inserted, targetKey: "conversation-b");
+        Assert.False(picker.Instance.HasOpenInteraction);
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(["Loaded content"], inserted));
+        Assert.Equal(2, compatibilityCalls);
+        Assert.Empty(dialogService.Dialogs);
+
+        // Only now does A's retired request complete; it may neither insert, notify nor touch the current state.
+        await cut.InvokeAsync(() =>
+        {
+            if (lateFailure)
+            {
+                pendingA.SetException(new IOException("Late compatibility failure for the retired target."));
+            }
+            else
+            {
+                pendingA.SetResult(Result<PromptCompatibilityResult>.Success(Warning()));
+            }
+        });
+        await cut.InvokeAsync(() => Task.CompletedTask);
+
+        Assert.Equal(["Loaded content"], inserted);
+        Assert.Empty(notifications.Messages);
+        Assert.Empty(dialogService.Dialogs);
+        Assert.Empty(gallery.SuppressionWrites);
+        Assert.False(picker.Instance.HasOpenInteraction);
+
+        // The current target can still start a new interaction after the retired one unwound.
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']");
+        Assert.Single(dialogService.Dialogs);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Retired_completion_neither_closes_nor_decides_the_new_target_warning_dialog(bool lateFailure)
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var pendingA = new TaskCompletionSource<Result<PromptCompatibilityResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var compatibilityCalls = 0;
+        gallery.EvaluateCompatibility = (_, _) => ++compatibilityCalls == 1
+            ? pendingA.Task
+            : Task.FromResult(Result<PromptCompatibilityResult>.Success(Warning()));
+        using var context = CreateContext(gallery);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var host = context.Render<DialogHost>();
+        var inserted = new List<string>();
+        var cut = RenderComposer(context, inserted, targetKey: 1L);
+
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(1, compatibilityCalls));
+
+        RenderComposer(cut, inserted, targetKey: 2L);
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        host.WaitForElement("[data-testid='prompt-compatibility-insert']");
+        var warningB = Assert.Single(dialogService.Dialogs);
+
+        await cut.InvokeAsync(() =>
+        {
+            if (lateFailure)
+            {
+                pendingA.SetException(new IOException("Late compatibility failure for the retired target."));
+            }
+            else
+            {
+                pendingA.SetResult(Result<PromptCompatibilityResult>.Success(Warning()));
+            }
+        });
+        await cut.InvokeAsync(() => Task.CompletedTask);
+
+        Assert.Same(warningB, Assert.Single(dialogService.Dialogs));
+        Assert.False(warningB.Result.IsCompleted);
+        Assert.Empty(inserted);
+        Assert.Empty(notifications.Messages);
+
+        // B's own consent still decides B's dialog exactly once.
+        host.Find("[data-testid='prompt-compatibility-insert']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(["Loaded content"], inserted));
+        Assert.Empty(dialogService.Dialogs);
+        Assert.Empty(gallery.SuppressionWrites);
+    }
+
+    [Fact]
+    public async Task Pending_preference_write_of_a_retired_target_neither_blocks_the_new_target_nor_inserts_late()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var compatibilityCalls = 0;
+        gallery.EvaluateCompatibility = (_, _) => ++compatibilityCalls == 1
+            ? Task.FromResult(Result<PromptCompatibilityResult>.Success(Warning()))
+            : Task.FromResult(Result<PromptCompatibilityResult>.Success(new PromptCompatibilityResult([])));
+        var pendingWrite = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        gallery.SetWarningSuppression = (_, _, _, _) => pendingWrite.Task;
+        using var context = CreateContext(gallery);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var host = context.Render<DialogHost>();
+        var inserted = new List<string>();
+        var cut = RenderComposer(context, inserted, targetKey: 1L);
+
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        host.WaitForElement("[data-testid='prompt-compatibility-insert-suppress']").Click();
+        cut.WaitForAssertion(() => Assert.Single(gallery.SuppressionWrites));
+        Assert.Empty(dialogService.Dialogs);
+
+        RenderComposer(cut, inserted, targetKey: 2L);
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(["Loaded content"], inserted));
+
+        await cut.InvokeAsync(() => pendingWrite.SetResult(Result.Success()));
+        await cut.InvokeAsync(() => Task.CompletedTask);
+
+        Assert.Equal(["Loaded content"], inserted);
+        Assert.Empty(notifications.Messages);
+        Assert.Single(gallery.SuppressionWrites);
+        Assert.Empty(dialogService.Dialogs);
+    }
+
+    [Fact]
+    public async Task Context_A_B_A_admits_a_fresh_interaction_for_A_while_the_retired_A_work_stays_obsolete()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var pendingA = new TaskCompletionSource<Result<PromptCompatibilityResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var compatibilityCalls = 0;
+        gallery.EvaluateCompatibility = (_, _) => ++compatibilityCalls == 1
+            ? pendingA.Task
+            : Task.FromResult(Result<PromptCompatibilityResult>.Success(new PromptCompatibilityResult([])));
+        using var context = CreateContext(gallery);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var notifications = context.Services.GetRequiredService<NotificationService>();
+        var host = context.Render<DialogHost>();
+        var inserted = new List<string>();
+        var cut = RenderComposer(context, inserted, targetKey: "a");
+
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(1, compatibilityCalls));
+
+        RenderComposer(cut, inserted, targetKey: "b");
+        RenderComposer(cut, inserted, targetKey: "a");
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(["Loaded content"], inserted));
+
+        await cut.InvokeAsync(() => pendingA.SetResult(Result<PromptCompatibilityResult>.Success(new PromptCompatibilityResult([]))));
+        await cut.InvokeAsync(() => Task.CompletedTask);
+
+        Assert.Equal(["Loaded content"], inserted);
+        Assert.Empty(notifications.Messages);
+        Assert.Empty(dialogService.Dialogs);
+    }
+
+    [Fact]
+    public void Same_context_rerender_keeps_the_current_interaction_and_a_duplicate_admission_is_rejected()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        using var context = CreateContext(gallery);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var host = context.Render<DialogHost>();
+        var inserted = new List<string>();
+        var cut = RenderComposer(context, inserted, targetKey: 7L);
+        var picker = cut.FindComponent<PromptGalleryPickerButton>();
+
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+        host.WaitForElement("[data-testid='prompt-gallery-select']");
+        var opened = Assert.Single(dialogService.Dialogs);
+
+        RenderComposer(cut, inserted, targetKey: 7L);
+        cut.Find("[data-testid='prompt-gallery-picker-button']").Click();
+
+        Assert.True(picker.Instance.HasOpenInteraction);
+        Assert.Same(opened, Assert.Single(dialogService.Dialogs));
+        Assert.False(opened.Result.IsCompleted);
+    }
+
     private static IRenderedComponent<PromptGalleryChatComposerButton> RenderComposer(
         BunitContext context,
         List<string> inserted,

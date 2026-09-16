@@ -8,7 +8,7 @@
         Variant="@Variant"
         Size="@Size"
         Disabled="@Disabled"
-        Click="OpenAsync"
+        Click="Open"
         aria-label="@EffectiveAriaLabel"
         title="@EffectiveAriaLabel"
         data-testid="prompt-gallery-picker-button" />
@@ -89,16 +89,34 @@
         observed = true;
         observedContext = next;
         contextGeneration++;
-        interaction?.Cancel();
+        RetireInteraction();
     }
 
-    private async Task OpenAsync()
+    // Cancels the current interaction and releases its ownership slot, so the next context can start its own
+    // interaction while the retired one is still unwinding. The retired operation keeps its own token source and
+    // clears the slot only if it still owns it, so it can neither block nor clear a newer interaction.
+    private void RetireInteraction()
+    {
+        var retired = interaction;
+        interaction = null;
+        retired?.Cancel();
+    }
+
+    // The click handler returns at once. The button component disables itself while its click task is in flight, and
+    // an interaction spans a modal dialog plus the owner's selection chain, which a retired target may keep pending;
+    // admission is therefore guarded by the interaction slot, not by the button.
+    private void Open()
     {
         if (disposed || interaction is not null)
         {
             return;
         }
 
+        _ = RunInteractionAsync();
+    }
+
+    private async Task RunInteractionAsync()
+    {
         var generation = contextGeneration;
         using var current = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         interaction = current;
