@@ -93,6 +93,27 @@ evidence for the production page is `FullyQualifiedName~PromptGalleryBrowserTest
 Playwright project; the sandbox is exercised through `PromptsSandboxTests` and manually via
 [its README](../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/README.md).
 
+For changes under `src/UI/CanDoItAll.CrmHr.UI`, the CRM / HR Home host in
+`src/Modules/CanDoItAll.Modules.CrmHr` (`CrmHrHomePage`, `CrmHrHomeReadSession`,
+`CrmHrHomePresentationMapper`) or the `src/Sandboxes/CanDoItAll.CrmHr.UiSandbox` host, build the
+changed production projects and run the Home topic with a stated discovery count:
+
+```powershell
+dotnet build ./src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj --configuration Release /m:1
+dotnet build ./src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CanDoItAll.CrmHr.UiSandbox.csproj --configuration Release /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrHome" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrHome" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrHome" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrHome" /m:1
+```
+
+The existing Home facts on the real component harness (`OpportunityBoardTests.Home_page_surfaces_open_pipeline_preview`,
+`CrmHrPrivacyBoundaryTests.Home_and_workforce_routes_surface_sensitive_handling_and_history`) and
+`CrmHrNavigationTests` stay the composition baseline. Browser evidence for the production route
+is `FullyQualifiedName~CrmHrHomeBrowserTests` in the Playwright project; the sandbox is exercised
+through `CrmHrHomeSandboxTests` and manually via
+[its README](../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/README.md).
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
