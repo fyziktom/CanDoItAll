@@ -11,6 +11,8 @@
     "catalog:build": "tailwindcss -i ./catalog-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css",
     "catalog:watch": "tailwindcss -i ./catalog-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css --watch",
     "prompts:build": "tailwindcss -i ./prompts-fast.css -o ../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css",
-    "prompts:watch": "tailwindcss -i ./prompts-fast.css -o ../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css --watch"
+    "prompts:watch": "tailwindcss -i ./prompts-fast.css -o ../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css --watch",
+    "crmhr:build": "tailwindcss -i ./crmhr-fast.css -o ../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css",
+    "crmhr:watch": "tailwindcss -i ./crmhr-fast.css -o ../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css --watch"
   }
 }

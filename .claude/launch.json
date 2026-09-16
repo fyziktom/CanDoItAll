@@ -27,6 +27,20 @@
         "Prompts sandbox"
       ],
       "port": 5395
+    },
+    {
+      "name": "crmhr-sandbox",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox",
+        "-c",
+        "Debug",
+        "--launch-profile",
+        "CrmHr sandbox"
+      ],
+      "port": 5397
     }
   ]
 }
