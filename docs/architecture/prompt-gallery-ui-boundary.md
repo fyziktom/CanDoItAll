@@ -15,7 +15,7 @@ corrected the extracted architecture (see the execution records at the end).
 | Search requests, debounce, request generations, favorite writes | `PromptGallerySearchSession` + `PromptGallerySearchHost` (module) | One session per host instance; never a scoped service |
 | Editing target, loads, draft/version/archive/suppression writes, identity adoption, accepted persisted baseline | `PromptGalleryEditorSession` + `PromptGalleryItemEditorHost` (module) | Reports `PromptGalleryEditorCommit` to its owner instead of mutating its own parameter; keeps the accepted token and content separate from the latest read |
 | Picker dialog lifetime, immutable-version selection, nested editor refresh | `PromptGalleryPickerDialog` (module) | Closes only its own `DialogReference` |
-| Picker button and chat composer effects, compatibility check, consent, suppression | `PromptGalleryPickerButton`, `PromptGalleryChatComposerButton` (module) | Interaction context = consumer, provider, model and the owner's `TargetKey`; a per-interaction token linked to the lifetime is passed to `DialogService.OpenAsync`; a genuine context transition cancels the open dialog and fences every late result |
+| Picker button and chat composer effects, compatibility check, consent, suppression | `PromptGalleryPickerButton`, `PromptGalleryChatComposerButton` (module) | Interaction context = consumer, provider, model and the owner's `TargetKey`; a per-interaction token linked to the lifetime is passed to `DialogService.OpenAsync`; a genuine context transition retires the current interaction (cancels its dialog, releases the ownership slot at once) and fences every late result of the retired chain |
 | Route, `promptId` request, editor dialog, catalog invalidation, optional Curator | `PromptGalleryPage` (module) | Curator port unchanged; page lifetime token passed to the launcher; late Curator effects after disposal are suppressed; the lease is released exactly once |
 | Validation, optimistic concurrency, persistence, projections, activity | `PromptsService` (module) | Unchanged |
 | Backend-free scenario host | `src/Sandboxes/CanDoItAll.Prompts.UiSandbox` | Renders the same surfaces with deterministic local state |
@@ -50,9 +50,15 @@ Infrastructure, Entity Framework, Web, AppComponents and AgentFramework.
 The editor session keeps an *accepted persisted baseline*: the concurrency token and the
 normalized editable content (title, summary, kind, phase, content, tags, supported models,
 consumers, recommendations) of the revision the draft was loaded from or last written by this
-editor. Every read-back is reconciled against it:
+editor. After a successful save the baseline is the receipt token plus the *submitted* content.
+Every read-back is reconciled against it:
 
-- a read-back whose token equals this editor's own receipt is adopted;
+- a read-back whose header token equals this editor's own receipt refreshes only identity
+  metadata (project, collection); it never replaces the submitted baseline content. The owner
+  loads the header and each collection with separate statements and no snapshot transaction,
+  so under PostgreSQL Read Committed the header token does not prove that the returned
+  collections belong to the same revision. Returned content that differs from the submission
+  can only come from another actor's revision and raises the conflict alert immediately;
 - a read-back whose editable content equals the accepted baseline is adopted with its newer
   token, because only this editor's non-editable commands (archive, restore, finalize)
   intervened;
@@ -60,6 +66,30 @@ editor. Every read-back is reconciled against it:
   `prompts.gallery.concurrency-conflict`, and the surface shows a conflict alert with an
   explicit **Reload latest and discard my draft** action (the `Retry` intent in the Ready
   phase). Nothing reloads, retries or replays automatically.
+
+Content equality is structural: tags compare as normalized ordered sets, consumers as ordered
+sets, and each supported provider/model declaration as a typed key of normalized provider,
+normalized model and preference flag. A joined string would let a delimiter inside a provider or
+model name (which the owner accepts) make different declarations compare equal.
+
+### Current versus retired interactions
+
+`PromptGalleryPickerButton` and `PromptGalleryChatComposerButton` own at most one *current*
+interaction each, keyed by their context (consumer, provider, model, owner `TargetKey`). A
+genuine context transition or disposal *retires* that interaction: its token source is
+cancelled (which closes its dialog through `DialogService.OpenAsync`) and the ownership slot is
+released at once, so the new context can open its picker, evaluate compatibility, ask for
+consent and insert while the retired chain is still unwinding. A retired chain keeps its own
+token source until it ends, observes its late success, failure or cancellation through the
+generation fence (no insertion, notice, dialog close or state change), and clears the slot only
+if it still owns it, so it can neither block nor clear a newer interaction. A same-context
+rerender changes nothing, and a second admission for the same current context is rejected
+while its interaction is open. The picker's click handler admits or rejects synchronously and
+runs the interaction as an owned task: the BaseLib `Button` disables itself while its click
+task is in flight, so a handler that awaited the whole chain would keep the button itself
+blocked for as long as a retired chain stayed pending. Cancellation stays cooperative: a
+committed preference write is not rolled back, it is simply never followed by an insertion
+for the retired target.
 
 ## Behavior matrix
 
@@ -90,6 +120,9 @@ isolation fix confirmed against the baseline code and covered by regression test
 | `ExpectedUpdatedAtUtc` and concurrency conflicts; no automatic overwrite; a rejected save shows the conflict alert | Preserve | Preserve | `Concurrency_conflict_keeps_the_draft_identity_and_token_without_overwriting` |
 | Foreign revision between load and an own archive/restore: the read-back carries foreign content, so the accepted token is kept, the next save is rejected, the conflict is visible, and Reload discards the draft and accepts the latest revision | extracted session adopted every read-back token, which would have let the stale draft overwrite the foreign revision | Safeguard | `Own_archive_after_a_foreign_content_change_keeps_the_accepted_token_and_flags_the_conflict`, `Reload_after_a_conflict_discards_the_draft_and_accepts_the_latest_revision`, host `Foreign_change_before_an_own_archive_is_surfaced_as_a_conflict…`, real persistence `Foreign_content_change_before_own_archive_is_not_overwritten_by_the_stale_draft` |
 | Foreign revision between an own save receipt and its read-back: the receipt token stays accepted, so the next save is rejected instead of silently adopting the foreign token | same | Safeguard | `Foreign_change_between_the_save_receipt_and_the_read_back_keeps_the_receipt_token`, real persistence `Foreign_change_between_own_receipt_and_read_back_is_rejected_on_the_next_save` |
+| Mixed read-back (own header token, another actor's collections, read between the owner's separate statements): the submitted baseline is kept, the conflict is shown at once, a later own archive does not adopt the foreign collections, and the stale save is rejected | own-token read-back replaced the baseline content → submitted content kept | Safeguard | `Own_token_read_back_with_foreign_collections_keeps_the_submitted_baseline_and_the_stale_save_is_rejected` (models, tags, consumers), `Own_token_read_back_with_matching_collections_keeps_the_next_own_command_conflict_free`, PostgreSQL `PostgreSql_MixedReadBackAfterOwnReceipt_DoesNotAuthorizeOverwritingAnotherEditorsModelSet` (statement-level barrier between the header and the supported-model read) |
+| Supported provider/model declarations compare structurally; a delimiter inside a provider or model name cannot make two different declarations equal, while reordering, repetition and case/whitespace normalization stay equivalent and a changed preference flag stays different | pipe-joined string key → typed key | Safeguard | `PromptGalleryPersistedContentTests` (6 facts), session `External_model_pair_change_that_only_differs_in_delimiter_placement_is_not_adopted_by_an_own_archive` |
+| A retired interaction (cancelled by a target transition) releases its ownership slot immediately: the new target opens its picker, evaluates compatibility, consents and inserts while the retired chain is still pending; the retired chain's late success, failure or pending preference write inserts nothing, notifies nothing and leaves the new target's dialog and state untouched; A→B→A admits a fresh interaction for A; a same-context duplicate admission is still rejected | slot cleared only by the old task's `finally` → released at retirement | Safeguard | composer `New_target_inserts_while_the_retired_compatibility_request_is_still_pending_and_its_late_outcome_is_inert`, `Retired_completion_neither_closes_nor_decides_the_new_target_warning_dialog`, `Pending_preference_write_of_a_retired_target_neither_blocks_the_new_target_nor_inserts_late`, `Context_A_B_A_admits_a_fresh_interaction_for_A_while_the_retired_A_work_stays_obsolete`, `Same_context_rerender_keeps_the_current_interaction_and_a_duplicate_admission_is_rejected` |
 | Own archive, restore, finalize and save in sequence without a foreign change never conflict: each newer token is adopted because the editable content still matches the accepted baseline | Safeguard | Safeguard | `Own_finalize_and_archive_without_a_foreign_change_adopt_each_newer_token`, `Archive_toggle_commits_and_re_reads_the_token_for_the_next_save`, real persistence `Own_archive_restore_and_finalize_keep_the_next_save_valid_without_a_foreign_change` |
 | "Create final version" = save draft, then create version; "draft saved, finalization failed" is distinct from "nothing saved"; busy spans the whole command; the catalog is told about the committed draft | baseline busy ended after `SaveCore` | Safeguard | `Finalize_reports_draft_saved_when_version_creation_fails`, `Finalize_success_commits_draft_then_version…`, host `Finalize_partial_success…` |
 | Mutation outcome is separated from owner refresh/notification failures: a `Committed` callback that throws after a valid receipt keeps the saved identity and token and is reported as "Editor update failed", never as a failed save or version; a returned version failure and a thrown version request stay distinct outcomes | one catch reported every exception as the command's failure | Safeguard | `Committed_callback_failure_after_a_valid_receipt_keeps_the_saved_identity_and_reports_only_the_effect`, `Owner_callback_failure_after_a_successful_version_keeps_the_version_known`, `Version_result_failure_and_thrown_version_request_are_distinct_outcomes` |
@@ -134,26 +167,31 @@ and the responsive filter rail. No delete, schema, routing, or URL contract was 
 ## Validation
 
 Commands run from the repository root in Release with `/m:1`. Discovery counts were stated
-before execution. The table shows the hardening pass; the extraction-time counts are kept in
-the first execution record below.
+before execution. The table shows the reconciliation and interaction pass; the counts of the
+earlier passes are kept in their execution records below.
 
 | Slice | Filter | Expected / discovered | Result |
 |---|---|---|---|
-| Unit sessions, form policy and real persistence owner | `FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.` | 47 / 47 (13 search + 27 editor + 4 form + 3 persistence) | 47 passed |
-| Components surfaces, hosts, dialogs, page, boundary, sandbox | `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.` | 83 / 83 (64 gallery + 19 sandbox) | 83 passed |
-| Downstream consumers of the changed composer contract | `FullyQualifiedName~LlmChatConversationWorkspaceTests\|FullyQualifiedName~WorkflowExecutorCanvasCatalogTests\|FullyQualifiedName~AgentChatPanel` | 72 / 72 | 72 passed |
+| Editor session reconciliation, real InMemory persistence owner and baseline comparator | `FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.PromptGalleryEditorSession\|FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.PromptGalleryPersistedContentTests` | 41 / 41 (27 session + 3 persistence + 5 reconciliation + 6 comparator) | 41 passed |
+| Composer and picker ownership | `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.PromptGalleryChatComposerButtonTests\|FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.PromptGalleryPickerDialogTests` | 30 / 30 (24 composer + 6 picker) | 30 passed (the six liveness cases failed against the reviewed source) |
+| PostgreSQL mixed read-back (Integration solution, local PostgreSQL) | `FullyQualifiedName~PromptGalleryMixedReadBackPersistenceIntegrationTests` | 1 / 1 | 1 passed |
+| Bounded Gallery slices | `FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.` and `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.` | 58 / 58 and 90 / 90 | 58 passed and 90 passed |
 | Production browser lane (real Web host, PostgreSQL) | `FullyQualifiedName~PromptGalleryBrowserTests` (Playwright solution) | 4 / 4 | 4 passed; twelve captures written to the git-ignored Playwright output folder (prompt-gallery) |
 
-Production projects built: `CanDoItAll.Modules.Prompts.Contracts`, `CanDoItAll.Prompts.UI`,
-`CanDoItAll.Modules.Prompts`, `CanDoItAll.Modules.AgentFramework`, the SimpleChats
-components, `CanDoItAll.Prompts.UiSandbox` and `CanDoItAll.Web` (0 errors).
+Persistence evidence by provider: `PromptGalleryEditorSessionPersistenceTests` (3 facts) run the
+real `PromptsService` on EF InMemory and interpose only before a whole read; they prove the
+owner's application logic, normalization and token check, not statement interleaving.
+`PromptGalleryMixedReadBackPersistenceIntegrationTests` runs the real service on PostgreSQL
+with a `DbCommandInterceptor` barrier that holds A's read-back between the artifact header
+statement and the supported-model statement while B commits through a separate context; it
+is the only relational proof of the mixed read-back path.
 
-Static gates for the hardening pass: the portability tooling self-tests passed (6 + 4);
-portability-static ran on the complete tree without `--tracked-only` (30417 findings, the
-untracked persistence test included) and the enforcement without `--write-baseline` reports
-`PASS (14681 reviewed executable-source findings unchanged)`, so no `ADDED` or `STALE`
-finding existed and the baseline was not touched. `Test-Documentation.ps1` passed after this
-record was updated. The extraction-time static results are in the first execution record.
+Production projects built for this pass: `CanDoItAll.Modules.Prompts` and its consumers
+through the test solutions (Unit, Components, Integration, Playwright), each with 0 errors.
+
+Static gates: see the execution records; each pass ran portability-static on the complete tree
+without `--tracked-only`, finished with the no-write enforcement, and ran
+`Test-Documentation.ps1` after updating this record.
 
 ## Build graph measurement
 
@@ -272,12 +310,22 @@ The hardening pass changed no project reference, so the measurement was not repe
   `PromptGalleryPage` (lifetime token, disposal fencing, exactly-once lease release), and the
   `TargetKey` plumbing in `LlmChatComposerActionContext`, `LlmChatConversationWorkspace`,
   `PromptGalleryLlmChatComposerActionContributor`, `AgentChatPanel` and `WorkflowCanvasEditor`.
-- Tests executed: the Validation table above (Unit 47, Components 83, downstream 72,
-  Playwright 4, all discovery counts stated before execution and matched). The scripted
-  gallery fake gained a persisted-details builder that mirrors a submission so read-backs of
-  own writes can be scripted exactly; the three persistence facts run the real `PromptsService`
-  through `PromptGalleryTestSupport` and interpose only on the read-back to inject the foreign
-  revision.
+- Tests executed (Release, `/m:1`, counts stated before execution and matched): Unit
+  `FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.` 47 / 47 passed (13 search + 27 editor +
+  4 form + 3 persistence); Components `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.`
+  83 / 83 passed (64 gallery + 19 sandbox); downstream
+  `LlmChatConversationWorkspaceTests|WorkflowExecutorCanvasCatalogTests|AgentChatPanel`
+  72 / 72 passed; Playwright `PromptGalleryBrowserTests` 4 / 4 passed with twelve captures in
+  the git-ignored Playwright output folder. The scripted gallery fake gained a persisted-details
+  builder that mirrors a submission so read-backs of own writes can be scripted exactly; the
+  three persistence facts run the real `PromptsService` through `PromptGalleryTestSupport` (EF
+  InMemory) and interpose only before a whole read to inject the foreign revision.
+- Static gates: the portability tooling self-tests passed (6 + 4); portability-static ran on
+  the complete tree without `--tracked-only` (30417 findings, the untracked persistence test
+  included) and the enforcement without `--write-baseline` reported
+  `PASS (14681 reviewed executable-source findings unchanged)`, so no `ADDED` or `STALE`
+  finding existed and the baseline was not touched; `Test-Documentation.ps1` passed for 217
+  maintained files after the record update.
 - Browser evidence: the Playwright captures listed in the Validation table; the misnamed
   case now reopens a genuinely persisted item through its `promptId`; the embedded chat
   composer, with the first listed agent selected, inserts a compatible item into the real
@@ -295,3 +343,56 @@ The hardening pass changed no project reference, so the measurement was not repe
   project set, build configuration or shared fixture, so no named trigger applies; the
   `SecretScanningTests` status recorded above is unchanged and unrelated to this change.
 - Deferred: none of the mandatory findings; the open items above remain open by design.
+
+## Execution record: reconciliation and interaction fixes (2026-09-16)
+
+- Start: `c2022c380a67a7fb86798d0c8140446786b49d0e` ("prompt gallery fixes", the hardening
+  pass committed by the operator) on `components-decoupling`, clean tree. The review of that
+  commit was a static source review; its three findings were reproduced here with the tests
+  named in the behavior matrix before the source was corrected. Nothing was pushed, merged,
+  rebased or reset; no signing or permission configuration was touched.
+- C1 (mixed read-back contaminating the accepted baseline): corrected in
+  `PromptGalleryEditorSession.Reconcile`. The own-token branch no longer replaces the baseline
+  content with the read-back; it keeps the submitted content, refreshes identity metadata and
+  raises the conflict alert when the read-back differs. The owner's loader was left as it is:
+  a feature-scoped snapshot transaction would have changed the persistence owner and the
+  InMemory persistence tests for a defect that the session can close alone, and the
+  PostgreSQL regression proves the session rule against the real statement interleaving.
+- C2 (ambiguous provider/model key): corrected by `PromptGalleryModelKey`, a typed key of
+  normalized provider, normalized model and preference flag; the comparator keeps order
+  independence, distinct-entry semantics and case/trim normalization. The owner's separate
+  unit-separator duplicate validation was not touched.
+- C3 (retired interactions blocking new targets): the six new liveness cases failed against the
+  reviewed source for two reasons. The ownership slot was only cleared by the old task's
+  `finally`, as reviewed; and the picker's click handler awaited the whole interaction while
+  the BaseLib `Button` disables itself for as long as its click task is in flight, so the
+  retired chain also kept the shipped button itself unclickable. Corrected by
+  `RetireInteraction()` in both effect owners (the slot is released when the context
+  transition cancels the interaction; the retired chain keeps its own token source until it
+  ends and clears the slot only if it still owns it) and by a click handler that admits or
+  rejects synchronously and runs the interaction as an owned task. No registry of retired
+  work; the generation fence is unchanged.
+- Validation (Release, `/m:1`, counts stated before execution and matched):
+  - Unit `FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.PromptGalleryEditorSession|FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.PromptGalleryPersistedContentTests`
+    41 / 41 passed (27 session + 3 InMemory persistence + 5 reconciliation + 6 comparator).
+  - Components `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.PromptGalleryChatComposerButtonTests|FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.PromptGalleryPickerDialogTests`
+    30 / 30: against the reviewed source the six new liveness cases failed (target B's picker
+    never opened while A's chain was pending, 24 passed); after the correction 30 passed.
+  - Integration `FullyQualifiedName~PromptGalleryMixedReadBackPersistenceIntegrationTests`
+    1 / 1 passed on the local PostgreSQL server (fresh database per run through
+    `PostgresTestDatabaseLease`).
+  - Bounded slices after the corrections, with the Unit assembly rebuilt for the final source:
+    `FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts.` 58 / 58 passed and
+    `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.` 90 / 90 passed.
+  - Browser lane `FullyQualifiedName~PromptGalleryBrowserTests` (Playwright solution rebuilt
+    for the final source, real Web host and PostgreSQL) 4 / 4 passed; twelve captures in the
+    git-ignored Playwright output folder.
+- Static gates: the portability tooling self-tests passed (6 + 4); portability-static ran on
+  the complete tree without `--tracked-only` after the session edit and again after the
+  picker edit; both enforcements without `--write-baseline` reported
+  `PASS (14681 reviewed executable-source findings unchanged)` and the baseline was not
+  touched. `Test-Documentation.ps1` ran after the final update of this record.
+- Not run: the broad Stable gate (no solution, project set, build configuration or shared
+  fixture changed; the new Integration test uses the existing PostgreSQL lease). The
+  historical `SecretScanningTests` failure on ignored retained artifacts is unchanged and not
+  cleared by this pass.
