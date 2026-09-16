@@ -17,6 +17,7 @@
                      ValueChanged="HandleSearchChangedAsync"
                      Placeholder="@SearchPlaceholder"
                      Immediate="true"
+                     Disabled="@(!isInteractive)"
                      Class="paged-record-browser__filter-field paged-record-browser__search"
                      aria-label="@SearchPlaceholder"
                      data-testid="@($"{DataTestId}-search")" />
@@ -28,6 +29,7 @@
                            Suggestions="@TagSuggestions"
                            Placeholder="@TagPlaceholder"
                            MaxTags="@MaximumTags"
+                           Disabled="@(!isInteractive)"
                            Class="paged-record-browser__filter-field paged-record-browser__tags"
                            TestId="@($"{DataTestId}-tag-filter")"
                            InputTestId="@($"{DataTestId}-tag-filter-input")" />
@@ -48,7 +50,7 @@
                                 Size="ButtonSize.Small"
                                 Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
                                 ButtonStyle="@(isSelected ? ButtonStyle.Info : ButtonStyle.Base)"
-                                Disabled="@isLoading"
+                                Disabled="@(isLoading || !isInteractive)"
                                 aria-pressed="@(isSelected ? "true" : "false")"
                                 data-testid="@option.TestId"
                                 Click="@(() => HandleFilterChangedAsync(option.Value))" />
@@ -62,7 +64,7 @@
                     Variant="Variant.Text"
                     Size="ButtonSize.Small"
                     Class="paged-record-browser__reset"
-                    Disabled="@(!HasActiveFilters || isLoading)"
+                    Disabled="@(!HasActiveFilters || isLoading || !isInteractive)"
                     Click="ResetFiltersAsync"
                     aria-label="@ResetFiltersLabel"
                     title="@ResetFiltersLabel"
@@ -89,6 +91,7 @@
                 <Actions>
                     <Button Text="Retry"
                             Icon="refresh"
+                            Disabled="@(!isInteractive)"
                             Click="RetryAsync"
                             data-testid="@($"{DataTestId}-retry")" />
                 </Actions>
@@ -119,7 +122,8 @@
                         @ItemTemplate(new PagedRecordItemTemplateContext<TKey>(
                             option,
                             isSelected,
-                            () => SelectAsync(option)))
+                            () => SelectAsync(option),
+                            isInteractive))
                     }
                     else
                     {
@@ -156,7 +160,7 @@
                                     class="paged-record-browser__select"
                                     aria-label="@($"Select {option.Title}")"
                                     aria-pressed="@(isSelected ? "true" : "false")"
-                                    disabled="@option.IsDisabled"
+                                    disabled="@(option.IsDisabled || !isInteractive)"
                                     data-testid="@ResolveOptionTestId(option)"
                                     @onclick="@(() => SelectAsync(option))">
                                 <div class="paged-record-browser__content">
@@ -336,6 +340,10 @@
     private long loadGeneration;
     private bool isLoading = true;
     private bool disposed;
+    // Prerendered markup has no event handlers attached yet: typing or clicking before the interactive renderer
+    // takes over is silently lost. Controls therefore stay disabled until the first interactive render, which is
+    // the only render that runs OnAfterRender (it never runs during prerendering or static rendering).
+    private bool isInteractive;
 
     [Parameter, EditorRequired]
     public PagedRecordLoader<TKey, TFilter>? Loader { get; set; }
@@ -440,9 +448,10 @@
         tagFilters.Count > 0 ||
         !EqualityComparer<TFilter>.Default.Equals(currentFilter, InitialFilter);
 
-    private bool CanMovePrevious => !isLoading && loadError is null && page.PageIndex > 0;
+    private bool CanMovePrevious => isInteractive && !isLoading && loadError is null && page.PageIndex > 0;
 
     private bool CanMoveNext =>
+        isInteractive &&
         !isLoading &&
         loadError is null &&
         page.TotalPages > 0 &&
@@ -513,6 +522,17 @@
         await LoadPageAsync(0);
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender || isInteractive)
+        {
+            return;
+        }
+
+        isInteractive = true;
+        StateHasChanged();
+    }
+
     private async Task HandleSearchChangedAsync(string? value)
     {
         searchText = value ?? string.Empty;
@@ -574,7 +594,7 @@
 
     private Task SelectAsync(PagedRecordOption<TKey> option)
     {
-        return option.IsDisabled
+        return option.IsDisabled || !isInteractive
             ? Task.CompletedTask
             : SelectionChanged.InvokeAsync(option.Key);
     }

@@ -44,6 +44,72 @@ public sealed class PagedRecordBrowserTests : BunitContext
     }
 
     [Fact]
+    public async Task Prerendered_record_controls_stay_disabled_until_the_first_interactive_render()
+    {
+        RenderFragment<PagedRecordItemTemplateContext<Guid>> template = context => builder =>
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "data-testid", "templated-record");
+            builder.AddAttribute(3, "disabled", !context.IsInteractive);
+            builder.AddContent(4, $"{context.Option.Title}:{context.IsInteractive}");
+            builder.CloseElement();
+        };
+        var parameters = new Dictionary<string, object?>
+        {
+            [nameof(PagedRecordBrowser<Guid, RecordScope>.Loader)] = LoaderWith(Option(AlphaId, "Alpha")),
+            [nameof(PagedRecordBrowser<Guid, RecordScope>.InitialFilter)] = RecordScope.All,
+            [nameof(PagedRecordBrowser<Guid, RecordScope>.FilterOptions)] = ScopeOptions(),
+            [nameof(PagedRecordBrowser<Guid, RecordScope>.PageSize)] = 1,
+            [nameof(PagedRecordBrowser<Guid, RecordScope>.DataTestId)] = "records"
+        };
+
+        // HtmlRenderer is the static/prerender path: it completes initialization but never runs OnAfterRender, which
+        // is exactly the markup a browser shows before the interactive circuit attaches its event handlers.
+        var prerendered = await RenderStaticallyAsync(parameters);
+        var prerenderedTemplate = await RenderStaticallyAsync(new Dictionary<string, object?>(parameters)
+        {
+            [nameof(PagedRecordBrowser<Guid, RecordScope>.ItemTemplate)] = template
+        });
+
+        Assert.Contains("1 matching record(s)", prerendered.DocumentElement.TextContent);
+        Assert.True(prerendered.QuerySelector("[data-testid='records-search']")!.HasAttribute("disabled"));
+        Assert.True(prerendered.QuerySelector("[data-testid='records-tag-filter-input']")!.HasAttribute("disabled"));
+        Assert.True(prerendered.QuerySelector("[data-testid='scope-people']")!.HasAttribute("disabled"));
+        Assert.True(prerendered.QuerySelector("[data-testid='record-alpha']")!.HasAttribute("disabled"));
+        Assert.True(prerendered.QuerySelector("[data-testid='records-next']")!.HasAttribute("disabled"));
+        Assert.Contains("Alpha:False", prerenderedTemplate.DocumentElement.TextContent);
+        Assert.True(prerenderedTemplate.QuerySelector("[data-testid='templated-record']")!.HasAttribute("disabled"));
+
+        var interactive = Render<PagedRecordBrowser<Guid, RecordScope>>(builder => builder
+            .Add(component => component.Loader, LoaderWithTotal(3, Option(AlphaId, "Alpha")))
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.FilterOptions, ScopeOptions())
+            .Add(component => component.PageSize, 1)
+            .Add(component => component.DataTestId, "records"));
+        var interactiveTemplate = Render<PagedRecordBrowser<Guid, RecordScope>>(builder => builder
+            .Add(component => component.Loader, LoaderWith(Option(AlphaId, "Alpha")))
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.PageSize, 1)
+            .Add(component => component.DataTestId, "templated")
+            .Add(component => component.ItemTemplate, template));
+
+        interactive.WaitForAssertion(() =>
+        {
+            Assert.False(interactive.Find("[data-testid='records-search']").HasAttribute("disabled"));
+            Assert.False(interactive.Find("[data-testid='records-tag-filter-input']").HasAttribute("disabled"));
+            Assert.False(interactive.Find("[data-testid='scope-people']").HasAttribute("disabled"));
+            Assert.False(interactive.Find("[data-testid='record-alpha']").HasAttribute("disabled"));
+            Assert.False(interactive.Find("[data-testid='records-next']").HasAttribute("disabled"));
+        });
+        interactiveTemplate.WaitForAssertion(() =>
+        {
+            Assert.Contains("Alpha:True", interactiveTemplate.Markup);
+            Assert.False(interactiveTemplate.Find("[data-testid='templated-record']").HasAttribute("disabled"));
+        });
+    }
+
+    [Fact]
     public void Search_is_debounced_and_normalized_before_loading()
     {
         var requests = new List<PagedRecordRequest<RecordScope>>();
@@ -466,6 +532,32 @@ public sealed class PagedRecordBrowserTests : BunitContext
                 parameters.Add(component => component.LoadFailed, loadFailed);
             }
         });
+    }
+
+    private async Task<AngleSharp.Dom.IDocument> RenderStaticallyAsync(IDictionary<string, object?> parameters)
+    {
+        await using var renderer = new HtmlRenderer(
+            Services,
+            Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var output = await renderer.RenderComponentAsync<PagedRecordBrowser<Guid, RecordScope>>(
+                ParameterView.FromDictionary(parameters));
+            return output.ToHtmlString();
+        });
+
+        return new AngleSharp.Html.Parser.HtmlParser().ParseDocument(html);
+    }
+
+    private static PagedRecordLoader<Guid, RecordScope> LoaderWithTotal(
+        int totalCount,
+        params PagedRecordOption<Guid>[] options)
+    {
+        return (request, _) => Task.FromResult(new PagedRecordPage<Guid>(
+            options,
+            request.PageIndex,
+            request.PageSize,
+            totalCount));
     }
 
     private static PagedRecordLoader<Guid, RecordScope> LoaderWith(

@@ -92,6 +92,97 @@ public sealed class ResourceFileSourceCatalogTests
         Assert.Equal(1, drivers.ResolveCount);
     }
 
+    [Theory]
+    [InlineData("aabbccddeeff00112233445566778899")]
+    [InlineData("AABBCCDDEEFF00112233445566778899")]
+    [InlineData("AaBbCcDdEeFf00112233445566778899")]
+    public void Parsed_project_and_storage_keys_equal_the_generated_canonical_keys(string digits)
+    {
+        Guid id = Guid.ParseExact(digits, "N");
+
+        Assert.True(ResourceFileSourceKey.TryParse($"project:{digits}", out ResourceFileSourceKey projectKey));
+        Assert.True(ResourceFileSourceKey.TryParse($"  storage:{digits}  ", out ResourceFileSourceKey storageKey));
+
+        Assert.Equal(ResourceFileSourceKey.ForProject(id), projectKey);
+        Assert.Equal(ResourceFileSourceKey.ForStorage(id), storageKey);
+        Assert.Equal($"project:{id:N}", projectKey.Value);
+        Assert.Equal($"storage:{id:N}", storageKey.Value);
+        Assert.True(projectKey.TryGetProjectId(out Guid projectId));
+        Assert.True(storageKey.TryGetStorageId(out Guid storageId));
+        Assert.Equal(id, projectId);
+        Assert.Equal(id, storageId);
+        Assert.False(projectKey.TryGetStorageId(out _));
+        Assert.False(storageKey.TryGetProjectId(out _));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("project:00000000000000000000000000000000")]
+    [InlineData("storage:00000000000000000000000000000000")]
+    [InlineData("Project:aabbccddeeff00112233445566778899")]
+    [InlineData("STORAGE:aabbccddeeff00112233445566778899")]
+    [InlineData("resource:aabbccddeeff00112233445566778899")]
+    [InlineData("project:aabbccddeeff0011223344556677889")]
+    [InlineData("project:aabbccddeeff001122334455667788990")]
+    [InlineData("project:aabbccdd-eeff-0011-2233-445566778899")]
+    [InlineData("project:zzbbccddeeff00112233445566778899")]
+    [InlineData("aabbccddeeff00112233445566778899")]
+    public void Invalid_keys_and_foreign_source_kinds_are_rejected(string? value)
+    {
+        Assert.False(ResourceFileSourceKey.TryParse(value, out ResourceFileSourceKey key));
+        Assert.Equal(default, key);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Catalog_resolves_a_key_whose_guid_digits_use_another_case(bool storageSource)
+    {
+        await using var fixture = await ResourceSourceFixture.CreateAsync();
+        StorageCatalogRecord fileSystem = Storage("Filesystem", StorageProviderKind.FileSystem);
+        var catalog = new ResourceFileSourceCatalog(
+            fixture.Projects,
+            new MutableStorageCatalog(fileSystem),
+            new FakeBrowseDriverRegistry(StorageProviderKind.FileSystem));
+        ResourceFileSourceCatalogSnapshot snapshot = await catalog.LoadAsync();
+        ResourceFileSourceDescriptor expected = snapshot.Sources.Single(source =>
+            storageSource
+                ? source.SourceClass == ResourceFileSourceClass.FileSystem
+                : source.SourceClass == ResourceFileSourceClass.Project);
+        string storedSpelling = expected.Key.Value[..8] + expected.Key.Value[8..].ToUpperInvariant();
+        Assert.NotEqual(expected.Key.Value, storedSpelling);
+
+        Assert.True(ResourceFileSourceKey.TryParse(storedSpelling, out ResourceFileSourceKey parsed));
+        ResourceFileSourceDescriptor resolved = await catalog.ResolveAsync(parsed);
+
+        Assert.Equal(expected.Key, resolved.Key);
+        Assert.Equal(expected.SourceClass, resolved.SourceClass);
+        Assert.Equal(expected.Scope, resolved.Scope);
+    }
+
+    [Fact]
+    public async Task Catalog_keeps_denying_unknown_disabled_and_unregistered_sources()
+    {
+        await using var fixture = await ResourceSourceFixture.CreateAsync();
+        StorageCatalogRecord disabled = Storage("Disabled", StorageProviderKind.FileSystem);
+        disabled.IsEnabled = false;
+        StorageCatalogRecord unregistered = Storage("FTP without driver", StorageProviderKind.Ftp);
+        var catalog = new ResourceFileSourceCatalog(
+            fixture.Projects,
+            new MutableStorageCatalog(disabled, unregistered),
+            new FakeBrowseDriverRegistry(StorageProviderKind.FileSystem));
+
+        foreach (Guid storageId in new[] { disabled.Id, unregistered.Id, Guid.NewGuid() })
+        {
+            Assert.True(ResourceFileSourceKey.TryParse(
+                $"storage:{storageId.ToString("N").ToUpperInvariant()}",
+                out ResourceFileSourceKey key));
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await catalog.ResolveAsync(key));
+        }
+    }
+
     private static StorageCatalogRecord Storage(string name, StorageProviderKind providerKind)
         => new()
         {

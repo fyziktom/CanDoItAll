@@ -99,6 +99,7 @@
                                             ShowWorkload="false"
                                             ShellTestId="crmhr-agent-item-shell"
                                             SelectTestId="crmhr-agent-item"
+                                            SelectDisabled="@(!recordContext.IsInteractive)"
                                             OnSelect="@(() => recordContext.SelectAsync())" />
                     </ItemTemplate>
                 </PagedRecordBrowser>

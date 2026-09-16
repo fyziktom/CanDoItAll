@@ -44,6 +44,7 @@ public static class AgentParticipantPresentationMapper
                     options.FavoriteTestId)
                 : null,
             isSelected: options.IsSelected,
+            isDisabled: options.IsSelectDisabled,
             isFavorite: isFavorite);
     }
 
@@ -227,4 +228,5 @@ public sealed record AgentParticipantCardProjectionOptions(
     string FavoriteTestId,
     bool ShowDetailsTooltip,
     bool IsPrivateProvider,
-    string SelectedLabel);
+    string SelectedLabel,
+    bool IsSelectDisabled = false);

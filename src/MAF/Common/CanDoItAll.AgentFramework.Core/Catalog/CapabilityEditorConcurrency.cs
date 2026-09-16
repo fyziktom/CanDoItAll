@@ -1,7 +1,6 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -24,7 +23,7 @@ public static class CapabilityEditorConcurrency
             editor.IsBuiltIn,
             Tags = NormalizeTags(editor.Tags)
         }, SerializerOptions);
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+        return StableContentHash.ComputeSha256Hex(payload);
     }
 
     private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)

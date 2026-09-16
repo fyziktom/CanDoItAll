@@ -45,6 +45,29 @@ public sealed class StorageObjectResourceConnectorTests
     }
 
     [Fact]
+    public void Stored_config_with_uppercase_source_digits_validates_without_being_rewritten()
+    {
+        Guid storageId = Guid.NewGuid();
+        string storedSourceKey = $"storage:{storageId.ToString("N").ToUpperInvariant()}";
+        var config = new StorageObjectResourceConfig(
+            storedSourceKey,
+            storageId,
+            StorageProviderKind.FileSystem,
+            StorageLocatorKind.RelativePath,
+            "folder/file.txt",
+            "file.txt",
+            "text/plain",
+            42);
+
+        string json = StorageObjectResourceConnectorPlugin.Serialize(config);
+        StorageObjectResourceConfig restored = StorageObjectResourceConnectorPlugin.Deserialize(json);
+
+        Assert.Equal(storedSourceKey, restored.SourceKey);
+        Assert.True(ResourceFileSourceKey.TryParse(restored.SourceKey, out ResourceFileSourceKey key));
+        Assert.Equal(ResourceFileSourceKey.ForStorage(storageId), key);
+    }
+
+    [Fact]
     public void Config_rejects_incompatible_provider_and_locator()
     {
         Guid storageId = Guid.NewGuid();

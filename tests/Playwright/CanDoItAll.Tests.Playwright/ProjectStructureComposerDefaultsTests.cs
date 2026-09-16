@@ -53,6 +53,7 @@ public sealed partial class AppSmokeTests
         await addParticipantButton.ClickAsync();
         await page.WaitForSelectorAsync("text=Autoselected Freelancer");
 
+        await CloseStructureToolboxWindowAsync(page);
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
         await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
@@ -131,6 +132,7 @@ public sealed partial class AppSmokeTests
             $"Expected the online meeting repeat select to expose the shared cadence options, but only found {repeatOptionCount} selectable options.");
 
         await page.Keyboard.PressAsync("Escape");
+        await CloseStructureToolboxWindowAsync(page);
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
         await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
@@ -166,6 +168,25 @@ public sealed partial class AppSmokeTests
         Assert.True(
             await WaitForLocatorAsync(groupBody, 2_000),
             $"Expected the project structure toolbox group '{groupKey}' to be expanded before interacting with its actions.");
+    }
+
+    // The test opened the standard-blocks toolbox itself. Floating windows may overlap, and the shared canvas window
+    // runtime re-raises a window on every state sync, so an open toolbox can legitimately cover the object index
+    // outline. Close it through its toolbar toggle and prove it is hidden instead of clicking through it.
+    private static async Task CloseStructureToolboxWindowAsync(IPage page)
+    {
+        var window = page.GetByTestId("project-structure-toolbox-window");
+        if (!await window.IsVisibleAsync())
+        {
+            return;
+        }
+
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-toolbox-window");
+        await page.GetByTestId("project-structure-toolbox-toggle").ClickAsync();
+        await window.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
+        Assert.False(
+            await window.IsVisibleAsync(),
+            "Expected the project structure toolbox window to be closed before using the object index outline.");
     }
 
     private static Task<int> ReadSelectableOptionCountAsync(ILocator select)
