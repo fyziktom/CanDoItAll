@@ -41,6 +41,14 @@ concrete service, a command surface or `NavigationManager`, and no component wri
 are host methods or host-supplied delegates (`PartyImportExportActions`), and a project admission
 is bound to the profile identifier the host passes (`OpportunityConversionDialog`).
 
+Three rules keep the surfaces' actions on the record the operator sees. An action outside its form
+element (a dialog footer Save) validates the form's `EditContext`, parsing errors included, through
+`CrmHrWorkspaceSurface.SubmitAsync` before the host sees it. A row action inside a loop names the
+row instance it rendered (or a per-row copy of the index), never the shared loop variable, because
+component child content runs after the loop. An overlay that belongs to a record dialog (the
+opportunity and connection dialogs of the CRM account) renders inside that dialog, so it closes
+with it and stacks above it.
+
 Presentation language: interface words a formatter generates are English under every server
 culture. `CrmHrPresentationCulture` formats month labels (`Jan 2025`) and forces English AM/PM
 designators into the ambient short timestamp; numbers, separators, the date order and the time

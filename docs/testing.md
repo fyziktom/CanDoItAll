@@ -148,6 +148,27 @@ must not change. Browser evidence is `FullyQualifiedName~CrmHrFinancialsBrowserT
 sparse multi-currency sales, plotted chart geometry and legend, monthly/yearly categories, a
 constrained width and an account without sales).
 
+For a change anywhere in the CRM / HR module, its rendering library, its contracts or its sandbox,
+the maintained [completion record](architecture/crm-hr-ui-completion.md) maps each workspace to its
+lanes. The whole-module lanes are the Unit and Components topics (the Components topic includes the
+host invariant facts `CrmHrSameTargetRerenderTests`, `CrmHrAssignmentsMutationTests`,
+`CrmHrOpportunityConversionHostTests`, `CrmHrDirectoryRowActionTests`, the footer-save and sandbox
+facts, and the boundary guards) and the browser journeys:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CrmHr|FullyQualifiedName~CrmAgent|FullyQualifiedName~HrAgent|FullyQualifiedName~CrmPlanning" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.|FullyQualifiedName~OpportunityBoardTests|FullyQualifiedName~AssignmentEditorAdmissionTests" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Playwright.slnx --configuration Release --no-build --no-restore --filter "(FullyQualifiedName~CrmHr|FullyQualifiedName~ProjectStructureTaskAssigneeJourneyTests)&Category!=Quarantined&Category!=LiveAgent" /m:1
+```
+
+The opt-in live model smoke (`Category=LiveAgent`: `CrmHrLiveAgentToolUiSmokeTests` in the
+Playwright project, `CrmHrLiveAgentToolSmokeIntegrationTests` in the Integration project) returns
+without effect unless both `CANDOITALL_RUN_LIVE_AGENT_VALIDATION=true` and
+`CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE=true` are set for the test process; it uses the seeded provider
+profile and its configured credential, synthetic records and a bound of ten model requests per
+execution. `CANDOITALL_LIVE_AGENT_UI_REHEARSAL=true` runs the UI smoke up to its first message
+without a model request.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
