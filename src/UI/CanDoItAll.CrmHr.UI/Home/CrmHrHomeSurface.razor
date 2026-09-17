@@ -42,6 +42,7 @@
                                         Label="Open directory"
                                         TooltipText="Open the CRM-HR party directory."
                                         ButtonStyle="ButtonStyle.Primary"
+                                        Disabled="@ActionsDisabled"
                                         Click="@(() => NavigateAsync(CrmHrHomeDestination.Directory))"
                                         data-testid="crmhr-home-open-directory" />
             </Actions>
@@ -49,7 +50,10 @@
     </Header>
 
     <ChildContent>
-        <Stack GapScale="LayoutGap.Large" data-testid="crmhr-home" data-phase="@Presentation.Phase.ToString().ToLowerInvariant()">
+        <Stack GapScale="LayoutGap.Large"
+               data-testid="crmhr-home"
+               data-phase="@Presentation.Phase.ToString().ToLowerInvariant()"
+               data-interactive="@(IsInteractive ? "true" : "false")">
             @SecondaryNavigation
 
             <Grid Gap="LayoutGap.Large" ColumnsLg="2">
@@ -77,12 +81,13 @@
                                 <Actions>
                                     <Button Text="Retry"
                                             Icon="refresh"
-                                            Disabled="@Presentation.IsRetrying"
+                                            Disabled="@(Presentation.IsRetrying || ActionsDisabled)"
                                             IsBusy="@Presentation.IsRetrying"
                                             Click="RetryAsync"
                                             data-testid="crmhr-home-retry" />
                                     <Button Text="Open directory"
                                             ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@ActionsDisabled"
                                             Click="@(() => NavigateAsync(CrmHrHomeDestination.Directory))"
                                             data-testid="crmhr-home-failed-open-directory" />
                                 </Actions>
@@ -122,6 +127,7 @@
                                             Description="The directory shell is ready. Add a person, organization, unit, or AI agent record to unlock downstream CRM and HR flows.">
                                     <Actions>
                                         <Button Text="Create party"
+                                                Disabled="@ActionsDisabled"
                                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Directory))"
                                                 data-testid="crmhr-home-create-party" />
                                     </Actions>
@@ -140,26 +146,32 @@
 
                     <Grid Gap="LayoutGap.Medium" ColumnsSm="2" Class="mt-5">
                         <Button Text="Directory"
+                                Disabled="@ActionsDisabled"
                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Directory))"
                                 data-testid="crmhr-home-route-directory" />
                         <Button Text="CRM"
                                 ButtonStyle="ButtonStyle.Light"
+                                Disabled="@ActionsDisabled"
                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Crm))"
                                 data-testid="crmhr-home-route-crm" />
                         <Button Text="Workforce"
                                 ButtonStyle="ButtonStyle.Light"
+                                Disabled="@ActionsDisabled"
                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Workforce))"
                                 data-testid="crmhr-home-route-workforce" />
                         <Button Text="Recruiting"
                                 ButtonStyle="ButtonStyle.Light"
+                                Disabled="@ActionsDisabled"
                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Recruiting))"
                                 data-testid="crmhr-home-route-recruiting" />
                         <Button Text="Agents"
                                 ButtonStyle="ButtonStyle.Light"
+                                Disabled="@ActionsDisabled"
                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Agents))"
                                 data-testid="crmhr-home-route-agents" />
                         <Button Text="Assignments"
                                 ButtonStyle="ButtonStyle.Light"
+                                Disabled="@ActionsDisabled"
                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Assignments))"
                                 data-testid="crmhr-home-route-assignments" />
                     </Grid>
@@ -203,6 +215,7 @@
                                 <Button Text="Open directory"
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
+                                        Disabled="@ActionsDisabled"
                                         Click="@(() => NavigateAsync(CrmHrHomeDestination.Directory))"
                                         data-testid="crmhr-home-sensitive-open-directory" />
                             </Cluster>
@@ -248,6 +261,7 @@
                         </div>
                         <Button Text="Open CRM"
                                 ButtonStyle="ButtonStyle.Light"
+                                Disabled="@ActionsDisabled"
                                 Click="@(() => NavigateAsync(CrmHrHomeDestination.Crm))"
                                 data-testid="crmhr-home-open-crm" />
                     </Split>
@@ -281,6 +295,7 @@
                                         </div>
                                         <Button Text="Open"
                                                 Size="ButtonSize.Small"
+                                                Disabled="@ActionsDisabled"
                                                 Click="@(() => OpenOpportunityAsync(opportunity))"
                                                 data-testid="crmhr-home-opportunity-open" />
                                     </Split>
@@ -304,6 +319,13 @@
     // Host-owned chrome rendered between the header and the overview cards (the production secondary tabs).
     [Parameter]
     public RenderFragment? SecondaryNavigation { get; set; }
+
+    // False while the host knows its markup cannot receive events (prerendered or statically rendered output); the
+    // actions stay disabled and the root reports data-interactive="false" until the host flips it.
+    [Parameter]
+    public bool IsInteractive { get; set; } = true;
+
+    private bool ActionsDisabled => !IsInteractive;
 
     private Task NavigateAsync(CrmHrHomeDestination destination)
         => Intent.InvokeAsync(new CrmHrHomeIntent.Navigate(destination));

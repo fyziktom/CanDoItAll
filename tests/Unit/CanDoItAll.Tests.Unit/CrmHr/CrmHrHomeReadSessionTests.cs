@@ -139,6 +139,34 @@ public sealed class CrmHrHomeReadSessionTests
     }
 
     [Fact]
+    public async Task Read_completion_tracks_the_current_read_and_completes_after_a_late_outcome_was_fenced()
+    {
+        var query = new ScriptedHomeQuery();
+        var session = new CrmHrHomeReadSession(query);
+        Assert.True(session.ReadCompletion.IsCompletedSuccessfully);
+
+        var load = session.LoadAsync();
+        Assert.Same(load, session.ReadCompletion);
+        query.Fail(new IOException("offline"));
+        await load;
+        Assert.True(session.ReadCompletion.IsCompletedSuccessfully);
+
+        var retry = session.RetryAsync(session.Presentation.Generation);
+        Assert.Same(retry, session.ReadCompletion);
+        // An ignored admission leaves the tracked read untouched.
+        await session.RetryAsync(session.Presentation.Generation);
+        Assert.Same(retry, session.ReadCompletion);
+
+        session.Dispose();
+        query.Complete(Snapshot);
+        await retry;
+
+        Assert.True(session.ReadCompletion.IsCompletedSuccessfully);
+        Assert.Equal(CrmHrHomePhase.Failed, session.Presentation.Phase);
+        Assert.Null(session.Presentation.Overview);
+    }
+
+    [Fact]
     public async Task Separate_instances_keep_separate_state()
     {
         var failing = new ScriptedHomeQuery();

@@ -8,7 +8,7 @@
 
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface" />
 
-<CrmHrHomeSurface Presentation="@session.Presentation" Intent="HandleIntentAsync">
+<CrmHrHomeSurface Presentation="@session.Presentation" Intent="HandleIntentAsync" IsInteractive="@isInteractive">
     <SecondaryNavigation>
         <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Home" />
     </SecondaryNavigation>
@@ -21,10 +21,14 @@
         CrmHrAgentChatSurfaceBuilder.BuildHomeSurface();
 
     private CrmHrHomeReadSession session = default!;
+    private bool isInteractive;
     private bool disposed;
 
     // Exposed for host tests that inspect the accepted presentation without reflection.
     public CrmHrHomePresentation Presentation => session.Presentation;
+
+    // The most recent read; completes once its outcome was accepted or fenced, also after disposal.
+    public Task ReadCompletion => session.ReadCompletion;
 
     protected override void OnInitialized()
     {
@@ -36,6 +40,19 @@
 
     protected override Task OnInitializedAsync()
         => session.LoadAsync();
+
+    // Prerendered and statically rendered markup has no event handlers. OnAfterRender runs only for an interactive
+    // render, so the surface's actions become usable exactly when a browser click can reach this host.
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender || isInteractive)
+        {
+            return;
+        }
+
+        isInteractive = true;
+        StateHasChanged();
+    }
 
     private Task HandleIntentAsync(CrmHrHomeIntent intent)
     {

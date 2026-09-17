@@ -1,9 +1,12 @@
 using Bunit;
+using Bunit.TestDoubles;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.CrmHr.UI.Home;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
+using CanDoItAll.Tests.Components.Prompts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,11 +41,12 @@ public sealed class CrmHrHomePageTests
         ]);
 
     [Fact]
-    public async Task Host_renders_the_shared_surface_reads_once_and_maps_every_navigation_to_the_catalogue_exactly_once()
+    public async Task Host_renders_the_shared_surface_reads_once_and_records_exactly_one_navigation_per_action()
     {
         var query = new ScriptedHomeQuery();
         using var context = CreateContext(query);
-        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var navigation = context.Services.GetRequiredService<BunitNavigationManager>();
+        var authority = new Uri(navigation.BaseUri).GetLeftPart(UriPartial.Authority);
 
         var cut = context.Render<CrmHrHomePage>();
 
@@ -52,6 +56,8 @@ public sealed class CrmHrHomePageTests
         var tabs = cut.FindComponent<CanDoItAll.Modules.CrmHr.Components.CrmHrSecondaryTabs>();
         Assert.Equal(CrmHrWorkspaceArea.Home, tabs.Instance.SelectedArea);
         Assert.NotNull(cut.Find("[data-testid='crmhr-home'] [aria-label='Home tab information']"));
+        // The host flips the surface to interactive after its first interactive render.
+        Assert.Equal("true", cut.Find("[data-testid='crmhr-home']").GetAttribute("data-interactive"));
 
         await cut.InvokeAsync(() => query.Complete(Snapshot));
         cut.WaitForAssertion(() => Assert.Equal("ready", cut.Find("[data-testid='crmhr-home']").GetAttribute("data-phase")));
@@ -61,7 +67,10 @@ public sealed class CrmHrHomePageTests
         // A same-instance rerender issues no new request.
         cut.Render();
         Assert.Single(query.Calls);
+        Assert.Empty(navigation.History);
 
+        // Every action records exactly one navigation, to the catalogue route of its destination.
+        var expectedNavigations = 0;
         foreach (var (testId, area) in new[]
                  {
                      ("crmhr-home-open-directory", CrmHrWorkspaceArea.Directory),
@@ -75,10 +84,14 @@ public sealed class CrmHrHomePageTests
                  })
         {
             cut.Find($"[data-testid='{testId}']").Click();
-            Assert.Equal(new Uri(navigation.BaseUri).GetLeftPart(UriPartial.Authority) + CrmHrRouteCatalog.Get(area).Route, navigation.Uri);
+            expectedNavigations++;
+            Assert.Equal(expectedNavigations, navigation.History.Count);
+            Assert.Equal(authority + CrmHrRouteCatalog.Get(area).Route, navigation.Uri);
         }
 
         cut.Find("[data-testid='crmhr-home-opportunity-open']").Click();
+        expectedNavigations++;
+        Assert.Equal(expectedNavigations, navigation.History.Count);
         Assert.EndsWith(
             "/crm-hr/crm?accountId=71000000-0000-0000-0000-000000000001&opportunityId=71000000-0000-0000-0000-000000000002",
             navigation.Uri,
@@ -87,14 +100,15 @@ public sealed class CrmHrHomePageTests
     }
 
     [Fact]
-    public async Task Host_publishes_the_static_home_agent_context_keeps_it_on_query_failure_and_releases_only_its_own_scope_on_disposal()
+    public async Task Host_publishes_the_static_home_agent_context_keeps_it_on_query_failure_and_releases_it_when_its_owner_removes_home()
     {
         var query = new ScriptedHomeQuery();
         using var context = CreateContext(query);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var expected = CrmHrAgentChatSurfaceBuilder.BuildHomeSurface();
 
-        var cut = context.Render<CrmHrHomePage>();
+        var owner = RenderHomeInsideOwner(context);
+        var cut = owner.FindComponent<CrmHrHomePage>();
 
         var snapshot = registry.Capture();
         Assert.NotNull(snapshot);
@@ -110,12 +124,59 @@ public sealed class CrmHrHomePageTests
         var afterFailure = registry.Capture();
         Assert.NotNull(afterFailure);
         Assert.Equal(expected.Source, afterFailure!.Scope.Source);
+        Assert.Equal(snapshot.Scope.Id, afterFailure.Scope.Id);
         Assert.Empty(afterFailure.Fragments);
         Assert.DoesNotContain("relation does not exist", cut.Markup, StringComparison.Ordinal);
 
-        await context.DisposeComponentsAsync();
+        // The real owner stops rendering Home; its scope registration goes with it and nothing else remains.
+        await owner.InvokeAsync(owner.Instance.Hide);
 
+        owner.WaitForAssertion(() => Assert.Empty(owner.FindComponents<CrmHrHomePage>()));
         Assert.Null(registry.Capture());
+        Assert.Single(query.Calls);
+    }
+
+    [Fact]
+    public async Task Removing_home_leaves_an_unrelated_registry_scope_valid_and_a_recreated_home_starts_a_fresh_read()
+    {
+        var query = new ScriptedHomeQuery();
+        using var context = CreateContext(query);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var owner = RenderHomeInsideOwner(context);
+        var first = owner.FindComponent<CrmHrHomePage>();
+        var firstInstance = first.Instance;
+        await first.InvokeAsync(() => query.Fail(new IOException("offline")));
+        first.WaitForAssertion(() => Assert.Equal("failed", first.Find("[data-testid='crmhr-home']").GetAttribute("data-phase")));
+
+        // A distinct scope takes over the same real registry after Home, as another surface would.
+        var directorySurface = CrmHrAgentChatSurfaceBuilder.BuildDirectorySurface();
+        using var unrelated = registry.ActivateScope(directorySurface.ToScope(AgentChatContextScopeId.Create()));
+        Assert.True(unrelated.IsActive);
+        Assert.Equal(unrelated.ScopeId, registry.Capture()?.Scope.Id);
+
+        await owner.InvokeAsync(owner.Instance.Hide);
+        owner.WaitForAssertion(() => Assert.Empty(owner.FindComponents<CrmHrHomePage>()));
+
+        // Home released only its own registration: the unrelated scope is still the valid active scope.
+        Assert.True(unrelated.IsActive);
+        var afterRemoval = registry.Capture();
+        Assert.NotNull(afterRemoval);
+        Assert.Equal(unrelated.ScopeId, afterRemoval!.Scope.Id);
+        Assert.Single(query.Calls);
+
+        // A recreated Home is a fresh instance with its own read; it inherits neither the failure nor the old session.
+        var second = context.Render<CrmHrHomePage>();
+        Assert.Equal("loading", second.Find("[data-testid='crmhr-home']").GetAttribute("data-phase"));
+        Assert.Equal(2, query.Calls.Count);
+        Assert.NotSame(firstInstance, second.Instance);
+
+        await second.InvokeAsync(() => query.Complete(Snapshot));
+
+        second.WaitForAssertion(() => Assert.Equal("ready", second.Find("[data-testid='crmhr-home']").GetAttribute("data-phase")));
+        Assert.Equal(CrmHrHomePhase.Failed, firstInstance.Presentation.Phase);
+        Assert.Equal(CrmHrAgentChatSurfaceBuilder.BuildHomeSurface().Source, registry.Capture()?.Scope.Source);
+        Assert.False(unrelated.IsActive);
     }
 
     [Fact]
@@ -149,9 +210,11 @@ public sealed class CrmHrHomePageTests
         using var context = CreateContext(query);
         var cut = context.Render<CrmHrHomePage>();
         var page = cut.Instance;
+        var read = page.ReadCompletion;
         Assert.Single(query.Calls);
+        Assert.False(read.IsCompleted);
 
-        await context.DisposeComponentsAsync();
+        await context.DisposeRenderedComponentsAsync();
         Assert.True(query.Calls[0].IsCancellationRequested);
 
         if (fail)
@@ -163,10 +226,12 @@ public sealed class CrmHrHomePageTests
             query.Complete(Snapshot);
         }
 
-        await Task.Yield();
+        // The read completes after its late outcome was fenced; only then is the accepted presentation inspected.
+        await read.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(CrmHrHomePhase.Loading, page.Presentation.Phase);
         Assert.Null(page.Presentation.Overview);
+        Assert.Null(page.Presentation.FailureMessage);
     }
 
     [Fact]
@@ -186,6 +251,11 @@ public sealed class CrmHrHomePageTests
         Assert.Equal("failed", first.Find("[data-testid='crmhr-home']").GetAttribute("data-phase"));
         Assert.Equal(2, query.Calls.Count);
     }
+
+    // Home rendered by a real conditional owner, so a test can remove exactly Home while the renderer stays alive.
+    private static IRenderedComponent<ConditionalRenderHost> RenderHomeInsideOwner(BunitContext context)
+        => context.Render<ConditionalRenderHost>(parameters => parameters
+            .AddChildContent<CrmHrHomePage>());
 
     private static BunitContext CreateContext(ScriptedHomeQuery query)
     {
@@ -208,7 +278,7 @@ public sealed class CrmHrHomePageTests
         public Task<CrmHrHomeSnapshotModel> GetAsync(CancellationToken cancellationToken = default)
         {
             Calls.Add(cancellationToken);
-            var source = new TaskCompletionSource<CrmHrHomeSnapshotModel>();
+            var source = new TaskCompletionSource<CrmHrHomeSnapshotModel>(TaskCreationOptions.RunContinuationsAsynchronously);
             pending.Enqueue(source);
             return source.Task;
         }

@@ -223,6 +223,35 @@ public sealed class CrmHrHomeSurfaceTests
         Assert.Equal("tabs", slot.TextContent);
     }
 
+    [Fact]
+    public void A_non_interactive_host_reports_the_signal_and_keeps_every_action_disabled_until_it_flips()
+    {
+        using var context = CreateContext();
+        var intents = new List<CrmHrHomeIntent>();
+        var overview = new CrmHrHomeOverview(
+            new CrmHrHomeTotals(1, 1, 1, 0, 0, 1),
+            [new CrmHrHomeDirectoryEntry(Guid.NewGuid(), "Aurora Logistics", "Organization", "Active", null, IsSensitive: false)],
+            [new CrmHrHomeSensitiveEntry(Guid.NewGuid(), "Dana Reyes", "Person", "Candidate")],
+            [new CrmHrHomeOpportunityEntry(OpportunityId, AccountId, "Renewal expansion", "Aurora Logistics", "Bram Vos", "Proposal", "Renewal", 45000m, 65)]);
+
+        var cut = context.Render<CrmHrHomeSurface>(parameters => parameters
+            .Add(component => component.Presentation, CrmHrHomePresentation.CreateReady(1, overview))
+            .Add(component => component.IsInteractive, false)
+            .Add(component => component.Intent, intent => intents.Add(intent)));
+
+        Assert.Equal("false", cut.Find("[data-testid='crmhr-home']").GetAttribute("data-interactive"));
+        var actions = cut.FindAll("[data-testid='crmhr-home'] button, [data-testid='crmhr-home-open-directory']");
+        Assert.NotEmpty(actions);
+        Assert.All(actions, action => Assert.True(action.HasAttribute("disabled"), $"{action.GetAttribute("data-testid")} is enabled"));
+
+        cut.Render(parameters => parameters.Add(component => component.IsInteractive, true));
+
+        Assert.Equal("true", cut.Find("[data-testid='crmhr-home']").GetAttribute("data-interactive"));
+        Assert.All(cut.FindAll("[data-testid='crmhr-home'] button"), action => Assert.False(action.HasAttribute("disabled")));
+        cut.Find("[data-testid='crmhr-home-route-crm']").Click();
+        Assert.Equal(CrmHrHomeDestination.Crm, Assert.IsType<CrmHrHomeIntent.Navigate>(Assert.Single(intents)).Destination);
+    }
+
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();

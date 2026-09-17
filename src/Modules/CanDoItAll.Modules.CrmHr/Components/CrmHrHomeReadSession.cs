@@ -28,6 +28,10 @@ public sealed class CrmHrHomeReadSession : IDisposable
     // Raised after every accepted presentation change so the host can render; never raised after disposal.
     public Func<Task>? Changed { get; set; }
 
+    // The most recent read, completed once its outcome was accepted or fenced. A late outcome of a query that ignores
+    // cancellation is observable through it after disposal, without polling.
+    public Task ReadCompletion { get; private set; } = Task.CompletedTask;
+
     // The first read. A same-instance rerender must not call this again; the host calls it once from initialization.
     public Task LoadAsync()
     {
@@ -36,7 +40,7 @@ public sealed class CrmHrHomeReadSession : IDisposable
             return Task.CompletedTask;
         }
 
-        return ReadAsync(++generation, retrying: false);
+        return ReadCompletion = ReadAsync(++generation, retrying: false);
     }
 
     // Explicit retry of a failed read. Stale generations and duplicate admissions while a read is in flight are ignored.
@@ -47,7 +51,7 @@ public sealed class CrmHrHomeReadSession : IDisposable
             return Task.CompletedTask;
         }
 
-        return ReadAsync(++generation, retrying: true);
+        return ReadCompletion = ReadAsync(++generation, retrying: true);
     }
 
     private async Task ReadAsync(long current, bool retrying)
