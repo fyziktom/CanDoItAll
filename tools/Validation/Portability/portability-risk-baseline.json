@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-16T19:39:53.886549+00:00",
+  "generated_utc": "2026-09-17T01:11:42.931654+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14682,
+  "allowance_count": 14683,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -71453,6 +71453,12 @@
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md",
       "category": "external-tool",
       "source_fingerprint": "a5ea14dc81de75fafccc9868df41e228dabeae8e63aff655c7df3f6b0eb118ca",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAccountActivitySandboxFixture.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4bc6eed57a8a9a400d722876d537c97325885ffe621ff2c26b9a5e798080ba2d",
       "count": 1
     },
     {

@@ -114,6 +114,23 @@ is `FullyQualifiedName~CrmHrHomeBrowserTests` in the Playwright project; the san
 through `CrmHrHomeSandboxTests` and manually via
 [its README](../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/README.md).
 
+For the account summary and activity history surfaces (`Accounts/`, `Activity/` in the
+rendering library, the `AccountSummaryPanel` and `InteractionTimeline` adapters, the two
+presentation mappers, or the `/crm-hr/account-activity` sandbox specimen), run the topic with a
+stated discovery count; the filters select the mapper, surface, adapter, sandbox and boundary
+classes by their `CrmHrAccount` and `CrmHrActivity` prefixes:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrAccount|FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrActivity" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrAccount|FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrActivity" /m:1
+```
+
+The CRM, Directory and Workforce pages compose the adapters, so the whole CRM / HR Components
+topic (`FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.`) is the composition baseline for
+an adapter change. Browser evidence is `FullyQualifiedName~CrmHrAccountActivityBrowserTests`
+(account summary and activity in the CRM workspace, the Directory timeline host, and the
+conversion mutation clicked once on the interactive summary).
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

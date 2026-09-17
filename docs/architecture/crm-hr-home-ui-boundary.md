@@ -76,6 +76,9 @@ lifecycle change covered by tests; **Correction** = explicit observable change r
 | Data text is encoded as text | Razor encoding (unchanged) | Preserve | surface `Untrusted_text_is_rendered_as_text…`, sandbox `Long_text_scenario…` |
 | Appearance: section hierarchy, existing selectors (`crmhr-home-open-directory`, `crmhr-home-sensitive-card`, `crmhr-home-sensitive-open-directory`, `crmhr-home-opportunity-item`), theme, responsive layout | same markup and classes; new selectors added for rows, states and actions | Preserve | browser case at 1600×1000 and 1100×900 |
 | The Sensitive badge in a directory or sensitive row broke mid-word ("Sensitiv / e") when the row was squeezed at 1100 px | badge no longer wraps (`NoWrap`) | Correction | browser capture at 1100×900 |
+| Prerendered Home actions could receive a lost click before the circuit attached | the host flips `IsInteractive` after its first interactive render (`OnAfterRender` never runs during prerendering); the surface reports `data-interactive` on its root and keeps every action disabled until then; prerendering itself is unchanged | Correction (follow-up pass) | surface `A_non_interactive_host_reports_the_signal_and_keeps_every_action_disabled_until_it_flips`, host `Host_renders_the_shared_surface…` (`data-interactive="true"` after the interactive render), browser lane (one click per action after the signal, no retry loop) |
+| Lifecycle evidence of the host: disposal through the documented dispatcher-safe helper or through a real rendered conditional owner; an unrelated real registry scope activated after Home survives Home's removal; a recreated Home starts a fresh read; late outcomes are asserted after the read's observable completion (`ReadCompletion`), not after a yield; every navigation action records exactly one navigation | tests relied on `DisposeComponentsAsync` outside the dispatcher, `Task.Yield` and an unrecorded "exactly once" claim | Safeguard (evidence repair, follow-up pass) | host `…releases_it_when_its_owner_removes_home`, `Removing_home_leaves_an_unrelated_registry_scope_valid_and_a_recreated_home_starts_a_fresh_read`, `A_disposed_host_ignores_the_late_outcome…` (awaits `ReadCompletion`), `…records_exactly_one_navigation_per_action` (`BunitNavigationManager.History`), session `Read_completion_tracks_the_current_read…` |
+| Browser seeding of the sensitive party: three distinguishable values in three fields (operational summary, ordinary `Notes`, an actual `ConfidentialNotes` entry through `PartyConfidentialNoteEditorModel`), persistence verified through `GetPartyAsync` before the page is opened; Home shows neither note and the sensitive card excludes the summary | the "confidential note" value had been seeded into `Notes` | Safeguard (evidence repair, follow-up pass) | browser `Home_shows_the_seeded_overview…` |
 
 No new currency policy, aggregation, card, filter, polling, route or URL-state schema was
 added. The query service is unchanged.
@@ -201,3 +204,50 @@ value is a separate measurement recorded below.
   on the git-ignored retained drafts under `artifacts/modules-decoupling/drafts/**` (47 copies
   of the fixture file are still present there); no reported path belongs to this change and
   the gate is therefore not green on this workstation and is reported as such.
+
+## Execution record: review repairs (2026-09-16)
+
+- Start: `8bc0d02eac3dae4e001c5db369e465d304d90ea4` on `components-decoupling`, clean tree,
+  as the second part of the CRM / HR follow-up pass (the first part is the Gallery picker
+  context policy in the Prompt Gallery record). Nothing was pushed, merged, rebased or reset;
+  no signing or permission configuration was touched.
+- Lifecycle evidence (review item A2): `CrmHrHomeReadSession` exposes `ReadCompletion`, the
+  task of the current read, and the host forwards it; the disposed-host theory now awaits it
+  after the late outcome instead of yielding. The agent-context facts render Home inside the
+  real `ConditionalRenderHost` from the Prompts tests and remove Home by hiding it: Home's own
+  registration is released (`Capture()` is null when nothing else was registered), a Directory
+  scope activated later on the same real `AgentChatContextRegistry` stays active with the same
+  scope id after Home is removed, and a Home rendered afterwards is a fresh instance with a
+  second read that inherits neither the failure nor the old session. The navigation fact
+  counts `BunitNavigationManager.History` and asserts exactly one recorded navigation per
+  action. The whole-tree disposal uses the documented `DisposeRenderedComponentsAsync()`
+  helper.
+- Browser seeding (review item A3): the sensitive party is seeded with three distinguishable
+  values in three fields (operational summary, ordinary `Notes`, an actual confidential note
+  through `PartyConfidentialNoteEditorModel` in the HumanResources category), the persisted
+  record is read back through `GetPartyAsync` and each value is asserted in its own field
+  before the page is opened; the browser assertions then check that neither note appears in
+  the Home document and that the sensitive card excludes the summary. The static agent
+  context stays free of preview values at the registry layer (host fact, unchanged).
+- Evidence mechanics: the host flips `IsInteractive` after its first interactive render, the
+  surface reports `data-interactive` and disables its actions until then, and the browser
+  lane waits for `data-interactive="true"` and clicks each action once; `ClickUntilUrlAsync`
+  was removed. Blazor's client-side navigation is still observed by URL because there is no
+  document load to wait for. Prerendering is unchanged.
+- Measurements: the tables above are unchanged and were not re-measured in this pass. The
+  earlier watch figures (Web 3.8 s, sandbox 5.5 s edit-to-visible) are separate measurements
+  of different hosts and are not a hot-reload speedup claim.
+- Validation (Release, `/m:1`, counts stated before execution and matched; the lanes were
+  run on the first policy of the Gallery fix and again on the final source):
+  - Unit `FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrHome` 13 / 13 passed
+    (8 session + 1 new `ReadCompletion` fact + 4 mapper).
+  - Components `FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrHome` 30 / 30
+    passed (8 surface + 7 host + 12 sandbox + 3 boundary).
+  - Existing composition facts 2 / 2 and `CrmHrNavigationTests` 13 / 13 passed; the whole
+    `FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.` topic 171 / 171 passed.
+  - Browser lane `FullyQualifiedName~CrmHrHomeBrowserTests` 1 / 1 passed (11 s) on the real
+    Web host and PostgreSQL, with the seeding verification and single clicks; captures in the
+    git-ignored Playwright output folder (crm-hr-home).
+- Static gates and the Stable gate decision for the whole follow-up pass are recorded in the
+  [account summary and activity history record](crm-hr-account-activity-ui-boundary.md); the
+  Home host and surface edits of this pass carried no portability finding.

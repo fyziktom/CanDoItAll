@@ -1,0 +1,112 @@
+@* The CRM account summary: one presentation record in, typed intents out. Navigation and the conversion mutation
+   stay with the host; the surface only reports that the operator asked for them. *@
+@if (Account is null)
+{
+    <div data-testid="crmhr-account-summary-empty">
+        <EmptyState Eyebrow="No account selected"
+                    Title="Choose an account from the list"
+                    Description="CRM details, connected records, recent interactions, and overdue follow-ups appear here after you select an organization.">
+            <Actions>
+                <Button Text="Open directory"
+                        Disabled="@ActionsDisabled"
+                        Click="@(() => OpenDirectoryAsync(null))"
+                        data-testid="crmhr-account-summary-open-directory" />
+            </Actions>
+        </EmptyState>
+    </div>
+}
+else
+{
+    <div data-testid="crmhr-account-summary"
+         data-account-id="@Account.AccountPartyId.ToString("D")"
+         data-interactive="@(IsInteractive ? "true" : "false")">
+        <SurfaceCard>
+            <Stack GapScale="LayoutGap.Medium">
+                <Split Gap="LayoutGap.Medium"
+                       AlignItems="AlignItems.Start"
+                       JustifyContent="JustifyContent.SpaceBetween"
+                       Wrap="FlexWrap.Wrap">
+                    <div class="min-w-0">
+                        <p class="cda-eyebrow">Account record</p>
+                        <h2 class="mt-1 break-words text-lg font-semibold text-slate-950" data-testid="crmhr-account-summary-name">@Account.DisplayName</h2>
+                        @if (!string.IsNullOrWhiteSpace(Account.Summary))
+                        {
+                            <p class="mt-2 max-w-4xl break-words text-sm leading-6 text-slate-600" data-testid="crmhr-account-summary-text">@Account.Summary</p>
+                        }
+                    </div>
+
+                    <Stack GapScale="LayoutGap.Small">
+                        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                            <StatusBadge Tone="@CrmHrAccountText.ToneToken(Account.RelationshipStageTone)"
+                                         Text="@Account.RelationshipStageLabel"
+                                         NoWrap="true"
+                                         data-testid="crmhr-account-summary-stage" />
+                            <StatusBadge Tone="@CrmHrAccountText.ToneToken(Account.LifecycleTone)"
+                                         Text="@Account.LifecycleLabel"
+                                         NoWrap="true"
+                                         data-testid="crmhr-account-summary-lifecycle" />
+                        </Cluster>
+                        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                            <Button Text="Open directory record"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@ActionsDisabled"
+                                    Click="@(() => OpenDirectoryAsync(Account.AccountPartyId))"
+                                    data-testid="crmhr-account-summary-open-directory" />
+                            @if (Account.CanConvertToActiveCustomer)
+                            {
+                                <Button Text="Convert to active customer"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@ActionsDisabled"
+                                        Click="@(() => ConvertAsync(Account.AccountPartyId))"
+                                        data-testid="crmhr-account-convert-active-button" />
+                            }
+                        </Cluster>
+                    </Stack>
+                </Split>
+
+                <CompactStatStrip data-testid="crmhr-account-summary-stats">
+                    <CompactStat Label="email"
+                                 Value="@CrmHrAccountText.FormatContact(Account.PrimaryEmail)"
+                                 TooltipText="Primary email from the shared party record." />
+                    <CompactStat Label="phone"
+                                 Value="@CrmHrAccountText.FormatContact(Account.PrimaryPhone)"
+                                 TooltipText="Primary phone from the shared party record." />
+                    <CompactStat Label="roles"
+                                 Value="@CrmHrAccountText.FormatRoles(Account.Roles)"
+                                 TooltipText="CRM-facing roles on the shared party record." />
+                    <CompactStat Label="connections"
+                                 Value="@CrmHrAccountText.FormatCount(Account.ConnectionCount)"
+                                 TooltipText="People and other directory records connected to this account." />
+                    <CompactStat Label="opportunities"
+                                 Value="@CrmHrAccountText.FormatCount(Account.OpportunityCount)"
+                                 TooltipText="Opportunities currently attached to this account."
+                                 Tone="info" />
+                    <CompactStat Label="tags"
+                                 Value="@CrmHrAccountText.FormatCount(Account.TagCount)"
+                                 TooltipText="Tags currently attached to this account." />
+                </CompactStatStrip>
+            </Stack>
+        </SurfaceCard>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public CrmHrAccountSummary? Account { get; set; }
+
+    [Parameter]
+    public EventCallback<CrmHrAccountSummaryIntent> Intent { get; set; }
+
+    // False while the host knows its markup cannot receive events (prerendered or statically rendered output).
+    [Parameter]
+    public bool IsInteractive { get; set; } = true;
+
+    private bool ActionsDisabled => !IsInteractive;
+
+    private Task OpenDirectoryAsync(Guid? accountPartyId)
+        => Intent.InvokeAsync(new CrmHrAccountSummaryIntent.OpenDirectory(accountPartyId));
+
+    private Task ConvertAsync(Guid accountPartyId)
+        => Intent.InvokeAsync(new CrmHrAccountSummaryIntent.ConvertToActiveCustomer(accountPartyId));
+}

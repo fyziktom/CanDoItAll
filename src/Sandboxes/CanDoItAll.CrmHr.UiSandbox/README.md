@@ -1,9 +1,10 @@
-# CRM / HR Home UI sandbox
+# CRM / HR UI sandbox
 
-Backend-free scenario host for the real CRM / HR Home overview from
-[CanDoItAll.CrmHr.UI](../../UI/CanDoItAll.CrmHr.UI/README.md). It references only that
-rendering library (and, through it, BaseLib and Common). It has no database, no
-`ICrmHrHomeQueryService`, no Web, module, AgentFramework or navigation dependency. Every
+Backend-free scenario host for the real CRM / HR surfaces from
+[CanDoItAll.CrmHr.UI](../../UI/CanDoItAll.CrmHr.UI/README.md): the Home overview at
+`/crm-hr` and the account summary with the activity history at `/crm-hr/account-activity`.
+It references only that rendering library (and, through it, BaseLib and Common). It has no
+database, no query service, no Web, module, AgentFramework or navigation dependency. Every
 interaction updates deterministic local state and the intent line; the production secondary
 tabs are host-owned chrome and are represented by a labelled slot, not duplicated.
 
@@ -55,6 +56,27 @@ the context; the intent line stays transient.
 | `long-text` | Markup-looking and very long names, summaries and titles rendered as text |
 | `null-optionals` | Missing summaries, no sensitive rows, an opportunity without an amount and with an unknown owner |
 | `large-totals` | Totals in the hundreds and thousands while the previews stay capped at 5 / 3 / 6 |
+
+## Account summary and activity history
+
+`/crm-hr/account-activity?scenario=<token>&layout=matched|narrow|flexible` renders the
+account summary followed by the timeline in its three production compositions (CRM account
+activity `crmhr-account-activity`, Directory party history `crmhr-directory-activity`,
+Workforce history `crmhr-workforce-history`), each with its own wording and its own page
+index over the same deterministic history (page size 10). The conversion intent updates the
+local account to an active customer; the production page saves and reloads instead.
+
+| Token | Presentation |
+|---|---|
+| `populated` | Prospect account with contacts, roles and counts; twelve entries over two pages with one overdue follow-up |
+| `no-account` | The no-account empty state with its directory action; empty timelines |
+| `active-customer` | An active customer: no conversion offer |
+| `loading` | Timelines in the host's loading state with paging disabled |
+| `empty` | Zero entries: each host's own empty copy and "No pages" |
+| `overdue` | Seven follow-ups, four overdue: the overdue total and per-row Overdue badges |
+| `long-text` | Markup-looking and very long names, summaries, titles and metadata rendered as text |
+| `null-contacts` | No summary, no email, no phone, no roles, zero counts: the placeholder copy |
+| `many-pages` | Forty-seven entries over five pages for independent paging per host |
 
 All data is synthetic. No real person, organization, contact detail or confidential note is
 present, and nothing here reaches an agent context.

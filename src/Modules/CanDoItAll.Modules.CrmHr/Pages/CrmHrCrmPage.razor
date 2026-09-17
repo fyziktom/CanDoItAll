@@ -80,7 +80,8 @@
                     <ChildContent>
                         <AccountSummaryPanel Account="selectedAccount"
                                              OpenDirectory="OpenDirectory"
-                                             MarkActiveCustomer="MarkActiveCustomerAsync" />
+                                             MarkActiveCustomer="MarkActiveCustomerAsync"
+                                             IsInteractive="@isInteractive" />
 
                         <Tabs SelectedIndex="@SelectedCrmRecordTabIndex"
                               SelectedIndexChanged="HandleCrmRecordTabChanged"
@@ -551,6 +552,7 @@
     private bool isAccountDialogOpen;
     private bool isOpportunityConversionBusy;
     private bool isAccountActivityLoading;
+    private bool isInteractive;
     private bool isDisposed;
     private string accountActivityLoadError = string.Empty;
 
@@ -1183,10 +1185,31 @@
         Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedAccount.AccountPartyId}");
     }
 
-    private async Task MarkActiveCustomerAsync()
+    // Prerendered markup has no event handlers; OnAfterRender runs only for an interactive render, so the account
+    // summary's actions become usable exactly when a browser click can reach this page.
+    protected override void OnAfterRender(bool firstRender)
     {
+        if (!firstRender || isInteractive)
+        {
+            return;
+        }
+
+        isInteractive = true;
+        StateHasChanged();
+    }
+
+    // The conversion is a mutation this page owns: it is admitted only for the account currently selected and only
+    // while the page's query load is current, and the editor is changed only once the action was captured, so a
+    // stale callback from a summary of a previous account neither saves nor leaves the form half-edited.
+    private async Task MarkActiveCustomerAsync(Guid accountPartyId)
+    {
+        if (selectedAccount?.AccountPartyId != accountPartyId || !TryCaptureCrmAction(out var action))
+        {
+            return;
+        }
+
         profileEditor.RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer;
-        await SaveAccountProfileAsync();
+        await SaveAccountProfileAsync(action);
     }
 
     private async Task SaveAccountProfileAsync()
@@ -1196,6 +1219,11 @@
             return;
         }
 
+        await SaveAccountProfileAsync(action);
+    }
+
+    private async Task SaveAccountProfileAsync(CrmPageActionStamp action)
+    {
         var result = await CrmService.SaveAccountProfileAsync(profileEditor);
         if (result.IsFailure)
         {
