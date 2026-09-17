@@ -75,8 +75,10 @@ model name (which the owner accepts) make different declarations compare equal.
 ### Current versus retired interactions
 
 `PromptGalleryPickerButton` and `PromptGalleryChatComposerButton` own at most one *current*
-interaction each, keyed by their context (consumer, provider, model, owner `TargetKey`). A
-genuine context transition or disposal *retires* that interaction: its token source is
+interaction each, keyed by their context (consumer, provider, model, owner `TargetKey`; for
+the picker with a named target, the provider and model count through the last configured pair
+it knew, see the behavior matrix). A genuine context transition or disposal *retires* that
+interaction: its token source is
 cancelled (which closes its dialog through `DialogService.OpenAsync`) and the ownership slot is
 released at once, so the new context can open its picker, evaluate compatibility, ask for
 consent and insert while the retired chain is still unwinding. A retired chain keeps its own
@@ -123,7 +125,7 @@ isolation fix confirmed against the baseline code and covered by regression test
 | Mixed read-back (own header token, another actor's collections, read between the owner's separate statements): the submitted baseline is kept, the conflict is shown at once, a later own archive does not adopt the foreign collections, and the stale save is rejected | own-token read-back replaced the baseline content → submitted content kept | Safeguard | `Own_token_read_back_with_foreign_collections_keeps_the_submitted_baseline_and_the_stale_save_is_rejected` (models, tags, consumers), `Own_token_read_back_with_matching_collections_keeps_the_next_own_command_conflict_free`, PostgreSQL `PostgreSql_MixedReadBackAfterOwnReceipt_DoesNotAuthorizeOverwritingAnotherEditorsModelSet` (statement-level barrier between the header and the supported-model read) |
 | Supported provider/model declarations compare structurally; a delimiter inside a provider or model name cannot make two different declarations equal, while reordering, repetition and case/whitespace normalization stay equivalent and a changed preference flag stays different | pipe-joined string key → typed key | Safeguard | `PromptGalleryPersistedContentTests` (6 facts), session `External_model_pair_change_that_only_differs_in_delimiter_placement_is_not_adopted_by_an_own_archive` |
 | A retired interaction (cancelled by a target transition) releases its ownership slot immediately: the new target opens its picker, evaluates compatibility, consents and inserts while the retired chain is still pending; the retired chain's late success, failure or pending preference write inserts nothing, notifies nothing and leaves the new target's dialog and state untouched; A→B→A admits a fresh interaction for A; a same-context duplicate admission is still rejected | slot cleared only by the old task's `finally` → released at retirement | Safeguard | composer `New_target_inserts_while_the_retired_compatibility_request_is_still_pending_and_its_late_outcome_is_inert`, `Retired_completion_neither_closes_nor_decides_the_new_target_warning_dialog`, `Pending_preference_write_of_a_retired_target_neither_blocks_the_new_target_nor_inserts_late`, `Context_A_B_A_admits_a_fresh_interaction_for_A_while_the_retired_A_work_stays_obsolete`, `Same_context_rerender_keeps_the_current_interaction_and_a_duplicate_admission_is_rejected` |
-| The picker's interaction identity is the owner's `TargetKey` when one is supplied; a provider or model that resolves for that target after the picker opened (the workflow canvas loads its provider options asynchronously) is a parameter update and keeps the open picker; without a `TargetKey` the provider and model remain the identity. The composer keeps provider and model in its own identity because its compatibility check depends on them | the hardening pass treated any provider/model change as a transition, which closed the canvas picker while its provider options settled and broke `WorkflowsPageTests` | Safeguard (regression fix) | composer `Provider_and_model_resolving_after_the_picker_opened_keep_the_same_target_picker_open`, `WorkflowsPageTests` (the three canvas facts that select a Gallery prompt) |
+| The picker's context policy for an owner that names its target: the interaction is bound to (consumer, `TargetKey`) plus the *configured pair* (provider and model both present) it last knew. Until the target has a configured pair there is nothing to invalidate, and the first configured pair completes the initial configuration (the workflow canvas shows a fallback model until its provider options load and then replaces both; a chat resolves its provider after the first render): the open picker keeps its generation and dialog. A configured pair that differs from the known pair (M1 → M2, or another provider) is a genuine change of the active compatibility and filter context: the picker is retired, its dialog closes, a pending details or version read of it never reports a selection, and M1 → M2 → M1 does not revive it. A value going absent again is unknown, not a change: the picker stays and the known pair is kept, so a later different pair is still recognized. Another consumer or target is always a transition. Without a `TargetKey` the provider and model are the only identity and any change of them, including their first resolution, is a transition. The composer keeps provider and model in its own identity | first: any provider/model change was a transition (closed the canvas picker while its options settled); then: `TargetKey` alone was the identity, so an M1 → M2 change left the open dialog with the obsolete M1 filter and let a late selection acquire the composer's new generation | Safeguard (policy made explicit) | `PromptGalleryPickerButtonTests` (real button + `DialogHost` + real search host): `Mature_model_change_for_the_same_target_retires_the_open_picker_and_the_next_picker_carries_the_new_model`, `Details_read_pending_across_a_model_change_never_reports_the_retired_selection`, `Returning_to_the_previous_model_does_not_revive_the_retired_picker`, `Initial_configuration_of_the_named_target_keeps_the_picker_until_a_different_configured_pair_appears`, `Without_a_target_key_the_provider_and_model_are_the_identity…`, `A_consumer_change_for_the_same_target_and_model_retires_the_picker`; composer `Provider_and_model_resolving_after_the_picker_opened_keep_the_same_target_picker_open`, `Provider_or_model_change_while_the_warning_is_open_closes_it_and_drops_the_selection`; `WorkflowsPageTests` (43, the three canvas facts that select a Gallery prompt included) |
 | Own archive, restore, finalize and save in sequence without a foreign change never conflict: each newer token is adopted because the editable content still matches the accepted baseline | Safeguard | Safeguard | `Own_finalize_and_archive_without_a_foreign_change_adopt_each_newer_token`, `Archive_toggle_commits_and_re_reads_the_token_for_the_next_save`, real persistence `Own_archive_restore_and_finalize_keep_the_next_save_valid_without_a_foreign_change` |
 | "Create final version" = save draft, then create version; "draft saved, finalization failed" is distinct from "nothing saved"; busy spans the whole command; the catalog is told about the committed draft | baseline busy ended after `SaveCore` | Safeguard | `Finalize_reports_draft_saved_when_version_creation_fails`, `Finalize_success_commits_draft_then_version…`, host `Finalize_partial_success…` |
 | Mutation outcome is separated from owner refresh/notification failures: a `Committed` callback that throws after a valid receipt keeps the saved identity and token and is reported as "Editor update failed", never as a failed save or version; a returned version failure and a thrown version request stay distinct outcomes | one catch reported every exception as the command's failure | Safeguard | `Committed_callback_failure_after_a_valid_receipt_keeps_the_saved_identity_and_reports_only_the_effect`, `Owner_callback_failure_after_a_successful_version_keeps_the_version_known`, `Version_result_failure_and_thrown_version_request_are_distinct_outcomes` |
@@ -405,3 +407,44 @@ The hardening pass changed no project reference, so the measurement was not repe
   before the search could run. Corrected by making the owner's `TargetKey` the picker's
   interaction identity (see the matrix row above); the composer's own identity still includes
   provider and model. The corrected slices are recorded in the CRM / HR Home record.
+
+## Execution record: picker context policy (2026-09-16)
+
+- Start: `8bc0d02eac3dae4e001c5db369e465d304d90ea4` on `components-decoupling`, clean tree,
+  as the first part of the CRM / HR follow-up pass. Nothing was pushed, merged, rebased or
+  reset; no signing or permission configuration was touched.
+- The review of `8bc0d02e` found the `TargetKey`-only identity too broad: for a named target
+  the picker discarded provider and model, so a mature M1 → M2 change left the open dialog
+  with the M1 filter captured at open and let a late selection of that dialog reach the
+  composer under its new generation. Reproduced first with the real button, `DialogHost` and
+  the real search host (the mature change kept the dialog open with M1 in its parameters and
+  in the rendered search host; the pending details read still reported its selection).
+- Policy chosen and recorded in the matrix: the interaction is bound to consumer, target and
+  the last *configured pair* (provider and model both present). A first attempt that treated
+  every absent → present step as settling and every other change as a transition failed the
+  three `WorkflowsPageTests` canvas facts again: the canvas renders a fallback model before its
+  provider options load and then replaces both provider and model, so the initial
+  configuration is a two-step change of a present model. The configured-pair rule keeps that
+  case (no known pair yet), retires a different pair, keeps a value going absent as unknown
+  without forgetting the known pair, and treats another consumer or target as a transition.
+  Owners without a `TargetKey` keep the earlier rule. The dialog opened before the pair was
+  configured keeps the search context it was opened with; the owner evaluates compatibility
+  against the pair current at selection time (existing composer fact).
+- Validation (Release, `/m:1`, counts stated before execution and matched), run twice: on the
+  first policy (the three canvas facts failed, 40 / 43) and on the recorded policy:
+  - `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.PromptGalleryPickerButtonTests`
+    6 / 6 passed (new class).
+  - `FullyQualifiedName~…PromptGalleryChatComposerButtonTests|…PromptGalleryPickerDialogTests`
+    31 / 31 passed.
+  - `FullyQualifiedName~CanDoItAll.Tests.Components.Prompts.` 97 / 97 passed.
+  - `FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests`
+    43 / 43 passed on the recorded policy.
+  - `FullyQualifiedName~LlmChatConversationWorkspaceTests|…WorkflowExecutorCanvasCatalogTests|…AgentChatPanel`
+    72 / 72 passed.
+  - The browser lane `FullyQualifiedName~PromptGalleryBrowserTests` passed 4 / 4 on the real
+    Web host and PostgreSQL (Playwright solution rebuilt for the final source), recorded with
+    the other browser lanes of the pass in the CRM / HR account summary and activity history
+    record.
+- Static gates: the picker edit carried no portability finding; the pass's portability-static
+  result and the `Test-Documentation.ps1` run are recorded in the CRM / HR account summary
+  and activity history record.
