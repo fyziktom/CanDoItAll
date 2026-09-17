@@ -110,6 +110,7 @@ Thumbs.db
 # Generated Fast sandbox theme
 src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css
 src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css
+src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css
 
 # Retained, manifest-checked evidence for the current component seam children.
 !codex/bundles/UI_Providers_02E_Verification_Delivery_Hardening_Bundle/proof/

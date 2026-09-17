@@ -40,6 +40,7 @@
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
+    <Project Path="src/UI/CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj" />
     <Project Path="src/UI/CanDoItAll.CrmHr.UI/CanDoItAll.CrmHr.UI.csproj" />
@@ -115,12 +116,14 @@
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.CrmHr.Contracts/CanDoItAll.Modules.CrmHr.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj" />
     <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj" />
     <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Projects.Contracts/CanDoItAll.Modules.Projects.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Prompts.Contracts/CanDoItAll.Modules.Prompts.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj" />

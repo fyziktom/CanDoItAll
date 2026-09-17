@@ -56,9 +56,9 @@ public sealed class CrmHrFinancialsUiBoundaryTests
 
         Assert.Contains("CanDoItAll.Components.Charts", references);
         Assert.All(references, reference =>
-            Assert.True(
-                AllowedReferencePrefixes.Any(prefix => reference.StartsWith(prefix, StringComparison.Ordinal)),
-                $"Unexpected reference from the rendering library: {reference}"));
+            Assert.True(CrmHrUiBoundary.IsAllowedDirectReference(reference), $"Unexpected reference from the rendering library: {reference}"));
+        Assert.All(references, reference =>
+            Assert.False(CrmHrUiBoundary.IsForbidden(reference), $"Forbidden reference from the rendering library: {reference}"));
         // The chart implementation's own dependency is reached through the chart library, never referenced directly.
         Assert.DoesNotContain(references, reference => reference.StartsWith("Blazor-ApexCharts", StringComparison.Ordinal));
         Assert.Same(typeof(CrmHrFinancialsSurface).Assembly, typeof(CrmHrFinancialsPresentation).Assembly);

@@ -20,9 +20,20 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
-This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
+This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
-Directory, Workforce, CRM, and Recruiting use the shared typed `PagedRecordBrowser`; party-backed routes compose it through the module-owned `PartyRecordBrowser` adapter. Queries perform source paging with deterministic ordering, the route catalogue owns an opt-in bounded card-results scroll, and complete record workspaces open in controlled full-size dialogs without displacing or recreating the catalogue. Recruiting separates application, interview, lifecycle, and conversion work into server-rendered dialog tabs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
+Rendering lives in [CanDoItAll.CrmHr.UI](../../UI/CanDoItAll.CrmHr.UI/README.md) on the public
+[CRM / HR contracts](../CanDoItAll.Modules.CrmHr.Contracts/README.md). The module keeps the seven
+routed pages as hosts (route identity, injected services, reads, mutations, navigation,
+notifications, agent context, effect lifetimes); each implements its workspace view contract in a
+`…Page.View.cs` partial and composes the library's workspace surface. It also keeps the effect
+adapters `AccountSummaryPanel`, `InteractionTimeline`, `CrmFinancialsPanel`,
+`AgentRecruitingEvidencePanel`, `CrmAgentChatContextProvider` and `CrmHrSecondaryTabs`. A new
+business renderer belongs in the library; `CrmHrUiModuleBoundaryTests` lists the module's
+components by role. See the
+[completion record](../../../docs/architecture/crm-hr-ui-completion.md).
+
+Directory, Workforce, CRM, and Recruiting use the shared typed `PagedRecordBrowser`; party-backed routes compose it through the library's `PartyRecordBrowser` over the `IPartyRecordQueryService` read port. Queries perform source paging with deterministic ordering, the route catalogue owns an opt-in bounded card-results scroll, and complete record workspaces open in controlled full-size dialogs without displacing or recreating the catalogue. Recruiting separates application, interview, lifecycle, and conversion work into server-rendered dialog tabs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
 
 The Agents route projects AgentFramework-owned identities instead of maintaining a second technical catalog. It joins the invalidation-aware `IAgentReferenceDataProvider` snapshot to the durable `AiResourceBinding.TechnicalAgentId` mapping and CRM-owned governance fields, then filters and pages that immutable composite snapshot in memory. The catalogue renders the shared `AgentSelectionCard`; selecting a card opens a CRM-HR read-only dialog, while technical edits remain in AgentFramework. The scoped composite snapshot expires after 20 seconds and is cleared by the shared AgentFramework invalidation signal both before and after successful directory synchronization, so search, validation filters, paging, and direct record lookup do not issue a database query on every interaction or retain a pre-synchronization join.
 

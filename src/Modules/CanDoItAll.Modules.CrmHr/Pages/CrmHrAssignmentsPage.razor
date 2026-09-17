@@ -1,3 +1,4 @@
+@using static CanDoItAll.CrmHr.UI.Assignments.CrmHrAssignmentsWorkspacePresentation
 @using CanDoItAll.SharedKernel
 @inject ProjectWriteAdmissionService ProjectWriteAdmissions
 @page "/crm-hr/assignments"
@@ -20,198 +21,13 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Assignments workspace"
-                    Description="Keep commercial, staffing, and project allocations aligned with the live project portfolio."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="projects"
-                             Value="@projectCount.ToString()"
-                             TooltipText="Projects currently available for CRM-HR relationship binding." />
-                <CompactStat Label="open requests"
-                             Value="@staffingDashboard.OpenRequestCount.ToString()"
-                             TooltipText="Open staffing demand across the CRM-HR module."
-                             Tone="info" />
-                <CompactStat Label="open demand"
-                             Value="@($"{staffingDashboard.OpenDemandPercent:0.##}%")"
-                             TooltipText="Requested allocation still flowing through open staffing requests."
-                             Tone="warning" />
-                <CompactStat Label="bench"
-                             Value="@staffingDashboard.BenchCount.ToString()"
-                             TooltipText="Profiles currently available for staffing."
-                             Tone="success" />
-                <CompactStat Label="overallocated"
-                             Value="@staffingDashboard.OverallocatedCount.ToString()"
-                             TooltipText="Profiles already exceeding available capacity."
-                             Tone="danger" />
-            </Stats>
-        </PageHeader>
-    </Header>
-
-    <ChildContent>
-        <Stack GapScale="LayoutGap.Medium">
-            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Assignments" />
-
-            <AssignmentsProjectContextBar SelectedProject="SelectedProject"
-                                          SelectedProjectId="selectedProjectId"
-                                          SelectedProjectIdChanged="HandleProjectChanged"
-                                          ProjectLoadFailed="HandleProjectPickerLoadFailed"
-                                          AssignmentCount="assignmentCounts.TotalCount"
-                                          AllocationCount="assignmentCounts.AllocationCount"
-                                          StaffingRequestCount="StaffingRequestCount"
-                                          OpenStructure="OpenStructure"
-                                          OpenGantt="OpenGantt" />
-
-            <Tabs @key="WorkspaceTabsKey"
-                  SelectedIndex="@((int)selectedWorkspaceTab)"
-                  SelectedIndexChanged="HandleWorkspaceTabChangedAsync"
-                  RenderMode="TabRenderMode.Server"
-                  Variant="TabsVariant.WorkspaceSecondary"
-                  BorderMode="TabsBorderMode.Soft"
-                  OverflowMode="TabsOverflowMode.Wrap"
-                  AriaLabel="Project assignment workflows"
-                  data-testid="crmhr-assignments-workspace-tabs">
-                <TabsItem Text="Resource schedule"
-                          Icon="view_timeline"
-                          BadgeText="@assignmentCounts.ScheduledCount.ToString()"
-                          data-testid="crmhr-assignments-tab-schedule">
-                    @if (IsLoading(AssignmentSelectionData.ScheduleAssignments))
-                    {
-                        <LoadingState Eyebrow="Resource schedule"
-                                      Title="Loading the bounded schedule window"
-                                      Description="Only the current project's dated allocation view is being loaded." />
-                    }
-                    else
-                    {
-                        <ProjectAssignmentResourceGanttPanel ProjectName="@(SelectedProject?.Name ?? string.Empty)"
-                                                             Assignments="scheduleAssignments"
-                                                             TotalCount="scheduleAssignmentTotalCount" />
-                    }
-                </TabsItem>
-
-                <TabsItem Text="Relationships"
-                          Icon="hub"
-                          BadgeText="@assignmentCounts.TotalCount.ToString()"
-                          data-testid="crmhr-assignments-tab-relationships">
-                    @if (IsLoading(AssignmentSelectionData.RelationshipAssignments))
-                    {
-                        <LoadingState Eyebrow="Project relationships"
-                                      Title="Loading relationship records"
-                                      Description="The selected relationship page is being loaded from the server." />
-                    }
-                    else
-                    {
-                        <ProjectPartyAssignmentPanel ProjectName="@(SelectedProject?.Name ?? string.Empty)"
-                                                     CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
-                                                     Draft="draftAssignment"
-                                                     Assignments="relationshipAssignments"
-                                                     PageIndex="relationshipAssignmentPageIndex"
-                                                     PageSize="AssignmentPageSize"
-                                                     TotalCount="relationshipAssignmentTotalCount"
-                                                     SearchText="relationshipAssignmentSearchText"
-                                                     SearchTextChanged="HandleRelationshipSearchTextChangedAsync"
-                                                     RoleFilter="relationshipAssignmentRoleFilter"
-                                                     RoleFilterChanged="HandleRelationshipRoleFilterChangedAsync"
-                                                     PageChanged="HandleRelationshipPageChangedAsync"
-                                                     PrepareCreate="PrepareRelationshipCreateAsync"
-                                                     SaveDraft="SaveDraftAsync"
-                                                     ResetDraft="ResetDraftAsync"
-                                                     DeleteAssignment="DeleteAssignmentAsync"
-                                                     LoadTaskDetails="LoadTaskDetailsAsync"
-                                                     OpenStructure="OpenSelectedProjectStructure"
-                                                     OpenGantt="OpenSelectedProjectGantt" />
-                    }
-                </TabsItem>
-
-                <TabsItem Text="Staffing requests"
-                          Icon="person_search"
-                          BadgeText="@StaffingRequestBadgeText"
-                          data-testid="crmhr-assignments-tab-staffing">
-                    @if (IsLoading(AssignmentSelectionData.StaffingRequests))
-                    {
-                        <LoadingState Eyebrow="Staffing requests"
-                                      Title="Loading project demand"
-                                      Description="Only this tab's staffing records are being loaded." />
-                    }
-                    else
-                    {
-                        <StaffingRequestEditor ProjectName="@(SelectedProject?.Name ?? string.Empty)"
-                                               CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
-                                               Draft="staffingRequestDraft"
-                                               SkillCatalog="skillCatalog"
-                                               Requests="staffingRequests"
-                                               PageIndex="staffingRequestPageIndex"
-                                               PageSize="StaffingPageSize"
-                                               TotalCount="staffingRequestTotalCount"
-                                               SearchText="staffingRequestSearchText"
-                                               SearchTextChanged="HandleStaffingRequestSearchTextChangedAsync"
-                                               StatusFilter="staffingRequestStatusFilter"
-                                               StatusFilterChanged="HandleStaffingRequestStatusFilterChangedAsync"
-                                               PageChanged="HandleStaffingRequestPageChangedAsync"
-                                               PrepareCreate="PrepareStaffingCreateAsync"
-                                               SaveRequest="SaveStaffingRequestAsync"
-                                               ResetRequest="ResetStaffingRequestAsync"
-                                               DeleteRequest="DeleteStaffingRequestAsync" />
-                    }
-                </TabsItem>
-
-                <TabsItem Text="Allocations"
-                          Icon="groups"
-                          BadgeText="@assignmentCounts.AllocationCount.ToString()"
-                          data-testid="crmhr-assignments-tab-allocations">
-                    @if (IsLoading(AssignmentSelectionData.AllocationAssignments))
-                    {
-                        <LoadingState Eyebrow="Project allocations"
-                                      Title="Loading allocation records"
-                                      Description="The selected allocation page is being loaded from the server." />
-                    }
-                    else
-                    {
-                        <ProjectAllocationEditor Draft="allocationDraft"
-                                                 ProjectName="@(SelectedProject?.Name ?? string.Empty)"
-                                                 CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
-                                                 Allocations="allocationAssignments"
-                                                 PageIndex="allocationAssignmentPageIndex"
-                                                 PageSize="AssignmentPageSize"
-                                                 TotalCount="allocationAssignmentTotalCount"
-                                                 SearchText="allocationAssignmentSearchText"
-                                                 SearchTextChanged="HandleAllocationSearchTextChangedAsync"
-                                                 RoleFilter="allocationAssignmentRoleFilter"
-                                                 RoleFilterChanged="HandleAllocationRoleFilterChangedAsync"
-                                                 PageChanged="HandleAllocationPageChangedAsync"
-                                                 SkillCatalog="skillCatalog"
-                                                 Candidates="staffingCandidates"
-                                                 CandidatePageIndex="staffingCandidatePageIndex"
-                                                 CandidatePageSize="StaffingPageSize"
-                                                 CandidateTotalCount="staffingCandidateTotalCount"
-                                                 CandidatePageChanged="HandleCandidatePageChangedAsync"
-                                                 CandidateSearchText="candidateSearchText"
-                                                 CandidateSearchTextChanged="HandleCandidateSearchTextChanged"
-                                                 CandidateSkillFilter="candidateSkillFilter"
-                                                 CandidateSkillFilterChanged="HandleCandidateSkillFilterChanged"
-                                                 CandidateAvailabilityFilter="candidateAvailabilityFilter"
-                                                 CandidateAvailabilityFilterChanged="HandleCandidateAvailabilityFilterChanged"
-                                                 SearchCandidates="SearchCandidatesAsync"
-                                                 ResetCandidateFilters="ResetCandidateFiltersAsync"
-                                                 PrepareCreate="PrepareAllocationCreateAsync"
-                                                 SaveAllocation="SaveAllocationAsync"
-                                                 ResetAllocation="ResetAllocationAsync"
-                                                 DeleteAllocation="DeleteAllocationAsync"
-                                                 LoadTaskDetails="LoadTaskDetailsAsync"
-                                                 OpenStructure="OpenSelectedProjectStructure"
-                                                 OpenGantt="OpenSelectedProjectGantt" />
-                    }
-                </TabsItem>
-            </Tabs>
-        </Stack>
-    </ChildContent>
-</PageScaffold>
+<CrmHrAssignmentsWorkspaceSurface View="this">
+    <SecondaryNavigation>
+        <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Assignments" />
+    </SecondaryNavigation>
+</CrmHrAssignmentsWorkspaceSurface>
 
 @code {
-    private const int StaffingPageSize = StaffingQueryLimits.DefaultPageSize;
-    private const int AssignmentPageSize = ProjectPartyAssignmentQueryLimits.DefaultPageSize;
     private const int StaffingRequestSearchDebounceMilliseconds = 250;
     private const int AssignmentSearchDebounceMilliseconds = 250;
     private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllAssignmentRoles =
@@ -323,35 +139,6 @@
     private ProjectRecordQueryItem? SelectedProject => selectedProject?.Id == selectedProjectId
         ? selectedProject
         : null;
-
-    private readonly record struct WorkspaceTabsIdentity(
-        Guid? ProjectId,
-        int AssignmentCount,
-        int AllocationCount,
-        int StaffingRequestCount,
-        bool StaffingRequestsLoaded);
-
-    private enum AssignmentWorkspaceTab
-    {
-        ResourceSchedule,
-        Relationships,
-        StaffingRequests,
-        Allocations
-    }
-
-    [Flags]
-    protected enum AssignmentSelectionData
-    {
-        None = 0,
-        AssignmentCounts = 1 << 0,
-        ScheduleAssignments = 1 << 1,
-        RelationshipAssignments = 1 << 2,
-        Assignments = RelationshipAssignments,
-        AllocationAssignments = 1 << 3,
-        SkillCatalog = 1 << 4,
-        StaffingRequests = 1 << 5,
-        StaffingCandidates = 1 << 6
-    }
 
     protected override async Task OnParametersSetAsync()
     {

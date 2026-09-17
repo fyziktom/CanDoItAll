@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-17T10:34:59.633558+00:00",
+  "generated_utc": "2026-09-17T13:18:53.638409+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -45326,9 +45326,15 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Assignments/ProjectAssignmentGanttProjectionAdapter.cs",
+      "path": "src/Modules/CanDoItAll.Modules.CrmHr.Contracts/CrmHrRouteCatalog.cs",
       "category": "case-policy",
-      "source_fingerprint": "338fe2f5769643078dd1589d802c9369853def595b82fef48b3dd3ce0c5fc868",
+      "source_fingerprint": "05dcd87aed5dc2a2e87b8d4bab4da5dd22448bc76d0b1e6191f7b8c5aff660d0",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.CrmHr.Contracts/CrmHrRouteCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "58f9fa2c47d9f56d2d68f56ce4c4cdb932c9a6dd0cb492da44c17398a399597a",
       "count": 1
     },
     {
@@ -45336,54 +45342,6 @@
       "category": "case-policy",
       "source_fingerprint": "1d72496a1c308af72e6d83df9de3c6568c190f54d6968c214f24fd0a245321db",
       "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Components/CrmHrAgentRecordDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "140578bbf416f40975be8daf6fc1da3713047adc5777fc37621e6329887007cb",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Components/CrmHrAgentRecordDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "85d5981967883d06911dc4df7fd659d84a699f2d9ffdecf696bd8ed879173327",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Components/PartyAffiliationPicker.razor",
-      "category": "case-policy",
-      "source_fingerprint": "9cf463728ff970feac89f830723af6005ccc49f822c9ac51ff70de816532e545",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Components/PartyContactMethodsEditor.razor",
-      "category": "case-policy",
-      "source_fingerprint": "ef404c97c45f29c73cf52acd54d5f97690d5f27dac50d3e9b2ee9f7b7ca8dc4e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Components/StaffingRequestEditor.razor",
-      "category": "process-start",
-      "source_fingerprint": "323be9643fae5ccd3982dc71a87d975108737467adc7f4dcc7470b5a1ff66e82",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Components/StaffingRequestEditor.razor",
-      "category": "process-start",
-      "source_fingerprint": "5255dea099521c38493815c32d2cb79bcfe78bfca6bbd5998524ee038a1cab43",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Navigation/CrmHrRouteCatalog.cs",
-      "category": "case-policy",
-      "source_fingerprint": "b12588487273d061367977408a5eac9b48da6cdf942941d1b7c032d8ef259d8e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.CrmHr/Navigation/CrmHrRouteCatalog.cs",
-      "category": "case-policy",
-      "source_fingerprint": "db818fc785eaed5b78cf759e64ee61892edb34ec2b21bd6d5b257f74e6c51b38",
-      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Persistence/AiTechnicalAgentProjectionStore.cs",
@@ -71792,6 +71750,12 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor",
+      "category": "case-policy",
+      "source_fingerprint": "17a9f2e7cb4d5dce9bc7ea96a8e82387a758315946892bc9e5c3ee9ae26bad0b",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj",
       "category": "external-tool",
       "source_fingerprint": "158c9594c151fb993265565c8704ec3ed24ac24b5310837ae3724223d4a5b3a0",
@@ -71939,12 +71903,6 @@
       "path": "src/UI/CanDoItAll.AppComponents/Components/EmbeddedBrowser.razor",
       "category": "case-policy",
       "source_fingerprint": "605e32689a9f005ebe83842a7d8798e4371959d74967e3cb2db320751b558119",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.AppComponents/Components/PagedRecordBrowser.razor",
-      "category": "case-policy",
-      "source_fingerprint": "9b180656ad28332addd77aff94e0bc83feeb31985e7efaa6b7445ef45c842d53",
       "count": 1
     },
     {
@@ -72401,6 +72359,48 @@
       "path": "src/UI/CanDoItAll.Conversations.Shell/README.md",
       "category": "windows-executable",
       "source_fingerprint": "132e2f75bebe5426882ad3f8a6396245fec9651e112d3685b62cc69792fb5f90",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "d992bff69a0e3f98f61ab9a85987e5b5bd02de18626a06b0b1a1d49d3a3718cb",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "e2b40da1c9438c442739136f6e9f449524c33a20beba279a26f8274c1342e641",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI/Assignments/ProjectAssignmentGanttProjectionAdapter.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6fa9137dcd4035c7160b3a1de3e7454695cec7d9f85e2eebb80a8a7ef43d95ea",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI/Assignments/StaffingRequestEditor.razor",
+      "category": "process-start",
+      "source_fingerprint": "265e775b60d36b12f924dc754f64a7fb4c0e62d31b45c1ea8ae7cb02202b8dc2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI/Assignments/StaffingRequestEditor.razor",
+      "category": "process-start",
+      "source_fingerprint": "59825e32051b3041372d838a50896fb1ff07a8774c7c4900623ec433d08e115a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI/Parties/PartyContactMethodsEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "ab9fe9334f1d4e25d9b6243f9f7af3f3d0ff60084344ae92ad4141eda5c2f28b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI/Pickers/PartyAffiliationPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "d127f91f830a67688f3ade952cb7f12200b55dce521051fe77d78437912e5762",
       "count": 1
     },
     {

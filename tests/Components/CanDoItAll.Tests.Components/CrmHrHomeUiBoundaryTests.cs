@@ -11,72 +11,45 @@ namespace CanDoItAll.Tests.Components.CrmHr;
 // reference assertions cover the direct set, not the transitive graph, which the record states separately.
 public sealed class CrmHrHomeUiBoundaryTests
 {
-    private static readonly string[] AllowedReferencePrefixes =
+    // The Home surface itself stays on UI primitives: its parameters expose the library's own presentation records only.
+    private static readonly string[] HomeParameterAssemblies =
     [
         "System",
-        "netstandard",
         "Microsoft.AspNetCore.Components",
-        "Microsoft.Extensions",
         "CanDoItAll.Components.BaseLib",
-        "CanDoItAll.Components.Charts",
         "CanDoItAll.Components.Common"
     ];
 
-    private static readonly string[] ForbiddenReferenceFragments =
-    [
-        "CanDoItAll.Modules.",
-        "CanDoItAll.AgentFramework",
-        "CanDoItAll.Infrastructure",
-        "CanDoItAll.Web",
-        "CanDoItAll.Composition",
-        "CanDoItAll.AppComponents",
-        "CanDoItAll.SharedKernel",
-        "EntityFrameworkCore"
-    ];
-
     [Fact]
-    public void Rendering_library_references_only_ui_primitives()
+    public void Rendering_library_references_only_the_allowed_dependency_categories()
     {
-        var references = typeof(CrmHrHomeSurface).Assembly.GetReferencedAssemblies().Select(reference => reference.FullName).ToArray();
+        var references = CrmHrUiBoundary.RenderingLibrary.GetReferencedAssemblies().Select(reference => reference.Name ?? string.Empty).ToArray();
 
         Assert.All(references, reference =>
-            Assert.True(
-                AllowedReferencePrefixes.Any(prefix => reference.StartsWith(prefix, StringComparison.Ordinal)),
-                $"Unexpected reference from the rendering library: {reference}"));
+            Assert.True(CrmHrUiBoundary.IsAllowedDirectReference(reference), $"Unexpected reference from the rendering library: {reference}"));
         Assert.All(references, reference =>
-            Assert.DoesNotContain(ForbiddenReferenceFragments, fragment => reference.Contains(fragment, StringComparison.Ordinal)));
-        Assert.Contains(references, reference => reference.StartsWith("CanDoItAll.Components.BaseLib", StringComparison.Ordinal));
+            Assert.False(CrmHrUiBoundary.IsForbidden(reference), $"Forbidden reference from the rendering library: {reference}"));
+        Assert.Contains("CanDoItAll.Components.BaseLib", references);
     }
 
     [Fact]
-    public void Rendering_components_inject_no_services_and_public_signatures_stay_in_the_light_graph()
+    public void Home_surface_injects_nothing_and_its_parameters_stay_on_ui_primitives()
     {
-        var assembly = typeof(CrmHrHomeSurface).Assembly;
-        var components = assembly.GetTypes().Where(type => typeof(IComponent).IsAssignableFrom(type) && !type.IsAbstract).ToArray();
-        Assert.NotEmpty(components);
+        var surface = typeof(CrmHrHomeSurface);
+        var properties = surface.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.Empty(properties.Where(property => property.GetCustomAttribute<InjectAttribute>() is not null));
 
-        foreach (var component in components)
-        {
-            var injected = component
-                .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(property => property.GetCustomAttribute<InjectAttribute>() is not null)
-                .Select(property => $"{component.Name}.{property.Name}")
-                .ToArray();
-            Assert.Empty(injected);
-        }
-
-        var publicTypeAssemblies = assembly.GetExportedTypes()
-            .SelectMany(type => type.GetProperties().Select(property => property.PropertyType)
-                .Concat(type.GetMethods().SelectMany(method => method.GetParameters().Select(parameter => parameter.ParameterType))))
-            .SelectMany(Expand)
+        var parameterAssemblies = properties
+            .Where(property => property.GetCustomAttribute<ParameterAttribute>() is not null)
+            .Select(property => property.PropertyType)
+            .SelectMany(CrmHrUiBoundary.Expand)
             .Select(type => type.Assembly.GetName().Name ?? string.Empty)
             .Distinct()
             .ToArray();
-        Assert.All(publicTypeAssemblies, name =>
+        Assert.All(parameterAssemblies, name =>
             Assert.True(
-                AllowedReferencePrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal)) ||
-                name == assembly.GetName().Name,
-                $"Public signature leaks assembly {name}"));
+                HomeParameterAssemblies.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal)) || name == surface.Assembly.GetName().Name,
+                $"The Home surface exposes assembly {name} in a parameter"));
     }
 
     [Fact]
@@ -93,15 +66,4 @@ public sealed class CrmHrHomeUiBoundaryTests
             reference => reference.Name == typeof(CrmHrHomePage).Assembly.GetName().Name);
     }
 
-    private static IEnumerable<Type> Expand(Type type)
-    {
-        yield return type;
-        if (type.IsGenericType)
-        {
-            foreach (var argument in type.GetGenericArguments().SelectMany(Expand))
-            {
-                yield return argument;
-            }
-        }
-    }
 }

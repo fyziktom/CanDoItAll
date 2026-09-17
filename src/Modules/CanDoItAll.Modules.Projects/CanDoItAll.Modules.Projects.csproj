@@ -22,6 +22,7 @@
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Projects.Contracts\CanDoItAll.Modules.Projects.Contracts.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj" />

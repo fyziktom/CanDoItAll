@@ -25,6 +25,7 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<PartyDirectoryManagementService>();
         services.AddScoped<ICrmPartyCommandService, CrmPartyCommandService>();
         services.AddScoped<IPartyOrganizationAffiliationService, PartyOrganizationAffiliationService>();
+        services.AddScoped<IPartyOrganizationAffiliationReader>(provider => provider.GetRequiredService<IPartyOrganizationAffiliationService>());
         services.AddScoped<IPartyRecordQueryService, PartyRecordQueryService>();
         services.AddScoped<IWorkforceRecordQueryService, WorkforceRecordQueryService>();
         services.AddScoped<ICrmHrHomeQueryService, CrmHrHomeQueryService>();

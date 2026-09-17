@@ -56,12 +56,25 @@ public sealed class CrmHrAccountActivityUiBoundaryTests
     {
         var assembly = typeof(CrmHrAccountSummary).Assembly;
         Assert.Equal("CanDoItAll.CrmHr.UI", assembly.GetName().Name);
-        var referenced = assembly.GetReferencedAssemblies().Select(reference => reference.Name ?? string.Empty).ToArray();
-        Assert.DoesNotContain(referenced, name => name.StartsWith("CanDoItAll.Modules.", StringComparison.Ordinal));
-        Assert.DoesNotContain(referenced, name => name.Contains("EntityFrameworkCore", StringComparison.Ordinal));
         Assert.Same(assembly, typeof(CrmHrActivityPage).Assembly);
         Assert.Same(assembly, typeof(CrmHrActivityCopy).Assembly);
         Assert.Same(assembly, typeof(CrmHrAccountSummaryIntent).Assembly);
+
+        // The library as a whole may use the lightweight contracts; these presentation records stay private to it.
+        Type[] records = [typeof(CrmHrAccountSummary), typeof(CrmHrActivityPage), typeof(CrmHrActivityEntry), typeof(CrmHrActivityPresentation), typeof(CrmHrActivityCopy)];
+        var exposed = records
+            .SelectMany(record => record.GetProperties().Select(property => property.PropertyType))
+            .SelectMany(Expand)
+            .Select(type => type.Assembly.GetName().Name ?? string.Empty)
+            .Distinct()
+            .ToArray();
+        Assert.All(exposed, name =>
+            Assert.True(
+                name.StartsWith("System", StringComparison.Ordinal) || name == "CanDoItAll.CrmHr.UI",
+                $"A presentation record exposes assembly {name}"));
+        Assert.All(
+            assembly.GetReferencedAssemblies().Select(reference => reference.Name ?? string.Empty),
+            name => Assert.False(CrmHrUiBoundary.IsForbidden(name), $"Forbidden reference from the rendering library: {name}"));
     }
 
     [Fact]

@@ -9,14 +9,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.CrmHr;
 
-public enum AiResourceBindingStatus
-{
-    Unbound,
-    PendingBackfill,
-    Bound,
-    Error
-}
-
 public sealed class AiResourceBinding
 {
     public Guid Id { get; set; } = Guid.NewGuid();

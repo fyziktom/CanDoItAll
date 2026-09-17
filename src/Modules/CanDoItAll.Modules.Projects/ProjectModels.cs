@@ -17,15 +17,6 @@ public static class ProjectErrorCodes
     public const string ReservationClosed = "projects.reservation-closed";
 }
 
-public enum ProjectStatus
-{
-    Draft,
-    Active,
-    OnHold,
-    Completed,
-    Archived
-}
-
 public enum ProjectPhaseStatus
 {
     Planned,
