@@ -56,8 +56,8 @@ therefore builds one chronological category list from every period any currency 
 sale in and gives each currency one point per category, a zero-height placeholder where that
 currency has no sale. The placeholder is presentation alignment only: it is never a figure, it
 is not summed anywhere and the metric totals come from the snapshot (guarded by
-`CrmHrFinancialsChartTests`). Month labels keep the module's culture-dependent short month
-format (`MMM yyyy`); years are rendered as numbers.
+`CrmHrFinancialsChartTests`). Month labels are English interface words under every server
+culture (`Jan 2025`, correction C1 below); years are rendered as four invariant digits.
 
 ## Behavior matrix
 
@@ -78,6 +78,7 @@ change covered by tests; **Correction** = explicit observable change recorded he
 | A snapshot answering with another account is rejected as a failure | not checked | Safeguard | session `A_snapshot_for_another_account_is_never_accepted` |
 | `Guid.Empty` fails at once without a query; an unknown account fails through the owner's exception with the generic copy | the owner's `ArgumentException` reached the generic catch | Safeguard | session `An_empty_account_identifier_fails_without_a_read`, browser lane (unknown-account path is the owner's `KeyNotFoundException`, integration facts) |
 | Disposal ignores late outcomes; token sources are disposed only after their read returned | disposal disposed the operation the read still held | Safeguard | session `Disposal_makes_late_outcomes_inert…` |
+| Month categories are English (`Jan 2025`) whatever the server culture is; the amounts keep the ambient number format | the ambient culture's short month name (`led 2025` on a Czech server) | Correction (C1) | unit `CrmHrPresentationCultureTests` (cs-CZ, ja-JP, ar-SA, el-GR, en-US), surface `The_rendered_chart_categories_are_english…`, browser lane (exact labels) |
 | Test identifiers `crmhr-financials-panel` (now with `data-phase`, `data-account-id`, `data-period`), `-metrics`, `-incomplete`, `-month`, `-year`, `-sold-chart`, `-retry`, `-distribution-unavailable`, `-invoices-unavailable` kept; `-loading`, `-failed`, `-sold-empty` added | additive | Preserve | surface and browser lanes |
 
 No exchange rate, combined total, purchase figure, invoice status, new query or new route was
@@ -200,3 +201,47 @@ before execution. See the execution record for the run sequence and the final nu
 - Tree: the R1–R3 repairs are the first signed commit of the continuation (the verified
   checkpoint), the Financials extraction with this record, the READMEs and the testing entry
   the second; nothing outside the two commits was modified.
+
+## Corrections after the `da50a040` review (2026-09-17)
+
+- **C1, generated interface language.** `CrmHrFinancialsText.PeriodLabel` formatted the month
+  with the ambient culture, so a Czech server rendered `led 2025` and the tests had been
+  aligned to the machine. The repository has no application-wide presentation-language
+  policy (the Web host only uses the invariant culture for machine formats), so the rendering
+  library now owns the smallest feature policy, `CrmHrPresentationCulture`: month labels are
+  formatted with an explicit English culture, years as four invariant digits, and the
+  activity timestamp keeps the ambient short pattern with English AM/PM designators. The
+  audit of the remaining CRM / HR surface found no other word-producing format: the module
+  uses explicit `yyyy-MM-dd` / `yyyy-MM-dd HH:mm` machine formats, and amounts and counts are
+  numeric (`N0`, `N2`, `0.##`) and stay with the ambient number format. The process culture,
+  input parsing, UTC recognition buckets, decimals and the time-zone policy are unchanged.
+  Regressions: `CrmHrPresentationCultureTests` (9 cases: the twelve English month labels
+  written out by hand under `cs-CZ`, `ja-JP`, `ar-SA`, `el-GR` and `en-US`, chart categories
+  under `cs-CZ`, the timestamp pattern under `cs-CZ`, `en-US` and the 12-hour `el-GR`, and
+  proof that the ambient culture is restored and never changed), the surface theory
+  `The_rendered_chart_categories_are_english_under_a_non_english_server_culture` (`cs-CZ`,
+  `ja-JP`), and literal English expectations in the chart, surface and sandbox facts that had
+  used the formatter under test as their own oracle.
+- **C2, browser failure oracle.** The lane ignored every `/_blazor` URL and every
+  `ERR_ABORTED`. `CrmHrBrowserOracle` now records page errors, console errors, every failed
+  request (assets, API and circuit traffic alike), every HTTP response with status 400 or
+  above, the Blazor error UI and the reconnect dialog. The single allowance is the teardown the
+  journey causes itself: the `POST /_blazor/disconnect` beacon aborted with
+  `net::ERR_ABORTED` while the journey's own `NavigateAsync` replaces the document, at most
+  one per replaced document; it is written to `expected-teardown.txt` next to the captures
+  (one entry in the recorded run). The chart assertions now use the seeded oracle: the exact
+  English categories `Jan 2025 | Mar 2025 | Feb 2026`, the legend `EUR`, `USD`, every bar's
+  series, category index and plotted value (12000, 3200.25 and 2500 with zero-height
+  placeholders elsewhere), bar heights in the proportion of their values (2 % tolerance),
+  left-to-right category order, the settled yearly projection (`2025 | 2026` with 12000,
+  3200.25 and 2500), the settled return to monthly, the metric totals by digits
+  (15200.25 EUR, 2500.00 USD) and three plotted bars at the constrained width.
+- Validation of the corrections (Release, `/m:1`, discovery stated before execution): Unit
+  `…CrmHrPresentationCultureTests` 9 / 9, Unit Financials 18 / 18, Unit activity 21 / 21,
+  Components Financials 25 / 25 (23 + the two culture theory cases), Components account and
+  activity 38 / 38, browser lane `CrmHrFinancialsBrowserTests` 1 / 1 on the real Web host and
+  PostgreSQL. The first browser run of the strengthened lane failed one geometry assertion
+  that compared the x position of zero-height placeholders (their empty box reports x = 0);
+  the order check now covers plotted bars only. The 1600×1000 monthly capture was inspected:
+  English month labels under the three plotted bars, `15 200,25 EUR` and `2 500,00 USD`
+  totals in the host's number format.

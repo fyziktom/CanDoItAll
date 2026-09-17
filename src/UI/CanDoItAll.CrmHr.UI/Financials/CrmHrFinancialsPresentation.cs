@@ -97,11 +97,12 @@ public static class CrmHrFinancialsText
     public static string ChartTitle(CrmHrFinancialPeriod period)
         => period == CrmHrFinancialPeriod.Month ? "Sold value by month" : "Sold value by year";
 
-    // The human-readable label of a bucket, as the module rendered it before the extraction.
+    // The human-readable label of a bucket. The month name is an interface word and is English under every server
+    // culture (CrmHrPresentationCulture); the bucket key itself stays the UTC period start.
     public static string PeriodLabel(DateOnly periodStart, CrmHrFinancialPeriod period)
         => period == CrmHrFinancialPeriod.Month
-            ? periodStart.ToString("MMM yyyy")
-            : periodStart.Year.ToString();
+            ? CrmHrPresentationCulture.FormatMonth(periodStart)
+            : CrmHrPresentationCulture.FormatYear(periodStart);
 
     public static string PeriodToken(CrmHrFinancialPeriod period)
         => period == CrmHrFinancialPeriod.Month ? "month" : "year";

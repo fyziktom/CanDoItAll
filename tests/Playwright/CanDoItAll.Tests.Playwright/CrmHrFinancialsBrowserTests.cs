@@ -17,8 +17,20 @@ public sealed class CrmHrFinancialsBrowserTests
         () => {
             const chart = document.querySelector('[data-testid="crmhr-financials-sold-chart"]');
             if (!chart) { return { present: false }; }
-            const bars = Array.from(chart.querySelectorAll('path.apexcharts-bar-area'));
-            const visibleBars = bars.filter(bar => { const box = bar.getBBox(); return box.height > 0.5 && box.width > 0.5; });
+            // Every plotted bar with the series it belongs to, its category index, the value the chart plotted and
+            // its real geometry.
+            const bars = Array.from(chart.querySelectorAll('path.apexcharts-bar-area')).map(bar => {
+                const box = bar.getBBox();
+                const series = bar.closest('.apexcharts-series');
+                return {
+                    series: series ? series.getAttribute('seriesName') : null,
+                    index: Number(bar.getAttribute('j')),
+                    value: Number(bar.getAttribute('val')),
+                    height: box.height,
+                    width: box.width,
+                    x: box.x
+                };
+            });
             const legend = Array.from(chart.querySelectorAll('.apexcharts-legend-text')).map(item => item.textContent.trim());
             // An axis label is a <text> with a <tspan> and an accessible <title>; read the visible tspan only.
             const labels = Array.from(chart.querySelectorAll('.apexcharts-xaxis-label')).map(item => (item.querySelector('tspan') ?? item).textContent.trim()).filter(text => text.length > 0);
@@ -26,8 +38,7 @@ public sealed class CrmHrFinancialsBrowserTests
             return {
                 present: true,
                 state: chart.dataset.cdaChartState,
-                bars: bars.length,
-                visibleBars: visibleBars.length,
+                bars,
                 legend,
                 labels,
                 svgWidth: svg ? svg.getBoundingClientRect().width : 0,
@@ -35,6 +46,14 @@ public sealed class CrmHrFinancialsBrowserTests
                 overflow: chart.scrollWidth > chart.clientWidth + 1
             };
         }
+        """;
+
+    // Resolves once the chart shows exactly the expected category labels, so a probe never reads a half-updated plot.
+    private const string LabelsSettled = """
+        expected => Array.from(document.querySelectorAll('[data-testid="crmhr-financials-sold-chart"] .apexcharts-xaxis-label'))
+            .map(item => (item.querySelector('tspan') ?? item).textContent.trim())
+            .filter(text => text.length > 0)
+            .join('|') === expected
         """;
 
     private const string OverflowProbe = """
@@ -68,30 +87,9 @@ public sealed class CrmHrFinancialsBrowserTests
             ViewportSize = new ViewportSize { Width = 1600, Height = 1000 }
         });
         var page = await context.NewPageAsync();
-        var pageErrors = new List<string>();
-        page.PageError += (_, message) => pageErrors.Add(message);
-        var consoleErrors = new List<string>();
-        page.Console += (_, message) =>
-        {
-            if (message.Type == "error")
-            {
-                consoleErrors.Add(message.Text);
-            }
-        };
-        var failedResources = new List<string>();
-        page.RequestFailed += (_, request) =>
-        {
-            // Navigating away aborts the circuit's own connection requests; only asset and API failures matter here.
-            if (request.Url.Contains("/_blazor", StringComparison.Ordinal) ||
-                request.Failure?.Contains("ERR_ABORTED", StringComparison.Ordinal) == true)
-            {
-                return;
-            }
+        var oracle = CrmHrBrowserOracle.Attach(page);
 
-            failedResources.Add($"{request.Method} {request.Url}: {request.Failure}");
-        };
-
-        var response = await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.SalesAccountId:D}");
+        var response = await oracle.NavigateAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.SalesAccountId:D}");
         Assert.True(response?.Ok, $"Expected the CRM route to return 2xx, got {(int?)response?.Status}.");
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("crmhr-crm-record-dialog").WaitForAsync(new() { Timeout = 30_000 });
@@ -106,44 +104,67 @@ public sealed class CrmHrFinancialsBrowserTests
         await Assertions.Expect(metrics).ToContainTextAsync("Sold · EUR");
         await Assertions.Expect(metrics).ToContainTextAsync("Sold · USD");
         await Assertions.Expect(metrics).ToContainTextAsync("Unavailable");
+        // The totals are the seeded recognized amounts per currency: 12000 + 3200.25 EUR and 2500 USD. The host formats
+        // them with its own number format, so the oracle compares the digits only.
+        var metricsText = await metrics.InnerTextAsync();
+        Assert.Contains("1520025", Digits(metricsText), StringComparison.Ordinal);
+        Assert.Contains("250000", Digits(metricsText), StringComparison.Ordinal);
         await Assertions.Expect(page.GetByTestId("crmhr-financials-incomplete")).ToContainTextAsync("1 incomplete");
         await Assertions.Expect(page.GetByTestId("crmhr-financials-distribution-unavailable")).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId("crmhr-financials-invoices-unavailable")).ToBeVisibleAsync();
 
-        // The real chart: plotted bar geometry, one legend entry per currency and one category per recognized month.
+        // The real chart: English month categories in chronological order, one legend entry per currency, and every
+        // plotted bar carrying exactly the seeded value of its currency and month.
         var chart = page.GetByTestId("crmhr-financials-sold-chart");
         await Assertions.Expect(chart).ToHaveAttributeAsync("data-cda-chart-state", "ready");
         await Assertions.Expect(chart).ToContainTextAsync("Sold value by month");
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-testid=\"crmhr-financials-sold-chart\"] path.apexcharts-bar-area').length > 0", null, new() { Timeout = 30_000 });
+        await page.WaitForFunctionAsync(LabelsSettled, "Jan 2025|Mar 2025|Feb 2026", new() { Timeout = 30_000 });
         var monthly = await page.EvaluateAsync<System.Text.Json.JsonElement>(ChartProbe);
         Assert.Equal("ready", monthly.GetProperty("state").GetString());
-        Assert.True(monthly.GetProperty("visibleBars").GetInt32() >= 3, $"Expected at least three plotted bars, got {monthly.GetProperty("visibleBars").GetInt32()} of {monthly.GetProperty("bars").GetInt32()}.");
+        Assert.Equal(new[] { "Jan 2025", "Mar 2025", "Feb 2026" }, Strings(monthly, "labels"));
+        Assert.Equal(new[] { "EUR", "USD" }, Strings(monthly, "legend"));
         Assert.True(monthly.GetProperty("svgHeight").GetDouble() > 200, "The chart canvas has no height.");
-        var monthlyLegend = monthly.GetProperty("legend").EnumerateArray().Select(item => item.GetString()).ToArray();
-        Assert.Equal(new[] { "EUR", "USD" }, monthlyLegend);
-        // Month labels use the host's culture-dependent short month format: one distinct category per recognized
-        // month, in chronological order, each carrying its year.
-        var monthlyLabels = monthly.GetProperty("labels").EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray();
-        Assert.Equal(3, monthlyLabels.Length);
-        Assert.Equal(3, monthlyLabels.Distinct().Count());
-        Assert.Equal(new[] { "2025", "2025", "2026" }, monthlyLabels.Select(label => label[^4..]));
+        AssertPlot(
+            monthly,
+            ("EUR", 0, 12000m),
+            ("EUR", 1, 0m),
+            ("EUR", 2, 3200.25m),
+            ("USD", 0, 0m),
+            ("USD", 1, 2500m),
+            ("USD", 2, 0m));
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "01-financials-monthly-1600.png") });
 
         // Yearly is a local re-projection of the same accepted snapshot: categories and bars change, no new read.
         await page.GetByTestId("crmhr-financials-year").ClickAsync();
         await Assertions.Expect(panel).ToHaveAttributeAsync("data-period", "year");
         await Assertions.Expect(chart).ToContainTextAsync("Sold value by year");
-        await page.WaitForFunctionAsync(
-            "() => Array.from(document.querySelectorAll('[data-testid=\"crmhr-financials-sold-chart\"] .apexcharts-xaxis-label')).map(item => (item.querySelector('tspan') ?? item).textContent.trim()).filter(text => text.length > 0).join('|') === '2025|2026'",
-            null,
-            new() { Timeout = 30_000 });
+        await page.WaitForFunctionAsync(LabelsSettled, "2025|2026", new() { Timeout = 30_000 });
         var yearly = await page.EvaluateAsync<System.Text.Json.JsonElement>(ChartProbe);
-        Assert.Equal(new[] { "2025", "2026" }, yearly.GetProperty("labels").EnumerateArray().Select(item => item.GetString()).ToArray());
-        Assert.Equal(new[] { "EUR", "USD" }, yearly.GetProperty("legend").EnumerateArray().Select(item => item.GetString()).ToArray());
-        Assert.True(yearly.GetProperty("visibleBars").GetInt32() >= 3, $"Expected at least three plotted yearly bars, got {yearly.GetProperty("visibleBars").GetInt32()}.");
+        Assert.Equal(new[] { "2025", "2026" }, Strings(yearly, "labels"));
+        Assert.Equal(new[] { "EUR", "USD" }, Strings(yearly, "legend"));
+        AssertPlot(
+            yearly,
+            ("EUR", 0, 12000m),
+            ("EUR", 1, 3200.25m),
+            ("USD", 0, 2500m),
+            ("USD", 1, 0m));
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "02-financials-yearly-1600.png") });
 
-        // Constrained width: the panel and the chart stay inside their boxes.
+        // Back to monthly: the update settles on the monthly categories and values again.
+        await page.GetByTestId("crmhr-financials-month").ClickAsync();
+        await Assertions.Expect(panel).ToHaveAttributeAsync("data-period", "month");
+        await page.WaitForFunctionAsync(LabelsSettled, "Jan 2025|Mar 2025|Feb 2026", new() { Timeout = 30_000 });
+        var monthlyAgain = await page.EvaluateAsync<System.Text.Json.JsonElement>(ChartProbe);
+        AssertPlot(
+            monthlyAgain,
+            ("EUR", 0, 12000m),
+            ("EUR", 1, 0m),
+            ("EUR", 2, 3200.25m),
+            ("USD", 0, 0m),
+            ("USD", 1, 2500m),
+            ("USD", 2, 0m));
+
+        // Constrained width: the panel and the chart stay inside their boxes and the plot keeps its values.
         await page.SetViewportSizeAsync(1100, 900);
         await page.WaitForTimeoutAsync(500);
         var overflow = await page.EvaluateAsync<System.Text.Json.JsonElement>(OverflowProbe);
@@ -151,12 +172,12 @@ public sealed class CrmHrFinancialsBrowserTests
         Assert.False(overflow.GetProperty("panelOverflow").GetBoolean(), "The Financials panel overflows horizontally at 1100 px.");
         var constrained = await page.EvaluateAsync<System.Text.Json.JsonElement>(ChartProbe);
         Assert.False(constrained.GetProperty("overflow").GetBoolean(), "The chart overflows its box at 1100 px.");
-        Assert.True(constrained.GetProperty("visibleBars").GetInt32() >= 3);
+        Assert.Equal(3, constrained.GetProperty("bars").EnumerateArray().Count(bar => bar.GetProperty("height").GetDouble() > 0.5));
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "03-financials-1100.png") });
         await page.SetViewportSizeAsync(1600, 1000);
 
         // Another account without sales: an accepted empty result, not the previous account's figures.
-        response = await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.EmptyAccountId:D}");
+        response = await oracle.NavigateAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.EmptyAccountId:D}");
         Assert.True(response?.Ok);
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("crmhr-crm-record-dialog").WaitForAsync(new() { Timeout = 30_000 });
@@ -169,10 +190,52 @@ public sealed class CrmHrFinancialsBrowserTests
         await Assertions.Expect(metrics).ToContainTextAsync("No recognized sales");
         Assert.DoesNotContain("Sold · EUR", await metrics.InnerTextAsync(), StringComparison.Ordinal);
 
-        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
-        Assert.True(pageErrors.Count == 0, "Page errors: " + string.Join(" | ", pageErrors));
-        Assert.True(consoleErrors.Count == 0, "Console errors: " + string.Join(" | ", consoleErrors));
-        Assert.True(failedResources.Count == 0, "Failed resources: " + string.Join(" | ", failedResources));
+        // Every browser-side failure of the journey counts; only the circuit teardown of the journey's own two
+        // navigations is kept apart, and it is written next to the screenshots.
+        await File.WriteAllLinesAsync(Path.Combine(artifactsDir, "expected-teardown.txt"), oracle.ExpectedTeardown);
+        await oracle.AssertCleanAsync();
+    }
+
+    private static string[] Strings(System.Text.Json.JsonElement probe, string property)
+        => probe.GetProperty(property).EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray();
+
+    private static string Digits(string text)
+        => new(text.Where(char.IsAsciiDigit).ToArray());
+
+    // The plotted bars against the seeded oracle: one bar per currency and category carrying exactly the seeded
+    // value, a zero-height placeholder where the currency has no sale, real geometry for the others, bar heights in
+    // the proportion of their values, and categories laid out left to right.
+    private static void AssertPlot(System.Text.Json.JsonElement probe, params (string Series, int Index, decimal Value)[] expected)
+    {
+        var bars = probe.GetProperty("bars").EnumerateArray()
+            .Select(bar => (
+                Series: bar.GetProperty("series").GetString() ?? string.Empty,
+                Index: bar.GetProperty("index").GetInt32(),
+                Value: bar.GetProperty("value").GetDecimal(),
+                Height: bar.GetProperty("height").GetDouble(),
+                Width: bar.GetProperty("width").GetDouble(),
+                X: bar.GetProperty("x").GetDouble()))
+            .OrderBy(bar => bar.Series, StringComparer.Ordinal)
+            .ThenBy(bar => bar.Index)
+            .ToArray();
+
+        Assert.Equal(expected, bars.Select(bar => (bar.Series, bar.Index, bar.Value)).ToArray());
+
+        var plotted = bars.Where(bar => bar.Value > 0m).ToArray();
+        Assert.All(plotted, bar => Assert.True(bar.Height > 0.5 && bar.Width > 0.5, $"The {bar.Series} bar of category {bar.Index} has no geometry."));
+        Assert.All(bars.Where(bar => bar.Value == 0m), bar => Assert.True(bar.Height <= 0.5, $"The {bar.Series} placeholder of category {bar.Index} is plotted with height {bar.Height}."));
+
+        var reference = plotted.MaxBy(bar => bar.Value);
+        Assert.All(plotted, bar =>
+        {
+            var expectedRatio = (double)(bar.Value / reference.Value);
+            var actualRatio = bar.Height / reference.Height;
+            Assert.True(Math.Abs(expectedRatio - actualRatio) < 0.02, $"The {bar.Series} bar of category {bar.Index} is {actualRatio:F3} of the tallest bar; its value is {expectedRatio:F3} of the largest value.");
+        });
+
+        // A placeholder has no box to position; the plotted bars follow their categories from left to right.
+        var positions = plotted.OrderBy(bar => bar.Index).ThenBy(bar => bar.Series, StringComparer.Ordinal).Select(bar => bar.X).ToArray();
+        Assert.Equal(positions.OrderBy(x => x).ToArray(), positions);
     }
 
     private async Task<SeededFinancials> SeedAsync(string suffix)

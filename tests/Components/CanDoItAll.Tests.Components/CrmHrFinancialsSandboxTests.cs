@@ -45,10 +45,7 @@ public sealed class CrmHrFinancialsSandboxTests : IDisposable
         var chart = Assert.Single(cut.FindComponents<CdaChart>());
         Assert.Equal(new[] { "EUR", "GBP", "USD" }, chart.Instance.Series.Select(series => series.Name));
         var categories = chart.Instance.Series[0].Points.Select(point => point.Category).ToArray();
-        var expected = new[] { new DateOnly(2025, 1, 1), new DateOnly(2025, 2, 1), new DateOnly(2025, 3, 1), new DateOnly(2025, 11, 1), new DateOnly(2026, 1, 1), new DateOnly(2026, 2, 1) }
-            .Select(start => start.ToString("MMM yyyy"))
-            .ToArray();
-        Assert.Equal(expected, categories);
+        Assert.Equal(new[] { "Jan 2025", "Feb 2025", "Mar 2025", "Nov 2025", "Jan 2026", "Feb 2026" }, categories);
         Assert.All(chart.Instance.Series, series => Assert.Equal(categories, series.Points.Select(point => point.Category)));
 
         cut.Find("[data-testid='crmhr-financials-year']").Click();

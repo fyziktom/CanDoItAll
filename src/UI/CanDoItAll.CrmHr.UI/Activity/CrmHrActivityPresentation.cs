@@ -106,9 +106,10 @@ public static class CrmHrActivityText
             ? NoPagesValue
             : $"Page {page.PageIndex + 1:N0} of {page.TotalPages:N0}";
 
-    // The local short date and time, as the module rendered it before the extraction.
+    // The local short date and time in the ambient numeric pattern, as the module rendered it before the extraction;
+    // only a 12-hour culture's AM/PM designators are forced to English (CrmHrPresentationCulture).
     public static string FormatTimestamp(DateTimeOffset occurredAtUtc)
-        => occurredAtUtc.LocalDateTime.ToString("g");
+        => CrmHrPresentationCulture.FormatShortTimestamp(occurredAtUtc.LocalDateTime);
 
     public static string ToneToken(CrmHrActivityTone tone)
         => tone switch

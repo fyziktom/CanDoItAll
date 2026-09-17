@@ -30,11 +30,8 @@ public sealed class CrmHrFinancialsChartTests
 
         Assert.Equal(new[] { "EUR", "USD" }, series.Select(item => item.Name));
         Assert.All(series, item => Assert.Equal(CdaChartType.Bar, item.Type));
-        // Month labels keep the module's culture-dependent short month format; the expectation uses the same format.
-        var categories = new[] { new DateOnly(2025, 1, 1), new DateOnly(2025, 2, 1), new DateOnly(2025, 3, 1), new DateOnly(2026, 1, 1) }
-            .Select(start => start.ToString("MMM yyyy"))
-            .ToArray();
-        Assert.Equal(4, categories.Distinct().Count());
+        // Month labels are English interface words under every server culture; the expectation is written out by hand.
+        var categories = new[] { "Jan 2025", "Feb 2025", "Mar 2025", "Jan 2026" };
         Assert.All(series, item => Assert.Equal(categories, item.Points.Select(point => point.Category)));
         Assert.Equal(new[] { 12000m, 0m, 8000m, 0m }, series[0].Points.Select(point => point.Value));
         Assert.Equal(new[] { 0m, 4500.5m, 2500m, 15000m }, series[1].Points.Select(point => point.Value));

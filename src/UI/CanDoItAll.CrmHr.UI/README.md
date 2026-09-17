@@ -34,6 +34,12 @@ action whose render has since been replaced. The timeline renders a
 `CrmHrActivityPresentation`: what the host accepted for its target and whether a read is in
 flight, so counts that were not accepted are shown as unavailable rather than as zero.
 
+Presentation language: interface words a formatter generates are English under every server
+culture. `CrmHrPresentationCulture` formats month labels (`Jan 2025`) and forces English
+AM/PM designators into the ambient short timestamp; numbers, separators, the date order and
+the time zone stay with the ambient culture, machine formats are explicit where they are
+produced, and nothing parses input or changes the process culture.
+
 The library references `CanDoItAll.Components.BaseLib` (which brings
 `CanDoItAll.Components.Common`), `CanDoItAll.Components.Charts` (which brings
 Blazor-ApexCharts and its static web assets; the library never references Blazor-ApexCharts

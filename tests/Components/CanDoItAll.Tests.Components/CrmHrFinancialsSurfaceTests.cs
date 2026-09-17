@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Charts;
@@ -87,7 +88,7 @@ public sealed class CrmHrFinancialsSurfaceTests
         var chart = Assert.Single(cut.FindComponents<CdaChart>());
         Assert.Equal("Sold value by month", chart.Instance.Title);
         Assert.Equal(new[] { "EUR", "USD" }, chart.Instance.Series.Select(series => series.Name));
-        var monthLabels = new[] { new DateOnly(2026, 5, 1).ToString("MMM yyyy"), new DateOnly(2026, 6, 1).ToString("MMM yyyy") };
+        var monthLabels = new[] { "May 2026", "Jun 2026" };
         Assert.All(chart.Instance.Series, series => Assert.Equal(monthLabels, series.Points.Select(point => point.Category)));
         Assert.Equal(new[] { 0m, 80m }, chart.Instance.Series[0].Points.Select(point => point.Value));
         Assert.Equal(new[] { 100m, 50m }, chart.Instance.Series[1].Points.Select(point => point.Value));
@@ -145,6 +146,34 @@ public sealed class CrmHrFinancialsSurfaceTests
         Assert.Empty(cut.FindAll("[data-testid='crmhr-financials-incomplete']"));
         Assert.DoesNotContain("0,00", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("0.00", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("cs-CZ")]
+    [InlineData("ja-JP")]
+    public void The_rendered_chart_categories_are_english_under_a_non_english_server_culture(string ambient)
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(ambient);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(ambient);
+            using var context = CreateContext();
+
+            var cut = context.Render<CrmHrFinancialsSurface>(parameters => parameters
+                .Add(component => component.Presentation, CrmHrFinancialsPresentation.CreateReady(1, Snapshot(incomplete: 0), CrmHrFinancialPeriod.Month)));
+
+            var chart = Assert.Single(cut.FindComponents<CdaChart>());
+            Assert.All(chart.Instance.Series, series => Assert.Equal(new[] { "May 2026", "Jun 2026" }, series.Points.Select(point => point.Category)));
+            // The plotted values are the owner's decimals, untouched by the label policy.
+            Assert.Equal(new[] { 0m, 80m }, chart.Instance.Series[0].Points.Select(point => point.Value));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
     }
 
     [Fact]
