@@ -9,9 +9,10 @@ namespace CanDoItAll.Tests.Components.CrmHr;
 public sealed class CrmHrAccountSummarySurfaceTests
 {
     private static readonly Guid AccountId = Guid.Parse("82000000-0000-0000-0000-000000000001");
+    private static readonly Guid OtherAccountId = Guid.Parse("82000000-0000-0000-0000-000000000002");
 
     [Fact]
-    public void No_account_renders_the_empty_state_and_its_directory_intent_names_no_account()
+    public void No_account_renders_the_empty_state_and_its_directory_intent_names_no_record()
     {
         using var context = CreateContext();
         var intents = new List<CrmHrAccountSummaryIntent>();
@@ -27,7 +28,7 @@ public sealed class CrmHrAccountSummarySurfaceTests
         cut.Find("[data-testid='crmhr-account-summary-open-directory']").Click();
 
         var open = Assert.IsType<CrmHrAccountSummaryIntent.OpenDirectory>(Assert.Single(intents));
-        Assert.Null(open.AccountPartyId);
+        Assert.Null(open.Account);
     }
 
     [Fact]
@@ -67,8 +68,40 @@ public sealed class CrmHrAccountSummarySurfaceTests
         cut.Find("[data-testid='crmhr-account-summary-open-directory']").Click();
 
         Assert.Equal(2, intents.Count);
-        Assert.Equal(AccountId, Assert.IsType<CrmHrAccountSummaryIntent.ConvertToActiveCustomer>(intents[0]).AccountPartyId);
-        Assert.Equal(AccountId, Assert.IsType<CrmHrAccountSummaryIntent.OpenDirectory>(intents[1]).AccountPartyId);
+        Assert.Same(account, Assert.IsType<CrmHrAccountSummaryIntent.ConvertToActiveCustomer>(intents[0]).Account);
+        Assert.Same(account, Assert.IsType<CrmHrAccountSummaryIntent.OpenDirectory>(intents[1]).Account);
+    }
+
+    [Fact]
+    public async Task Actions_carry_the_record_they_were_rendered_for_even_after_the_parameter_moved_on()
+    {
+        using var context = CreateContext();
+        var intents = new List<CrmHrAccountSummaryIntent>();
+        var first = Summary();
+        var second = Summary() with { AccountPartyId = OtherAccountId, DisplayName = "Borealis Freight" };
+
+        var cut = context.Render<CrmHrAccountSummarySurface>(parameters => parameters
+            .Add(component => component.Account, first)
+            .Add(component => component.Intent, intent => intents.Add(intent)));
+        var retainedConvert = FindButton(cut, "Convert to active customer").Instance.Click;
+        var retainedDirectory = FindButton(cut, "Open directory record").Instance.Click;
+
+        cut.Render(parameters => parameters.Add(component => component.Account, second));
+        Assert.Equal("Borealis Freight", cut.Find("[data-testid='crmhr-account-summary-name']").TextContent);
+
+        // The callbacks created by the first render still name the first record, whatever the surface shows now.
+        await cut.InvokeAsync(() => retainedConvert.InvokeAsync());
+        await cut.InvokeAsync(() => retainedDirectory.InvokeAsync());
+
+        Assert.Equal(2, intents.Count);
+        Assert.Same(first, Assert.IsType<CrmHrAccountSummaryIntent.ConvertToActiveCustomer>(intents[0]).Account);
+        Assert.Same(first, Assert.IsType<CrmHrAccountSummaryIntent.OpenDirectory>(intents[1]).Account);
+
+        // The same retained callbacks stay inert for a surface that no longer shows any account: no throw, no retarget.
+        cut.Render(parameters => parameters.Add(component => component.Account, null));
+        await cut.InvokeAsync(() => retainedConvert.InvokeAsync());
+        Assert.Same(first, Assert.IsType<CrmHrAccountSummaryIntent.ConvertToActiveCustomer>(intents[2]).Account);
+        Assert.Equal(3, intents.Count);
     }
 
     [Fact]
@@ -137,6 +170,9 @@ public sealed class CrmHrAccountSummarySurfaceTests
         cut.Find("[data-testid='crmhr-account-convert-active-button']").Click();
         Assert.Single(intents);
     }
+
+    private static IRenderedComponent<Button> FindButton(IRenderedComponent<CrmHrAccountSummarySurface> cut, string text)
+        => Assert.Single(cut.FindComponents<Button>(), button => button.Instance.Text == text);
 
     private static CrmHrAccountSummary Summary()
         => new(

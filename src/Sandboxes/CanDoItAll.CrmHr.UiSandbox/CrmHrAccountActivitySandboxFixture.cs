@@ -9,6 +9,7 @@ public enum CrmHrAccountActivitySandboxScenario
     NoAccount,
     ActiveCustomer,
     Loading,
+    Paging,
     Empty,
     Overdue,
     LongText,
@@ -80,8 +81,6 @@ public sealed class CrmHrAccountActivitySandboxFixture
 
     public CrmHrAccountSummary? Account { get; private set; } = PopulatedAccount();
 
-    public bool IsLoading { get; private set; }
-
     public string IntentLog { get; private set; } = "No intent yet.";
 
     public static string TestId(CrmHrActivitySandboxHost host)
@@ -105,7 +104,6 @@ public sealed class CrmHrAccountActivitySandboxFixture
         scenario = next;
         pageIndexes.Clear();
         IntentLog = "No intent yet.";
-        IsLoading = next == CrmHrAccountActivitySandboxScenario.Loading;
         Account = next switch
         {
             CrmHrAccountActivitySandboxScenario.NoAccount => null,
@@ -131,8 +129,18 @@ public sealed class CrmHrAccountActivitySandboxFixture
         overdueCount = entries.Count(entry => entry.IsOverdue);
     }
 
+    // What a host has accepted for its record: nothing yet while the first read is pending (loading), the accepted
+    // first page while another page loads (paging), or the accepted requested page.
+    public CrmHrActivityPresentation Presentation(CrmHrActivitySandboxHost host)
+        => scenario switch
+        {
+            CrmHrAccountActivitySandboxScenario.Loading => CrmHrActivityPresentation.Loading(),
+            CrmHrAccountActivitySandboxScenario.Paging => CrmHrActivityPresentation.Loading(Page(host)),
+            _ => CrmHrActivityPresentation.Ready(Page(host))
+        };
+
     // The page a host shows: the whole-history counts plus the requested slice, exactly as the query owner pages it.
-    public CrmHrActivityPage Page(CrmHrActivitySandboxHost host)
+    private CrmHrActivityPage Page(CrmHrActivitySandboxHost host)
     {
         var pageIndex = pageIndexes.GetValueOrDefault(host);
         return new CrmHrActivityPage(
@@ -144,17 +152,21 @@ public sealed class CrmHrAccountActivitySandboxFixture
             overdueCount);
     }
 
+    // An intent is honoured only when it was rendered for the record currently shown, as the production adapter does.
     public void HandleAccount(CrmHrAccountSummaryIntent intent)
     {
         switch (intent)
         {
-            case CrmHrAccountSummaryIntent.OpenDirectory open:
-                IntentLog = open.AccountPartyId is { } id ? $"Open directory: account {id:D}" : "Open directory: no account";
+            case CrmHrAccountSummaryIntent.OpenDirectory open when ReferenceEquals(open.Account, Account):
+                IntentLog = open.Account is { } shown ? $"Open directory: account {shown.AccountPartyId:D}" : "Open directory: no account";
                 break;
-            case CrmHrAccountSummaryIntent.ConvertToActiveCustomer convert when Account?.AccountPartyId == convert.AccountPartyId:
+            case CrmHrAccountSummaryIntent.OpenDirectory:
+                IntentLog = "Open directory ignored: the action was rendered for another record";
+                break;
+            case CrmHrAccountSummaryIntent.ConvertToActiveCustomer convert when ReferenceEquals(convert.Account, Account) && Account is { } current:
                 // The production page saves and reloads; the sandbox shows the reloaded state locally.
-                IntentLog = $"Convert to active customer: account {convert.AccountPartyId:D}";
-                Account = Account with
+                IntentLog = $"Convert to active customer: account {convert.Account.AccountPartyId:D}";
+                Account = current with
                 {
                     RelationshipStageLabel = "ActiveCustomer",
                     RelationshipStageTone = CrmHrAccountTone.Success,
@@ -162,7 +174,7 @@ public sealed class CrmHrAccountActivitySandboxFixture
                 };
                 break;
             case CrmHrAccountSummaryIntent.ConvertToActiveCustomer convert:
-                IntentLog = $"Convert ignored: account {convert.AccountPartyId:D} is not shown";
+                IntentLog = $"Convert ignored: account {convert.Account.AccountPartyId:D} is not the shown record";
                 break;
         }
     }
@@ -171,7 +183,7 @@ public sealed class CrmHrAccountActivitySandboxFixture
     {
         switch (intent)
         {
-            case CrmHrActivityIntent.RequestPage request when request.PageIndex >= 0 && request.PageIndex < Page(host).TotalPages:
+            case CrmHrActivityIntent.RequestPage request when Presentation(host) is { IsLoading: false, Accepted: { } accepted } && request.PageIndex >= 0 && request.PageIndex < accepted.TotalPages:
                 pageIndexes[host] = request.PageIndex;
                 IntentLog = $"Request page: {host} {request.PageIndex + 1}";
                 break;

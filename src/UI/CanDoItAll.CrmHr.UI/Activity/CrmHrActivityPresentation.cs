@@ -43,6 +43,21 @@ public sealed record CrmHrActivityPage(
         => new([], 0, pageSize, 0, 0, 0);
 }
 
+// What the host has accepted for its current target and whether a read is in flight. No accepted page means the
+// history is unknown for the target: totals and pages are unavailable, never zero. An accepted page with a read in
+// flight is another page of the same accepted history loading over its totals.
+public sealed record CrmHrActivityPresentation(CrmHrActivityPage? Accepted, bool IsLoading)
+{
+    public static CrmHrActivityPresentation NotAccepted { get; } = new(null, false);
+
+    public static CrmHrActivityPresentation Loading(CrmHrActivityPage? accepted = null) => new(accepted, true);
+
+    public static CrmHrActivityPresentation Ready(CrmHrActivityPage accepted)
+        => new(accepted ?? throw new ArgumentNullException(nameof(accepted)), false);
+
+    public bool HasAccepted => Accepted is not null;
+}
+
 // The host-specific wording of a timeline: heading and empty-state copy. Each host composition supplies its own.
 public sealed record CrmHrActivityCopy(
     string Eyebrow,
@@ -75,6 +90,10 @@ public static class CrmHrActivityText
 {
     public const string NoPagesValue = "No pages";
     public const string OverdueLabel = "Overdue";
+    public const string TotalsLoadingLabel = "Counts load with the history";
+    public const string TotalsUnavailableLabel = "Counts unavailable";
+    public const string HistoryUnavailableTitle = "History not loaded";
+    public const string HistoryUnavailableDescription = "No activity has been accepted for this record yet.";
 
     public static string FormatActivities(int count) => $"{count:N0} activities";
 

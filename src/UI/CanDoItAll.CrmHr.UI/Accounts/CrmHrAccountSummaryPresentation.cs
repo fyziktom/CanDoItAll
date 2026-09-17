@@ -31,17 +31,19 @@ public sealed record CrmHrAccountSummary(
     public IReadOnlyList<string> Roles { get; init; } = Roles?.ToArray() ?? throw new ArgumentNullException(nameof(Roles));
 }
 
-// Everything the account summary can ask its host to do. Navigation and the conversion mutation stay with the host;
-// the conversion intent names the account it was raised for so a host can fence a stale surface.
+// Everything the account summary can ask its host to do. Navigation and the conversion mutation stay with the host.
+// Each intent carries the exact account record that was rendered when its action was created (null for the
+// no-account state), so a host can recognize an action whose render has since been replaced: an action created for
+// one record never acquires the identity of the record shown later, whatever the surface displays by then.
 public abstract record CrmHrAccountSummaryIntent
 {
     private CrmHrAccountSummaryIntent()
     {
     }
 
-    public sealed record OpenDirectory(Guid? AccountPartyId) : CrmHrAccountSummaryIntent;
+    public sealed record OpenDirectory(CrmHrAccountSummary? Account) : CrmHrAccountSummaryIntent;
 
-    public sealed record ConvertToActiveCustomer(Guid AccountPartyId) : CrmHrAccountSummaryIntent;
+    public sealed record ConvertToActiveCustomer(CrmHrAccountSummary Account) : CrmHrAccountSummaryIntent;
 }
 
 public static class CrmHrAccountText

@@ -1,21 +1,15 @@
-@* Compatibility adapter: the CRM, Directory and Workforce pages keep composing InteractionTimeline with the query
-   owner's history page and their own wording, while the rendering lives in CanDoItAll.CrmHr.UI. Loading, failure
-   and the read stay with each page; the adapter maps the page once per reference and forwards page requests. *@
-<CrmHrActivitySurface Page="@presentation"
-                      IsLoading="@IsLoading"
+@* Compatibility adapter: the CRM, Directory and Workforce pages keep composing InteractionTimeline with their own
+   wording and test identifier, while the rendering lives in CanDoItAll.CrmHr.UI. The pages own the read through
+   CrmHrActivityHistorySession and pass its presentation; the adapter forwards a page request only while that
+   presentation admits one (an accepted page, no read in flight, the index inside the accepted range). *@
+<CrmHrActivitySurface Presentation="@Presentation"
                       Copy="@Copy"
                       DataTestId="@DataTestId"
                       Intent="HandleIntentAsync" />
 
 @code {
-    private CrmActivityHistoryPage? mapped;
-    private CrmHrActivityPage presentation = CrmHrActivityPage.Empty();
-
-    [Parameter]
-    public CrmActivityHistoryPage Page { get; set; } = CrmActivityHistoryPage.Empty();
-
-    [Parameter]
-    public bool IsLoading { get; set; }
+    [Parameter, EditorRequired]
+    public CrmHrActivityPresentation Presentation { get; set; } = CrmHrActivityPresentation.NotAccepted;
 
     [Parameter]
     public EventCallback<int> PageRequested { get; set; }
@@ -43,21 +37,14 @@
 
     private CrmHrActivityCopy Copy => new(Eyebrow, Title, Description, EmptyEyebrow, EmptyTitle, EmptyDescription);
 
-    protected override void OnParametersSet()
-    {
-        if (ReferenceEquals(mapped, Page))
-        {
-            return;
-        }
-
-        mapped = Page;
-        presentation = CrmHrActivityPresentationMapper.ToPage(Page);
-    }
-
     private Task HandleIntentAsync(CrmHrActivityIntent intent)
         => intent switch
         {
-            CrmHrActivityIntent.RequestPage request => PageRequested.InvokeAsync(request.PageIndex),
+            CrmHrActivityIntent.RequestPage request when IsAdmissible(request.PageIndex) => PageRequested.InvokeAsync(request.PageIndex),
+            CrmHrActivityIntent.RequestPage => Task.CompletedTask,
             _ => throw new NotSupportedException($"The timeline adapter does not own the {intent.GetType().Name} intent.")
         };
+
+    private bool IsAdmissible(int pageIndex)
+        => Presentation is { IsLoading: false, Accepted: { } page } && pageIndex >= 0 && pageIndex < page.TotalPages;
 }

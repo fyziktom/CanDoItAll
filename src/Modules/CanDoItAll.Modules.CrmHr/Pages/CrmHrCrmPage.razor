@@ -278,11 +278,11 @@
                                           data-testid="crmhr-crm-tab-interactions">
                                     <Stack GapScale="LayoutGap.Large">
                             <Grid Gap="LayoutGap.Large" ColumnsLg="2">
-                                @if (!string.IsNullOrWhiteSpace(accountActivityLoadError))
+                                @if (accountActivity.FailureMessage is { } accountActivityFailure)
                                 {
                                     <SurfaceCard Soft="true" data-testid="crmhr-account-activity-error">
                                         <p class="cda-eyebrow text-rose-700">Account activity unavailable</p>
-                                        <p class="mt-2 text-sm leading-6 text-slate-700">@accountActivityLoadError</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-700">@accountActivityFailure</p>
                                         <Button Text="Retry"
                                                 Icon="refresh"
                                                 ButtonStyle="ButtonStyle.Light"
@@ -293,8 +293,7 @@
                                 }
                                 else
                                 {
-                                    <InteractionTimeline Page="accountActivityPage"
-                                                         IsLoading="@isAccountActivityLoading"
+                                    <InteractionTimeline Presentation="@accountActivity.Presentation"
                                                          PageRequested="HandleAccountActivityPageRequestedAsync"
                                                          DataTestId="crmhr-account-activity" />
                                 }
@@ -306,12 +305,22 @@
                                         Counts cover the complete account history while the timeline renders only the active page.
                                     </p>
                                     <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                        <StatusBadge Tone="info"
-                                                     Text="@($"{accountActivityPage.ActionCount:N0} open follow-ups")"
-                                                     data-testid="crmhr-account-action-count" />
-                                        <StatusBadge Tone="@(accountActivityPage.OverdueActionCount > 0 ? "danger" : "success")"
-                                                     Text="@($"{accountActivityPage.OverdueActionCount:N0} overdue")"
-                                                     data-testid="crmhr-account-overdue-count" />
+                                        @if (accountActivity.Presentation.Accepted is { } acceptedActivity)
+                                        {
+                                            <StatusBadge Tone="info"
+                                                         Text="@($"{acceptedActivity.ActionCount:N0} open follow-ups")"
+                                                         data-testid="crmhr-account-action-count" />
+                                            <StatusBadge Tone="@(acceptedActivity.OverdueActionCount > 0 ? "danger" : "success")"
+                                                         Text="@($"{acceptedActivity.OverdueActionCount:N0} overdue")"
+                                                         data-testid="crmhr-account-overdue-count" />
+                                        }
+                                        else
+                                        {
+                                            @* Nothing accepted for this account yet: no count is claimed and no tone reassures. *@
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@(accountActivity.Presentation.IsLoading ? "Follow-up counts load with the history" : "Follow-up counts unavailable")"
+                                                         data-testid="crmhr-account-activity-counts-unavailable" />
+                                        }
                                     </Cluster>
                                 </SurfaceCard>
                             </Grid>
@@ -519,7 +528,7 @@
     private CrmAccountWorkspaceModel? selectedAccount;
     private CrmInteractionDetailModel? selectedInteraction;
     private CrmOpportunityDetailModel? selectedOpportunity;
-    private CrmActivityHistoryPage accountActivityPage = CrmActivityHistoryPage.Empty();
+    private CrmHrActivityHistorySession accountActivity = default!;
     private CrmAccountProfileEditorModel profileEditor = new();
     private List<CrmAccountConnectionEditorModel> connectedRecordEditors = [];
     private CrmInteractionEditorModel interactionEditor = CreateInteractionEditor();
@@ -532,7 +541,6 @@
     private int accountCount;
     private Guid? selectedOpportunityId;
     private Guid? selectedInteractionId;
-    private Guid? accountActivityLoadedPartyId;
     private int? connectionPartyPickerIndex;
     private CrmRecordTab selectedCrmRecordTab = CrmRecordTab.Overview;
     private string? committedQueryKey;
@@ -540,8 +548,6 @@
     private CrmQueryLoadStamp? activeQueryLoadStamp;
     private CancellationTokenSource? queryLoadCancellation;
     private long transientStateGeneration;
-    private long accountActivityLoadGeneration;
-    private Task? accountActivityLoadTask;
     private string? message;
     private long opportunityPipelineRefreshVersion;
     private bool isOpportunityBusy;
@@ -551,10 +557,8 @@
     private bool isOpportunityConversionDialogOpen;
     private bool isAccountDialogOpen;
     private bool isOpportunityConversionBusy;
-    private bool isAccountActivityLoading;
     private bool isInteractive;
     private bool isDisposed;
-    private string accountActivityLoadError = string.Empty;
 
     private int SelectedCrmRecordTabIndex => (int)selectedCrmRecordTab;
 
@@ -592,6 +596,15 @@
                 new("opportunityId", OpportunityIdQuery?.ToString("D")),
                 new("interactionId", InteractionIdQuery?.ToString("D"))
             ]);
+
+    protected override void OnInitialized()
+    {
+        accountActivity = new CrmHrActivityHistorySession(
+            (query, cancellationToken) => CrmService.SearchAccountActivityAsync(query, cancellationToken),
+            initialFailureMessage: "Account activity could not be loaded.",
+            pageFailureMessage: "The requested account activity page could not be loaded.",
+            Logger);
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -995,108 +1008,25 @@
         }
     }
 
-    private async Task EnsureAccountActivityLoadedAsync()
-    {
-        if (selectedAccount is not { } account ||
-            accountActivityLoadedPartyId == account.AccountPartyId)
-        {
-            return;
-        }
+    // The account activity lane: the session owns the read, the accepted page, the busy gate and the fencing of
+    // late outcomes; this page decides when the lane is asked for the selected account and renders its failure.
+    private Task EnsureAccountActivityLoadedAsync()
+        => selectedAccount is { } account
+            ? accountActivity.EnsureLoadedAsync(account.AccountPartyId)
+            : Task.CompletedTask;
 
-        var accountPartyId = account.AccountPartyId;
-        var generation = Volatile.Read(ref accountActivityLoadGeneration);
-        if (accountActivityLoadTask is null)
-        {
-            isAccountActivityLoading = true;
-            accountActivityLoadError = string.Empty;
-            accountActivityLoadTask = LoadAccountActivityAsync(
-                accountPartyId,
-                pageIndex: 0,
-                generation);
-        }
+    private Task HandleAccountActivityPageRequestedAsync(int pageIndex)
+        => selectedAccount is { } account && accountActivity.Target == account.AccountPartyId
+            ? accountActivity.RequestPageAsync(pageIndex)
+            : Task.CompletedTask;
 
-        await accountActivityLoadTask;
-    }
-
-    private async Task LoadAccountActivityAsync(
-        Guid accountPartyId,
-        int pageIndex,
-        long generation)
-    {
-        try
-        {
-            var page = await CrmService.SearchAccountActivityAsync(
-                new CrmActivityHistoryQuery(
-                    accountPartyId,
-                    pageIndex,
-                    accountActivityPage.PageSize));
-            if (!IsCurrentAccountActivityLoad(accountPartyId, generation))
-            {
-                return;
-            }
-
-            accountActivityPage = page;
-            accountActivityLoadedPartyId = accountPartyId;
-        }
-        catch when (!IsCurrentAccountActivityLoad(accountPartyId, generation))
-        {
-        }
-        catch (Exception exception)
-        {
-            Logger.LogError(
-                exception,
-                "Failed to load account activity page {PageIndex} for account {AccountPartyId}.",
-                pageIndex,
-                accountPartyId);
-            accountActivityLoadError = "Account activity could not be loaded.";
-        }
-        finally
-        {
-            if (IsCurrentAccountActivityLoad(accountPartyId, generation))
-            {
-                isAccountActivityLoading = false;
-                accountActivityLoadTask = null;
-            }
-        }
-    }
-
-    private async Task HandleAccountActivityPageRequestedAsync(int pageIndex)
-    {
-        if (selectedAccount is not { } account ||
-            pageIndex < 0 ||
-            pageIndex >= accountActivityPage.TotalPages)
-        {
-            return;
-        }
-
-        isAccountActivityLoading = true;
-        accountActivityLoadError = string.Empty;
-        await LoadAccountActivityAsync(
-            account.AccountPartyId,
-            pageIndex,
-            Volatile.Read(ref accountActivityLoadGeneration));
-    }
-
-    private bool IsCurrentAccountActivityLoad(Guid accountPartyId, long generation)
-        => !isDisposed &&
-           selectedAccount?.AccountPartyId == accountPartyId &&
-           generation == Volatile.Read(ref accountActivityLoadGeneration);
-
-    private async Task RetryAccountActivityAsync()
-    {
-        InvalidateAccountActivity();
-        await EnsureAccountActivityLoadedAsync();
-    }
+    private Task RetryAccountActivityAsync()
+        => selectedAccount is { } account && accountActivity.Target == account.AccountPartyId
+            ? accountActivity.RetryAsync()
+            : Task.CompletedTask;
 
     private void InvalidateAccountActivity()
-    {
-        Interlocked.Increment(ref accountActivityLoadGeneration);
-        accountActivityPage = CrmActivityHistoryPage.Empty();
-        accountActivityLoadedPartyId = null;
-        accountActivityLoadTask = null;
-        isAccountActivityLoading = false;
-        accountActivityLoadError = string.Empty;
-    }
+        => accountActivity.Invalidate();
 
     private void SelectCrmRecordTabForRoute(
         Guid accountPartyId,
@@ -1981,5 +1911,6 @@
         activeQueryLoadStamp = null;
         Interlocked.Increment(ref transientStateGeneration);
         Interlocked.Exchange(ref queryLoadCancellation, null)?.Cancel();
+        accountActivity.Dispose();
     }
 }

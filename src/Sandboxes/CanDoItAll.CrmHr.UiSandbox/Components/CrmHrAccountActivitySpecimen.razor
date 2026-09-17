@@ -33,8 +33,7 @@
 
         @foreach (var host in Enum.GetValues<CrmHrActivitySandboxHost>())
         {
-            <CrmHrActivitySurface Page="@fixture.Page(host)"
-                                  IsLoading="@fixture.IsLoading"
+            <CrmHrActivitySurface Presentation="@fixture.Presentation(host)"
                                   Copy="@CrmHrAccountActivitySandboxFixture.Copy(host)"
                                   DataTestId="@CrmHrAccountActivitySandboxFixture.TestId(host)"
                                   Intent="@(intent => HandleActivityIntent(host, intent))" />

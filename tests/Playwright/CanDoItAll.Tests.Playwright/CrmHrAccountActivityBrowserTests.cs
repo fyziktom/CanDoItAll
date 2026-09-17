@@ -88,6 +88,11 @@ public sealed class CrmHrAccountActivityBrowserTests
         await Assertions.Expect(settledItem).ToHaveAttributeAsync("data-overdue", "false");
         await Assertions.Expect(page.GetByTestId("crmhr-account-activity-overdue-total")).ToHaveTextAsync("1 overdue");
         await Assertions.Expect(page.GetByTestId("crmhr-account-activity-totals")).ToContainTextAsync("1 next actions");
+        await Assertions.Expect(activity).ToHaveAttributeAsync("data-accepted", "true");
+        // The adjacent follow-up pressure card renders the same accepted history, not a placeholder zero.
+        await Assertions.Expect(page.GetByTestId("crmhr-account-action-count")).ToHaveTextAsync("1 open follow-ups");
+        await Assertions.Expect(page.GetByTestId("crmhr-account-overdue-count")).ToHaveTextAsync("1 overdue");
+        await Assertions.Expect(page.GetByTestId("crmhr-account-activity-counts-unavailable")).ToHaveCountAsync(0);
         Assert.True(await page.GetByTestId("crmhr-account-activity-item").CountAsync() >= 2);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "01-account-activity-1600.png") });
 
@@ -155,6 +160,17 @@ public sealed class CrmHrAccountActivityBrowserTests
         var persisted = await ReadProfileAsync(seed.AccountId);
         Assert.Equal(CrmAccountRelationshipStage.ActiveCustomer, persisted.RelationshipStage);
         Assert.Equal(seed.AccountId, persisted.AccountPartyId);
+
+        // An account without interactions: the accepted history is empty, and the follow-up counts are accepted
+        // zeros after the read, not the placeholder shown before anything was accepted.
+        await page.GetByTestId("crmhr-crm-tab-interactions").ClickAsync();
+        var activity = page.GetByTestId("crmhr-account-activity");
+        await Assertions.Expect(activity).ToHaveAttributeAsync("data-accepted", "true", new() { Timeout = 30_000 });
+        await Assertions.Expect(activity).ToHaveAttributeAsync("data-loading", "false");
+        await Assertions.Expect(page.GetByTestId("crmhr-account-activity-totals")).ToContainTextAsync("0 next actions");
+        await Assertions.Expect(page.GetByTestId("crmhr-account-action-count")).ToHaveTextAsync("0 open follow-ups");
+        await Assertions.Expect(page.GetByTestId("crmhr-account-overdue-count")).ToHaveTextAsync("0 overdue");
+        await Assertions.Expect(page.GetByTestId("crmhr-account-activity-counts-unavailable")).ToHaveCountAsync(0);
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.Empty(pageErrors);

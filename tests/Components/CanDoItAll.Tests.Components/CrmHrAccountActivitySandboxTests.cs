@@ -24,6 +24,7 @@ public sealed class CrmHrAccountActivitySandboxTests : IDisposable
     [InlineData("no-account", "crmhr-account-summary-empty")]
     [InlineData("active-customer", "crmhr-account-summary")]
     [InlineData("loading", "crmhr-workforce-history-loading")]
+    [InlineData("paging", "crmhr-account-activity-loading")]
     [InlineData("empty", "crmhr-directory-activity-empty")]
     [InlineData("overdue", "crmhr-account-activity-overdue-total")]
     [InlineData("long-text", "crmhr-account-summary-text")]
@@ -37,6 +38,22 @@ public sealed class CrmHrAccountActivitySandboxTests : IDisposable
         Assert.Equal(scenario, cut.Find("[data-testid='crmhr-sandbox-frame']").GetAttribute("data-scenario"));
         Assert.NotNull(cut.FindComponent<CrmHrAccountSummarySurface>());
         Assert.Equal(3, cut.FindComponents<CrmHrActivitySurface>().Count);
+    }
+
+    [Fact]
+    public void Loading_scenario_claims_no_count_while_the_paging_scenario_keeps_the_accepted_totals()
+    {
+        var loading = Render("loading");
+        loading.WaitForAssertion(() => Assert.NotNull(loading.Find("[data-testid='crmhr-account-activity-loading']")));
+        Assert.Equal("false", loading.Find("[data-testid='crmhr-account-activity']").GetAttribute("data-accepted"));
+        Assert.Equal(CrmHrActivityText.TotalsLoadingLabel, loading.Find("[data-testid='crmhr-account-activity-totals-unavailable']").TextContent.Trim());
+        Assert.DoesNotContain("0 activities", loading.Markup, StringComparison.Ordinal);
+
+        var paging = Render("paging");
+        paging.WaitForAssertion(() => Assert.NotNull(paging.Find("[data-testid='crmhr-account-activity-loading']")));
+        Assert.Equal("true", paging.Find("[data-testid='crmhr-account-activity']").GetAttribute("data-accepted"));
+        Assert.Contains("12 activities", paging.Find("[data-testid='crmhr-account-activity-totals']").TextContent, StringComparison.Ordinal);
+        Assert.True(paging.Find("[data-testid='crmhr-account-activity-next']").HasAttribute("disabled"));
     }
 
     [Fact]

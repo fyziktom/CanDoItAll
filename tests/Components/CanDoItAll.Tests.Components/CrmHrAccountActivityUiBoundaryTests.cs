@@ -24,6 +24,7 @@ public sealed class CrmHrAccountActivityUiBoundaryTests
         "Microsoft.AspNetCore.Components",
         "Microsoft.Extensions",
         "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.Charts",
         "CanDoItAll.Components.Common"
     ];
 
@@ -69,7 +70,7 @@ public sealed class CrmHrAccountActivityUiBoundaryTests
         using var context = CreateContext();
 
         var panel = context.Render<AccountSummaryPanel>(parameters => parameters.Add(component => component.Account, null));
-        var timeline = context.Render<InteractionTimeline>(parameters => parameters.Add(component => component.Page, CrmActivityHistoryPage.Empty()));
+        var timeline = context.Render<InteractionTimeline>(parameters => parameters.Add(component => component.Presentation, CrmHrActivityPresentation.NotAccepted));
 
         Assert.Single(panel.FindComponents<CrmHrAccountSummarySurface>());
         Assert.Single(timeline.FindComponents<CrmHrActivitySurface>());

@@ -1,6 +1,7 @@
 @* The CRM account summary: one presentation record in, typed intents out. Navigation and the conversion mutation
-   stay with the host; the surface only reports that the operator asked for them. *@
-@if (Account is null)
+   stay with the host; the surface only reports that the operator asked for them. Every action captures the record
+   it was rendered for, so an action created for one account never reads a later account off the live parameter. *@
+@if (Account is not { } account)
 {
     <div data-testid="crmhr-account-summary-empty">
         <EmptyState Eyebrow="No account selected"
@@ -18,7 +19,7 @@
 else
 {
     <div data-testid="crmhr-account-summary"
-         data-account-id="@Account.AccountPartyId.ToString("D")"
+         data-account-id="@account.AccountPartyId.ToString("D")"
          data-interactive="@(IsInteractive ? "true" : "false")">
         <SurfaceCard>
             <Stack GapScale="LayoutGap.Medium">
@@ -28,21 +29,21 @@ else
                        Wrap="FlexWrap.Wrap">
                     <div class="min-w-0">
                         <p class="cda-eyebrow">Account record</p>
-                        <h2 class="mt-1 break-words text-lg font-semibold text-slate-950" data-testid="crmhr-account-summary-name">@Account.DisplayName</h2>
-                        @if (!string.IsNullOrWhiteSpace(Account.Summary))
+                        <h2 class="mt-1 break-words text-lg font-semibold text-slate-950" data-testid="crmhr-account-summary-name">@account.DisplayName</h2>
+                        @if (!string.IsNullOrWhiteSpace(account.Summary))
                         {
-                            <p class="mt-2 max-w-4xl break-words text-sm leading-6 text-slate-600" data-testid="crmhr-account-summary-text">@Account.Summary</p>
+                            <p class="mt-2 max-w-4xl break-words text-sm leading-6 text-slate-600" data-testid="crmhr-account-summary-text">@account.Summary</p>
                         }
                     </div>
 
                     <Stack GapScale="LayoutGap.Small">
                         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
-                            <StatusBadge Tone="@CrmHrAccountText.ToneToken(Account.RelationshipStageTone)"
-                                         Text="@Account.RelationshipStageLabel"
+                            <StatusBadge Tone="@CrmHrAccountText.ToneToken(account.RelationshipStageTone)"
+                                         Text="@account.RelationshipStageLabel"
                                          NoWrap="true"
                                          data-testid="crmhr-account-summary-stage" />
-                            <StatusBadge Tone="@CrmHrAccountText.ToneToken(Account.LifecycleTone)"
-                                         Text="@Account.LifecycleLabel"
+                            <StatusBadge Tone="@CrmHrAccountText.ToneToken(account.LifecycleTone)"
+                                         Text="@account.LifecycleLabel"
                                          NoWrap="true"
                                          data-testid="crmhr-account-summary-lifecycle" />
                         </Cluster>
@@ -51,14 +52,14 @@ else
                                     ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Small"
                                     Disabled="@ActionsDisabled"
-                                    Click="@(() => OpenDirectoryAsync(Account.AccountPartyId))"
+                                    Click="@(() => OpenDirectoryAsync(account))"
                                     data-testid="crmhr-account-summary-open-directory" />
-                            @if (Account.CanConvertToActiveCustomer)
+                            @if (account.CanConvertToActiveCustomer)
                             {
                                 <Button Text="Convert to active customer"
                                         Size="ButtonSize.Small"
                                         Disabled="@ActionsDisabled"
-                                        Click="@(() => ConvertAsync(Account.AccountPartyId))"
+                                        Click="@(() => ConvertAsync(account))"
                                         data-testid="crmhr-account-convert-active-button" />
                             }
                         </Cluster>
@@ -67,23 +68,23 @@ else
 
                 <CompactStatStrip data-testid="crmhr-account-summary-stats">
                     <CompactStat Label="email"
-                                 Value="@CrmHrAccountText.FormatContact(Account.PrimaryEmail)"
+                                 Value="@CrmHrAccountText.FormatContact(account.PrimaryEmail)"
                                  TooltipText="Primary email from the shared party record." />
                     <CompactStat Label="phone"
-                                 Value="@CrmHrAccountText.FormatContact(Account.PrimaryPhone)"
+                                 Value="@CrmHrAccountText.FormatContact(account.PrimaryPhone)"
                                  TooltipText="Primary phone from the shared party record." />
                     <CompactStat Label="roles"
-                                 Value="@CrmHrAccountText.FormatRoles(Account.Roles)"
+                                 Value="@CrmHrAccountText.FormatRoles(account.Roles)"
                                  TooltipText="CRM-facing roles on the shared party record." />
                     <CompactStat Label="connections"
-                                 Value="@CrmHrAccountText.FormatCount(Account.ConnectionCount)"
+                                 Value="@CrmHrAccountText.FormatCount(account.ConnectionCount)"
                                  TooltipText="People and other directory records connected to this account." />
                     <CompactStat Label="opportunities"
-                                 Value="@CrmHrAccountText.FormatCount(Account.OpportunityCount)"
+                                 Value="@CrmHrAccountText.FormatCount(account.OpportunityCount)"
                                  TooltipText="Opportunities currently attached to this account."
                                  Tone="info" />
                     <CompactStat Label="tags"
-                                 Value="@CrmHrAccountText.FormatCount(Account.TagCount)"
+                                 Value="@CrmHrAccountText.FormatCount(account.TagCount)"
                                  TooltipText="Tags currently attached to this account." />
                 </CompactStatStrip>
             </Stack>
@@ -104,9 +105,10 @@ else
 
     private bool ActionsDisabled => !IsInteractive;
 
-    private Task OpenDirectoryAsync(Guid? accountPartyId)
-        => Intent.InvokeAsync(new CrmHrAccountSummaryIntent.OpenDirectory(accountPartyId));
+    // The record argument is the one captured when the action was rendered, never the live parameter.
+    private Task OpenDirectoryAsync(CrmHrAccountSummary? renderedAccount)
+        => Intent.InvokeAsync(new CrmHrAccountSummaryIntent.OpenDirectory(renderedAccount));
 
-    private Task ConvertAsync(Guid accountPartyId)
-        => Intent.InvokeAsync(new CrmHrAccountSummaryIntent.ConvertToActiveCustomer(accountPartyId));
+    private Task ConvertAsync(CrmHrAccountSummary renderedAccount)
+        => Intent.InvokeAsync(new CrmHrAccountSummaryIntent.ConvertToActiveCustomer(renderedAccount));
 }

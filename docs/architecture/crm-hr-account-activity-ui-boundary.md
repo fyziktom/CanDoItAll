@@ -71,9 +71,27 @@ change covered by tests; **Correction** = explicit observable change recorded he
 | A new selected account never shows the previous account's rows | `InvalidateAccountActivity` on the page (unchanged) resets the page; the adapter re-maps on every new page reference | Preserve | existing page facts; adapter re-maps by reference |
 | Test identifiers: `crmhr-account-convert-active-button`, `<host>-item`, `<host>-loading`, `<host>-pager`, `<host>-previous`, `<host>-next` kept; new `crmhr-account-summary` (with `data-account-id`, `data-interactive`), `crmhr-account-summary-empty`, `-name`, `-text`, `-stage`, `-lifecycle`, `-open-directory`, `<host>` root (with `data-page-index`, `data-total-pages`, `data-loading`), `<host>-totals`, `<host>-overdue-total`, `<host>-empty`, row `data-kind` and `data-overdue` | additive | Preserve | surface and browser lanes |
 | Data text is encoded as text; long values wrap inside their row | Razor encoding; `break-words` on the row texts and the summary header | Preserve | surface `Untrusted_text…`, sandbox `Long_text_scenario…`, browser overflow probe at 1100 px |
+| Origin of rendered account actions (review R1): each action captures the record it was rendered for and its intent carries that record; the adapter forwards an intent only when that record is the very instance it currently maps; the page still admits only its selected account after its action stamp | the action lambdas read the live `Account` parameter at click time, so an action created for account A that ran after the surface moved to B read B's identity and passed the adapter and page checks as B; the directory intent's identity was discarded before checking | Safeguard (review repair) | surface `Actions_carry_the_record_they_were_rendered_for…`, adapter `A_conversion_action_rendered_for_one_account_never_converts_the_account_shown_later` and `Retained_actions_are_inert_after_the_account_went_away_and_after_the_same_account_was_loaded_again` (real Button callbacks retained across rerenders, account → null, A → B → A with a new model instance, positive unchanged-target and same-model rerender cases) |
+| History page-request admission (review R2): the surface resolves a pager action against the presentation current at the click and drops it while a read is in flight or before a page was accepted; the adapter forwards only admissible requests; each owner's `CrmHrActivityHistorySession` rejects a page request, a duplicate ensure and a retry while its read is in flight, so two reads of one lane never coexist | the surface checked numeric bounds only, the adapter forwarded every index, and the CRM page admitted several page reads under one generation whose completions could land in reverse order | Safeguard (review repair) | surface `A_pager_action_created_earlier_is_resolved_against_the_current_presentation…`, adapter `InteractionTimeline…forwards_a_page_request_only_while_it_is_admissible`, session `A_page_request_keeps_the_accepted_totals_while_it_loads_and_is_rejected_while_a_read_is_in_flight`, `Page_requests_outside_the_accepted_range…` (query-call counts asserted) |
+| Truthful history availability (review R3): `CrmHrActivityPresentation` distinguishes not accepted, first read in flight, accepted (empty or populated), another page loading over an accepted history, and the host's failure; unknown totals render as "Counts unavailable" / "Counts load with the history" and "No pages", never as zero; the CRM follow-up pressure card renders the same accepted state and shows a neutral "Follow-up counts unavailable" badge instead of a success-toned zero before anything was accepted; a failed page read keeps the accepted page; a new target never shows the previous target's page | the timeline and the follow-up card always printed the zero-filled `Empty()` page before the first read and after a failed first read | Correction (review repair) | surface `History_not_accepted_yet_shows_no_count…`, `First_read_in_flight_shows_the_loading_state_without_claiming_a_count`, `Another_page_loading_over_an_accepted_history_keeps_its_totals…`, `An_accepted_empty_page_shows_the_host_copy…`, session (initial failure → not accepted, page failure → accepted kept, target change → nothing of the old target shown), sandbox `loading` and `paging`, browser lane (accepted counts on the card, accepted zeros for an account without interactions, no placeholder once accepted) |
+| The three timeline owners (CRM account activity, Directory party history, Workforce history) read through one `CrmHrActivityHistorySession` each: target, accepted page, busy gate, retry, generation fencing and cancellation | three inline state machines with the same shape and the R2/R3 gaps | Safeguard (review repair) | session facts (10), the whole CRM / HR Components topic on the real harness, browser lanes for the CRM and Directory hosts |
 
-No new read, aggregation, route, URL contract or mutation was added; the three timeline hosts
-and their query owners are unchanged.
+No new read, aggregation, route, URL contract or mutation was added; the query owners are
+unchanged. The three timeline hosts keep their headings, error cards, retry actions, page
+size and test identifiers; the Directory host's whole-tab loading state now covers only the
+first read of a party (a later page read shows the timeline's own loading state over the
+accepted totals), and the Workforce tab badge shows the accepted total only.
+
+### Callback compatibility of the adapters
+
+`AccountSummaryPanel` keeps its name, its `Account` model input and its `OpenDirectory`
+callback; `MarkActiveCustomer` is `EventCallback<Guid>` (it carries the identity of the shown
+account) since the extraction and is not signature-compatible with the parameterless callback
+the pre-extraction component exposed. `InteractionTimeline` keeps its name, its wording inputs
+and `DataTestId`; it now takes the owner's `CrmHrActivityPresentation` instead of the raw
+`CrmActivityHistoryPage` + `IsLoading` pair, because the presentation carries the accepted
+state the review required. The audited consumers are `CrmHrCrmPage`, `CrmHrDirectoryPage`
+and `CrmHrWorkforcePage`, all updated in the same commit; no other consumer exists.
 
 ## Consumers
 
@@ -182,3 +200,47 @@ before execution. See the execution record for the run sequence.
 - Tree: every change of the pass is in the three signed commits listed in the final report
   (Gallery picker policy, Home evidence repairs, account summary and activity extraction);
   nothing outside the pass was modified.
+
+## Execution record: review repairs R1–R3 (2026-09-17)
+
+- Start: `de7934f3a2b77048a33b244c800406c43e3a9486` on `components-decoupling`, clean tree,
+  as the first part of the continuation that then extracts Financials. Nothing was pushed,
+  merged, rebased or reset; no signing or permission configuration was touched.
+- Reproductions first, through the real adapter, surface and BaseLib `Button`: the retained
+  `Button.Click` callback of account A, invoked through the renderer dispatcher after the
+  same instance moved to account B, reached the page's `MarkActiveCustomer` callback with B's
+  identity (R1); a retained Next callback invoked after the presentation became loading was
+  forwarded to the owner (R2); the timeline and the CRM follow-up card printed
+  `0 activities` / `0 open follow-ups` / a success-toned `0 overdue` before any read had
+  been accepted (R3). The behavior matrix rows above name the corrections and their tests.
+- R1: the surface captures the rendered record into every action, the intents carry it, the
+  adapter forwards only intents whose record is the instance it currently maps, and the page
+  keeps its selected-account and action-stamp admission. An A → B → A lifecycle yields a new
+  model instance on the page, so an action from the first A lifetime stays inert while a
+  fresh action converts.
+- R2 and R3: the three owners read through `CrmHrActivityHistorySession` (target, accepted
+  page, busy gate, retry, generation fence, per-read token source disposed only after its
+  read returned). The surface and adapter admit a page request only against the current
+  presentation; the session rejects further admissions while its read is in flight, so no
+  two reads of one lane coexist and reverse completion cannot occur. The presentation
+  distinguishes not accepted, first read in flight, accepted, paging over accepted, and the
+  host's failure; unknown totals are unavailable, never zero.
+- Validation (Release, `/m:1`, counts stated before execution and matched). First run on the
+  repaired tree before the Financials work started (the session's own unit class had one
+  test awaiting a joined read, which hung the Unit host and was corrected; its stage is
+  counted from the rerun), then the whole set again after the Financials sources and the
+  corrected tests were in place:
+  - Unit `FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrActivityHistorySessionTests`
+    10 / 10 passed.
+  - Unit `FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrAccount|…CrmHrActivity` 34 / 34
+    passed (24 mapper cases + the 10 session facts); Unit Home 13 / 13.
+  - Components `FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrAccountActivityAdapterTests`
+    4 / 4 (real Button callbacks retained across rerenders); Components
+    `FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrAccount|…CrmHrActivity` 38 / 38
+    (6 account surface + 8 activity surface + 4 adapter + 15 sandbox + 5 boundary);
+    Components Home 30 / 30.
+  - The whole CRM / HR Components topic (`FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.`)
+    178 / 178 on the repaired tree, then 199 / 199 with the Financials classes added
+    (`ComponentTestHarness` on PostgreSQL for the page facts).
+  - Browser lanes: recorded with the Financials lanes in the
+    [CRM Financials record](crm-hr-financials-ui-boundary.md).

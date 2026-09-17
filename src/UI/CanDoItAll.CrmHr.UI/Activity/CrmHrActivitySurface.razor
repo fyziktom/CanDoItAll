@@ -1,9 +1,11 @@
-@* The activity history timeline: one page record and its host's wording in, a page request out. Loading, failure
-   and the read itself belong to the host; the surface shows the page it is given. *@
+@* The activity history timeline: what the host accepted for its target and its wording in, a page request out. The
+   read, its failure and the target belong to the host; the surface shows the accepted page, shows nothing as a
+   number that was not accepted, and asks for another page only while no read is in flight. *@
 <div data-testid="@DataTestId"
-     data-page-index="@Page.PageIndex"
-     data-total-pages="@Page.TotalPages"
-     data-loading="@(IsLoading ? "true" : "false")">
+     data-accepted="@(Presentation.HasAccepted ? "true" : "false")"
+     data-loading="@(Presentation.IsLoading ? "true" : "false")"
+     data-page-index="@(Presentation.Accepted?.PageIndex.ToString() ?? "none")"
+     data-total-pages="@(Presentation.Accepted?.TotalPages.ToString() ?? "none")">
     <SurfaceCard>
         <p class="cda-eyebrow">@Copy.Eyebrow</p>
         <h3 class="mt-1 text-lg font-semibold text-slate-950">@Copy.Title</h3>
@@ -12,15 +14,24 @@
         </p>
 
         <Cluster Gap="LayoutGap.Small" Class="mt-4" data-testid="@($"{DataTestId}-totals")">
-            <StatusBadge Tone="neutral" Text="@CrmHrActivityText.FormatActivities(Page.TotalCount)" />
-            <StatusBadge Tone="info" Text="@CrmHrActivityText.FormatNextActions(Page.ActionCount)" />
-            @if (Page.OverdueActionCount > 0)
+            @if (Presentation.Accepted is { } totals)
             {
-                <StatusBadge Tone="danger" Text="@CrmHrActivityText.FormatOverdue(Page.OverdueActionCount)" data-testid="@($"{DataTestId}-overdue-total")" />
+                <StatusBadge Tone="neutral" Text="@CrmHrActivityText.FormatActivities(totals.TotalCount)" />
+                <StatusBadge Tone="info" Text="@CrmHrActivityText.FormatNextActions(totals.ActionCount)" />
+                @if (totals.OverdueActionCount > 0)
+                {
+                    <StatusBadge Tone="danger" Text="@CrmHrActivityText.FormatOverdue(totals.OverdueActionCount)" data-testid="@($"{DataTestId}-overdue-total")" />
+                }
+            }
+            else
+            {
+                <StatusBadge Tone="neutral"
+                             Text="@(Presentation.IsLoading ? CrmHrActivityText.TotalsLoadingLabel : CrmHrActivityText.TotalsUnavailableLabel)"
+                             data-testid="@($"{DataTestId}-totals-unavailable")" />
             }
         </Cluster>
 
-        @if (IsLoading)
+        @if (Presentation.IsLoading)
         {
             <div class="mt-5" data-testid="@($"{DataTestId}-loading")">
                 <LoadingState Eyebrow="@Copy.Eyebrow"
@@ -28,7 +39,15 @@
                               Description="Loading only the requested activity page." />
             </div>
         }
-        else if (Page.Items.Count == 0)
+        else if (Presentation.Accepted is not { } page)
+        {
+            <div class="mt-5" data-testid="@($"{DataTestId}-unavailable")">
+                <EmptyState Eyebrow="@Copy.Eyebrow"
+                            Title="@CrmHrActivityText.HistoryUnavailableTitle"
+                            Description="@CrmHrActivityText.HistoryUnavailableDescription" />
+            </div>
+        }
+        else if (page.Items.Count == 0)
         {
             <div class="mt-5" data-testid="@($"{DataTestId}-empty")">
                 <EmptyState Eyebrow="@Copy.EmptyEyebrow"
@@ -39,7 +58,7 @@
         else
         {
             <Stack GapScale="LayoutGap.Small" Class="mt-5">
-                @foreach (var item in Page.Items)
+                @foreach (var item in page.Items)
                 {
                     <div class="max-w-full rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
                          data-testid="@($"{DataTestId}-item")"
@@ -75,21 +94,21 @@
                Wrap="FlexWrap.Wrap"
                Class="mt-5"
                data-testid="@($"{DataTestId}-pager")">
-            <StatusBadge Tone="neutral" Text="@CrmHrActivityText.FormatPage(Page)" />
+            <StatusBadge Tone="neutral" Text="@(Presentation.Accepted is { } paged ? CrmHrActivityText.FormatPage(paged) : CrmHrActivityText.NoPagesValue)" />
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Previous"
                         Icon="chevron_left"
                         ButtonStyle="ButtonStyle.Light"
                         Size="ButtonSize.Small"
                         Disabled="@(!CanMovePrevious)"
-                        Click="@(() => RequestPageAsync(Page.PageIndex - 1))"
+                        Click="@(() => RequestPageAsync(-1))"
                         data-testid="@($"{DataTestId}-previous")" />
                 <Button Text="Next"
                         Icon="chevron_right"
                         ButtonStyle="ButtonStyle.Light"
                         Size="ButtonSize.Small"
                         Disabled="@(!CanMoveNext)"
-                        Click="@(() => RequestPageAsync(Page.PageIndex + 1))"
+                        Click="@(() => RequestPageAsync(+1))"
                         data-testid="@($"{DataTestId}-next")" />
             </Cluster>
         </Split>
@@ -98,10 +117,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public CrmHrActivityPage Page { get; set; } = CrmHrActivityPage.Empty();
-
-    [Parameter]
-    public bool IsLoading { get; set; }
+    public CrmHrActivityPresentation Presentation { get; set; } = CrmHrActivityPresentation.NotAccepted;
 
     [Parameter]
     public CrmHrActivityCopy Copy { get; set; } = CrmHrActivityCopy.Default;
@@ -113,15 +129,23 @@
     [Parameter]
     public EventCallback<CrmHrActivityIntent> Intent { get; set; }
 
-    private bool CanMovePrevious => !IsLoading && Page.PageIndex > 0;
+    private bool CanMovePrevious => Presentation is { IsLoading: false, Accepted: { PageIndex: > 0 } };
 
-    private bool CanMoveNext =>
-        !IsLoading &&
-        Page.TotalPages > 0 &&
-        Page.PageIndex + 1 < Page.TotalPages;
+    private bool CanMoveNext => Presentation is { IsLoading: false, Accepted: { } page } && page.PageIndex + 1 < page.TotalPages;
 
-    private Task RequestPageAsync(int pageIndex)
-        => pageIndex < 0 || pageIndex >= Page.TotalPages
+    // A page request is admitted only against the presentation current at the click, never against the page the
+    // action was rendered for: a request dispatched after a read began, or after the accepted page changed, is
+    // resolved against what is accepted now and dropped while a read is in flight.
+    private Task RequestPageAsync(int offset)
+    {
+        if (Presentation is not { IsLoading: false, Accepted: { } page })
+        {
+            return Task.CompletedTask;
+        }
+
+        var pageIndex = page.PageIndex + offset;
+        return pageIndex < 0 || pageIndex >= page.TotalPages
             ? Task.CompletedTask
             : Intent.InvokeAsync(new CrmHrActivityIntent.RequestPage(pageIndex));
+    }
 }

@@ -1,6 +1,8 @@
 @* Compatibility adapter: the CRM page keeps composing AccountSummaryPanel with its workspace model, while the
-   rendering lives in CanDoItAll.CrmHr.UI. The adapter maps the model once per instance and hands intents back as the
-   callbacks the page owns; a conversion intent for an account this adapter no longer shows is dropped here. *@
+   rendering lives in CanDoItAll.CrmHr.UI. The adapter maps the model once per model instance and hands intents back
+   as the callbacks the page owns. An intent is forwarded only when the record it was rendered for is the record this
+   adapter currently shows (the same mapped instance): an action created for an earlier account, an earlier load of
+   the same account or the no-account state is inert here, before the page's own admission runs. *@
 <CrmHrAccountSummarySurface Account="@summary" IsInteractive="@IsInteractive" Intent="HandleIntentAsync" />
 
 @code {
@@ -10,10 +12,11 @@
     [Parameter]
     public CrmAccountWorkspaceModel? Account { get; set; }
 
+    // Raised for the directory action of the shown record (or of the no-account state); the page navigates.
     [Parameter]
     public EventCallback OpenDirectory { get; set; }
 
-    // Raised with the identity of the account the operator asked to convert; the page fences it against its selection.
+    // Raised with the identity of the shown account the operator asked to convert; the page admits and saves.
     [Parameter]
     public EventCallback<Guid> MarkActiveCustomer { get; set; }
 
@@ -34,10 +37,15 @@
     private Task HandleIntentAsync(CrmHrAccountSummaryIntent intent)
         => intent switch
         {
-            CrmHrAccountSummaryIntent.OpenDirectory => OpenDirectory.InvokeAsync(),
-            CrmHrAccountSummaryIntent.ConvertToActiveCustomer convert when Account?.AccountPartyId == convert.AccountPartyId
-                => MarkActiveCustomer.InvokeAsync(convert.AccountPartyId),
+            CrmHrAccountSummaryIntent.OpenDirectory open when IsShown(open.Account) => OpenDirectory.InvokeAsync(),
+            CrmHrAccountSummaryIntent.OpenDirectory => Task.CompletedTask,
+            CrmHrAccountSummaryIntent.ConvertToActiveCustomer convert when IsShown(convert.Account)
+                => MarkActiveCustomer.InvokeAsync(convert.Account.AccountPartyId),
             CrmHrAccountSummaryIntent.ConvertToActiveCustomer => Task.CompletedTask,
             _ => throw new NotSupportedException($"The account summary adapter does not own the {intent.GetType().Name} intent.")
         };
+
+    // The rendered record of an intent must be the very instance this adapter maps for its current model.
+    private bool IsShown(CrmHrAccountSummary? renderedAccount)
+        => ReferenceEquals(renderedAccount, summary);
 }
