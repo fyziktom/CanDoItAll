@@ -80,6 +80,78 @@ public sealed partial class MafHrResultDisclosureIntegrationTests {
         Assert.Equal(original, retained);
     }
 
+    [Theory]
+    [InlineData(HrAgentToolPolicy.HrCrmPartyCreate)]
+    [InlineData(HrAgentToolPolicy.HrCrmAffiliationUpsert)]
+    public async Task A_denied_CRM_mutation_never_reaches_the_owner_and_a_separately_approved_proposal_writes_exactly_once(string toolName) {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var profile = services.GetRequiredService<IDatabaseRuntimeState>().GetSnapshot();
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var canonical = (await workspace.ListAgentsAsync(includeTemplates: true)).Single(item => item.Id == HrAgentIdentity.AgentId);
+        var agent = canonical with {
+            ChatHistoryMode = AgentChatHistoryMode.FrameworkManaged,
+            ConfigurationJson = AgentThinkingEffortPolicy.WriteAgentOverride(canonical.ConfigurationJson, null)
+        };
+        var capabilities = (await workspace.ListCapabilitiesAsync()).Where(item => item.Kind == CapabilityKind.Tool).ToArray();
+        var available = capabilities.Select(item => item.Id).ToHashSet();
+        agent = agent with { Capabilities = agent.Capabilities.Where(item => available.Contains(item.CapabilityId)).ToArray() };
+        var name = $"HR denied target {Guid.NewGuid():N}";
+        var prepared = await PrepareMutationAsync(services, toolName, name);
+        var before = await ReadMutationOwnerAsync(services, toolName, name, prepared.PersonId);
+
+        // First admitted run: the operator denies the proposal.
+        await using (var deniedRun = await AgentToolAdmissionJournalFixture.CreateAsync(
+            profileBinding: new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)), managedHr: true)) {
+            var proposed = new ScriptClient(toolName, prepared.Request);
+            var pending = await ExecuteAsync(deniedRun, services, agent, capabilities, proposed);
+            Assert.Single(pending.PendingApprovals);
+            Assert.Equal(before, await ReadMutationOwnerAsync(services, toolName, name, prepared.PersonId));
+            await DenyAsync(deniedRun, pending.PendingApprovals);
+
+            var resumed = new ScriptClient(toolName, prepared.Request);
+            await Record.ExceptionAsync(() => ExecuteAsync(deniedRun, services, agent, capabilities, resumed));
+            var rejected = Assert.Single((await deniedRun.NewStore().GetExecutionRunAsync(deniedRun.Session.ExecutionRunId))!
+                .ToolAdmission!.Batches.SelectMany(batch => batch.Proposals));
+            Assert.Equal(ExecutionApprovalStatus.Rejected, rejected.ApprovalStatus);
+            Assert.Equal(AgentToolProposalState.Rejected, rejected.State);
+            Assert.NotEqual(AgentToolEffectState.Committed, rejected.EffectState);
+            Assert.Null(rejected.ApprovedDigest);
+            Assert.Null(rejected.DispatchClaimId);
+            // The owner was never called: its state is byte for byte what it was before the proposal.
+            Assert.Equal(before, await ReadMutationOwnerAsync(services, toolName, name, prepared.PersonId));
+        }
+
+        // A separate admitted run with its own proposal is approved: exactly one canonical write.
+        await using var approvedRun = await AgentToolAdmissionJournalFixture.CreateAsync(
+            profileBinding: new(profile.ActiveProfileId!.Value, profile.ActiveFingerprint!, new(profile.Generation)), managedHr: true);
+        var second = new ScriptClient(toolName, prepared.Request);
+        var secondPending = await ExecuteAsync(approvedRun, services, agent, capabilities, second);
+        Assert.Single(secondPending.PendingApprovals);
+        await approvedRun.ApproveAsync(secondPending.PendingApprovals);
+        var completed = await ExecuteAsync(approvedRun, services, agent, capabilities, new ScriptClient(toolName, prepared.Request));
+        Assert.Equal("completed", completed.ResponseText);
+        var written = Assert.IsType<MutationOwnerState>(await ReadMutationOwnerAsync(services, toolName, name, prepared.PersonId));
+        Assert.NotEqual(before, written);
+        var committed = Assert.Single((await approvedRun.NewStore().GetExecutionRunAsync(approvedRun.Session.ExecutionRunId))!
+            .ToolAdmission!.Batches.SelectMany(batch => batch.Proposals));
+        Assert.Equal(AgentToolEffectState.Committed, committed.EffectState);
+        Assert.Contains(written.Id.ToString("D"), committed.Result!.PayloadJson, StringComparison.Ordinal);
+        // ReadMutationOwnerAsync uses SingleOrDefault over the unique name: a duplicate write would have thrown.
+    }
+
+    private static async Task DenyAsync(AgentToolAdmissionJournalFixture fixture, IReadOnlyList<PendingToolApprovalRecord> pending) {
+        await ((ISandboxWorkspaceExecutionRunMutationStore)fixture.NewStore()).UpdateExecutionRunDetailAsync(fixture.Session.ExecutionRunId, current => {
+            var decisions = pending.Select(item => new PendingToolApprovalDecision(item.ApprovalId, false) { ToolAdmission = item.ToolAdmission }).ToArray();
+            var journal = AgentToolJournalTransitions.ApplyDecisions(current.Run.ToolAdmission!, pending, decisions, false);
+            return current with { Run = current.Run with {
+                ToolAdmission = journal, PendingApprovals = [], State = ExecutionState.Running,
+                Revision = current.Run.Revision + 1, UpdatedAtUtc = DateTimeOffset.UtcNow
+            } };
+        });
+    }
+
     private static void AssertAcknowledgedTrace(AgentRuntimeResponse response, string kind, Guid id) {
         var trace = Assert.Single(response.ToolInvocationTraces);
         Assert.True(trace.Succeeded);

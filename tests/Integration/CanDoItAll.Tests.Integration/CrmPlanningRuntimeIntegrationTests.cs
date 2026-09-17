@@ -57,6 +57,33 @@ public sealed class CrmPlanningRuntimeIntegrationTests {
     }
 
     [Theory]
+    [InlineData(CrmPlanningToolPolicy.Search)]
+    [InlineData(CrmPlanningToolPolicy.Summary)]
+    public async Task A_governed_planning_read_reserves_no_capacity_and_writes_no_assignment_or_staffing_record(string tool) {
+        await using var fixture = await Fixture.CreateAsync();
+        var before = await WriteSideCountsAsync(fixture);
+
+        var proposal = await fixture.CompleteBeforeLostReplyAsync(tool);
+
+        Assert.Equal(AgentToolProposalEffect.Read, proposal.Payload.Effect);
+        Assert.False(proposal.RequiresApproval);
+        Assert.Equal(1, fixture.Queries.Reads);
+        // A planning read is advice for the planner: capacity, project participation, staffing and the party itself
+        // are exactly as they were.
+        Assert.Equal(before, await WriteSideCountsAsync(fixture));
+    }
+
+    private static async Task<(int Parties, int CapacityBlocks, int Assignments, int StaffingRequests, DateTimeOffset PartyUpdatedAtUtc)> WriteSideCountsAsync(Fixture fixture) {
+        await using var owner = await fixture.OwnerAsync();
+        return (
+            await owner.Set<Party>().CountAsync(),
+            await owner.Set<CapacityBlock>().CountAsync(),
+            await owner.Set<ProjectPartyAssignment>().CountAsync(),
+            await owner.Set<StaffingRequest>().CountAsync(),
+            (await owner.Set<Party>().SingleAsync(item => item.Id == fixture.PersonId)).UpdatedAtUtc);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Current_CRM_scope_or_capability_revocation_blocks_prepared_dispatch_before_the_real_owner_read(bool revokeScope) {
