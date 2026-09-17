@@ -1,0 +1,102 @@
+@page "/crm-hr/workspaces/agent-evidence"
+@inject NavigationManager Navigation
+
+<PageTitle>CRM / HR agent recruiting evidence UI sandbox</PageTitle>
+
+<header class="crmhr-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <h1 class="cda-title-xl">CRM / HR agent recruiting evidence UI sandbox</h1>
+        <p>The real agent assessment evidence surface with a deterministic sandbox view and recorded intents. No query service, persistence, navigation or live agent, workflow or process execution is involved; creating or attaching an assessment only appends to a local, in-memory interview list.</p>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
+            <label for="crmhr-sandbox-scenario">Scenario</label>
+            <select id="crmhr-sandbox-scenario"
+                    class="cda-input"
+                    value="@AgentRecruitingEvidenceSandboxContext.Token(context.Scenario)"
+                    @onchange="ChangeScenario"
+                    data-testid="crmhr-sandbox-scenario">
+                @foreach (var scenario in Enum.GetValues<AgentRecruitingEvidenceSandboxScenario>())
+                {
+                    <option value="@AgentRecruitingEvidenceSandboxContext.Token(scenario)">@scenario</option>
+                }
+            </select>
+            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
+            <a href="/crm-hr/workspaces/recruiting" data-testid="crmhr-sandbox-recruiting-link">Recruiting workspace sandbox</a>
+            <a href="/crm-hr/workspaces/agents" data-testid="crmhr-sandbox-agents-link">Agents workspace sandbox</a>
+        </Cluster>
+        <output aria-live="polite" data-testid="crmhr-sandbox-intent">@view.IntentLog</output>
+    </Stack>
+</header>
+
+<main class="@FrameClass" data-testid="crmhr-sandbox-frame" data-scenario="@AgentRecruitingEvidenceSandboxContext.Token(context.Scenario)">
+    <AgentRecruitingEvidenceSurface View="@view" />
+</main>
+
+<Tooltip />
+
+@code {
+    private AgentRecruitingEvidenceSandboxView view = null!;
+    private AgentRecruitingEvidenceSandboxContext context = new();
+    private bool observed;
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "scenario")]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "layout")]
+    public string? LayoutQuery { get; set; }
+
+    private string FrameClass => context.Layout switch
+    {
+        CrmHrHomeSandboxLayout.Matched => "crmhr-sandbox__frame crmhr-sandbox__frame--matched",
+        CrmHrHomeSandboxLayout.Narrow => "crmhr-sandbox__frame crmhr-sandbox__frame--narrow",
+        _ => "crmhr-sandbox__frame"
+    };
+
+    private string LayoutLabel => context.Layout switch
+    {
+        CrmHrHomeSandboxLayout.Matched => "Layout: matched desktop (1600×1000)",
+        CrmHrHomeSandboxLayout.Narrow => "Layout: constrained 960px",
+        _ => "Layout: flexible"
+    };
+
+    protected override void OnInitialized()
+    {
+        view = new AgentRecruitingEvidenceSandboxView { RenderRequested = () => InvokeAsync(StateHasChanged) };
+    }
+
+    protected override void OnParametersSet()
+    {
+        var next = AgentRecruitingEvidenceSandboxContext.Parse(ScenarioQuery, LayoutQuery);
+        if (observed && next == context)
+        {
+            return;
+        }
+
+        var scenarioChanged = !observed || next.Scenario != context.Scenario;
+        observed = true;
+        context = next;
+        if (scenarioChanged)
+        {
+            view.Apply(context.Scenario);
+        }
+    }
+
+    private void ChangeScenario(ChangeEventArgs args)
+        => Navigate(context with { Scenario = AgentRecruitingEvidenceSandboxContext.ParseScenario(args.Value?.ToString()) });
+
+    private void CycleLayout()
+        => Navigate(context with
+        {
+            Layout = context.Layout switch
+            {
+                CrmHrHomeSandboxLayout.Matched => CrmHrHomeSandboxLayout.Narrow,
+                CrmHrHomeSandboxLayout.Narrow => CrmHrHomeSandboxLayout.Flexible,
+                _ => CrmHrHomeSandboxLayout.Matched
+            }
+        });
+
+    // Controls replace the current history entry so a reload restores the scenario and layout.
+    private void Navigate(AgentRecruitingEvidenceSandboxContext next)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters("/crm-hr/workspaces/agent-evidence", next.ToQuery()), replace: true);
+}

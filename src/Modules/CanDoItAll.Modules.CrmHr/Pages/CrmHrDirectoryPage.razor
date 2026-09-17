@@ -67,6 +67,7 @@
     private string? handledPartyKey;
     private bool hasHandledPartyRequest;
     private long directoryLoadGeneration;
+    private readonly CrmHrMutationGate mutationGate = new();
     private long directoryBrowserVersion;
     private int selectedEditorTabIndex = ProfileTabIndex;
     private string relationshipsLoadError = string.Empty;
@@ -315,7 +316,19 @@
     private async Task SaveAsync()
     {
         var action = CaptureDirectoryAction();
-        var result = await PartyDirectoryService.SavePartyAsync(editor.ToEditorModel());
+        // One admitted save per editor lifetime: a second dispatch while the owner is writing is dropped, so a new
+        // party can never be created twice. The submission and its affiliation and relationship lists are captured
+        // before the first await.
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
+        var submission = editor.ToEditorModel();
+        var affiliationSubmission = affiliationEditors.Select(affiliation => affiliation.Snapshot()).ToArray();
+        var relationshipSubmission = relationships.Select(relationship => relationship.Snapshot()).ToList();
+        var result = await PartyDirectoryService.SavePartyAsync(submission);
         if (!IsCurrentDirectoryAction(action))
         {
             return;
@@ -335,8 +348,8 @@
         {
             var affiliationSaveResult = await AffiliationService.ReplaceAsync(
                 savedPartyId,
-                affiliationEditors,
-                editor.LastChangedBy);
+                affiliationSubmission,
+                submission.LastChangedBy);
             if (!IsCurrentDirectoryAction(action))
             {
                 return;
@@ -358,8 +371,8 @@
         {
             var relationshipSaveResult = await ManagementService.SaveRelationshipsAsync(
                 savedPartyId,
-                relationships,
-                editor.LastChangedBy);
+                relationshipSubmission,
+                submission.LastChangedBy);
             if (!IsCurrentDirectoryAction(action))
             {
                 return;
@@ -384,7 +397,11 @@
 
         NotificationService.Success("Party saved", "Party saved.");
         directoryBrowserVersion++;
-        await LoadAsync(savedPartyId, clearMessage: false);
+        if (!await RefreshAfterCommitAsync(savedPartyId))
+        {
+            return;
+        }
+
         if (!isEditorDialogOpen || editor.Id != savedPartyId)
         {
             return;
@@ -663,14 +680,16 @@
         });
     }
 
-    private void RemoveAdditionalRole(int index)
+    // Rows are removed by the instance their Remove button rendered; a row already gone (a second click, a replaced
+    // editor) removes nothing.
+    private void RemoveAdditionalRole(PartyRoleAssignmentEditorModel role)
     {
-        editor.AdditionalRoles.RemoveAt(index);
+        editor.AdditionalRoles.Remove(role);
     }
 
-    private void RemoveConfidentialNote(int index)
+    private void RemoveConfidentialNote(PartyConfidentialNoteEditorModel note)
     {
-        editor.ConfidentialNotes.RemoveAt(index);
+        editor.ConfidentialNotes.Remove(note);
     }
 
     private void OpenMergeDialog(PartyDuplicateCandidateModel candidate)
@@ -694,6 +713,12 @@
         }
 
         var action = CaptureDirectoryAction();
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         var candidateId = mergeCandidate.Id;
         var result = await ManagementService.MergePartyAsync(
             retainedPartyId,
@@ -717,13 +742,36 @@
         NotificationService.Success("Party merged", summary.Summary);
         handledPartyKey = retainedPartyId.ToString("N");
         directoryBrowserVersion++;
-        await LoadAsync(retainedPartyId, clearMessage: false);
+        if (!await RefreshAfterCommitAsync(retainedPartyId))
+        {
+            return;
+        }
+
         if (!isEditorDialogOpen || editor.Id != retainedPartyId)
         {
             return;
         }
 
         Navigation.NavigateTo($"/crm-hr/directory?partyId={retainedPartyId}", replace: true);
+    }
+
+    // The owner committed and the saved identity is already bound. A failed read-back is a warning: it never repeats
+    // the write and never turns the saved party back into a new draft; the operator can reload to reconcile the view.
+    private async Task<bool> RefreshAfterCommitAsync(Guid committedPartyId)
+    {
+        try
+        {
+            await LoadAsync(committedPartyId, clearMessage: false);
+            return true;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(exception, "The directory record {PartyId} could not be refreshed after a committed change.", committedPartyId);
+            NotificationService.Warning(
+                "Saved, refresh failed",
+                "The change was saved, but the record could not be refreshed. Reload the page to see the current state.");
+            return false;
+        }
     }
 
     private DirectoryActionStamp CaptureDirectoryAction()

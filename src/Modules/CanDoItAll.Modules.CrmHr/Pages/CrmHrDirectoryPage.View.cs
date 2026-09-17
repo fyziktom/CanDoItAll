@@ -57,8 +57,8 @@ public partial class CrmHrDirectoryPage : ICrmHrDirectoryWorkspaceView
     Task ICrmHrDirectoryWorkspaceView.RetryProjectAssignmentsLoadAsync() => RetryProjectAssignmentsLoadAsync();
     void ICrmHrDirectoryWorkspaceView.AddAdditionalRole() => AddAdditionalRole();
     void ICrmHrDirectoryWorkspaceView.AddConfidentialNote() => AddConfidentialNote();
-    void ICrmHrDirectoryWorkspaceView.RemoveAdditionalRole(int index) => RemoveAdditionalRole(index);
-    void ICrmHrDirectoryWorkspaceView.RemoveConfidentialNote(int index) => RemoveConfidentialNote(index);
+    void ICrmHrDirectoryWorkspaceView.RemoveAdditionalRole(PartyRoleAssignmentEditorModel role) => RemoveAdditionalRole(role);
+    void ICrmHrDirectoryWorkspaceView.RemoveConfidentialNote(PartyConfidentialNoteEditorModel note) => RemoveConfidentialNote(note);
     void ICrmHrDirectoryWorkspaceView.OpenMergeDialog(PartyDuplicateCandidateModel candidate) => OpenMergeDialog(candidate);
     Task ICrmHrDirectoryWorkspaceView.HandleMergeCloseAsync() => HandleMergeCloseAsync();
     Task ICrmHrDirectoryWorkspaceView.HandleMergeConfirmAsync(string reason) => HandleMergeConfirmAsync(reason);

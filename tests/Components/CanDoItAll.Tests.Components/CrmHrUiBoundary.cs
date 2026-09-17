@@ -80,11 +80,14 @@ internal static class CrmHrUiBoundary
         => ForbiddenExact.Contains(assemblyName, StringComparer.Ordinal) || StartsWithAny(assemblyName, ForbiddenPrefixes);
 
     // The transitive closure of the library's references, loaded from the test output.
-    public static IReadOnlyCollection<string> TransitiveReferenceNames()
+    public static IReadOnlyCollection<string> TransitiveReferenceNames() => TransitiveReferenceNames(RenderingLibrary);
+
+    // The transitive closure of another consumer of the library, such as the backend-free sandbox.
+    public static IReadOnlyCollection<string> TransitiveReferenceNames(Assembly root)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var pending = new Stack<Assembly>();
-        pending.Push(RenderingLibrary);
+        pending.Push(root);
         while (pending.Count > 0)
         {
             foreach (var reference in pending.Pop().GetReferencedAssemblies())

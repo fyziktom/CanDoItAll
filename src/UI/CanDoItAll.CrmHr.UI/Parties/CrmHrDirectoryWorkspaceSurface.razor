@@ -113,7 +113,7 @@
                     </Split>
 
                     <EditForm id="crmhr-directory-record-form"
-                              Model="View.Editor"
+                              EditContext="@ContextFor(ref editorContext, View.Editor)"
                               OnValidSubmit="View.SaveAsync">
                         <Stack Class="min-h-full" GapScale="LayoutGap.Large">
                             <Tabs SelectedIndex="@View.SelectedEditorTabIndex"
@@ -249,6 +249,9 @@
                                     {
                                         @for (var index = 0; index < View.Editor.AdditionalRoles.Count; index++)
                                         {
+                                            // The markup below renders inside component child content after the loop has moved on: it uses these
+                                            // per-row copies, never the shared loop variable.
+                                            var rowIndex = index;
                                             var role = View.Editor.AdditionalRoles[index];
                                             <PanelCard Soft="true">
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
@@ -256,7 +259,7 @@
                                                         <label class="cda-field-label">Role kind</label>
                                                         <InputSelect @bind-Value="role.RoleKind"
                                                                      class="cda-input"
-                                                                     data-testid="@($"crmhr-party-extra-role-kind-{index}")">
+                                                                     data-testid="@($"crmhr-party-extra-role-kind-{rowIndex}")">
                                                             @foreach (var roleKind in Enum.GetValues<PartyRoleKind>())
                                                             {
                                                                 <option value="@roleKind">@roleKind</option>
@@ -267,14 +270,14 @@
                                                         <label class="cda-field-label">Role title</label>
                                                         <InputText @bind-Value="role.Title"
                                                                    class="cda-input"
-                                                                   data-testid="@($"crmhr-party-extra-role-title-{index}")" />
+                                                                   data-testid="@($"crmhr-party-extra-role-title-{rowIndex}")" />
                                                     </div>
                                                     <div class="flex items-end justify-end">
                                                         <Button Text="Remove"
                                                                 ButtonStyle="ButtonStyle.Danger"
                                                                 Size="ButtonSize.Small"
-                                                                Click="@(() => View.RemoveAdditionalRole(index))"
-                                                                data-testid="@($"crmhr-party-extra-role-remove-{index}")" />
+                                                                Click="@(() => View.RemoveAdditionalRole(role))"
+                                                                data-testid="@($"crmhr-party-extra-role-remove-{rowIndex}")" />
                                                     </div>
                                                 </Grid>
 
@@ -283,19 +286,19 @@
                                                         <label class="cda-field-label">Valid from</label>
                                                         <InputDate @bind-Value="role.ValidFromUtc"
                                                                    class="cda-input"
-                                                                   data-testid="@($"crmhr-party-extra-role-start-{index}")" />
+                                                                   data-testid="@($"crmhr-party-extra-role-start-{rowIndex}")" />
                                                     </div>
                                                     <div>
                                                         <label class="cda-field-label">Valid to</label>
                                                         <InputDate @bind-Value="role.ValidToUtc"
                                                                    class="cda-input"
-                                                                   data-testid="@($"crmhr-party-extra-role-end-{index}")" />
+                                                                   data-testid="@($"crmhr-party-extra-role-end-{rowIndex}")" />
                                                     </div>
                                                     <div>
                                                         <label class="cda-field-label">Notes</label>
                                                         <InputText @bind-Value="role.Notes"
                                                                    class="cda-input"
-                                                                   data-testid="@($"crmhr-party-extra-role-notes-{index}")" />
+                                                                   data-testid="@($"crmhr-party-extra-role-notes-{rowIndex}")" />
                                                     </div>
                                                 </Grid>
                                             </PanelCard>
@@ -410,6 +413,9 @@
                                         <Stack GapScale="LayoutGap.Medium" Class="mt-4">
                                             @for (var index = 0; index < View.Editor.ConfidentialNotes.Count; index++)
                                             {
+                                                // The markup below renders inside component child content after the loop has moved on: it uses these
+                                                // per-row copies, never the shared loop variable.
+                                                var rowIndex = index;
                                                 var note = View.Editor.ConfidentialNotes[index];
                                                 <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-4"
                                                      data-testid="crmhr-confidential-note-item">
@@ -418,7 +424,7 @@
                                                             <label class="cda-field-label">Category</label>
                                                             <InputSelect @bind-Value="note.Category"
                                                                          class="cda-input"
-                                                                         data-testid="@($"crmhr-confidential-note-category-{index}")">
+                                                                         data-testid="@($"crmhr-confidential-note-category-{rowIndex}")">
                                                                 @foreach (var category in CrmHrDirectoryWorkspacePresentation.ConfidentialNoteCategories)
                                                                 {
                                                                     <option value="@category">@category</option>
@@ -439,8 +445,8 @@
                                                                     ButtonStyle="ButtonStyle.Danger"
                                                                     Size="ButtonSize.Small"
                                                                     Type="button"
-                                                                    Click="@(() => View.RemoveConfidentialNote(index))"
-                                                                    data-testid="@($"crmhr-confidential-note-remove-{index}")" />
+                                                                    Click="@(() => View.RemoveConfidentialNote(note))"
+                                                                    data-testid="@($"crmhr-confidential-note-remove-{rowIndex}")" />
                                                         </div>
                                                     </Grid>
 
@@ -448,7 +454,7 @@
                                                         <label class="cda-field-label">Confidential note</label>
                                                         <InputTextArea @bind-Value="note.NoteText"
                                                                        class="cda-input cda-input--textarea min-h-24"
-                                                                       data-testid="@($"crmhr-confidential-note-text-{index}")" />
+                                                                       data-testid="@($"crmhr-confidential-note-text-{rowIndex}")" />
                                                     </div>
                                                 </div>
                                             }
@@ -705,7 +711,7 @@
                                         Click="View.CloseEditorDialogAsync"
                                         data-testid="crmhr-directory-record-close" />
                                 <Button Text="Save party"
-                                        Click="View.SaveAsync"
+                                        Click="SaveFromFooterAsync"
                                         data-testid="crmhr-party-save-button" />
                             </Cluster>
                         </Split>
@@ -744,6 +750,11 @@
 </PageScaffold>
 
 @code {
+    private EditContext? editorContext;
+
+    // The footer button sits outside the form element: it validates the same form before the host saves.
+    private Task SaveFromFooterAsync() => SubmitAsync(editorContext, View.SaveAsync);
+
     // Host-owned region: the host composes its adapter here.
     [Parameter]
     public RenderFragment? ActivityTimeline { get; set; }

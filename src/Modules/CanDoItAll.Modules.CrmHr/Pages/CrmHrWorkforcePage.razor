@@ -70,6 +70,11 @@
     private string capacityWorkspaceError = string.Empty;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private long workforceLoadGeneration;
+    private readonly CrmHrMutationGate mutationGate = new();
+    private readonly CrmHrDraftReconciler drafts = new();
+    private const string ProfileDraft = "profile";
+    private const string SkillDraft = "skill";
+    private const string CapacityDraft = "capacity";
     private long deliveryUnitDialogGeneration;
     private int selectedDetailTabIndex = OverviewTabIndex;
     private int workforceBrowserVersion;
@@ -191,7 +196,8 @@
     }
 
     private async Task<WorkforceLoadOutcome> LoadAndCommitWorkforceAsync(
-        WorkforceLoadRequest request)
+        WorkforceLoadRequest request,
+        WorkforceEditor committed = WorkforceEditor.None)
     {
         try
         {
@@ -201,7 +207,7 @@
                 return WorkforceLoadOutcome.Stale;
             }
 
-            CommitWorkforceSnapshot(snapshot);
+            CommitWorkforceSnapshot(snapshot, committed);
             return snapshot.RequestedPartyFound
                 ? WorkforceLoadOutcome.Ready
                 : WorkforceLoadOutcome.Missing;
@@ -239,7 +245,7 @@
             RequestedPartyFound: true);
     }
 
-    private void CommitWorkforceSnapshot(WorkforceLoadSnapshot snapshot)
+    private void CommitWorkforceSnapshot(WorkforceLoadSnapshot snapshot, WorkforceEditor committed)
     {
         if (snapshot.Workspace is null)
         {
@@ -256,7 +262,7 @@
 
         InvalidateHistory();
         selectedAffiliations = snapshot.Affiliations;
-        ApplyLoadedWorkspace(snapshot.Workspace);
+        ApplyLoadedWorkspace(snapshot.Workspace, isPartySelectionChanged, committed);
     }
 
     private bool IsCurrentWorkforceLoad(WorkforceLoadRequest request)
@@ -266,14 +272,24 @@
            (request.Binding == WorkforceLoadBinding.RouteBound ||
             selectedWorkspace?.PartyId == request.ExpectedSelectedPartyId);
 
-    private void ApplyLoadedWorkspace(WorkforceProfileWorkspaceModel workspace)
+    // A reload of the record already on screen (another editor's commit, a removed skill or block, an agent refresh)
+    // keeps what the operator typed into the editors it did not commit.
+    private void ApplyLoadedWorkspace(
+        WorkforceProfileWorkspaceModel workspace,
+        bool partyChanged,
+        WorkforceEditor committed)
     {
         selectedWorkspace = workspace;
         selectedClassification = WorkforceRecordPresentation.ResolveSelectedClassification(
             workspace,
             selectedAffiliations);
-        isProfileCreationRequested = false;
-        profileEditor = new WorkforceProfileEditorModel
+        var profileCommitted = committed.HasFlag(WorkforceEditor.Profile);
+        if (partyChanged || profileCommitted || !drafts.IsDirty(ProfileDraft, profileEditor))
+        {
+            isProfileCreationRequested = false;
+        }
+
+        profileEditor = drafts.Reconcile(ProfileDraft, profileEditor, () => new WorkforceProfileEditorModel
         {
             Id = workspace.Profile.Id,
             PartyId = workspace.Profile.PartyId,
@@ -296,13 +312,24 @@
             Status = workspace.Profile.Status,
             Notes = workspace.Profile.Notes,
             LastChangedBy = workspace.Profile.LastChangedBy
-        };
-        skillEditor = CreatePartySkillEditor(workspace.PartyId);
-        capacityBlockEditor = CreateCapacityBlockEditor(workspace.PartyId);
-
+        }, partyChanged, profileCommitted);
+        skillEditor = drafts.Reconcile(
+            SkillDraft,
+            skillEditor,
+            () => CreatePartySkillEditor(workspace.PartyId),
+            partyChanged,
+            committed.HasFlag(WorkforceEditor.Skill));
+        capacityBlockEditor = drafts.Reconcile(
+            CapacityDraft,
+            capacityBlockEditor,
+            () => CreateCapacityBlockEditor(workspace.PartyId),
+            partyChanged,
+            committed.HasFlag(WorkforceEditor.Capacity));
     }
 
-    private async Task<bool> ReloadAfterActionAsync(WorkforceActionStamp action)
+    private async Task<bool> ReloadAfterActionAsync(
+        WorkforceActionStamp action,
+        WorkforceEditor committed = WorkforceEditor.None)
     {
         if (!IsCurrentWorkforceAction(action))
         {
@@ -313,7 +340,22 @@
             action.SelectedPartyId ?? action.RoutePartyId,
             WorkforceLoadBinding.ActionRefresh,
             action.SelectedPartyId);
-        var outcome = await LoadAndCommitWorkforceAsync(request);
+        WorkforceLoadOutcome outcome;
+        try
+        {
+            outcome = await LoadAndCommitWorkforceAsync(request, committed);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The owner committed. A failed read-back is a warning: it never repeats the write; the operator can
+            // reload to reconcile the view.
+            Logger.LogWarning(exception, "The workforce workspace could not be refreshed after a committed change.");
+            NotificationService.Warning(
+                "Saved, refresh failed",
+                "The change was saved, but the workspace could not be refreshed. Reload the page to see the current state.");
+            return false;
+        }
+
         agentChatContextAccessState = outcome switch
         {
             WorkforceLoadOutcome.Ready => AgentChatContextAccessState.Ready,
@@ -365,6 +407,8 @@
         selectedDetailTabIndex = OverviewTabIndex;
         InvalidateCapacityWorkspace();
         InvalidateHistory();
+        // Closing the record discards its drafts: the next record, or the same one reopened, starts from the owner.
+        drafts.Reset();
         profileEditor = new();
         skillEditor = CreatePartySkillEditor(Guid.Empty);
         capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
@@ -624,7 +668,13 @@
             return;
         }
 
-        var result = await HrService.SaveWorkforceProfileAsync(profileEditor);
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
+        var result = await HrService.SaveWorkforceProfileAsync(profileEditor.Snapshot());
         if (result.IsFailure)
         {
             if (IsCurrentWorkforceAction(action))
@@ -635,7 +685,7 @@
             return;
         }
 
-        if (!await ReloadAfterActionAsync(action))
+        if (!await ReloadAfterActionAsync(action, WorkforceEditor.Profile))
         {
             return;
         }
@@ -646,7 +696,13 @@
     private async Task SaveSkillDefinitionAsync()
     {
         var action = CaptureWorkforceAction();
-        var result = await HrService.SaveSkillDefinitionAsync(skillDefinitionEditor);
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
+        var result = await HrService.SaveSkillDefinitionAsync(skillDefinitionEditor.Snapshot());
         if (result.IsFailure)
         {
             if (IsCurrentWorkforceAction(action))
@@ -683,8 +739,14 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         skillEditor.PartyId = partyId;
-        var result = await HrService.SavePartySkillAsync(skillEditor);
+        var result = await HrService.SavePartySkillAsync(skillEditor.Snapshot());
         if (result.IsFailure)
         {
             if (IsCurrentWorkforceAction(action))
@@ -700,8 +762,8 @@
             return;
         }
 
-        skillEditor = CreatePartySkillEditor(partyId);
-        if (!await ReloadAfterActionAsync(action))
+        skillEditor = drafts.Replace(SkillDraft, CreatePartySkillEditor(partyId));
+        if (!await ReloadAfterActionAsync(action, WorkforceEditor.Skill))
         {
             return;
         }
@@ -712,6 +774,12 @@
     private async Task DeletePartySkillAsync(Guid partySkillId)
     {
         if (!TryCaptureSelectedWorkforceAction(out var action))
+        {
+            return;
+        }
+
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
         {
             return;
         }
@@ -733,8 +801,14 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         capacityBlockEditor.PartyId = partyId;
-        var result = await HrService.SaveCapacityBlockAsync(capacityBlockEditor);
+        var result = await HrService.SaveCapacityBlockAsync(capacityBlockEditor.Snapshot());
         if (result.IsFailure)
         {
             if (IsCurrentWorkforceAction(action))
@@ -750,8 +824,8 @@
             return;
         }
 
-        capacityBlockEditor = CreateCapacityBlockEditor(partyId);
-        if (!await ReloadAfterActionAsync(action))
+        capacityBlockEditor = drafts.Replace(CapacityDraft, CreateCapacityBlockEditor(partyId));
+        if (!await ReloadAfterActionAsync(action, WorkforceEditor.Capacity))
         {
             return;
         }
@@ -762,6 +836,12 @@
     private async Task DeleteCapacityBlockAsync(Guid capacityBlockId)
     {
         if (!TryCaptureSelectedWorkforceAction(out var action))
+        {
+            return;
+        }
+
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
         {
             return;
         }
@@ -896,6 +976,16 @@
             EndDate = today,
             Percentage = 100m
         };
+    }
+
+    // The inline editors of the workforce record; a reload names the one whose commit caused it.
+    [Flags]
+    private enum WorkforceEditor
+    {
+        None = 0,
+        Profile = 1,
+        Skill = 2,
+        Capacity = 4
     }
 
     private enum WorkforceLoadBinding

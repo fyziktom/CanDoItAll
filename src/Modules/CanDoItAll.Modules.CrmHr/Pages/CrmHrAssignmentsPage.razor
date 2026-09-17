@@ -78,6 +78,8 @@
     private long loadGeneration;
     private CancellationTokenSource? loadCancellation;
     private CancellationTokenSource? selectionLifetimeCancellation;
+    private long selectionLifetime;
+    private readonly CrmHrMutationGate mutationGate = new();
     private CancellationTokenSource? staffingRequestSearchCancellation;
     private CancellationTokenSource? relationshipAssignmentSearchCancellation;
     private CancellationTokenSource? allocationAssignmentSearchCancellation;
@@ -555,6 +557,12 @@
             cancellationToken);
     }
 
+    // The owner write of a participation or allocation; a seam for deterministic interleaving tests of the host.
+    protected virtual Task<Result<Guid>> SaveAssignmentOwnerAsync(
+        ProjectPartyAssignmentUpsertRequest submission,
+        CancellationToken cancellationToken)
+        => ProjectPartyIntegrationService.SaveAssignmentAsync(submission, cancellationToken);
+
     protected virtual Task<StaffingDashboardModel> GetStaffingDashboardAsync(
         CancellationToken cancellationToken)
         => HrService.GetStaffingDashboardAsync(cancellationToken);
@@ -712,6 +720,7 @@
             return;
         }
 
+        Interlocked.Increment(ref selectionLifetime);
         var previousSelection = Interlocked.Exchange(
             ref selectionLifetimeCancellation,
             projectId.HasValue ? new CancellationTokenSource() : null);
@@ -803,8 +812,18 @@
             NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
             return false;
         }
-        var result = await SaveForCapturedProjectAsync(() => ProjectPartyIntegrationService.SaveAssignmentAsync(
-            draftAssignment,
+        // One admitted write per project selection; the submission carries the captured project admission and is
+        // independent of later edits of the draft.
+        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
+        if (admission is null)
+        {
+            return false;
+        }
+
+        var submittedDraft = draftAssignment;
+        var submission = submittedDraft.Snapshot();
+        var result = await SaveForCapturedProjectAsync(() => SaveAssignmentOwnerAsync(
+            submission,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None));
         if (!result.IsSuccess)
         {
@@ -813,7 +832,12 @@
         }
 
         NotificationService.Success("Assignment saved", "Project assignment saved.");
-        ResetDraft();
+        // A completion of a retired selection never resets the draft of the project selected since.
+        if (ReferenceEquals(draftAssignment, submittedDraft))
+        {
+            ResetDraft();
+        }
+
         if (selectedProjectId == projectId)
         {
             InvalidateAssignmentViews();
@@ -840,9 +864,17 @@
             NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
             return false;
         }
+        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
+        if (admission is null)
+        {
+            return false;
+        }
+
         allocationDraft.Source = "crm-hr-ui";
-        var result = await SaveForCapturedProjectAsync(() => ProjectPartyIntegrationService.SaveAssignmentAsync(
-            allocationDraft,
+        var submittedDraft = allocationDraft;
+        var submission = submittedDraft.Snapshot();
+        var result = await SaveForCapturedProjectAsync(() => SaveAssignmentOwnerAsync(
+            submission,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None));
         if (!result.IsSuccess)
         {
@@ -851,7 +883,11 @@
         }
 
         NotificationService.Success("Allocation saved", "Project allocation saved.");
-        ResetAllocationDraft();
+        if (ReferenceEquals(allocationDraft, submittedDraft))
+        {
+            ResetAllocationDraft();
+        }
+
         if (selectedProjectId == projectId)
         {
             InvalidateAssignmentViews();
@@ -879,8 +915,16 @@
             NotificationService.Warning("Project refresh required", "Reload the project and reopen this editor before saving.");
             return false;
         }
+        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
+        if (admission is null)
+        {
+            return false;
+        }
+
+        var submittedDraft = staffingRequestDraft;
+        var submission = submittedDraft.Snapshot();
         var result = await SaveForCapturedProjectAsync(() => HrService.SaveStaffingRequestAsync(
-            staffingRequestDraft,
+            submission,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None));
         if (result.IsFailure)
         {
@@ -889,7 +933,11 @@
         }
 
         NotificationService.Success("Staffing request saved", "Staffing request saved.");
-        ResetStaffingRequestDraft();
+        if (ReferenceEquals(staffingRequestDraft, submittedDraft))
+        {
+            ResetStaffingRequestDraft();
+        }
+
         if (selectedProjectId == projectId)
         {
             staffingRequestPageIndex = 0;
@@ -1169,6 +1217,12 @@
     {
         var expectedReference = RequireDisplayedAssignmentReference(assignmentId);
         var projectId = selectedProjectId;
+        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
+        if (admission is null)
+        {
+            return;
+        }
+
         await ProjectPartyIntegrationService.DeleteAssignmentAsync(
             assignmentId,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None, expectedReference);
@@ -1188,6 +1242,12 @@
     {
         var expectedReference = RequireDisplayedAssignmentReference(assignmentId);
         var projectId = selectedProjectId;
+        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
+        if (admission is null)
+        {
+            return;
+        }
+
         await ProjectPartyIntegrationService.DeleteAssignmentAsync(
             assignmentId,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None, expectedReference);
@@ -1207,6 +1267,12 @@
     private async Task DeleteStaffingRequestAsync(Guid staffingRequestId)
     {
         var projectId = selectedProjectId;
+        using var admission = mutationGate.TryEnter(Volatile.Read(ref selectionLifetime));
+        if (admission is null)
+        {
+            return;
+        }
+
         await HrService.DeleteStaffingRequestAsync(
             staffingRequestId,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None);

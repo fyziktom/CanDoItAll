@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-17T13:18:53.638409+00:00",
+  "generated_utc": "2026-09-17T17:26:06.464867+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14684,
+  "allowance_count": 14719,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -71414,9 +71414,117 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/AgentRecruitingEvidenceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c82a7da5d03eabda48b71a4044b830234a948fdb801c3a8bbb6e231830fb39a8",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/AgentRecruitingEvidenceSandbox.cs",
+      "category": "process-domain",
+      "source_fingerprint": "4d1cf70214177e0083ac141db9d83e6f8e05939aa428b81928abfd68d65a4da1",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/AgentRecruitingEvidenceSandbox.cs",
+      "category": "process-domain",
+      "source_fingerprint": "6e0fba8c7e2303fd511e6dca713ff5b1cd7f05dd4700408c0cdb039e4b866fe4",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAccountActivitySandboxFixture.cs",
       "category": "case-policy",
       "source_fingerprint": "4bc6eed57a8a9a400d722876d537c97325885ffe621ff2c26b9a5e798080ba2d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAgentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "45ba32737c7b50316c89b6ee336b1c0e35545352a79420798c963c3d91f2b87e",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAgentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6b1e75c8ed7d94eaab7036fb1c1338608268bf1d32cb57cb984bea3b1a802e81",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAgentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e17fb397685dc0a851888b1026b99264a8228bd78f15df8ea143c26626e0fa6c",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAgentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e894c51f36c83551db99b54be9ecd96a3bb413983b6b30f7eedfdc4a93adf1e2",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAssignmentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0667d313fc6450bd29175c0cdbe61f92a9012467b5b956091bdd8ccc22ca88a4",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAssignmentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "459166732ab61368a2a61d2624b8577f094f27f69119fff96c4861c17a1f3266",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAssignmentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5f072cad99d3a3c243c7104321b29efcf3812d2ba42ce0ba05fc9ee04e774e0e",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAssignmentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6cf0e4aa1e82134ab0d8d6104e9f13ad92f9919e0e8eb3d1ebf877313e87f3f9",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAssignmentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a10a7095a082efd9173393776c2e7218ff7eed56713fbed44301440cd6479efe",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAssignmentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c103921d2161c30f324c7e43639b0bbfb4fa585766e46536b2628d3ac304b061",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrAssignmentsWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d438bbb90030552a7c8fbf6c62aab1eb3705845798e4b106a6deda7fdcc4ee35",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrCrmWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b721cad31fd0346d9e4f62d5d1c3672c5d1f8be5ba86b981005cb4b2f090f80d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrCrmWorkspaceSandbox.cs",
+      "category": "process-domain",
+      "source_fingerprint": "d318638dbd556dc5d4a4460280583977d1bc31351d80e45baa9582fdbb661963",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrDirectoryWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0499e3f0bda4ec8b2dc13c63604c735e21f7808aaf7354907dd73789bef57968",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrDirectoryWorkspaceSandbox.cs",
+      "category": "process-domain",
+      "source_fingerprint": "ee9260896672bc14b563a53edfc8b03d8e554d62e358ea7e8046cc57d922c937",
       "count": 1
     },
     {
@@ -71429,6 +71537,96 @@
       "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrHomeSandboxFixture.cs",
       "category": "case-policy",
       "source_fingerprint": "08e082dd42dd2f6b1a0651d053f9aaff1c2a2698876830ad4abefd331a507f33",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrRecruitingWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "88d9f45a1fdb4235d171f1f68b4f907506e22429453e19daef9f0941c76d2ff3",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrRecruitingWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c5d5c043d390f4853fc8e620410c3dd03d7c3e98fa9b3f35da7e2d636111ba79",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrRecruitingWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c847780ab2721c84b47cf5903c79abb3357d9e9a841e1c5a25edff162f135777",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrRecruitingWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f42e19c1bfb004b9ea313bde8f8b1e3a248229dab33567360c08b810aedb7193",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "034c7e709f70473fdf52bea7bdfb4cdc219ad8da7f2659e36c4d102a90aa87e6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0cbb6502800aa07ac7a6af597d789bb3f8545eca402c42e19d46b6a7864738a5",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "1bde1f0fecad2121b719f375742a852ca14ac82f2949c5c12faebcd59dcd36ef",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "41f8a28b212732dfcbf4f682309e0c25232f04773cfe4e37c36273baa14b9e93",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "567958e0b3283dc4ebdfa3e00dfefd875ffea9aae0bbed26ceb7e531a7aefdd9",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "712075604fb239758ba1fb94f73d9ea26dcd22cd8093a8a96e2bc913bf5b3e28",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c630f18196820ca35abc6aed87f90de035a89e0e85e090785f129af5978eeef8",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "df005110ff7b97657c7744925d14b97cfe13d8d3246bb63353534792b25ef43c",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e2bae443c1d201c614e957aed7bab0bc4764ae1e647c13b189b298981603efe7",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrSandboxReadPorts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ec5f51866d622c8d3939927e14db25546a22922c97caeadb9fd65cdb2fc4ad07",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CrmHrWorkforceWorkspaceSandbox.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f1466c205756a9fabfcc07788a6f3976ec91b57d1dd32763bd73f43bfac933fd",
       "count": 1
     },
     {

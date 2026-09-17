@@ -266,6 +266,34 @@ public sealed class CrmHrDirectoryPageFreshnessTests {
         });
     }
 
+    [Fact]
+    public async Task A_second_save_dispatched_while_a_new_party_is_being_written_creates_it_once() {
+        var loadGate = new DelayedDbContextCreationGate();
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => WrapDbContextFactory(services, loadGate));
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var displayName = $"Double dispatch {Guid.NewGuid():N}";
+        navigation.NavigateTo("/crm-hr/directory");
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
+        cut.WaitForElement("[data-testid='crmhr-directory-new-button']").Click();
+        cut.WaitForElement("[data-testid='crmhr-party-display-name']").Change(displayName);
+
+        // The form has two dispatch paths into the same host save: the footer button and Enter on the form. A button
+        // drops its own second click, the form does not, so the host entry is dispatched twice here.
+        var view = (ICrmHrDirectoryWorkspaceView)cut.Instance;
+        loadGate.Arm();
+        var first = cut.InvokeAsync(() => view.SaveAsync());
+        await loadGate.WaitForDelayedCreationAsync();
+        await cut.InvokeAsync(() => view.SaveAsync());
+        loadGate.Release();
+        await first;
+
+        cut.WaitForAssertion(() => Assert.Contains("partyId=", navigation.Uri, StringComparison.Ordinal));
+        var records = harness.Context.Services.GetRequiredService<IPartyRecordQueryService>();
+        var page = await records.SearchAsync(new PartyRecordQuery(SearchText: displayName));
+        Assert.Equal(1, page.TotalCount);
+    }
+
     private static void AssertCurrentAgentChatSurface(
         IRenderedComponent<CrmHrDirectoryPage> cut,
         Guid expectedPartyId,

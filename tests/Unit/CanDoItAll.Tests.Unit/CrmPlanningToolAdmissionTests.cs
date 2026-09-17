@@ -60,6 +60,55 @@ public sealed class CrmPlanningToolAdmissionTests {
     }
 
     [Theory]
+    [InlineData(AgentLifecycleStatus.Draft)]
+    [InlineData(AgentLifecycleStatus.Suspended)]
+    [InlineData(AgentLifecycleStatus.Archived)]
+    public void Inactive_foreign_or_mistyped_actors_resolve_no_planning_capability(AgentLifecycleStatus status) {
+        var (agent, capability, governance) = Actor(CrmPlanningToolPolicy.SearchCapability);
+        Assert.NotNull(CrmPlanningToolPolicy.ResolveCapability(agent, [capability], governance, CrmPlanningToolPolicy.Search));
+
+        // Agent status: only an active agent reads planning facts.
+        Assert.Null(CrmPlanningToolPolicy.ResolveCapability(agent with { Status = status }, [capability], governance, CrmPlanningToolPolicy.Search));
+        // Governance issued for another agent never authorizes this actor.
+        var foreign = new AgentExecutionGovernanceSnapshot(governance.AuthorityId, Guid.NewGuid(), governance.DatabaseProfileId,
+            governance.DatabaseProfileGeneration, governance.WorkspaceScope, true, false, governance.PolicyVersion, governance.PolicyFingerprint);
+        Assert.Null(CrmPlanningToolPolicy.ResolveCapability(agent, [capability], foreign, CrmPlanningToolPolicy.Search));
+        // The assignment and the catalog entry must both be tool capabilities of the exact key.
+        Assert.Null(CrmPlanningToolPolicy.ResolveCapability(agent with {
+            Capabilities = [agent.Capabilities[0] with { Kind = CapabilityKind.Skill }]
+        }, [capability], governance, CrmPlanningToolPolicy.Search));
+        Assert.Null(CrmPlanningToolPolicy.ResolveCapability(agent, [capability with { Kind = CapabilityKind.Skill }], governance, CrmPlanningToolPolicy.Search));
+        // The search capability never resolves the summary operation.
+        Assert.Null(CrmPlanningToolPolicy.ResolveCapability(agent, [capability], governance, CrmPlanningToolPolicy.Summary));
+    }
+
+    [Fact]
+    public void Attachment_requires_project_scope_read_authority_and_an_interactive_not_background_session() {
+        var (agent, capability, governance) = Actor(CrmPlanningToolPolicy.SearchCapability);
+        var context = Context(agent, capability, governance) with {
+            ContextIntent = AgentRuntimeContextIntent.Empty with { SourceKind = AgentChatTrustedSourceKinds.ProjectStructure }
+        };
+        Assert.True(CrmPlanningToolPolicy.CanAttach(context));
+
+        AgentExecutionGovernanceSnapshot With(WorkspaceScopeDescriptor scope, bool readAllowed)
+            => new(governance.AuthorityId, agent.Id, governance.DatabaseProfileId, governance.DatabaseProfileGeneration,
+                scope, readAllowed, false, governance.PolicyVersion, governance.PolicyFingerprint);
+
+        // Project scope: an organization, tenant or sandbox scope is not a planning source.
+        Assert.False(CrmPlanningToolPolicy.CanAttach(context with { Governance = With(WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("D")), true) }));
+        Assert.False(CrmPlanningToolPolicy.CanAttach(context with { Governance = With(WorkspaceScopeDescriptor.Tenant(Guid.NewGuid().ToString("D")), true) }));
+        Assert.False(CrmPlanningToolPolicy.CanAttach(context with { Governance = With(WorkspaceScopeDescriptor.Sandbox, true) }));
+        // Read authority of the admitted governance snapshot.
+        Assert.False(CrmPlanningToolPolicy.CanAttach(context with { Governance = With(governance.WorkspaceScope, false) }));
+        Assert.False(CrmPlanningToolPolicy.CanAttach(context with { Governance = null }));
+        // A background source can never attach the interactive planning reads, whatever its purpose claims.
+        var background = new AgentToolBackgroundSourceBinding("process-step", "implementation", new(new string('a', 64)), new(new string('b', 64)));
+        Assert.False(CrmPlanningToolPolicy.CanAttach(context with {
+            AdmittedToolSession = new(Guid.NewGuid(), Guid.Empty, default, background)
+        }));
+    }
+
+    [Theory]
     [InlineData(CrmPlanningToolPolicy.Search, CrmPlanningToolPolicy.SearchCapability)]
     [InlineData(CrmPlanningToolPolicy.Summary, CrmPlanningToolPolicy.SummaryCapability)]
     public void Prepared_source_round_trips_nonempty_identity_and_numeric_or_string_request_enums(string tool, string key) {

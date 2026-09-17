@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.CrmHr.UI;
 
@@ -23,6 +24,23 @@ public abstract class CrmHrWorkspaceSurface<TView> : ComponentBase, IHandleEvent
     // Host-owned chrome: the CRM / HR area tabs navigate, so the routed host composes them here.
     [Parameter]
     public RenderFragment? SecondaryNavigation { get; set; }
+
+    // One EditContext per draft instance: the same draft keeps its context, and with it the parsing messages of its
+    // inputs, across renders and tab changes; a replaced draft gets a new context.
+    protected static EditContext ContextFor(ref EditContext? current, object draft)
+    {
+        if (current is null || !ReferenceEquals(current.Model, draft))
+        {
+            current = new EditContext(draft);
+        }
+
+        return current;
+    }
+
+    // An action outside the form element (a dialog footer button) validates the same form the submit path validates,
+    // parsing errors included, before it reaches the host.
+    protected static Task SubmitAsync(EditContext? context, Func<Task> submit)
+        => context is null || context.Validate() ? submit() : Task.CompletedTask;
 
     Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg)
     {

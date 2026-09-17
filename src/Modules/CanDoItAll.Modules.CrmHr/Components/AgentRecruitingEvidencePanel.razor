@@ -185,23 +185,45 @@
             return;
         }
 
+        // One admitted command at a time: assessment evidence is append-only, so a second dispatch must not write again.
+        if (isSaving)
+        {
+            return;
+        }
+
+        var identity = loadedIdentity;
+        var command = new CreateAgentRecruitingInterviewCommand(
+            candidate.Id,
+            AgentConfigurationVersion.Create(candidate),
+            createPurpose,
+            RecruitmentApplicationId,
+            ProjectId);
         isSaving = true;
         try
         {
-            await EvidenceService.CreateInterviewAsync(
-                new CreateAgentRecruitingInterviewCommand(
-                    candidate.Id,
-                    AgentConfigurationVersion.Create(candidate),
-                    createPurpose,
-                    RecruitmentApplicationId,
-                    ProjectId));
+            try
+            {
+                await EvidenceService.CreateInterviewAsync(command);
+            }
+            catch (Exception exception)
+            {
+                if (identity == loadedIdentity)
+                {
+                    HandleSaveFailure(exception, "The assessment could not be created.");
+                }
+
+                return;
+            }
+
+            // The candidate changed while the owner was writing: the completion belongs to a retired target.
+            if (identity != loadedIdentity)
+            {
+                return;
+            }
+
             isCreateDialogOpen = false;
             NotificationService.Success("Assessment created", "The configuration-fenced assessment is ready for evidence.");
             await ReloadAsync();
-        }
-        catch (Exception exception)
-        {
-            HandleSaveFailure(exception, "The assessment could not be created.");
         }
         finally
         {
@@ -276,11 +298,20 @@
             strengths,
             gaps);
 
+        if (isSaving)
+        {
+            return;
+        }
+
+        var identity = loadedIdentity;
+        var interviewId = attemptDraft.InterviewId.Value;
         isSaving = true;
         try
         {
-            await EvidenceService.AppendAttemptAsync(
-                attemptDraft.InterviewId.Value,
+            try
+            {
+                await EvidenceService.AppendAttemptAsync(
+                interviewId,
                 new AppendAgentRecruitingAttemptCommand(
                     new AgentRecruitingExecutionTarget(attemptDraft.TargetKind, targetId),
                     attemptDraft.ChallengeKey,
@@ -295,13 +326,25 @@
                         : "succeeded",
                     automatedEvaluation,
                     analysis));
+            }
+            catch (Exception exception)
+            {
+                if (identity == loadedIdentity)
+                {
+                    HandleSaveFailure(exception, "The result could not be attached.");
+                }
+
+                return;
+            }
+
+            if (identity != loadedIdentity)
+            {
+                return;
+            }
+
             isAttachDialogOpen = false;
             NotificationService.Success("Result attached", "The target and typed analysis were appended to the assessment.");
             await ReloadAsync();
-        }
-        catch (Exception exception)
-        {
-            HandleSaveFailure(exception, "The result could not be attached.");
         }
         finally
         {

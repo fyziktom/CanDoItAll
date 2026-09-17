@@ -10,18 +10,6 @@ namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class CrmHrHomeSandboxTests : IDisposable
 {
-    private static readonly string[] ForbiddenReferenceFragments =
-    [
-        "CanDoItAll.Modules.",
-        "CanDoItAll.AgentFramework",
-        "CanDoItAll.Infrastructure",
-        "CanDoItAll.Web",
-        "CanDoItAll.Composition",
-        "CanDoItAll.AppComponents",
-        "CanDoItAll.SharedKernel",
-        "EntityFrameworkCore"
-    ];
-
     private readonly BunitContext context = new();
 
     public CrmHrHomeSandboxTests()
@@ -90,14 +78,22 @@ public sealed class CrmHrHomeSandboxTests : IDisposable
         Assert.Equal("failed", cut.Find("[data-testid='crmhr-sandbox-frame']").GetAttribute("data-scenario"));
     }
 
+    // The sandbox composes the rendering library over the same dependency categories the library itself may use (UI
+    // primitives, shared UI families, lightweight contracts) plus its own ASP.NET Core host. No backend module,
+    // persistence, runtime or production composition assembly reaches it, directly or transitively.
     [Fact]
     public void Sandbox_assembly_references_no_backend_module_or_host()
     {
-        var references = typeof(CrmHrSandboxAssets).Assembly.GetReferencedAssemblies().Select(reference => reference.FullName).ToArray();
+        var sandbox = typeof(CrmHrSandboxAssets).Assembly;
+        var references = sandbox.GetReferencedAssemblies().Select(reference => reference.Name ?? string.Empty).ToArray();
 
-        Assert.Contains(references, reference => reference.StartsWith("CanDoItAll.CrmHr.UI", StringComparison.Ordinal));
-        Assert.All(references, reference =>
-            Assert.DoesNotContain(ForbiddenReferenceFragments, fragment => reference.Contains(fragment, StringComparison.Ordinal)));
+        Assert.Contains(CrmHrUiBoundary.RenderingLibrary.GetName().Name, references);
+        Assert.All(references, name => Assert.True(
+            name == CrmHrUiBoundary.RenderingLibrary.GetName().Name ||
+            CrmHrUiBoundary.IsAllowedDirectReference(name) ||
+            name.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal),
+            $"The sandbox references '{name}', which is outside the rendering library's dependency categories."));
+        Assert.DoesNotContain(CrmHrUiBoundary.TransitiveReferenceNames(sandbox), CrmHrUiBoundary.IsForbidden);
     }
 
     public void Dispose() => context.Dispose();

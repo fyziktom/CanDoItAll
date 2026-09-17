@@ -189,7 +189,7 @@
                                       Icon="badge"
                                       data-testid="crmhr-workforce-tab-profile">
                             <EditForm id="crmhr-workforce-profile-form"
-                                      Model="View.ProfileEditor"
+                                      EditContext="@ContextFor(ref profileContext, View.ProfileEditor)"
                                       OnValidSubmit="View.SaveWorkforceProfileAsync">
                                 <FormSection Title="Workforce profile"
                                              Description="Keep employment type, commercial rate context, and org-structure metadata attached to the same Party identity used by CRM and project flows.">
@@ -444,7 +444,7 @@
                                 @if (View.SelectedDetailTabIndex == CrmHrWorkforceWorkspacePresentation.ProfileTabIndex)
                                 {
                                     <Button Text="Save workforce profile"
-                                            Click="View.SaveWorkforceProfileAsync"
+                                            Click="SaveProfileFromFooterAsync"
                                             data-testid="crmhr-workforce-save-button" />
                                 }
                             </Cluster>
@@ -509,6 +509,11 @@
 </PageScaffold>
 
 @code {
+    private EditContext? profileContext;
+
+    // The footer button sits outside the form element: it validates the same form before the host saves.
+    private Task SaveProfileFromFooterAsync() => SubmitAsync(profileContext, View.SaveWorkforceProfileAsync);
+
     // Host-owned region: the host composes its adapter here.
     [Parameter]
     public RenderFragment? ActivityTimeline { get; set; }

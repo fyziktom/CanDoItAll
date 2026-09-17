@@ -422,6 +422,54 @@
                                 </TabsItem>
                             </TabItems>
                         </Tabs>
+
+                        @* The account record owns its opportunity and connection overlays. Rendered inside it they open above it even
+                           when one render opens both (a deep link, a board card), and they close with the record. *@
+                        <OpportunityCreateDialog IsOpen="@View.IsOpportunityCreateDialogOpen"
+                                                 InitialModel="View.OpportunityEditor"
+                                                 AccountDisplayName="@(View.SelectedAccount?.DisplayName ?? string.Empty)"
+                                                 RelationshipStageLabel="@View.ProfileEditor.RelationshipStage.ToString()"
+                                                 IsBusy="View.IsOpportunityBusy"
+                                                 Message="@(View.IsOpportunityCreateDialogOpen ? View.Message : null)"
+                                                 Save="View.SaveOpportunityAsync"
+                                                 Close="View.CloseOpportunityCreateDialogAsync"
+                                                 LoadFailed="View.HandleOpportunityPickerLoadFailedAsync" />
+
+                        <OpportunityDetailDialog IsOpen="@View.IsOpportunityDetailDialogOpen"
+                                                 Opportunity="View.SelectedOpportunity"
+                                                 Close="View.CloseOpportunityDetailDialogAsync"
+                                                 Edit="View.OpenOpportunityEditDialog"
+                                                 Convert="View.OpenConversionDialogAsync"
+                                                 OpenLinkedProject="View.OpenLinkedProjectAsync" />
+
+                        <OpportunityEditDialog IsOpen="@View.IsOpportunityEditDialogOpen"
+                                               Opportunity="View.SelectedOpportunity"
+                                               IsBusy="View.IsOpportunityBusy"
+                                               Message="@(View.IsOpportunityEditDialogOpen ? View.Message : null)"
+                                               Save="View.SaveOpportunityAsync"
+                                               Close="View.CloseOpportunityEditDialogAsync"
+                                               LoadFailed="View.HandleOpportunityPickerLoadFailedAsync" />
+
+                        <OpportunityConversionDialog IsOpen="@View.IsOpportunityConversionDialogOpen"
+                                                     DatabaseProfileId="@View.ProjectDatabaseProfileId"
+                                                     Opportunity="View.SelectedOpportunity"
+                                                     Model="View.OpportunityConversionEditor"
+                                                     IsBusy="View.IsOpportunityConversionBusy"
+                                                     Message="@(View.IsOpportunityConversionDialogOpen ? View.Message : null)"
+                                                     Close="View.CloseOpportunityConversionDialogAsync"
+                                                     Save="View.SaveOpportunityConversionAsync"
+                                                     LoadFailed="View.HandleOpportunityPickerLoadFailedAsync" />
+
+                        <PartyRecordPickerDialog IsOpen="@View.ConnectionPartyPickerIndex.HasValue"
+                                                 SelectedPartyId="@View.SelectedConnectionPartyId"
+                                                 ExcludedPartyId="View.SelectedAccount?.AccountPartyId"
+                                                 SelectionConfirmed="View.ConfirmConnectionPartyAsync"
+                                                 OnClose="View.CloseConnectionPartyPickerAsync"
+                                                 LoadFailed="View.HandleOpportunityPickerLoadFailedAsync"
+                                                 Eyebrow="Connected records"
+                                                 Title="Choose a directory record"
+                                                 Subtitle="Search people, organizations, units, and AI agents that have a relationship with this company."
+                                                 DataTestId="crmhr-connection-party-picker" />
                     </ChildContent>
                     <Footer>
                         <Split Breakpoint="LayoutBreakpoint.None"
@@ -443,52 +491,6 @@
         </Stack>
     </ChildContent>
 </PageScaffold>
-
-<OpportunityCreateDialog IsOpen="@View.IsOpportunityCreateDialogOpen"
-                         InitialModel="View.OpportunityEditor"
-                         AccountDisplayName="@(View.SelectedAccount?.DisplayName ?? string.Empty)"
-                         RelationshipStageLabel="@View.ProfileEditor.RelationshipStage.ToString()"
-                         IsBusy="View.IsOpportunityBusy"
-                         Message="@(View.IsOpportunityCreateDialogOpen ? View.Message : null)"
-                         Save="View.SaveOpportunityAsync"
-                         Close="View.CloseOpportunityCreateDialogAsync"
-                         LoadFailed="View.HandleOpportunityPickerLoadFailedAsync" />
-
-<OpportunityDetailDialog IsOpen="@View.IsOpportunityDetailDialogOpen"
-                         Opportunity="View.SelectedOpportunity"
-                         Close="View.CloseOpportunityDetailDialogAsync"
-                         Edit="View.OpenOpportunityEditDialog"
-                         Convert="View.OpenConversionDialogAsync"
-                         OpenLinkedProject="View.OpenLinkedProjectAsync" />
-
-<OpportunityEditDialog IsOpen="@View.IsOpportunityEditDialogOpen"
-                       Opportunity="View.SelectedOpportunity"
-                       IsBusy="View.IsOpportunityBusy"
-                       Message="@(View.IsOpportunityEditDialogOpen ? View.Message : null)"
-                       Save="View.SaveOpportunityAsync"
-                       Close="View.CloseOpportunityEditDialogAsync"
-                       LoadFailed="View.HandleOpportunityPickerLoadFailedAsync" />
-
-<OpportunityConversionDialog IsOpen="@View.IsOpportunityConversionDialogOpen"
-                             DatabaseProfileId="@View.ProjectDatabaseProfileId"
-                             Opportunity="View.SelectedOpportunity"
-                             Model="View.OpportunityConversionEditor"
-                             IsBusy="View.IsOpportunityConversionBusy"
-                             Message="@(View.IsOpportunityConversionDialogOpen ? View.Message : null)"
-                             Close="View.CloseOpportunityConversionDialogAsync"
-                             Save="View.SaveOpportunityConversionAsync"
-                             LoadFailed="View.HandleOpportunityPickerLoadFailedAsync" />
-
-<PartyRecordPickerDialog IsOpen="@View.ConnectionPartyPickerIndex.HasValue"
-                         SelectedPartyId="@View.SelectedConnectionPartyId"
-                         ExcludedPartyId="View.SelectedAccount?.AccountPartyId"
-                         SelectionConfirmed="View.ConfirmConnectionPartyAsync"
-                         OnClose="View.CloseConnectionPartyPickerAsync"
-                         LoadFailed="View.HandleOpportunityPickerLoadFailedAsync"
-                         Eyebrow="Connected records"
-                         Title="Choose a directory record"
-                         Subtitle="Search people, organizations, units, and AI agents that have a relationship with this company."
-                         DataTestId="crmhr-connection-party-picker" />
 
 @code {
     // Host-owned region: the host composes its adapter here.

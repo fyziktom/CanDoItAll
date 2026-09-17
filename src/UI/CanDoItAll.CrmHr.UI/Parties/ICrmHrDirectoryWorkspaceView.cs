@@ -54,8 +54,9 @@ public interface ICrmHrDirectoryWorkspaceView : ICrmHrWorkspaceView
     Task RetryProjectAssignmentsLoadAsync();
     void AddAdditionalRole();
     void AddConfidentialNote();
-    void RemoveAdditionalRole(int index);
-    void RemoveConfidentialNote(int index);
+    // A row action names the row the operator saw, never a position that later edits can shift.
+    void RemoveAdditionalRole(PartyRoleAssignmentEditorModel role);
+    void RemoveConfidentialNote(PartyConfidentialNoteEditorModel note);
     void OpenMergeDialog(PartyDuplicateCandidateModel candidate);
     Task HandleMergeCloseAsync();
     Task HandleMergeConfirmAsync(string reason);
