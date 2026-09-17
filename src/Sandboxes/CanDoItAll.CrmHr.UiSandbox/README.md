@@ -2,11 +2,13 @@
 
 Backend-free scenario host for the real CRM / HR surfaces from
 [CanDoItAll.CrmHr.UI](../../UI/CanDoItAll.CrmHr.UI/README.md): the Home overview at
-`/crm-hr` and the account summary with the activity history at `/crm-hr/account-activity`.
-It references only that rendering library (and, through it, BaseLib and Common). It has no
-database, no query service, no Web, module, AgentFramework or navigation dependency. Every
-interaction updates deterministic local state and the intent line; the production secondary
-tabs are host-owned chrome and are represented by a labelled slot, not duplicated.
+`/crm-hr`, the account summary with the activity history at `/crm-hr/account-activity` and
+the Financials projection at `/crm-hr/financials`. It references only that rendering library
+(and, through it, BaseLib, Common and the chart library with its Blazor-ApexCharts assets;
+`Program.cs` registers the charts like the Web host). It has no database, no query service,
+no Web, module, AgentFramework or navigation dependency. Every interaction updates
+deterministic local state and the intent line; the production secondary tabs are host-owned
+chrome and are represented by a labelled slot, not duplicated.
 
 Run from the repository root with the SDK selected by `global.json` and the live Components
 checkout. Open the browser at 1600x1000 for the matched desktop frame.
@@ -71,12 +73,29 @@ local account to an active customer; the production page saves and reloads inste
 | `populated` | Prospect account with contacts, roles and counts; twelve entries over two pages with one overdue follow-up |
 | `no-account` | The no-account empty state with its directory action; empty timelines |
 | `active-customer` | An active customer: no conversion offer |
-| `loading` | Timelines in the host's loading state with paging disabled |
-| `empty` | Zero entries: each host's own empty copy and "No pages" |
+| `loading` | First read in flight: nothing accepted, counts shown as loading, paging disabled |
+| `paging` | Another page loading over an accepted first page: totals kept, rows replaced by the loading state |
+| `empty` | Zero entries accepted: each host's own empty copy, accepted zero counts and "No pages" |
 | `overdue` | Seven follow-ups, four overdue: the overdue total and per-row Overdue badges |
 | `long-text` | Markup-looking and very long names, summaries, titles and metadata rendered as text |
 | `null-contacts` | No summary, no email, no phone, no roles, zero counts: the placeholder copy |
 | `many-pages` | Forty-seven entries over five pages for independent paging per host |
 
-All data is synthetic. No real person, organization, contact detail or confidential note is
-present, and nothing here reaches an agent context.
+## Financials
+
+`/crm-hr/financials?scenario=<token>&layout=matched|narrow|flexible` renders the Financials
+surface with the real chart. Retry resolves the failed scenario to the populated snapshot
+locally; Monthly/Yearly re-project the same snapshot and issue no read.
+
+| Token | Presentation |
+|---|---|
+| `populated` | Three currencies over two years in sparse months (no currency sells every month): the aligned category axis |
+| `single-currency` | One currency over three consecutive months |
+| `empty` | An accepted empty result: "No recognized sales", no chart, purchase and invoice figures unavailable |
+| `incomplete` | The populated snapshot with three incomplete won records |
+| `loading` | The loading phase |
+| `failed` | The failed phase with Retry |
+| `long-labels` | Eighteen consecutive months in two currencies with seven-figure amounts and twelve incomplete records |
+
+All data is synthetic. No real person, organization, contact detail, confidential note or
+financial record is present, and nothing here reaches an agent context.

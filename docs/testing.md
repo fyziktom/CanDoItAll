@@ -129,7 +129,24 @@ The CRM, Directory and Workforce pages compose the adapters, so the whole CRM / 
 topic (`FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.`) is the composition baseline for
 an adapter change. Browser evidence is `FullyQualifiedName~CrmHrAccountActivityBrowserTests`
 (account summary and activity in the CRM workspace, the Directory timeline host, and the
-conversion mutation clicked once on the interactive summary).
+conversion mutation clicked once on the interactive summary); `CrmHrSensitiveDataFlowTests`
+exercises the Directory activity tab as well. The three timeline owners read through
+`CrmHrActivityHistorySession` (`FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrActivityHistorySessionTests`).
+
+For the CRM Financials surface (`Financials/` in the rendering library, `CrmFinancialsPanel`,
+`CrmFinancialsReadSession`, `CrmFinancialsPresentationMapper`, or the `/crm-hr/financials`
+sandbox specimen), run:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmFinancials|FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrFinancials" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmFinancials|FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrFinancials" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmFinancialSnapshotQueryIntegrationTests" /m:1
+```
+
+The integration facts protect the query owner's recognition semantics, which the extraction
+must not change. Browser evidence is `FullyQualifiedName~CrmHrFinancialsBrowserTests` (seeded
+sparse multi-currency sales, plotted chart geometry and legend, monthly/yearly categories, a
+constrained width and an account without sales).
 
 ## Broad Stable Gate
 

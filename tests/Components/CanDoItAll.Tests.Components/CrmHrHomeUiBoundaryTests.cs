@@ -18,6 +18,7 @@ public sealed class CrmHrHomeUiBoundaryTests
         "Microsoft.AspNetCore.Components",
         "Microsoft.Extensions",
         "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.Charts",
         "CanDoItAll.Components.Common"
     ];
 
