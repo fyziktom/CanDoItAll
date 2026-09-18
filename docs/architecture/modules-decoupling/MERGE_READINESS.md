@@ -1,5 +1,11 @@
 # Module Decoupling Merge Readiness
 
+> **Historical record.** This file describes the `modules-decoupling` work and its handoff into
+> `components-decoupling`, which is finished and merged. Its checkpoints, next actions, signing
+> state, branch references and dependency verdicts were true when they were written and are kept
+> for provenance; they are not current guidance. The current pre-merge verdict for the branch that
+> follows it is [CRM / HR pre-merge readiness](../crm-hr-premerge-readiness.md).
+
 One compact verdict for the operator's merge decision of `modules-decoupling` into `components-decoupling`. It is the practical handoff, not an implementation bundle; the dated history stays in [EXECUTION.md](EXECUTION.md), [VALIDATION.md](VALIDATION.md), [COVERAGE.md](COVERAGE.md) and the [manual test handover](MANUAL_TEST_HANDOVER.md). Written on 2026-09-15 for the signed head `160616c8256594257d00612b4e7dbadd567c024e` and updated on 2026-09-16 for the pre-merge cleanup that is staged over the signed records head `ae4e3a04d66fa0848e5dda1df40320ed1401eb06` and gated there as captures fix14 and fix15. That cleanup is not yet committed: the GPG agent cache expired and the checkpoint commit waits for the operator's local pinentry unlock.
 
 ## Verdict

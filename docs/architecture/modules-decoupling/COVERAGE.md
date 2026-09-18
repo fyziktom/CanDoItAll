@@ -1,6 +1,12 @@
 # Module Decoupling Coverage
 
-## Current checkpoint, 2026-09-16 00:45 UTC
+> **Historical record.** This file describes the `modules-decoupling` work and its handoff into
+> `components-decoupling`, which is finished and merged. Its checkpoints, next actions, signing
+> state, branch references and dependency verdicts were true when they were written and are kept
+> for provenance; they are not current guidance. The current pre-merge verdict for the branch that
+> follows it is [CRM / HR pre-merge readiness](../crm-hr-premerge-readiness.md).
+
+## Final checkpoint, 2026-09-16 00:45 UTC (historical)
 
 Newly covered by the pre-merge cleanup. Prerender readiness of the shared `PagedRecordBrowser` is covered by a Components case that renders the browser statically and interactively and asserts that search, tag input, scope filter, card, pager and templated controls stay disabled until the first interactive render. The CRM-HR agent directory is covered by a browser case that holds the circuit negotiation deterministically, proves the prerendered search and every prerendered card are disabled, then proves the first search applies and the first card click opens the record; the older journey case now requires exactly one card of the searched agent instead of a substring that also matched 11, 21 or 31 matches. Canonical Resources source keys are covered for upper, lower and mixed-case GUID digits, for catalog resolution of a stored key in another casing, for the unchanged denials, and for a stored configuration that validates without being rewritten. `StableContentHash` reuse is covered by published SHA-256 vectors and byte-identity cases. The reworked guards cover the CI workflow policy with six mutation fixtures, the process boundary with four, the global `AppDbContext` detection with five compiled fixtures (identifier, alias, service lookup, lambda capture and a clean case), the Project Structure page through compiled symbols and IL, one strict repository-root helper, and the secret scan's report of unreadable in-scope entries as missing coverage.
 

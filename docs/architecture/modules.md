@@ -58,6 +58,25 @@ evidence.
 | Simple Chats (`src/MAF/SimpleChats`, `SimpleChatsDbContext`) | ordinary definitions, conversations and turns | `LlmChatDefinitionApplicationService`; `/api/llm-chats` | `HrSimpleChatRuntimeToolProvider` administers definitions without transcript access or tools |
 | Composition (`CanDoItAll.Composition`) | wiring only | `RuntimeHostServiceCollectionExtensions` | the complete `AppDbContext` model exists for migrations, transfer and schema health through `IProfileAppDbContextFactory`; product modules never inject the global context (guarded by `DatabaseCanonicalityArchitectureTests`) |
 
+## Rendering libraries and contracts assemblies
+
+Two modules have moved their rendering out of the module and into a feature UI library that binds to
+a contract the routed host implements:
+
+| Module | Contracts assembly | Rendering library | Scenario host |
+|---|---|---|---|
+| CRM / HR | `CanDoItAll.Modules.CrmHr.Contracts` | `CanDoItAll.CrmHr.UI` | `CanDoItAll.CrmHr.UiSandbox` |
+| Prompts | `CanDoItAll.Modules.Prompts.Contracts` | `CanDoItAll.Prompts.UI` | `CanDoItAll.Prompts.UiSandbox` |
+
+`CanDoItAll.Modules.Projects.Contracts` exists for the same reason in the other direction: it lets a
+renderer or another module name a project, its write admission and its assignment queries without
+referencing the Projects implementation. A contracts assembly keeps the namespace of its module, so
+no consumer had to be rewritten when the types moved.
+
+The owners above are unchanged by that move: a rendering library performs no write and holds no
+session. [UI component seams](ui-component-seams.md) describes the seam, and the per-module records
+under this directory describe what each slice moved and what it deliberately left behind.
+
 Stable seams for the next UI decoupling are the owner application services and the
 Projects-owned bridge contracts above, together with the agent chat context registry
 (`IAgentChatContextRegistry`, one active scope per circuit with `IsActive` leases) and the

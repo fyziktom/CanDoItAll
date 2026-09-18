@@ -22,13 +22,14 @@ scan after source edits. Refresh intentional, reviewed baseline deltas in the sa
 change, inspect the diff, and require final enforcement without `--write-baseline`.
 Report that result alongside the focused tests; do not claim completion while it fails.
 
-<!-- BEGIN active modules-decoupling task -->
-## Active Module Decoupling Task
+## UI and module boundaries
 
-The active `modules-decoupling` task uses **LIGHTWEIGHT_INCREMENTAL_E2E**, as recorded in
-[the execution record](docs/architecture/modules-decoupling/EXECUTION.md). The operator
-has approved end-to-end implementation in verified slices without legacy bundle or
-subbundle generation and without separate milestone approval. All existing engineering,
-product-preservation, security, compatibility, and validation rules still apply.
-Work only on `modules-decoupling`; no merge is permitted. This note applies to this task.
-<!-- END active modules-decoupling task -->
+[UI component seams](docs/architecture/ui-component-seams.md) is the canonical guidance for
+separating a feature's rendering from the host that owns its state, its reads and its
+writes: placement, the seam contracts, state and effect ownership, mutation outcomes,
+reconciliation after a commit, the scenario host and the proof layers. Read it before
+extracting a renderer, adding a workspace surface or changing an editor's lifetime.
+
+The module-decoupling and CRM / HR extraction records under
+[docs/architecture](docs/architecture) describe what each completed slice did and what it
+left with its original owner.

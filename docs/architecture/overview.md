@@ -60,7 +60,8 @@ See [shared providers](../shared-providers.md) and
 | `src/Foundation` | Shared primitives, PostgreSQL infrastructure, migrations, and Git integration |
 | `src/Integration` | Adapters for file tools and other separately owned systems |
 | `src/plugins` | Plugin contracts and bundled plugin implementations |
-| `src/UI` | Application-owned reusable UI facades and focused UI integrations |
+| `src/UI` | Application-owned reusable UI facades, the shared record-browsing family, and the feature rendering libraries a module's routed hosts bind to |
+| `src/Sandboxes` | Small hosts that render a feature's real components from deterministic scenarios, without the module implementations or a database |
 
 ## Dependency Direction
 
@@ -70,6 +71,11 @@ See [shared providers](../shared-providers.md) and
 - Infrastructure implements persistence and external boundaries selected by composition.
 - MAF, provider, plugin, MCP, and Memory drivers adapt external behavior to provider-neutral contracts.
 - Cross-module behavior uses typed services, commands, events, projections, or runtime-tool contracts.
+- A feature rendering library depends on contracts assemblies and shared UI, never on a module
+  implementation. A module's routed host keeps the state, the reads and the writes and implements
+  the rendering library's contract; a lightweight contracts assembly
+  (`CanDoItAll.Modules.<Feature>.Contracts`) is what a renderer or another module may name instead
+  of the implementation. [UI component seams](ui-component-seams.md) is the guidance for that seam.
 
 Direct calls from persistence into UI, module-to-module access through Razor components,
 and provider-specific types in domain contracts violate this direction.

@@ -1,6 +1,12 @@
 # Module Decoupling Execution
 
-## Current checkpoint and next action
+> **Historical record.** This file describes the `modules-decoupling` work and its handoff into
+> `components-decoupling`, which is finished and merged. Its checkpoints, next actions, signing
+> state, branch references and dependency verdicts were true when they were written and are kept
+> for provenance; they are not current guidance. The current pre-merge verdict for the branch that
+> follows it is [CRM / HR pre-merge readiness](../crm-hr-premerge-readiness.md).
+
+## Final checkpoint and next action, as written on 2026-09-16 (historical)
 
 Continuation checkpoint, **2026-09-16 00:45 UTC**, written by the Claude Code takeover (Opus 5). Branch `modules-decoupling`; the product HEAD is still the signed records head `ae4e3a04` because the pre-merge cleanup is staged but not yet committed: the GPG agent cache expired and the non-interactive probe kept returning "No pinentry", so the checkpoint commit waits for the operator's trusted local pinentry. Nothing was bypassed and no GPG setting was changed.
 

@@ -1,6 +1,12 @@
 # Module Decoupling Validation
 
-## Current checkpoint, 2026-09-16 00:45 UTC
+> **Historical record.** This file describes the `modules-decoupling` work and its handoff into
+> `components-decoupling`, which is finished and merged. Its checkpoints, next actions, signing
+> state, branch references and dependency verdicts were true when they were written and are kept
+> for provenance; they are not current guidance. The current pre-merge verdict for the branch that
+> follows it is [CRM / HR pre-merge readiness](../crm-hr-premerge-readiness.md).
+
+## Final checkpoint, 2026-09-16 00:45 UTC (historical)
 
 Pre-merge cleanup over the signed records head `ae4e3a04`. The checkpoint commit is still pending the operator's pinentry unlock, so the gates ran on the staged working tree: captures fix14 (`source-fix14.json` SHA-256 `8270f2f5…`, 6,370 tracked files, 24 staged entries, 20:24 UTC) and fix15 (`d0d9d083…`, the same files plus the canvas recreate readiness wait, 25 staged entries). Builds `build-fix14` PASS (entries Stable and PlaywrightSolution; prior-closure drift recorded because this task's development builds had rewritten the fix13 closure in `artifacts/mdo-storage`) and `build-fix15` PASS (entry PlaywrightSolution, prior closure verified byte for byte).
 

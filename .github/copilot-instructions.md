@@ -28,6 +28,7 @@ PostgreSQL is the application database. InMemory is test-only. Generic Memory pr
 
 - Keep components focused on rendering and orchestration; move non-trivial behavior to the owning service.
 - Keep lifecycle side effects and state transitions explicit and testable.
+- Follow [UI component seams](../docs/architecture/ui-component-seams.md) when separating a feature's rendering from the host that owns its state, reads and writes: placement, seam contracts, state and effect ownership, mutation outcomes, reconciliation after a commit, the scenario host and the proof layers.
 - Reuse `CanDoItAll.Components.*` contracts before adding raw structural markup or page-local layout abstractions.
 - For non-WebGL shared-component work, query the `candoitall_components` MCP: inspect libraries, request recommendations for the concrete use case, and inspect the selected component contract and examples.
 - Improve the sibling `CanDoItAll.Components` library when a reusable contract is missing. Do not copy its implementation into this repository.

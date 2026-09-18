@@ -255,8 +255,8 @@ they were removed, not simply deleted:
 - They executed nothing. All six were run against this candidate and all six failed, on selectors
   the product replaced (the party picker that succeeded a `<select>`, the party form that moved into
   a dialog) and on the assignment admission that now requires a captured project lifetime.
-- They could never have run in CI. Each wrote its screenshots to an absolute
-  `C:\repositories\CanDoItAll\evidence\crm-hr\b**` path.
+- They could never have run in CI. Each wrote its screenshots to an absolute Windows path of the
+  author's own workstation, below an evidence directory that no runner has.
 - They asserted almost nothing: two to eighteen assertions each, mostly screenshots.
 - Their flows are covered by the journeys in the table above, and the party pickers of Project
   Structure are covered by `ProjectStructurePartyPickerTests`.

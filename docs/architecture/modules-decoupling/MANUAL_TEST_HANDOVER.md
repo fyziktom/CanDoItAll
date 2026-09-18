@@ -1,5 +1,11 @@
 # Module Decoupling Manual Test Handover
 
+> **Historical record.** This file describes the `modules-decoupling` work and its handoff into
+> `components-decoupling`, which is finished and merged. Its checkpoints, next actions, signing
+> state, branch references and dependency verdicts were true when they were written and are kept
+> for provenance; they are not current guidance. The current pre-merge verdict for the branch that
+> follows it is [CRM / HR pre-merge readiness](../crm-hr-premerge-readiness.md).
+
 This guide describes the private manual-test candidate of the `modules-decoupling` branch, how to run it, what is already prepared in it, and which manual scenarios remain for the operator. It is an operating guide, not an acceptance record: every operator result below starts as `NOT_RUN`.
 
 | Axis | Value at handover |
