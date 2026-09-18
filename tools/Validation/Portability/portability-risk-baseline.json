@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-17T17:26:06.464867+00:00",
+  "generated_utc": "2026-09-18T19:47:50.015602+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -64858,12 +64858,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSourceWorkspacePathResolver.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "1f9eb64162cc2c3eec31f97383f2e076fd5e6430843823b7eeab8d72fe986b8a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSourceWorkspacePathResolver.cs",
-      "category": "absolute-path-field",
       "source_fingerprint": "701b4830ae6dfaf0482a296994d1096e038a1f2c4991be413bd88a4fb46bd2d3",
       "count": 1
     },
@@ -64881,8 +64875,8 @@
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSourceWorkspacePathResolver.cs",
-      "category": "case-policy",
-      "source_fingerprint": "14f35355e27396fabcb38fadf4584004d634cfafe7ef7cc1746abe7e842f39be",
+      "category": "absolute-path-field",
+      "source_fingerprint": "d8ee6f8469693bb65874d5ba2d5d8f292221d6da88e43e08a7c667ecfe320c8f",
       "count": 1
     },
     {
@@ -64895,6 +64889,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSourceWorkspacePathResolver.cs",
       "category": "case-policy",
       "source_fingerprint": "b6bd14c52e619e1e45ac0592ffe31a2a9af6be7c013159981daad0ef9450ff70",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSourceWorkspacePathResolver.cs",
+      "category": "case-policy",
+      "source_fingerprint": "de47101d71610a531fb9e847234a3bb9aa94de5ec5446fbb588d5c644c326696",
       "count": 1
     },
     {

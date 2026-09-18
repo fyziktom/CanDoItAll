@@ -22,6 +22,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     private const int GovernedProcessDefaultStructureReadTake = 80;
     private const int GovernedProcessMaxExplicitLeaseMinutes = 5;
     private const string ProjectsSourceKind = "projects";
+    private const string WorkspaceScopeKindTag = "workspaceScopeKind";
+    private const string WorkspaceScopeKeyTag = "workspaceScopeKey";
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
     private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512}}""";
@@ -316,7 +318,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 context.Governance) {
                     ProviderContext = context,
                     SourceProject = context.Purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation ? null :
-                        await admissionService.CaptureSourceProjectAsync(context.Governance, context.AdmittedToolSession, cancellationToken)
+                        await admissionService.CaptureSourceProjectAsync(context.Governance, context.AdmittedToolSession, cancellationToken),
+                    ActiveWorkspaceScope = ResolveActiveWorkspaceScope(context.Tags)
                 };
             if (!accessState.CanRead &&
                 !accessState.CanWrite &&
@@ -3083,12 +3086,14 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 return scopedAgentContext with {
                     WorkflowAuthority = workflowAuthority,
                     ExpectedProjectAdmission = scopedProcessAccess.ExpectedProjectAdmission,
-                    ProcessMutationAdmission = CaptureProcessMutationAdmission(accessState)
+                    ProcessMutationAdmission = CaptureProcessMutationAdmission(accessState),
+                    ActiveWorkspaceScope = accessState.ActiveWorkspaceScope
                 };
             }
 
             return BuildAgentContext(agent, branchName, repositoryRoot) with {
                 WorkflowAuthority = workflowAuthority,
+                ActiveWorkspaceScope = accessState.ActiveWorkspaceScope,
                 ExpectedProjectAdmission = projectId is null ? null :
                     accessState.SessionCreatedReservations.TryGetValue(projectId.Value, out var created)
                         ? new(created.DatabaseProfileId, created.ProjectId, created.LifetimeId) : accessState.ScopedProcessAccess?.ExpectedProjectAdmission,
@@ -3479,10 +3484,28 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             out Guid projectId)
         {
             projectId = Guid.Empty;
-            return tags.TryGetValue("workspaceScopeKind", out var scopeKind) &&
+            return tags.TryGetValue(WorkspaceScopeKindTag, out var scopeKind) &&
                    string.Equals(scopeKind, WorkspaceScopeKind.Project.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                   tags.TryGetValue("workspaceScopeKey", out var scopeKey) &&
+                   tags.TryGetValue(WorkspaceScopeKeyTag, out var scopeKey) &&
                    Guid.TryParse(scopeKey, out projectId);
+        }
+
+        // The runtime tags every provider context with the execution workspace scope its workspace tools were built
+        // for, so a workspace path an agent wrote is resolved in that same scope.
+        private static WorkspaceScopeDescriptor? ResolveActiveWorkspaceScope(IReadOnlyDictionary<string, string> tags)
+        {
+            if (!tags.TryGetValue(WorkspaceScopeKindTag, out var scopeKind))
+            {
+                return null;
+            }
+
+            if (!Enum.TryParse<WorkspaceScopeKind>(scopeKind, ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
+            {
+                throw new InvalidOperationException(
+                    $"The runtime tool context names an unsupported workspace scope kind '{scopeKind}'.");
+            }
+
+            return new WorkspaceScopeDescriptor(kind, tags.GetValueOrDefault(WorkspaceScopeKeyTag));
         }
 
         private static bool ContainsProcessOperation(

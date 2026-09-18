@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Abstractions;
@@ -1681,7 +1682,7 @@ public sealed partial class ProjectStructureAgentService(
         }
 
         ProjectStructureManagedAssetCreationPolicy.EnsureExplicitParent(request.ParentNodeKey);
-        var media = await ResolveAssetCreateMediaAsync(projectId, request, cancellationToken);
+        var media = await ResolveAssetCreateMediaAsync(projectId, request, agent.ActiveWorkspaceScope, cancellationToken);
 
         return await CreateNodeCoreAsync(
             projectId,
@@ -1948,6 +1949,7 @@ public sealed partial class ProjectStructureAgentService(
     private async Task<ProjectObjectMediaPayload> ResolveAssetCreateMediaAsync(
         Guid projectId,
         ProjectStructureAssetCreateInput request,
+        WorkspaceScopeDescriptor? activeWorkspaceScope,
         CancellationToken cancellationToken)
     {
         if (request.Media is not null)
@@ -1963,7 +1965,7 @@ public sealed partial class ProjectStructureAgentService(
                 return await ResolveExternalSourceMediaAsync(request, workspacePathSourceUri, cancellationToken);
             }
 
-            return await ResolveWorkspaceSourceMediaAsync(projectId, request, cancellationToken);
+            return await ResolveWorkspaceSourceMediaAsync(projectId, request, activeWorkspaceScope, cancellationToken);
         }
 
         if (!string.IsNullOrWhiteSpace(request.SourceUrl))
@@ -1981,9 +1983,13 @@ public sealed partial class ProjectStructureAgentService(
     private async Task<ProjectObjectMediaPayload> ResolveWorkspaceSourceMediaAsync(
         Guid projectId,
         ProjectStructureAssetCreateInput request,
+        WorkspaceScopeDescriptor? activeWorkspaceScope,
         CancellationToken cancellationToken)
     {
-        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(projectId, request.SourceWorkspacePath!);
+        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(
+            projectId,
+            request.SourceWorkspacePath!,
+            activeWorkspaceScope);
         var bytes = await ProjectStructureWorkspaceAssetReader.ReadAsync(resolution.FullPath, cancellationToken);
         var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
         var contentType = ProjectStructureAssetMediaTypePolicy.Resolve(request.SourceContentType, fileName);
@@ -2208,7 +2214,8 @@ public sealed partial class ProjectStructureAgentService(
             "SourceUrlNotAllowed",
             "External asset source URLs must point only to public http or https hosts, without embedded credentials or excessive redirects.",
             canRetryWithCorrectedInput: true,
-            diagnosticDetails: new { failureType = exception.GetType().Name });
+            diagnosticDetails: new { failureType = exception.GetType().Name },
+            effectState: AgentToolEffectState.NotCommitted);
     }
 
     private static string ResolveSourceAssetFileName(string? requestedFileName, Uri sourceUri)

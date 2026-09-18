@@ -373,6 +373,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.Equal("AssetParentRequired", exception.ErrorCode);
         Assert.True(exception.IsSafeToExpose);
         Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
         var after = await workbench.GetStructureAsync(projectId);
         Assert.Equal(before.Nodes.Count, after.Nodes.Count);
     }
@@ -438,6 +439,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.Equal("ManagedAssetCreationRequired", exception.ErrorCode);
         Assert.True(exception.IsSafeToExpose);
         Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
         var after = await workbench.GetStructureAsync(projectId);
         Assert.Equal(before.Nodes.Count, after.Nodes.Count);
     }

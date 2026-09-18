@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
@@ -24,6 +25,10 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
     internal const string RequestedAssetTitle = "Integrity architecture overview";
     internal const string UnrelatedAssetTitle = "Different committed asset";
     internal const string FollowUpPrompt = "Review the prior tool failure before answering.";
+    internal const string WorkspaceSourceAssetTitle = "Game screen proposal";
+    internal const string WorkspaceSourcePath = "artifacts/project-structure/screen-proposal.svg";
+    internal const string ScreenProposalSvg =
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 20\"><text x=\"2\" y=\"12\">Board &amp; preview</text></svg>";
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromMinutes(2);
     private static readonly JsonSerializerOptions ApiJsonOptions = CreateApiJsonOptions();
 
@@ -136,6 +141,128 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
         Assert.Equal(AgentToolEffectState.Committed, receipts[1].EffectState);
     }
 
+    [Fact]
+    public async Task Workspace_file_written_in_the_project_chat_registers_by_the_same_relative_path()
+    {
+        await using var fixture = await CreateFixtureAsync(IntegrityScenarioKind.WorkspaceWriteThenRegister);
+
+        var observation = await ExecuteContextualAsync(
+            fixture,
+            "Write the screen proposal SVG and add it under the selected node.");
+        var detail = await ReadRunAsync(fixture, observation.ExecutionRunId);
+        var receipts = AssetReceipts(detail);
+
+        AssertRunCompleted(detail, receipts);
+        Assert.True(File.Exists(ResolveProjectScopedSourcePath(fixture)));
+        await AssertRegisteredScreenProposalAsync(fixture);
+        var registered = Assert.Single(receipts);
+        Assert.Equal(AgentToolInvocationOutcome.Succeeded, registered.InvocationOutcome);
+        Assert.Equal(AgentToolEffectState.Committed, registered.EffectState);
+    }
+
+    [Fact]
+    public async Task Missing_workspace_source_stays_retryable_until_the_agent_writes_it()
+    {
+        await using var fixture = await CreateFixtureAsync(IntegrityScenarioKind.RegisterBeforeWorkspaceWrite);
+
+        var observation = await ExecuteContextualAsync(
+            fixture,
+            "Add the screen proposal SVG under the selected node.");
+        var detail = await ReadRunAsync(fixture, observation.ExecutionRunId);
+        var receipts = AssetReceipts(detail);
+
+        // The first registration names a file that does not exist yet. That rejection happens before anything is
+        // stored, so the non-idempotent tool must stay retryable instead of blocking the next provider turn as uncertain.
+        AssertRunCompleted(detail, receipts);
+        await AssertRegisteredScreenProposalAsync(fixture);
+        Assert.Collection(
+            receipts,
+            failed =>
+            {
+                Assert.Equal(AgentToolInvocationOutcome.Failed, failed.InvocationOutcome);
+                Assert.Equal(AgentToolEffectState.NotCommitted, failed.EffectState);
+                Assert.Equal("SourceWorkspaceFileNotFound", failed.FailureCode);
+                Assert.True(failed.CanRetryWithCorrectedInput);
+            },
+            succeeded =>
+            {
+                Assert.Equal(AgentToolInvocationOutcome.Succeeded, succeeded.InvocationOutcome);
+                Assert.Equal(AgentToolEffectState.Committed, succeeded.EffectState);
+            });
+    }
+
+    [Fact]
+    public async Task Snapshot_read_outside_its_coverage_stays_retryable_with_canonical_current()
+    {
+        await using var fixture = await CreateFixtureAsync(IntegrityScenarioKind.SnapshotReadRetry);
+
+        var observation = await ExecuteContextualAsync(
+            fixture,
+            "Read the project structure with metadata and links before planning.");
+        var detail = await ReadRunAsync(fixture, observation.ExecutionRunId);
+        var reads = detail.ToolReceipts
+            .Where(item => string.Equals(
+                item.ToolName,
+                ProjectStructureToolPolicy.ProjectStructureRead,
+                StringComparison.Ordinal))
+            .OrderBy(item => item.StartedAtUtc)
+            .ToArray();
+
+        // The default source in a project-structure chat is the held surface snapshot, which cannot answer a
+        // metadata read. The model must see that typed guidance and retry with CanonicalCurrent instead of the
+        // runtime ending the run on an opaque read failure.
+        AssertRunCompleted(detail, reads);
+        Assert.Collection(
+            reads,
+            failed =>
+            {
+                Assert.Equal(AgentToolInvocationOutcome.Failed, failed.InvocationOutcome);
+                Assert.Equal(AgentToolEffectState.None, failed.EffectState);
+                Assert.StartsWith("ProjectStructureInvocationSnapshot", failed.FailureCode, StringComparison.Ordinal);
+                Assert.True(failed.CanRetryWithCorrectedInput);
+            },
+            succeeded => Assert.Equal(AgentToolInvocationOutcome.Succeeded, succeeded.InvocationOutcome));
+    }
+
+    private static void AssertRunCompleted(ExecutionRunDetail detail, IReadOnlyList<ToolExecutionReceiptRecord> receipts)
+    {
+        Assert.True(
+            detail.Run.State == ExecutionState.Completed && detail.Run.Outcome == RunOutcome.Succeeded,
+            $"Run {detail.Run.State}/{detail.Run.Outcome}: {detail.Run.ResultSummary} Receipts: " +
+            string.Join("; ", receipts.Select(receipt =>
+                $"{receipt.InvocationOutcome}/{receipt.EffectState}/{receipt.FailureCode}/{receipt.FailureMessage}")));
+    }
+
+    private static async Task AssertRegisteredScreenProposalAsync(IntegrityFixture fixture)
+    {
+        var structure = await ReadStructureAsync(fixture);
+        var created = Assert.Single(structure.Nodes, node => node.Title == WorkspaceSourceAssetTitle);
+        var content = await ReadAssetContentAsync(fixture, created.Id);
+
+        Assert.Equal(fixture.PrimaryParentNodeId, created.ParentId);
+        Assert.Equal(ProjectObjectType.ImageAsset, created.ObjectType);
+        Assert.Equal(ScreenProposalSvg, Encoding.UTF8.GetString(Convert.FromBase64String(content.Base64Data)));
+    }
+
+    private static string ResolveProjectScopedSourcePath(IntegrityFixture fixture)
+    {
+        var workspaceRoot = fixture.ServiceScope.ServiceProvider
+            .GetRequiredService<IWorkspacePathResolver>()
+            .ResolveWorkspaceRoot();
+        var projectScope = WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"));
+        return Path.Combine(projectScope.ResolveArtifactRoot(workspaceRoot), "project-structure", "screen-proposal.svg");
+    }
+
+    private static async Task<ProjectStructureAssetContentDescriptor> ReadAssetContentAsync(
+        IntegrityFixture fixture,
+        string nodeId)
+    {
+        await using var scope = fixture.Host.App.Services.CreateAsyncScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProjectStructureAgentService>()
+            .GetAssetContentAsync(fixture.ProjectId, nodeId);
+    }
+
     private static ToolExecutionReceiptRecord[] AssetReceipts(ExecutionRunDetail detail)
     {
         return detail.ToolReceipts
@@ -180,7 +307,12 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
                         primaryParentNodeId,
                         ObjectSubtype: "architecture"));
             var workspaceService = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-            var agentId = await CreateAgentAsync(workspaceService, projectId);
+            var agentId = await CreateAgentAsync(
+                workspaceService,
+                projectId,
+                canWriteWorkspaceFiles: scenario is
+                    IntegrityScenarioKind.WorkspaceWriteThenRegister or
+                    IntegrityScenarioKind.RegisterBeforeWorkspaceWrite);
             var session = await workspaceService.GetOrCreateChatSessionAsync(agentId);
             var chatClient = host.App.Services.GetRequiredService<IntegrityScenarioChatClient>();
             chatClient.Configure(scenario, projectId, primaryParentNodeId, secondaryParent.Id);
@@ -235,7 +367,8 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
 
     private static async Task<Guid> CreateAgentAsync(
         IAgentFrameworkWorkspaceService workspaceService,
-        Guid projectId)
+        Guid projectId,
+        bool canWriteWorkspaceFiles)
     {
         var provider = (await workspaceService.ListProvidersAsync())
             .First(item => item.IsEnabled && item.SupportsTools && item.Purpose == ProviderProfilePurpose.Chat);
@@ -261,6 +394,15 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
             CanWriteNonTaskStructure = true,
             AllowedProjectIds = [projectId]
         };
+        if (canWriteWorkspaceFiles)
+        {
+            editor.WorkspaceToolAccess = new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            };
+        }
+
         return await workspaceService.SaveAgentAsync(editor);
     }
 
@@ -380,7 +522,10 @@ internal enum IntegrityScenarioKind
     MalformedThenClaim,
     CorrectedSameOperation,
     NextTurnEvidence,
-    UnrelatedSuccess
+    UnrelatedSuccess,
+    WorkspaceWriteThenRegister,
+    RegisterBeforeWorkspaceWrite,
+    SnapshotReadRetry
 }
 
 internal sealed class IntegrityScenarioMafProviderAgentFactory(
@@ -401,6 +546,11 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
 {
     private const string MalformedCallId = "asset-create-malformed";
     private const string CorrectedCallId = "asset-create-corrected";
+    private const string SnapshotReadCallId = "structure-read-default-source";
+    private const string CanonicalReadCallId = "structure-read-canonical-current";
+    private const string WorkspaceWriteCallId = "workspace-write-source";
+    private const string EarlySourceCallId = "asset-create-before-write";
+    private const string WrittenSourceCallId = "asset-create-after-write";
     private static readonly JsonSerializerOptions ArgumentSerializerOptions = CreateArgumentSerializerOptions();
     private readonly Lock sync = new();
     private Scenario? scenario;
@@ -459,8 +609,32 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
                 return Task.FromResult(CreateCompletionResponse("Prior canonical failure reviewed."));
             }
 
+            if (configured.Kind is IntegrityScenarioKind.WorkspaceWriteThenRegister or
+                IntegrityScenarioKind.RegisterBeforeWorkspaceWrite)
+            {
+                EnsureToolIsAvailable(options, ToolContractCatalog.WorkspaceWriteFile);
+            }
+
             return Task.FromResult(responseIndex++ switch
             {
+                0 when configured.Kind is IntegrityScenarioKind.WorkspaceWriteThenRegister =>
+                    CreateWorkspaceWriteResponse(),
+                1 when configured.Kind is IntegrityScenarioKind.WorkspaceWriteThenRegister =>
+                    CreateWorkspaceSourceCallResponse(configured, WrittenSourceCallId),
+                0 when configured.Kind is IntegrityScenarioKind.RegisterBeforeWorkspaceWrite =>
+                    CreateWorkspaceSourceCallResponse(configured, EarlySourceCallId),
+                1 when configured.Kind is IntegrityScenarioKind.RegisterBeforeWorkspaceWrite =>
+                    CreateWorkspaceWriteResponse(),
+                2 when configured.Kind is IntegrityScenarioKind.RegisterBeforeWorkspaceWrite =>
+                    CreateWorkspaceSourceCallResponse(configured, WrittenSourceCallId),
+                3 when configured.Kind is IntegrityScenarioKind.RegisterBeforeWorkspaceWrite =>
+                    CreateCompletionResponse("The screen proposal is registered under the selected node."),
+                0 when configured.Kind is IntegrityScenarioKind.SnapshotReadRetry =>
+                    CreateStructureReadResponse(configured, SnapshotReadCallId, ProjectStructureReadSource.ContextDefault),
+                1 when configured.Kind is IntegrityScenarioKind.SnapshotReadRetry =>
+                    CreateStructureReadResponse(configured, CanonicalReadCallId, ProjectStructureReadSource.CanonicalCurrent),
+                2 when configured.Kind is IntegrityScenarioKind.SnapshotReadRetry =>
+                    CreateCompletionResponse("The canonical project structure was read."),
                 0 => CreateMalformedCallResponse(configured),
                 1 when configured.Kind is IntegrityScenarioKind.CorrectedSameOperation =>
                     CreateCorrectedCallResponse(
@@ -550,9 +724,66 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
             });
     }
 
+    private static ChatResponse CreateStructureReadResponse(
+        Scenario configured,
+        string callId,
+        ProjectStructureReadSource source)
+    {
+        return CreateFunctionCallResponse(
+            callId,
+            new Dictionary<string, object?>
+            {
+                ["projectId"] = configured.ProjectId,
+                ["request"] = JsonSerializer.SerializeToElement(
+                    new ProjectStructureReadRequest(
+                        IncludeLinks: true,
+                        IncludeMetadata: true,
+                        Source: source),
+                    ArgumentSerializerOptions)
+            },
+            ProjectStructureToolPolicy.ProjectStructureRead);
+    }
+
+    private static ChatResponse CreateWorkspaceWriteResponse()
+    {
+        return CreateFunctionCallResponse(
+            WorkspaceWriteCallId,
+            new Dictionary<string, object?>
+            {
+                ["path"] = ProjectStructureAgentToolIntegrityEndToEndTests.WorkspaceSourcePath,
+                ["content"] = ProjectStructureAgentToolIntegrityEndToEndTests.ScreenProposalSvg,
+                ["overwrite"] = true
+            },
+            ToolContractCatalog.WorkspaceWriteFile);
+    }
+
+    private static ChatResponse CreateWorkspaceSourceCallResponse(Scenario configured, string callId)
+    {
+        return CreateFunctionCallResponse(
+            callId,
+            new Dictionary<string, object?>
+            {
+                ["projectId"] = configured.ProjectId,
+                ["request"] = JsonSerializer.SerializeToElement(
+                    new ProjectStructureAgentAssetCreateInput(
+                        ProjectObjectType.ImageAsset,
+                        ProjectStructureAgentToolIntegrityEndToEndTests.WorkspaceSourceAssetTitle,
+                        "UI proposal",
+                        "Registered from the relative path the agent used with its workspace tools.",
+                        Media: null,
+                        ParentNodeKey: configured.PrimaryParentNodeId,
+                        ObjectSubtype: "svg",
+                        SourceWorkspacePath: ProjectStructureAgentToolIntegrityEndToEndTests.WorkspaceSourcePath,
+                        SourceFileName: "screen-proposal.svg",
+                        SourceContentType: "image/svg+xml"),
+                    ArgumentSerializerOptions)
+            });
+    }
+
     private static ChatResponse CreateFunctionCallResponse(
         string callId,
-        IDictionary<string, object?> arguments)
+        IDictionary<string, object?> arguments,
+        string toolName = ProjectStructureToolPolicy.ProjectStructureAssetCreate)
     {
         return new ChatResponse(
             new ChatMessage(
@@ -560,7 +791,7 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
                 [
                     new FunctionCallContent(
                         callId,
-                        ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+                        toolName,
                         arguments)
                 ]));
     }
@@ -587,13 +818,18 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
 
     private static void EnsureAssetToolIsAvailable(ChatOptions? options)
     {
+        EnsureToolIsAvailable(options, ProjectStructureToolPolicy.ProjectStructureAssetCreate);
+    }
+
+    private static void EnsureToolIsAvailable(ChatOptions? options, string toolName)
+    {
         if (options?.Tools?.Any(tool => string.Equals(
                 tool.Name,
-                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+                toolName,
                 StringComparison.Ordinal)) != true)
         {
             throw new InvalidOperationException(
-                "Real MAF did not attach the project structure asset-create tool.");
+                $"Real MAF did not attach the '{toolName}' tool.");
         }
     }
 

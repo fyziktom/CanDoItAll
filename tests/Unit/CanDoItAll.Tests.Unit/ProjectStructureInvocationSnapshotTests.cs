@@ -365,6 +365,7 @@ public sealed class ProjectStructureInvocationSnapshotTests
         Assert.Equal(
             "ProjectStructureInvocationSnapshotContextIneligible",
             exception.ErrorCode);
+        AssertCorrectableNoEffectReadFailure(exception);
     }
 
     [Fact]
@@ -428,6 +429,7 @@ public sealed class ProjectStructureInvocationSnapshotTests
         Assert.Equal(
             "ProjectStructureInvocationSnapshotCoverageInsufficient",
             exception.ErrorCode);
+        AssertCorrectableNoEffectReadFailure(exception);
         Assert.Equal(0, canonicalReadCount);
         return;
 
@@ -506,6 +508,7 @@ public sealed class ProjectStructureInvocationSnapshotTests
                 CancellationToken.None));
 
         Assert.Equal(expectedErrorCode, exception.ErrorCode);
+        AssertCorrectableNoEffectReadFailure(exception);
         Assert.Equal(0, canonicalReadCount);
         return;
 
@@ -516,6 +519,16 @@ public sealed class ProjectStructureInvocationSnapshotTests
             Interlocked.Increment(ref canonicalReadCount);
             return Task.FromResult(CreateCanonicalResponse(fixture.ProjectId));
         }
+    }
+
+    // The model must see the guidance and retry the read, usually with CanonicalCurrent; an opaque failure would leave
+    // the admitted read unresolved and end the run on the next provider turn.
+    private static void AssertCorrectableNoEffectReadFailure(ProjectStructureAgentException exception)
+    {
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.None, exception.EffectState);
+        Assert.Contains("CanonicalCurrent", exception.SafeMessage, StringComparison.Ordinal);
     }
 
     private static ReadFixture CreateReadFixture()

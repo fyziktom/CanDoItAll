@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectStructureAssetMediaTypePolicy
@@ -81,6 +83,7 @@ internal static class ProjectStructureWorkspaceAssetReader
             413,
             "SourceWorkspaceFileTooLarge",
             $"Workspace asset sources are limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 }

@@ -1280,6 +1280,35 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_previews_a_published_workflow_as_an_unsaved_draft()
+    {
+        var runner = new CapturingWorkflowTestRunner();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IWorkflowTestRunner>();
+            services.AddSingleton<IWorkflowTestRunner>(runner);
+        });
+        var published = CreatePreviewProgressDefinition() with { Status = WorkflowLifecycleStatus.Active };
+
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, published)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+        cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").Click());
+
+        // The launch service admits only Draft definitions as draft previews, so an Active canvas must be sent as an
+        // unsaved draft of its current content rather than failing every preview with a generic error.
+        cut.WaitForAssertion(() => Assert.NotNull(runner.LastRequest));
+        var draft = Assert.IsType<WorkflowDefinition>(runner.LastRequest!.DraftDefinition);
+        Assert.Equal(WorkflowLifecycleStatus.Draft, draft.Status);
+        Assert.Equal(published.Id, draft.Id);
+        Assert.NotEqual(published.VersionId, draft.VersionId);
+        Assert.Null(runner.LastRequest.WorkflowId);
+        Assert.Null(runner.LastRequest.VersionId);
+    }
+
+    [Fact]
     public async Task Workflow_canvas_marks_planned_runtime_backends_unavailable()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

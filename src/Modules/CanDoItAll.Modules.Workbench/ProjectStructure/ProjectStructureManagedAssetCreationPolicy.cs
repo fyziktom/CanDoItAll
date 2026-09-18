@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -19,7 +20,8 @@ internal static class ProjectStructureManagedAssetCreationPolicy
             400,
             AssetParentRequiredErrorCode,
             "Managed asset creation requires an explicit parentNodeKey.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 
     internal static void EnsureGenericNodeCreateAllowed(
@@ -39,6 +41,7 @@ internal static class ProjectStructureManagedAssetCreationPolicy
             400,
             ManagedAssetCreationRequiredErrorCode,
             "File and Mermaid assets must be created with project_structure_asset_create so their content is stored as a managed asset.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 }

@@ -66,6 +66,7 @@ internal sealed class ProjectStructureAccessState {
 
     public AgentRuntimeToolProviderContext? ProviderContext { get; init; }
     public ProjectWriteAdmission? SourceProject { get; init; }
+    public WorkspaceScopeDescriptor? ActiveWorkspaceScope { get; init; }
 
     public bool CanRead { get; }
 

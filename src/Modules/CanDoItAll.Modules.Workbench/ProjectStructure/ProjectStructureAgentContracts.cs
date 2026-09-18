@@ -46,6 +46,9 @@ public sealed record ProjectStructureAgentContext(
 
     [JsonIgnore]
     public ProjectProcessAssetInvocation? ProcessAssetInvocation { get; init; }
+
+    [JsonIgnore]
+    public WorkspaceScopeDescriptor? ActiveWorkspaceScope { get; init; }
 }
 
 [JsonConverter(typeof(FlexibleProjectStructureLeaseScopeKindJsonConverter))]
