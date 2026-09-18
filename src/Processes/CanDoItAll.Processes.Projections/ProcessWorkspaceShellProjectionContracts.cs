@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Processes.Projections;
 
@@ -881,7 +882,9 @@ public sealed record ProcessWorkspaceShellRequest(
     ProcessTemplateCatalogQueryProjection TemplateCatalogQuery,
     bool ForceRefresh,
     ProcessRuntimeWorkspaceQueryProjection? RuntimeQuery = null,
-    ProcessDefinitionWorkspaceLoadOptions? DefinitionLoadOptions = null);
+    ProcessDefinitionWorkspaceLoadOptions? DefinitionLoadOptions = null) {
+    public ProcessProjectionProjectBinding? ProjectBinding { get; init; }
+}
 
 public sealed record ProcessDefinitionWorkspaceLoadOptions
 {
@@ -1312,6 +1315,9 @@ public sealed record ProcessWorkspaceShellProjection(
     IReadOnlyList<ProcessWorkspaceCommandProjection> Commands,
     ProcessWorkspaceAgentEntryProjection AgentEntry)
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessProjectionProjectBinding? ProjectBinding { get; init; }
+
     public ProcessRuntimeWorkspaceProjection Runtime { get; init; } = ProcessRuntimeWorkspaceProjection.Empty;
 
     public ProcessWorkspaceProvenanceVector Provenance { get; init; } =

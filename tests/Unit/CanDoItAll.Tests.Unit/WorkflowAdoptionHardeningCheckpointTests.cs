@@ -7,6 +7,7 @@ public sealed class WorkflowAdoptionHardeningCheckpointTests
         @"src\App\CanDoItAll.Web\Api\WorkflowsApi.cs",
         @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor",
         @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowEventPresentationPolicy.cs",
         @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor",
         @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs",
         @"src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj",
@@ -37,8 +38,7 @@ public sealed class WorkflowAdoptionHardeningCheckpointTests
     }
 
     [Fact]
-    public void WorkflowUiAndWorkbenchAdoptionUseTypedFailureDisplayBoundary()
-    {
+    public void WorkflowUiAndWorkbenchAdoptionUseTypedFailureDisplayBoundary() {
         var root = FindRepositoryRoot();
         var formatterSource = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
@@ -46,6 +46,9 @@ public sealed class WorkflowAdoptionHardeningCheckpointTests
         var workflowsPageCode = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs"));
+        var presentationPolicy = File.ReadAllText(TestRepositoryPath.Resolve(
+            root,
+            "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowEventPresentationPolicy.cs"));
         var workflowNodeService = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs"));
@@ -57,8 +60,9 @@ public sealed class WorkflowAdoptionHardeningCheckpointTests
         Assert.Contains("TryResolveDiagnosticTechnicalDetail", formatterSource, StringComparison.Ordinal);
         Assert.Contains("WorkflowEventPayloadEnvelope", formatterSource, StringComparison.Ordinal);
         Assert.Contains("ResolveEventDisplayMessage(WorkflowEventRecord workflowEvent)", workflowsPageCode, StringComparison.Ordinal);
-        Assert.Contains("WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent)", workflowsPageCode, StringComparison.Ordinal);
-        Assert.Contains("WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail", workflowsPageCode, StringComparison.Ordinal);
+        Assert.Contains("WorkflowEventPresentationPolicy.Map(workflowEvent).Summary", workflowsPageCode, StringComparison.Ordinal);
+        Assert.Contains("WorkflowFailureDisplayFormatter.TryResolveDiagnosticUserMessage", presentationPolicy, StringComparison.Ordinal);
+        Assert.Contains("WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail", presentationPolicy, StringComparison.Ordinal);
         Assert.Contains("WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent)", workflowNodeService, StringComparison.Ordinal);
         Assert.Contains(".Select(WorkflowFailureDisplayFormatter.ToUserMessage)", workflowNodeService, StringComparison.Ordinal);
         Assert.Contains("string PayloadJson = \"\"", workbenchContracts, StringComparison.Ordinal);

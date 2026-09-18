@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -21,7 +20,7 @@ internal static class MemoryWorkerIntegrityTestData
     public static ServiceProvider CreateServiceProvider(Action<IServiceCollection>? configure = null)
     {
         var services = new ServiceCollection();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-worker-integrity-{Guid.NewGuid():N}"));
         services.AddGenericMemoryModule(options => options.WorkerOptions = Options);
         configure?.Invoke(services);

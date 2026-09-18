@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
@@ -90,11 +91,9 @@ public sealed class StorageCatalogServiceTests
         string workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog-protected-default");
         try
         {
-            DbContextOptions<AppDbContext> options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"storage-catalog-protected-default-{Guid.NewGuid():N}")
-                .Options;
+            var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, $"storage-catalog-protected-default-{Guid.NewGuid():N}");
             Guid legacyDefaultId = Guid.NewGuid();
-            await using (var seed = new AppDbContext(options))
+            await using (var seed = new StorageDbContext(options))
             {
                 seed.Add(new StorageCatalogRecord
                 {
@@ -111,8 +110,8 @@ public sealed class StorageCatalogServiceTests
                 await seed.SaveChangesAsync();
             }
 
-            var sut = new StorageCatalogService(
-                new TestDbContextFactory(options),
+            var sut = CreateStorageService(
+                new TestDbContextFactory(options, coordinator),
                 new TestWorkspacePathResolver(workspaceRoot),
                 new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
 
@@ -120,7 +119,7 @@ public sealed class StorageCatalogServiceTests
                 sut.EnsureBootstrapFileSystemStorageAsync());
 
             Assert.Contains("left unchanged", exception.Message, StringComparison.OrdinalIgnoreCase);
-            await using var assertContext = new AppDbContext(options);
+            await using var assertContext = new StorageDbContext(options);
             StorageCatalogRecord preserved = Assert.Single(
                 await assertContext.Set<StorageCatalogRecord>().AsNoTracking().ToListAsync());
             Assert.Equal(legacyDefaultId, preserved.Id);
@@ -142,19 +141,17 @@ public sealed class StorageCatalogServiceTests
         string workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog-ambiguous-defaults");
         try
         {
-            DbContextOptions<AppDbContext> options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"storage-catalog-ambiguous-defaults-{Guid.NewGuid():N}")
-                .Options;
+            var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, $"storage-catalog-ambiguous-defaults-{Guid.NewGuid():N}");
             StorageCatalogRecord first = CreateBoundBootstrapStorage(workspaceRoot, "First default");
             StorageCatalogRecord second = CreateBoundBootstrapStorage(workspaceRoot, "Second default");
-            await using (var seed = new AppDbContext(options))
+            await using (var seed = new StorageDbContext(options))
             {
                 seed.AddRange(first, second);
                 await seed.SaveChangesAsync();
             }
 
-            var sut = new StorageCatalogService(
-                new TestDbContextFactory(options),
+            var sut = CreateStorageService(
+                new TestDbContextFactory(options, coordinator),
                 new TestWorkspacePathResolver(workspaceRoot),
                 new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
 
@@ -162,7 +159,7 @@ public sealed class StorageCatalogServiceTests
                 sut.EnsureBootstrapFileSystemStorageAsync());
 
             Assert.Contains("multiple", exception.Message, StringComparison.OrdinalIgnoreCase);
-            await using var assertContext = new AppDbContext(options);
+            await using var assertContext = new StorageDbContext(options);
             List<StorageCatalogRecord> preserved = await assertContext.Set<StorageCatalogRecord>()
                 .AsNoTracking()
                 .OrderBy(item => item.Name)
@@ -182,11 +179,9 @@ public sealed class StorageCatalogServiceTests
         string workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog-bootstrap-rebind");
         try
         {
-            DbContextOptions<AppDbContext> options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"storage-catalog-bootstrap-rebind-{Guid.NewGuid():N}")
-                .Options;
+            var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, $"storage-catalog-bootstrap-rebind-{Guid.NewGuid():N}");
             Guid storageId = Guid.NewGuid();
-            await using (var seed = new AppDbContext(options))
+            await using (var seed = new StorageDbContext(options))
             {
                 seed.Add(new StorageCatalogRecord
                 {
@@ -200,8 +195,8 @@ public sealed class StorageCatalogServiceTests
                 await seed.SaveChangesAsync();
             }
 
-            var sut = new StorageCatalogService(
-                new TestDbContextFactory(options),
+            var sut = CreateStorageService(
+                new TestDbContextFactory(options, coordinator),
                 new TestWorkspacePathResolver(workspaceRoot),
                 new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
 
@@ -209,8 +204,8 @@ public sealed class StorageCatalogServiceTests
                 sut.EnsureBootstrapFileSystemStorageAsync());
             Assert.Contains("not authoritative", unresolved.Message, StringComparison.OrdinalIgnoreCase);
 
-            StorageCatalogRecord rebound = await sut.RebindRootAsync(storageId, workspaceRoot);
-            StorageCatalogRecord bootstrap = await sut.EnsureBootstrapFileSystemStorageAsync();
+            StorageCatalogSnapshot rebound = await sut.RebindRootAsync(storageId, workspaceRoot);
+            StorageCatalogSnapshot bootstrap = await sut.EnsureBootstrapFileSystemStorageAsync();
 
             Assert.Equal(HostBoundPathState.Active, rebound.RootPathState);
             Assert.Equal(storageId, bootstrap.Id);
@@ -232,26 +227,26 @@ public sealed class StorageCatalogServiceTests
 
         try
         {
-            var options = database.CreateAppDbContextOptions();
-            await using (var dbContext = new AppDbContext(options))
-            {
+            var (options, coordinator) = CreateOptions(DatabaseProviderKind.PostgreSql,
+                database.ConnectionString);
+            await using (var dbContext = new AppDbContext(database.CreateAppDbContextOptions())) {
                 await dbContext.Database.EnsureCreatedAsync();
             }
 
-            var factory = new TestDbContextFactory(options);
+            var factory = new TestDbContextFactory(options, coordinator);
             var resolver = new TestWorkspacePathResolver(workspaceRoot);
             var clock = new TestClock(new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero));
             var tasks = Enumerable.Range(0, 12)
                 .Select(_ => Task.Run(async () =>
                 {
-                    var service = new StorageCatalogService(factory, resolver, clock);
+                    var service = CreateStorageService(factory, resolver, clock);
                     return await service.EnsureBootstrapFileSystemStorageAsync();
                 }))
                 .ToArray();
 
             var results = await Task.WhenAll(tasks);
 
-            await using var assertContext = new AppDbContext(options);
+            await using var assertContext = new StorageDbContext(options);
             var storages = await assertContext.Set<StorageCatalogRecord>().ToListAsync();
             var rules = await assertContext.Set<StorageRoutingRule>().ToListAsync();
             var bootstrapStorage = Assert.Single(storages, item => item.IsSystemDefault);
@@ -273,23 +268,14 @@ public sealed class StorageCatalogServiceTests
         {
             string databaseName = $"storage-catalog-{Guid.NewGuid():N}";
             StorageCatalogService sut = CreateSut(databaseName, workspaceRoot);
-            var record = new StorageCatalogRecord
-            {
-                Name = "Invalid cache",
-                ProviderKind = StorageProviderKind.Ftp,
-                ConfigJson = """
-                    {
-                      "browseCache": {
-                        "enabled": true,
-                        "mode": "disabled"
-                      }
-                    }
-                    """
+            var record = new StorageCatalogSaveRequest {
+                Name = "Invalid cache", ProviderKind = StorageProviderKind.Ftp,
+                Configuration = new() { BrowseCache = new() { Enabled = true, Mode = StorageBrowseCacheMode.Disabled } }
             };
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.SaveAsync(record));
-            IReadOnlyList<StorageCatalogRecord> persisted = await sut.ListAsync();
+            IReadOnlyList<StorageCatalogSnapshot> persisted = await sut.ListAsync();
 
             Assert.Equal(StorageBrowseErrorCode.InvalidConfiguration, exception.Error.Code);
             Assert.DoesNotContain(persisted, item => item.Id == record.Id);
@@ -308,11 +294,9 @@ public sealed class StorageCatalogServiceTests
         try
         {
             string databaseName = $"storage-catalog-migration-{Guid.NewGuid():N}";
-            DbContextOptions<AppDbContext> options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase(databaseName)
-                .Options;
+            var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, databaseName);
             Guid storageId = Guid.NewGuid();
-            await using (var seed = new AppDbContext(options))
+            await using (var seed = new StorageDbContext(options))
             {
                 seed.Add(new StorageCatalogRecord
                 {
@@ -326,15 +310,15 @@ public sealed class StorageCatalogServiceTests
                 await seed.SaveChangesAsync();
             }
 
-            var sut = new StorageCatalogService(
-                new TestDbContextFactory(options),
+            var sut = CreateStorageService(
+                new TestDbContextFactory(options, coordinator),
                 new TestWorkspacePathResolver(workspaceRoot),
                 new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
 
             StorageCatalogPathMigrationReport dryRun = await sut.DryRunAsync();
             StorageCatalogPathMigrationReport committed = await sut.ExecuteAsync();
             string reportJson = System.Text.Json.JsonSerializer.Serialize(committed);
-            await using var committedContext = new AppDbContext(options);
+            await using var committedContext = new StorageDbContext(options);
             StorageCatalogRecord migrated = await committedContext.Set<StorageCatalogRecord>()
                 .SingleAsync(item => item.Id == storageId);
             string migrationRoot = Path.Combine(
@@ -363,7 +347,7 @@ public sealed class StorageCatalogServiceTests
 
             File.Delete(Path.Combine(migrationRoot, "commit.json"));
             StorageCatalogPathMigrationReport rolledBack = await sut.RollbackAsync();
-            await using var rolledBackContext = new AppDbContext(options);
+            await using var rolledBackContext = new StorageDbContext(options);
             StorageCatalogRecord restored = await rolledBackContext.Set<StorageCatalogRecord>()
                 .SingleAsync(item => item.Id == storageId);
 
@@ -386,10 +370,8 @@ public sealed class StorageCatalogServiceTests
         string legacyRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog-checksum-legacy");
         try
         {
-            DbContextOptions<AppDbContext> options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"storage-catalog-checksum-{Guid.NewGuid():N}")
-                .Options;
-            await using (var seed = new AppDbContext(options))
+            var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, $"storage-catalog-checksum-{Guid.NewGuid():N}");
+            await using (var seed = new StorageDbContext(options))
             {
                 seed.Add(new StorageCatalogRecord
                 {
@@ -401,8 +383,8 @@ public sealed class StorageCatalogServiceTests
                 await seed.SaveChangesAsync();
             }
 
-            var sut = new StorageCatalogService(
-                new TestDbContextFactory(options),
+            var sut = CreateStorageService(
+                new TestDbContextFactory(options, coordinator),
                 new TestWorkspacePathResolver(workspaceRoot),
                 new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
             await sut.ExecuteAsync();
@@ -434,14 +416,12 @@ public sealed class StorageCatalogServiceTests
         string workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog-foreign-workspace");
         try
         {
-            DbContextOptions<AppDbContext> options = AppDbContextTestOptionsBuilder.Create()
-                .UseInMemoryDatabase($"storage-catalog-foreign-{Guid.NewGuid():N}")
-                .Options;
+            var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, $"storage-catalog-foreign-{Guid.NewGuid():N}");
             string foreignRoot = OperatingSystem.IsWindows()
                 ? "/foreign/storage/root"
                 : @"C:\foreign\storage\root";
             Guid storageId = Guid.NewGuid();
-            await using (var seed = new AppDbContext(options))
+            await using (var seed = new StorageDbContext(options))
             {
                 seed.Add(new StorageCatalogRecord
                 {
@@ -454,12 +434,12 @@ public sealed class StorageCatalogServiceTests
                 await seed.SaveChangesAsync();
             }
 
-            var sut = new StorageCatalogService(
-                new TestDbContextFactory(options),
+            var sut = CreateStorageService(
+                new TestDbContextFactory(options, coordinator),
                 new TestWorkspacePathResolver(workspaceRoot),
                 new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
             await sut.ExecuteAsync();
-            await using var assertContext = new AppDbContext(options);
+            await using var assertContext = new StorageDbContext(options);
             StorageCatalogRecord migrated = await assertContext.Set<StorageCatalogRecord>()
                 .SingleAsync(item => item.Id == storageId);
 
@@ -484,12 +464,10 @@ public sealed class StorageCatalogServiceTests
 
     private static StorageCatalogService CreateSut(string databaseName, string workspaceRoot)
     {
-        var options = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase(databaseName)
-            .Options;
+        var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, databaseName);
 
-        return new StorageCatalogService(
-            new TestDbContextFactory(options),
+        return CreateStorageService(
+            new TestDbContextFactory(options, coordinator),
             new TestWorkspacePathResolver(workspaceRoot),
             new TestClock(new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero)));
     }
@@ -508,13 +486,28 @@ public sealed class StorageCatalogServiceTests
         return storage;
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
-            => new(options);
+    private static (DbContextOptions<StorageDbContext> Options, CoordinatedDatabaseTransaction Coordinator) CreateOptions(
+        DatabaseProviderKind provider, string connectionString) {
+        var profile = new ResolvedDatabaseProfile(new DatabaseProfileRecord { ProviderKind = provider },
+            DatabaseProfileResolutionSource.ExplicitOverride, connectionString);
+        var options = new DbContextOptionsBuilder<StorageDbContext>();
+        AppDbContextOptionsConfigurator.Configure(options, profile);
+        return (options.Options, CoordinatedDatabaseTransaction.ForProfile(profile));
+    }
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new AppDbContext(options));
+    private static StorageCatalogService CreateStorageService(
+        TestDbContextFactory factory, IWorkspacePathResolver paths, IClock clock) =>
+        new(factory, paths, clock, factory.Options, factory.Coordinator);
+
+    private sealed class TestDbContextFactory(
+        DbContextOptions<StorageDbContext> options, CoordinatedDatabaseTransaction coordinator) : IDbContextFactory<StorageDbContext> {
+        public DbContextOptions<StorageDbContext> Options { get; } = options;
+        public CoordinatedDatabaseTransaction Coordinator { get; } = coordinator;
+
+        public StorageDbContext CreateDbContext() => new(Options);
+
+        public Task<StorageDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new StorageDbContext(Options));
     }
 
     private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver

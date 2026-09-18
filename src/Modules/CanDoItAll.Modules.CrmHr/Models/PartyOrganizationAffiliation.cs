@@ -3,14 +3,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.CrmHr;
 
-public enum PartyOrganizationAffiliationKind
-{
-    Employee,
-    Contractor,
-    Freelancer,
-    ExternalContact
-}
-
 public sealed class PartyOrganizationAffiliation
 {
     public Guid Id { get; set; } = Guid.NewGuid();

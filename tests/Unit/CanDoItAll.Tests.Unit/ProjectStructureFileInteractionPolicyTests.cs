@@ -60,26 +60,26 @@ public sealed class ProjectStructureFileInteractionPolicyTests
 
         Assert.Equal(
             FileToolsKnownFileIntent.Edit,
-            ProjectStructureFileInteractionPolicy.ResolveIntent("notes.md", "text/plain", writable, revisioned));
+            ProjectStructureFileInteractionPolicy.ResolveIntent("notes.md", "text/plain", writable.ToSnapshot(), revisioned));
         Assert.Equal(
             FileToolsKnownFileIntent.ReadOnly,
-            ProjectStructureFileInteractionPolicy.ResolveIntent("notes.md", "text/plain", readOnly, revisioned));
+            ProjectStructureFileInteractionPolicy.ResolveIntent("notes.md", "text/plain", readOnly.ToSnapshot(), revisioned));
         Assert.Equal(
             FileToolsKnownFileIntent.ReadOnly,
-            ProjectStructureFileInteractionPolicy.ResolveIntent("notes.md", "text/plain", writable, readOnlyDriver));
+            ProjectStructureFileInteractionPolicy.ResolveIntent("notes.md", "text/plain", writable.ToSnapshot(), readOnlyDriver));
         Assert.Equal(
             FileToolsKnownFileIntent.ReadOnly,
             ProjectStructureFileInteractionPolicy.ResolveIntent(
                 "notes.md",
                 "text/plain",
-                writable,
+                writable.ToSnapshot(),
                 new NonRevisionedPolicyDriver()));
         Assert.Equal(
             FileToolsKnownFileIntent.ReadOnly,
-            ProjectStructureFileInteractionPolicy.ResolveIntent("hostile.svg", "image/svg+xml", writable, revisioned));
+            ProjectStructureFileInteractionPolicy.ResolveIntent("hostile.svg", "image/svg+xml", writable.ToSnapshot(), revisioned));
         Assert.Equal(
             FileToolsKnownFileIntent.ReadOnly,
-            ProjectStructureFileInteractionPolicy.ResolveIntent("report.pdf", "application/pdf", writable, revisioned));
+            ProjectStructureFileInteractionPolicy.ResolveIntent("report.pdf", "application/pdf", writable.ToSnapshot(), revisioned));
     }
 
     [Theory]
@@ -156,37 +156,37 @@ public sealed class ProjectStructureFileInteractionPolicyTests
         public StorageCapability SupportedCapabilities => capabilities;
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageContentRevision?> GetRevisionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageRevisionedWriteResult> ReplaceAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageRevisionedWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -200,25 +200,25 @@ public sealed class ProjectStructureFileInteractionPolicyTests
             StorageCapability.Read | StorageCapability.Write | StorageCapability.MutableUpdate;
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

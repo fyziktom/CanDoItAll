@@ -169,6 +169,7 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
         Assert.Contains("2 row", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("3 row", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(result.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.None, result.EffectState);
         Assert.DoesNotContain(temp.Path, result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(File.Exists(Path.Combine(temp.Path, "row-capacity.xlsx")));
     }
@@ -202,6 +203,7 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
         Assert.Contains("row 6", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("3 value", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(result.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.None, result.EffectState);
         Assert.DoesNotContain(temp.Path, result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(File.Exists(Path.Combine(temp.Path, "range-capacity.xlsx")));
     }
@@ -1431,7 +1433,9 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             WorkspaceRuntimeServices workspaceRuntimeServices,
             string runtimeSessionKey = "",
             IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
-            AgentExecutionGovernanceSnapshot? governance = null)
+            AgentExecutionGovernanceSnapshot? governance = null,
+            AgentToolSessionReference? admittedToolSession = null,
+            AgentToolAdmissionSupport toolAdmissionSupport = AgentToolAdmissionSupport.Recoverable)
             => throw new NotSupportedException();
     }
 }

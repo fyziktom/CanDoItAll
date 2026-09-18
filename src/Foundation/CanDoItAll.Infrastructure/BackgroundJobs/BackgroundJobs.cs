@@ -116,14 +116,14 @@ kind: service
 name: BackgroundJobTracker
 summary: Tracks queued and completed background work for UI diagnostics and module-level workflows.
 owns: background-job-records, queue-correlation
-deps: AppDbContext, IBackgroundJobQueue, IClock
+deps: BackgroundJobsDbContext, IBackgroundJobQueue, IClock
 risks: stale-running-state, lost-error-summary
 tests: integration:BackgroundJobTrackerTests
 inputs: job requests and state transitions
 outputs: BackgroundJobSummary list
 */
 public sealed class BackgroundJobTracker(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<BackgroundJobsDbContext> dbContextFactory,
     IBackgroundJobQueue queue,
     IClock clock) : IBackgroundJobTracker
 {
@@ -155,13 +155,21 @@ public sealed class BackgroundJobTracker(
         await dbContext.Set<BackgroundJobRecord>().AddAsync(prepared.Record, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await queue.EnqueueAsync(
-            new BackgroundJobRequest(
-                prepared.Record.JobType,
-                prepared.Record.CorrelationId,
-                prepared.Record.Description,
-                prepared.Metadata),
-            cancellationToken);
+        try {
+            await queue.EnqueueAsync(
+                new BackgroundJobRequest(
+                    prepared.Record.JobType,
+                    prepared.Record.CorrelationId,
+                    prepared.Record.Description,
+                    prepared.Metadata),
+                cancellationToken);
+        } catch (OperationCanceledException exception) {
+            throw new BackgroundJobEnqueueCanceledException(prepared.Record.Id,
+                prepared.Record.CorrelationId, exception);
+        } catch (Exception exception) {
+            throw new BackgroundJobEnqueueException(prepared.Record.Id,
+                prepared.Record.CorrelationId, exception);
+        }
 
         return prepared.Record.Id;
     }

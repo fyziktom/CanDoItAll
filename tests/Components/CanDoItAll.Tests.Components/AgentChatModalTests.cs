@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
@@ -276,6 +277,7 @@ public sealed class AgentChatModalTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<AgentToolPolicyCatalog>();
         return context;
     }
 

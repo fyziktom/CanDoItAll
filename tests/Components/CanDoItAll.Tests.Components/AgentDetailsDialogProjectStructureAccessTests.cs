@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -7,8 +6,6 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,42 +76,15 @@ public sealed class AgentDetailsDialogProjectStructureAccessTests
         var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
         workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
         context.Services.AddSingleton(workspaceService);
-        context.Services.AddSingleton(
-            (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
-        context.Services.AddSingleton(
-            (SecretService)RuntimeHelpers.GetUninitializedObject(typeof(SecretService)));
+        context.Services.AddAgentEditorReadFixture();
         return context;
     }
 
-    private static IRenderedComponent<TestAgentDetailsDialog> RenderProjectStructureTab(
+    private static IRenderedComponent<AgentDetailsDialog> RenderProjectStructureTab(
         BunitContext context,
         AgentEditorModel editor)
     {
-        return context.Render<TestAgentDetailsDialog>(parameters => parameters
-            .Add(component => component.TestEditor, editor));
-    }
-
-    public sealed class TestAgentDetailsDialog : AgentDetailsDialog
-    {
-        [Parameter]
-        public AgentEditorModel TestEditor { get; set; } = new();
-
-        protected override Task OnInitializedAsync()
-        {
-            SetBaseField("editorModel", TestEditor);
-            SetBaseField("selectedTabIndex", 4);
-            SetBaseField("isLoading", false);
-            return Task.CompletedTask;
-        }
-
-        private void SetBaseField(string fieldName, object value)
-        {
-            var field = typeof(AgentDetailsDialog).GetField(
-                fieldName,
-                BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(AgentDetailsDialog).FullName, fieldName);
-            field.SetValue(this, value);
-        }
+        return context.RenderEditor(editor, AgentEditorSection.ProjectStructureAccess);
     }
 
     public class RecordingWorkspaceServiceProxy : DispatchProxy

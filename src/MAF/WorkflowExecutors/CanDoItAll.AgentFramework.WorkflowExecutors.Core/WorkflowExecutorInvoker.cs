@@ -82,6 +82,8 @@ public sealed class WorkflowExecutorInvoker(
             policy)
         {
             RunId = WorkflowExecutorExecutionAuditScope.CurrentRunId,
+            ExecutionOccurrence = invocationContext.ExecutionOccurrence,
+            ApprovalAdmission = invocationContext.ApprovalAdmission,
             PluginConnectionId = pluginConnectionId,
             RedactedSettingsSummary = redactedSettingsSummary,
             CausationRequestId = invocationContext.CausationRequestId,
@@ -90,6 +92,10 @@ public sealed class WorkflowExecutorInvoker(
             InvocationGeneration = invocationContext.InvocationGeneration,
             IdempotencyKey = invocationContext.IdempotencyKey
         };
+
+        using var invocationScope = WorkflowExecutorExecutionAuditScope.PushInvocation(definition, node, input,
+            invocationContext.ExecutionOccurrence, invocationContext.CompilerContractVersion ??
+                WorkflowExecutorExecutionAuditScope.CurrentInvocation?.CompilerVersion ?? WorkflowProviderDisclosureProtocol.Current);
 
         Exception? lastException = null;
         var maxAttemptIndex = policy.MaxRetryAttempts;

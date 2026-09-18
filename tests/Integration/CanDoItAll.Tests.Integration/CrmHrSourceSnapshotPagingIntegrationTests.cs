@@ -294,8 +294,11 @@ public sealed class CrmHrSourceSnapshotPagingIntegrationTests
     }
 
     private sealed class TestDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>, IDbContextFactory<CrmHrDbContext>
     {
+        CrmHrDbContext IDbContextFactory<CrmHrDbContext>.CreateDbContext()
+            => new(new DbContextOptions<CrmHrDbContext>(options.Extensions.ToDictionary(extension => extension.GetType())));
+
         public AppDbContext CreateDbContext()
         {
             return new AppDbContext(options);

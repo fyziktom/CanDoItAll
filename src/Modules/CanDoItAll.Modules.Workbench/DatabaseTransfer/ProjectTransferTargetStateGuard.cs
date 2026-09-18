@@ -1,5 +1,5 @@
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -7,17 +7,19 @@ internal sealed record ProjectTransferTargetResidue(
     ProjectTransferTargetStateArea Area,
     string Description);
 
-public sealed class ProjectTransferTargetStateGuard
-{
+public sealed class ProjectTransferTargetStateGuard {
     private static readonly ProjectTransferTargetStateArea[] RequiredAreas =
         Enum.GetValues<ProjectTransferTargetStateArea>();
     private readonly IReadOnlyList<IProjectTransferTargetStateParticipant>
         participants;
 
+    private readonly DatabaseTransferOperationRunner operations;
+
     public ProjectTransferTargetStateGuard(
-        IEnumerable<IProjectTransferTargetStateParticipant> participants)
-    {
+        IEnumerable<IProjectTransferTargetStateParticipant> participants,
+        DatabaseTransferOperationRunner operations) {
         ArgumentNullException.ThrowIfNull(participants);
+        this.operations = operations ?? throw new ArgumentNullException(nameof(operations));
 
         var supplied = participants.ToArray();
         var duplicateAreas = supplied
@@ -26,8 +28,7 @@ public sealed class ProjectTransferTargetStateGuard
             .Select(group => group.Key)
             .Order()
             .ToArray();
-        if (duplicateAreas.Length > 0)
-        {
+        if (duplicateAreas.Length > 0) {
             throw new InvalidOperationException(
                 $"Project transfer target-state participants are duplicated for: {string.Join(", ", duplicateAreas)}.");
         }
@@ -37,8 +38,7 @@ public sealed class ProjectTransferTargetStateGuard
         var missingAreas = RequiredAreas
             .Where(area => !participantsByArea.ContainsKey(area))
             .ToArray();
-        if (missingAreas.Length > 0)
-        {
+        if (missingAreas.Length > 0) {
             throw new InvalidOperationException(
                 $"Project transfer target-state participants are missing for: {string.Join(", ", missingAreas)}.");
         }
@@ -48,65 +48,39 @@ public sealed class ProjectTransferTargetStateGuard
             .ToArray();
     }
 
-    internal async Task<IReadOnlyList<ProjectTransferTargetResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-
-        var residues = new List<ProjectTransferTargetResidue>();
-        foreach (var participant in participants)
-        {
-            var participantResidues = await participant.FindResiduesAsync(
-                dbContext,
-                cancellationToken);
-            residues.AddRange(participantResidues.Select(residue =>
-                new ProjectTransferTargetResidue(
-                    participant.Area,
-                    residue.Description)));
+    internal Task<IReadOnlyList<ProjectTransferTargetResidue>> FindPreflightResiduesAsync(
+        DatabaseTransferProfileSession session, CancellationToken cancellationToken) {
+        if (session.Mode != DatabaseTransferProfileMode.Independent) {
+            throw new InvalidOperationException("Project transfer preflight requires the explicit independent target session.");
         }
-
-        return residues;
+        return FindResiduesAsync(session, cancellationToken);
     }
 
-    internal async Task AcquireExclusiveImportLocksAsync(
-        AppDbContext dbContext,
+    internal Task<IReadOnlyList<ProjectTransferTargetResidue>> FindLockedResiduesAsync(
+        DatabaseTransferProfileSession session, CancellationToken cancellationToken) {
+        if (session.Mode != DatabaseTransferProfileMode.Serializable) {
+            throw new InvalidOperationException("Project transfer final inspection requires the exact locked target session.");
+        }
+        return FindResiduesAsync(session, cancellationToken);
+    }
+
+    private Task<IReadOnlyList<ProjectTransferTargetResidue>> FindResiduesAsync(DatabaseTransferProfileSession session,
         CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-        if (!string.Equals(
-                dbContext.Database.ProviderName,
-                "Npgsql.EntityFrameworkCore.PostgreSQL",
-                StringComparison.Ordinal))
-        {
-            throw new NotSupportedException(
-                $"Project import exclusion locks require PostgreSQL; provider '{dbContext.Database.ProviderName ?? "unknown"}' is not supported.");
-        }
+        => operations.InspectTargetAsync<IReadOnlyList<ProjectTransferTargetResidue>>(session, async (request, token) => {
+            var residues = new List<ProjectTransferTargetResidue>();
+            foreach (var participant in participants) {
+                var found = await participant.FindResiduesAsync(request, token);
+                residues.AddRange(found.Select(residue => new ProjectTransferTargetResidue(participant.Area, residue.Description)));
+            }
+            return residues;
+        }, cancellationToken);
 
-        if (dbContext.Database.CurrentTransaction is null)
-        {
-            throw new InvalidOperationException(
-                "Project import exclusion locks require an active database transaction.");
-        }
+    internal IReadOnlyCollection<Type> EntityTypesToLock => participants.SelectMany(participant => participant.EntityTypesToLock).Distinct().ToArray();
 
-        var tableNames = ResolveExclusiveImportTableNames(dbContext);
-        var command = $"LOCK TABLE\n    {string.Join(",\n    ", tableNames)}\nIN ACCESS EXCLUSIVE MODE";
-        await dbContext.Database.ExecuteSqlRawAsync(command, cancellationToken);
-    }
-
-    internal IReadOnlyList<string> ResolveExclusiveImportTableNames(
-        AppDbContext dbContext)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-
-        return participants
-            .SelectMany(participant => participant.EntityTypesToLock.Select(entityType =>
-                ResolveTableName(dbContext, participant.Area, entityType)))
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)
-            .ToArray();
-    }
+    internal Task<TResult> RunLockedImportAsync<TResult>(ResolvedDatabaseProfile profile,
+        Func<DatabaseTransferProfileSession, CancellationToken, Task<TResult>> operation, CancellationToken cancellationToken = default)
+        => operations.RunExclusiveImportAsync(profile, [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey],
+            EntityTypesToLock, operation, cancellationToken);
 
     internal static string Describe(
         IReadOnlyCollection<ProjectTransferTargetResidue> residues)
@@ -117,23 +91,4 @@ public sealed class ProjectTransferTargetStateGuard
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal));
 
-    private static string ResolveTableName(
-        AppDbContext dbContext,
-        ProjectTransferTargetStateArea area,
-        Type entityType)
-    {
-        var metadata = dbContext.Model.FindEntityType(entityType) ??
-            throw new InvalidOperationException(
-                $"Project transfer target-state participant '{area}' declared unmapped entity type '{entityType.FullName}'.");
-        var tableName = metadata.GetTableName() ??
-            throw new InvalidOperationException(
-                $"Project transfer target-state participant '{area}' declared entity type '{entityType.FullName}' without a table mapping.");
-        var schema = metadata.GetSchema();
-        return string.IsNullOrWhiteSpace(schema)
-            ? QuoteIdentifier(tableName)
-            : $"{QuoteIdentifier(schema)}.{QuoteIdentifier(tableName)}";
-    }
-
-    private static string QuoteIdentifier(string identifier)
-        => $"\"{identifier.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 }

@@ -2,6 +2,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.SchedulerPlanner;
@@ -12,10 +13,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit.Projects;
 
-public sealed class ProjectTransferTargetStateArchitectureTests
-{
+public sealed class ProjectTransferTargetStateArchitectureTests {
     private static readonly SemanticProjectStateRegistration[] SemanticProjectStateRegistry =
     [
+        Residue<ProcessPreparedLaunchEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedOrigin),
+        Residue<StoragePlacementIntentRecord>(ProjectTransferTargetStateArea.Infrastructure, SemanticProjectStateKind.TypedScope),
+        Residue<WorkflowStructureOutputRecord>(ProjectTransferTargetStateArea.AgentFramework, SemanticProjectStateKind.JsonRuntimeAggregate),
+        Residue<ProjectWorkflowContributionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
+        Residue<ProjectWorkflowAdmissionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
+        Residue<ProjectProcessAssetContributionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
+        Residue<ProjectWorkAssignmentHistoryRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
+        Residue<SchedulerFireAdmissionRecord>(ProjectTransferTargetStateArea.SchedulerPlanner, SemanticProjectStateKind.DynamicInput),
+        Residue<ProjectCreationReservationRecord>(ProjectTransferTargetStateArea.Projects, SemanticProjectStateKind.RootAggregate),
+        Residue<ProjectWorkAssignmentRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedScope),
         Residue<Project>(
             ProjectTransferTargetStateArea.Projects,
             SemanticProjectStateKind.RootAggregate),
@@ -58,11 +68,10 @@ public sealed class ProjectTransferTargetStateArchitectureTests
     ];
 
     [Fact]
-    public void Conventionally_project_related_entities_have_one_lock_owner()
-    {
+    public void Conventionally_project_related_entities_have_one_lock_owner() {
         using var dbContext = CreateDbContext();
         var participants = CreateParticipants();
-        _ = new ProjectTransferTargetStateGuard(participants);
+        _ = new ProjectTransferTargetStateGuard(participants, DatabaseTransferTestSupport.Create());
         var lockOwners = BuildLockOwners(participants);
 
         var projectEntities = dbContext.Model.GetEntityTypes()
@@ -86,8 +95,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
             .ToArray();
 
         Assert.NotEmpty(projectEntities);
-        foreach (var entity in projectEntities)
-        {
+        foreach (var entity in projectEntities) {
             var owners = ResolveOwners(lockOwners, entity.EntityType);
             Assert.True(
                 owners.Count == 1,
@@ -98,8 +106,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
     }
 
     [Fact]
-    public void Semantic_project_state_registry_is_mapped_and_lock_owned()
-    {
+    public void Semantic_project_state_registry_is_mapped_and_lock_owned() {
         using var dbContext = CreateDbContext();
         var participants = CreateParticipants();
         var lockOwners = BuildLockOwners(participants);
@@ -113,8 +120,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
             duplicateRegistrations.Length == 0,
             $"Semantic project-state entities are registered more than once: {string.Join(", ", duplicateRegistrations)}.");
 
-        foreach (var registration in SemanticProjectStateRegistry)
-        {
+        foreach (var registration in SemanticProjectStateRegistry) {
             Assert.True(
                 dbContext.Model.FindEntityType(registration.EntityType) is not null,
                 $"Semantic project-state entity '{registration.EntityType.FullName}' is not mapped by AppDbContext.");
@@ -129,20 +135,17 @@ public sealed class ProjectTransferTargetStateArchitectureTests
     }
 
     [Fact]
-    public void Participant_lock_declarations_are_unique_and_mapped()
-    {
+    public void Participant_lock_declarations_are_unique_and_mapped() {
         using var dbContext = CreateDbContext();
         var participants = CreateParticipants();
         var declarations = participants
-            .SelectMany(participant => participant.EntityTypesToLock.Select(entityType => new
-            {
+            .SelectMany(participant => participant.EntityTypesToLock.Select(entityType => new {
                 participant.Area,
                 EntityType = entityType
             }))
             .ToArray();
 
-        foreach (var declaration in declarations)
-        {
+        foreach (var declaration in declarations) {
             Assert.True(
                 dbContext.Model.FindEntityType(declaration.EntityType) is not null,
                 $"Participant '{declaration.Area}' declares unmapped lock entity " +
@@ -160,8 +163,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
             $"Project-transfer lock entities must have one owner. Duplicates: {string.Join("; ", duplicateOwners)}.");
     }
 
-    private static AppDbContext CreateDbContext()
-    {
+    private static AppDbContext CreateDbContext() {
         AppDbContextModelRegistry.ConfigureAssemblies(
             TestApplicationBootstrap.ModuleAssemblies);
         var optionsBuilder = AppDbContextTestOptionsBuilder.Create()
@@ -170,8 +172,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
         return new AppDbContext(optionsBuilder.Options);
     }
 
-    private static IProjectTransferTargetStateParticipant[] CreateParticipants()
-    {
+    private static IProjectTransferTargetStateParticipant[] CreateParticipants() {
         var assemblies = TestApplicationBootstrap.ModuleAssemblies
             .Append(typeof(IProjectTransferTargetStateParticipant).Assembly)
             .Distinct()
@@ -182,7 +183,9 @@ public sealed class ProjectTransferTargetStateArchitectureTests
                 !type.IsAbstract &&
                 !type.IsInterface &&
                 typeof(IProjectTransferTargetStateParticipant).IsAssignableFrom(type))
-            .Select(type => Activator.CreateInstance(type, nonPublic: true))
+            .Select(type => Activator.CreateInstance(type,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+                binder: null, args: [new ProjectTransferTargetInspectionRunner()], culture: null))
             .Select(instance => Assert.IsAssignableFrom<IProjectTransferTargetStateParticipant>(instance))
             .OrderBy(participant => participant.Area)
             .ToArray();
@@ -191,8 +194,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
     private static Dictionary<Type, ProjectTransferTargetStateArea[]> BuildLockOwners(
         IReadOnlyCollection<IProjectTransferTargetStateParticipant> participants)
         => participants
-            .SelectMany(participant => participant.EntityTypesToLock.Select(entityType => new
-            {
+            .SelectMany(participant => participant.EntityTypesToLock.Select(entityType => new {
                 participant.Area,
                 EntityType = entityType
             }))
@@ -247,8 +249,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
         SemanticProjectStateKind Kind,
         SemanticProjectStateParticipation Participation);
 
-    private enum SemanticProjectStateKind
-    {
+    private enum SemanticProjectStateKind {
         RootAggregate,
         TypedDiscriminator,
         TypedScope,
@@ -260,8 +261,7 @@ public sealed class ProjectTransferTargetStateArchitectureTests
         ActiveWriter
     }
 
-    private enum SemanticProjectStateParticipation
-    {
+    private enum SemanticProjectStateParticipation {
         ResidueSource,
         ConcurrencyAnchor
     }

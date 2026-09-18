@@ -101,10 +101,10 @@ public sealed class StorageBrowseContractsTests
         var storage = new StorageCatalogRecord();
 
         StorageBrowsePage fileSystemPage = await registry.Resolve(StorageProviderKind.FileSystem)
-            .BrowseAsync(storage, new StorageBrowseRequest(StorageBrowseContainer.Root));
+            .BrowseAsync(storage.ToDriverInput(), new StorageBrowseRequest(StorageBrowseContainer.Root));
         StorageBrowsePage ipfsSearchPage = await registry.ResolveSearch(StorageProviderKind.Ipfs)
             .SearchAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageBrowseSearchRequest(
                     "report",
                     new StorageBrowseRequest(StorageBrowseContainer.Root)));
@@ -135,7 +135,7 @@ public sealed class StorageBrowseContractsTests
         public StorageBrowseWorkBudget MaximumBudget => StorageBrowseWorkBudget.Default;
 
         public Task<StorageBrowsePage> BrowseAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseRequest request,
             CancellationToken cancellationToken = default)
             => Task.FromResult(EmptyPage(request.Container));
@@ -159,19 +159,19 @@ public sealed class StorageBrowseContractsTests
         public StorageBrowseSearchBudget MaximumSearchBudget => StorageBrowseSearchBudget.Default;
 
         public Task<StorageBrowsePage> BrowseAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseRequest request,
             CancellationToken cancellationToken = default)
             => Task.FromResult(EmptyPage(request.Container));
 
         public Task<StorageBrowsePage> SearchAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseSearchRequest request,
             CancellationToken cancellationToken = default)
             => Task.FromResult(EmptyPage(request.Browse.Container));
 
         public Task<StorageBrowseEntry> StatAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseStatRequest request,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new StorageBrowseEntry(
@@ -194,7 +194,7 @@ public sealed class StorageBrowseContractsTests
         public StorageBrowseWorkBudget MaximumBudget => StorageBrowseWorkBudget.Default;
 
         public Task<StorageBrowsePage> BrowseAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseRequest request,
             CancellationToken cancellationToken = default)
             => Task.FromResult(EmptyPage(request.Container));

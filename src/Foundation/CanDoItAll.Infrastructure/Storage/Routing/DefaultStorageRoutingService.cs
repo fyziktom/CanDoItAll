@@ -1,7 +1,19 @@
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class DefaultStorageRoutingService(IStorageCatalogService catalogService) : IStorageRoutingService
-{
+public sealed class DefaultStorageRoutingService : IStorageRoutingService {
+    private readonly IStorageCatalogService catalogService;
+    private readonly Func<CancellationToken, Task<IReadOnlyList<StorageRoutingRule>>> readRules;
+
+    public DefaultStorageRoutingService(StorageCatalogService catalogService)
+        : this(catalogService, catalogService.ListRoutingRuleRecordsAsync) {
+    }
+
+    internal DefaultStorageRoutingService(IStorageCatalogService catalogService,
+        Func<CancellationToken, Task<IReadOnlyList<StorageRoutingRule>>> readRules) {
+        this.catalogService = catalogService;
+        this.readRules = readRules;
+    }
+
     public async Task<StorageRecommendation> RecommendAsync(StorageSelectionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -9,7 +21,7 @@ public sealed class DefaultStorageRoutingService(IStorageCatalogService catalogS
         var storages = (await catalogService.ListAsync(cancellationToken))
             .Where(item => item.IsEnabled)
             .ToList();
-        var rules = (await catalogService.ListRulesAsync(cancellationToken))
+        var rules = (await readRules(cancellationToken))
             .Where(item => item.IsEnabled)
             .OrderBy(item => GetScopeRank(item.ScopeKind))
             .ThenBy(item => item.Priority)
@@ -71,7 +83,7 @@ public sealed class DefaultStorageRoutingService(IStorageCatalogService catalogS
     }
 
     private static IEnumerable<StorageRecommendationCandidate> RankByHeuristic(
-        IReadOnlyList<StorageCatalogRecord> storages,
+        IReadOnlyList<StorageCatalogSnapshot> storages,
         StorageSelectionContext context,
         StorageCapability requiredCapabilities)
     {
@@ -85,7 +97,7 @@ public sealed class DefaultStorageRoutingService(IStorageCatalogService catalogS
         }
     }
 
-    private static StorageRecommendationCandidate ToCandidate(StorageCatalogRecord storage, string reason)
+    private static StorageRecommendationCandidate ToCandidate(StorageCatalogSnapshot storage, string reason)
     {
         return new StorageRecommendationCandidate(
             storage.Id,
@@ -184,7 +196,7 @@ public sealed class DefaultStorageRoutingService(IStorageCatalogService catalogS
         return true;
     }
 
-    private static bool SupportsCapabilities(StorageCatalogRecord storage, StorageCapability requiredCapabilities)
+    private static bool SupportsCapabilities(StorageCatalogSnapshot storage, StorageCapability requiredCapabilities)
     {
         if (storage.IsReadOnly && requiredCapabilities.HasFlag(StorageCapability.Write))
         {
@@ -200,7 +212,7 @@ public sealed class DefaultStorageRoutingService(IStorageCatalogService catalogS
     }
 
     private static IEnumerable<StorageRecommendationCandidate> RankByRule(
-        IReadOnlyList<StorageCatalogRecord> storages,
+        IReadOnlyList<StorageCatalogSnapshot> storages,
         StorageRoutingRule rule,
         StorageCapability requiredCapabilities)
     {

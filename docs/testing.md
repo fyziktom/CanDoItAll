@@ -72,6 +72,120 @@ list before the queued disposal reads it, leaving old components and their scope
 registrations alive. The helper dispatches the entire operation; its regression test
 holds the renderer busy to verify that disposal still releases the rendered components.
 
+### Prompt Gallery UI slice
+
+For changes under `src/UI/CanDoItAll.Prompts.UI`, `src/Modules/CanDoItAll.Modules.Prompts.Contracts`,
+the Prompt Gallery hosts in `src/Modules/CanDoItAll.Modules.Prompts` or the
+`src/Sandboxes/CanDoItAll.Prompts.UiSandbox` host, build the changed production projects and run
+the owning slices with a stated discovery count:
+
+```powershell
+dotnet build ./src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj --configuration Release /m:1
+dotnet build ./src/Sandboxes/CanDoItAll.Prompts.UiSandbox/CanDoItAll.Prompts.UiSandbox.csproj --configuration Release /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts." /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.Prompts." /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.Prompts." /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.Prompts." /m:1
+```
+
+The trailing dot keeps the unrelated `PromptsDbContextTests` out of the Unit filter. Browser
+evidence for the production page is `FullyQualifiedName~PromptGalleryBrowserTests` in the
+Playwright project; the sandbox is exercised through `PromptsSandboxTests` and manually via
+[its README](../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/README.md).
+
+For changes under `src/UI/CanDoItAll.CrmHr.UI`, the CRM / HR Home host in
+`src/Modules/CanDoItAll.Modules.CrmHr` (`CrmHrHomePage`, `CrmHrHomeReadSession`,
+`CrmHrHomePresentationMapper`) or the `src/Sandboxes/CanDoItAll.CrmHr.UiSandbox` host, build the
+changed production projects and run the Home topic with a stated discovery count:
+
+```powershell
+dotnet build ./src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj --configuration Release /m:1
+dotnet build ./src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CanDoItAll.CrmHr.UiSandbox.csproj --configuration Release /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrHome" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrHome" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrHome" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrHome" /m:1
+```
+
+The existing Home facts on the real component harness (`OpportunityBoardTests.Home_page_surfaces_open_pipeline_preview`,
+`CrmHrPrivacyBoundaryTests.Home_and_workforce_routes_surface_sensitive_handling_and_history`) and
+`CrmHrNavigationTests` stay the composition baseline. Browser evidence for the production route
+is `FullyQualifiedName~CrmHrHomeBrowserTests` in the Playwright project; the sandbox is exercised
+through `CrmHrHomeSandboxTests` and manually via
+[its README](../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/README.md).
+
+For the account summary and activity history surfaces (`Accounts/`, `Activity/` in the
+rendering library, the `AccountSummaryPanel` and `InteractionTimeline` adapters, the two
+presentation mappers, or the `/crm-hr/account-activity` sandbox specimen), run the topic with a
+stated discovery count; the filters select the mapper, surface, adapter, sandbox and boundary
+classes by their `CrmHrAccount` and `CrmHrActivity` prefixes:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrAccount|FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrActivity" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrAccount|FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrActivity" /m:1
+```
+
+The CRM, Directory and Workforce pages compose the adapters, so the whole CRM / HR Components
+topic (`FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.`) is the composition baseline for
+an adapter change. Browser evidence is `FullyQualifiedName~CrmHrAccountActivityBrowserTests`
+(account summary and activity in the CRM workspace, the Directory timeline host, and the
+conversion mutation clicked once on the interactive summary); `CrmHrSensitiveDataFlowTests`
+exercises the Directory activity tab as well. The three timeline owners read through
+`CrmHrActivityHistorySession` (`FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrActivityHistorySessionTests`).
+
+For the CRM Financials surface (`Financials/` in the rendering library, `CrmFinancialsPanel`,
+`CrmFinancialsReadSession`, `CrmFinancialsPresentationMapper`, or the `/crm-hr/financials`
+sandbox specimen), run:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmFinancials|FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmHrFinancials" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmFinancials|FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.CrmHrFinancials" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmFinancialSnapshotQueryIntegrationTests" /m:1
+```
+
+The integration facts protect the query owner's recognition semantics, which the extraction
+must not change. Browser evidence is `FullyQualifiedName~CrmHrFinancialsBrowserTests` (seeded
+sparse multi-currency sales, plotted chart geometry and legend, monthly/yearly categories, a
+constrained width and an account without sales).
+
+For a change anywhere in the CRM / HR module, its rendering library, its contracts or its sandbox,
+the maintained [completion record](architecture/crm-hr-ui-completion.md) maps each workspace to its
+lanes. The whole-module lanes are the Unit and Components topics (the Components topic includes the
+host invariant facts `CrmHrSameTargetRerenderTests`, `CrmHrPostDispatchEditTests`,
+`CrmHrCommittedReadBackTests`, `CrmHrAssignmentsMutationTests`, `CrmHrOpportunityConversionHostTests`,
+`CrmHrDirectoryRowActionTests`, `CrmHrEditorFieldCoverageTests`, the footer-save and sandbox facts,
+and the boundary guards) and the browser journeys:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CrmHr|FullyQualifiedName~CrmAgent|FullyQualifiedName~HrAgent|FullyQualifiedName~CrmPlanning|FullyQualifiedName~ProjectAssignmentGanttProjectionAdapterTests|FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.|FullyQualifiedName~OpportunityBoardTests|FullyQualifiedName~AssignmentEditorAdmissionTests" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Playwright.slnx --configuration Release --no-build --no-restore --filter "(FullyQualifiedName~CrmHr|FullyQualifiedName~ProjectStructureTaskAssigneeJourneyTests)&Category!=Quarantined&Category!=LiveAgent" /m:1
+```
+
+The six CRM / HR evidence-capture browser scripts that predated these journeys are gone. They were
+quarantined, wrote their screenshots to an absolute Windows path, asserted almost nothing, and no
+longer ran against the current UI at all. The journeys above cover their flows; the secondary
+editor fields they used to type into are covered by `CrmHrEditorFieldCoverageTests` and by their
+owners' Unit and Integration tests. The
+[completion record](architecture/crm-hr-ui-completion.md#retired-browser-scripts) lists what is
+still not driven through a browser.
+
+The opt-in live model smoke (`Category=LiveAgent`: `CrmHrLiveAgentToolUiSmokeTests` in the
+Playwright project, `CrmHrLiveAgentToolSmokeIntegrationTests` in the Integration project) returns
+without effect unless both `CANDOITALL_RUN_LIVE_AGENT_VALIDATION=true` and
+`CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE=true` are set for the test process; it uses the seeded provider
+profile and its configured credential, synthetic records and a bound of ten model requests per
+execution. `CANDOITALL_LIVE_AGENT_UI_REHEARSAL=true` runs the UI smoke up to its first message
+without a model request.
+
+**A runner result of passed is not live evidence in this lane.** The test runner in use does not
+honour xUnit's dynamic skip for these projects, so a closed gate and a rehearsal are both reported
+as passing tests. Read `output/live-agent-smoke/<timestamp>/evidence.json` instead: its `execution`
+field is `not-run` when the gate was closed, `rehearsal` when the journey stopped before its first
+Send, and `live` only when a model was actually reached, and `modelRequests.used` is the number of
+requests the provider journal counted. A report that claims live proof cites that manifest, the
+provider and model it names, and the persisted run and owner state it recorded.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
@@ -96,6 +210,12 @@ Those commands use sibling source projects. CI checks out Components and FileToo
 pinned commits declared in its workflow, and Docker receives the same repositories as
 named build contexts. Keep source roots and commits identical for the whole gate; do not
 substitute an unpublished package graph for any command.
+
+The gate is long. Measure it when you run it and compare the number with the `timeout-minutes` of
+the stable job in the CI workflow before assuming the two agree: this workstation has recorded runs
+close to, and above, that budget, and a runner that is slower than the budget fails the job without
+a test failing. Neither reducing the filter nor raising the timeout without a measurement is an
+acceptable answer to that.
 
 The filter intentionally excludes:
 
@@ -162,6 +282,21 @@ python ./tools/Validation/Portability/enforce_portability_baseline.py --scan $po
 Do not use `--write-baseline` to conceal an unexplained result, weaken scanner patterns,
 or defer the update to a later change. `ADDED` and `STALE` findings both block closure
 until the code and reviewed baseline agree and the final no-write enforcement passes.
+
+## Documentation evidence validation
+
+`./tools/Validation/Test-Documentation.ps1` rejects tracked runtime logs. It carries one
+format rule for sealed evidence: a durable `.log` inside a tracked working bundle is accepted only
+when the owning tracked `MANIFEST.sha256` contains exactly one matching path and its hash
+matches the current file. Untracked manifests, modified logs and unsealed logs do not
+qualify; `.pid` and `.pyc` files remain forbidden. The rule is about the format, not about
+any particular directory: when no such path is tracked it simply never applies, and its own
+tests build a disposable fixture instead of reading a real one. New task-specific evidence
+limits still apply.
+
+Run `./tools/Validation/Test-DocumentationEvidence.ps1` to check the acceptance and
+rejection cases, then run the canonical documentation validator. Both commands only
+validate; the evidence tests create and remove their own temporary fixture.
 
 ## Focused HTTP Integration
 

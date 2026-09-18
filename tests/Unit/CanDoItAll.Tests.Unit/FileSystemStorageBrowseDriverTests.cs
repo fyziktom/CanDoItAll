@@ -146,7 +146,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             StorageCatalogRecord storage = CreateStorage(root);
 
             StorageWriteResult result = await driver.SaveAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageWriteRequest(
                     physicalName,
                     "text/plain",
@@ -181,14 +181,14 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             StorageCatalogRecord storage = CreateStorage(root);
 
             StorageBrowsePage page = await sut.BrowseAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageBrowseRequest(StorageBrowseContainer.Root));
 
             StorageBrowseEntry entry = Assert.Single(page.Entries);
             Assert.Equal(physicalName, entry.Name);
             Assert.Contains("%5C", entry.Id.Value, StringComparison.Ordinal);
             var pathPolicy = new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(root));
-            Assert.Equal(physicalPath, pathPolicy.ResolveFullPath(storage, entry.Id.Value));
+            Assert.Equal(physicalPath, pathPolicy.ResolveFullPath(storage.ToSnapshot(), entry.Id.Value));
         }
         finally
         {
@@ -223,7 +223,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.BrowseAsync(
-                    CreateStorage(root),
+                    CreateStorage(root).ToDriverInput(),
                     new StorageBrowseRequest(StorageBrowseContainer.Root, pageSize: 25, budget: budget)));
 
             Assert.Equal(StorageBrowseErrorCode.BudgetExceeded, exception.Error.Code);
@@ -257,7 +257,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                 pageSize: 50,
                 budget: budget);
             long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-            StorageBrowsePage acceptedFirst = await sut.BrowseAsync(storage, request);
+            StorageBrowsePage acceptedFirst = await sut.BrowseAsync(storage.ToDriverInput(), request);
             long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
             Assert.Equal(50, acceptedFirst.Entries.Count);
             Assert.Equal(fixtureSize, acceptedFirst.Metrics.InspectedItems);
@@ -266,7 +266,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             Assert.InRange(allocated, 1, 32 * 1024 * 1024);
 
             StorageBrowsePage second = await sut.BrowseAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageBrowseRequest(
                     StorageBrowseContainer.Root,
                     pageSize: 50,
@@ -305,7 +305,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.BrowseAsync(
-                    CreateStorage(root),
+                    CreateStorage(root).ToDriverInput(),
                     new StorageBrowseRequest(new StorageBrowseContainer("../outside"))));
 
             Assert.Equal(StorageBrowseErrorCode.AccessDenied, exception.Error.Code);
@@ -330,7 +330,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.BrowseAsync(
-                    CreateStorage(root),
+                    CreateStorage(root).ToDriverInput(),
                     new StorageBrowseRequest(new StorageBrowseContainer("linked"))));
 
             Assert.Equal(StorageBrowseErrorCode.AccessDenied, exception.Error.Code);
@@ -355,9 +355,9 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                 new TestWorkspacePathResolver(workspaceRoot));
             StorageCatalogRecord storage = CreateStorage(linkedStorageRoot);
 
-            Assert.False(pathPolicy.IsTrustedForLocalOpen(storage));
+            Assert.False(pathPolicy.IsTrustedForLocalOpen(storage.ToSnapshot()));
             StorageBrowseException exception = Assert.Throws<StorageBrowseException>(() =>
-                pathPolicy.ResolveTrustedLocalOpenPath(storage, "report.xlsx"));
+                pathPolicy.ResolveTrustedLocalOpenPath(storage.ToSnapshot(), "report.xlsx"));
             Assert.Equal(StorageBrowseErrorCode.AccessDenied, exception.Error.Code);
         }
         finally
@@ -408,14 +408,14 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             FileSystemStorageBrowseDriver sut = CreateSut(root);
             StorageCatalogRecord storage = CreateStorage(root);
             var request = new StorageBrowseRequest(StorageBrowseContainer.Root, pageSize: 1);
-            StorageBrowsePage first = await sut.BrowseAsync(storage, request);
+            StorageBrowsePage first = await sut.BrowseAsync(storage.ToDriverInput(), request);
             DateTime previousWrite = Directory.GetLastWriteTimeUtc(root);
             File.WriteAllText(Path.Combine(root, "added.txt"), "changed");
             Directory.SetLastWriteTimeUtc(root, previousWrite.AddSeconds(2));
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.BrowseAsync(
-                    storage,
+                    storage.ToDriverInput(),
                     new StorageBrowseRequest(
                         StorageBrowseContainer.Root,
                         pageSize: 1,
@@ -446,12 +446,12 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             var request = new StorageBrowseRequest(
                 StorageBrowseContainer.Root,
                 metadata: StorageBrowseMetadataField.Size | StorageBrowseMetadataField.ModifiedAtUtc);
-            StorageBrowsePage before = await browseDriver.BrowseAsync(storage, request);
+            StorageBrowsePage before = await browseDriver.BrowseAsync(storage.ToDriverInput(), request);
 
             await File.WriteAllTextAsync(filePath, "replacement-content");
-            StorageBrowsePage after = await browseDriver.BrowseAsync(storage, request);
+            StorageBrowsePage after = await browseDriver.BrowseAsync(storage.ToDriverInput(), request);
             await using Stream stream = await contentDriver.OpenReadAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageObjectReference(
                     storage.Id,
                     StorageProviderKind.FileSystem,
@@ -490,12 +490,12 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                 "editable.txt",
                 "text/plain");
             StorageContentRevision original = Assert.IsType<StorageContentRevision>(
-                await driver.GetRevisionAsync(storage, reference));
+                await driver.GetRevisionAsync(storage.ToDriverInput(), reference));
             await File.WriteAllTextAsync(filePath, "external-change");
 
             StorageContentConflictException conflict = await Assert.ThrowsAsync<StorageContentConflictException>(() =>
                 driver.ReplaceAsync(
-                    storage,
+                    storage.ToDriverInput(),
                     new StorageRevisionedWriteRequest(
                         reference,
                         "stale-write"u8.ToArray(),
@@ -505,9 +505,9 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             Assert.Equal(original, conflict.ExpectedRevision);
             Assert.Equal("external-change", await File.ReadAllTextAsync(filePath));
             StorageContentRevision current = Assert.IsType<StorageContentRevision>(
-                await driver.GetRevisionAsync(storage, reference));
+                await driver.GetRevisionAsync(storage.ToDriverInput(), reference));
             StorageRevisionedWriteResult result = await driver.ReplaceAsync(
-                storage,
+                storage.ToDriverInput(),
                 new StorageRevisionedWriteRequest(
                     reference,
                     "persisted"u8.ToArray(),
@@ -550,7 +550,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
                 sut.BrowseAsync(
-                    CreateStorage(root),
+                    CreateStorage(root).ToDriverInput(),
                     new StorageBrowseRequest(StorageBrowseContainer.Root),
                     cancellation.Token));
 
@@ -587,8 +587,8 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                     StorageBrowseSortField.Name,
                     StorageBrowseSortDirection.Ascending));
 
-            StorageBrowsePage first = await sut.BrowseAsync(CreateStorage(root), request);
-            StorageBrowsePage second = await sut.BrowseAsync(CreateStorage(root), request);
+            StorageBrowsePage first = await sut.BrowseAsync(CreateStorage(root).ToDriverInput(), request);
+            StorageBrowsePage second = await sut.BrowseAsync(CreateStorage(root).ToDriverInput(), request);
 
             Assert.Equal(["alpha.txt", "beta.txt", "zeta.txt"], first.Entries.Select(entry => entry.Name));
             Assert.Equal(first.Entries.Select(entry => entry.Id), second.Entries.Select(entry => entry.Id));
@@ -616,7 +616,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.BrowseAsync(
-                    CreateStorage(root),
+                    CreateStorage(root).ToDriverInput(),
                     new StorageBrowseRequest(
                         StorageBrowseContainer.Root,
                         pageSize: 5,
@@ -647,7 +647,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
             StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
                 sut.BrowseAsync(
-                    CreateStorage(root),
+                    CreateStorage(root).ToDriverInput(),
                     new StorageBrowseRequest(StorageBrowseContainer.Root)));
 
             Assert.Equal(StorageBrowseErrorCode.ProviderUnavailable, exception.Error.Code);
@@ -698,7 +698,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
         string fileName,
         string content)
         => driver.SaveAsync(
-            storage,
+            storage.ToDriverInput(),
             new StorageWriteRequest(
                 fileName,
                 "text/plain",
@@ -710,7 +710,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
         StorageCatalogRecord storage,
         StorageObjectReference reference)
     {
-        await using Stream stream = await driver.OpenReadAsync(storage, reference);
+        await using Stream stream = await driver.OpenReadAsync(storage.ToDriverInput(), reference);
         using var reader = new StreamReader(stream);
         return await reader.ReadToEndAsync();
     }

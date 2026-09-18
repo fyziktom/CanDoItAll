@@ -62,7 +62,7 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
             RootPath,
             profileRootPath,
             TestDatabaseProviderKind.InMemory,
-            string.IsNullOrWhiteSpace(databaseName) ? $"{SanitizeSegment(profileKey)}-inmemory" : databaseName,
+            string.IsNullOrWhiteSpace(databaseName) ? $"{SanitizeSegment(profileKey)}-inmemory-{Path.GetFileName(RootPath)}" : databaseName,
             workspaceRootPath,
             managerArtifactsRootPath);
     }
@@ -181,6 +181,15 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Return this lease's pooled connections before the database is dropped. A long test class leases one
+        // database per fixture, and every lease keeps its own client pool; without this a run of a few dozen
+        // fixtures holds more server connections than the server allows and the next fixture waits instead of
+        // working.
+        await using (var pooled = new NpgsqlConnection(ConnectionString))
+        {
+            NpgsqlConnection.ClearPool(pooled);
+        }
+
         await using var connection = new NpgsqlConnection(AdminConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
@@ -279,32 +288,5 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
     }
 
     private static string FindRepositoryRoot()
-    {
-        const string repositoryRootEnvironmentVariable = "CANDOITALL_TEST_REPOSITORY_ROOT";
-        string? configuredRoot = Environment.GetEnvironmentVariable(repositoryRootEnvironmentVariable);
-        if (!string.IsNullOrWhiteSpace(configuredRoot))
-        {
-            string resolvedRoot = Path.GetFullPath(configuredRoot);
-            if (!File.Exists(Path.Combine(resolvedRoot, "CanDoItAll.slnx")))
-            {
-                throw new InvalidOperationException(
-                    $"{repositoryRootEnvironmentVariable} does not identify the CanDoItAll repository root.");
-            }
-
-            return resolvedRoot;
-        }
-
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the CanDoItAll repository root from the test output directory.");
-    }
+        => TestRepositoryRoot.Find();
 }

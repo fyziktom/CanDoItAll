@@ -11,17 +11,19 @@ public sealed partial class ProjectWorkbenchService
         IReadOnlyCollection<string> sourceRootNodeKeys,
         string targetParentNodeKey,
         ProjectStructureClipboardCopyTaskPolicy taskPolicy = ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-                cancellationToken);
+                cancellationToken, mutationOwner?.ExpectedProjectAdmission is { } expected ? [expected] : null,
+                mutationOwner?.ProcessMutationAdmission, mutationOwner?.AgentMutationAdmission);
 
         var normalizedTargetNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(
             projectId,

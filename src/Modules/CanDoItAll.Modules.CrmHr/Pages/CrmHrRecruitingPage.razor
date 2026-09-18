@@ -1,3 +1,4 @@
+@using static CanDoItAll.CrmHr.UI.Recruiting.CrmHrRecruitingWorkspacePresentation
 @page "/crm-hr/recruiting"
 @implements IDisposable
 @using CanDoItAll.Components.BaseLib
@@ -14,328 +15,22 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Recruiting workspace"
-                    Description="Recruit people and AI agents through interviews, execution evidence, typed analysis, training, rechecks, and an explicitly authorized handoff."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="applications"
-                             Value="@applicationSummary.TotalCount.ToString()"
-                             TooltipText="Candidate pipelines tracked on the shared registry." />
-                <CompactStat Label="interviewing"
-                             Value="@applicationSummary.InterviewingCount.ToString()"
-                             TooltipText="Candidates currently in interview loops."
-                             Tone="info" />
-                <CompactStat Label="offer or hired"
-                             Value="@applicationSummary.OfferOrHiredCount.ToString()"
-                             TooltipText="Applications close enough to require controlled handoff."
-                             Tone="success" />
-                <CompactStat Label="open tasks"
-                             Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")"
-                             TooltipText="Selected candidate training, onboarding, or offboarding actions."
-                             Tone="warning" />
-            </Stats>
-            <Actions>
-                @if (SelectedPartyId.HasValue)
-                {
-                    <PageHeaderActionButton Icon="groups"
-                                            Label="Open workforce"
-                                            TooltipText="Open the linked workforce profile."
-                                            Click="OpenWorkforceAsync"
-                                            data-testid="crmhr-recruiting-open-workforce" />
-                }
-            </Actions>
-        </PageHeader>
-    </Header>
-
-    <ChildContent>
-        <Stack GapScale="LayoutGap.Medium">
-            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" />
-
-            <SurfaceCard data-testid="crmhr-recruiting-catalog">
-                <Stack GapScale="LayoutGap.Medium">
-                    <ListPanelHeader Title="Recruitment applications"
-                                     Description="Search and page through candidate pipelines. Open a card to manage the complete recruitment record."
-                                     Count="Server-paged">
-                        <Actions>
-                            <Button Text="New application"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Size="ButtonSize.Small"
-                                    Click="CreateNewApplicationAsync"
-                                    data-testid="crmhr-recruiting-new-button" />
-                        </Actions>
-                    </ListPanelHeader>
-
-                    <PagedRecordBrowser @key="applicationBrowserRevision"
-                                        TKey="Guid"
-                                        TFilter="RecruitmentApplicationScope"
-                                        Loader="LoadApplicationPageAsync"
-                                        InitialFilter="RecruitmentApplicationScope.All"
-                                        FilterOptions="@ApplicationScopeOptions"
-                                        ShowTagFilter="false"
-                                        Selection="@ApplicationSelection"
-                                        SelectionChanged="SelectApplicationAsync"
-                                        LoadFailed="HandleApplicationPageLoadFailed"
-                                        PageSize="@RecruitmentApplicationQueryLimits.DefaultPageSize"
-                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
-                                        GridMode="PagedRecordGridMode.BoundedCatalog"
-                                        SearchPlaceholder="Search candidate, role, recruiter, manager, source, or public email"
-                                        FilterAriaLabel="Recruitment stage"
-                                        LoadingEyebrow="Recruiting"
-                                        LoadingTitle="Loading applications"
-                                        EmptyEyebrow="No recruitment applications"
-                                        EmptyTitle="No applications match"
-                                        EmptyDescription="Change the search or stage, or create the first candidate."
-                                        DataTestId="crmhr-recruiting-applications" />
-                </Stack>
-            </SurfaceCard>
-
-            @if (isRecruitmentDialogOpen && currentWorkspace is { } recruitmentWorkspace)
-            {
-                <Dialog IsOpen="true"
-                        Eyebrow="Recruitment record"
-                        Title="@RecruitmentDialogTitle"
-                        Subtitle="Application, interviews, assessment evidence, development, and controlled conversion."
-                        Size="ModalSize.Full"
-                        DenseChrome="true"
-                        CloseOnBackdrop="false"
-                        TestId="crmhr-recruiting-record-dialog"
-                        OnClose="CloseRecruitmentDialogAsync">
-                    <ChildContent>
-                    @if (recruitmentWorkspace.HasSelectedApplication)
-                    {
-                        <SurfaceCard>
-                            <Split Gap="LayoutGap.Medium"
-                                   AlignItems="AlignItems.Start"
-                                   JustifyContent="JustifyContent.SpaceBetween"
-                                   Wrap="FlexWrap.Wrap">
-                                <div class="min-w-0">
-                                    <p class="cda-eyebrow">Candidate summary</p>
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@recruitmentWorkspace.CandidateDisplayName</h2>
-                                    @if (!string.IsNullOrWhiteSpace(recruitmentWorkspace.CandidateSummary))
-                                    {
-                                        <p class="mt-3 text-sm leading-6 text-slate-600">@recruitmentWorkspace.CandidateSummary</p>
-                                    }
-                                </div>
-                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                    @if (recruitmentWorkspace.CandidatePartyType is { } candidatePartyType)
-                                    {
-                                        <StatusBadge Tone="neutral" Text="@FormatCandidateType(candidatePartyType)" />
-                                    }
-                                    @if (recruitmentWorkspace.CandidatePartyType == PartyType.AiAgent)
-                                    {
-                                        <StatusBadge Tone="@ResolveBindingTone(recruitmentWorkspace.CandidateBindingStatus)"
-                                                     Text="@FormatBinding(recruitmentWorkspace.CandidateBindingStatus)" />
-                                    }
-                                    <StatusBadge Tone="@ResolveStageTone(applicationEditor.Stage)" Text="@applicationEditor.Stage.ToString()" />
-                                    <StatusBadge Tone="@ResolveDecisionTone(applicationEditor.Decision)" Text="@applicationEditor.Decision.ToString()" />
-                                </Cluster>
-                            </Split>
-
-                            <CompactStatStrip Class="mt-5">
-                                <CompactStat Label="email"
-                                             Value="@FormatValue(recruitmentWorkspace.CandidatePrimaryEmail)"
-                                             TooltipText="Candidate primary email." />
-                                <CompactStat Label="phone"
-                                             Value="@FormatValue(recruitmentWorkspace.CandidatePrimaryPhone)"
-                                             TooltipText="Candidate primary phone." />
-                                <CompactStat Label="recruiter"
-                                             Value="@FormatValue(recruitmentWorkspace.RecruiterDisplayName)"
-                                             TooltipText="Recruiter responsible for this application." />
-                                <CompactStat Label="hiring manager"
-                                             Value="@FormatValue(recruitmentWorkspace.HiringManagerDisplayName)"
-                                             TooltipText="Hiring manager responsible for the decision." />
-                            </CompactStatStrip>
-                        </SurfaceCard>
-                    }
-                    else
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Recruiting workspace ready</p>
-                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Create or choose a candidate pipeline</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">Candidate setup, interviews, lifecycle tasks, and workforce conversion all stay on this route once the first application is saved.</p>
-                        </SurfaceCard>
-                    }
-
-                        <Tabs SelectedIndex="@SelectedRecruitingTabIndex"
-                              SelectedIndexChanged="HandleRecruitingTabChangedAsync"
-                              RenderMode="TabRenderMode.Server"
-                              Variant="TabsVariant.WorkspaceSecondary"
-                              BorderMode="TabsBorderMode.Soft"
-                              OverflowMode="TabsOverflowMode.Wrap"
-                              AriaLabel="Recruitment record sections"
-                              data-testid="crmhr-recruiting-tabs">
-                            <TabsItem Text="Application"
-                                      Icon="person_search"
-                                      data-testid="crmhr-recruiting-tab-application">
-                            <CandidatePipeline Draft="applicationEditor"
-                                               StageHistory="recruitmentWorkspace.StageHistory"
-                                               HasWorkforceProfile="recruitmentWorkspace.HasWorkforceProfile"
-                                               SaveApplication="SaveApplicationAsync"
-                                               ResetApplication="ResetApplicationAsync" />
-                            </TabsItem>
-
-                            @if (recruitmentWorkspace.HasSelectedApplication)
-                            {
-                            <TabsItem Text="Interviews"
-                                      Icon="event"
-                                      data-testid="crmhr-recruiting-tab-interviews">
-                            <InterviewSchedulePanel Draft="interviewEditor"
-                                                    Interviews="recruitmentWorkspace.Interviews"
-                                                    SaveInterview="SaveInterviewAsync"
-                                                    ResetInterview="ResetInterviewAsync"
-                                                    DeleteInterview="DeleteInterviewAsync" />
-                            </TabsItem>
-
-                            <TabsItem Text="Assessments"
-                                      Icon="fact_check"
-                                      data-testid="crmhr-recruiting-tab-assessments">
-                            <AgentRecruitingEvidencePanel CandidateAgentId="recruitmentWorkspace.CandidateTechnicalAgentId"
-                                                          RecruitmentApplicationId="recruitmentWorkspace.Application.Id"
-                                                          ReadinessChanged="HandleAssessmentReadinessChangedAsync"
-                                                          RequestTraining="OpenTrainingAsync" />
-                            </TabsItem>
-
-                            <TabsItem Text="Development"
-                                      Icon="school"
-                                      data-testid="crmhr-recruiting-tab-development">
-                            <OnboardingChecklistPanel SupportDraft="supportEditor"
-                                                      CurrentAssignments="recruitmentWorkspace.SupportAssignments"
-                                                      TaskDraft="taskEditor"
-                                                      Tasks="recruitmentWorkspace.LifecycleTasks"
-                                                      SaveSupportAssignments="SaveSupportAssignmentsAsync"
-                                                      SaveTask="SaveTaskAsync"
-                                                      ResetTask="ResetTaskAsync"
-                                                      DeleteTask="DeleteTaskAsync" />
-                            </TabsItem>
-
-                            <TabsItem Text="Conversion"
-                                      Icon="group_add"
-                                      data-testid="crmhr-recruiting-tab-conversion">
-                            <FormSection Title="Hiring conversion"
-                                         Description="Convert an approved candidate on the same Party identity. Technical-agent activation remains a separate AgentFramework command.">
-                                    <SurfaceCard>
-                                        @if (recruitmentWorkspace.HasWorkforceProfile)
-                                        {
-                                            <div class="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700" data-testid="crmhr-recruiting-convert-existing-callout">
-                                                This candidate already has a workforce profile. Saving conversion updates that existing identity instead of creating another person.
-                                            </div>
-                                        }
-
-                                        @if (ConversionEligibilityError is { } conversionError)
-                                        {
-                                            <Alert AlertStyle="AlertStyle.Warning" Class="mt-4">
-                                                @conversionError.Message
-                                            </Alert>
-                                        }
-
-                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
-                                            <FormField Text="Workforce kind">
-                                                <InputSelect @bind-Value="conversionEditor.WorkforceKind" class="cda-input" data-testid="crmhr-recruiting-convert-kind">
-                                                    @foreach (var workforceKind in Enum.GetValues<WorkforceKind>())
-                                                    {
-                                                        <option value="@workforceKind">@workforceKind</option>
-                                                    }
-                                                </InputSelect>
-                                            </FormField>
-                                            <FormField Text="Job title">
-                                                <InputText @bind-Value="conversionEditor.JobTitle" class="cda-input" data-testid="crmhr-recruiting-convert-job-title" />
-                                            </FormField>
-                                            <FormField Text="Discipline">
-                                                <InputText @bind-Value="conversionEditor.Discipline" class="cda-input" data-testid="crmhr-recruiting-convert-discipline" />
-                                            </FormField>
-                                        </Grid>
-
-                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
-                                            <FormField Text="Seniority">
-                                                <InputText @bind-Value="conversionEditor.Seniority" class="cda-input" data-testid="crmhr-recruiting-convert-seniority" />
-                                            </FormField>
-                                            <PartyPicker Label="Home unit"
-                                                         TestIdPrefix="crmhr-recruiting-convert-home-unit"
-                                                         AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
-                                                         InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
-                                                         SelectedPartyId="@conversionEditor.HomeUnitPartyId"
-                                                         SelectedPartyIdChanged="SetConversionHomeUnitAsync" />
-                                            <PartyPicker Label="Manager"
-                                                         TestIdPrefix="crmhr-recruiting-convert-manager"
-                                                         AllowedScope="PartyRecordScope.People"
-                                                         InitialScope="PartyRecordScope.People"
-                                                         ExcludedPartyId="@SelectedPartyId"
-                                                         SelectedPartyId="@conversionEditor.ManagerPartyId"
-                                                         SelectedPartyIdChanged="SetConversionManagerAsync" />
-                                        </Grid>
-
-                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
-                                            <FormField Text="Start date"><InputDate @bind-Value="conversionEditor.StartDate" class="cda-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
-                                            <FormField Text="Location"><InputText @bind-Value="conversionEditor.Location" class="cda-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
-                                            <FormField Text="Time zone"><InputText @bind-Value="conversionEditor.TimeZone" class="cda-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
-                                            <FormField Text="Capacity h/week"><InputNumber @bind-Value="conversionEditor.CapacityHoursPerWeek" class="cda-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
-                                        </Grid>
-
-                                        <div class="mt-4">
-                                            <FormField Text="Notes">
-                                                <InputTextArea @bind-Value="conversionEditor.Notes" class="cda-input cda-input--textarea min-h-[7rem]" data-testid="crmhr-recruiting-convert-notes" />
-                                            </FormField>
-                                        </div>
-
-                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
-                                            <Button Text="Convert to workforce"
-                                                    Disabled="@(ConversionEligibilityError is not null)"
-                                                    Click="ConvertCandidateAsync"
-                                                    data-testid="crmhr-recruiting-convert-save-button" />
-                                            @if (SelectedPartyId.HasValue)
-                                            {
-                                                <Button Text="Open workforce" ButtonStyle="ButtonStyle.Light" Click="OpenWorkforceAsync" data-testid="crmhr-recruiting-convert-open-workforce" />
-                                            }
-                                        </Cluster>
-                                    </SurfaceCard>
-                            </FormSection>
-                            </TabsItem>
-                            }
-                        </Tabs>
-                    </ChildContent>
-                    <Footer>
-                        <Split Breakpoint="LayoutBreakpoint.None"
-                               Gap="LayoutGap.Medium"
-                               AlignItems="AlignItems.Center"
-                               JustifyContent="JustifyContent.SpaceBetween"
-                               Wrap="FlexWrap.Wrap">
-                            <SmallText Text="Automated evidence never changes stage, converts workforce, or activates an agent." />
-                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                @if (SelectedPartyId.HasValue)
-                                {
-                                    <Button Text="Open workforce"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Click="OpenWorkforceAsync" />
-                                }
-                                <Button Text="Close"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Click="CloseRecruitmentDialogAsync"
-                                        data-testid="crmhr-recruiting-record-close" />
-                            </Cluster>
-                        </Split>
-                    </Footer>
-                </Dialog>
-            }
-        </Stack>
-    </ChildContent>
-</PageScaffold>
+<CrmHrRecruitingWorkspaceSurface View="this">
+    <SecondaryNavigation>
+        <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" />
+    </SecondaryNavigation>
+    <AgentEvidence>
+        @if (currentWorkspace is { } recruitmentWorkspace)
+        {
+            <AgentRecruitingEvidencePanel CandidateAgentId="recruitmentWorkspace.CandidateTechnicalAgentId"
+                                          RecruitmentApplicationId="recruitmentWorkspace.Application.Id"
+                                          ReadinessChanged="HandleAssessmentReadinessChangedAsync"
+                                          RequestTraining="OpenTrainingAsync" />
+        }
+    </AgentEvidence>
+</CrmHrRecruitingWorkspaceSurface>
 
 @code {
-    private static readonly IReadOnlyList<PagedRecordFilterOption<RecruitmentApplicationScope>> ApplicationScopeOptions =
-    [
-        new(RecruitmentApplicationScope.All, "All", "crmhr-recruiting-stage-all"),
-        new(RecruitmentApplicationScope.Applied, "Applied", "crmhr-recruiting-stage-applied"),
-        new(RecruitmentApplicationScope.Screening, "Screening", "crmhr-recruiting-stage-screening"),
-        new(RecruitmentApplicationScope.Interviewing, "Interviewing", "crmhr-recruiting-stage-interviewing"),
-        new(RecruitmentApplicationScope.Offer, "Offer", "crmhr-recruiting-stage-offer"),
-        new(RecruitmentApplicationScope.Hired, "Hired", "crmhr-recruiting-stage-hired"),
-        new(RecruitmentApplicationScope.Rejected, "Rejected", "crmhr-recruiting-stage-rejected"),
-        new(RecruitmentApplicationScope.Withdrawn, "Withdrawn", "crmhr-recruiting-stage-withdrawn")
-    ];
-
     [SupplyParameterFromQuery]
     private Guid? ApplicationId { get; set; }
 
@@ -354,6 +49,13 @@
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private long agentChatContextLoadGeneration;
     private long recruitmentActionGeneration;
+    private readonly CrmHrMutationGate mutationGate = new();
+    private readonly CrmHrDraftReconciler drafts = new();
+    private const string ApplicationDraft = "application";
+    private const string InterviewDraft = "interview";
+    private const string TaskDraft = "task";
+    private const string SupportDraft = "support";
+    private const string ConversionDraft = "conversion";
     private Guid? committedApplicationId;
     private Guid? committedPartyId;
     private RecruitingRecordTab selectedRecruitingTab = RecruitingRecordTab.Application;
@@ -431,7 +133,7 @@
         await LoadAsync();
     }
 
-    private async Task LoadAsync()
+    private async Task LoadAsync(RecruitingEditor committed = RecruitingEditor.None)
     {
         var loadGeneration = Interlocked.Increment(ref agentChatContextLoadGeneration);
         var requestedApplicationId = ApplicationId;
@@ -453,7 +155,10 @@
             var loadedWorkspace = await workspaceTask;
             currentWorkspace = loadedWorkspace;
             applicationSummary = await summaryTask;
-            ApplyWorkspace(loadedWorkspace);
+            ApplyWorkspace(
+                loadedWorkspace,
+                applicationChanged: previousApplicationId != loadedWorkspace.Application.Id,
+                committed);
             committedApplicationId = requestedApplicationId;
             committedPartyId = requestedPartyId;
             hasCommittedRecruitmentRoute = true;
@@ -498,26 +203,57 @@
         => !isDisposed &&
            loadGeneration == Volatile.Read(ref agentChatContextLoadGeneration);
 
-    private void ApplyWorkspace(RecruitmentWorkspaceModel workspace)
+    // A reload of the application already on screen (another editor's commit, a deleted interview or task, an agent
+    // refresh) keeps what the operator typed into the editors it did not commit. Closing the record and starting a new
+    // application discard every draft.
+    private void ApplyWorkspace(
+        RecruitmentWorkspaceModel workspace,
+        bool applicationChanged,
+        RecruitingEditor committed = RecruitingEditor.None)
     {
         assessmentReadiness = null;
-        applicationEditor = CloneApplication(workspace.Application);
-        interviewEditor = workspace.HasSelectedApplication && workspace.Application.Id.HasValue
-            ? CreateInterviewDraft(workspace.Application.Id.Value)
-            : new RecruitmentInterviewEditorModel();
-        taskEditor = workspace.HasSelectedApplication && workspace.Application.PartyId.HasValue
-            ? CreateTaskDraft(workspace.Application.PartyId.Value)
-            : new LifecycleTaskEditorModel();
-        supportEditor = workspace.HasSelectedApplication
-            ? new RecruitmentSupportAssignmentsEditorModel
-            {
-                PartyId = workspace.SupportAssignments.PartyId,
-                ManagerPartyId = workspace.SupportAssignments.ManagerPartyId,
-                BuddyPartyId = workspace.SupportAssignments.BuddyPartyId,
-                MentorPartyId = workspace.SupportAssignments.MentorPartyId
-            }
-            : new RecruitmentSupportAssignmentsEditorModel();
-        conversionEditor = CloneConversion(workspace.Conversion);
+        applicationEditor = drafts.Reconcile(
+            ApplicationDraft,
+            applicationEditor,
+            () => CloneApplication(workspace.Application),
+            applicationChanged,
+            committed.HasFlag(RecruitingEditor.Application));
+        interviewEditor = drafts.Reconcile(
+            InterviewDraft,
+            interviewEditor,
+            () => workspace.HasSelectedApplication && workspace.Application.Id.HasValue
+                ? CreateInterviewDraft(workspace.Application.Id.Value)
+                : new RecruitmentInterviewEditorModel(),
+            applicationChanged,
+            committed.HasFlag(RecruitingEditor.Interview));
+        taskEditor = drafts.Reconcile(
+            TaskDraft,
+            taskEditor,
+            () => workspace.HasSelectedApplication && workspace.Application.PartyId.HasValue
+                ? CreateTaskDraft(workspace.Application.PartyId.Value)
+                : new LifecycleTaskEditorModel(),
+            applicationChanged,
+            committed.HasFlag(RecruitingEditor.Task));
+        supportEditor = drafts.Reconcile(
+            SupportDraft,
+            supportEditor,
+            () => workspace.HasSelectedApplication
+                ? new RecruitmentSupportAssignmentsEditorModel
+                {
+                    PartyId = workspace.SupportAssignments.PartyId,
+                    ManagerPartyId = workspace.SupportAssignments.ManagerPartyId,
+                    BuddyPartyId = workspace.SupportAssignments.BuddyPartyId,
+                    MentorPartyId = workspace.SupportAssignments.MentorPartyId
+                }
+                : new RecruitmentSupportAssignmentsEditorModel(),
+            applicationChanged,
+            committed.HasFlag(RecruitingEditor.Support));
+        conversionEditor = drafts.Reconcile(
+            ConversionDraft,
+            conversionEditor,
+            () => CloneConversion(workspace.Conversion),
+            applicationChanged,
+            committed.HasFlag(RecruitingEditor.Conversion));
     }
 
     private Task HandleAssessmentReadinessChangedAsync(
@@ -602,7 +338,7 @@
 
         InvalidateRecruitmentActions();
         selectedRecruitingTab = RecruitingRecordTab.Application;
-        ApplyWorkspace(currentWorkspace);
+        ApplyWorkspace(currentWorkspace, applicationChanged: true);
         isRecruitmentDialogOpen = true;
         return Task.CompletedTask;
     }
@@ -620,13 +356,14 @@
         selectedRecruitingTab = RecruitingRecordTab.Application;
         if (currentWorkspace is { } workspace)
         {
-            ApplyWorkspace(workspace);
+            ApplyWorkspace(workspace, applicationChanged: true);
             agentChatContextAccessState = AgentChatContextAccessState.Ready;
             return Task.CompletedTask;
         }
 
         Interlocked.Increment(ref agentChatContextLoadGeneration);
         currentWorkspace = null;
+        drafts.Reset();
         applicationEditor = new();
         interviewEditor = new();
         taskEditor = new();
@@ -656,14 +393,24 @@
             return;
         }
 
-        var result = await RecruitingService.SaveRecruitmentApplicationAsync(applicationEditor);
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
+        var result = await RecruitingService.SaveRecruitmentApplicationAsync(
+            drafts.Submit(ApplicationDraft, applicationEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(ApplicationDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            // Nothing was written: the draft stays as the operator left it and owns all of its fields again.
+            drafts.Retire(ApplicationDraft);
             SetError(result.Errors);
             return;
         }
@@ -680,12 +427,14 @@
             return;
         }
 
-        await LoadAsync();
+        await RefreshAfterCommitAsync(RecruitingEditor.Application);
     }
 
     private Task ResetApplicationAsync()
     {
-        applicationEditor = currentWorkspace?.HasSelectedApplication == true ? CloneApplication(currentWorkspace.Application) : new RecruitmentApplicationEditorModel();
+        applicationEditor = drafts.Replace(
+            ApplicationDraft,
+            currentWorkspace?.HasSelectedApplication == true ? CloneApplication(currentWorkspace.Application) : new RecruitmentApplicationEditorModel());
         return Task.CompletedTask;
     }
 
@@ -703,28 +452,43 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         interviewEditor.ApplicationId = currentWorkspace.Application.Id.Value;
-        var result = await RecruitingService.SaveRecruitmentInterviewAsync(interviewEditor);
+        var result = await RecruitingService.SaveRecruitmentInterviewAsync(
+            drafts.Submit(InterviewDraft, interviewEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(InterviewDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(InterviewDraft);
             SetError(result.Errors);
             return;
         }
 
         NotificationService.Success("Interview saved", "Interview saved.");
-        await LoadAsync();
+        // The create editor starts over once the owner accepted it, unless the operator already typed the next
+        // interview into it while the write was in flight; that draft is theirs and survives the read-back whole.
+        var interviewStartsOver = !drafts.ChangedAfterSubmission(InterviewDraft, interviewEditor);
+        drafts.Retire(InterviewDraft);
+        await RefreshAfterCommitAsync(interviewStartsOver ? RecruitingEditor.Interview : RecruitingEditor.None);
     }
 
     private Task ResetInterviewAsync()
     {
-        interviewEditor = currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.Id.HasValue
-            ? CreateInterviewDraft(currentWorkspace.Application.Id.Value)
-            : new RecruitmentInterviewEditorModel();
+        interviewEditor = drafts.Replace(
+            InterviewDraft,
+            currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.Id.HasValue
+                ? CreateInterviewDraft(currentWorkspace.Application.Id.Value)
+                : new RecruitmentInterviewEditorModel());
         return Task.CompletedTask;
     }
 
@@ -736,6 +500,12 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         await RecruitingService.DeleteRecruitmentInterviewAsync(interviewId);
         if (!IsCurrentRecruitmentAction(action))
         {
@@ -743,7 +513,7 @@
         }
 
         NotificationService.Warning("Interview deleted", "Interview deleted.");
-        await LoadAsync();
+        await RefreshAfterCommitAsync(RecruitingEditor.None);
     }
 
     private async Task SaveTaskAsync()
@@ -760,28 +530,41 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         taskEditor.PartyId = currentWorkspace.Application.PartyId.Value;
-        var result = await RecruitingService.SaveLifecycleTaskAsync(taskEditor);
+        var result = await RecruitingService.SaveLifecycleTaskAsync(
+            drafts.Submit(TaskDraft, taskEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(TaskDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(TaskDraft);
             SetError(result.Errors);
             return;
         }
 
         NotificationService.Success("Lifecycle task saved", "Lifecycle task saved.");
-        await LoadAsync();
+        var taskStartsOver = !drafts.ChangedAfterSubmission(TaskDraft, taskEditor);
+        drafts.Retire(TaskDraft);
+        await RefreshAfterCommitAsync(taskStartsOver ? RecruitingEditor.Task : RecruitingEditor.None);
     }
 
     private Task ResetTaskAsync()
     {
-        taskEditor = currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.PartyId.HasValue
-            ? CreateTaskDraft(currentWorkspace.Application.PartyId.Value)
-            : new LifecycleTaskEditorModel();
+        taskEditor = drafts.Replace(
+            TaskDraft,
+            currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.PartyId.HasValue
+                ? CreateTaskDraft(currentWorkspace.Application.PartyId.Value)
+                : new LifecycleTaskEditorModel());
         return Task.CompletedTask;
     }
 
@@ -794,7 +577,9 @@
             return Task.CompletedTask;
         }
 
-        taskEditor = CreateTaskDraft(currentWorkspace.Application.PartyId.Value);
+        // The prefilled plan is unsaved content like anything typed: it is tracked from the empty draft, so a reload
+        // of the same application keeps it.
+        taskEditor = drafts.Replace(TaskDraft, CreateTaskDraft(currentWorkspace.Application.PartyId.Value));
         taskEditor.TaskKind = LifecycleTaskKind.Training;
         taskEditor.Title = $"{FormatClassification(request.Classification)} development plan";
         taskEditor.Notes =
@@ -814,6 +599,12 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         await RecruitingService.DeleteLifecycleTaskAsync(taskId);
         if (!IsCurrentRecruitmentAction(action))
         {
@@ -821,7 +612,7 @@
         }
 
         NotificationService.Warning("Lifecycle task deleted", "Lifecycle task deleted.");
-        await LoadAsync();
+        await RefreshAfterCommitAsync(RecruitingEditor.None);
     }
 
     private async Task SaveSupportAssignmentsAsync()
@@ -838,21 +629,30 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         supportEditor.PartyId = currentWorkspace.Application.PartyId.Value;
-        var result = await RecruitingService.SaveSupportAssignmentsAsync(supportEditor);
+        var result = await RecruitingService.SaveSupportAssignmentsAsync(
+            drafts.Submit(SupportDraft, supportEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(SupportDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(SupportDraft);
             SetError(result.Errors);
             return;
         }
 
         NotificationService.Success("Support assignments saved", "Support assignments saved.");
-        await LoadAsync();
+        await RefreshAfterCommitAsync(RecruitingEditor.Support);
     }
 
     private async Task ConvertCandidateAsync()
@@ -869,22 +669,48 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         conversionEditor.ApplicationId = currentWorkspace.Application.Id.Value;
-        var result = await RecruitingService.ConvertCandidateAsync(conversionEditor);
+        var result = await RecruitingService.ConvertCandidateAsync(
+            drafts.Submit(ConversionDraft, conversionEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(ConversionDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(ConversionDraft);
             SetError(result.Errors);
             return;
         }
 
         NotificationService.Success("Candidate converted", "Candidate converted to workforce.");
         applicationBrowserRevision++;
-        await LoadAsync();
+        await RefreshAfterCommitAsync(RecruitingEditor.Conversion);
+    }
+
+    // The owner committed. A failed read-back is a warning: it never repeats the write and never discards the
+    // committed identity; the operator can reload to reconcile the view.
+    private async Task RefreshAfterCommitAsync(RecruitingEditor committed)
+    {
+        try
+        {
+            await LoadAsync(committed);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(exception, "The recruiting workspace could not be refreshed after a committed change.");
+            NotificationService.Warning(
+                "Saved, refresh failed",
+                "The change was saved, but the workspace could not be refreshed. Reload the page to see the current state.");
+        }
     }
 
     private Task SetConversionHomeUnitAsync(Guid? partyId)
@@ -1118,40 +944,6 @@
         return parts.Count == 0 ? "No additional candidate detail yet." : string.Join(" / ", parts);
     }
 
-    private static string ResolveStageTone(RecruitmentStage stage)
-    {
-        return stage switch
-        {
-            RecruitmentStage.Hired => "success",
-            RecruitmentStage.Offer => "primary",
-            RecruitmentStage.Interviewing => "info",
-            RecruitmentStage.Rejected => "danger",
-            RecruitmentStage.Withdrawn => "warning",
-            _ => "base"
-        };
-    }
-
-    private static string ResolveDecisionTone(RecruitmentDecision decision)
-    {
-        return decision switch
-        {
-            RecruitmentDecision.Approved => "success",
-            RecruitmentDecision.Rejected => "danger",
-            RecruitmentDecision.Withdrawn => "warning",
-            _ => "base"
-        };
-    }
-
-    private static string FormatValue(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
-    }
-
-    private static string FormatCandidateType(PartyType partyType)
-    {
-        return partyType == PartyType.AiAgent ? "AI agent" : "Person";
-    }
-
     private static string FormatClassification(
         AgentRecruitingAssessmentClassification classification)
     {
@@ -1164,26 +956,16 @@
         };
     }
 
-    private static string FormatBinding(AiResourceBindingStatus bindingStatus)
+    // The editors of the recruitment record; a reload names the one whose commit caused it.
+    [Flags]
+    private enum RecruitingEditor
     {
-        return bindingStatus switch
-        {
-            AiResourceBindingStatus.Bound => "Technical binding ready",
-            AiResourceBindingStatus.PendingBackfill => "Binding pending",
-            AiResourceBindingStatus.Error => "Binding error",
-            _ => "Not technically bound"
-        };
-    }
-
-    private static string ResolveBindingTone(AiResourceBindingStatus bindingStatus)
-    {
-        return bindingStatus switch
-        {
-            AiResourceBindingStatus.Bound => "success",
-            AiResourceBindingStatus.Error => "danger",
-            AiResourceBindingStatus.PendingBackfill => "warning",
-            _ => "neutral"
-        };
+        None = 0,
+        Application = 1,
+        Interview = 2,
+        Task = 4,
+        Support = 8,
+        Conversion = 16
     }
 
     private enum RecruitingRecordTab

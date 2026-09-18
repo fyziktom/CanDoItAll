@@ -1,0 +1,111 @@
+@page "/crm-hr/account-activity"
+@inject NavigationManager Navigation
+
+<PageTitle>CRM / HR account and activity UI sandbox</PageTitle>
+
+<header class="crmhr-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <h1 class="cda-title-xl">CRM / HR account summary and activity history sandbox</h1>
+        <p>The real account summary and the real activity timeline in its three production compositions (CRM account activity, Directory party history, Workforce history) with deterministic local state and recorded intents. No query service, persistence, navigation or mutation is involved; paging slices a local list and the conversion intent updates local state only.</p>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
+            <label for="crmhr-sandbox-scenario">Scenario</label>
+            <select id="crmhr-sandbox-scenario"
+                    class="cda-input"
+                    value="@CrmHrAccountActivitySandboxContext.Token(context.Scenario)"
+                    @onchange="ChangeScenario"
+                    data-testid="crmhr-sandbox-scenario">
+                @foreach (var scenario in Enum.GetValues<CrmHrAccountActivitySandboxScenario>())
+                {
+                    <option value="@CrmHrAccountActivitySandboxContext.Token(scenario)">@scenario</option>
+                }
+            </select>
+            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
+            <a href="/crm-hr" data-testid="crmhr-sandbox-home-link">Home sandbox</a>
+        </Cluster>
+        <output aria-live="polite" data-testid="crmhr-sandbox-intent">@fixture.IntentLog</output>
+    </Stack>
+</header>
+
+<main class="@FrameClass" data-testid="crmhr-sandbox-frame" data-scenario="@CrmHrAccountActivitySandboxContext.Token(context.Scenario)">
+    @* The CRM account dialog gives the summary and the timeline the full content width; the frame stretches them the same way. *@
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+        <CrmHrAccountSummarySurface Account="@fixture.Account" Intent="HandleAccountIntent" />
+
+        @foreach (var host in Enum.GetValues<CrmHrActivitySandboxHost>())
+        {
+            <CrmHrActivitySurface Presentation="@fixture.Presentation(host)"
+                                  Copy="@CrmHrAccountActivitySandboxFixture.Copy(host)"
+                                  DataTestId="@CrmHrAccountActivitySandboxFixture.TestId(host)"
+                                  Intent="@(intent => HandleActivityIntent(host, intent))" />
+        }
+    </Stack>
+</main>
+
+<Tooltip />
+
+@code {
+    private readonly CrmHrAccountActivitySandboxFixture fixture = new();
+    private CrmHrAccountActivitySandboxContext context = new();
+    private bool observed;
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "scenario")]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "layout")]
+    public string? LayoutQuery { get; set; }
+
+    private string FrameClass => context.Layout switch
+    {
+        CrmHrHomeSandboxLayout.Matched => "crmhr-sandbox__frame crmhr-sandbox__frame--matched",
+        CrmHrHomeSandboxLayout.Narrow => "crmhr-sandbox__frame crmhr-sandbox__frame--narrow",
+        _ => "crmhr-sandbox__frame"
+    };
+
+    private string LayoutLabel => context.Layout switch
+    {
+        CrmHrHomeSandboxLayout.Matched => "Layout: matched desktop (1600×1000)",
+        CrmHrHomeSandboxLayout.Narrow => "Layout: constrained 960px",
+        _ => "Layout: flexible"
+    };
+
+    protected override void OnParametersSet()
+    {
+        var next = CrmHrAccountActivitySandboxContext.Parse(ScenarioQuery, LayoutQuery);
+        if (observed && next == context)
+        {
+            return;
+        }
+
+        var scenarioChanged = !observed || next.Scenario != context.Scenario;
+        observed = true;
+        context = next;
+        if (scenarioChanged)
+        {
+            fixture.Apply(context.Scenario);
+        }
+    }
+
+    private void HandleAccountIntent(CrmHrAccountSummaryIntent intent) => fixture.HandleAccount(intent);
+
+    private void HandleActivityIntent(CrmHrActivitySandboxHost host, CrmHrActivityIntent intent) => fixture.HandleActivity(host, intent);
+
+    private void ChangeScenario(ChangeEventArgs args)
+        => Navigate(context with { Scenario = CrmHrAccountActivitySandboxContext.ParseScenario(args.Value?.ToString()) });
+
+    private void CycleLayout()
+        => Navigate(context with
+        {
+            Layout = context.Layout switch
+            {
+                CrmHrHomeSandboxLayout.Matched => CrmHrHomeSandboxLayout.Narrow,
+                CrmHrHomeSandboxLayout.Narrow => CrmHrHomeSandboxLayout.Flexible,
+                _ => CrmHrHomeSandboxLayout.Matched
+            }
+        });
+
+    // Controls replace the current history entry so a reload restores the scenario and layout.
+    private void Navigate(CrmHrAccountActivitySandboxContext next)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters("/crm-hr/account-activity", next.ToQuery()), replace: true);
+}

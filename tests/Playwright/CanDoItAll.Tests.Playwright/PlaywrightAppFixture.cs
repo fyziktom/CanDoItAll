@@ -26,9 +26,22 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     public IBrowser Browser { get; private set; } = default!;
 
+    internal TestDatabaseProfile OwnedDatabaseProfile => _activeProfile
+        ?? throw new InvalidOperationException("The Playwright fixture must own its host profile before creating a seed provider.");
+
     public string? DatabaseConnectionString => _activeProfile?.ConnectionString;
 
     public string? StorageWorkspaceRoot => _activeProfile?.WorkspaceRootPath;
+
+    internal static async Task CompleteDatabaseStartupAsync(IPage page) {
+        await page.WaitForFunctionAsync("() => typeof window.CanDoItAll?.browserState?.isDatabaseStartupPromptDismissed === 'function'");
+        if (!await page.EvaluateAsync<bool>("() => window.CanDoItAll.browserState.isDatabaseStartupPromptDismissed()")) {
+            await page.GetByTestId("database-startup-modal").WaitForAsync();
+            await page.GetByTestId("database-startup-continue").ClickAsync();
+        }
+        await page.GetByTestId("database-startup-modal").WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await page.WaitForFunctionAsync("() => window.CanDoItAll.browserState.isDatabaseStartupPromptDismissed()");
+    }
 
     public bool IsRuntimePresentationHeadless =>
         !OperatingSystem.IsWindows() ||

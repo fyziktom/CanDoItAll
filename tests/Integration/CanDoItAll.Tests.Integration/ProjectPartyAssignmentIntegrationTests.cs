@@ -18,6 +18,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var projectId = await CreateProjectAsync(projectsService, "B10 Integration Project");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var customerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Acme Customer");
         var deliveryUnitId = await CreatePartyAsync(partyDirectoryService, PartyType.OrganizationUnit, "Platform Guild");
         var ownerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Owner");
@@ -25,6 +27,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = customerId,
             Role = ProjectPartyAssignmentRole.Customer,
             IsPrimary = true,
@@ -33,6 +36,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = deliveryUnitId,
             Role = ProjectPartyAssignmentRole.DeliveryUnit,
             IsPrimary = true,
@@ -44,6 +48,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = ownerId,
             Role = ProjectPartyAssignmentRole.Manager,
             IsPrimary = true,
@@ -96,6 +101,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var assignments = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
 
         var projectId = await CreateProjectAsync(projectsService, "Bounded assignment search project");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         for (var index = 0; index < 13; index++)
         {
             var partyId = await CreatePartyAsync(
@@ -105,6 +112,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             var result = await assignments.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = partyId,
                 Role = ProjectPartyAssignmentRole.TeamMember,
                 AllocationPercent = 50m,
@@ -158,9 +166,12 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             var projectId = await CreateProjectAsync(
                 projectsService,
                 $"Party assignment history project {index:D2}");
+            var admission = Assert.IsType<ProjectWriteAdmission>(
+                await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
             var result = await assignments.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = partyId,
                 Role = ProjectPartyAssignmentRole.TeamMember,
                 Source = "integration-tests"
@@ -251,11 +262,14 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var projectId = await CreateProjectAsync(projectsService, "Assignment invariant project");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var partyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Invariant worker");
 
         var allocationResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = partyId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             AllocationPercent = 0m,
@@ -264,6 +278,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var dateResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = partyId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             AllocationPercent = 100m,
@@ -276,12 +291,14 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             new ProjectNodeReference("work-item-invariant-check"),
             [new ProjectPartyAssignmentUpsertRequest
             {
+                ExpectedProjectAdmission = admission,
                 PartyId = partyId,
                 Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                 AllocationPercent = 101m,
                 Source = "integration-tests"
             }],
-            [ProjectPartyAssignmentRole.WorkItemAssignee]);
+            [ProjectPartyAssignmentRole.WorkItemAssignee],
+            expectedProjectAdmission: admission);
 
         Assert.False(allocationResult.IsSuccess);
         Assert.Contains(allocationResult.Errors, error => error.Code == "crmhr.project-assignment.allocation-range");
@@ -309,6 +326,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var projectId = await CreateProjectAsync(
             projectsService,
             "Affiliation-aware assignment project");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var organizationId = await CreatePartyAsync(
             partyDirectoryService,
             PartyType.Organization,
@@ -341,6 +360,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = otherPersonId,
                 PartyAffiliationId = affiliationId,
                 Role = ProjectPartyAssignmentRole.TeamMember,
@@ -350,6 +370,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = personId,
                 PartyAffiliationId = affiliationId,
                 Role = ProjectPartyAssignmentRole.TeamMember,
@@ -361,6 +382,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = personId,
                 PartyAffiliationId = affiliationId,
                 Role = ProjectPartyAssignmentRole.TeamMember,
@@ -372,6 +394,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             new ProjectPartyAssignmentUpsertRequest
             {
                 ProjectId = projectId,
+                ExpectedProjectAdmission = admission,
                 PartyId = personId,
                 PartyAffiliationId = affiliationId,
                 Role = ProjectPartyAssignmentRole.TeamMember,
@@ -425,7 +448,11 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var firstProjectId = await CreateProjectAsync(projectsService, "Canonical assignment A");
+        var firstAdmission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(firstProjectId));
         var secondProjectId = await CreateProjectAsync(projectsService, "Canonical assignment B");
+        var secondAdmission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(secondProjectId));
         var assigneeId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Willa Worker");
         var foreignWorkItem = await workbench.CreateObjectAsync(
             secondProjectId,
@@ -439,11 +466,12 @@ public sealed class ProjectPartyAssignmentIntegrationTests
                 240,
                 null,
                 null,
-                "task"));
+                "task") { ExpectedProjectAdmission = secondAdmission });
 
         var missingNodeResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = firstProjectId,
+            ExpectedProjectAdmission = firstAdmission,
             PartyId = assigneeId,
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = "custom:missing-work-item",
@@ -457,6 +485,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var foreignNodeResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = firstProjectId,
+            ExpectedProjectAdmission = firstAdmission,
             PartyId = assigneeId,
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = foreignWorkItem.Id,
@@ -479,6 +508,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var projectId = await CreateProjectAsync(projectsService, "Canonical role policy");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var participantId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Mina Meeting");
         var workItemAssigneeId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Ari Assignee");
         var noteNode = await workbench.CreateObjectAsync(
@@ -490,7 +521,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
                 "Not a meeting or work item.",
                 null,
                 420,
-                260));
+                260) { ExpectedProjectAdmission = admission });
         var meetingNode = await workbench.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -500,11 +531,12 @@ public sealed class ProjectPartyAssignmentIntegrationTests
                 "Meeting node.",
                 null,
                 680,
-                260));
+                260) { ExpectedProjectAdmission = admission });
 
         var invalidMeetingRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = participantId,
             Role = ProjectPartyAssignmentRole.MeetingParticipant,
             NodeKey = noteNode.Id,
@@ -518,6 +550,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var validMeetingRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = participantId,
             Role = ProjectPartyAssignmentRole.MeetingParticipant,
             NodeKey = meetingNode.Id,
@@ -530,6 +563,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var invalidWorkItemRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = workItemAssigneeId,
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = meetingNode.Id,
@@ -552,6 +586,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
 
         var projectId = await CreateProjectAsync(projectsService, "Participant role policy");
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var teamMemberId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Taylor Team Member");
         var partnerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Partner Org");
         var participantNode = await workbench.CreateObjectAsync(
@@ -566,11 +602,12 @@ public sealed class ProjectPartyAssignmentIntegrationTests
                 260,
                 null,
                 null,
-                "freelancer"));
+                "freelancer") { ExpectedProjectAdmission = admission });
 
         var projectionOnlyResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = teamMemberId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             NodeKey = $"project:{projectId}",
@@ -584,6 +621,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var invalidParticipantRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = partnerId,
             Role = ProjectPartyAssignmentRole.Partner,
             NodeKey = participantNode.Id,
@@ -597,6 +635,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var validParticipantRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = teamMemberId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             NodeKey = participantNode.Id,
@@ -609,6 +648,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var projectLevelRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = teamMemberId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             IsPrimary = true,

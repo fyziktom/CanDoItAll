@@ -1,9 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 
 public readonly record struct LlmChatDefinitionId
 {
-    public LlmChatDefinitionId(Guid value)
-    {
+    [JsonConstructor]
+    public LlmChatDefinitionId(Guid value) {
         ArgumentOutOfRangeException.ThrowIfEqual(value, Guid.Empty);
         Value = value;
     }
@@ -19,8 +21,8 @@ public readonly record struct LlmChatDefinitionId
 
 public readonly record struct LlmChatDefinitionRevisionNumber
 {
-    public LlmChatDefinitionRevisionNumber(int value)
-    {
+    [JsonConstructor]
+    public LlmChatDefinitionRevisionNumber(int value) {
         ArgumentOutOfRangeException.ThrowIfLessThan(value, 1);
         Value = value;
     }

@@ -8,6 +8,10 @@ public static class AgentConfigurationVersion
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
+    public static DateTimeOffset NextRevision(DateTimeOffset? previous, DateTimeOffset observed) {
+        return previous is { } revision && observed <= revision ? revision.AddTicks(1) : observed;
+    }
+
     public static string Create(AgentDefinition agent)
     {
         ArgumentNullException.ThrowIfNull(agent);

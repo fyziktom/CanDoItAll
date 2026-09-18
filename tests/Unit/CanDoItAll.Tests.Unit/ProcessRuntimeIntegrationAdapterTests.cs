@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -6854,17 +6855,20 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 workspaceFiles,
                 workflowStepExecutor: workflowExecutor);
 
-            var result = await adapter.ExecuteAsync(CreateAdapterRequest(
+            var request = CreateAdapterRequest(
                 assignment,
                 ProcessExecutionAdapterKind.Workflow,
                 new ProcessExecutionAdapterOperationKey("execute"),
                 Binding,
                 [],
                 [],
-                ProcessStepExecutionContract.Empty));
+                ProcessStepExecutionContract.Empty);
+            var result = await adapter.ExecuteAsync(request);
 
             Assert.Equal(expected, result);
             Assert.Equal(assignment, workflowExecutor.Assignment);
+            Assert.NotEqual(Guid.Empty, request.DispatchClaimIdentity.Value);
+            Assert.Equal(request.DispatchClaimIdentity, workflowExecutor.Claim);
             Assert.NotNull(workflowExecutor.StepContract);
             Assert.False(workspace.ExecuteRunCalled);
         }
@@ -6909,7 +6913,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
             var requiredTools = Enumerable.Range(0, 65)
                 .Select(index => $"runtime_tool_{index:D2}")
@@ -7079,7 +7084,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7151,7 +7157,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 runtimeOwnedStepExecutors: [runtimeExecutor]);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7221,7 +7228,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7269,7 +7277,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 runtimeOwnedStepExecutors: [runtimeExecutor]);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7335,7 +7344,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty),
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies),
                 runtimeOwnedStepExecutors: [runtimeExecutor]);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
@@ -7402,7 +7412,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty));
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies));
             var requiredTools = Enumerable.Range(0, 65)
                 .Select(index => $"runtime_tool_{index:D2}")
                 .ToArray();
@@ -9311,7 +9322,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
                     [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
-                    ProcessRuntimeToolPreflightContributionCatalog.Empty));
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty,
+                    ProductToolPolicies));
 
             var result = await adapter.ExecuteAsync(
                 CreateAdapterRequest(
@@ -12927,7 +12939,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ProcessRuntimeStepAssignment assignment,
             ProcessStepExecutionContract stepContract,
             CancellationToken cancellationToken = default,
-            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null)
+            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null,
+            ProcessDispatchClaimIdentity dispatchClaimIdentity = default)
             => throw new InvalidOperationException(
                 $"Agent integration test unexpectedly dispatched workflow assignment '{assignment.StepKey}'.");
     }
@@ -12940,15 +12953,18 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         public ProcessStepExecutionContract? StepContract { get; private set; }
 
         public int ExecutionCount { get; private set; }
+        public ProcessDispatchClaimIdentity Claim { get; private set; }
 
         public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
             ProcessRuntimeStepAssignment assignment,
             ProcessStepExecutionContract stepContract,
             CancellationToken cancellationToken = default,
-            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null)
+            Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null,
+            ProcessDispatchClaimIdentity dispatchClaimIdentity = default)
         {
             Assignment = assignment;
             StepContract = stepContract;
+            Claim = dispatchClaimIdentity;
             if (beforeLaunch is not null &&
                 await beforeLaunch(cancellationToken) is { } blocked)
             {
@@ -13715,6 +13731,22 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             bool includeTemplates = true,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<AgentDefinition>>([agent]);
+
+        public async Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(ExecutionRunSourceKey source,
+            ExecutionRunRequest request, CancellationToken cancellationToken = default) {
+            Assert.True(source.RequiresBackgroundAdmission);
+            Assert.Equal(request.Context!.CorrelationId, source.CorrelationId);
+            Assert.Equal(request.Context.CausationId, source.CausationId);
+            var result = await ExecuteRunAsync(request, cancellationToken);
+            var now = DateTimeOffset.UtcNow;
+            var context = request.Context;
+            var run = executionDetail?.Run ?? new ExecutionRunRecord(result.ExecutionRunId, request.AgentId, null,
+                "Process adapter fixture", source.SourceKind, source.SourceId, context.CorrelationId, context.CausationId,
+                context.RequestedBy, context.RequestedByKind, context.MetadataJson, request.Prompt, result.ResponseText,
+                result.Metric.ProviderName, result.Metric.Model, result.State, result.Metric.Outcome, now, now, now, now,
+                string.Empty, null, []);
+            return new(ExecutionRunSourceDisposition.Created, run, result);
+        }
 
         public Task<ExecutionRunResult> ExecuteRunAsync(
             ExecutionRunRequest request,

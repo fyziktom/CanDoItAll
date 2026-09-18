@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Memory.Persistence;
 
 internal sealed class EfMemoryRetentionApplier(
-    IDbContextFactory<AppDbContext> dbContextFactory)
+    IDbContextFactory<MemoryDbContext> dbContextFactory)
 {
     public async Task<MemoryRetentionApplicationResult> ApplyAsync(
         MemoryRetentionCandidate candidate,

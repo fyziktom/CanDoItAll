@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
@@ -8,8 +7,6 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -151,28 +148,6 @@ public sealed class AgentDetailsDialogDeletionTests
         };
     }
 
-    public sealed class TestAgentDetailsDialog : AgentDetailsDialog
-    {
-        [Parameter]
-        public AgentEditorModel TestEditor { get; set; } = new();
-
-        protected override Task OnInitializedAsync()
-        {
-            SetBaseField("editorModel", TestEditor);
-            SetBaseField("isLoading", false);
-            return Task.CompletedTask;
-        }
-
-        private void SetBaseField(string fieldName, object value)
-        {
-            var field = typeof(AgentDetailsDialog).GetField(
-                fieldName,
-                BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(AgentDetailsDialog).FullName, fieldName);
-            field.SetValue(this, value);
-        }
-    }
-
     public class RecordingWorkspaceServiceProxy : DispatchProxy
     {
         public int DeleteCallCount { get; private set; }
@@ -226,10 +201,7 @@ public sealed class AgentDetailsDialogDeletionTests
             context.Services.AddSingleton(workspaceService);
             context.Services.AddSingleton<IAvatarGenerationGateway>(
                 new AgentAvatarGenerationGateway(workspaceService, avatarGenerationService));
-            context.Services.AddSingleton(
-                (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
-            context.Services.AddSingleton(
-                (SecretService)RuntimeHelpers.GetUninitializedObject(typeof(SecretService)));
+        context.Services.AddAgentEditorReadFixture();
 
             DialogService = context.Services.GetRequiredService<DialogService>();
             Host = context.Render<DialogHost>();
@@ -245,9 +217,10 @@ public sealed class AgentDetailsDialogDeletionTests
             AgentEditorModel editor,
             Action<AgentDetailsDialogResult>? saved = null)
         {
+            context.Services.GetRequiredService<AgentEditorReadFixture>().Draft = editor;
             var parameters = new Dictionary<string, object?>
             {
-                [nameof(TestAgentDetailsDialog.TestEditor)] = editor
+                [nameof(AgentDetailsDialog.AgentId)] = editor.Id
             };
             if (saved is not null)
             {
@@ -255,7 +228,7 @@ public sealed class AgentDetailsDialogDeletionTests
                     EventCallback.Factory.Create(this, saved);
             }
 
-            var result = DialogService.OpenAsync<TestAgentDetailsDialog>(
+            var result = DialogService.OpenAsync<AgentDetailsDialog>(
                 "Agent details",
                 parameters,
                 new DialogOptions

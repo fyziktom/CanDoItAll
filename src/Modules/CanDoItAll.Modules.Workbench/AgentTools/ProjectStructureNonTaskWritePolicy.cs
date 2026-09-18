@@ -22,7 +22,7 @@ internal static class ProjectStructureNonTaskWritePolicy
     {
         return string.Equals(
             toolName,
-            AgentToolInvocationPolicyMetadata.ProjectStructureImport,
+            ProjectStructureToolPolicy.ProjectStructureImport,
             StringComparison.OrdinalIgnoreCase);
     }
 

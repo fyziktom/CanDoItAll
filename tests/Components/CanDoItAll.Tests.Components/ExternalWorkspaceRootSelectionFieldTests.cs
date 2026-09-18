@@ -9,6 +9,28 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ExternalWorkspaceRootSelectionFieldTests : IDisposable
 {
+    [Fact]
+    public void Registry_failure_retains_unresolved_alias_without_disclosing_host_details() {
+        const string alias = "external-target/v1/0123456789abcdef01234567";
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new FailingRegistryFactory());
+        var cut = RenderField(context, [alias], []);
+        Assert.Contains(alias, cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Unresolved", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("REGISTRY_PRIVATE_SENTINEL", cut.Markup, StringComparison.Ordinal);
+    }
+
+    private sealed class FailingRegistryFactory : IExternalTargetPathRegistryFactory {
+        private int calls;
+        public IExternalTargetPathRegistry Create(IEnumerable<ExternalTargetRootBinding> bindings) {
+            if (calls++ == 0) {
+                throw new InvalidOperationException("REGISTRY_PRIVATE_SENTINEL /srv/private/roots api_key=test-only-private-root");
+            }
+            return new ExternalTargetPathRegistryFactory().Create(bindings);
+        }
+    }
     private const string DataTestId = "external-root-selection";
 
     private readonly string temporaryRoot = TestFileSystem.CreateTemporaryRoot("external-root-selection-field");

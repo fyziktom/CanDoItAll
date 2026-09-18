@@ -1,0 +1,315 @@
+@using CanDoItAll.Infrastructure.Storage
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IStoragePlacementRecovery Recovery
+@inject IStoragePlacementOwnerContinuation OwnerContinuation
+@inject ILogger<StoragePlacementRecoveryDialog> Logger
+
+<Dialog IsOpen="true" Title="Storage recovery" Size="ModalSize.Wide" DenseChrome="true"
+        Subtitle="Review pending files and owner follow-up."
+        OnClose="OnClose" TestId="storage-recovery-dialog">
+    <HeaderActions>
+        <Button Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Light" Disabled="busy"
+                Click="RefreshAsync" data-testid="storage-recovery-refresh" />
+    </HeaderActions>
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            @if (!string.IsNullOrEmpty(error)) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="storage-recovery-error">@error</Alert>
+            }
+            <DataGrid TItem="StoragePlacementRecoveryItem" Data="Rows" Loading="busy"
+                      EmptyText="No pending work on these pages." Caption="Pending Storage work"
+                      data-testid="storage-recovery-list">
+                <Columns>
+                    <DataGridColumn TItem="StoragePlacementRecoveryItem" Title="Original intent">
+                        <Template Context="item">@item.Identity.IntentId.Value</Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="StoragePlacementRecoveryItem" Title="Pending work">
+                        <Template Context="item">@DescribePhase(item)</Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="StoragePlacementRecoveryItem" Title="Storage state">
+                        <Template Context="item">@item.StorageState</Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="StoragePlacementRecoveryItem" Title="Updated">
+                        <Template Context="item">@item.UpdatedAtUtc.LocalDateTime.ToString("g")</Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="StoragePlacementRecoveryItem" Title="Review">
+                        <Template Context="item">
+                            <Button Text="Inspect" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Disabled="busy"
+                                    Click="@(() => SelectAsync(item))" data-testid="@($"storage-recovery-inspect-{item.Identity.IntentId.Value:N}")" />
+                        </Template>
+                    </DataGridColumn>
+                </Columns>
+            </DataGrid>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Previous placements" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || pendingOffset == 0)"
+                        Click="@(() => PageAsync(false, Math.Max(0, pendingOffset - PageSize)))" />
+                <Button Text="Next placements" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || pending.NextOffset is null)"
+                        Click="@(() => PageAsync(false, pending.NextOffset ?? pendingOffset))" data-testid="storage-recovery-next-placements" />
+                <Button Text="Previous owner follow-ups" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || continuationOffset == 0)"
+                        Click="@(() => PageAsync(true, Math.Max(0, continuationOffset - PageSize)))" />
+                <Button Text="Next owner follow-ups" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || continuations.NextOffset is null)"
+                        Click="@(() => PageAsync(true, continuations.NextOffset ?? continuationOffset))" data-testid="storage-recovery-next-owners" />
+            </Cluster>
+            @if (selected is { } item) {
+                <FormSection Title="Selected intent" Description="Actions retain the original intent and target.">
+                    <FactTable>
+                        <div><dt>Intent</dt><dd data-testid="storage-recovery-selected-intent">@item.Identity.IntentId.Value</dd></div>
+                        <div><dt>Database profile</dt><dd>@item.Context.DatabaseProfileId</dd></div>
+                        <div><dt>Original project</dt><dd>@item.Identity.OriginalProjectId</dd></div>
+                        <div><dt>Original storage</dt><dd>@item.Identity.OriginalStorageId</dd></div>
+                        <div><dt>File receipt</dt><dd>@(item.StorageReceiptPresent ? "Recorded" : "Not observed")</dd></div>
+                        <div><dt>Native asset receipt</dt><dd>@(item.NativeReceiptPresent ? "Recorded" : "Not observed")</dd></div>
+                        <div><dt>Available recovery</dt><dd>@DescribeBlock(item.Block)</dd></div>
+                        @if (owner is { } observation) {
+                            <div><dt>Run receipt status</dt><dd>@observation.State</dd></div>
+                            <div><dt>Original execution</dt><dd>@observation.OriginalExecutionRunId</dd></div>
+                        }
+                    </FactTable>
+                    @if (item.AvailableAction == StoragePlacementRecoveryAction.Reconcile) {
+                        <Button Text="Reconcile file placement" Disabled="busy" Click="ReconcileAsync"
+                                data-testid="storage-recovery-reconcile" />
+                    }
+                    @if (item.AvailableAction == StoragePlacementRecoveryAction.VerifyExternalTermination) {
+                        <Stack GapScale="LayoutGap.Small">
+                            <label>
+                                <CheckBox TValue="bool" @bind-Value="externalDispatchStopped" Disabled="busy"
+                                          aria-label="I verified that the original external transfer has stopped"
+                                          data-testid="storage-recovery-external-stopped" />
+                                I verified that the original external transfer has stopped.
+                            </label>
+                            <Button Text="Record verification and check file" Disabled="@(busy || !externalDispatchStopped)"
+                                    Click="VerifyExternalTerminationAsync" data-testid="storage-recovery-verify-external" />
+                        </Stack>
+                    }
+                    @if (owner?.WorkflowIntent is { } workflow) {
+                        <FactTable>
+                            <div><dt>Original workflow run</dt><dd>@workflow.RunId</dd></div>
+                        </FactTable>
+                        @if (owner.AvailableAction == StoragePlacementOwnerContinuationAction.RecordWorkflowAssetReceipt) {
+                            <Button Text="Record workflow asset receipt" Disabled="busy"
+                                    Click="@(() => ContinueWorkflowAssetAsync(StoragePlacementOwnerContinuationAction.RecordWorkflowAssetReceipt))"
+                                    data-testid="storage-recovery-record-workflow-receipt" />
+                        }
+                        @if (owner.AvailableAction == StoragePlacementOwnerContinuationAction.CompletePreparedWorkflowAsset) {
+                            <Button Text="Complete prepared workflow asset" Disabled="busy"
+                                    Click="@(() => ContinueWorkflowAssetAsync(StoragePlacementOwnerContinuationAction.CompletePreparedWorkflowAsset))"
+                                    data-testid="storage-recovery-complete-workflow-asset" />
+                        }
+                    }
+                    @if (owner?.AvailableAction == StoragePlacementOwnerContinuationAction.ReconcileCancelledRunReceipts) {
+                        <Stack GapScale="LayoutGap.Small">
+                            <Alert AlertStyle="AlertStyle.Info">
+                                This checks all admitted receipts in the original cancelled run. It does not run tools, transfer files or resume the model.
+                            </Alert>
+                            <Button Text="Reconcile cancelled run receipts" Disabled="busy" Click="ReconcileCancelledRunAsync"
+                                    data-testid="storage-recovery-reconcile-cancelled" />
+                        </Stack>
+                    }
+                </FormSection>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer><Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="OnClose" /></Footer>
+</Dialog>
+
+@code {
+    [Parameter]
+    public Guid? StorageId { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private const int PageSize = 8;
+    private readonly CancellationTokenSource lifetime = new();
+    private StoragePlacementRecoveryContext? context;
+    private StoragePlacementRecoveryPage pending = new([], null);
+    private StoragePlacementContinuationPage continuations = new([], null);
+    private StoragePlacementRecoveryItem? selected;
+    private StoragePlacementOwnerContinuationObservation? owner;
+    private int pendingOffset;
+    private int continuationOffset;
+    private bool busy;
+    private bool externalDispatchStopped;
+    private string error = string.Empty;
+    private IEnumerable<StoragePlacementRecoveryItem> Rows => pending.Items.Concat(continuations.Items.Select(item => item.Storage));
+
+    protected override Task OnInitializedAsync() => RefreshAsync();
+
+    private Task RefreshAsync() => RunAsync(async token => {
+        var fresh = await Recovery.GetCurrentContextAsync(token);
+        if (context != fresh) {
+            ClearSelection();
+            pendingOffset = 0;
+            continuationOffset = 0;
+        }
+        context = fresh;
+        await ReadPagesAsync(token);
+        if (selected is { } item) {
+            await ReadSelectionAsync(new(item.Context, item.Identity.IntentId), token);
+        }
+    });
+
+    private Task PageAsync(bool ownerFeed, int offset) => RunAsync(async token => {
+        if (ownerFeed) {
+            continuationOffset = offset;
+        } else {
+            pendingOffset = offset;
+        }
+        await ReadPagesAsync(token);
+    });
+
+    private async Task ReadPagesAsync(CancellationToken token) {
+        var bound = context ?? throw new StoragePlacementRecoveryException(StoragePlacementRecoveryFailure.StaleContext);
+        var nextPending = await Recovery.ListPendingAsync(new(bound, StorageId: StorageId, Take: PageSize, Offset: pendingOffset), token);
+        var nextContinuations = await Recovery.ListPendingContinuationsAsync(
+            new(bound, StorageId: StorageId, Take: PageSize, Offset: continuationOffset), token);
+        token.ThrowIfCancellationRequested();
+        pending = nextPending;
+        continuations = nextContinuations;
+    }
+
+    private Task SelectAsync(StoragePlacementRecoveryItem item) => RunAsync(async token => {
+        ClearSelection();
+        await ReadSelectionAsync(new(item.Context, item.Identity.IntentId), token);
+    });
+
+    private async Task ReadSelectionAsync(StoragePlacementRecoveryCommand request, CancellationToken token) {
+        var current = await Recovery.GetAsync(request, token);
+        var observation = await OwnerContinuation.GetAsync(request, token);
+        token.ThrowIfCancellationRequested();
+        selected = current;
+        owner = observation;
+        externalDispatchStopped = false;
+    }
+
+    private Task ReconcileAsync() => ApplyAsync(StoragePlacementRecoveryAction.Reconcile);
+
+    private Task VerifyExternalTerminationAsync() => ApplyAsync(StoragePlacementRecoveryAction.VerifyExternalTermination);
+
+    private Task ApplyAsync(StoragePlacementRecoveryAction action) {
+        if (selected is not { } item || item.AvailableAction != action ||
+                action == StoragePlacementRecoveryAction.VerifyExternalTermination && !externalDispatchStopped) {
+            return Task.CompletedTask;
+        }
+        var request = new StoragePlacementRecoveryCommand(item.Context, item.Identity.IntentId);
+        return RunAsync(async token => {
+            externalDispatchStopped = false;
+            selected = action == StoragePlacementRecoveryAction.Reconcile
+                ? await Recovery.ReconcileAsync(request, token)
+                : await Recovery.RecordOperatorVerifiedExternalDispatchTerminationAsync(new(request.Context, request.IntentId, true), token);
+            await ReadPagesAsync(token);
+            await ReadSelectionAsync(request, token);
+        });
+    }
+
+    private Task ReconcileCancelledRunAsync() {
+        if (selected is not { } item || owner?.AvailableAction != StoragePlacementOwnerContinuationAction.ReconcileCancelledRunReceipts) {
+            return Task.CompletedTask;
+        }
+        var request = new StoragePlacementRecoveryCommand(item.Context, item.Identity.IntentId);
+        return RunAsync(async token => {
+            owner = await OwnerContinuation.ReconcileCancelledRunReceiptsAsync(request, token);
+            await ReadPagesAsync(token);
+            await ReadSelectionAsync(request, token);
+        });
+    }
+
+    private Task ContinueWorkflowAssetAsync(StoragePlacementOwnerContinuationAction action) {
+        if (selected is not { } item || owner is not { WorkflowIntent: { } workflow } observation ||
+                observation.AvailableAction != action ||
+                action is not (StoragePlacementOwnerContinuationAction.RecordWorkflowAssetReceipt or
+                    StoragePlacementOwnerContinuationAction.CompletePreparedWorkflowAsset)) {
+            return Task.CompletedTask;
+        }
+        var command = new StoragePlacementWorkflowContinuationCommand(item.Context, item.Identity.IntentId, action, workflow);
+        return RunAsync(async token => {
+            owner = await OwnerContinuation.ReconcileWorkflowAssetAsync(command, token);
+            await ReadPagesAsync(token);
+            await ReadSelectionAsync(new(command.Context, command.IntentId), token);
+        });
+    }
+
+    private async Task RunAsync(Func<CancellationToken, Task> operation) {
+        if (busy || lifetime.IsCancellationRequested) {
+            return;
+        }
+        var token = lifetime.Token;
+        busy = true;
+        error = string.Empty;
+        try {
+            await operation(token);
+        } catch (OperationCanceledException) when (lifetime.IsCancellationRequested) {
+        } catch (StoragePlacementRecoveryException exception) {
+            ClearSelection();
+            pending = new([], null);
+            continuations = new([], null);
+            error = exception.Failure switch {
+                StoragePlacementRecoveryFailure.Denied => "Current access does not allow this recovery operation.",
+                StoragePlacementRecoveryFailure.NotFound => "The original intent is no longer available. Refresh the list.",
+                StoragePlacementRecoveryFailure.StaleContext => "The database selection changed. The previous action was not redirected; review the refreshed list.",
+                _ => "Recovery is currently unavailable. Refresh its status before another action."
+            };
+            if (exception.Failure == StoragePlacementRecoveryFailure.StaleContext) {
+                await ReadChangedContextAsync(token);
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning("Storage recovery observation failed with {FailureType}; selected intent {IntentId}.",
+                exception.GetType().Name, selected?.Identity.IntentId.Value);
+            ClearSelection();
+            pending = new([], null);
+            continuations = new([], null);
+            error = "The recovery result could not be observed. An earlier command may have recorded progress; refresh before continuing.";
+        } finally {
+            busy = false;
+        }
+    }
+
+    private async Task ReadChangedContextAsync(CancellationToken token) {
+        context = null;
+        pendingOffset = 0;
+        continuationOffset = 0;
+        try {
+            context = await Recovery.GetCurrentContextAsync(token);
+            await ReadPagesAsync(token);
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning("Storage recovery refresh after database selection change failed with {FailureType}.", exception.GetType().Name);
+            error = "The database selection changed and its recovery status could not be loaded. Refresh before continuing.";
+        }
+    }
+
+    private void ClearSelection() {
+        selected = null;
+        owner = null;
+        externalDispatchStopped = false;
+    }
+
+    private string DescribePhase(StoragePlacementRecoveryItem item)
+        => continuations.Items.FirstOrDefault(candidate => candidate.Storage.Identity.IntentId == item.Identity.IntentId)?.Phase switch {
+            StoragePlacementContinuationPhase.NativeCommit => "Native asset creation",
+            StoragePlacementContinuationPhase.CoreCheckpoint => "Run receipt",
+            StoragePlacementContinuationPhase.WorkflowAcknowledgement => "Workflow acknowledgement",
+            StoragePlacementContinuationPhase.OwnerEvidenceUnavailable => "Owner evidence unavailable",
+            _ => "File placement"
+        };
+
+    private static string DescribeBlock(StoragePlacementRecoveryBlock block) => block switch {
+        StoragePlacementRecoveryBlock.None => "See the available action below.",
+        StoragePlacementRecoveryBlock.ReadOnlyAuthority => "Read-only access",
+        StoragePlacementRecoveryBlock.OriginalProjectLifetimeMissing => "Original project lifetime was not recorded",
+        StoragePlacementRecoveryBlock.OriginalProjectUnavailable => "Original project is unavailable",
+        StoragePlacementRecoveryBlock.ImportedHistory => "Imported history cannot authorize a new effect",
+        StoragePlacementRecoveryBlock.OriginalStorageUnavailable => "Original storage is unavailable",
+        StoragePlacementRecoveryBlock.OriginalTargetConflict => "Original target conflicts with current data",
+        StoragePlacementRecoveryBlock.DispatchNotStarted => "Transfer was not started",
+        StoragePlacementRecoveryBlock.RetainedConflict => "A retained conflict requires owner review",
+        StoragePlacementRecoveryBlock.DeletionRequested => "Deletion was requested",
+        _ => "Original owner evidence is unavailable or inconsistent"
+    };
+
+    public void Dispose() {
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
+}

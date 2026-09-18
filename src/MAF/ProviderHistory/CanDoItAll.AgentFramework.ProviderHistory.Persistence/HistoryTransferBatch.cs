@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
@@ -7,7 +6,7 @@ namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 internal static class HistoryTransferBatch {
     private const int BatchSize = 500;
 
-    internal static async Task<int> CopyAsync<T>(IQueryable<T> source, AppDbContext target,
+    internal static async Task<int> CopyAsync<T>(IQueryable<T> source, ProviderHistoryDbContext target,
         Expression<Func<T, Guid>> key, CancellationToken cancellationToken) where T : class {
         var copied = 0;
         Guid? cursor = null;
@@ -31,7 +30,7 @@ internal static class HistoryTransferBatch {
         }
     }
 
-    internal static async Task<int> CopyOwnersAsync(AppDbContext source, AppDbContext target, CancellationToken cancellationToken) {
+    internal static async Task<int> CopyOwnersAsync(ProviderHistoryDbContext source, ProviderHistoryDbContext target, CancellationToken cancellationToken) {
         var copied = 0;
         Guid? sourceCursor = null;
         var entryCursor = Guid.Empty;

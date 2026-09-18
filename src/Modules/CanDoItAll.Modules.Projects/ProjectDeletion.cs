@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Projects;
@@ -50,7 +49,6 @@ public interface IProjectDeletionParticipant
     IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; }
 
     Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
-        AppDbContext dbContext,
         Guid projectId,
         CancellationToken cancellationToken = default);
 

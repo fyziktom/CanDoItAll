@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
@@ -13,6 +15,13 @@ public sealed class MafNativeHitlArchitectureTests
 {
     private const string AdapterRelativeRoot =
         @"src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter";
+
+    private const string ReviewedApprovalFriendPath =
+        "src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/Properties/InternalsVisibleTo.cs";
+    private const string ReviewedApprovalFriendAssembly =
+        "CanDoItAll.AgentFramework.Workflows.MafAdapter";
+    private const string ReviewedApprovalFriendDeclaration =
+        "[assembly: InternalsVisibleTo(\"" + ReviewedApprovalFriendAssembly + "\")]";
 
     private static readonly string[] FrameworkNeutralRelativeRoots =
     [
@@ -49,19 +58,48 @@ public sealed class MafNativeHitlArchitectureTests
     ];
 
     [Fact]
-    public void Framework_neutral_and_web_projects_contain_no_MAF_namespace_or_package_reference()
-    {
+    public void Framework_neutral_and_web_projects_contain_no_MAF_namespace_or_package_reference() {
         var root = FindRepositoryRoot();
         var violations = FrameworkNeutralRelativeRoots
             .Select(relativeRoot => TestRepositoryPath.Resolve(root, relativeRoot))
             .SelectMany(EnumerateBoundaryFiles)
-            .SelectMany(path => ForbiddenMafTokens
-                .Where(token => File.ReadAllText(path).Contains(token, StringComparison.OrdinalIgnoreCase))
-                .Select(token => $"{Path.GetRelativePath(root, path)} contains '{token}'"))
+            .Select(path => (Path: path, Source: DependencyCheckSource(
+                Path.GetRelativePath(root, path), File.ReadAllText(path))))
+            .SelectMany(file => ForbiddenMafTokens
+                .Where(token => file.Source.Contains(token, StringComparison.OrdinalIgnoreCase))
+                .Select(token => $"{Path.GetRelativePath(root, file.Path)} contains '{token}'"))
             .OrderBy(violation => violation, StringComparer.Ordinal)
             .ToArray();
 
         Assert.Empty(violations);
+        var admissionType = typeof(WorkflowExecutorApprovalAdmission);
+        Assert.DoesNotContain(admissionType.Assembly.GetReferencedAssemblies(), reference =>
+            ForbiddenMafTokens.Any(token =>
+                (reference.Name ?? string.Empty).Contains(token, StringComparison.OrdinalIgnoreCase)));
+        Assert.Contains(admissionType.Assembly.GetCustomAttributes<InternalsVisibleToAttribute>(),
+            friend => friend.AssemblyName == ReviewedApprovalFriendAssembly);
+        Assert.Empty(admissionType.GetConstructors(BindingFlags.Instance | BindingFlags.Public));
+        Assert.True(Assert.Single(admissionType.GetConstructors(
+            BindingFlags.Instance | BindingFlags.NonPublic)).IsAssembly);
+    }
+
+    [Theory]
+    [InlineData("src/App/CanDoItAll.Web/Properties/InternalsVisibleTo.cs",
+        ReviewedApprovalFriendDeclaration, ReviewedApprovalFriendDeclaration)]
+    [InlineData(ReviewedApprovalFriendPath,
+        ReviewedApprovalFriendDeclaration + "\n" + ReviewedApprovalFriendDeclaration,
+        ReviewedApprovalFriendDeclaration + "\n" + ReviewedApprovalFriendDeclaration)]
+    [InlineData(ReviewedApprovalFriendPath,
+        ReviewedApprovalFriendDeclaration + "\n// " + ReviewedApprovalFriendDeclaration,
+        ReviewedApprovalFriendDeclaration + "\n// " + ReviewedApprovalFriendDeclaration)]
+    [InlineData(ReviewedApprovalFriendPath,
+        ReviewedApprovalFriendDeclaration + "\nusing Microsoft.Agents.AI;", "\nusing Microsoft.Agents.AI;")]
+    public void Reviewed_friend_declaration_does_not_hide_other_forbidden_content(
+        string relativePath, string source, string expectedInspectedSource) {
+        var inspected = DependencyCheckSource(relativePath, source);
+
+        Assert.Equal(expectedInspectedSource, inspected);
+        Assert.Contains(ForbiddenMafTokens, token => inspected.Contains(token, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -219,6 +257,21 @@ public sealed class MafNativeHitlArchitectureTests
             .ToArray();
 
         Assert.Empty(violations);
+    }
+
+    private static string DependencyCheckSource(string relativePath, string source) {
+        if (!string.Equals(relativePath.Replace(Path.DirectorySeparatorChar, '/'), ReviewedApprovalFriendPath,
+                StringComparison.Ordinal)) {
+            return source;
+        }
+        var start = source.IndexOf(ReviewedApprovalFriendDeclaration, StringComparison.Ordinal);
+        var end = start + ReviewedApprovalFriendDeclaration.Length;
+        if (start < 0 || source.IndexOf(ReviewedApprovalFriendDeclaration, end, StringComparison.Ordinal) >= 0 ||
+                start > 0 && source[start - 1] is not ('\r' or '\n') ||
+                end < source.Length && source[end] is not ('\r' or '\n')) {
+            return source;
+        }
+        return source.Remove(start, ReviewedApprovalFriendDeclaration.Length);
     }
 
     private static IEnumerable<string> EnumerateBoundaryFiles(string root)

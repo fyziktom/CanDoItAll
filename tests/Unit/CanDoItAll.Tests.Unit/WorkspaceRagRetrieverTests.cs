@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
@@ -25,10 +26,9 @@ public sealed class WorkspaceRagRetrieverTests
 
         try
         {
-            var retriever = new WorkspaceRagRetriever(
+            var retriever = CreateProjectRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
-                TestWorkspaceServices.PhysicalPathPolicyFactory);
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
 
             var searchRoots = retriever.ResolveSearchRoots(workspaceRoot);
             var results = (await retriever.SearchAsync(
@@ -73,10 +73,9 @@ public sealed class WorkspaceRagRetrieverTests
             File.WriteAllText(
                 Path.Combine(workspaceRoot, "project-structure-context-brief.md"),
                 "stale shared context");
-            var retriever = new WorkspaceRagRetriever(
+            var retriever = CreateProjectRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
-                TestWorkspaceServices.PhysicalPathPolicyFactory);
+                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")));
 
             var searchRoots = retriever.ResolveSearchRoots(workspaceRoot);
             var results = await retriever.SearchAsync(
@@ -114,10 +113,9 @@ public sealed class WorkspaceRagRetrieverTests
 
         try
         {
-            var projectRetriever = new WorkspaceRagRetriever(
+            var projectRetriever = CreateProjectRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
-                TestWorkspaceServices.PhysicalPathPolicyFactory);
+                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")));
             var sandboxRetriever = new WorkspaceRagRetriever(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox,
@@ -152,10 +150,9 @@ public sealed class WorkspaceRagRetrieverTests
 
         try
         {
-            var retriever = new WorkspaceRagRetriever(
+            var retriever = CreateProjectRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
-                TestWorkspaceServices.PhysicalPathPolicyFactory);
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
 
             Assert.Empty(retriever.ResolveSearchRoots(foreignRoot));
             Assert.Empty(retriever.ResolveSearchRoots(sharedMediaRoot));
@@ -165,6 +162,10 @@ public sealed class WorkspaceRagRetrieverTests
             Directory.Delete(workspaceRoot, recursive: true);
         }
     }
+
+    private static WorkspaceRagRetriever CreateProjectRetriever(string root, WorkspaceScopeDescriptor scope)
+        => new(root, scope, TestWorkspaceServices.PhysicalPathPolicyFactory,
+            new ProjectWorkspacePathContributor().ContributeWorkspacePaths(scope));
 
     private static string CreateWorkspaceRoot()
     {

@@ -5,8 +5,57 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class MafAgentRuntimeToolInvocationResultTests
-{
+public sealed class MafAgentRuntimeToolInvocationResultTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Captured_host_failure_preserves_its_retry_flag_independently_of_tool_json(bool canRetry) {
+        var untrusted = JsonSerializer.SerializeToElement(new {
+            succeeded = false, errorCode = "InvalidToolArguments", message = "Correct the original arguments.",
+            effectState = AgentToolEffectState.NotCommitted, canRetryWithCorrectedInput = canRetry
+        });
+        var ordinary = MafRuntimeToolInvocationResultClassifier.Assess(ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation, untrusted);
+        Assert.Equal(AgentToolEffectState.Unknown, ordinary.EffectState);
+        Assert.Empty(ordinary.FailureCode);
+        Assert.False(ordinary.CanRetryWithCorrectedInput);
+        using var capture = AgentToolInvocationEffectScope.Begin();
+        AgentToolInvocationEffectScope.RecordPreDispatchFailure(new("InvalidToolArguments", "Correct the original arguments.") {
+            CanRetryWithCorrectedInput = canRetry
+        });
+        var captured = MafRuntimeToolInvocationResultClassifier.Assess(ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation, untrusted, capture.PreDispatchFailure);
+        Assert.Equal(AgentToolInvocationOutcome.Failed, captured.Outcome);
+        Assert.Equal(AgentToolEffectState.NotCommitted, captured.EffectState);
+        Assert.Equal("InvalidToolArguments", captured.FailureCode);
+        Assert.Equal(canRetry, captured.CanRetryWithCorrectedInput);
+    }
+
+    [Theory]
+    [InlineData(ToolInvocationClassification.Read)]
+    [InlineData(ToolInvocationClassification.Mutation)]
+    public void Trusted_pre_dispatch_failure_preserves_the_denial_without_inferring_authority_from_tool_json(
+        ToolInvocationClassification classification) {
+        const string denial = "PolicyDenied: This invocation cannot execute.";
+        var toolName = classification == ToolInvocationClassification.Read
+            ? ToolContractCatalog.WorkspaceReadFile : ToolContractCatalog.WorkspaceWriteFile;
+        var untrusted = JsonSerializer.SerializeToElement(new {
+            succeeded = true,
+            preDispatchFailure = new { failureCode = "ToolPolicyDenied", safeMessage = denial }
+        });
+        Assert.Equal(AgentToolInvocationOutcome.Succeeded,
+            MafRuntimeToolInvocationResultClassifier.Assess(toolName, classification, untrusted).Outcome);
+        using var capture = AgentToolInvocationEffectScope.Begin();
+        AgentToolInvocationEffectScope.RecordPreDispatchFailure(new("ToolPolicyDenied", denial));
+        var result = MafRuntimeToolInvocationResultClassifier.Assess(toolName, classification, denial, capture.PreDispatchFailure);
+        Assert.False(result.Succeeded);
+        Assert.Equal(AgentToolEffectState.NotCommitted, result.EffectState);
+        Assert.Equal("ToolPolicyDenied", result.FailureCode);
+        Assert.Equal(denial, result.FailureMessage);
+        Assert.Null(result.DirectReceiptExecutionRunId);
+        Assert.Throws<InvalidOperationException>(() => AgentToolInvocationEffectScope.RecordCommitted("owner", "new-effect"));
+    }
+
     [Fact]
     public void Agent_visible_tool_failure_is_mapped_without_exposing_exception_details()
     {

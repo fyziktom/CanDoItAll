@@ -3,6 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
@@ -13,6 +14,7 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
 {
+    private static readonly Guid ProfileId = Guid.Parse("2da5b7b8-6d85-4dfe-8f42-81e2c26b5932");
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-24T12:00:00Z");
 
     [Fact]
@@ -25,10 +27,10 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
         ]);
         var existingPartyId = Guid.Parse("7b3eeb93-5b7f-47cc-888f-058fb441d15b");
         var newPartyId = Guid.Parse("b86c540f-048b-4774-a7ca-7d9c70053176");
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<CrmHrDbContext>()
             .UseInMemoryDatabase($"agent-framework-party-tags-{Guid.NewGuid():N}")
             .Options;
-        IDbContextFactory<AppDbContext> dbContextFactory = new TestDbContextFactory(options);
+        IDbContextFactory<CrmHrDbContext> dbContextFactory = new TestDbContextFactory(options);
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
@@ -80,10 +82,10 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
             typeof(AgentFrameworkModuleAssemblyMarker).Assembly
         ]);
         var partyId = Guid.Parse("83bcd274-eeb1-4457-b809-7c6f3388b27c");
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<CrmHrDbContext>()
             .UseInMemoryDatabase($"agent-framework-summary-projection-{Guid.NewGuid():N}")
             .Options;
-        IDbContextFactory<AppDbContext> dbContextFactory = new TestDbContextFactory(options);
+        IDbContextFactory<CrmHrDbContext> dbContextFactory = new TestDbContextFactory(options);
         var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, WorkspaceServiceProxy>();
         var workspaceProxy = (WorkspaceServiceProxy)(object)workspace;
         workspaceProxy.Agents =
@@ -96,6 +98,7 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
             new FixedClock(Now));
 
         await bridge.SynchronizeDirectoryProjectionAsync();
+        Assert.Equal(1, workspaceProxy.SnapshotCallCount);
         workspaceProxy.ResetCatalogCallCounts();
 
         var summaries = await bridge.GetDirectorySummariesAsync(
@@ -109,13 +112,14 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
         Assert.Equal("Technical agent", staffingFact.RoleTitle);
         Assert.Equal("Execute technical work.", staffingFact.Instructions);
         Assert.Contains("runtime-projection", staffingFact.Tags);
+        Assert.Equal(0, workspaceProxy.SnapshotCallCount);
         Assert.Equal(0, workspaceProxy.ListAgentsCallCount);
         Assert.Equal(0, workspaceProxy.ListProvidersCallCount);
         Assert.Equal(0, workspaceProxy.ListCapabilitiesCallCount);
     }
 
     private static IAiTechnicalAgentBridge CreateBridge(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<CrmHrDbContext> dbContextFactory,
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
         IClock clock)
     {
@@ -124,7 +128,7 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
             throwOnError: true)!;
         var constructor = Assert.Single(implementationType.GetConstructors());
         return Assert.IsAssignableFrom<IAiTechnicalAgentBridge>(
-            constructor.Invoke([dbContextFactory, workspaceFactory, clock]));
+            constructor.Invoke([new AiTechnicalAgentProjectionStore(dbContextFactory, new CanonicalDatabase(), clock), workspaceFactory]));
     }
 
     private static AgentDefinition CreateAgent(
@@ -168,11 +172,11 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
     }
 
     private sealed class TestDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+        DbContextOptions<CrmHrDbContext> options) : IDbContextFactory<CrmHrDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public CrmHrDbContext CreateDbContext()
         {
-            return new AppDbContext(options);
+            return new CrmHrDbContext(options);
         }
     }
 
@@ -206,6 +210,8 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
     {
         public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
 
+        public int SnapshotCallCount { get; private set; }
+
         public int ListAgentsCallCount { get; private set; }
 
         public int ListProvidersCallCount { get; private set; }
@@ -214,6 +220,7 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
 
         public void ResetCatalogCallCounts()
         {
+            SnapshotCallCount = 0;
             ListAgentsCallCount = 0;
             ListProvidersCallCount = 0;
             ListCapabilitiesCallCount = 0;
@@ -224,6 +231,13 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
             object?[]? args)
         {
             ArgumentNullException.ThrowIfNull(targetMethod);
+
+            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.LoadCatalogSnapshotAsync)) {
+                SnapshotCallCount++;
+                var catalog = SandboxWorkspaceCatalog.Empty with { Agents = Agents, CatalogDataRevision = new(1) };
+                return Task.FromResult(new AgentWorkspaceCatalogSnapshot(new(ProfileId,
+                    WorkspaceScopeDescriptor.Organization("privacy-tests"), new(0)), new(catalog, catalog.CatalogDataRevision)));
+            }
 
             if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync))
             {
@@ -245,6 +259,12 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
 
             throw new NotSupportedException($"Unexpected workspace call '{targetMethod.Name}'.");
         }
+    }
+
+    private sealed class CanonicalDatabase : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = new(new() { Id = ProfileId, ProviderKind = DatabaseProviderKind.InMemory },
+            DatabaseProfileResolutionSource.ExplicitOverride, "projection-unit-tests");
+        public long Generation => 0;
     }
 
     private sealed class FixedClock(DateTimeOffset now) : IClock

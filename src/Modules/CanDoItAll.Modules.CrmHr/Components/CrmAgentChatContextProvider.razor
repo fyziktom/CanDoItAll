@@ -69,6 +69,13 @@
             return;
         }
 
+        if (scopeLease is { IsActive: false })
+        {
+            // A newer surface published its own scope; this provider's registrations are finished and must not
+            // overwrite the live scope. An account change still activates a fresh scope above.
+            return;
+        }
+
         var accountChanged = !ReferenceEquals(activeAccount, Account);
         var opportunityChanged = !ReferenceEquals(activeOpportunity, Opportunity);
         var interactionChanged = !ReferenceEquals(activeInteraction, Interaction);
@@ -100,10 +107,18 @@
     }
 
     protected override void OnAfterRender(bool firstRender)
-        => scopeLease?.SynchronizeNavigation(
+    {
+        // Only the live registration synchronizes: a disposing provider or one superseded by a newer scope stands down.
+        if (scopeLease is not { IsActive: true } lease)
+        {
+            return;
+        }
+
+        lease.SynchronizeNavigation(
             ContextNavigationIdentity ?? AgentChatNavigationIdentity.CreateForLocation(
                 Navigation.BaseUri,
                 Navigation.Uri));
+    }
 
     private AgentChatContextAccessState EffectiveAccessState
         => ContextAccessState ?? AgentChatContextAccessState.Ready;
@@ -121,6 +136,12 @@
             workspaceFragmentLease = ContextRegistry.RegisterFragment(scopeId, fragment);
             workspaceFragmentContent = fragment.Content;
             isWorkspaceContextActive = true;
+            return;
+        }
+
+        if (scopeLease is { IsActive: false })
+        {
+            // Superseded by a newer surface: the workspace registrations stand down until disposal.
             return;
         }
 
@@ -320,12 +341,25 @@
     {
         if (isDisposed ||
             activeAccount is null ||
-            notification.Source != CrmAgentChatContextBuilder.BuildSource(activeAccount.AccountId))
+            notification.Source != CrmAgentChatContextBuilder.BuildSource(activeAccount.AccountId) ||
+            notificationSubscription is not { } admittedSubscription)
         {
             return Task.CompletedTask;
         }
 
-        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+        // The refresh is dispatched on the renderer later; the same activation must still be current then.
+        return InvokeAsync(async () =>
+        {
+            if (isDisposed ||
+                activeAccount is null ||
+                notification.Source != CrmAgentChatContextBuilder.BuildSource(activeAccount.AccountId) ||
+                !ReferenceEquals(notificationSubscription, admittedSubscription))
+            {
+                return;
+            }
+
+            await RefreshRequested.InvokeAsync(notification);
+        });
     }
 
     private static string BuildScopeStateKey(

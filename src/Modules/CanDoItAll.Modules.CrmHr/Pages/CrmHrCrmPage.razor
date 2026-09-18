@@ -1,10 +1,13 @@
+@using static CanDoItAll.CrmHr.UI.Crm.CrmHrCrmWorkspacePresentation
 @page "/crm-hr/crm"
 @implements IDisposable
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
 @using Microsoft.Extensions.Logging
 @inject CrmService CrmService
+@inject ProjectWriteAdmissionService ProjectWriteAdmissions
 @inject IPartyRecordQueryService PartyRecordQueryService
 @inject IAgentChatLauncher AgentChatLauncher
 @inject NavigationManager Navigation
@@ -12,489 +15,6 @@
 @inject ILogger<CrmHrCrmPage> Logger
 
 <PageTitle>CRM / HR CRM</PageTitle>
-
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="CRM workspace"
-                    Description="Review shared customer, partner, and vendor accounts, keep company connections explicit, and log follow-ups before they disappear into side channels."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="accounts"
-                             Value="@accountCount.ToString()"
-                             TooltipText="Active organization records in the shared directory." />
-                <CompactStat Label="selection"
-                             Value="@(selectedAccount is null ? "None" : "Active")"
-                             TooltipText="Current account workspace selection."
-                             Tone="info" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="smart_toy"
-                                        Label="Agent chats"
-                                        TooltipText="Open the global agent catalog with the current CRM selection as context."
-                                        ButtonStyle="ButtonStyle.Primary"
-                                        Click="OpenAgentChats"
-                                        data-testid="crmhr-crm-agent-chats" />
-                <PageHeaderActionButton Icon="asset"
-                                        Label="Open directory"
-                                        TooltipText="Open the shared party directory."
-                                        Click="OpenDirectory" />
-            </Actions>
-        </PageHeader>
-    </Header>
-
-    <ChildContent>
-        <Stack GapScale="LayoutGap.Medium">
-            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Crm" />
-
-            <SurfaceCard data-testid="crmhr-crm-catalog">
-                <Stack GapScale="LayoutGap.Medium">
-                    <ListPanelHeader Title="Accounts"
-                                     Description="Search and page through customer, partner, and vendor organizations. Open a card to manage the complete CRM workspace."
-                                     Count="Server-paged" />
-                    <PartyRecordBrowser AllowedScope="PartyRecordScope.Organizations"
-                                        InitialScope="PartyRecordScope.Organizations"
-                                        SelectedPartyId="selectedAccount?.AccountPartyId"
-                                        SelectionChanged="SelectAccountAsync"
-                                        LoadFailed="HandleAccountBrowserLoadFailedAsync"
-                                        PageSize="12"
-                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
-                                        GridMode="PagedRecordGridMode.BoundedCatalog"
-                                        SearchPlaceholder="Search account name, code, summary, or tag"
-                                        DataTestId="crmhr-account"
-                                        OptionTestId="crmhr-account-item" />
-                </Stack>
-            </SurfaceCard>
-
-            @if (isAccountDialogOpen && selectedAccount is not null)
-            {
-                <Dialog IsOpen="true"
-                        Eyebrow="CRM account"
-                        Title="@selectedAccount.DisplayName"
-                        Subtitle="Relationship profile, financials, connected records, interactions, and opportunities."
-                        Size="ModalSize.Full"
-                        DenseChrome="true"
-                        CloseOnBackdrop="false"
-                        TestId="crmhr-crm-record-dialog"
-                        OnClose="CloseAccountDialogAsync">
-                    <ChildContent>
-                        <AccountSummaryPanel Account="selectedAccount"
-                                             OpenDirectory="OpenDirectory"
-                                             MarkActiveCustomer="MarkActiveCustomerAsync" />
-
-                        <Tabs SelectedIndex="@SelectedCrmRecordTabIndex"
-                              SelectedIndexChanged="HandleCrmRecordTabChanged"
-                              RenderMode="TabRenderMode.Server"
-                              Variant="TabsVariant.WorkspaceSecondary"
-                              BorderMode="TabsBorderMode.Soft"
-                              OverflowMode="TabsOverflowMode.Wrap"
-                              AriaLabel="CRM account sections"
-                              data-testid="crmhr-crm-tabs">
-                            <TabItems>
-                                <TabsItem Text="Overview"
-                                          Icon="dashboard"
-                                          data-testid="crmhr-crm-tab-overview">
-                            <EditForm Model="profileEditor" OnValidSubmit="SaveAccountProfileAsync">
-                                <FormSection Title="Relationship profile"
-                                             Description="Keep prospect conversion, commercial context, and timing risk on the same account record instead of scattering it across notes.">
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Relationship stage</label>
-                                            <InputSelect @bind-Value="profileEditor.RelationshipStage"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-account-stage">
-                                                @foreach (var stage in Enum.GetValues<CrmAccountRelationshipStage>())
-                                                {
-                                                    <option value="@stage">@stage</option>
-                                                }
-                                            </InputSelect>
-                                        </div>
-                                        <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                            <p class="cda-eyebrow">Current scope</p>
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">
-                                                Account context, connected people, follow-up history, opportunity progression, and recognized sold value stay grounded on the shared party record.
-                                            </p>
-                                        </div>
-                                    </Grid>
-
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
-                                        <div>
-                                            <label class="cda-field-label">Commercial notes</label>
-                                            <InputTextArea @bind-Value="profileEditor.CommercialNotes"
-                                                           class="cda-input cda-input--textarea min-h-[9rem]"
-                                                           data-testid="crmhr-account-commercial-notes" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Constraints</label>
-                                            <InputTextArea @bind-Value="profileEditor.ConstraintNotes"
-                                                           class="cda-input cda-input--textarea min-h-[9rem]"
-                                                           data-testid="crmhr-account-constraints" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Timing risks</label>
-                                            <InputTextArea @bind-Value="profileEditor.TimingRiskNotes"
-                                                           class="cda-input cda-input--textarea min-h-[9rem]"
-                                                           data-testid="crmhr-account-timing-risks" />
-                                        </div>
-                                    </Grid>
-
-                                    <Cluster Gap="LayoutGap.Small" Class="mt-5">
-                                        <Button Text="Save CRM profile"
-                                                data-testid="crmhr-account-save-button"
-                                                Type="submit" />
-                                        <Button Text="Open directory record"
-                                                ButtonStyle="ButtonStyle.Light"
-                                                Click="OpenDirectory" />
-                                    </Cluster>
-                                </FormSection>
-                            </EditForm>
-                                </TabsItem>
-
-                                <TabsItem Text="Financials"
-                                          Icon="monitoring"
-                                          data-testid="crmhr-crm-tab-financials">
-                                    <CrmFinancialsPanel AccountPartyId="@selectedAccount.AccountPartyId" />
-                                </TabsItem>
-
-                                <TabsItem Text="Connected records"
-                                          Icon="hub"
-                                          data-testid="crmhr-crm-tab-connections">
-                            <FormSection Title="Connected records"
-                                         Description="Connect the people and other directory records you communicate or cooperate with at this company, then optionally scope each connection to related projects.">
-                                <Split Gap="LayoutGap.Medium"
-                                       AlignItems="AlignItems.Center"
-                                       JustifyContent="JustifyContent.SpaceBetween">
-                                    <div>
-                                        <p class="cda-eyebrow">Company relationship map</p>
-                                        <p class="mt-1 text-sm leading-6 text-slate-600">Use typed relationship roles for employees, contacts, sponsors, partners, and delivery participants. Project links are optional.</p>
-                                    </div>
-                                    <Button Text="Add connection"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Size="ButtonSize.Small"
-                                            Click="AddConnectedRecord"
-                                            data-testid="crmhr-connection-add" />
-                                </Split>
-
-                                @if (connectedRecordEditors.Count == 0)
-                                {
-                                    <div class="mt-5 rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
-                                        No connected records saved yet. Add a person or another directory record associated with this company.
-                                    </div>
-                                }
-                                else
-                                {
-                                    <Stack GapScale="LayoutGap.Medium"
-                                           AlignItems="AlignItems.Stretch"
-                                           Class="mt-5">
-                                        @for (var index = 0; index < connectedRecordEditors.Count; index++)
-                                        {
-                                            var rowIndex = index;
-                                            var connection = connectedRecordEditors[index];
-                                            <PanelCard Soft="true">
-                                                <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
-                                                    <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Connected directory record</label>
-                                                        <SurfaceCard Soft="true">
-                                                            <Split Breakpoint="LayoutBreakpoint.None"
-                                                                   Gap="LayoutGap.Medium"
-                                                                   AlignItems="AlignItems.Center"
-                                                                   JustifyContent="JustifyContent.SpaceBetween"
-                                                                   Wrap="FlexWrap.Wrap">
-                                                                <TextBlock TextStyle="TextStyle.Note"
-                                                                           Value="@ResolveConnectionPartyLabel(connection.RelatedPartyId)" />
-                                                                <Cluster Gap="LayoutGap.Small">
-                                                                    @if (connection.RelatedPartyId != Guid.Empty)
-                                                                    {
-                                                                        <Button Text="Clear"
-                                                                                ButtonStyle="ButtonStyle.Light"
-                                                                                Size="ButtonSize.Small"
-                                                                                Click="@(() => ClearConnectionParty(rowIndex))"
-                                                                                data-testid="@($"crmhr-connection-party-clear-{rowIndex}")" />
-                                                                    }
-                                                                    <Button Text="Choose record"
-                                                                            Icon="search"
-                                                                            Size="ButtonSize.Small"
-                                                                            Click="@(() => OpenConnectionPartyPicker(rowIndex))"
-                                                                            data-testid="@($"crmhr-connection-party-{rowIndex}")" />
-                                                                </Cluster>
-                                                            </Split>
-                                                        </SurfaceCard>
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Relationship role</label>
-                                                        <InputSelect @bind-Value="connection.Role"
-                                                                     class="cda-input"
-                                                                     data-testid="@($"crmhr-connection-role-{rowIndex}")">
-                                                            @foreach (var role in Enum.GetValues<CrmAccountConnectionRole>())
-                                                            {
-                                                                <option value="@role">@FormatConnectionRole(role)</option>
-                                                            }
-                                                        </InputSelect>
-                                                    </div>
-                                                    <div class="flex items-end justify-end">
-                                                        <Button Text="Remove"
-                                                                ButtonStyle="ButtonStyle.Danger"
-                                                                Size="ButtonSize.Small"
-                                                                Click="@(() => RemoveConnectedRecord(rowIndex))"
-                                                                data-testid="@($"crmhr-connection-remove-{rowIndex}")" />
-                                                    </div>
-                                                </Grid>
-
-                                                <div class="mt-4">
-                                                    <ProjectMultiPicker SelectedProjectIds="@connection.ProjectIds"
-                                                                        SelectedProjectIdsChanged="@(projectIds => UpdateConnectedRecordProjects(rowIndex, projectIds))"
-                                                                        TestIdPrefix="@($"crmhr-connection-projects-{rowIndex}")" />
-                                                </div>
-
-                                                <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
-                                                    <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Relationship notes</label>
-                                                        <InputText @bind-Value="connection.Notes"
-                                                                   class="cda-input"
-                                                                   data-testid="@($"crmhr-connection-notes-{rowIndex}")" />
-                                                    </div>
-                                                    <div class="flex items-end gap-3">
-                                                        <InputCheckbox @bind-Value="connection.IsPrimary"
-                                                                       data-testid="@($"crmhr-connection-primary-{rowIndex}")" />
-                                                        <label class="text-sm text-slate-700">Primary for this role</label>
-                                                    </div>
-                                                </Grid>
-                                            </PanelCard>
-                                        }
-                                    </Stack>
-                                }
-
-                                <Cluster Gap="LayoutGap.Small" Class="mt-5">
-                                    <Button Text="Save connected records"
-                                            Click="SaveConnectedRecordsAsync"
-                                            data-testid="crmhr-connection-save-button" />
-                                </Cluster>
-                            </FormSection>
-                                </TabsItem>
-
-                                <TabsItem Text="Interactions"
-                                          Icon="forum"
-                                          data-testid="crmhr-crm-tab-interactions">
-                                    <Stack GapScale="LayoutGap.Large">
-                            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
-                                @if (!string.IsNullOrWhiteSpace(accountActivityLoadError))
-                                {
-                                    <SurfaceCard Soft="true" data-testid="crmhr-account-activity-error">
-                                        <p class="cda-eyebrow text-rose-700">Account activity unavailable</p>
-                                        <p class="mt-2 text-sm leading-6 text-slate-700">@accountActivityLoadError</p>
-                                        <Button Text="Retry"
-                                                Icon="refresh"
-                                                ButtonStyle="ButtonStyle.Light"
-                                                Size="ButtonSize.Small"
-                                                Class="mt-4"
-                                                Click="RetryAccountActivityAsync" />
-                                    </SurfaceCard>
-                                }
-                                else
-                                {
-                                    <InteractionTimeline Page="accountActivityPage"
-                                                         IsLoading="@isAccountActivityLoading"
-                                                         PageRequested="HandleAccountActivityPageRequestedAsync"
-                                                         DataTestId="crmhr-account-activity" />
-                                }
-
-                                <SurfaceCard Soft="true">
-                                    <p class="cda-eyebrow">Next actions</p>
-                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Follow-up pressure</h3>
-                                    <p class="mt-4 text-sm leading-6 text-slate-600">
-                                        Counts cover the complete account history while the timeline renders only the active page.
-                                    </p>
-                                    <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                        <StatusBadge Tone="info"
-                                                     Text="@($"{accountActivityPage.ActionCount:N0} open follow-ups")"
-                                                     data-testid="crmhr-account-action-count" />
-                                        <StatusBadge Tone="@(accountActivityPage.OverdueActionCount > 0 ? "danger" : "success")"
-                                                     Text="@($"{accountActivityPage.OverdueActionCount:N0} overdue")"
-                                                     data-testid="crmhr-account-overdue-count" />
-                                    </Cluster>
-                                </SurfaceCard>
-                            </Grid>
-
-                            <EditForm Model="interactionEditor" OnValidSubmit="SaveInteractionAsync">
-                                <Stack GapScale="LayoutGap.Large">
-                                    <FormSection Title="Interaction journal"
-                                                 Description="Record calls, meetings, emails, and messages against the account so recent context survives handoffs and reloads.">
-                                        <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-                                            <div>
-                                                <label class="cda-field-label">Interaction type</label>
-                                                <InputSelect @bind-Value="interactionEditor.InteractionType"
-                                                             class="cda-input"
-                                                             data-testid="crmhr-interaction-type">
-                                                    @foreach (var interactionType in Enum.GetValues<InteractionType>())
-                                                    {
-                                                        <option value="@interactionType">@interactionType</option>
-                                                    }
-                                                </InputSelect>
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Occurred on</label>
-                                                <InputDate @bind-Value="interactionEditor.OccurredOn"
-                                                           class="cda-input"
-                                                           data-testid="crmhr-interaction-occurred-on" />
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Linked opportunity</label>
-                                                <InputSelect @bind-Value="interactionEditor.RelatedOpportunityId"
-                                                             class="cda-input"
-                                                             data-testid="crmhr-interaction-opportunity">
-                                                    <option value="">No linked opportunity</option>
-                                                    @if (SelectedOpportunity is { } selectedOpportunity)
-                                                    {
-                                                        <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
-                                                    }
-                                                </InputSelect>
-                                                <p class="mt-1 text-xs leading-5 text-slate-500">
-                                                    Select an opportunity from the paged Opportunities tab before linking it here.
-                                                </p>
-                                            </div>
-                                        </Grid>
-
-                                        <div class="mt-5">
-                                            <label class="cda-field-label">Subject</label>
-                                            <InputText @bind-Value="interactionEditor.Subject"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-interaction-subject" />
-                                        </div>
-
-                                        <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
-                                            <div>
-                                                <label class="cda-field-label">Summary</label>
-                                                <InputTextArea @bind-Value="interactionEditor.Summary"
-                                                               class="cda-input cda-input--textarea min-h-[9rem]"
-                                                               data-testid="crmhr-interaction-summary" />
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Notes</label>
-                                                <InputTextArea @bind-Value="interactionEditor.Notes"
-                                                               class="cda-input cda-input--textarea min-h-[9rem]"
-                                                               data-testid="crmhr-interaction-notes" />
-                                            </div>
-                                        </Grid>
-
-                                        <div class="mt-5">
-                                            <p class="cda-field-label">Participants</p>
-                                            @if (ParticipantOptions.Count == 0)
-                                            {
-                                                <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
-                                                    Save at least one connected record to expose reusable participant shortcuts here.
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <Grid Gap="LayoutGap.Small" ColumnsMd="2">
-                                                    @foreach (var option in ParticipantOptions)
-                                                    {
-                                                        <label class="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700"
-                                                               data-testid="@($"crmhr-interaction-participant-option-{option.Id:N}")">
-                                                            <input type="checkbox"
-                                                                   checked="@interactionEditor.ParticipantPartyIds.Contains(option.Id)"
-                                                                   @onchange="args => ToggleInteractionParticipant(option.Id, args)"
-                                                                   data-testid="@($"crmhr-interaction-participant-{option.Id:N}")" />
-                                                            <span>@option.DisplayName (@option.PartyType)</span>
-                                                        </label>
-                                                    }
-                                                </Grid>
-                                            }
-                                        </div>
-                                    </FormSection>
-
-                                    <NextActionEditor Model="interactionEditor"
-                                                      OwnerOptions="selectedAccount.ConnectedParties" />
-
-                                    <Cluster Gap="LayoutGap.Small">
-                                        <Button Text="Log interaction"
-                                                data-testid="crmhr-interaction-save-button"
-                                                Type="submit" />
-                                    </Cluster>
-                                </Stack>
-                            </EditForm>
-                                    </Stack>
-                                </TabsItem>
-
-                                <TabsItem Text="Opportunities"
-                                          Icon="trending_up"
-                                          data-testid="crmhr-crm-tab-opportunities">
-                                    <OpportunityPipeline AccountPartyId="selectedAccount.AccountPartyId"
-                                                         SelectedOpportunityId="selectedOpportunityId"
-                                                         RefreshVersion="opportunityPipelineRefreshVersion"
-                                                         AddOpportunity="OpenOpportunityCreateDialog"
-                                                         SelectOpportunity="SelectOpportunityAsync"
-                                                         AdvanceOpportunityStage="AdvanceOpportunityStageAsync"
-                                                         LoadFailed="HandleOpportunityPipelineLoadFailedAsync" />
-                                </TabsItem>
-                            </TabItems>
-                        </Tabs>
-                    </ChildContent>
-                    <Footer>
-                        <Split Breakpoint="LayoutBreakpoint.None"
-                               Gap="LayoutGap.Medium"
-                               AlignItems="AlignItems.Center"
-                               JustifyContent="JustifyContent.SpaceBetween"
-                               Wrap="FlexWrap.Wrap">
-                            <Button Text="Open directory record"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Click="OpenDirectory" />
-                            <Button Text="Close"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Click="CloseAccountDialogAsync"
-                                    data-testid="crmhr-crm-record-close" />
-                        </Split>
-                    </Footer>
-                </Dialog>
-            }
-        </Stack>
-    </ChildContent>
-</PageScaffold>
-
-<OpportunityCreateDialog IsOpen="@isOpportunityCreateDialogOpen"
-                         InitialModel="opportunityEditor"
-                         AccountDisplayName="@(selectedAccount?.DisplayName ?? string.Empty)"
-                         RelationshipStageLabel="@profileEditor.RelationshipStage.ToString()"
-                         IsBusy="isOpportunityBusy"
-                         Message="@(isOpportunityCreateDialogOpen ? message : null)"
-                         Save="SaveOpportunityAsync"
-                         Close="CloseOpportunityCreateDialogAsync"
-                         LoadFailed="HandleOpportunityPickerLoadFailedAsync" />
-
-<OpportunityDetailDialog IsOpen="@isOpportunityDetailDialogOpen"
-                         Opportunity="SelectedOpportunity"
-                         Close="CloseOpportunityDetailDialogAsync"
-                         Edit="OpenOpportunityEditDialog"
-                         Convert="OpenConversionDialogAsync"
-                         OpenLinkedProject="OpenLinkedProjectAsync" />
-
-<OpportunityEditDialog IsOpen="@isOpportunityEditDialogOpen"
-                       Opportunity="SelectedOpportunity"
-                       IsBusy="isOpportunityBusy"
-                       Message="@(isOpportunityEditDialogOpen ? message : null)"
-                       Save="SaveOpportunityAsync"
-                       Close="CloseOpportunityEditDialogAsync"
-                       LoadFailed="HandleOpportunityPickerLoadFailedAsync" />
-
-<OpportunityConversionDialog IsOpen="@isOpportunityConversionDialogOpen"
-                             Opportunity="SelectedOpportunity"
-                             Model="opportunityConversionEditor"
-                             IsBusy="isOpportunityConversionBusy"
-                             Message="@(isOpportunityConversionDialogOpen ? message : null)"
-                             Close="CloseOpportunityConversionDialogAsync"
-                             Save="SaveOpportunityConversionAsync"
-                             LoadFailed="HandleOpportunityPickerLoadFailedAsync" />
-
-<PartyRecordPickerDialog IsOpen="@connectionPartyPickerIndex.HasValue"
-                         SelectedPartyId="@SelectedConnectionPartyId"
-                         ExcludedPartyId="selectedAccount?.AccountPartyId"
-                         SelectionConfirmed="ConfirmConnectionPartyAsync"
-                         OnClose="CloseConnectionPartyPickerAsync"
-                         LoadFailed="HandleOpportunityPickerLoadFailedAsync"
-                         Eyebrow="Connected records"
-                         Title="Choose a directory record"
-                         Subtitle="Search people, organizations, units, and AI agents that have a relationship with this company."
-                         DataTestId="crmhr-connection-party-picker" />
 
 <CrmAgentChatContextProvider AccountCount="accountCount"
                              Account="agentChatAccountContext"
@@ -504,7 +24,38 @@
                              ContextAccessState="@agentChatContextAccessState"
                              RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
 
+<CrmHrCrmWorkspaceSurface View="this">
+    <SecondaryNavigation>
+        <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Crm" />
+    </SecondaryNavigation>
+    <AccountSummary>
+        <AccountSummaryPanel Account="selectedAccount"
+                             OpenDirectory="OpenDirectory"
+                             MarkActiveCustomer="MarkActiveCustomerAsync"
+                             IsInteractive="@isInteractive" />
+    </AccountSummary>
+    <Financials>
+        @if (selectedAccount is { } financialsAccount)
+        {
+            <CrmFinancialsPanel AccountPartyId="@financialsAccount.AccountPartyId" />
+        }
+    </Financials>
+    <ActivityTimeline>
+        <InteractionTimeline Presentation="@AccountActivityPresentation"
+                             PageRequested="HandleAccountActivityPageRequestedAsync"
+                             DataTestId="crmhr-account-activity" />
+    </ActivityTimeline>
+</CrmHrCrmWorkspaceSurface>
+
 @code {
+    // The database profile that project admissions captured on this page are bound to.
+    private Guid ProjectDatabaseProfileId => ProjectWriteAdmissions.DatabaseProfileId;
+
+    // What the history lane accepted for the selected account, and its failure copy; the surface never sees the session.
+    private CrmHrActivityPresentation AccountActivityPresentation => accountActivity.Presentation;
+
+    private string? AccountActivityFailureMessage => accountActivity.FailureMessage;
+
     [SupplyParameterFromQuery(Name = "accountId")]
     public Guid? AccountIdQuery { get; set; }
 
@@ -518,7 +69,9 @@
     private CrmAccountWorkspaceModel? selectedAccount;
     private CrmInteractionDetailModel? selectedInteraction;
     private CrmOpportunityDetailModel? selectedOpportunity;
-    private CrmActivityHistoryPage accountActivityPage = CrmActivityHistoryPage.Empty();
+    // The linked project of the selected opportunity, bound to the incarnation the same load observed.
+    private ProjectWriteAdmission? selectedOpportunityProjectAdmission;
+    private CrmHrActivityHistorySession accountActivity = default!;
     private CrmAccountProfileEditorModel profileEditor = new();
     private List<CrmAccountConnectionEditorModel> connectedRecordEditors = [];
     private CrmInteractionEditorModel interactionEditor = CreateInteractionEditor();
@@ -531,16 +84,18 @@
     private int accountCount;
     private Guid? selectedOpportunityId;
     private Guid? selectedInteractionId;
-    private Guid? accountActivityLoadedPartyId;
     private int? connectionPartyPickerIndex;
     private CrmRecordTab selectedCrmRecordTab = CrmRecordTab.Overview;
     private string? committedQueryKey;
     private readonly CrmQueryLoadGeneration queryLoadGeneration = new();
     private CrmQueryLoadStamp? activeQueryLoadStamp;
+    private readonly CrmHrMutationGate mutationGate = new();
+    private readonly CrmHrDraftReconciler drafts = new();
+    private const string ProfileDraft = "profile";
+    private const string ConnectionsDraft = "connections";
+    private const string InteractionDraft = "interaction";
     private CancellationTokenSource? queryLoadCancellation;
     private long transientStateGeneration;
-    private long accountActivityLoadGeneration;
-    private Task? accountActivityLoadTask;
     private string? message;
     private long opportunityPipelineRefreshVersion;
     private bool isOpportunityBusy;
@@ -550,9 +105,8 @@
     private bool isOpportunityConversionDialogOpen;
     private bool isAccountDialogOpen;
     private bool isOpportunityConversionBusy;
-    private bool isAccountActivityLoading;
+    private bool isInteractive;
     private bool isDisposed;
-    private string accountActivityLoadError = string.Empty;
 
     private int SelectedCrmRecordTabIndex => (int)selectedCrmRecordTab;
 
@@ -590,6 +144,15 @@
                 new("opportunityId", OpportunityIdQuery?.ToString("D")),
                 new("interactionId", InteractionIdQuery?.ToString("D"))
             ]);
+
+    protected override void OnInitialized()
+    {
+        accountActivity = new CrmHrActivityHistorySession(
+            (query, cancellationToken) => CrmService.SearchAccountActivityAsync(query, cancellationToken),
+            initialFailureMessage: "Account activity could not be loaded.",
+            pageFailureMessage: "The requested account activity page could not be loaded.",
+            Logger);
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -762,7 +325,7 @@
         return stamp;
     }
 
-    private async Task<CrmOpportunityDetailModel?> LoadOpportunityForAccountAsync(
+    private async Task<LoadedOpportunity?> LoadOpportunityForAccountAsync(
         Guid? opportunityId,
         Guid accountPartyId,
         CancellationToken cancellationToken)
@@ -775,57 +338,92 @@
         var opportunity = await CrmService.GetOpportunityAsync(
             opportunityId.Value,
             cancellationToken);
-        return opportunity?.AccountPartyId == accountPartyId
-            ? opportunity
+        if (opportunity?.AccountPartyId != accountPartyId)
+        {
+            return null;
+        }
+
+        // A conversion that links the already linked project writes against the project incarnation this load
+        // observed. A project retired or recreated since is rejected by the owner; it is never rebound on save.
+        var linkedProjectAdmission = opportunity.LinkedProjectId is { } linkedProjectId
+            ? await ProjectWriteAdmissions.CaptureAsync(linkedProjectId, cancellationToken)
             : null;
+        return new LoadedOpportunity(opportunity, linkedProjectAdmission);
     }
 
     private void ApplyLoadedAccount(
         CrmAccountWorkspaceModel account,
-        CrmOpportunityDetailModel? opportunity,
+        LoadedOpportunity? opportunity,
         CrmInteractionDetailModel? interaction,
         bool clearMessage,
         Guid? requestedOpportunityId,
         Guid? preferredOpportunityId,
-        Guid? requestedInteractionId)
+        Guid? requestedInteractionId,
+        CrmAccountEditor committed = CrmAccountEditor.None)
     {
         InvalidateAccountActivity();
+        // A reload of the account already on screen (an opportunity or interaction selected in the route, another
+        // editor's commit, an agent refresh) keeps what the operator typed into the editors it did not commit.
+        var accountChanged = selectedAccount?.AccountPartyId != account.AccountPartyId;
         selectedAccount = account;
-        selectedOpportunity = opportunity;
+        selectedOpportunity = opportunity?.Detail;
+        selectedOpportunityProjectAdmission = opportunity?.LinkedProjectAdmission;
         selectedInteraction = interaction;
-        profileEditor = new CrmAccountProfileEditorModel
-        {
-            Id = account.Profile.Id,
-            AccountPartyId = account.Profile.AccountPartyId,
-            RelationshipStage = account.Profile.RelationshipStage,
-            CommercialNotes = account.Profile.CommercialNotes,
-            ConstraintNotes = account.Profile.ConstraintNotes,
-            TimingRiskNotes = account.Profile.TimingRiskNotes,
-            LastChangedBy = account.Profile.LastChangedBy
-        };
-        connectedRecordEditors = account.ConnectedRecords
-            .Select(item => new CrmAccountConnectionEditorModel
+        profileEditor = drafts.Reconcile(
+            ProfileDraft,
+            profileEditor,
+            () => new CrmAccountProfileEditorModel
             {
-                Id = item.Id,
-                RelatedPartyId = item.RelatedPartyId,
-                Role = item.Role,
-                IsPrimary = item.IsPrimary,
-                Notes = item.Notes,
-                ProjectIds = item.Projects.Select(project => project.Id).ToList()
-            })
-            .ToList();
-        connectionPartyLabels.Clear();
+                Id = account.Profile.Id,
+                AccountPartyId = account.Profile.AccountPartyId,
+                RelationshipStage = account.Profile.RelationshipStage,
+                CommercialNotes = account.Profile.CommercialNotes,
+                ConstraintNotes = account.Profile.ConstraintNotes,
+                TimingRiskNotes = account.Profile.TimingRiskNotes,
+                LastChangedBy = account.Profile.LastChangedBy
+            },
+            accountChanged,
+            committed.HasFlag(CrmAccountEditor.Profile));
+        var previousConnections = connectedRecordEditors;
+        // Rows are paired by the directory record and role the owner keeps unique per account, so a row this commit
+        // created adopts the connection identity the owner assigned even when the operator kept editing the list.
+        connectedRecordEditors = drafts.ReconcileList(
+            ConnectionsDraft,
+            connectedRecordEditors,
+            () => account.ConnectedRecords
+                .Select(item => new CrmAccountConnectionEditorModel
+                {
+                    Id = item.Id,
+                    RelatedPartyId = item.RelatedPartyId,
+                    Role = item.Role,
+                    IsPrimary = item.IsPrimary,
+                    Notes = item.Notes,
+                    ProjectIds = item.Projects.Select(project => project.Id).ToList()
+                })
+                .ToList(),
+            accountChanged,
+            committed.HasFlag(CrmAccountEditor.Connections),
+            nameof(CrmAccountConnectionEditorModel.RelatedPartyId),
+            nameof(CrmAccountConnectionEditorModel.Role));
+        if (!ReferenceEquals(previousConnections, connectedRecordEditors))
+        {
+            // A kept connection draft still names the parties the operator picked for it and its open picker row.
+            connectionPartyLabels.Clear();
+            connectionPartyPickerIndex = null;
+        }
+
         foreach (var connection in account.ConnectedRecords)
         {
             connectionPartyLabels[connection.RelatedPartyId] =
                 $"{connection.DisplayName} ({connection.PartyType})";
         }
 
-        connectionPartyPickerIndex = null;
         ApplyContextSelection(
             requestedOpportunityId,
             preferredOpportunityId,
-            requestedInteractionId);
+            requestedInteractionId,
+            accountChanged,
+            committed.HasFlag(CrmAccountEditor.Interaction));
 
         if (clearMessage)
         {
@@ -836,7 +434,8 @@
     private async Task<bool> ReloadSelectedAccountAsync(
         CrmPageActionStamp action,
         bool clearMessage,
-        Guid? preferredOpportunityId = null)
+        Guid? preferredOpportunityId = null,
+        CrmAccountEditor committed = CrmAccountEditor.None)
     {
         if (!IsCurrentCrmAction(action))
         {
@@ -899,7 +498,8 @@
                 clearMessage,
                 action.RouteOpportunityId,
                 preferredOpportunityId ?? action.SelectedOpportunityId,
-                action.RouteInteractionId);
+                action.RouteInteractionId,
+                committed);
             if (selectedCrmRecordTab == CrmRecordTab.Interactions)
             {
                 await EnsureAccountActivityLoadedAsync();
@@ -922,10 +522,16 @@
         {
             return false;
         }
-        catch
+        catch (Exception exception)
         {
+            // Every caller refreshes after an owner already committed (a save, a conversion, an agent run). A failed
+            // read-back is a warning: it never repeats a write, and the operator can reload to reconcile the view.
             agentChatContextAccessState = AgentChatContextAccessState.Failed;
-            throw;
+            Logger.LogWarning(exception, "The CRM account {AccountId} could not be refreshed after a committed change.", action.AccountId);
+            NotificationService.Warning(
+                "Refresh failed",
+                "The change was kept by its owner, but the account could not be refreshed. Reload the page to see the current state.");
+            return false;
         }
         finally
         {
@@ -993,108 +599,25 @@
         }
     }
 
-    private async Task EnsureAccountActivityLoadedAsync()
-    {
-        if (selectedAccount is not { } account ||
-            accountActivityLoadedPartyId == account.AccountPartyId)
-        {
-            return;
-        }
+    // The account activity lane: the session owns the read, the accepted page, the busy gate and the fencing of
+    // late outcomes; this page decides when the lane is asked for the selected account and renders its failure.
+    private Task EnsureAccountActivityLoadedAsync()
+        => selectedAccount is { } account
+            ? accountActivity.EnsureLoadedAsync(account.AccountPartyId)
+            : Task.CompletedTask;
 
-        var accountPartyId = account.AccountPartyId;
-        var generation = Volatile.Read(ref accountActivityLoadGeneration);
-        if (accountActivityLoadTask is null)
-        {
-            isAccountActivityLoading = true;
-            accountActivityLoadError = string.Empty;
-            accountActivityLoadTask = LoadAccountActivityAsync(
-                accountPartyId,
-                pageIndex: 0,
-                generation);
-        }
+    private Task HandleAccountActivityPageRequestedAsync(int pageIndex)
+        => selectedAccount is { } account && accountActivity.Target == account.AccountPartyId
+            ? accountActivity.RequestPageAsync(pageIndex)
+            : Task.CompletedTask;
 
-        await accountActivityLoadTask;
-    }
-
-    private async Task LoadAccountActivityAsync(
-        Guid accountPartyId,
-        int pageIndex,
-        long generation)
-    {
-        try
-        {
-            var page = await CrmService.SearchAccountActivityAsync(
-                new CrmActivityHistoryQuery(
-                    accountPartyId,
-                    pageIndex,
-                    accountActivityPage.PageSize));
-            if (!IsCurrentAccountActivityLoad(accountPartyId, generation))
-            {
-                return;
-            }
-
-            accountActivityPage = page;
-            accountActivityLoadedPartyId = accountPartyId;
-        }
-        catch when (!IsCurrentAccountActivityLoad(accountPartyId, generation))
-        {
-        }
-        catch (Exception exception)
-        {
-            Logger.LogError(
-                exception,
-                "Failed to load account activity page {PageIndex} for account {AccountPartyId}.",
-                pageIndex,
-                accountPartyId);
-            accountActivityLoadError = "Account activity could not be loaded.";
-        }
-        finally
-        {
-            if (IsCurrentAccountActivityLoad(accountPartyId, generation))
-            {
-                isAccountActivityLoading = false;
-                accountActivityLoadTask = null;
-            }
-        }
-    }
-
-    private async Task HandleAccountActivityPageRequestedAsync(int pageIndex)
-    {
-        if (selectedAccount is not { } account ||
-            pageIndex < 0 ||
-            pageIndex >= accountActivityPage.TotalPages)
-        {
-            return;
-        }
-
-        isAccountActivityLoading = true;
-        accountActivityLoadError = string.Empty;
-        await LoadAccountActivityAsync(
-            account.AccountPartyId,
-            pageIndex,
-            Volatile.Read(ref accountActivityLoadGeneration));
-    }
-
-    private bool IsCurrentAccountActivityLoad(Guid accountPartyId, long generation)
-        => !isDisposed &&
-           selectedAccount?.AccountPartyId == accountPartyId &&
-           generation == Volatile.Read(ref accountActivityLoadGeneration);
-
-    private async Task RetryAccountActivityAsync()
-    {
-        InvalidateAccountActivity();
-        await EnsureAccountActivityLoadedAsync();
-    }
+    private Task RetryAccountActivityAsync()
+        => selectedAccount is { } account && accountActivity.Target == account.AccountPartyId
+            ? accountActivity.RetryAsync()
+            : Task.CompletedTask;
 
     private void InvalidateAccountActivity()
-    {
-        Interlocked.Increment(ref accountActivityLoadGeneration);
-        accountActivityPage = CrmActivityHistoryPage.Empty();
-        accountActivityLoadedPartyId = null;
-        accountActivityLoadTask = null;
-        isAccountActivityLoading = false;
-        accountActivityLoadError = string.Empty;
-    }
+        => accountActivity.Invalidate();
 
     private void SelectCrmRecordTabForRoute(
         Guid accountPartyId,
@@ -1125,7 +648,10 @@
         InvalidateAccountActivity();
         selectedAccount = null;
         selectedOpportunity = null;
+        selectedOpportunityProjectAdmission = null;
         selectedInteraction = null;
+        // Closing the record discards its drafts: the next record, or the same one reopened, starts from the owner.
+        drafts.Reset();
         profileEditor = new();
         connectedRecordEditors = [];
         connectionPartyLabels.Clear();
@@ -1183,10 +709,31 @@
         Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedAccount.AccountPartyId}");
     }
 
-    private async Task MarkActiveCustomerAsync()
+    // Prerendered markup has no event handlers; OnAfterRender runs only for an interactive render, so the account
+    // summary's actions become usable exactly when a browser click can reach this page.
+    protected override void OnAfterRender(bool firstRender)
     {
+        if (!firstRender || isInteractive)
+        {
+            return;
+        }
+
+        isInteractive = true;
+        StateHasChanged();
+    }
+
+    // The conversion is a mutation this page owns: it is admitted only for the account currently selected and only
+    // while the page's query load is current, and the editor is changed only once the action was captured, so a
+    // stale callback from a summary of a previous account neither saves nor leaves the form half-edited.
+    private async Task MarkActiveCustomerAsync(Guid accountPartyId)
+    {
+        if (selectedAccount?.AccountPartyId != accountPartyId || !TryCaptureCrmAction(out var action))
+        {
+            return;
+        }
+
         profileEditor.RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer;
-        await SaveAccountProfileAsync();
+        await SaveAccountProfileAsync(action);
     }
 
     private async Task SaveAccountProfileAsync()
@@ -1196,9 +743,24 @@
             return;
         }
 
-        var result = await CrmService.SaveAccountProfileAsync(profileEditor);
+        await SaveAccountProfileAsync(action);
+    }
+
+    private async Task SaveAccountProfileAsync(CrmPageActionStamp action)
+    {
+        // One admitted write per account lifetime; the submission is independent of later typing.
+        using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
+        var result = await CrmService.SaveAccountProfileAsync(
+            drafts.Submit(ProfileDraft, profileEditor, static editor => editor.Snapshot()));
         if (result.IsFailure)
         {
+            // Nothing was written: the draft stays exactly as the operator left it and owns all of its fields again.
+            drafts.Retire(ProfileDraft);
             if (IsCurrentCrmAction(action))
             {
                 NotifyError("CRM account save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -1207,7 +769,7 @@
             return;
         }
 
-        if (!await ReloadSelectedAccountAsync(action, clearMessage: false))
+        if (!await ReloadSelectedAccountAsync(action, clearMessage: false, committed: CrmAccountEditor.Profile))
         {
             return;
         }
@@ -1339,12 +901,22 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         var result = await CrmService.SaveConnectedRecordsAsync(
             action.AccountId,
-            connectedRecordEditors,
+            drafts.Submit(
+                ConnectionsDraft,
+                connectedRecordEditors,
+                static rows => rows.Select(connection => connection.Snapshot()).ToList()),
             profileEditor.LastChangedBy);
         if (result.IsFailure)
         {
+            drafts.Retire(ConnectionsDraft);
             if (IsCurrentCrmAction(action))
             {
                 NotifyError(
@@ -1355,7 +927,7 @@
             return;
         }
 
-        if (!await ReloadSelectedAccountAsync(action, clearMessage: false))
+        if (!await ReloadSelectedAccountAsync(action, clearMessage: false, committed: CrmAccountEditor.Connections))
         {
             return;
         }
@@ -1370,12 +942,19 @@
             return;
         }
 
+        using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         var result = await CrmService.AddInteractionAsync(
             action.AccountId,
-            interactionEditor,
+            drafts.Submit(InteractionDraft, interactionEditor, static editor => editor.Snapshot()),
             profileEditor.LastChangedBy);
         if (result.IsFailure)
         {
+            drafts.Retire(InteractionDraft);
             if (IsCurrentCrmAction(action))
             {
                 NotifyError("Interaction save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -1384,7 +963,14 @@
             return;
         }
 
-        if (!await ReloadSelectedAccountAsync(action, clearMessage: false))
+        // The create editor starts over once the owner accepted it, unless the operator already typed the next
+        // interaction into it while the write was in flight; that draft is theirs and survives the read-back whole.
+        var interactionStartsOver = !drafts.ChangedAfterSubmission(InteractionDraft, interactionEditor);
+        drafts.Retire(InteractionDraft);
+        if (!await ReloadSelectedAccountAsync(
+                action,
+                clearMessage: false,
+                committed: interactionStartsOver ? CrmAccountEditor.Interaction : CrmAccountEditor.None))
         {
             return;
         }
@@ -1408,6 +994,12 @@
     private async Task SaveOpportunityAsync(CrmOpportunityEditorModel model)
     {
         if (!TryCaptureCrmAction(out var action))
+        {
+            return;
+        }
+
+        using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
+        if (admission is null)
         {
             return;
         }
@@ -1544,7 +1136,7 @@
             return Task.CompletedTask;
         }
 
-        opportunityConversionEditor = CreateOpportunityConversionEditor(selectedOpportunity);
+        opportunityConversionEditor = CreateOpportunityConversionEditor(selectedOpportunity, selectedOpportunityProjectAdmission);
         message = null;
         isOpportunityDetailDialogOpen = false;
         isOpportunityConversionDialogOpen = true;
@@ -1567,7 +1159,24 @@
             return;
         }
 
+        if (model.LinkExistingProject &&
+            (model.ExistingProjectId is not { } existingProjectId ||
+             model.ExpectedProjectAdmission?.ProjectId != existingProjectId))
+        {
+            NotifyError(
+                "Opportunity conversion not saved",
+                "Choose the project to link in the project picker before converting.",
+                keepDialogMessage: true);
+            return;
+        }
+
         var transientGeneration = Interlocked.Increment(ref transientStateGeneration);
+        using var admission = mutationGate.TryEnter(action.LoadStamp.Generation);
+        if (admission is null)
+        {
+            return;
+        }
+
         isOpportunityConversionBusy = true;
         try
         {
@@ -1612,6 +1221,22 @@
                 ? "Opportunity converted into a new project."
                 : "Opportunity linked to the selected project.";
             NotifySuccess("Opportunity converted", conversionMessage);
+        }
+        catch (CrmOpportunityConversionRequiresObservationException exception) {
+            if (IsCurrentCrmAction(action)) {
+                NotifyError("Opportunity conversion requires review", exception.Message, keepDialogMessage: true);
+            }
+        }
+        catch (ProjectWriteAdmissionRejectedException)
+        {
+            // Nothing was written: the linked project was retired or recreated after it was chosen.
+            if (IsCurrentCrmAction(action))
+            {
+                NotifyError(
+                    "Opportunity conversion not saved",
+                    "The selected project changed after it was chosen. Choose the project again before converting.",
+                    keepDialogMessage: true);
+            }
         }
         finally
         {
@@ -1698,15 +1323,18 @@
     private void ApplyContextSelection(
         Guid? requestedOpportunityId,
         Guid? preferredOpportunityId,
-        Guid? requestedInteractionId)
+        Guid? requestedInteractionId,
+        bool accountChanged,
+        bool interactionCommitted)
     {
         if (selectedAccount is null)
         {
             selectedOpportunity = null;
+            selectedOpportunityProjectAdmission = null;
             selectedOpportunityId = null;
             selectedInteractionId = null;
             opportunityEditor = new();
-            interactionEditor = CreateInteractionEditor();
+            interactionEditor = drafts.Replace(InteractionDraft, CreateInteractionEditor());
             opportunityConversionEditor = new();
             isOpportunityCreateDialogOpen = false;
             isOpportunityDetailDialogOpen = false;
@@ -1727,6 +1355,7 @@
         {
             targetOpportunityId = null;
             selectedOpportunity = null;
+            selectedOpportunityProjectAdmission = null;
         }
 
         selectedOpportunityId = targetOpportunityId;
@@ -1737,9 +1366,15 @@
                 RelationshipStage = selectedAccount.Profile.RelationshipStage.ToString()
             }
             : OpportunityEditorDrafts.FromDetail(SelectedOpportunity);
-        interactionEditor = CreateInteractionEditor(
-            selectedOpportunityId ?? SelectedInteraction?.RelatedOpportunityId);
-        opportunityConversionEditor = CreateOpportunityConversionEditor(SelectedOpportunity);
+        // The new-interaction draft shows its related opportunity as a field: it follows the selection until the
+        // operator chooses one, and a draft the operator started keeps its text either way.
+        interactionEditor = drafts.Reconcile(
+            InteractionDraft,
+            interactionEditor,
+            () => CreateInteractionEditor(selectedOpportunityId ?? SelectedInteraction?.RelatedOpportunityId),
+            accountChanged,
+            interactionCommitted);
+        opportunityConversionEditor = CreateOpportunityConversionEditor(SelectedOpportunity, selectedOpportunityProjectAdmission);
         isOpportunityDetailDialogOpen =
             requestedOpportunityId.HasValue &&
             SelectedOpportunity is not null;
@@ -1838,25 +1473,6 @@
             "The selected account was refreshed after the agent run completed.");
     }
 
-    private static string FormatConnectionRole(CrmAccountConnectionRole role)
-    {
-        return role switch
-        {
-            CrmAccountConnectionRole.PrimaryContact => "Primary contact",
-            CrmAccountConnectionRole.Stakeholder => "Stakeholder",
-            CrmAccountConnectionRole.BillingContact => "Billing contact",
-            CrmAccountConnectionRole.ContractContact => "Contract contact",
-            CrmAccountConnectionRole.AccountManager => "Account manager",
-            CrmAccountConnectionRole.DeliveryLead => "Delivery lead",
-            CrmAccountConnectionRole.Sponsor => "Sponsor",
-            CrmAccountConnectionRole.TechnicalContact => "Technical contact",
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(role),
-                role,
-                "Unknown CRM account connection role.")
-        };
-    }
-
     private static OpportunityStage ResolveNextOpportunityStage(OpportunityStage stage)
     {
         return stage switch
@@ -1869,19 +1485,28 @@
         };
     }
 
-    private static CrmOpportunityConversionEditorModel CreateOpportunityConversionEditor(CrmOpportunityDetailModel? opportunity)
+    private static CrmOpportunityConversionEditorModel CreateOpportunityConversionEditor(
+        CrmOpportunityDetailModel? opportunity,
+        ProjectWriteAdmission? capturedLinkedProjectAdmission)
     {
         if (opportunity is null)
         {
             return new CrmOpportunityConversionEditorModel();
         }
 
+        // The linked project is preselected only with the admission its load captured. A linked project that no
+        // longer exists is not offered: the operator chooses a project in the picker instead.
+        var linkedProjectAdmission = opportunity.LinkedProjectId is { } linkedProjectId &&
+                                     capturedLinkedProjectAdmission?.ProjectId == linkedProjectId
+            ? capturedLinkedProjectAdmission
+            : null;
         return new CrmOpportunityConversionEditorModel
         {
             OpportunityId = opportunity.Id,
             ExpectedUpdatedAtUtc = opportunity.UpdatedAtUtc,
             LinkExistingProject = opportunity.LinkedProjectId.HasValue,
-            ExistingProjectId = opportunity.LinkedProjectId,
+            ExistingProjectId = linkedProjectAdmission?.ProjectId,
+            ExpectedProjectAdmission = linkedProjectAdmission,
             ProjectName = string.IsNullOrWhiteSpace(opportunity.LinkedProjectName)
                 ? $"{opportunity.AccountDisplayName} - {opportunity.Title}"
                 : opportunity.LinkedProjectName,
@@ -1889,6 +1514,19 @@
             ProjectObjective = string.IsNullOrWhiteSpace(opportunity.Notes) ? opportunity.Title : opportunity.Notes,
             CurrentPhase = "Sales handoff"
         };
+    }
+
+    // An opportunity read together with the admission of its linked project, observed by the same load.
+    private sealed record LoadedOpportunity(CrmOpportunityDetailModel Detail, ProjectWriteAdmission? LinkedProjectAdmission);
+
+    // The inline editors of the account record; a reload names the one whose commit caused it.
+    [Flags]
+    private enum CrmAccountEditor
+    {
+        None = 0,
+        Profile = 1,
+        Connections = 2,
+        Interaction = 4
     }
 
     private static CrmInteractionEditorModel CreateInteractionEditor(Guid? relatedOpportunityId = null)
@@ -1909,6 +1547,7 @@
             ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
             LinkExistingProject = source.LinkExistingProject,
             ExistingProjectId = source.ExistingProjectId,
+            ExpectedProjectAdmission = source.ExpectedProjectAdmission,
             ProjectName = source.ProjectName,
             ProjectDescription = source.ProjectDescription,
             ProjectObjective = source.ProjectObjective,
@@ -1947,5 +1586,6 @@
         activeQueryLoadStamp = null;
         Interlocked.Increment(ref transientStateGeneration);
         Interlocked.Exchange(ref queryLoadCancellation, null)?.Cancel();
+        accountActivity.Dispose();
     }
 }

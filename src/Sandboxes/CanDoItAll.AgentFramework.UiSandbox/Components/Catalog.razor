@@ -1,0 +1,59 @@
+@page "/"
+@page "/agents"
+
+@if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Capabilities) {
+    <CapabilitiesSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Overview) {
+    <OverviewSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" UsageScopeQuery="@UsageScopeQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Governance) {
+    <GovernanceSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Diagnostics) {
+    <DiagnosticsSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.History) {
+    <HistorySpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatDefinitions) {
+    <DefinitionCatalogSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatDefinitionEditor) {
+    <DefinitionEditorSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Workflows) {
+    <WorkflowSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.AgentChat) {
+    <AgentChatSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.SimpleChatConversation) {
+    <ConversationWorkspaceSpecimen ScenarioQuery="@ScenarioQuery" />
+}
+else if (SandboxSpecimens.Parse(SpecimenQuery) is SandboxSpecimen.VoiceSettings or SandboxSpecimen.FloatingChatSettings) {
+    <AgentSettingsSpecimen Voice="@(SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.VoiceSettings)" ScenarioQuery="@ScenarioQuery" />
+}
+else {
+    <CatalogSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" TeamQuery="@TeamQuery" />
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "usageScope")]
+    public string? UsageScopeQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "specimen")]
+    public string? SpecimenQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "scenario")]
+    public string? ScenarioQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "layout")]
+    public string? LayoutQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "agentId")]
+    public string? AgentQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "teamId")]
+    public string? TeamQuery { get; set; }
+}

@@ -110,7 +110,7 @@ public sealed class DisabledPromptGalleryProjectionDriver : IPromptGalleryProjec
 }
 
 public sealed class PromptGalleryProjectionCoordinator(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PromptsDbContext> dbContextFactory,
     IPromptGalleryProjectionDriver driver) : IPromptGalleryProjectionCoordinator
 {
     public Task<PromptGalleryProjectionStatus> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -279,7 +279,7 @@ public sealed class PromptGalleryProjectionCoordinator(
     }
 
     private static async Task<Dictionary<Guid, IReadOnlyList<string>>> LoadTagsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         IReadOnlyCollection<Guid> promptArtifactIds,
         CancellationToken cancellationToken)
     {

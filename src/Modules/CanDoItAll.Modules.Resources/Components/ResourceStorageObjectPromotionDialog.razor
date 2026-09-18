@@ -1,3 +1,4 @@
+@using CanDoItAll.Modules.Projects
 @namespace CanDoItAll.Modules.Resources
 @implements IDisposable
 @inject ResourceStorageObjectPromotionService PromotionService
@@ -32,9 +33,9 @@
                 <label class="cda-field-label">Target project</label>
                 <InputSelect @bind-Value="projectId" class="cda-input w-full" data-testid="resources-promotion-project">
                     <option value="">Select a project</option>
-                    @foreach (KeyValuePair<Guid, string> project in projects.OrderBy(project => project.Value))
+                    @foreach (KeyValuePair<Guid, ProjectWriteSelection> project in projects.OrderBy(project => project.Value.Name))
                     {
-                        <option value="@project.Key">@project.Value</option>
+                        <option value="@project.Key">@project.Value.Name</option>
                     }
                 </InputSelect>
             </div>
@@ -74,7 +75,7 @@
     private string sourceName = string.Empty;
     private Guid? sourceProjectId;
     private FileBrowserItem? item;
-    private IReadOnlyDictionary<Guid, string> projects = new Dictionary<Guid, string>();
+    private IReadOnlyDictionary<Guid, ProjectWriteSelection> projects = new Dictionary<Guid, ProjectWriteSelection>();
     private Guid? projectId;
     private string resourceName = string.Empty;
     private string? error;
@@ -89,7 +90,7 @@
     private bool CanSave => !isSaving &&
                             sourceKey.HasValue &&
                             item is not null &&
-                            projectId.HasValue &&
+                            projectId.HasValue && projects.ContainsKey(projectId.Value) &&
                             !string.IsNullOrWhiteSpace(resourceName);
 
     public void Open(
@@ -97,7 +98,7 @@
         string selectedSourceName,
         Guid? selectedSourceProjectId,
         FileBrowserItem selectedItem,
-        IReadOnlyDictionary<Guid, string> availableProjects)
+        IReadOnlyDictionary<Guid, ProjectWriteSelection> availableProjects)
     {
         if (!ResourceFileSourceKey.TryParse(selectedSourceKey, out ResourceFileSourceKey parsedSourceKey))
         {
@@ -139,6 +140,7 @@
                     item.Key,
                     projectId.Value,
                     resourceName,
+                    projects[projectId.Value].Admission,
                     sensitivity),
                 lifetime.Token);
             string completedSourceKey = sourceKey.Value.Value;
@@ -187,7 +189,7 @@
         sourceName = string.Empty;
         sourceProjectId = null;
         item = null;
-        projects = new Dictionary<Guid, string>();
+        projects = new Dictionary<Guid, ProjectWriteSelection>();
         projectId = null;
         resourceName = string.Empty;
         error = null;

@@ -9,7 +9,13 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class RuntimeCapabilityState
 {
+    public AgentToolPolicyCatalog ToolPolicies { get; set; } = AgentToolPolicyCatalog.BuiltIn;
+
     public List<AITool> Tools { get; } = [];
+
+    public List<MafContextToolRegistration> ContextToolRegistrations { get; } = [];
+
+    public bool HasToolContracts => Tools.Count > 0 || ContextToolRegistrations.Count > 0;
 
     public List<AgentRuntimeToolProviderDescriptor> RuntimeToolProviderDescriptors { get; } = [];
 
@@ -83,7 +89,9 @@ internal sealed record RuntimeCapabilityAccessPlan(
 
 internal sealed record RuntimeToolProviderRegistration(
     IAgentRuntimeToolProvider Provider,
-    AgentRuntimeToolProviderDescriptor Descriptor);
+    AgentRuntimeToolProviderDescriptor Descriptor) {
+    public AgentRuntimeConfiguredWorkspacePolicy? ConfiguredWorkspacePolicy { get; init; }
+}
 
 internal sealed record RuntimeToolProviderAttachmentRequest(
     RuntimeCapabilityState State,

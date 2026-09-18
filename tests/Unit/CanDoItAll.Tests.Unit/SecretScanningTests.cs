@@ -1,9 +1,18 @@
 using System.Text.RegularExpressions;
+using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class SecretScanningTests
 {
+    // Source scan scope. It walks the working tree, so git-ignored files inside the checkout are included; generated
+    // build and browser outputs are excluded by the skip policy below. Proof artifacts have their own scanner with a
+    // different selection (tools/Validation/Portability/scan_artifacts_for_secrets.py), which also reports unreadable
+    // files as missing coverage instead of treating them as clean.
+    internal const string ScanScope =
+        "working-tree text files under the repository root, tracked and git-ignored, excluding .git, .artifacts, " +
+        "generated browser outputs, transient codex bundles, bin, obj and node_modules";
+
     private static readonly SecretPattern[] SecretPatterns =
     [
         new(
@@ -27,11 +36,54 @@ public sealed class SecretScanningTests
     [Fact]
     public void Repository_contains_no_realistic_provider_keys()
     {
-        var findings = ScanRepositoryFiles().ToList();
+        var result = Scan(TestRepositoryRoot.Find(), PhysicalScanFileSystem.Instance);
+        var problems = new List<string>();
+        if (result.ScannedFileCount == 0)
+        {
+            problems.Add("The source secret scan read no files, so its scope was not exercised.");
+        }
 
-        Assert.True(
-            findings.Count == 0,
-            "Realistic provider key pattern found in tracked text files: " + string.Join(", ", findings.Take(10)));
+        if (result.Omissions.Count > 0)
+        {
+            problems.Add(
+                $"Secret scan coverage is incomplete for {ScanScope}; unreadable in-scope entries (path and error type only): " +
+                string.Join(", ", result.Omissions.Take(20)));
+        }
+
+        if (result.Findings.Count > 0)
+        {
+            problems.Add(
+                $"Realistic provider key pattern found in {ScanScope}: " + string.Join(", ", result.Findings.Take(10)));
+        }
+
+        Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
+    }
+
+    [Fact]
+    public void Unreadable_entries_are_reported_as_missing_coverage_without_echoing_content()
+    {
+        var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "candoitall-secret-scan-fake"));
+        var fileSystem = new FakeScanFileSystem(root)
+            .WithFile("src/Clean.cs", "public sealed class Clean { }")
+            .WithFile("src/Leaky.cs", "var value = \"" + SecretPatterns[1].Sample + "\";")
+            .WithUnreadableFile("src/Locked.cs", new UnauthorizedAccessException("denied " + SecretPatterns[0].Sample))
+            .WithUnreadableDirectory("docs/private", new IOException("device not ready"))
+            .WithFile("bin/Generated.cs", "var value = \"" + SecretPatterns[2].Sample + "\";");
+
+        var result = Scan(root, fileSystem);
+
+        Assert.Equal(2, result.ScannedFileCount);
+        Assert.Equal([$"{Path.Combine("src", "Leaky.cs")} (GitHub token)"], result.Findings);
+        Assert.Equal(
+            [
+                $"{Path.Combine("docs", "private")} (directory, IOException)",
+                $"{Path.Combine("src", "Locked.cs")} (file, UnauthorizedAccessException)"
+            ],
+            result.Omissions.Select(omission => omission.ToString()).Order(StringComparer.Ordinal));
+        string rendered = string.Join(" ", result.Findings.Concat(result.Omissions.Select(omission => omission.ToString())));
+        Assert.All(SecretPatterns, pattern => Assert.DoesNotContain(pattern.Sample, rendered, StringComparison.Ordinal));
+        Assert.DoesNotContain("denied", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("device not ready", rendered, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -86,76 +138,80 @@ public sealed class SecretScanningTests
         Assert.Equal(expectedToSkip, ShouldSkipPath(root, candidate));
     }
 
-    private static IEnumerable<string> ScanRepositoryFiles()
+    private static ScanResult Scan(string root, IScanFileSystem fileSystem)
     {
-        var root = FindRepositoryRoot();
-        foreach (var filePath in EnumerateRepositoryFiles(root))
-        {
-            if (ShouldSkipPath(root, filePath) || !IsTextFile(filePath))
-            {
-                continue;
-            }
-
-            string content;
-            try
-            {
-                content = File.ReadAllText(filePath);
-            }
-            catch (IOException)
-            {
-                continue;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                continue;
-            }
-
-            var matchingPattern = SecretPatterns.FirstOrDefault(pattern => pattern.Pattern.IsMatch(content));
-            if (matchingPattern is not null)
-            {
-                yield return $"{Path.GetRelativePath(root, filePath)} ({matchingPattern.Provider})";
-            }
-        }
-    }
-
-    private static IEnumerable<string> EnumerateRepositoryFiles(string root)
-    {
+        var findings = new List<string>();
+        var omissions = new List<ScanOmission>();
+        var scannedFiles = 0;
         var pendingDirectories = new Stack<string>();
         pendingDirectories.Push(root);
         while (pendingDirectories.TryPop(out string? directory))
         {
-            IEnumerable<string> files;
-            IEnumerable<string> childDirectories;
+            string[] files;
+            string[] childDirectories;
             try
             {
-                files = Directory.EnumerateFiles(directory).ToArray();
-                childDirectories = Directory.EnumerateDirectories(directory).ToArray();
+                files = fileSystem.EnumerateFiles(directory).ToArray();
+                childDirectories = fileSystem.EnumerateDirectories(directory).ToArray();
             }
-            catch (IOException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                continue;
-            }
-            catch (UnauthorizedAccessException)
-            {
+                omissions.Add(new(Path.GetRelativePath(root, directory), "directory", exception.GetType().Name));
                 continue;
             }
 
-            foreach (string file in files)
+            foreach (string filePath in files)
             {
-                yield return file;
-            }
-
-            foreach (string childDirectory in childDirectories)
-            {
-                if (ShouldSkipPath(root, childDirectory) ||
-                    new DirectoryInfo(childDirectory).Attributes.HasFlag(FileAttributes.ReparsePoint))
+                if (ShouldSkipPath(root, filePath) || !IsTextFile(filePath))
                 {
                     continue;
                 }
 
-                pendingDirectories.Push(childDirectory);
+                string content;
+                try
+                {
+                    content = fileSystem.ReadAllText(filePath);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    omissions.Add(new(Path.GetRelativePath(root, filePath), "file", exception.GetType().Name));
+                    continue;
+                }
+
+                scannedFiles++;
+                var matchingPattern = SecretPatterns.FirstOrDefault(pattern => pattern.Pattern.IsMatch(content));
+                if (matchingPattern is not null)
+                {
+                    findings.Add($"{Path.GetRelativePath(root, filePath)} ({matchingPattern.Provider})");
+                }
+            }
+
+            foreach (string childDirectory in childDirectories)
+            {
+                if (ShouldSkipPath(root, childDirectory))
+                {
+                    continue;
+                }
+
+                bool isReparsePoint;
+                try
+                {
+                    isReparsePoint = fileSystem.IsReparsePoint(childDirectory);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    omissions.Add(new(Path.GetRelativePath(root, childDirectory), "directory", exception.GetType().Name));
+                    continue;
+                }
+
+                if (!isReparsePoint)
+                {
+                    pendingDirectories.Push(childDirectory);
+                }
             }
         }
+
+        return new(findings, omissions, scannedFiles);
     }
 
     private static bool ShouldSkipPath(string root, string filePath)
@@ -182,10 +238,7 @@ public sealed class SecretScanningTests
     {
         for (var index = 0; index < pathSegments.Count; index++)
         {
-            if (string.Equals(
-                    pathSegments[index],
-                    "codex-bundles",
-                    StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(pathSegments[index], "codex-bundles", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -205,18 +258,11 @@ public sealed class SecretScanningTests
         return false;
     }
 
-    private static bool IsUnderGeneratedGpuBrowserProfilePath(
-        IReadOnlyList<string> pathSegments)
+    private static bool IsUnderGeneratedGpuBrowserProfilePath(IReadOnlyList<string> pathSegments)
     {
         return pathSegments.Count >= 2 &&
-               string.Equals(
-                   pathSegments[0],
-                   "artifacts",
-                   StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(
-                   pathSegments[1],
-                   "gpu-profile",
-                   StringComparison.OrdinalIgnoreCase);
+               string.Equals(pathSegments[0], "artifacts", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(pathSegments[1], "gpu-profile", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsTextFile(string filePath)
@@ -228,24 +274,99 @@ public sealed class SecretScanningTests
         };
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the repository root.");
-    }
-
     private sealed record SecretPattern(
         string Provider,
         Regex Pattern,
         string Sample);
+
+    private sealed record ScanResult(
+        IReadOnlyList<string> Findings,
+        IReadOnlyList<ScanOmission> Omissions,
+        int ScannedFileCount);
+
+    private sealed record ScanOmission(string RelativePath, string Kind, string ErrorType)
+    {
+        public override string ToString() => $"{RelativePath} ({Kind}, {ErrorType})";
+    }
+
+    private interface IScanFileSystem
+    {
+        IEnumerable<string> EnumerateFiles(string directory);
+
+        IEnumerable<string> EnumerateDirectories(string directory);
+
+        string ReadAllText(string filePath);
+
+        bool IsReparsePoint(string directory);
+    }
+
+    private sealed class PhysicalScanFileSystem : IScanFileSystem
+    {
+        public static PhysicalScanFileSystem Instance { get; } = new();
+
+        public IEnumerable<string> EnumerateFiles(string directory) => Directory.EnumerateFiles(directory);
+
+        public IEnumerable<string> EnumerateDirectories(string directory) => Directory.EnumerateDirectories(directory);
+
+        public string ReadAllText(string filePath) => File.ReadAllText(filePath);
+
+        public bool IsReparsePoint(string directory)
+            => new DirectoryInfo(directory).Attributes.HasFlag(FileAttributes.ReparsePoint);
+    }
+
+    private sealed class FakeScanFileSystem(string root) : IScanFileSystem
+    {
+        private readonly Dictionary<string, Func<string>> files = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Exception> unreadableDirectories = new(StringComparer.OrdinalIgnoreCase);
+
+        public FakeScanFileSystem WithFile(string relativePath, string content)
+        {
+            files[Full(relativePath)] = () => content;
+            return this;
+        }
+
+        public FakeScanFileSystem WithUnreadableFile(string relativePath, Exception error)
+        {
+            files[Full(relativePath)] = () => throw error;
+            return this;
+        }
+
+        public FakeScanFileSystem WithUnreadableDirectory(string relativePath, Exception error)
+        {
+            unreadableDirectories[Full(relativePath)] = error;
+            return this;
+        }
+
+        public IEnumerable<string> EnumerateFiles(string directory)
+        {
+            ThrowIfUnreadable(directory);
+            return files.Keys.Where(path => string.Equals(Path.GetDirectoryName(path), directory, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public IEnumerable<string> EnumerateDirectories(string directory)
+        {
+            ThrowIfUnreadable(directory);
+            return files.Keys
+                .Concat(unreadableDirectories.Keys.Select(path => Path.Combine(path, "placeholder")))
+                .Select(path => Path.GetRelativePath(directory, path))
+                .Where(relative => !relative.StartsWith("..", StringComparison.Ordinal) && relative.Contains(Path.DirectorySeparatorChar))
+                .Select(relative => Path.Combine(directory, relative[..relative.IndexOf(Path.DirectorySeparatorChar)]))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public string ReadAllText(string filePath) => files[filePath]();
+
+        public bool IsReparsePoint(string directory) => false;
+
+        private void ThrowIfUnreadable(string directory)
+        {
+            if (unreadableDirectories.TryGetValue(directory, out var error))
+            {
+                throw error;
+            }
+        }
+
+        private string Full(string relativePath)
+            => Path.GetFullPath(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+    }
 }

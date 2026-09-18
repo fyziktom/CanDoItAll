@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
@@ -167,7 +166,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-regression-e2e-{Guid.NewGuid():N}"));
         services.AddSingleton(driver);
         services.AddSingleton<IMemoryProviderDriver>(provider =>
@@ -383,7 +382,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             "artifacts");
         Directory.CreateDirectory(artifactDirectory);
 
-        await using var dbContext = await serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>()
+        await using var dbContext = await serviceProvider.GetRequiredService<IDbContextFactory<MemoryDbContext>>()
             .CreateDbContextAsync();
         var operations = await dbContext.Set<MemoryOperationLedgerEntity>()
             .AsNoTracking()

@@ -19,7 +19,7 @@ public interface ISchedulerPlannerTriggerScheduler
 }
 
 public sealed class SchedulerPlannerTriggerScheduler(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SchedulerPlannerDbContext> dbContextFactory,
     ISchedulerFactory schedulerFactory,
     IClock clock,
     ILogger<SchedulerPlannerTriggerScheduler> logger) : ISchedulerPlannerTriggerScheduler

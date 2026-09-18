@@ -7,7 +7,7 @@ public sealed class WorkflowArchitectureBoundaryTests
     [Fact]
     public void AgentFrameworkCoreDoesNotReferenceMafWorkflowPackage()
     {
-        var root = FindRepositoryRoot();
+        var root = CanDoItAll.Tests.Support.TestRepositoryRoot.Find();
         var projectPath = Path.Combine(
             root,
             "src",
@@ -26,21 +26,5 @@ public sealed class WorkflowArchitectureBoundaryTests
             "Microsoft.Agents.AI.Workflows",
             packageReferences,
             StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the repository root.");
     }
 }

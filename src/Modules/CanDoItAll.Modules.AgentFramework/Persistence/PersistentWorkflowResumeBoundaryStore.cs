@@ -11,19 +11,21 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBoundaryStore
 {
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<WorkflowDbContext> dbContextFactory;
     private readonly IDataProtector responseProtector;
     private readonly IDataProtector checkpointPayloadProtector;
     private readonly WorkflowHistoryProjection historyProjection;
+    private readonly CoordinatedDatabaseTransaction transactions;
 
     public PersistentWorkflowResumeBoundaryStore(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkflowDbContext> dbContextFactory,
         IDataProtectionProvider dataProtectionProvider,
-        WorkflowHistoryProjection historyProjection)
-    {
+        WorkflowHistoryProjection historyProjection,
+        CoordinatedDatabaseTransaction transactions) {
         this.dbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
         ArgumentNullException.ThrowIfNull(dataProtectionProvider);
         this.historyProjection = historyProjection ?? throw new ArgumentNullException(nameof(historyProjection));
+        this.transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
         responseProtector = dataProtectionProvider.CreateProtector(
             PersistentWorkflowExternalResponseOperationStore.DataProtectionPurpose);
         checkpointPayloadProtector = dataProtectionProvider.CreateProtector(
@@ -133,6 +135,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         await using var transaction = isInMemory
             ? null
             : await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var operationIdentity = await dbContext.Set<WorkflowExternalResponseOperationEntity>()
             .AsNoTracking()
             .Where(item => item.Id == request.OperationId.Value)
@@ -305,6 +308,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         await using var transaction = isInMemory
             ? null
             : await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var requestEntity = isInMemory
             ? await dbContext.Set<WorkflowExternalRequestRecordEntity>()
                 .SingleOrDefaultAsync(item => item.Id == request.RequestId.Value, cancellationToken)
@@ -472,7 +476,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private static async Task<bool> NativeCheckpointLinksExistAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowBackendStartResult result,
         CancellationToken cancellationToken)
     {
@@ -508,7 +512,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private async Task<WorkflowResumeBoundaryLoadOutcome> ClassifyResumableBoundaryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowRunRecordEntity run,
         WorkflowExternalRequestRecordEntity request,
         WorkflowExternalRequestBoundaryRecord boundary,
@@ -687,18 +691,11 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private async Task AddBackendResultRecordsAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowBackendStartResult result,
         CancellationToken cancellationToken)
     {
-        var eventIds = result.Events.Select(workflowEvent => workflowEvent.Id).ToArray();
-        var existingEventIds = await dbContext.Set<WorkflowEventRecordEntity>()
-            .Where(workflowEvent => eventIds.Contains(workflowEvent.Id))
-            .Select(workflowEvent => workflowEvent.Id)
-            .ToArrayAsync(cancellationToken);
-        dbContext.Set<WorkflowEventRecordEntity>().AddRange(result.Events
-            .Where(workflowEvent => !existingEventIds.Contains(workflowEvent.Id))
-            .Select(WorkflowEventRecordEntity.FromEvent));
+        await PersistentWorkflowRunStore.StageBackendDisclosureEventsAsync(dbContext, result.Run, result.Events, cancellationToken);
 
         foreach (var externalRequest in result.ExternalRequests)
         {
@@ -741,7 +738,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         dbContext.Set<WorkflowUsageObservationRecordEntity>().AddRange(
             newUsage.Select(WorkflowUsageObservationRecordEntity.FromObservation));
         if (newUsage.Length > 0) {
-            await historyProjection.StageAsync(dbContext, newUsage, cancellationToken);
+            await historyProjection.StageAsync(newUsage, cancellationToken);
         }
     }
 
@@ -758,6 +755,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         WorkflowRunSnapshot result,
         DateTimeOffset committedAtUtc)
     {
+        PersistentWorkflowRunStore.RequireFrozenAuthority(target, result);
         target.WorkflowId = result.WorkflowId.Value;
         target.VersionId = result.VersionId.Value;
         target.State = result.State;
@@ -774,7 +772,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     }
 
     private static async Task MarkSourceCheckpointResumedAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         Guid requestId,
         DateTimeOffset resumedAtUtc,
         CancellationToken cancellationToken)

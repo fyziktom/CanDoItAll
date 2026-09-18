@@ -1,0 +1,151 @@
+@* The activity history timeline: what the host accepted for its target and its wording in, a page request out. The
+   read, its failure and the target belong to the host; the surface shows the accepted page, shows nothing as a
+   number that was not accepted, and asks for another page only while no read is in flight. *@
+<div data-testid="@DataTestId"
+     data-accepted="@(Presentation.HasAccepted ? "true" : "false")"
+     data-loading="@(Presentation.IsLoading ? "true" : "false")"
+     data-page-index="@(Presentation.Accepted?.PageIndex.ToString() ?? "none")"
+     data-total-pages="@(Presentation.Accepted?.TotalPages.ToString() ?? "none")">
+    <SurfaceCard>
+        <p class="cda-eyebrow">@Copy.Eyebrow</p>
+        <h3 class="mt-1 text-lg font-semibold text-slate-950">@Copy.Title</h3>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+            @Copy.Description
+        </p>
+
+        <Cluster Gap="LayoutGap.Small" Class="mt-4" data-testid="@($"{DataTestId}-totals")">
+            @if (Presentation.Accepted is { } totals)
+            {
+                <StatusBadge Tone="neutral" Text="@CrmHrActivityText.FormatActivities(totals.TotalCount)" />
+                <StatusBadge Tone="info" Text="@CrmHrActivityText.FormatNextActions(totals.ActionCount)" />
+                @if (totals.OverdueActionCount > 0)
+                {
+                    <StatusBadge Tone="danger" Text="@CrmHrActivityText.FormatOverdue(totals.OverdueActionCount)" data-testid="@($"{DataTestId}-overdue-total")" />
+                }
+            }
+            else
+            {
+                <StatusBadge Tone="neutral"
+                             Text="@(Presentation.IsLoading ? CrmHrActivityText.TotalsLoadingLabel : CrmHrActivityText.TotalsUnavailableLabel)"
+                             data-testid="@($"{DataTestId}-totals-unavailable")" />
+            }
+        </Cluster>
+
+        @if (Presentation.IsLoading)
+        {
+            <div class="mt-5" data-testid="@($"{DataTestId}-loading")">
+                <LoadingState Eyebrow="@Copy.Eyebrow"
+                              Title="Loading history"
+                              Description="Loading only the requested activity page." />
+            </div>
+        }
+        else if (Presentation.Accepted is not { } page)
+        {
+            <div class="mt-5" data-testid="@($"{DataTestId}-unavailable")">
+                <EmptyState Eyebrow="@Copy.Eyebrow"
+                            Title="@CrmHrActivityText.HistoryUnavailableTitle"
+                            Description="@CrmHrActivityText.HistoryUnavailableDescription" />
+            </div>
+        }
+        else if (page.Items.Count == 0)
+        {
+            <div class="mt-5" data-testid="@($"{DataTestId}-empty")">
+                <EmptyState Eyebrow="@Copy.EmptyEyebrow"
+                            Title="@Copy.EmptyTitle"
+                            Description="@Copy.EmptyDescription" />
+            </div>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-5">
+                @foreach (var item in page.Items)
+                {
+                    <div class="max-w-full rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                         data-testid="@($"{DataTestId}-item")"
+                         data-kind="@item.Kind"
+                         data-overdue="@(item.IsOverdue ? "true" : "false")">
+                        <Split Gap="LayoutGap.Medium">
+                            <div class="min-w-0">
+                                <p class="break-words text-sm font-semibold text-slate-950">@item.Title</p>
+                                @if (!string.IsNullOrWhiteSpace(item.Description))
+                                {
+                                    <p class="mt-2 break-words text-sm leading-6 text-slate-600">@item.Description</p>
+                                }
+                                <p class="mt-2 break-words text-xs uppercase tracking-[0.18em] text-slate-500">@item.Meta</p>
+                            </div>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@CrmHrActivityText.ToneToken(item.Tone)" Text="@item.Kind" NoWrap="true" />
+                                @if (item.IsOverdue)
+                                {
+                                    <StatusBadge Tone="danger" Text="@CrmHrActivityText.OverdueLabel" NoWrap="true" />
+                                }
+                                <StatusBadge Tone="neutral" Text="@CrmHrActivityText.FormatTimestamp(item.OccurredAtUtc)" NoWrap="true" />
+                            </Cluster>
+                        </Split>
+                    </div>
+                }
+            </Stack>
+        }
+
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap"
+               Class="mt-5"
+               data-testid="@($"{DataTestId}-pager")">
+            <StatusBadge Tone="neutral" Text="@(Presentation.Accepted is { } paged ? CrmHrActivityText.FormatPage(paged) : CrmHrActivityText.NoPagesValue)" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Previous"
+                        Icon="chevron_left"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!CanMovePrevious)"
+                        Click="@(() => RequestPageAsync(-1))"
+                        data-testid="@($"{DataTestId}-previous")" />
+                <Button Text="Next"
+                        Icon="chevron_right"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!CanMoveNext)"
+                        Click="@(() => RequestPageAsync(+1))"
+                        data-testid="@($"{DataTestId}-next")" />
+            </Cluster>
+        </Split>
+    </SurfaceCard>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public CrmHrActivityPresentation Presentation { get; set; } = CrmHrActivityPresentation.NotAccepted;
+
+    [Parameter]
+    public CrmHrActivityCopy Copy { get; set; } = CrmHrActivityCopy.Default;
+
+    // Prefix of every test identifier in this timeline, so several timelines can coexist on one page.
+    [Parameter]
+    public string DataTestId { get; set; } = "crmhr-timeline";
+
+    [Parameter]
+    public EventCallback<CrmHrActivityIntent> Intent { get; set; }
+
+    private bool CanMovePrevious => Presentation is { IsLoading: false, Accepted: { PageIndex: > 0 } };
+
+    private bool CanMoveNext => Presentation is { IsLoading: false, Accepted: { } page } && page.PageIndex + 1 < page.TotalPages;
+
+    // A page request is admitted only against the presentation current at the click, never against the page the
+    // action was rendered for: a request dispatched after a read began, or after the accepted page changed, is
+    // resolved against what is accepted now and dropped while a read is in flight.
+    private Task RequestPageAsync(int offset)
+    {
+        if (Presentation is not { IsLoading: false, Accepted: { } page })
+        {
+            return Task.CompletedTask;
+        }
+
+        var pageIndex = page.PageIndex + offset;
+        return pageIndex < 0 || pageIndex >= page.TotalPages
+            ? Task.CompletedTask
+            : Intent.InvokeAsync(new CrmHrActivityIntent.RequestPage(pageIndex));
+    }
+}

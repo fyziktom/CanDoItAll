@@ -14,7 +14,9 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class AgentFileHistorySource(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<AgentHistoryDbContext> factory,
+    ProjectIdentityQueryService projects,
+    HistoryPartitionStore partitions,
     IDatabaseProfileRuntimeAccessor profiles,
     IWorkspacePathResolver paths,
     AgentHistoryPublicationStore publications,
@@ -78,9 +80,7 @@ public sealed class AgentFileHistorySource(
         if (position.Phase == BackfillPhase.Complete) {
             return null;
         }
-        await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        var project = await db.Set<Project>().AsNoTracking().Where(row => row.Id.CompareTo(position.AfterProject) > 0)
-            .OrderBy(row => row.Id).Select(row => (Guid?)row.Id).FirstOrDefaultAsync(cancellationToken);
+        var project = await projects.FindNextIdAfterAsync(position.AfterProject, cancellationToken);
         return project is { } id ? WorkspaceScopeDescriptor.Project(id.ToString("D")) : null;
     }
 
@@ -105,7 +105,7 @@ public sealed class AgentFileHistorySource(
             return null;
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var locator = await db.Set<AgentHistoryLocator>().AsNoTracking().SingleOrDefaultAsync(row =>
             row.PartitionId == source.Partition.StorageLineageId && row.EvidenceId == evidence && row.OwnerId == owner, cancellationToken);
         if (locator is null) {
@@ -114,7 +114,7 @@ public sealed class AgentFileHistorySource(
         if (locator.IsDeleted) {
             return new(source, new(locator.SourceVersion), HistorySourceMutationKind.Delete, null, []);
         }
-        if (locator.ProjectId is { } project && !await db.Set<Project>().AnyAsync(row => row.Id == project, cancellationToken)) {
+        if (locator.ProjectId is { } project && !await projects.ExistsAsync(project, cancellationToken)) {
             return new(source, new(checked(locator.SourceVersion + 1)), HistorySourceMutationKind.Delete, null, []);
         }
         var journal = new FileProviderHistoryJournal(paths.ResolveWorkspaceRoot(), new(locator.ScopeKind, locator.ScopeKey));
@@ -129,7 +129,7 @@ public sealed class AgentFileHistorySource(
             return new(entryId, HistoryDetailState.Unavailable);
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, source.Partition, cancellationToken);
+        await partitions.RequireAsync(source.Partition, cancellationToken);
         var owner = Guid.ParseExact(source.Owner.Value, "N");
         var evidenceId = Guid.ParseExact(source.Evidence.Value, "N");
         var locator = await db.Set<AgentHistoryLocator>().AsNoTracking().SingleOrDefaultAsync(row =>

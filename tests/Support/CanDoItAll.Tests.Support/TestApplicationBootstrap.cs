@@ -90,8 +90,13 @@ public static class TestApplicationBootstrap
         configureServices?.Invoke(services);
 
         var serviceProvider = services.BuildServiceProvider(DefaultServiceProviderOptions);
-        await InitializeSchemaAsync(serviceProvider, schemaModules, cancellationToken);
-        return serviceProvider;
+        try {
+            await InitializeSchemaAsync(serviceProvider, schemaModules, cancellationToken);
+            return serviceProvider;
+        } catch (Exception failure) {
+            await TestFixtureCleanup.DisposeAfterFailureAsync(failure, serviceProvider);
+            throw;
+        }
     }
 
     public static async Task InitializeSchemaAsync(

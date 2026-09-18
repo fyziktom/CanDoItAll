@@ -24,7 +24,8 @@ public interface ISharedProviderImageExecutionTargetResolver
 }
 
 internal sealed class SharedProviderImageExecutionTargetResolver(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    SecretReferenceQuery secretReferences,
     IProviderManifestCatalog providerManifestCatalog,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     ISharedProviderRelaySupportCatalog relaySupportCatalog) :
@@ -47,29 +48,28 @@ internal sealed class SharedProviderImageExecutionTargetResolver(
             from publication in dbContext.Set<ProviderSharePublication>().AsNoTracking()
             join profile in dbContext.Set<ProviderProfile>().AsNoTracking()
                 on publication.ProviderProfileId equals profile.Id
-            join secret in dbContext.Set<SecretRecord>().AsNoTracking()
-                on profile.ApiKeySecretId equals (Guid?)secret.Id into matchedSecrets
-            from secret in matchedSecrets.DefaultIfEmpty()
             where publication.IsPublished &&
                 publication.PublicId == request.PublicationId &&
                 publication.ProviderProfileId == request.ProviderProfileId
-            select new PersistedImageProfile(profile, secret != null))
+            select profile)
             .SingleOrDefaultAsync(cancellationToken);
         if (row is null)
         {
             return null;
         }
 
+        var requiredSecretExists = row.ApiKeySecretId is { } secretId &&
+            (await secretReferences.GetExistingIdsAsync([secretId], cancellationToken)).Contains(secretId);
         var eligibility = eligibilityPolicy.Evaluate(
-            row.Profile,
+            row,
             providerManifestCatalog.ResolveManifest(
-                row.Profile.ConnectorPluginKey,
-                row.Profile.ProviderKind),
-            row.RequiredSecretExists);
+                row.ConnectorPluginKey,
+                row.ProviderKind),
+            requiredSecretExists);
         if (!eligibility.IsEligible ||
             eligibility.Purpose != SharedProviderPurpose.ImageGeneration ||
             !relaySupportCatalog.TryGet(
-                row.Profile.ConnectorPluginKey,
+                row.ConnectorPluginKey,
                 SharedProviderPurpose.ImageGeneration,
                 out var relayDescriptor) ||
             relayDescriptor.Classification != SharedProviderRelayAdapterClassification.Production ||
@@ -84,10 +84,7 @@ internal sealed class SharedProviderImageExecutionTargetResolver(
             return null;
         }
 
-        return new SharedProviderImageExecutionTarget(row.Profile);
+        return new SharedProviderImageExecutionTarget(row);
     }
 
-    private sealed record PersistedImageProfile(
-        ProviderProfile Profile,
-        bool RequiredSecretExists);
 }

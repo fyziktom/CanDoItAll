@@ -25,7 +25,8 @@ public sealed class ProjectPartyAffiliationPresentationTests
             PartyOrganizationAffiliationKind.ExternalContact);
         var service = new StubAffiliationService([other, primary]);
         using var context = new BunitContext();
-        context.Services.AddSingleton<IPartyOrganizationAffiliationService>(
+        // The picker depends on the read port only; the command surface is not registered for it.
+        context.Services.AddSingleton<IPartyOrganizationAffiliationReader>(
             service);
         Guid? selectedAffiliationId = null;
 

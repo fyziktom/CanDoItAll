@@ -2,15 +2,18 @@ using System.Text;
 using System.Text.Json;
 using System.Linq.Expressions;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.CrmHr;
 
 public sealed class PartyDirectoryManagementService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IClock clock,
-    PartyDirectoryService partyDirectoryService)
+    PartyDirectoryService partyDirectoryService,
+    IProjectWorkAssignmentCommands workAssignments,
+    CoordinatedDatabaseTransaction coordinatedTransaction)
 {
     private const string PartyNotFoundErrorCode = "crmhr.party.not-found";
     private const string RelationshipInvalidErrorCode = "crmhr.party.relationship-invalid";
@@ -261,7 +264,27 @@ public sealed class PartyDirectoryManagementService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var affectedPersonIds = await dbContext.Set<PartyOrganizationAffiliation>().AsNoTracking().Where(item =>
+            item.PersonPartyId == retainedPartyId || item.PersonPartyId == mergedPartyId ||
+            item.OrganizationPartyId == retainedPartyId || item.OrganizationPartyId == mergedPartyId ||
+            item.OrganizationUnitPartyId == retainedPartyId || item.OrganizationUnitPartyId == mergedPartyId ||
+            item.ManagerPartyId == retainedPartyId || item.ManagerPartyId == mergedPartyId)
+            .Select(item => item.PersonPartyId).Distinct().ToArrayAsync(cancellationToken);
+        var affiliationIds = await dbContext.Set<PartyOrganizationAffiliation>().AsNoTracking()
+            .Where(item => affectedPersonIds.Contains(item.PersonPartyId) || item.PersonPartyId == mergedPartyId)
+            .Select(item => item.Id).ToArrayAsync(cancellationToken);
+        var workProjectIds = await workAssignments.ListPartyMergeProjectsAsync(
+            retainedPartyId, mergedPartyId, affiliationIds, cancellationToken);
+        var participationProjectIds = await dbContext.Set<ProjectPartyAssignment>().AsNoTracking()
+            .Where(item => item.PartyId == retainedPartyId || item.PartyId == mergedPartyId ||
+                (item.PartyOrganizationAffiliationId.HasValue && affiliationIds.Contains(item.PartyOrganizationAffiliationId.Value)))
+            .Select(item => item.ProjectId).Distinct().ToArrayAsync(cancellationToken);
+        var lockedProjectIds = workProjectIds.Concat(participationProjectIds).Distinct().ToArray();
+        await using var transaction = await SerializableMutationScope.BeginAsync(dbContext,
+            lockedProjectIds.Select(ProjectMutationScopeKeys.ForProject)
+                .Append($"crmhr:party-merge:{retainedPartyId:D}")
+                .Append($"crmhr:party-merge:{mergedPartyId:D}").ToArray(), cancellationToken);
+        using var ownerEntry = coordinatedTransaction.Enter(dbContext);
 
         var parties = await dbContext.Set<Party>()
             .Where(item => item.Id == retainedPartyId || item.Id == mergedPartyId)
@@ -315,6 +338,14 @@ public sealed class PartyDirectoryManagementService(
             mergedPartyId,
             ResolveActor(actor),
             clock.GetUtcNow(),
+            replacements => workAssignments.StagePartyMergeAsync(new ProjectWorkAssignmentPartyMerge(
+                mergedPartyId, new ProjectWorkAssignmentPartyFact(retainedPartyId, retainedParty.PartyType switch {
+                    PartyType.Person => ProjectPartyType.Person,
+                    PartyType.AiAgent => ProjectPartyType.AiAgent,
+                    PartyType.Organization => ProjectPartyType.Organization,
+                    PartyType.OrganizationUnit => ProjectPartyType.OrganizationUnit,
+                    _ => throw new InvalidOperationException("Unsupported Party merge type.")
+                }, retainedParty.DisplayName), replacements, lockedProjectIds), cancellationToken),
             cancellationToken);
         await ReassignDirectPartyReferencesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
         await ReassignOptionalPartyReferencesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
@@ -571,7 +602,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeRoleAssignmentsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -607,7 +638,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeContactPointsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -656,7 +687,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeAddressesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -690,7 +721,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeRelationshipsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -761,7 +792,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergePartySkillsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -797,7 +828,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeAiAgentProfilesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -839,7 +870,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergeWorkforceProfilesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -909,11 +940,12 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task MergePartyOrganizationAffiliationsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         string actor,
         DateTimeOffset now,
+        Func<IReadOnlyDictionary<Guid, Guid>, Task> stageWorkAssignments,
         CancellationToken cancellationToken)
     {
         var affectedPersonIds = await dbContext
@@ -932,6 +964,7 @@ public sealed class PartyDirectoryManagementService(
             .ToListAsync(cancellationToken);
         if (affectedPersonIds.Count == 0)
         {
+            await stageWorkAssignments(new Dictionary<Guid, Guid>());
             return;
         }
 
@@ -987,6 +1020,8 @@ public sealed class PartyDirectoryManagementService(
                     .Remove(duplicate);
             }
         }
+
+        await stageWorkAssignments(removedToRetainedAffiliationIds);
 
         if (removedToRetainedAffiliationIds.Count > 0)
         {
@@ -1222,7 +1257,7 @@ public sealed class PartyDirectoryManagementService(
         => partyId == mergedPartyId ? retainedPartyId : partyId;
 
     private static async Task ReassignDirectPartyReferencesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -1237,7 +1272,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task ReassignOptionalPartyReferencesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid retainedPartyId,
         Guid mergedPartyId,
         CancellationToken cancellationToken)
@@ -1370,7 +1405,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private async Task<IReadOnlyList<PartyDuplicateCandidateModel>> FindPotentialDuplicatesCoreAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string displayName,
         string legalName,
         string preferredName,
@@ -1394,7 +1429,7 @@ public sealed class PartyDirectoryManagementService(
     }
 
     private static async Task<IReadOnlyList<IReadOnlyList<PartyDuplicateCandidateModel>>> FindPotentialDuplicatesForInputsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<PartyDuplicateLookupInput> inputs,
         Guid? excludePartyId,
         CancellationToken cancellationToken)

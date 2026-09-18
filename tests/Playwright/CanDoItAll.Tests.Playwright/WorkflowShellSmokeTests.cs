@@ -15,14 +15,7 @@ public sealed class WorkflowShellSmokeTests
     [Fact]
     public async Task Workflow_shell_creates_and_runs_starter_preview_on_large_screen()
     {
-        var artifactDirectory = Path.Combine(
-            PlaywrightTestHostPaths.RepositoryRoot,
-            "codex",
-            "bundles",
-            "skill-tool-mcp-isolation-template-migration",
-            "proof",
-            "regression",
-            "screenshots");
+        var artifactDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -42,6 +35,7 @@ public sealed class WorkflowShellSmokeTests
         await page.GetByTestId("workflows-tabs").WaitForAsync();
         await page.GetByTestId("workflows-create-starter").WaitForAsync();
         await page.GetByTestId("workflows-create-starter").ClickAsync();
+        await ExpectTextContainsAsync(page.Locator("body"), "Starter workflow and LLM component were created.", timeoutMs: 30_000);
 
         await page.GetByTestId("workflows-tab-workflows").ClickAsync();
         await page.GetByTestId("workflows-catalog").WaitForAsync();
@@ -52,11 +46,13 @@ public sealed class WorkflowShellSmokeTests
         await page.GetByTestId("workflows-run-test").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("workflows-test-result"), "Succeeded", timeoutMs: 30_000);
         await page.GetByTestId("workflows-run-event").First.WaitForAsync();
-        await page.ScreenshotAsync(new PageScreenshotOptions
+        if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+            await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "workflow-shell-runtime-large.png"),
             FullPage = true
         });
+        }
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }

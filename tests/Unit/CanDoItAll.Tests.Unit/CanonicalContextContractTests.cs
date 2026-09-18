@@ -11,6 +11,8 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class CanonicalContextContractTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.General);
+    private static readonly AgentProjectStructureLifetime ProjectLifetime = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+    private static readonly string ProjectKey = ProjectLifetime.ProjectId.ToString("D");
 
     [Fact]
     public void Identifier_value_objects_reject_empty_values()
@@ -143,7 +145,7 @@ public sealed class CanonicalContextContractTests
             AgentTurnContextId.Create(),
             AgentContextEpochId.Create(),
             new AgentChatContextSourceKind("project-structure"),
-            new AgentChatContextSourceId("project-1"),
+            new AgentChatContextSourceId(ProjectKey),
             "project-structure",
             "canvas",
             observationVersion: 41,
@@ -242,6 +244,8 @@ public sealed class CanonicalContextContractTests
         Assert.NotNull(authorityRoundTrip);
         Assert.Equal(authority.AuthorityId, authorityRoundTrip.AuthorityId);
         Assert.Equal(authority.WorkspaceScope, authorityRoundTrip.WorkspaceScope);
+        Assert.Equal(ProjectLifetime, authorityRoundTrip.SourceProjectLifetime);
+        Assert.Equal(AgentExecutionAuthorityRecord.CurrentSchemaVersion, authorityRoundTrip.SchemaVersion);
         Assert.Equal(authority.AllowedOperations.AsEnumerable(), authorityRoundTrip.AllowedOperations.AsEnumerable());
 
         var envelope = CreateEnvelope();
@@ -261,7 +265,7 @@ public sealed class CanonicalContextContractTests
               "TurnContextId": { "Value": "{{Guid.NewGuid():D}}" },
               "ContextEpochId": { "Value": "{{Guid.NewGuid():D}}" },
               "SourceKind": { "Value": "project-structure" },
-              "SourceId": { "Value": "project-1" },
+              "SourceId": { "Value": "{{ProjectKey}}" },
               "Surface": "project-structure",
               "View": "canvas",
               "ObservationVersion": 41,
@@ -375,14 +379,14 @@ public sealed class CanonicalContextContractTests
         => new(
             AgentUiObservationId.Create(),
             new AgentChatContextSourceKind("project-structure"),
-            new AgentChatContextSourceId("project-1"),
+            new AgentChatContextSourceId(ProjectKey),
             "Project X",
             "project-structure",
             view,
             publicationVersion,
             AgentUiObservationCompleteness.Ready,
             new DateTimeOffset(2026, 8, 6, 10, 0, 0, TimeSpan.Zero),
-            expectedWorkspaceScope: WorkspaceScopeDescriptor.Project("project-1"),
+            expectedWorkspaceScope: WorkspaceScopeDescriptor.Project(ProjectKey),
             visibleFacts:
             [
                 new AgentUiObservationFact(
@@ -398,7 +402,7 @@ public sealed class CanonicalContextContractTests
             AgentTurnContextId.Create(),
             AgentContextEpochId.Create(),
             new AgentChatContextSourceKind("project-structure"),
-            new AgentChatContextSourceId("project-1"),
+            new AgentChatContextSourceId(ProjectKey),
             "project-structure",
             "canvas",
             observationVersion,
@@ -412,15 +416,17 @@ public sealed class CanonicalContextContractTests
         => new(
             AgentExecutionAuthorityId.Create(),
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            ProjectLifetime.DatabaseProfileId,
             new DatabaseProfileGeneration(1),
-            WorkspaceScopeDescriptor.Project("project-1"),
+            WorkspaceScopeDescriptor.Project(ProjectKey),
             readAllowed,
             mutationAllowed,
             "v1",
             "policy-fingerprint",
             new DateTimeOffset(2026, 8, 6, 10, 0, 0, TimeSpan.Zero),
-            allowedOperations: allowedOperations);
+            allowedOperations: allowedOperations,
+            schemaVersion: AgentExecutionAuthorityRecord.CurrentSchemaVersion,
+            sourceProjectLifetime: ProjectLifetime);
 
     private static RuntimeStateEnvelope CreateEnvelope(
         string adapterId = RuntimeStateAdapterIds.Maf,

@@ -106,3 +106,37 @@ docker-compose.override.yml
 .DS_Store
 Thumbs.db
 .dotnet_cli_home
+
+# Generated Fast sandbox theme
+src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css
+src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css
+src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css
+
+# Retained, manifest-checked evidence for the current component seam children.
+!codex/bundles/UI_Providers_02E_Verification_Delivery_Hardening_Bundle/proof/
+!codex/bundles/UI_Providers_02E_Verification_Delivery_Hardening_Bundle/proof/**
+!codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle/proof/
+!codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle/proof/**
+!codex/bundles/UI_Providers_02F_Explicit_Acknowledgement_Bundle/evidence/
+!codex/bundles/UI_Providers_02F_Explicit_Acknowledgement_Bundle/evidence/**
+!codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle/proof/
+!codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle/proof/**
+
+# Compact capabilities seam proof.
+!codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/**
+
+!codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/**
+
+!codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/**
+
+!codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/**
+
+# Exact historical Overview and Governance proof, delivery reviewed by Overview-01D.
+!codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/**
+!codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/proof/**

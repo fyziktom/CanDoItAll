@@ -113,7 +113,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(40, 12, 4))));
         var provider = CreateProviderProfile();
-        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -133,7 +133,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(1, 1))));
         var provider = CreateProviderProfile();
-        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent(temperature: null);
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -150,7 +150,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             throw new InvalidOperationException("simulated port failure"));
         var provider = CreateProviderProfile();
-        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -180,7 +180,7 @@ public sealed class WorkflowLlmLightweightPathTests
                 usage: knownUsage));
         var provider = CreateProviderProfile();
         var invoker = new WorkflowLlmComponentInvoker(
-            port, new SingleProviderSource(provider), new ProviderProfileService());
+            port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -204,7 +204,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromCanceled<LlmInvocationResult>(new CancellationToken(canceled: true)));
         var provider = CreateProviderProfile();
-        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -224,7 +224,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromResult(new LlmInvocationResult(request.Model, "{\"unexpected\":true}", new LlmUsage(10, 5))));
         var provider = CreateProviderProfile();
-        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent(
             """{"type":"object","required":["markdown"],"properties":{"markdown":{"type":"string"}}}""");
         var node = CreateNode(component.Id);
@@ -246,7 +246,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(1, 1))));
         var provider = CreateProviderProfile();
-        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -294,7 +294,7 @@ public sealed class WorkflowLlmLightweightPathTests
             }
             return new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(700, 300));
         });
-        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         Task<WorkflowNodeExecutionResult> Invoke() => invoker.ExecuteAsync(

@@ -1,3 +1,4 @@
+@using static CanDoItAll.CrmHr.UI.Agents.CrmHrAgentsWorkspacePresentation
 @page "/crm-hr/agents"
 @implements IAsyncDisposable
 @inject AiAgentService AiAgentService
@@ -10,121 +11,16 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="CRM / HR"
-                    Title="Agent directory projection"
-                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. The shared catalog snapshot supplies technical identity and card data; CRM-HR adds governance, ownership, and directory context."
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="projected agents"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.TotalCount.ToString())"
-                             TooltipText="AgentFramework agents in the current CRM-HR projection." />
-                <CompactStat Label="page providers"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Provider is not null).ToString())"
-                             TooltipText="Agents on this page linked to a provider profile."
-                             Tone="info" />
-                <CompactStat Label="page review"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Governance.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
-                             TooltipText="Agents on this page awaiting CRM-HR governance review."
-                             Tone="warning" />
-                <CompactStat Label="page capabilities"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Agent.Capabilities.Count > 0).ToString())"
-                             TooltipText="Agents on this page that expose technical capabilities."
-                             Tone="success" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="smart_toy"
-                                        Label="Open technical catalog"
-                                        TooltipText="Open the AgentFramework technical catalog."
-                                        ButtonStyle="ButtonStyle.Primary"
-                                        Click="OpenTechnicalCatalog"
-                                        data-testid="crmhr-agent-open-catalog" />
-                <PageHeaderActionButton Icon="asset"
-                                        Label="Open directory"
-                                        TooltipText="Open the linked directory record."
-                                        Click="OpenDirectoryRecord" />
-            </Actions>
-        </PageHeader>
-    </Header>
-
-    <ChildContent>
-        <Stack GapScale="LayoutGap.Large">
-            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Agents" />
-
-            <section class="crmhr-agent-catalog" data-testid="crmhr-agent-catalog">
-                <div class="crmhr-agent-catalog__hero">
-                    <div class="min-w-0">
-                        <p class="cda-eyebrow">Projected technical agents</p>
-                        <h2 class="cda-title-xl">Agent cards</h2>
-                    </div>
-                    <StatusBadge Tone="info"
-                                 Text="@(ShouldShowListLoadingState ? "Loading..." : $"{agentPage.Items.Count} of {agentPage.TotalCount} agent(s)")" />
-                </div>
-
-                <PagedRecordBrowser TKey="Guid"
-                                    TFilter="AiAgentValidationFilter"
-                                    Loader="LoadAgentPageAsync"
-                                    InitialFilter="AiAgentValidationFilter.All"
-                                    FilterOptions="@ValidationFilters"
-                                    Selection="@AgentSelection"
-                                    SelectionChanged="@SelectPartyAsync"
-                                    LoadFailed="@HandleAgentDirectoryLoadFailed"
-                                    PageSize="@AiAgentDirectoryQueryLimits.DefaultPageSize"
-                                    ShowTagFilter="false"
-                                    ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
-                                    GridMode="PagedRecordGridMode.BoundedCatalog"
-                                    SearchPlaceholder="Search name, role, owner, model, or tags"
-                                    FilterAriaLabel="CRM-HR validation status"
-                                    LoadingEyebrow="Agent projection"
-                                    LoadingTitle="Loading projected agent cards"
-                                    LoadingDescription="CRM-HR is joining its governance snapshot to the shared AgentFramework catalog."
-                                    EmptyEyebrow="No projected AI agents"
-                                    EmptyTitle="No agents match these filters"
-                                    EmptyDescription="Change the search or validation filter, or create a technical agent in AgentFramework."
-                                    DataTestId="crmhr-agent">
-                    <ItemTemplate Context="recordContext">
-                        @{
-                            var item = GetCurrentPageItem(recordContext.Option.Key);
-                        }
-                        <AgentSelectionCard Agent="@item.Agent"
-                                            IsSelected="@recordContext.IsSelected"
-                                            IsPrivateProvider="@item.IsPrivateProvider"
-                                            SelectedLabel="Selected"
-                                            CenterContent="true"
-                                            EnterpriseLayout="true"
-                                            ShowStatusRibbon="true"
-                                            ShowKindBadge="true"
-                                            MaxVisibleTags="2"
-                                            ShowWorkload="false"
-                                            ShellTestId="crmhr-agent-item-shell"
-                                            SelectTestId="crmhr-agent-item"
-                                            OnSelect="@(() => recordContext.SelectAsync())" />
-                    </ItemTemplate>
-                </PagedRecordBrowser>
-            </section>
-
-            <CrmHrAgentRecordDialog IsOpen="@isRecordDialogOpen"
-                                    IsLoading="@isWorkspaceLoading"
-                                    Item="@selectedDirectoryItem"
-                                    Workspace="@selectedWorkspace"
-                                    Close="CloseRecordDialogAsync"
-                                    OpenTechnicalRecord="OpenTechnicalRecord"
-                                    OpenDirectoryRecord="OpenDirectoryRecord" />
-        </Stack>
-    </ChildContent>
-</PageScaffold>
+<CrmHrAgentsWorkspaceSurface View="this">
+    <SecondaryNavigation>
+        <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Agents" />
+    </SecondaryNavigation>
+    <RecruitingEvidence Context="technicalAgentId">
+        <AgentRecruitingEvidencePanel CandidateAgentId="technicalAgentId" />
+    </RecruitingEvidence>
+</CrmHrAgentsWorkspaceSurface>
 
 @code {
-    private static readonly IReadOnlyList<PagedRecordFilterOption<AiAgentValidationFilter>> ValidationFilters =
-    [
-        new(AiAgentValidationFilter.All, "All", "crmhr-agent-validation-all"),
-        new(AiAgentValidationFilter.Draft, "Draft", "crmhr-agent-validation-draft"),
-        new(AiAgentValidationFilter.ReviewRequired, "Review required", "crmhr-agent-validation-review"),
-        new(AiAgentValidationFilter.Approved, "Approved", "crmhr-agent-validation-approved"),
-        new(AiAgentValidationFilter.Suspended, "Suspended", "crmhr-agent-validation-suspended")
-    ];
-
     [SupplyParameterFromQuery(Name = "partyId")]
     public Guid? PartyIdQuery { get; set; }
 
@@ -417,14 +313,5 @@
         cancellation?.Cancel();
         cancellation?.Dispose();
         return ValueTask.CompletedTask;
-    }
-
-    private enum AiAgentValidationFilter
-    {
-        All,
-        Draft,
-        ReviewRequired,
-        Approved,
-        Suspended
     }
 }

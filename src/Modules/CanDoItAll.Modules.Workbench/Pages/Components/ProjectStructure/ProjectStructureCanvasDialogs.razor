@@ -626,6 +626,7 @@
         <ProjectStructureProcessAssignmentDialog Dialog="@startDialog"
                                                  Close="CloseProcessStart"
                                                  ReviewAndStartProcess="ReviewAndStartProcess"
+                                                 PrepareAnotherProcessLaunch="PrepareAnotherProcessLaunch"
                                                  RequestHrManagerMatch="RequestHrManagerMatch"
                                                  CancelHrManagerMatch="CancelHrManagerMatch"
                                                  ExecuteHrManagerMatch="ExecuteHrManagerMatch"
@@ -643,6 +644,10 @@
                                    DataTestId="project-structure-process-start-dialog"
                                    Close="CloseProcessStart">
         <Actions>
+            @if (startDialog.IntentStorageKey is not null && !string.IsNullOrWhiteSpace(startDialog.Error)) {
+                <Button Text="Prepare another launch" Variant="Variant.Text" Disabled="@startDialog.IsBusy"
+                        Click="PrepareAnotherProcessLaunch" data-testid="project-structure-process-start-new-intent" />
+            }
             <Button @key="processStartCancelKey"
                     Text="Cancel"
                     Variant="Variant.Text"
@@ -1102,6 +1107,9 @@
 
     [Parameter]
     public EventCallback ReviewAndStartProcess { get; set; }
+
+    [Parameter]
+    public EventCallback PrepareAnotherProcessLaunch { get; set; }
 
     [Parameter]
     public EventCallback<ProjectStructureProcessStartCandidateSelection> SelectProcessStartCandidate { get; set; }

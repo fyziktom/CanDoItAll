@@ -1,12 +1,11 @@
 using System.Collections.Concurrent;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Persistence.Hosting;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Memory.Persistence;
 
 internal sealed class EfMemoryWorkerLeaseStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<MemoryDbContext> dbContextFactory,
     MemoryWorkerInMemoryLeaseRegistry inMemoryLeaseRegistry) : IMemoryWorkerLeaseStore
 {
     private static readonly ConcurrentDictionary<MemoryBackgroundWorkerPhase, SemaphoreSlim> AcquireGates = new();
@@ -120,8 +119,8 @@ internal sealed class EfMemoryWorkerLeaseStore(
     }
 
     private async Task<bool> ExecuteForProviderAsync(
-        Func<AppDbContext, CancellationToken, Task<bool>> executePostgreSql,
-        Func<AppDbContext, CancellationToken, Task<bool>> executeInMemory,
+        Func<MemoryDbContext, CancellationToken, Task<bool>> executePostgreSql,
+        Func<MemoryDbContext, CancellationToken, Task<bool>> executeInMemory,
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);

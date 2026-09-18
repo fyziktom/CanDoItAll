@@ -4,17 +4,16 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
-using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 
-public sealed class LlmChatHistoryProjection(HistoryOutboxWriter outbox) {
-    public async Task StageAsync(AppDbContext ownerContext, LlmChatInvocationRecord record, CancellationToken cancellationToken) {
-        var partition = await HistoryPartitionStore.GetForWriteAsync(ownerContext, cancellationToken);
+public sealed class LlmChatHistoryProjection(HistoryPartitionStore partitions, HistoryOutboxWriter outbox) {
+    public async Task StageAsync(SimpleChatsDbContext ownerContext, LlmChatInvocationRecord record, CancellationToken cancellationToken) {
+        var partition = await partitions.GetForWriteAsync(cancellationToken);
         var mutation = Create(record, partition);
         var source = mutation.Source;
-        outbox.Stage(ownerContext, mutation);
+        await outbox.StageAsync(mutation, cancellationToken);
         if (record.HistoryAttempts.Count == 0) {
             return;
         }
@@ -26,8 +25,8 @@ public sealed class LlmChatHistoryProjection(HistoryOutboxWriter outbox) {
             throw new ProviderHistoryException(HistoryFailure.Conflict, "The chat operation exceeds its history evidence bound.");
         }
         var attempts = prior.SelectMany(ParseAttempts).Concat(record.HistoryAttempts).ToArray();
-        outbox.Stage(ownerContext, new(source with { Evidence = new(source.Owner.Value) },
-            new(record.Ordinal), HistorySourceMutationKind.Upsert, null, []) { Attempts = attempts });
+        await outbox.StageAsync(new(source with { Evidence = new(source.Owner.Value) },
+            new(record.Ordinal), HistorySourceMutationKind.Upsert, null, []) { Attempts = attempts }, cancellationToken);
     }
 
     internal static HistorySourceMutation Create(LlmChatInvocationRecord record, HistoryPartition partition) {
@@ -45,10 +44,10 @@ public sealed class LlmChatHistoryProjection(HistoryOutboxWriter outbox) {
     internal static HistoryEntry LegacyEntry(LlmChatInvocationRecord record, CanonicalEvidenceReference source) {
         var price = record.PricingStatus switch {
             LlmChatInvocationPricingEvidenceStatus.ProviderReported =>
-                new HistoryPrice(HistoryPriceState.ProviderReported, record.ProviderCostUsd, "USD",
+                new HistoryPrice(HistoryPriceState.ProviderReported, NormalizePriceAmount(record.ProviderCostUsd), "USD",
                     record.PricingProfileHash, record.PricingVersion),
             LlmChatInvocationPricingEvidenceStatus.CalculatedAtExecution =>
-                new HistoryPrice(HistoryPriceState.CalculatedAtExecution, record.CalculatedCostUsd, "USD",
+                new HistoryPrice(HistoryPriceState.CalculatedAtExecution, NormalizePriceAmount(record.CalculatedCostUsd), "USD",
                     record.PricingProfileHash, record.PricingVersion),
             _ => new HistoryPrice(HistoryPriceState.Unpriced)
         };
@@ -72,4 +71,8 @@ public sealed class LlmChatHistoryProjection(HistoryOutboxWriter outbox) {
                 Version = 1
             };
     }
+
+    private static decimal? NormalizePriceAmount(decimal? amount) => amount is { } value
+        ? decimal.Parse(value.ToString("G29", CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture)
+        : null;
 }

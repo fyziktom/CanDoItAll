@@ -2746,7 +2746,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,
             int take,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, ProcessProjectionProjectBinding? projectBinding = null)
             => Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>([]);
 
         public Task AppendHistoryAsync(

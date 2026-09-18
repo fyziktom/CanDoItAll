@@ -10,21 +10,27 @@ public sealed class SharedProviderSourceService
 {
     private const int MaximumPersistedStatusMessageLength = 400;
 
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<ProvidersDbContext> dbContextFactory;
     private readonly IClock clock;
     private readonly IReadOnlyList<IProviderProfileCommitObserver> providerProfileCommitObservers;
     private readonly ISharedProviderSourceUriPolicy sourceUriPolicy;
+    private readonly SecretReferenceQuery secretReferences;
+    private readonly CoordinatedDatabaseTransaction transactions;
 
     public SharedProviderSourceService(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<ProvidersDbContext> dbContextFactory,
         IClock clock,
         IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers,
-        ISharedProviderSourceUriPolicy sourceUriPolicy)
+        ISharedProviderSourceUriPolicy sourceUriPolicy,
+        SecretReferenceQuery secretReferences,
+        CoordinatedDatabaseTransaction transactions)
     {
         this.dbContextFactory = dbContextFactory;
         this.clock = clock;
         this.providerProfileCommitObservers = providerProfileCommitObservers.ToArray();
         this.sourceUriPolicy = sourceUriPolicy;
+        this.secretReferences = secretReferences;
+        this.transactions = transactions;
     }
 
     public async Task<IReadOnlyList<SharedProviderSourceSnapshot>> ListAsync(
@@ -57,8 +63,24 @@ public sealed class SharedProviderSourceService
         CancellationToken cancellationToken = default)
     {
         var canonicalBaseUri = NormalizeBaseUri(request);
+        var proposedId = request.ProposedId ?? Guid.NewGuid();
+        ValidateSourceId(proposedId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await EnsureSecretExistsAsync(dbContext, request.ApiTokenSecretId, cancellationToken);
+        await using var mutation = await BeginMutationAsync(dbContext, proposedId, cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
+        await EnsureSecretExistsAsync(request.ApiTokenSecretId, cancellationToken);
+        var existing = await dbContext.Set<SharedProviderSource>().AsNoTracking()
+            .SingleOrDefaultAsync(source => source.Id == proposedId, cancellationToken);
+        if (existing is not null) {
+            var expected = new SharedProviderSourceEditorRequest(proposedId, null, request.Name, canonicalBaseUri,
+                request.ApiTokenSecretId, request.IsEnabled, request.AllowInsecurePrivateNetwork);
+            if (!SharedProviderSourceVerification.Matches(CreateSnapshot(existing), expected)) {
+                throw new SharedProviderConcurrencyException(nameof(SharedProviderSource), proposedId);
+            }
+            return new(existing.Id, existing.ConcurrencyToken) {
+                Change = new(SharedProviderChangeKind.SourceConfiguration, [])
+            };
+        }
         var source = SharedProviderSourceTransitions.Create(
             request.Name,
             canonicalBaseUri.AbsoluteUri,
@@ -66,9 +88,13 @@ public sealed class SharedProviderSourceService
             request.AllowInsecurePrivateNetwork,
             request.IsEnabled,
             clock.GetUtcNow());
+        source.Id = proposedId;
         dbContext.Add(source);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        await SaveAndCommitAsync(dbContext, mutation, proposedId, cancellationToken);
+        coordination.Dispose();
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) {
+            Change = new(SharedProviderChangeKind.SourceConfiguration, [])
+        };
     }
 
     public async Task<SharedProviderSourceWriteResult> UpdateAsync(
@@ -84,7 +110,8 @@ public sealed class SharedProviderSourceService
             dbContext,
             sourceId,
             cancellationToken);
-        await EnsureSecretExistsAsync(dbContext, request.ApiTokenSecretId, cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
+        await EnsureSecretExistsAsync(request.ApiTokenSecretId, cancellationToken);
         var source = await LoadSourceAsync(dbContext, sourceId, cancellationToken);
         EnsureConcurrencyToken(source, expectedConcurrencyToken);
         SharedProviderSourceTransitions.UpdateConfiguration(
@@ -100,8 +127,11 @@ public sealed class SharedProviderSourceService
             source,
             cancellationToken);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        coordination.Dispose();
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceConfiguration, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) { Change = change };
     }
 
     public async Task<SharedProviderSourceWriteResult> SetEnabledAsync(
@@ -116,6 +146,7 @@ public sealed class SharedProviderSourceService
             dbContext,
             sourceId,
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var source = await LoadSourceAsync(dbContext, sourceId, cancellationToken);
         EnsureConcurrencyToken(source, expectedConcurrencyToken);
         if (source.IsEnabled == isEnabled)
@@ -130,8 +161,11 @@ public sealed class SharedProviderSourceService
             sourceId,
             cancellationToken);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        coordination.Dispose();
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceEnablement, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) { Change = change };
     }
 
     public async Task<SharedProviderSourceWriteResult> ResetTrustedIdentityAsync(
@@ -145,6 +179,7 @@ public sealed class SharedProviderSourceService
             dbContext,
             sourceId,
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var source = await LoadSourceAsync(dbContext, sourceId, cancellationToken);
         EnsureConcurrencyToken(source, expectedConcurrencyToken);
         SharedProviderSourceTransitions.ResetTrustedIdentity(source, clock.GetUtcNow());
@@ -153,8 +188,11 @@ public sealed class SharedProviderSourceService
             sourceId,
             cancellationToken);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken);
+        coordination.Dispose();
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceConfiguration, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new SharedProviderSourceWriteResult(source.Id, source.ConcurrencyToken) { Change = change };
     }
 
     public async Task<SharedProviderSourceDeleteResult> DeleteAsync(
@@ -168,6 +206,7 @@ public sealed class SharedProviderSourceService
             dbContext,
             sourceId,
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var source = await LoadSourceAsync(dbContext, sourceId, cancellationToken);
         EnsureConcurrencyToken(source, expectedConcurrencyToken);
         var importCount = await dbContext.Set<SharedProviderImport>()
@@ -179,10 +218,13 @@ public sealed class SharedProviderSourceService
 
         dbContext.Remove(source);
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        return new SharedProviderSourceDeleteResult(sourceId);
+        coordination.Dispose();
+        return new SharedProviderSourceDeleteResult(sourceId) {
+            Change = new(SharedProviderChangeKind.SourceDeleted, [])
+        };
     }
 
-    public async Task<SharedProviderCatalogIdentityAcceptance> RecordSuccessfulCatalogTestAsync(
+    public async Task<SharedProviderSourceTestReceipt> RecordSuccessfulCatalogTestAsync(
         Guid sourceId,
         Guid expectedConcurrencyToken,
         SharedProviderSourceInstanceId remoteInstanceId,
@@ -195,6 +237,7 @@ public sealed class SharedProviderSourceService
             dbContext,
             sourceId,
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var source = await LoadSourceAsync(dbContext, sourceId, cancellationToken);
         EnsureConcurrencyToken(source, expectedConcurrencyToken);
         var imports = await dbContext.Set<SharedProviderImport>()
@@ -206,7 +249,7 @@ public sealed class SharedProviderSourceService
             remoteInstanceId,
             entityTag,
             now);
-        Guid[] affectedProviderIds = [];
+        var affectedProviderIds = imports.Select(import => import.ProviderProfileId).Distinct().ToArray();
         if (acceptance == SharedProviderCatalogIdentityAcceptance.IdentityMismatch)
         {
             foreach (var import in imports)
@@ -224,11 +267,14 @@ public sealed class SharedProviderSourceService
         }
 
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(affectedProviderIds, CancellationToken.None);
-        return acceptance;
+        coordination.Dispose();
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceAvailability, affectedProviderIds, remoteOwnedFieldsChanged: false),
+            providerProfileCommitObservers);
+        return new(acceptance, change);
     }
 
-    public Task RecordFailureAsync(
+    public Task<SharedProviderChange> RecordFailureAsync(
         Guid sourceId,
         SharedProviderSourceFailure failure,
         CancellationToken cancellationToken = default)
@@ -238,7 +284,7 @@ public sealed class SharedProviderSourceService
             failure,
             cancellationToken);
 
-    internal Task RecordFetchFailureAsync(
+    internal Task<SharedProviderChange> RecordFetchFailureAsync(
         Guid sourceId,
         Guid expectedConcurrencyToken,
         SharedProviderSourceFailure failure,
@@ -252,7 +298,7 @@ public sealed class SharedProviderSourceService
             cancellationToken);
     }
 
-    private async Task RecordFailureCoreAsync(
+    private async Task<SharedProviderChange> RecordFailureCoreAsync(
         Guid sourceId,
         Guid? expectedConcurrencyToken,
         SharedProviderSourceFailure failure,
@@ -285,6 +331,7 @@ public sealed class SharedProviderSourceService
             dbContext,
             sourceId,
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var source = await LoadSourceAsync(dbContext, sourceId, cancellationToken);
         if (expectedConcurrencyToken is { } expectedToken)
         {
@@ -310,9 +357,10 @@ public sealed class SharedProviderSourceService
         }
 
         await SaveAndCommitAsync(dbContext, mutationScope, sourceId, cancellationToken);
-        await NotifySavedAsync(
-            imports.Select(import => import.ProviderProfileId),
-            CancellationToken.None);
+        coordination.Dispose();
+        return await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.SourceAvailability, imports.Select(import => import.ProviderProfileId),
+                remoteOwnedFieldsChanged: false), providerProfileCommitObservers);
     }
 
     private Uri NormalizeBaseUri(SharedProviderSourceWriteRequest request)
@@ -346,14 +394,11 @@ public sealed class SharedProviderSourceService
             ? SharedProviderSourceNetworkPolicy.AllowPrivateNetwork
             : SharedProviderSourceNetworkPolicy.PublicOnly;
 
-    private static async Task EnsureSecretExistsAsync(
-        AppDbContext dbContext,
+    private async Task EnsureSecretExistsAsync(
         Guid secretId,
         CancellationToken cancellationToken)
     {
-        if (secretId == Guid.Empty || !await dbContext.Set<SecretRecord>()
-                .AsNoTracking()
-                .AnyAsync(secret => secret.Id == secretId, cancellationToken))
+        if (secretId == Guid.Empty || !await secretReferences.ExistsForMutationAsync(secretId, cancellationToken))
         {
             throw new ArgumentException(
                 "The source must reference an existing secret record.",
@@ -362,7 +407,7 @@ public sealed class SharedProviderSourceService
     }
 
     private static async Task<Guid[]> PropagateEffectiveSourceConfigurationAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         SharedProviderSource source,
         CancellationToken cancellationToken)
     {
@@ -390,7 +435,7 @@ public sealed class SharedProviderSourceService
     }
 
     private static Task<Guid[]> GetProviderIdsAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid sourceId,
         CancellationToken cancellationToken)
         => dbContext.Set<SharedProviderImport>()
@@ -399,7 +444,7 @@ public sealed class SharedProviderSourceService
             .ToArrayAsync(cancellationToken);
 
     private static async Task<SharedProviderSource> LoadSourceAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid sourceId,
         CancellationToken cancellationToken)
         => await dbContext.Set<SharedProviderSource>()
@@ -407,7 +452,7 @@ public sealed class SharedProviderSourceService
             ?? throw SourceNotFound(sourceId);
 
     private static Task<SerializableMutationScope> BeginMutationAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid sourceId,
         CancellationToken cancellationToken)
         => SerializableMutationScope.BeginAsync(
@@ -416,7 +461,7 @@ public sealed class SharedProviderSourceService
             cancellationToken);
 
     private static async Task SaveAndCommitAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         SerializableMutationScope mutationScope,
         Guid sourceId,
         CancellationToken cancellationToken)
@@ -434,19 +479,6 @@ public sealed class SharedProviderSourceService
                 nameof(SharedProviderSource),
                 sourceId,
                 exception);
-        }
-    }
-
-    private async Task NotifySavedAsync(
-        IEnumerable<Guid> providerIds,
-        CancellationToken cancellationToken)
-    {
-        foreach (var providerId in providerIds.Distinct().Order())
-        {
-            foreach (var observer in providerProfileCommitObservers)
-            {
-                await observer.ProviderSavedAsync(providerId, cancellationToken);
-            }
         }
     }
 

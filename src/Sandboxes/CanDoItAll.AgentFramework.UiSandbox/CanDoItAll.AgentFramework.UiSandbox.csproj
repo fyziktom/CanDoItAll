@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <CatalogAssetMode Condition="'$(CatalogAssetMode)' == ''">Parity</CatalogAssetMode>
+    <OutputPath>bin/$(CatalogAssetMode)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>obj/$(CatalogAssetMode)/$(Configuration)/</IntermediateOutputPath>
+    <DefineConstants Condition="'$(CatalogAssetMode)' == 'Fast'">$(DefineConstants);CATALOG_FAST_ASSETS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj" />
+    <ProjectReference Include="../../MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/CanDoItAll.AgentFramework.Llm.SimpleChats.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
+    <EmbeddedResource Include="Fixtures/catalog.json" LogicalName="CatalogFixture.json" />
+    <EmbeddedResource Include="Fixtures/capabilities.json" LogicalName="CapabilitiesFixture.json" />
+    <EmbeddedResource Include="Fixtures/overview.json" LogicalName="OverviewFixture.json" />
+    <Content Remove="wwwroot/css/catalog-fast.css" Condition="'$(CatalogAssetMode)' != 'Fast'" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="'$(CatalogAssetMode)' == 'Parity'" />
+  </ItemGroup>
+  <Target Name="RequireCatalogTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(CatalogAssetMode)' != 'Parity' and '$(CatalogAssetMode)' != 'Fast'"
+           Text="CatalogAssetMode must be Parity or Fast." />
+    <Error Condition="'$(CatalogAssetMode)' == 'Parity' and !Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run tailwind:build." />
+    <Error Condition="'$(CatalogAssetMode)' == 'Fast' and !Exists('$(MSBuildProjectDirectory)/wwwroot/css/catalog-fast.css')"
+           Text="Fast CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run catalog:css:build." />
+  </Target>
+</Project>

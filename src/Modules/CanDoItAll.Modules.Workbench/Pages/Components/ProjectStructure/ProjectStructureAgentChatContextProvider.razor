@@ -4,6 +4,7 @@
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.Modules.Workbench.AgentContext
 @using CanDoItAll.Modules.Workbench.ProjectStructure
+@using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 @using Microsoft.Extensions.Logging
 @using System.Globalization
@@ -28,6 +29,9 @@
 
     [Parameter]
     public ProjectStructureSurface? Surface { get; set; }
+
+    [Parameter]
+    public ProjectCalendarSurface? CalendarSurface { get; set; }
 
     [Parameter]
     public IReadOnlyList<ProjectStructureNode> SelectedNodes { get; set; } = [];
@@ -102,10 +106,19 @@
     }
 
     protected override void OnAfterRender(bool firstRender)
-        => publicationLease?.SynchronizeNavigation(
+    {
+        // A render can complete after this provider's scope ended: the component is disposing, or a newer
+        // surface published its own scope and superseded this one. Only the live registration synchronizes.
+        if (publicationLease is not { IsActive: true } lease)
+        {
+            return;
+        }
+
+        lease.SynchronizeNavigation(
             ContextNavigationIdentity ?? AgentChatNavigationIdentity.CreateForLocation(
                 Navigation.BaseUri,
                 Navigation.Uri));
+    }
 
     private AgentChatContextAccessState EffectiveAccessState
         => ResolveEffectiveAccessState(
@@ -113,14 +126,23 @@
             ContextAccessState ?? AgentChatContextAccessState.Ready,
             ActiveView,
             Surface,
-            ProjectId);
+            ProjectId,
+            ObservedProjectAdmission,
+            GanttObservation);
+
+    private ProjectWriteAdmission? ObservedProjectAdmission
+        => ActiveView == ProjectStructureAgentChatView.Calendar
+            ? CalendarSurface?.ExpectedProjectAdmission
+            : Surface?.ExpectedProjectAdmission;
 
     private static AgentChatContextAccessState ResolveEffectiveAccessState(
         AgentChatContextAccessState agentAccessState,
         AgentChatContextAccessState parentAccessState,
         ProjectStructureAgentChatView activeView,
         ProjectStructureSurface? surface,
-        Guid projectId)
+        Guid projectId,
+        ProjectWriteAdmission? observedAdmission,
+        ProjectStructureGanttObservation? ganttObservation)
     {
         var combinedState = (agentAccessState, parentAccessState) switch
         {
@@ -132,13 +154,20 @@
                 => AgentChatContextAccessState.Loading,
             _ => AgentChatContextAccessState.Ready
         };
-        if (combinedState != AgentChatContextAccessState.Ready ||
-            activeView == ProjectStructureAgentChatView.Calendar)
+        if (combinedState != AgentChatContextAccessState.Ready)
         {
             return combinedState;
         }
 
-        return surface is not null && surface.ProjectId == projectId
+        if (observedAdmission is null || observedAdmission.ProjectId != projectId) {
+            return AgentChatContextAccessState.Loading;
+        }
+        if (activeView == ProjectStructureAgentChatView.Gantt && ganttObservation is { } gantt &&
+                gantt.ObservedProjectLifetime != new AgentProjectStructureLifetime(observedAdmission.DatabaseProfileId,
+                    observedAdmission.ProjectId, observedAdmission.LifetimeId)) {
+            return AgentChatContextAccessState.Loading;
+        }
+        return activeView == ProjectStructureAgentChatView.Calendar || surface is not null && surface.ProjectId == projectId
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Loading;
     }
@@ -220,29 +249,60 @@
         }
 
         var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
-        _ = InvokeAsync(async () =>
-        {
-            if (isDisposed ||
-                activeProjectId == Guid.Empty ||
-                publicationLease is null ||
-                loadGeneration != Volatile.Read(ref agentAccessGeneration))
-            {
-                return;
-            }
+        _ = ReloadAgentAccessAsync(loadGeneration);
+    }
 
-            var projectId = activeProjectId;
-            var scopeId = publicationLease.ScopeId;
-            agents = [];
-            accessState = AgentChatContextAccessState.Loading;
-            PublishCurrentContext();
-            await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
-        });
+    private async Task ReloadAgentAccessAsync(long loadGeneration)
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                if (isDisposed ||
+                    activeProjectId == Guid.Empty ||
+                    publicationLease is null ||
+                    loadGeneration != Volatile.Read(ref agentAccessGeneration))
+                {
+                    return;
+                }
+
+                var projectId = activeProjectId;
+                var scopeId = publicationLease.ScopeId;
+                agents = [];
+                accessState = AgentChatContextAccessState.Loading;
+                PublishCurrentContext();
+                await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
+            });
+        }
+        catch (Exception) when (isDisposed)
+        {
+            // The component ended while the reload was queued; nothing is left to refresh.
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Unable to reload project-structure agent chat access after a reference-data invalidation. ProjectId={ProjectId} FailureType={FailureType}.",
+                activeProjectId,
+                exception.GetType().Name);
+        }
     }
 
     private void PublishCurrentContext()
     {
         if (publicationLease is null)
         {
+            return;
+        }
+
+        if (!publicationLease.IsActive)
+        {
+            // A newer surface published its own scope; this provider's scope is finished and must not
+            // overwrite the live publication. A project change re-activates a fresh scope.
+            Logger.LogDebug(
+                "Skipped a project-structure agent chat context publication because its scope was superseded. ProjectId={ProjectId} ScopeId={ScopeId}.",
+                activeProjectId,
+                publicationLease.ScopeId);
             return;
         }
 
@@ -311,7 +371,7 @@
         {
             var ganttCapturedAtUtc = TimeProvider.GetUtcNow();
             ganttContributor = ProjectStructureGanttObservationContributor.BuildPublication(
-                GanttObservation,
+                EffectiveAccessState == AgentChatContextAccessState.Ready ? GanttObservation : null,
                 new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
                 ganttCapturedAtUtc,
                 ganttCapturedAtUtc.Add(ProjectStructureInvocationSnapshotMapper.FreshnessLifetime));
@@ -359,7 +419,8 @@
                 agents,
                 EffectiveAccessState,
                 ActiveView,
-                selectedEntities),
+                selectedEntities,
+                ObservedProjectAdmission),
             contributors);
     }
 
@@ -368,6 +429,11 @@
     {
         var builder = new StringBuilder();
         AppendKeyPart(builder, publication.Scope.DisplayName);
+        if (publication.Scope.ObservedProjectLifetime is { } lifetime) {
+            AppendKeyPart(builder, lifetime.DatabaseProfileId.ToString("N"));
+            AppendKeyPart(builder, lifetime.ProjectId.ToString("N"));
+            AppendKeyPart(builder, lifetime.LifetimeId.ToString("N"));
+        }
         AppendKeyPart(
             builder,
             ((int)publication.Scope.AccessState).ToString(CultureInfo.InvariantCulture));
@@ -517,12 +583,32 @@
 
     private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
     {
-        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        if (isDisposed ||
+            activeSource is null ||
+            notification.Source != activeSource ||
+            publicationLease is not { } admittedLease)
         {
             return Task.CompletedTask;
         }
 
-        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+        // The notification is admitted for the scope that is active now. It is dispatched on the renderer
+        // later, so the same scope must still be active at consumption: a disposal, a switch to another
+        // project, or a re-activation of the same project id (a new lifetime) ends the admitted scope and
+        // must not refresh the page that replaced it.
+        var admittedScopeId = admittedLease.ScopeId;
+        return InvokeAsync(async () =>
+        {
+            if (isDisposed ||
+                activeSource is null ||
+                notification.Source != activeSource ||
+                publicationLease is null ||
+                publicationLease.ScopeId != admittedScopeId)
+            {
+                return;
+            }
+
+            await RefreshRequested.InvokeAsync(notification);
+        });
     }
 
     private void DisposeContext()

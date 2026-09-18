@@ -30,6 +30,12 @@ viewers adapt FileTools' object-URL targets to BaseLib's reusable zoom-pan frame
 target remains an inert sandboxed iframe. Add another dependency only when an
 application-owned surface has a real need for it.
 
+The service-free `AgentAvatarActionButton` is implemented by
+[Conversations.Components](../CanDoItAll.Conversations.Components/README.md) and retains
+its `CanDoItAll.AppComponents` namespace. This project references that assembly for
+repository source consumers. Repository packaging is disabled; no published binary
+compatibility contract or old-assembly type-forwarding promise is declared.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

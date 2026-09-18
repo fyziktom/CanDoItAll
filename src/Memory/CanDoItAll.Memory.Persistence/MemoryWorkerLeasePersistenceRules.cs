@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Persistence.Hosting;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +10,7 @@ internal static class MemoryWorkerLeasePersistenceRules
     public static readonly DateTimeOffset ReleasedAtUtc = DateTimeOffset.UnixEpoch;
 
     public static IQueryable<MemoryWorkerLeaseEntity> OwnedQuery(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset nowUtc,
         bool requireUnexpired)

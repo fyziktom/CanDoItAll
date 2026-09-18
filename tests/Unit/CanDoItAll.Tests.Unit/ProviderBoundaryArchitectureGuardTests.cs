@@ -1,4 +1,7 @@
 using System.Xml.Linq;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -139,24 +142,18 @@ public sealed class ProviderBoundaryArchitectureGuardTests
     }
 
     [Fact]
-    public void Agent_provider_editor_uses_only_provider_management_ports()
-    {
-        var componentDirectory = Absolute(
-            "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components");
-        var componentSource = string.Join(
-            Environment.NewLine,
-            Directory.EnumerateFiles(
-                    componentDirectory,
-                    "AgentProviderProfilesPanel.*",
-                    SearchOption.TopDirectoryOnly)
-                .Select(File.ReadAllText));
-
-        Assert.Contains("IProviderAdministrationService", componentSource, StringComparison.Ordinal);
-        Assert.Contains("IProviderRuntimeAdministrationService", componentSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Modules.Workspace", componentSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IAgentFrameworkWorkspaceService", componentSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IWorkspaceProviderCatalog", componentSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("WorkspaceProviderOption", componentSource, StringComparison.Ordinal);
+    public void Agent_provider_editor_uses_only_provider_management_ports() {
+        var services = new ServiceCollection().AddAgentFrameworkUi();
+        var descriptor = Assert.Single(services, service => service.ServiceType == typeof(IProviderEditorCommands));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+        Assert.Equal(typeof(ProviderEditorCommands), descriptor.ImplementationType);
+        var dependencies = typeof(ProviderEditorCommands).GetConstructors()
+            .SelectMany(constructor => constructor.GetParameters())
+            .Select(parameter => parameter.ParameterType);
+        Assert.All(dependencies, dependency => {
+            Assert.True(dependency.IsInterface);
+            Assert.Equal(typeof(IProviderRuntimeAdministrationService).Assembly, dependency.Assembly);
+        });
     }
 
     [Fact]

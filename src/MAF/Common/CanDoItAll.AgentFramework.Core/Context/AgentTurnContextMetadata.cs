@@ -64,6 +64,13 @@ public static class AgentTurnContextMetadata
         WriteEntries(authorityObject, "allowedCapabilityKeys", authority.AllowedCapabilityKeys);
         WriteEntries(authorityObject, "allowedExternalTargetAliases", authority.AllowedExternalTargetAliases);
         WriteEntries(authorityObject, "readOnlyExternalTargetAliases", authority.ReadOnlyExternalTargetAliases);
+        if (authority.SourceProjectLifetime is { } lifetime) {
+            authorityObject["sourceProjectLifetime"] = new JsonObject {
+                ["databaseProfileId"] = lifetime.DatabaseProfileId.ToString("N"),
+                ["projectId"] = lifetime.ProjectId.ToString("N"),
+                ["lifetimeId"] = lifetime.LifetimeId.ToString("N")
+            };
+        }
         metadata[ExecutionAuthorityMetadataKey] = authorityObject;
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
@@ -167,7 +174,7 @@ public static class AgentTurnContextMetadata
         try
         {
             var schemaVersion = ReadInt32(authority, "schemaVersion");
-            if (schemaVersion != AgentExecutionAuthorityRecord.CurrentSchemaVersion)
+            if (schemaVersion is not (AgentExecutionAuthorityRecord.LegacySchemaVersion or AgentExecutionAuthorityRecord.CurrentSchemaVersion))
             {
                 return AgentExecutionGovernanceReadResult.Malformed;
             }
@@ -179,6 +186,14 @@ public static class AgentTurnContextMetadata
             }
 
             var policyVersion = ReadString(authority, "policyVersion");
+            AgentProjectStructureLifetime? sourceProjectLifetime = null;
+            if (authority.TryGetPropertyValue("sourceProjectLifetime", out var lifetimeNode)) {
+                if (schemaVersion == AgentExecutionAuthorityRecord.LegacySchemaVersion || lifetimeNode is not JsonObject lifetime) {
+                    return AgentExecutionGovernanceReadResult.Malformed;
+                }
+                sourceProjectLifetime = new(ReadGuid(lifetime, "databaseProfileId"),
+                    ReadGuid(lifetime, "projectId"), ReadGuid(lifetime, "lifetimeId"));
+            }
             var policyFingerprint = ReadString(authority, "policyFingerprint");
             if (policyFingerprint.Length > AgentChatContextLimits.MaximumFingerprintLength)
             {
@@ -200,7 +215,9 @@ public static class AgentTurnContextMetadata
                 ReadEntriesStrict(authority, "allowedOperations"),
                 ReadEntriesStrict(authority, "allowedCapabilityKeys"),
                 ReadEntriesStrict(authority, "allowedExternalTargetAliases"),
-                ReadEntriesStrict(authority, "readOnlyExternalTargetAliases"));
+                ReadEntriesStrict(authority, "readOnlyExternalTargetAliases"),
+                schemaVersion: schemaVersion,
+                sourceProjectLifetime: sourceProjectLifetime);
             return AgentExecutionGovernanceReadResult.Valid(snapshot);
         }
         catch (Exception exception) when (

@@ -1,13 +1,9 @@
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-using PersistedProviderProfile =
-    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 using IProviderProfileCommitObserver =
     CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderProfileCommitObserver;
 using IProviderRuntimeProfileSnapshotLoader =
@@ -20,7 +16,7 @@ using SharedProviderProfileOwnershipPolicy =
     CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderProfileOwnershipPolicy;
 
 internal sealed class SharedProviderCatalogProjectionCommitObserver(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    SharedProviderProfileOwnershipQuery ownership,
     IProviderRuntimeProfileSnapshotLoader runtimeProfileLoader,
     ISandboxWorkspaceCatalogStore catalogStore,
     ILogger<SharedProviderCatalogProjectionCommitObserver> logger) :
@@ -30,7 +26,7 @@ internal sealed class SharedProviderCatalogProjectionCommitObserver(
         Guid providerId,
         CancellationToken cancellationToken = default)
     {
-        if (!await IsSharedProviderAsync(providerId, cancellationToken))
+        if (!await ownership.IsSourceManagedAsync(providerId, cancellationToken))
         {
             return;
         }
@@ -60,10 +56,9 @@ internal sealed class SharedProviderCatalogProjectionCommitObserver(
             var projectionException = new ProviderCatalogProjectionException(
                 providerId,
                 ProviderCatalogProjectionOperationKind.Upsert,
-                "Retry shared-provider synchronization to repair the catalog projection.",
+                "Reconcile the committed provider catalog projection without repeating the shared write.",
                 exception);
             logger.LogError(
-                projectionException,
                 "Shared-provider catalog projection failed after the canonical database commit. ProviderId={ProviderId} RepairAction={RepairAction}",
                 providerId,
                 projectionException.RepairAction);
@@ -94,19 +89,4 @@ internal sealed class SharedProviderCatalogProjectionCommitObserver(
         }, cancellationToken);
     }
 
-    private async Task<bool> IsSharedProviderAsync(
-        Guid providerId,
-        CancellationToken cancellationToken)
-    {
-        await using var dbContext =
-            await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var connectorPluginKey = await dbContext
-            .Set<PersistedProviderProfile>()
-            .AsNoTracking()
-            .Where(provider => provider.Id == providerId)
-            .Select(provider => provider.ConnectorPluginKey)
-            .SingleOrDefaultAsync(cancellationToken);
-        return SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
-            connectorPluginKey);
-    }
 }

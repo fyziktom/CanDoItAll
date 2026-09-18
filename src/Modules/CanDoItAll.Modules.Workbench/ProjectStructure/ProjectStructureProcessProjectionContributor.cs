@@ -2,17 +2,15 @@ using System.Text.Json;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Processes.Application;
-using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureProcessProjectionContributor(
-    IDbContextFactory<ProcessPersistenceDbContext> processDbContextFactory,
+    IProcessStructureProjectionQueryService processQueries,
     ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService,
     IWorkspacePathResolver workspacePathResolver,
     IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
@@ -56,9 +54,9 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     {
         var runRecordProjectionsTask = runRecordProjector.LoadAsync(
             context.ProjectId,
-            cancellationToken);
-        var userAuthoredLinks = await context.DbContext.Set<ProjectObjectLinkRecord>()
-            .AsNoTracking()
+            cancellationToken,
+            context.RequiresCoordinatedOwnerReads);
+        var userAuthoredLinks = context.CanonicalLinks
             .Where(item =>
                 item.ProjectId == context.ProjectId &&
                 !item.IsSystemManaged &&
@@ -71,7 +69,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 item.TargetNodeKey,
                 item.LinkKind,
                 item.CreatedAtUtc))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var linkedDefinitionIds = userAuthoredLinks
             .SelectMany(link => new[] { link.SourceNodeKey, link.TargetNodeKey })
@@ -88,15 +86,10 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         var runRecordProjectionsByRunId = await runRecordProjectionsTask.ConfigureAwait(false);
         var durableRunIds = runRecordProjectionsByRunId.Keys.ToHashSet();
 
-        await using var processDbContext = await processDbContextFactory
-            .CreateDbContextAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var projectScopedRunReferences = await LoadProjectScopedRunReferencesAsync(
-                processDbContext,
-                context.ProjectId,
-                durableRunIds,
-                cancellationToken)
-            .ConfigureAwait(false);
+        var assignmentFacts = context.RequiresCoordinatedOwnerReads
+            ? await processQueries.GetProjectAssignmentsForMutationAsync(context.ProjectId, durableRunIds, cancellationToken)
+            : await processQueries.GetProjectAssignmentsAsync(context.ProjectId, durableRunIds, cancellationToken);
+        var projectScopedRunReferences = BuildProjectScopedRunReferences(assignmentFacts, context.ProjectId);
         foreach (var reference in projectScopedRunReferences)
         {
             linkedRunIds.Add(reference.RunId);
@@ -128,36 +121,11 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         var runtimeDiscoveryRunIds = linkedRunIds
             .Where(runId => !durableRunIds.Contains(runId))
             .ToArray();
-        var linkedRuntimeStates = runtimeDiscoveryRunIds.Length == 0
-            ? []
-            : await processDbContext.RuntimeStates
-                .AsNoTracking()
-                .Where(item => runtimeDiscoveryRunIds.Contains(item.RunId))
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .Select(item => new ProjectStructureProcessRuntimeState(
-                    item.RunId,
-                    item.RootRunId,
-                    item.PlanId,
-                    item.Status,
-                    item.UpdatedAtUtc))
-                .ToListAsync(cancellationToken);
-        var projectedRuntimeRunIds = linkedRuntimeStates
-            .Select(item => item.RootRunId)
-            .Distinct()
-            .ToArray();
-        var persistedRuntimeStates = projectedRuntimeRunIds.Length == 0
-            ? []
-            : await processDbContext.RuntimeStates
-                .AsNoTracking()
-                .Where(item => projectedRuntimeRunIds.Contains(item.RunId))
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .Select(item => new ProjectStructureProcessRuntimeState(
-                    item.RunId,
-                    item.RootRunId,
-                    item.PlanId,
-                    item.Status,
-                    item.UpdatedAtUtc))
-                .ToListAsync(cancellationToken);
+        var runtimeFacts = context.RequiresCoordinatedOwnerReads
+            ? await processQueries.GetRuntimeFactsForMutationAsync(runtimeDiscoveryRunIds, cancellationToken)
+            : await processQueries.GetRuntimeFactsAsync(runtimeDiscoveryRunIds, cancellationToken);
+        var linkedRuntimeStates = runtimeFacts.LinkedRuns.Select(MapRuntimeFact).ToArray();
+        var persistedRuntimeStates = runtimeFacts.RootRuns.Select(MapRuntimeFact).ToArray();
         var runtimeStatesByRunId = persistedRuntimeStates.ToDictionary(state => state.RunId);
         foreach (var projection in runRecordProjectionsByRunId.Values)
         {
@@ -178,46 +146,13 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 item => ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(item.RunId),
                 item => ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(item.RootRunId),
                 StringComparer.Ordinal);
-        var planIds = runtimeStates
-            .Where(item => !runRecordProjectionsByRunId.ContainsKey(item.RunId))
-            .Select(item => item.PlanId)
-            .Where(planId => planId.HasValue)
-            .Select(planId => planId!.Value)
-            .Distinct()
-            .ToArray();
-        var plansById = planIds.Length == 0
-            ? new Dictionary<Guid, ProjectStructureProcessPlan>()
-            : await processDbContext.InstancePlans
-                .AsNoTracking()
-                .Where(item => planIds.Contains(item.PlanId))
-                .Select(item => new ProjectStructureProcessPlan(
-                    item.PlanId,
-                    item.DefinitionId,
-                    item.CreatedAtUtc))
-                .ToDictionaryAsync(item => item.PlanId, cancellationToken);
-        var projectedRunIdArray = runtimeStates
-            .Select(item => item.RunId)
-            .ToArray();
-        var runtimeStepRunIds = projectedRunIdArray
-            .Where(runId => !runRecordProjectionsByRunId.ContainsKey(runId))
-            .ToArray();
-        var stepStatsByRunId = runtimeStepRunIds.Length == 0
-            ? new Dictionary<Guid, ProjectStructureProcessRunProjectionStats>()
-            : await processDbContext.RuntimeSteps
-                .AsNoTracking()
-                .Where(item => runtimeStepRunIds.Contains(item.RunId))
-                .GroupBy(item => item.RunId)
-                .Select(group => new ProjectStructureProcessRunProjectionStats(
-                    group.Key,
-                    group.Count(),
-                    group.Count(item => item.Status == ProcessRuntimeStepStatus.Completed),
-                    group.Count(item => item.Status == ProcessRuntimeStepStatus.Blocked),
-                    group.Count(item => item.Status == ProcessRuntimeStepStatus.WaitingApproval),
-                    group.Count(item => item.Status == ProcessRuntimeStepStatus.Ready ||
-                                        item.Status == ProcessRuntimeStepStatus.Waiting ||
-                                        item.Status == ProcessRuntimeStepStatus.Running ||
-                                        item.Status == ProcessRuntimeStepStatus.Claimed)))
-                .ToDictionaryAsync(item => item.RunId, cancellationToken);
+        var requiredPlanIds = runtimeStates.Where(item => !runRecordProjectionsByRunId.ContainsKey(item.RunId))
+            .Where(item => item.PlanId.HasValue).Select(item => item.PlanId!.Value).ToHashSet();
+        var plansById = runtimeFacts.Plans.Where(item => requiredPlanIds.Contains(item.PlanId)).ToDictionary(item => item.PlanId,
+            item => new ProjectStructureProcessPlan(item.PlanId, item.DefinitionId, item.CreatedAtUtc));
+        var stepStatsByRunId = runtimeFacts.Statistics.ToDictionary(item => item.RunId,
+            item => new ProjectStructureProcessRunProjectionStats(item.RunId, item.TotalStepCount, item.CompletedStepCount,
+                item.BlockedStepCount, item.WaitingApprovalStepCount, item.ActiveStepCount));
 
         foreach (var projection in runRecordProjectionsByRunId.Values)
         {
@@ -712,29 +647,12 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     .ToArray());
     }
 
-    private static async Task<IReadOnlyList<ProjectScopedProcessRunReference>> LoadProjectScopedRunReferencesAsync(
-        ProcessPersistenceDbContext processDbContext,
-        Guid projectId,
-        IReadOnlyCollection<Guid> excludedRunIds,
-        CancellationToken cancellationToken)
-    {
-        var projectIdText = projectId.ToString("D");
-        var projectIdSnippet = BuildLaunchVariableJsonSnippet(ProjectIdVariableName, projectIdText);
-        var assignmentsQuery = processDbContext.RuntimeStepAssignments.AsNoTracking();
-        if (excludedRunIds.Count > 0)
-        {
-            var excludedRunIdArray = excludedRunIds.ToArray();
-            assignmentsQuery = assignmentsQuery.Where(assignment => !excludedRunIdArray.Contains(assignment.RunId));
-        }
+    private static ProjectStructureProcessRuntimeState MapRuntimeFact(ProcessStructureRuntimeFact fact) =>
+        new(fact.RunId, fact.RootRunId, fact.PlanId, fact.Status, fact.UpdatedAtUtc);
 
-        var rows = await assignmentsQuery
-            .Where(assignment => assignment.LaunchVariablesJson.Contains(projectIdSnippet))
-            .Select(assignment => new ProjectStructureProcessAssignmentScope(
-                assignment.RunId,
-                assignment.LaunchVariablesJson,
-                assignment.CreatedAtUtc))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+    private static IReadOnlyList<ProjectScopedProcessRunReference> BuildProjectScopedRunReferences(
+        IReadOnlyList<ProcessStructureAssignmentFact> rows, Guid projectId) {
+        var projectIdText = projectId.ToString("D");
         var references = new List<ProjectScopedProcessRunReference>();
         foreach (var row in rows)
         {
@@ -832,15 +750,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         string key,
         out Guid value)
         => Guid.TryParse(ResolveLaunchVariable(variables, key), out value);
-
-    private static string BuildLaunchVariableJsonSnippet(string key, string value)
-    {
-        var json = JsonSerializer.Serialize(new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            [key] = value
-        });
-        return json.Trim('{', '}');
-    }
 
     private static Guid? TryResolveProcessDefinitionId(string nodeKey)
         => ProjectStructureProcessNodeKeys.TryParseProcessDefinitionNodeKey(nodeKey, out var definitionId)
@@ -1373,11 +1282,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
 
     private static string ShortId(Guid value)
         => value.ToString("N")[..8];
-
-    private sealed record ProjectStructureProcessAssignmentScope(
-        Guid RunId,
-        string LaunchVariablesJson,
-        DateTimeOffset CreatedAtUtc);
 
     private sealed record ProjectScopedProcessRunReference(
         Guid RunId,

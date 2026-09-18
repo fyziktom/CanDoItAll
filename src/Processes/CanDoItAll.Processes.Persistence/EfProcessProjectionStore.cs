@@ -93,18 +93,30 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
         ProcessProjectorName projectorName,
         ProcessProjectionKeyPrefix projectionKeyPrefix,
         int take,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProcessProjectionProjectBinding? projectBinding = null)
     {
         if (take <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(take), take, "Projection snapshot read size must be positive.");
         }
 
-        var rows = await dbContext.ProjectionSnapshots
+        var query = dbContext.ProjectionSnapshots
             .AsNoTracking()
             .Where(snapshot =>
                 snapshot.ProjectorName == projectorName.Value &&
-                snapshot.ProjectionKey.StartsWith(projectionKeyPrefix.Value))
+                snapshot.ProjectionKey.StartsWith(projectionKeyPrefix.Value));
+        if (projectBinding is { } project) {
+            if (projectionKeyPrefix != ProcessRuntimeProjectionKeys.LivePrefix) {
+                throw new ArgumentException("Project-bound Process snapshot queries require the canonical live-run prefix.", nameof(projectionKeyPrefix));
+            }
+            var livePrefix = ProcessRuntimeProjectionKeys.LivePrefix.Value;
+            query = query.Where(snapshot => dbContext.RuntimeStates.Any(state =>
+                state.ProjectAdmissionDatabaseProfileId == project.DatabaseProfileId &&
+                state.ProjectAdmissionProjectId == project.ProjectId && state.ProjectAdmissionLifetimeId == project.LifetimeId &&
+                snapshot.ProjectionKey == livePrefix + state.RunId.ToString()));
+        }
+        var rows = await query
             .OrderByDescending(snapshot => snapshot.UpdatedAtUtc)
             .ThenBy(snapshot => snapshot.ProjectionKey)
             .Take(take)
@@ -186,6 +198,12 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
         if (query.RunId is { } runId)
         {
             rowsQuery = rowsQuery.Where(history => history.RunId == runId.Value);
+        }
+
+        if (query.ProjectBinding is { } project) {
+            rowsQuery = rowsQuery.Where(history => dbContext.RuntimeStates.Any(state => state.RunId == history.RunId &&
+                state.ProjectAdmissionDatabaseProfileId == project.DatabaseProfileId &&
+                state.ProjectAdmissionProjectId == project.ProjectId && state.ProjectAdmissionLifetimeId == project.LifetimeId));
         }
 
         if (query.AfterGlobalSequence is { } afterGlobalSequence)

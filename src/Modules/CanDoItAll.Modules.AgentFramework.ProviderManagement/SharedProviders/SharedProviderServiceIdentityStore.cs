@@ -7,7 +7,7 @@ using System.Runtime.ExceptionServices;
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderServiceIdentityStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
     IClock clock)
 {
     public async Task<SharedProviderSourceInstanceId> GetOrCreateAsync(

@@ -31,7 +31,7 @@ public interface IProjectStructureAnalyticsService
 }
 
 public sealed class ProjectStructureAnalyticsService(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IProjectStructureAnalyticsService
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory) : IProjectStructureAnalyticsService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 

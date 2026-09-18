@@ -10,18 +10,17 @@ internal static class PromptGalleryTestSupport
 {
     public static TestDbContextFactory CreateFactory(string testName)
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([typeof(PromptsModuleAssemblyMarker).Assembly]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+        var options = new DbContextOptionsBuilder<PromptsDbContext>()
             .UseInMemoryDatabase($"prompt-gallery-{testName}-{Guid.NewGuid():N}")
             .Options;
         return new TestDbContextFactory(options);
     }
 
     public static PromptGalleryProjectionCoordinator CreateDisabledProjectionCoordinator(
-        IDbContextFactory<AppDbContext> factory)
+        IDbContextFactory<PromptsDbContext> factory)
         => new(factory, new DisabledPromptGalleryProjectionDriver());
 
-    public static PromptsService CreateService(IDbContextFactory<AppDbContext> factory)
+    public static PromptsService CreateService(IDbContextFactory<PromptsDbContext> factory)
         => new(
             factory,
             new FixedClock(),
@@ -31,12 +30,12 @@ internal static class PromptGalleryTestSupport
             new PromptGalleryCompatibilityEvaluator(),
             NullLogger<PromptsService>.Instance);
 
-    internal sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
+    internal sealed class TestDbContextFactory(DbContextOptions<PromptsDbContext> options)
+        : IDbContextFactory<PromptsDbContext>
     {
-        public AppDbContext CreateDbContext() => new(options);
+        public PromptsDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<PromptsDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(CreateDbContext());
     }
 

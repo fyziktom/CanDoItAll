@@ -58,7 +58,7 @@ public sealed class WorkspaceSettingsModel
 }
 
 public sealed partial class WorkspaceService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkspaceSettingsDbContext> dbContextFactory,
     IClock clock,
     SecretService secretService,
     ISecretRuntimeResolver secretRuntimeResolver,

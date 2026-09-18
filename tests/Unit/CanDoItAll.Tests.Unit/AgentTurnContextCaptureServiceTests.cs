@@ -12,6 +12,8 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentTurnContextCaptureServiceTests
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
+    private static readonly Guid ProfileId = Guid.NewGuid();
+    private static readonly Guid LifetimeId = Guid.NewGuid();
 
     [Fact]
     public async Task Authorized_capture_binds_turn_reference_authority_and_digest()
@@ -184,7 +186,9 @@ public sealed class AgentTurnContextCaptureServiceTests
                 "workbench",
                 "project-structure",
                 "canvas",
-                $"/projects/{ProjectId:D}/structure"));
+                $"/projects/{ProjectId:D}/structure"),
+            observedProjectLifetime: workspaceScope.Kind == WorkspaceScopeKind.Project
+                ? new(ProfileId, Guid.Parse(workspaceScope.Key), LifetimeId) : null);
         return new AgentChatContextSnapshot(
             scope,
             [
@@ -204,14 +208,16 @@ public sealed class AgentTurnContextCaptureServiceTests
         => new(
             AgentExecutionAuthorityId.Create(),
             request.AgentId,
-            Guid.NewGuid(),
+            ProfileId,
             request.ExpectedDatabaseProfileGeneration,
             scope,
             readAllowed: true,
             mutationAllowed: mutationAllowed,
             "v2-canonical",
             "canonical-fingerprint",
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            schemaVersion: AgentExecutionAuthorityRecord.CurrentSchemaVersion,
+            sourceProjectLifetime: scope.Kind == WorkspaceScopeKind.Project ? new(ProfileId, Guid.Parse(scope.Key), LifetimeId) : null);
 
     private sealed class FixedContextRegistry(AgentChatContextSnapshot? context)
         : IAgentChatContextRegistry

@@ -133,6 +133,30 @@ public sealed partial class AgentFrameworkWorkspaceService
             autoApprovePendingToolCalls,
             cancellationToken);
 
+    public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
+        EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,
+            "Cancelled execution receipt reconciliation accepted.", operation => executionService.ReconcileCancelledExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+    }
+
+    public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default)
+        => executionService.ReconcileCancelledExecutionRunWithinOperationAsync(operation, executionRunId, cancellationToken);
+
+    public Task<ExecutionRunResult> RecoverExecutionRunAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
+        EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,
+            "Execution recovery accepted.", operation => executionService.RecoverExecutionRunWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+    }
+
+    public Task<ExecutionRunResult> RecoverExecutionRunWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        Guid executionRunId, CancellationToken cancellationToken = default)
+        => executionService.RecoverExecutionRunWithinOperationAsync(operation, executionRunId, cancellationToken);
+
     public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         ExecutionRunQuery query,
         CancellationToken cancellationToken = default)

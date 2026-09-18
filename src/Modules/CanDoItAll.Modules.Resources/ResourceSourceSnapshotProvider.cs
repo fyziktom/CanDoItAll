@@ -2,15 +2,15 @@ using CanDoItAll.Memory.SourceGateway;
 using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
 namespace CanDoItAll.Modules.Resources;
 
 public sealed partial class ResourceSourceSnapshotProvider(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry) : IResourceSourceSnapshotProvider
+    IDbContextFactory<ResourcesDbContext> dbContextFactory,
+    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry,
+    Projects.ProjectWriteAdmissionService writeAdmissions) : IResourceSourceSnapshotProvider
 {
     public async Task<MemorySourceSnapshot> ReadSnapshotAsync(
         ResourceSourceSnapshotRequest request,
@@ -31,7 +31,9 @@ public sealed partial class ResourceSourceSnapshotProvider(
 
         if (request.ProjectId.HasValue)
         {
-            query = query.Where(resource => resource.ProjectId == request.ProjectId.Value);
+            var admission = await writeAdmissions.CaptureAsync(request.ProjectId.Value, cancellationToken);
+            var lifetimeId = admission?.LifetimeId ?? Guid.Empty;
+            query = query.Where(resource => resource.ProjectId == request.ProjectId.Value && resource.ProjectLifetimeId == lifetimeId);
         }
 
         var resources = await query.OrderBy(resource => resource.Name).ToListAsync(cancellationToken);

@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public static class HistoryIndexQuery {
-    public static IQueryable<HistoryEntryRow> Authorized(AppDbContext db, HistoryAccessContext context, DateTimeOffset now) {
+internal static class HistoryIndexQuery {
+    internal static IQueryable<HistoryEntryRow> Authorized(ProviderHistoryDbContext db, HistoryAccessContext context, DateTimeOffset now) {
         var rows = db.Set<HistoryEntryRow>().AsNoTracking().Where(row =>
             row.PartitionId == context.Partition.StorageLineageId && row.IsVisible &&
             (row.ExpiresAtUtc == null || row.ExpiresAtUtc > now));
@@ -15,7 +15,7 @@ public static class HistoryIndexQuery {
         return rows;
     }
 
-    public static IQueryable<HistoryEntryRow> Page(AppDbContext db, HistoryAccessContext context,
+    internal static IQueryable<HistoryEntryRow> Page(ProviderHistoryDbContext db, HistoryAccessContext context,
         ProviderRequestHistoryQuery query, HistoryPagePosition? position, DateTimeOffset now) {
         var fromUtc = query.FromUtc.ToUniversalTime();
         var toUtc = query.ToUtc.ToUniversalTime();

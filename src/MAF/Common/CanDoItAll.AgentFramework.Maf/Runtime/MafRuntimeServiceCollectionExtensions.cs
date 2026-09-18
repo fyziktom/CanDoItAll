@@ -17,6 +17,7 @@ public static class MafRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IMafProviderCredentialService>(serviceProvider => new MafProviderCredentialService(
             serviceProvider.GetService<IAgentProviderCredentialResolver>(),
             serviceProvider.GetService<IConfiguration>()));
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
         services.TryAddSingleton<IRuntimeToolProviderAccessFilter, RuntimeToolProviderAccessFilter>();
         services.TryAddSingleton<IRuntimeToolProviderComposer, RuntimeToolProviderComposer>();
         services.TryAddSingleton<IMafRuntimeCompositionMetrics, NoOpMafRuntimeCompositionMetrics>();

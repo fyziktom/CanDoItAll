@@ -58,7 +58,7 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         return string.IsNullOrWhiteSpace(slug) ? "canvas-node" : slug;
     }
 
-    private static void ValidateScope(ProcessWorkspaceShellScope scope)
+    private static void ValidateScope(ProcessWorkspaceShellScope scope, ProcessProjectionProjectBinding? projectBinding)
     {
         if (scope.Kind == ProcessWorkspaceScopeKind.Project && scope.ProjectId is null)
         {
@@ -69,17 +69,22 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         {
             throw new ArgumentException("Global canvas command cannot carry a project id.", nameof(scope));
         }
+        if (projectBinding is not null && (scope.Kind != ProcessWorkspaceScopeKind.Project || scope.ProjectId != projectBinding.ProjectId)) {
+            throw new ArgumentException("The canvas project lifetime must match its project scope.", nameof(projectBinding));
+        }
     }
 
     private readonly record struct ProcessDefinitionCanvasStateKey(
         ProcessWorkspaceScopeKind ScopeKind,
         Guid? ProjectId,
-        ProcessDefinitionCatalogItemKey DefinitionKey)
+        ProcessDefinitionCatalogItemKey DefinitionKey,
+        ProcessProjectionProjectBinding? ProjectBinding)
     {
         public static ProcessDefinitionCanvasStateKey From(
             ProcessWorkspaceShellScope scope,
-            ProcessDefinitionCatalogItemKey definitionKey)
-            => new(scope.Kind, scope.ProjectId, definitionKey);
+            ProcessDefinitionCatalogItemKey definitionKey,
+            ProcessProjectionProjectBinding? projectBinding)
+            => new(scope.Kind, scope.ProjectId, definitionKey, projectBinding);
     }
 
     private sealed record ProcessDefinitionCanvasSnapshot(

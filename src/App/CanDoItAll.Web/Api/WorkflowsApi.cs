@@ -254,10 +254,13 @@ internal static class WorkflowsApi
 
         workflows.MapPost("/test-runs", async (
                 WorkflowTestRunRequest request,
+                HttpContext httpContext,
                 IWorkflowTestRunner testRunner,
                 CancellationToken cancellationToken) =>
         {
-            var result = await testRunner.RunAsync(request, cancellationToken);
+            var result = await testRunner.RunAsync(request with {
+                StructureAuthority = await ResolveStructureAuthorityAsync(httpContext, cancellationToken)
+            }, cancellationToken);
             return result.Succeeded
                 ? Results.Ok(result)
                 : Results.BadRequest(result);
@@ -393,14 +396,16 @@ internal static class WorkflowsApi
                     workflowId,
                     new WorkflowVersionId(request.VersionId.Value))
                 : new WorkflowDefinitionSelection.LatestActive(workflowId);
+            var structureAuthority = await ResolveStructureAuthorityAsync(httpContext, cancellationToken);
             var launchResult = await launchService.LaunchAsync(
                 new WorkflowLaunchIntent(
                     selection,
                     WorkflowLaunchMode.Production,
                     new WorkflowLaunchOrigin.Api(
-                        ResolveApiActor(httpContext.User),
+                        structureAuthority.Principal,
                         new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)) {
-                        HistoryCaller = ProviderHistoryRequestContext.Caller(httpContext)
+                        HistoryCaller = ProviderHistoryRequestContext.Caller(httpContext),
+                        StructureAuthority = structureAuthority
                     },
                     request.InputJson ?? "{}",
                     WorkflowLaunchCompletionPolicy.WaitForStopped,
@@ -409,14 +414,23 @@ internal static class WorkflowsApi
                     RequestedBackend = request.RequestedBackend
                 },
                 cancellationToken);
-            var detail = await WorkflowRunReadEndpoints.BuildRunDetailAsync(
-                launchResult.Run,
-                runtimeManager,
-                runStore,
-                cancellationToken);
-            return Results.Ok(WorkflowRunStartApiResponse.From(
-                detail,
-                launchResult.IdempotencyDisposition));
+            try {
+                var detail = await WorkflowRunReadEndpoints.BuildRunDetailAsync(
+                    launchResult.Run, runtimeManager, runStore, cancellationToken);
+                return Results.Ok(WorkflowRunStartApiResponse.From(detail, launchResult.IdempotencyDisposition) with {
+                    Observation = launchResult.Observation
+                });
+            } catch (Exception exception) {
+                httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("WorkflowLaunch")
+                    .LogWarning(exception, "Workflow {RunId} was admitted; API detail observation failed.", launchResult.Run.RunId);
+                return Results.Ok(new WorkflowRunStartApiResponse(WorkflowApiSafeProjection.Map(launchResult.Run), [], [], [], [],
+                    launchResult.IdempotencyDisposition,
+                    launchResult.IdempotencyDisposition != WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun,
+                    launchResult.IdempotencyDisposition == WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun) {
+                    Observation = WorkflowLaunchObservation.RecoveredAfterObserverFailure,
+                    DetailsComplete = false
+                });
+            }
         }
         catch (WorkflowLaunchValidationException exception)
         {
@@ -487,6 +501,21 @@ internal static class WorkflowsApi
         return string.IsNullOrWhiteSpace(subjectId)
             ? new WorkflowLaunchActor(WorkflowLaunchActorKind.Service, "candoitall-api")
             : new WorkflowLaunchActor(WorkflowLaunchActorKind.User, subjectId);
+    }
+
+    private static Task<WorkflowStructureAuthority> ResolveStructureAuthorityAsync(HttpContext context, CancellationToken cancellationToken) {
+        var factory = context.RequestServices.GetRequiredService<IWorkflowStructureAuthorityFactory>();
+        if (context.User.Identity?.IsAuthenticated != true) {
+            return factory.CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.Api, cancellationToken);
+        }
+
+        var actor = ResolveApiActor(context.User);
+        if (actor.Kind != WorkflowLaunchActorKind.User || !long.TryParse(context.User.FindFirst("exp")?.Value,
+                System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var expiresAt)) {
+            throw new InvalidOperationException("The authenticated workflow request must retain its subject and validated token expiry.");
+        }
+
+        return factory.CaptureAuthenticatedOperatorAsync(actor.SubjectId, DateTimeOffset.FromUnixTimeSeconds(expiresAt), cancellationToken);
     }
 
     private static IResult MapCancellationResult(WorkflowRunCancellationResult result)

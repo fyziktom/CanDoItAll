@@ -18,8 +18,10 @@ public sealed class ProviderProfileSecretMutationScope : IAsyncDisposable
 
     public ProviderProfile? Profile { get; }
 
+    internal bool HasMutationScope => mutationScope is not null;
+
     public static async Task<ProviderProfileSecretMutationScope> BeginAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid? providerProfileId,
         Guid? targetSecretRecordId,
         CancellationToken cancellationToken)

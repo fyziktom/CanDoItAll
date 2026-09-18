@@ -32,7 +32,7 @@ public sealed class ProjectPartyAffiliationContextService(IClock clock)
 {
     public async Task<IReadOnlyDictionary<Guid, ProjectPartyAffiliationContext>>
         LoadPartyContextsAsync(
-            AppDbContext dbContext,
+            CrmHrDbContext dbContext,
             IReadOnlyDictionary<Guid, PartyType> partyTypes,
             CancellationToken cancellationToken = default)
     {
@@ -146,7 +146,7 @@ public sealed class ProjectPartyAffiliationContextService(IClock clock)
 
     public async Task<IReadOnlyDictionary<Guid, ProjectPartyAffiliationContext>>
         LoadAssignmentContextsAsync(
-            AppDbContext dbContext,
+            CrmHrDbContext dbContext,
             IReadOnlyCollection<ProjectPartyAffiliationReference> references,
             CancellationToken cancellationToken = default)
     {
@@ -219,7 +219,7 @@ public sealed class ProjectPartyAffiliationContextService(IClock clock)
     }
 
     public async Task<Error?> ValidateAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         Guid? affiliationId,
         DateTimeOffset? startsAtUtc,
@@ -239,7 +239,7 @@ public sealed class ProjectPartyAffiliationContextService(IClock clock)
     }
 
     public async Task<Error?> ValidateAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyCollection<ProjectPartyAffiliationValidation> requests,
         CancellationToken cancellationToken = default)
     {

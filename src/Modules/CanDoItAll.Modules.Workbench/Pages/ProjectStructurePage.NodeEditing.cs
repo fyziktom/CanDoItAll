@@ -251,12 +251,14 @@ public partial class ProjectStructurePage
             return;
         }
 
+        var actionContext = CaptureActionContext(request.ActionId, node);
         await SelectNodeAsync(node.Id);
-        await ExecuteInspectorActionAsync(node, request.ActionId);
+        await ExecuteInspectorActionAsync(node, request.ActionId, actionContext);
     }
 
-    private async Task ExecuteInspectorActionAsync(ProjectStructureNode node, string actionId)
-    {
+    private async Task ExecuteInspectorActionAsync(ProjectStructureNode node, string actionId,
+        ProjectStructureActionContext? capturedContext = null) {
+        var actionContext = capturedContext ?? CaptureActionContext(actionId, node);
         if (await TryHandleFileBrowserActionAsync(actionId, node.Id))
         {
             return;
@@ -265,7 +267,7 @@ public partial class ProjectStructurePage
         switch (actionId)
         {
             case ProjectStructureActionCatalogAdapter.EditActionId:
-                await OpenEditDialogAsync(node);
+                await OpenEditDialogAsync(node, actionContext);
                 break;
             case "mermaid:view":
                 await OpenMermaidViewerAsync(node);
@@ -313,7 +315,7 @@ public partial class ProjectStructurePage
                 await TryHandleCopyActionAsync(actionId, node.Id);
                 break;
             case "summary":
-                await OpenSummaryAsync(node.Id);
+                await OpenSummaryAsync(node.Id, actionContext);
                 break;
             case "add-process":
                 await OpenAddProcessDialogAsync(node);
@@ -354,7 +356,7 @@ public partial class ProjectStructurePage
                 await OpenMoveDescendantsToSubprojectDialogAsync(node);
                 break;
             case "export-image":
-                await ExportMindmapImageAsync();
+                await ExportMindmapImageAsync(node, actionContext);
                 break;
             case "block:change-type":
                 await OpenChangeBlockTypeDialogAsync(node);
@@ -363,16 +365,16 @@ public partial class ProjectStructurePage
                 await OpenNoteConversionDialogAsync(node);
                 break;
             case "transcript:create":
-                await CreateTranscriptFromRecordingAsync(node);
+                await CreateTranscriptFromRecordingAsync(node, actionContext);
                 break;
             case "transcript:summarize":
-                await OpenTranscriptActionAsync(ProjectLlmActionKind.Summarize, node.Id);
+                await OpenTranscriptActionAsync(ProjectLlmActionKind.Summarize, node.Id, actionContext);
                 break;
             case "transcript:find-my-tasks":
-                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindMyTasks, node.Id);
+                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindMyTasks, node.Id, actionContext);
                 break;
             case "transcript:find-others-deliveries":
-                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindOthersDeliveries, node.Id);
+                await OpenTranscriptActionAsync(ProjectLlmActionKind.FindOthersDeliveries, node.Id, actionContext);
                 break;
             case "delete":
                 await DeleteNodeAsync(node.Id);
@@ -412,8 +414,7 @@ public partial class ProjectStructurePage
                ResolveNodeAuthoringRoute(node) is not null;
     }
 
-    private async Task OpenEditDialogAsync(ProjectStructureNode node)
-    {
+    private async Task OpenEditDialogAsync(ProjectStructureNode node, ProjectStructureActionContext? capturedContext = null) {
         if (node.IsSystemManaged)
         {
             await OpenNodeAuthoringSurfaceOrShowFeedbackAsync(node);
@@ -422,7 +423,7 @@ public partial class ProjectStructurePage
 
         if (node.ObjectType == ProjectObjectType.SecretReference)
         {
-            await OpenSecretReferenceEditDialogAsync(node);
+            await OpenSecretReferenceEditDialogAsync(node, capturedContext);
             return;
         }
 

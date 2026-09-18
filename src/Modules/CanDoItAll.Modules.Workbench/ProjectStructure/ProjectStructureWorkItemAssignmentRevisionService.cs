@@ -5,21 +5,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public sealed class ProjectStructureWorkItemAssignmentRevisionService(IClock clock) :
-    IProjectWorkItemAssignmentMutationBridge
-{
+public sealed class ProjectStructureWorkItemAssignmentRevisionService(
+    IClock clock,
+    DbContextOptions<WorkbenchDbContext> contextOptions,
+    CoordinatedDatabaseTransaction coordinatedTransaction,
+    ProjectWriteAdmissionService admissions) : IProjectWorkItemAssignmentMutationBridge {
     public async Task<ProjectWorkItemDirectAssignmentMutationResult>
         StageMutationAsync(
-        AppDbContext dbContext,
         Guid projectId,
         ProjectNodeReference taskNode,
         IReadOnlyCollection<ProjectWorkItemDirectAssignmentState>
             finalAssignments,
         ProjectWorkItemDirectAssignmentRevision?
             expectedCurrentRevision = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null)
     {
-        ArgumentNullException.ThrowIfNull(dbContext);
+        var expected = ProjectAssignmentAdmission.Require(projectId, expectedProjectAdmission);
+        await admissions.RequireForMutationAsync(expected, cancellationToken);
         ArgumentNullException.ThrowIfNull(finalAssignments);
         foreach (var assignment in finalAssignments)
         {
@@ -33,6 +36,8 @@ public sealed class ProjectStructureWorkItemAssignmentRevisionService(IClock clo
             }
         }
 
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new WorkbenchDbContext(options), cancellationToken);
         var workItemRecord = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(
                 item =>
@@ -95,7 +100,7 @@ public sealed class ProjectStructureWorkItemAssignmentRevisionService(IClock clo
             ProjectWorkbenchObjectModeling.ResolveMetadataJson(
             workItemRecord.ObjectType,
             workItemRecord.ObjectSubtype,
-            ProjectObjectMetadataSerializer.Serialize(metadata),
+            ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(workItemRecord.MetadataJson, metadata),
             workItemRecord.MetadataJson,
             workItemRecord.Notes,
             media: null);
@@ -104,6 +109,7 @@ public sealed class ProjectStructureWorkItemAssignmentRevisionService(IClock clo
             dbContext,
             workItemRecord,
             cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return new ProjectWorkItemDirectAssignmentMutationResult(
             ProjectWorkItemDirectAssignmentMutationStatus.Applied,
             new ProjectWorkItemDirectAssignmentRevision(

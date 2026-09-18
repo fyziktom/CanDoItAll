@@ -175,10 +175,11 @@ public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
         WorkflowUsagePostgresDbContextFactory factory,
         PromptsService gallery,
         IWorkflowDefinitionValidator validator)
-        => new(factory, validator, gallery, gallery);
+        => new(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory), validator, gallery, gallery);
 
-    private static PromptsService CreateGallery(WorkflowUsagePostgresDbContextFactory factory)
-        => new(
+    private static PromptsService CreateGallery(WorkflowUsagePostgresDbContextFactory canonicalFactory) {
+        var factory = PromptsPersistenceTestFactory.FromCanonical(canonicalFactory);
+        return new(
             factory,
             new SystemClock(),
             new NullActivityStream(),
@@ -186,6 +187,7 @@ public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
             new PromptGalleryProjectionCoordinator(factory, new DisabledPromptGalleryProjectionDriver()),
             new PromptGalleryCompatibilityEvaluator(),
             NullLogger<PromptsService>.Instance);
+    }
 
     private static WorkflowDefinitionSaveRequest CreateSaveRequest(
         WorkflowId? workflowId = null,

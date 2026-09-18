@@ -6,9 +6,19 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderPublicationStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock)
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    IClock clock,
+    CoordinatedDatabaseTransaction transactions)
 {
+    public async Task<SharedProviderPublicationWriteResult?> FindAsync(
+        Guid providerProfileId, CancellationToken cancellationToken = default) {
+        await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var publication = await db.Set<ProviderSharePublication>().AsNoTracking()
+            .SingleOrDefaultAsync(item => item.ProviderProfileId == providerProfileId, cancellationToken);
+        return publication is null ? null
+            : new(publication.Id, publication.PublicId, publication.IsPublished, publication.ConcurrencyToken);
+    }
+
     public async Task<SharedProviderPublicationWriteResult> GetOrCreateAsync(
         Guid providerProfileId,
         CancellationToken cancellationToken = default)
@@ -23,6 +33,7 @@ public sealed class SharedProviderPublicationStore(
             dbContext,
             $"shared-provider-publication:{providerProfileId:D}",
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         if (!await dbContext.Set<ProviderProfile>()
             .AsNoTracking()
             .AnyAsync(profile => profile.Id == providerProfileId, cancellationToken))
@@ -45,10 +56,12 @@ public sealed class SharedProviderPublicationStore(
         {
             await dbContext.SaveChangesAsync(cancellationToken);
             await mutationScope.CommitAsync(cancellationToken);
+            coordination.Dispose();
         }
         catch (DbUpdateException exception) when (
             SharedProviderPersistenceConflictClassifier.IsPublicationProviderIdentityConflict(exception))
         {
+            coordination.Dispose();
             await mutationScope.DisposeAsync();
             await using var verification = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             var committed = await verification.Set<ProviderSharePublication>()
@@ -81,7 +94,7 @@ public sealed class SharedProviderPublicationStore(
             publication.ConcurrencyToken);
     }
 
-    private static SharedProviderPublicationId CreatePublicId(Guid providerProfileId)
+    internal static SharedProviderPublicationId CreatePublicId(Guid providerProfileId)
     {
         Guid value;
         do

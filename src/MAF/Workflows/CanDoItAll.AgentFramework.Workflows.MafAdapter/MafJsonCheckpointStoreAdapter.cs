@@ -96,7 +96,7 @@ internal static class MafWorkflowCheckpointProtocol
 
     public static WorkflowBackendCheckpointFormatVersion FormatVersion { get; } = new(1);
 
-    public static WorkflowCompilerContractVersion CompilerContractVersion { get; } = new(1);
+    public static WorkflowCompilerContractVersion CompilerContractVersion => WorkflowProviderDisclosureProtocol.Current;
 
     public static JsonSerializerOptions JsonOptions { get; } = CreateJsonOptions();
 

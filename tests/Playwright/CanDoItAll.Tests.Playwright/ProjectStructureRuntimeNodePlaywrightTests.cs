@@ -13,7 +13,8 @@ public sealed partial class AppSmokeTests
     [Trait("Surface", "SharedCanvas")]
     public async Task Runtime_node_actions_show_direct_optional_and_dependency_missing_states()
     {
-        var artifactsDirectory = Path.Combine(GetRepoRoot(), "output", "playwright");
+        var artifactsDirectory = Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_EVIDENCE_ROOT")
+            ?? Path.Combine(GetRepoRoot(), "output", "playwright");
         Directory.CreateDirectory(artifactsDirectory);
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {

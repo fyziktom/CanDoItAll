@@ -72,11 +72,19 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
         var currentProfile = databaseProfileRuntimeAccessor
             .ResolveCurrentProfile()
             .Profile;
+        if (request.Revalidation is { } captured &&
+                (captured.Source.SourceKind != request.SourceKind || captured.Source.SourceId != request.SourceId ||
+                captured.Authority.AgentId != request.AgentId || captured.Authority.DatabaseProfileId != currentProfile.Id ||
+                captured.Authority.DatabaseProfileGeneration != request.ExpectedDatabaseProfileGeneration ||
+                captured.Authority.WorkspaceScope != request.ObservedWorkspaceScope ||
+                captured.Authority.SourceProjectLifetime != request.ObservedProjectLifetime || request.UiAccessHint is not null)) {
+            throw new AgentExecutionAuthorityMismatchException("The captured execution source does not match this authority revalidation.");
+        }
         var agent = await ResolveActiveAgentAsync(request.AgentId, cancellationToken)
             .ConfigureAwait(false);
         EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
 
-        var (workspaceScope, readAllowed, mutationAllowed, policyVersion) = await ResolveSourceAuthorityAsync(
+        var decision = await ResolveSourceAuthorityAsync(
             request,
             agent,
             currentProfile.Id,
@@ -84,25 +92,34 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
             .ConfigureAwait(false);
         EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
 
+        if (request.Revalidation is { } original &&
+                (decision.WorkspaceScope != original.Authority.WorkspaceScope ||
+                decision.SourceProjectLifetime != original.Authority.SourceProjectLifetime)) {
+            throw new AgentExecutionAuthorityMismatchException("Current source authority does not match the captured workspace scope and project lifetime.");
+        }
+
         return new AgentExecutionAuthorityRecord(
             AgentExecutionAuthorityId.Create(),
             agent.Id,
             currentProfile.Id,
             request.ExpectedDatabaseProfileGeneration,
-            workspaceScope,
-            readAllowed,
-            mutationAllowed,
-            policyVersion,
+            decision.WorkspaceScope,
+            decision.ReadAllowed,
+            decision.MutationAllowed,
+            decision.PolicyVersion,
             ComputePolicyFingerprint(
                 agent.Id,
                 request.SourceKind,
                 request.SourceId,
-                workspaceScope,
+                decision.WorkspaceScope,
                 request.ExpectedDatabaseProfileGeneration,
-                readAllowed,
-                mutationAllowed,
-                policyVersion),
-            timeProvider.GetUtcNow());
+                decision.ReadAllowed,
+                decision.MutationAllowed,
+                decision.PolicyVersion,
+                decision.SourceProjectLifetime),
+            timeProvider.GetUtcNow(),
+            schemaVersion: request.Revalidation?.Authority.EffectiveSchemaVersion ?? AgentExecutionAuthorityRecord.CurrentSchemaVersion,
+            sourceProjectLifetime: decision.SourceProjectLifetime);
     }
 
     private async Task<AgentDefinition> ResolveActiveAgentAsync(
@@ -128,7 +145,7 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
         return agent;
     }
 
-    private async ValueTask<(WorkspaceScopeDescriptor Scope, bool ReadAllowed, bool MutationAllowed, string PolicyVersion)> ResolveSourceAuthorityAsync(
+    private async ValueTask<AgentExecutionSourceAuthorityDecision> ResolveSourceAuthorityAsync(
         AgentExecutionAuthorityResolutionRequest request,
         AgentDefinition agent,
         Guid currentProfileId,
@@ -152,27 +169,31 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
                         request.SourceKind,
                         request.SourceId,
                         request.ObservedWorkspaceScope,
-                        currentProfileId),
+                        currentProfileId) {
+                        Revalidation = request.Revalidation,
+                        ObservedProjectLifetime = request.ObservedProjectLifetime
+                    },
                     cancellationToken)
                 .ConfigureAwait(false);
             // Fence the database profile generation again after the provider's
             // asynchronous lookup so a mid-resolution profile switch cannot
             // smuggle a stale decision into admission.
             EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
-            return (decision.WorkspaceScope, decision.ReadAllowed, decision.MutationAllowed, decision.PolicyVersion);
+            return decision;
         }
 
         // Unknown source kinds fail closed. A published workspace claim from a
         // source without a canonical rule is denied outright — it can never be
         // adopted or silently downgraded; without a claim the turn receives a
         // bounded read-only sandbox.
-        if (request.ObservedWorkspaceScope is { } observedScope)
+        if (request.ObservedWorkspaceScope is { } observedScope &&
+                !(request.Revalidation is { } captured && captured.Authority.WorkspaceScope == WorkspaceScopeDescriptor.Sandbox))
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"The source kind '{request.SourceKind.Value}' has no canonical authority rule for the published workspace scope '{observedScope.DisplayName}'.");
         }
 
-        return (WorkspaceScopeDescriptor.Sandbox, true, false, FailClosedSandboxPolicyVersion);
+        return new(WorkspaceScopeDescriptor.Sandbox, true, false, FailClosedSandboxPolicyVersion);
     }
 
     private void EnsureCurrentGeneration(DatabaseProfileGeneration expectedGeneration)
@@ -192,7 +213,8 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
         DatabaseProfileGeneration generation,
         bool readAllowed,
         bool mutationAllowed,
-        string policyVersion)
+        string policyVersion,
+        AgentProjectStructureLifetime? sourceProjectLifetime)
     {
         var payload = string.Join(
             '',
@@ -205,6 +227,10 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
             readAllowed ? "read" : "no-read",
             mutationAllowed ? "mutate" : "no-mutate",
             policyVersion);
+        if (sourceProjectLifetime is { } lifetime) {
+            payload = string.Join('\u001f', payload, lifetime.DatabaseProfileId.ToString("N"),
+                lifetime.ProjectId.ToString("N"), lifetime.LifetimeId.ToString("N"));
+        }
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)))
             .ToLowerInvariant();
     }

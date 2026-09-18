@@ -46,7 +46,7 @@ public sealed partial class AppSmokeTests
             $"Expected the collapse control to stay on the outgoing connector side of the node, but collapse x={collapseCenter.X} and node center x={rootCenter.X}.");
         Assert.InRange(collapseCenter.Y - rootCenter.Y, -36, 36);
 
-        await OpenNodeQuickActionsAsync(page, projectRootSelector);
+        await DoubleClickCanvasNodeAsync(page, SelectorForNodeId(childNodeId));
         var quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
         await quickActionDialog.WaitForAsync();
         await page.GetByTestId("project-structure-quick-action-edit").WaitForAsync();

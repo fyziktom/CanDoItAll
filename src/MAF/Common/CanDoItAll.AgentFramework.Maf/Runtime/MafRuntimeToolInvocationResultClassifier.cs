@@ -20,8 +20,13 @@ internal static class MafRuntimeToolInvocationResultClassifier
     public static MafToolInvocationResultAssessment Assess(
         string toolName,
         ToolInvocationClassification classification,
-        object? result)
+        object? result,
+        AgentToolPreDispatchFailure? preDispatchFailure = null)
     {
+        if (preDispatchFailure is not null) {
+            return new(AgentToolInvocationOutcome.Failed, AgentToolEffectState.NotCommitted,
+                preDispatchFailure.FailureCode, preDispatchFailure.SafeMessage, preDispatchFailure.CanRetryWithCorrectedInput, null);
+        }
         var directReceiptExecutionRunId = ResolveDurableReceiptExecutionRunId(toolName, result);
         if (result is IAgentToolInvocationResultEvidence evidence)
         {

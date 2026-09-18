@@ -11,7 +11,7 @@ public static class StandardNetworkWorkflowExecutorServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddWorkflowExecutorContribution<HttpFetchWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.HttpFetch, executorLifetime);
+        services.AddWorkflowExecutorContribution<HttpFetchWorkflowExecutor>(HttpFetchWorkflowExecutor.CredentialAwareDescriptor, executorLifetime);
 
         return services;
     }

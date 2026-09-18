@@ -6,9 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed class ProcessesProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+internal sealed class ProcessesProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
+    : IProjectTransferTargetStateParticipant {
     private static readonly string ProjectIdJsonPropertyToken =
         $"\"{ProcessRuntimeLaunchVariables.ProjectId}\"";
     private static readonly string ProjectNodeIdJsonPropertyToken =
@@ -22,19 +21,28 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant
         typeof(ProcessRunRecordEntity),
         typeof(ProcessInstancePlanEntity),
         typeof(ProcessRuntimeStateEntity),
-        typeof(ProcessRuntimeStepAssignmentEntity)
+        typeof(ProcessRuntimeStepAssignmentEntity),
+        typeof(ProcessPreparedLaunchEntity)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken)
-    {
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<ProcessPersistenceDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
+
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        ProcessPersistenceDbContext dbContext, CancellationToken cancellationToken) {
         var residues = new List<ProjectTransferTargetStateResidue>();
+        await foreach (var launch in dbContext.Set<ProcessPreparedLaunchEntity>().AsNoTracking()
+                .AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+            if (launch.ReferencesProject()) {
+                residues.Add(new("retained process prepared launches linked to projects"));
+                break;
+            }
+        }
         if (await dbContext.Set<ProcessRunRecordEntity>()
                 .AsNoTracking()
-                .AnyAsync(item => item.ProjectId.HasValue, cancellationToken))
-        {
+                .AnyAsync(item => item.ProjectId.HasValue, cancellationToken)) {
             residues.Add(new("process runs linked to projects"));
         }
 
@@ -45,8 +53,7 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant
                         item.Status != ProcessRuntimeStatus.Completed &&
                         item.Status != ProcessRuntimeStatus.Failed &&
                         item.Status != ProcessRuntimeStatus.Cancelled,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("nonterminal process runtime state"));
         }
 
@@ -60,14 +67,11 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant
             .ToListAsync(cancellationToken);
         var hasProjectReference = false;
         var hasUnverifiableProjectReference = false;
-        foreach (var launchVariablesJson in launchVariables)
-        {
-            try
-            {
+        foreach (var launchVariablesJson in launchVariables) {
+            try {
                 var variables = JsonSerializer.Deserialize<Dictionary<string, string>>(
                     launchVariablesJson);
-                if (variables is null)
-                {
+                if (variables is null) {
                     hasUnverifiableProjectReference = true;
                     continue;
                 }
@@ -76,8 +80,7 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant
                     ProcessRuntimeLaunchVariables.ProjectId);
                 var hasProjectNodeId = variables.ContainsKey(
                     ProcessRuntimeLaunchVariables.ProjectNodeId);
-                if (!hasProjectId && !hasProjectNodeId)
-                {
+                if (!hasProjectId && !hasProjectNodeId) {
                     continue;
                 }
 
@@ -89,34 +92,38 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant
                     ProcessRuntimeLaunchVariables.TryReadProjectNodeId(
                         variables,
                         out _);
-                if (hasValidProjectId || hasValidProjectNodeId)
-                {
+                if (hasValidProjectId || hasValidProjectNodeId) {
                     hasProjectReference = true;
                 }
 
                 if ((hasProjectId && !hasValidProjectId) ||
-                    (hasProjectNodeId && !hasValidProjectNodeId))
-                {
+                    (hasProjectNodeId && !hasValidProjectNodeId)) {
                     hasUnverifiableProjectReference = true;
                 }
-            }
-            catch (JsonException)
-            {
+            } catch (JsonException) {
                 hasUnverifiableProjectReference = true;
             }
         }
 
-        if (hasProjectReference)
-        {
+        if (hasProjectReference) {
             residues.Add(new("process step assignments linked to projects"));
         }
 
-        if (hasUnverifiableProjectReference)
-        {
+        if (hasUnverifiableProjectReference) {
             residues.Add(new(
                 "process step assignments with malformed project launch state"));
         }
 
+        if (await dbContext.Set<ProcessRuntimeStateEntity>().AsNoTracking().AnyAsync(runtime =>
+                runtime.LaunchAdmissionId.HasValue && !dbContext.Set<ProcessPreparedLaunchEntity>().Any(launch =>
+                    launch.Id == runtime.LaunchAdmissionId.Value && launch.RunId == runtime.RunId), cancellationToken)) {
+            residues.Add(new("process runtime state with missing or mismatched launch admission evidence"));
+        }
+        if (await dbContext.Set<ProcessRuntimeStateEntity>().AsNoTracking().AnyAsync(item =>
+                item.ProjectAdmissionDatabaseProfileId.HasValue || item.ProjectAdmissionProjectId.HasValue ||
+                item.ProjectAdmissionLifetimeId.HasValue, cancellationToken)) {
+            residues.Add(new("retained process project admissions"));
+        }
         return residues;
     }
 }

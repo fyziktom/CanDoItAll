@@ -11,8 +11,14 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 public sealed record CapabilityDetailsDialogResult(Guid CapabilityId);
 
-public partial class CapabilityDetailsDialog
+public partial class CapabilityDetailsDialog : IDisposable
 {
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenRegistration ownerRegistration;
+    private bool disposed;
+    private bool IsCurrent => !disposed && !lifetime.IsCancellationRequested;
+
     [Parameter]
     public Guid CapabilityId { get; set; }
 
@@ -41,6 +47,7 @@ public partial class CapabilityDetailsDialog
     private string rawConfigurationJson = string.Empty;
     private int selectedTabIndex;
     private bool isLoading = true;
+    private bool loadFailed;
     private bool isBusy;
 
     private bool IsKindLocked => editorModel.IsBuiltIn;
@@ -60,26 +67,38 @@ public partial class CapabilityDetailsDialog
 
     protected override async Task OnInitializedAsync()
     {
+        ownerRegistration = OwnerCancellationToken.Register(lifetime.Cancel);
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         isLoading = true;
+        loadFailed = false;
         try
         {
-            editorModel = await WorkspaceService.GetCapabilityEditorAsync(CapabilityId);
+            var loaded = await WorkspaceService.GetCapabilityEditorAsync(CapabilityId, request.Token);
+            if (!IsCurrent) {
+                return;
+            }
+            editorModel = loaded;
             capabilityTags = NormalizeTags(editorModel.Tags);
             rawConfigurationJson = editorModel.ConfigurationJson;
             RefreshTypedConfigurationState();
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrent) {
+        }
+        catch (Exception)
         {
-            NotificationService.Error("Capability details failed to load", exception.Message);
+            loadFailed = true;
+            NotificationService.Error("Capability details failed to load", "The requested capability could not be loaded. Retry or close the editor.");
         }
         finally
         {
-            isLoading = false;
+            if (IsCurrent) {
+                isLoading = false;
+            }
         }
     }
 
@@ -114,7 +133,7 @@ public partial class CapabilityDetailsDialog
 
     private async Task SaveAsync()
     {
-        if (isBusy)
+        if (!IsCurrent || isBusy || isLoading || loadFailed)
         {
             return;
         }
@@ -129,20 +148,29 @@ public partial class CapabilityDetailsDialog
                 return;
             }
 
-            var capabilityId = await WorkspaceService.SaveCapabilityAsync(editorModel);
+            var submission = JsonSerializer.Deserialize<CapabilityEditorModel>(JsonSerializer.SerializeToUtf8Bytes(editorModel))!;
+            var capabilityId = await WorkspaceService.SaveCapabilityAsync(submission, CancellationToken.None);
+            if (!IsCurrent) {
+                return;
+            }
+            editorModel.Id = capabilityId;
             NotificationService.Success("Capability saved", "Capability metadata was saved.");
             if (DialogReference is not null)
             {
                 await DialogReference.CloseAsync(new CapabilityDetailsDialogResult(capabilityId));
             }
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrent) {
+        }
+        catch (Exception)
         {
-            NotificationService.Error("Capability save failed", exception.Message);
+            NotificationService.Error("Capability save failed", "The save result could not be confirmed. Check the capability catalog before trying again.");
         }
         finally
         {
-            isBusy = false;
+            if (IsCurrent) {
+                isBusy = false;
+            }
         }
     }
 
@@ -207,16 +235,19 @@ public partial class CapabilityDetailsDialog
         }
     }
 
-    private Task CancelAsync()
-        => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    private Task CancelAsync() {
+        Dispose();
+        return DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    }
 
     private async Task TestSetupAsync()
     {
-        if (isBusy || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
+        if (!IsCurrent || isBusy || isLoading || loadFailed || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
         {
             return;
         }
 
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         isBusy = true;
         try
         {
@@ -229,29 +260,41 @@ public partial class CapabilityDetailsDialog
 
             if (editorModel.Kind == CapabilityKind.Tool)
             {
-                toolSetupResult = await CapabilitySetupFlowService.TestToolSetupAsync(new CapabilityToolSetupTestRequest
+                var result = await CapabilitySetupFlowService.TestToolSetupAsync(new CapabilityToolSetupTestRequest
                 {
                     Capability = editorModel,
                     JsonInput = string.IsNullOrWhiteSpace(toolState.TestInputJson) ? "{}" : toolState.TestInputJson
-                });
+                }, request.Token);
+                if (!IsCurrent) {
+                    return;
+                }
+                toolSetupResult = result;
                 NotifySetupResult(toolSetupResult.IsSuccess, "Tool setup test");
             }
             else
             {
-                mcpSetupResult = await CapabilitySetupFlowService.TestMcpSetupAsync(new CapabilityMcpSetupTestRequest
+                var result = await CapabilitySetupFlowService.TestMcpSetupAsync(new CapabilityMcpSetupTestRequest
                 {
                     Capability = editorModel
-                });
+                }, request.Token);
+                if (!IsCurrent) {
+                    return;
+                }
+                mcpSetupResult = result;
                 NotifySetupResult(mcpSetupResult.IsSuccess, "MCP setup test");
             }
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrent) {
+        }
+        catch (Exception)
         {
-            NotificationService.Error("Setup test failed", exception.Message);
+            NotificationService.Error("Setup test failed", "The setup test could not be completed. Review the configuration before trying again.");
         }
         finally
         {
-            isBusy = false;
+            if (IsCurrent) {
+                isBusy = false;
+            }
         }
     }
 
@@ -341,5 +384,14 @@ public partial class CapabilityDetailsDialog
             CapabilityKind.AiContext => "AI context",
             _ => kind.ToString()
         };
+    }
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        ownerRegistration.Dispose();
+        lifetime.Cancel();
+        lifetime.Dispose();
     }
 }

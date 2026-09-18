@@ -128,8 +128,16 @@ public sealed record StorageObjectReference(
     string MetadataJson = "{}")
 {
     public const int CurrentFormatVersion = 2;
+    public const int StablePlacementFormatVersion = 3;
+    public const int MaximumSupportedFormatVersion = StablePlacementFormatVersion;
 
     public int FormatVersion { get; init; } = CurrentFormatVersion;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? PlacementIntentId { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public StorageReferenceImportHistory? ImportedHistory { get; init; }
 }
 
 public sealed record StorageAccessDescriptor(
@@ -222,8 +230,8 @@ public sealed record StorageTransferManifest(
     Guid? SourceStorageId,
     Guid? TargetStorageId,
     IReadOnlyList<StorageTransferItem> Items,
-    StorageCatalogRecord? SourceStorage = null,
-    StorageCatalogRecord? TargetStorage = null,
+    StorageDriverInput? SourceStorage = null,
+    StorageDriverInput? TargetStorage = null,
     StorageTransferOptions? Options = null);
 
 public sealed record StorageTransferItemResult(

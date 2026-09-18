@@ -39,7 +39,7 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
             detail.ToolReceipts,
             item => string.Equals(
                 item.ToolName,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 StringComparison.Ordinal));
 
         Assert.Equal(HttpStatusCode.OK, observation.StatusCode);
@@ -105,7 +105,7 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
         Assert.Equal(firstDetail.Run.ChatSessionId, secondDetail.Run.ChatSessionId);
         Assert.Equal(ExecutionState.Completed, secondDetail.Run.State);
         Assert.Contains(
-            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate,
             evidence,
             StringComparison.Ordinal);
         Assert.Contains("InvalidToolArguments", evidence, StringComparison.Ordinal);
@@ -141,7 +141,7 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
         return detail.ToolReceipts
             .Where(item => string.Equals(
                 item.ToolName,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 StringComparison.Ordinal))
             .OrderBy(item => item.StartedAtUtc)
             .ToArray();
@@ -165,6 +165,8 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
         {
             var services = serviceScope.ServiceProvider;
             var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+            var admission = Assert.IsType<ProjectWriteAdmission>(
+                await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
             var primaryParentNodeId = $"project:{projectId:D}";
             var secondaryParent = await services
                 .GetRequiredService<ProjectWorkbenchService>()
@@ -197,7 +199,8 @@ public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
                     ],
                     AgentChatContextScopeAccessMode.AllowListed,
                     AgentChatContextAccessState.Ready,
-                    completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun));
+                    completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+                    observedProjectLifetime: new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId)));
             return new IntegrityFixture(
                 host,
                 contextLease,
@@ -390,7 +393,7 @@ internal sealed class IntegrityScenarioMafProviderAgentFactory(
         bool frameworkManagedHistory,
         bool allowBackgroundResponses)
     {
-        return chatClient.AsAIAgent(options: options);
+        return new ChatClientAgent(new MafToolAdmissionChatClient(chatClient), options);
     }
 }
 
@@ -557,7 +560,7 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
                 [
                     new FunctionCallContent(
                         callId,
-                        AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                        ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                         arguments)
                 ]));
     }
@@ -586,7 +589,7 @@ internal sealed class IntegrityScenarioChatClient : IChatClient
     {
         if (options?.Tools?.Any(tool => string.Equals(
                 tool.Name,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 StringComparison.Ordinal)) != true)
         {
             throw new InvalidOperationException(

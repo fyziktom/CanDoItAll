@@ -1,0 +1,117 @@
+<HeadContent><link rel="stylesheet" href="_content/CanDoItAll.AgentFramework.Workflows.UI/workflows.css" /></HeadContent>
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="AgentFramework"
+                    Title="Workflows"
+                    Description="Build, validate, test, and observe workflow executions as a peer option beside technical agents."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="definitions"
+                             Value="@Presentation.DefinitionCount"
+                             TooltipText="Saved workflow definitions in the workflow catalog."
+                             Tone="info" />
+                <CompactStat Label="LLM components"
+                             Value="@Presentation.ComponentCount"
+                             TooltipText="Prepared LLM Call Components available to workflow nodes."
+                             Tone="success" />
+                <CompactStat Label="runs"
+                             Value="@Presentation.RunCount"
+                             TooltipText="Paged workflow runs for the selected workflow history."
+                             Tone="accent" />
+                <CompactStat Label="pending input"
+                             Value="@Presentation.PendingCount"
+                             TooltipText="Human-in-loop or approval requests waiting for a response."
+                             Tone="warning" />
+                <CompactStat Label="backend"
+                             Value="@Presentation.Backend"
+                             TooltipText="Workflow setting used when a run does not request a backend explicitly."
+                             Tone="info" />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh"
+                                        TooltipText="Refresh workflow definitions, runs, and settings."
+                                        Click="RefreshAsync"
+                                        Disabled="@Presentation.IsBusy"
+                                        IsBusy="@Presentation.IsBusy"
+                                        data-testid="workflows-refresh" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="Create starter"
+                                        TooltipText="Create the starter workflow definition."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateStarterAsync"
+                                        Disabled="@Presentation.IsBusy"
+                                        data-testid="workflows-create-starter" />
+                @CuratorAction
+                <PageHeaderActionButton Icon="support_agent"
+                                        Label="Open agents"
+                                        TooltipText="Open the technical agents workspace."
+                                        Click="OpenAgentsAsync"
+                                        data-testid="workflows-open-agents" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+    @if (!string.IsNullOrWhiteSpace(Presentation.ErrorMessage)) {
+        <SurfaceCard Soft="true" data-testid="workflows-error">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
+            <h2 class="workflows-card-title">Workflow operation failed</h2>
+            <p class="workflows-muted">@Presentation.ErrorMessage</p>
+        </SurfaceCard>
+    }
+    @if (Presentation.IsLoading) {
+        <SurfaceCard data-testid="workflows-loading">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+            <h2 class="workflows-card-title">Refreshing workflow catalog</h2>
+            <p class="workflows-muted">Loading definitions and settings.</p>
+        </SurfaceCard>
+    } else {
+        <Tabs SelectedIndex="@((int)Presentation.ActiveTab)" SelectedIndexChanged="ChangeTabAsync"
+              RenderMode="TabRenderMode.Server" Variant="TabsVariant.WorkspacePrimary" OverflowMode="TabsOverflowMode.Wrap"
+              AriaLabel="Workflow workspace tabs" data-testid="workflows-tabs">
+            <TabsItem Text="Dashboard" Icon="dashboard" data-testid="workflows-tab-dashboard">@Dashboard</TabsItem>
+            <TabsItem Text="Workflows" Icon="list_alt" BadgeText="@Presentation.DefinitionCount" data-testid="workflows-tab-workflows">
+                <WorkflowCatalogSurface Presentation="@Catalog" Intent="@Intent" />
+            </TabsItem>
+            <TabsItem Text="Editor" Icon="edit_square" data-testid="workflows-tab-editor">
+                @if (Presentation.EditorLoading) {
+                    <SurfaceCard data-testid="workflows-editor-loading">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Editor" />
+                        <h2 class="workflows-card-title">Loading workflow definition</h2>
+                        <p class="workflows-muted">@Presentation.EditorTitle</p>
+                    </SurfaceCard>
+                } else if (Presentation.EditorUnavailable) {
+                    <SurfaceCard data-testid="workflows-editor-unavailable">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Editor" />
+                        <h2 class="workflows-card-title">Workflow definition unavailable</h2>
+                        <p class="workflows-muted">@Presentation.EditorTitle</p>
+                    </SurfaceCard>
+                } else {
+                    @Editor
+                }
+            </TabsItem>
+            <TabsItem Text="History" Icon="history" BadgeText="@Presentation.RunCount" data-testid="workflows-tab-history">
+                <WorkflowHistorySurface Presentation="@History" Intent="@Intent" />
+            </TabsItem>
+            <TabsItem Text="Analytics" Icon="query_stats" data-testid="workflows-tab-analytics">@Analytics</TabsItem>
+        </Tabs>
+        @Overlays
+    }
+</ChildContent>
+</PageScaffold>
+@code {
+    [Parameter, EditorRequired] public WorkflowShellPresentation Presentation { get; set; } = new();
+    [Parameter, EditorRequired] public WorkflowCatalogPresentation Catalog { get; set; } = new();
+    [Parameter, EditorRequired] public WorkflowHistoryPresentation History { get; set; } = new();
+    [Parameter] public EventCallback<WorkflowIntent> Intent { get; set; }
+    [Parameter] public RenderFragment? CuratorAction { get; set; }
+    [Parameter] public RenderFragment? Dashboard { get; set; }
+    [Parameter] public RenderFragment? Editor { get; set; }
+    [Parameter] public RenderFragment? Analytics { get; set; }
+    [Parameter] public RenderFragment? Overlays { get; set; }
+    private Task RefreshAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.Refresh));
+    private Task CreateStarterAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.CreateStarter));
+    private Task OpenAgentsAsync() => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.OpenAgents));
+    private Task ChangeTabAsync(int index) => Intent.InvokeAsync(new(Presentation.Revision, WorkflowAction.ChangeTab, Tab: (WorkflowTab)index));
+}

@@ -62,7 +62,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
         maximumDuration: TimeSpan.FromMinutes(2));
 
     public Task<StorageBrowsePage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -180,7 +180,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
     }
 
     public Task<StorageBrowseEntry> StatAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseStatRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -202,7 +202,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
         return Task.FromResult(FileSystemStorageBrowseEntryMapper.CreateEntry(request.Container, info, request.Metadata));
     }
 
-    private static void ValidateStorage(StorageCatalogRecord storage)
+    private static void ValidateStorage(StorageDriverInput storage)
     {
         if (storage.ProviderKind != StorageProviderKind.FileSystem)
         {
@@ -289,7 +289,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
     }
 
     private int ResolveOffset(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         long directoryVersion)
     {
@@ -324,7 +324,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
     }
 
     private StorageBrowseCursor CreateCursor(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         int offset,
         long directoryVersion)
@@ -370,7 +370,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
         hash.AppendData(Encoding.UTF8.GetBytes(value));
     }
 
-    private void LogCompleted(StorageCatalogRecord storage, StorageBrowsePage page)
+    private void LogCompleted(StorageDriverInput storage, StorageBrowsePage page)
     {
         _logger.LogInformation(
             "Filesystem browse completed for provider {ProviderKind}, storage {StorageId}, returned {ReturnedItems}, inspected {InspectedItems}, metadata {MetadataProbes}, retained {RetainedStateBytes}, duration {DurationMs}, completeness {Completeness}.",

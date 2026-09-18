@@ -238,25 +238,25 @@ public sealed class ProjectDeletionSharedStorageConcurrencyIntegrationTests
             => inner.SupportedCapabilities;
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => inner.TestConnectionAsync(storage, secretValue, cancellationToken);
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => inner.SaveAsync(storage, request, cancellationToken);
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => inner.OpenReadAsync(storage, reference, cancellationToken);
 
         public async Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
         {

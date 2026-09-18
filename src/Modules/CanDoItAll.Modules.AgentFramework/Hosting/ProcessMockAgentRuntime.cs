@@ -19,7 +19,8 @@ namespace CanDoItAll.Modules.AgentFramework.Hosting;
 internal sealed partial class ProcessMockAgentRuntime(
     IWorkspaceFileService fileService,
     string workspaceRoot,
-    IOptions<ProcessMockAgentOptions> options)
+    IOptions<ProcessMockAgentOptions> options,
+    AgentToolPolicyCatalog toolPolicies)
 {
     private const string WorkspaceStatPathToolName = "workspace_stat_path";
     private const string WorkspaceReadFileToolName = "workspace_read_file";

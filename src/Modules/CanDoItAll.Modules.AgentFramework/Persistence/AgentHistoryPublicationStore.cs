@@ -8,7 +8,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-public sealed class AgentHistoryPublicationStore(IDbContextFactory<AppDbContext> factory) {
+public sealed class AgentHistoryPublicationStore(
+    IDbContextFactory<AgentHistoryDbContext> factory,
+    ProjectIdentityQueryService projects,
+    HistoryPartitionStore partitions,
+    HistoryProjectionWriter projection,
+    CoordinatedDatabaseTransaction transactions) {
     public async Task PublishAsync(HistoryPartition partition, WorkspaceScopeDescriptor scope,
         IReadOnlyList<FileHistoryPublication> publications, CancellationToken cancellationToken) {
         if (publications.Count is < 1 or > 1000) {
@@ -16,7 +21,8 @@ public sealed class AgentHistoryPublicationStore(IDbContextFactory<AppDbContext>
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
+        using var coordination = transactions.Enter(db);
+        await partitions.RequireForWriteAsync(partition, cancellationToken);
         var ids = publications.Select(item => item.EvidenceId).ToArray();
         if (ids.Distinct().Count() != ids.Length) {
             throw new InvalidDataException("A file publication batch contains duplicate source identities.");
@@ -25,7 +31,7 @@ public sealed class AgentHistoryPublicationStore(IDbContextFactory<AppDbContext>
             .Where(row => row.PartitionId == partition.StorageLineageId && ids.Contains(row.EvidenceId))
             .ToDictionaryAsync(row => row.EvidenceId, cancellationToken);
         var projectId = scope.Kind == WorkspaceScopeKind.Project ? Guid.Parse(scope.Key) : (Guid?)null;
-        var deletedProject = projectId is { } project && !await db.Set<Project>().AnyAsync(row => row.Id == project, cancellationToken);
+        var deletedProject = projectId is { } project && !await projects.ExistsForMutationAsync(project, cancellationToken);
         foreach (var publication in publications) {
             var mutation = publication.Mutation;
             if (mutation.Source.Kind != HistorySourceKind.AgentConversation || mutation.Source.Partition != partition ||
@@ -51,7 +57,7 @@ public sealed class AgentHistoryPublicationStore(IDbContextFactory<AppDbContext>
             if (deletedProject) {
                 mutation = Delete(mutation.Source, checked(Math.Max(locator.SourceVersion, mutation.Version.Value) + 1));
             }
-            await HistoryProjectionWriter.StageAsync(db, mutation, cancellationToken);
+            await projection.StageAsync(mutation, cancellationToken);
             locator.SourceVersion = mutation.Version.Value;
             locator.IsDeleted = mutation.Kind == HistorySourceMutationKind.Delete;
         }
@@ -65,16 +71,24 @@ public sealed class AgentHistoryPublicationStore(IDbContextFactory<AppDbContext>
         }
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await HistoryPartitionStore.RequireAsync(db, partition, cancellationToken);
-        var locators = await db.Set<AgentHistoryLocator>().Where(row =>
-                row.PartitionId == partition.StorageLineageId && row.ProjectId != null && !row.IsDeleted &&
-                !db.Set<Project>().Any(project => project.Id == row.ProjectId))
-            .OrderBy(row => row.EvidenceId).Take(maximumItems).ToArrayAsync(cancellationToken);
+        using var coordination = transactions.Enter(db);
+        await partitions.RequireForWriteAsync(partition, cancellationToken);
+        var locators = await db.Set<AgentHistoryLocator>().FromSqlInterpolated($"""
+            SELECT locator.*
+            FROM "AgentFramework_HistoryLocators" AS locator
+            WHERE locator."PartitionId" = {partition.StorageLineageId}
+                AND locator."ProjectId" IS NOT NULL AND NOT locator."IsDeleted"
+                AND NOT EXISTS (
+                    SELECT 1 FROM "Projects_Projects" AS project
+                    WHERE project."Id" = locator."ProjectId")
+            ORDER BY locator."EvidenceId"
+            LIMIT {maximumItems}
+            """).ToArrayAsync(cancellationToken);
         foreach (var locator in locators) {
             var source = new CanonicalEvidenceReference(partition, HistorySourceKind.AgentConversation,
                 new(locator.OwnerId.ToString("N")), new(locator.EvidenceId.ToString("N")));
             var mutation = Delete(source, checked(locator.SourceVersion + 1));
-            await HistoryProjectionWriter.StageAsync(db, mutation, cancellationToken);
+            await projection.StageAsync(mutation, cancellationToken);
             locator.SourceVersion = mutation.Version.Value;
             locator.IsDeleted = true;
         }

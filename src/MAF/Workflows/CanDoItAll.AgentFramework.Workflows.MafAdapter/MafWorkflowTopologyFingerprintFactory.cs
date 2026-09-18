@@ -6,17 +6,20 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class MafWorkflowTopologyFingerprintFactory
 {
-    public static WorkflowCompilerContractVersion CompilerContractVersion { get; } = new(1);
+    public static WorkflowCompilerContractVersion CompilerContractVersion => WorkflowProviderDisclosureProtocol.Current;
 
     public static WorkflowTopologyFingerprint Create(
         WorkflowDefinition definition,
-        IReadOnlyDictionary<WorkflowNodeId, MafCompiledNodeBinding> bindings)
+        IReadOnlyDictionary<WorkflowNodeId, MafCompiledNodeBinding> bindings,
+        WorkflowCompilerContractVersion? compilerVersion = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(bindings);
 
+        var version = compilerVersion ?? CompilerContractVersion;
+        WorkflowProviderDisclosureProtocol.RequireSupported(version);
         var canonical = new StringBuilder();
-        Append(canonical, CompilerContractVersion.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(canonical, version.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         Append(canonical, definition.VersionId.ToString());
         Append(canonical, definition.Graph.StartNodeId.Value);
         Append(canonical, definition.SourceHash);

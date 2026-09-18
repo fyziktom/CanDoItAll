@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <PromptsAssetMode Condition="'$(PromptsAssetMode)' == ''">Parity</PromptsAssetMode>
+    <OutputPath>bin/$(PromptsAssetMode)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>obj/$(PromptsAssetMode)/$(Configuration)/</IntermediateOutputPath>
+    <DefineConstants Condition="'$(PromptsAssetMode)' == 'Fast'">$(DefineConstants);PROMPTS_FAST_ASSETS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Prompts.UI/CanDoItAll.Prompts.UI.csproj" />
+    <Content Remove="wwwroot/css/prompts-fast.css" Condition="'$(PromptsAssetMode)' != 'Fast'" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="'$(PromptsAssetMode)' == 'Parity'" />
+  </ItemGroup>
+  <Target Name="RequirePromptsTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(PromptsAssetMode)' != 'Parity' and '$(PromptsAssetMode)' != 'Fast'"
+           Text="PromptsAssetMode must be Parity or Fast." />
+    <Error Condition="'$(PromptsAssetMode)' == 'Parity' and !Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run tailwind:build." />
+    <Error Condition="'$(PromptsAssetMode)' == 'Fast' and !Exists('$(MSBuildProjectDirectory)/wwwroot/css/prompts-fast.css')"
+           Text="Fast CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run prompts:css:build." />
+  </Target>
+</Project>

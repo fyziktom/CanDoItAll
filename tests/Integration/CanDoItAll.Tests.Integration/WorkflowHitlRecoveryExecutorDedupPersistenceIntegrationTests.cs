@@ -682,7 +682,7 @@ public sealed class WorkflowHitlRecoveryExecutorDedupPersistenceIntegrationTests
 
         public PersistentWorkflowExecutorInvocationDeduplicationStore CreateStore(
             bool reconstructDataProtectionProvider = false)
-            => new(Factory, keyDirectory.CreateProvider());
+            => new(WorkflowOwnerPersistenceTestFactory.FromCanonical(Factory), keyDirectory.CreateProvider());
 
         public async ValueTask DisposeAsync()
         {

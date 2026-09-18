@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 internal static class HistoryCanonicalEntryWriter {
-    internal static async Task UpsertAsync(AppDbContext db, HistoryEntry evidence,
+    internal static async Task UpsertAsync(ProviderHistoryDbContext db, HistoryEntry evidence,
         HistoryOwnerRole role, bool updateExisting, CancellationToken cancellationToken) {
         var row = db.Set<HistoryEntryRow>().Local.SingleOrDefault(entry => entry.Id == evidence.Id.Value)
             ?? await db.Set<HistoryEntryRow>().SingleOrDefaultAsync(
@@ -12,7 +12,7 @@ internal static class HistoryCanonicalEntryWriter {
         Apply(db, row, evidence, role, updateExisting);
     }
 
-    internal static async Task UpsertAttemptsAsync(AppDbContext db, IReadOnlyList<HistoryEntry> attempts,
+    internal static async Task UpsertAttemptsAsync(ProviderHistoryDbContext db, IReadOnlyList<HistoryEntry> attempts,
         CancellationToken cancellationToken) {
         if (attempts.Count == 0) {
             return;
@@ -28,7 +28,7 @@ internal static class HistoryCanonicalEntryWriter {
         }
     }
 
-    private static void Apply(AppDbContext db, HistoryEntryRow? row, HistoryEntry evidence, HistoryOwnerRole role, bool updateExisting) {
+    private static void Apply(ProviderHistoryDbContext db, HistoryEntryRow? row, HistoryEntry evidence, HistoryOwnerRole role, bool updateExisting) {
         if (row is null) {
             db.Add(HistoryEntryMapping.From(evidence));
             return;

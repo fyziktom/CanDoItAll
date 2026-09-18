@@ -1,0 +1,83 @@
+@implements IAsyncDisposable
+@inject IPromptGalleryService Gallery
+@inject NotificationService Notifications
+
+<PromptGallerySearchSurface Presentation="@session.Presentation"
+                            Compact="@Compact"
+                            AllowEdit="@AllowEdit"
+                            ShowSelectAction="@ShowSelectAction"
+                            SelectText="@SelectText"
+                            Intent="HandleIntentAsync" />
+
+@code {
+    private PromptGallerySearchSession session = default!;
+
+    [Parameter]
+    public PromptGalleryConsumer? Consumer { get; set; }
+
+    [Parameter]
+    public string? Provider { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public bool ShowActualChatModelFilter { get; set; }
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 25;
+
+    [Parameter]
+    public bool AllowEdit { get; set; } = true;
+
+    [Parameter]
+    public bool ShowSelectAction { get; set; } = true;
+
+    [Parameter]
+    public string SelectText { get; set; } = "Select";
+
+    [Parameter]
+    public EventCallback<PromptGallerySearchItem> Selected { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> EditRequested { get; set; }
+
+    public PromptGallerySearchPresentation Presentation => session.Presentation;
+
+    protected override void OnInitialized()
+    {
+        session = new PromptGallerySearchSession(Gallery)
+        {
+            Changed = () => InvokeAsync(StateHasChanged),
+            NoticeRaised = notice =>
+            {
+                PromptGalleryNotices.Show(Notifications, notice);
+                return Task.CompletedTask;
+            }
+        };
+    }
+
+    protected override Task OnParametersSetAsync()
+        => session.ConfigureAsync(new PromptGallerySearchContext(
+            Consumer,
+            Provider,
+            Model,
+            ShowActualChatModelFilter,
+            Compact,
+            PageSize));
+
+    // Reloads the current page and clamps to the last page when the list shrank; filters and paging survive.
+    public Task RefreshAsync() => session.RefreshAsync();
+
+    private Task HandleIntentAsync(PromptGallerySearchIntent intent) => intent switch
+    {
+        PromptGallerySearchIntent.Select select => Selected.InvokeAsync(select.Item),
+        PromptGallerySearchIntent.Edit edit => EditRequested.InvokeAsync(edit.ItemId),
+        _ => session.ApplyAsync(intent)
+    };
+
+    public ValueTask DisposeAsync() => session.DisposeAsync();
+}

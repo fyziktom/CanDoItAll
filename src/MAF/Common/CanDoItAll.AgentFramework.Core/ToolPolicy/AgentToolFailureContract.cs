@@ -36,7 +36,12 @@ public sealed record AgentToolFailureResult(
     string IAgentToolInvocationResultEvidence.SafeMessage => Message;
 }
 
-public sealed class AgentToolInputValidationException : InvalidOperationException, IAgentToolFailure
+/// <summary>
+/// A tool rejected its input before performing any effect. Tools may raise this only while nothing has been
+/// stored, written or dispatched yet, because the failure tells the agent that a corrected retry is safe and the
+/// runtime records the attempt as a proven no-effect rejection rather than an uncertain mutation.
+/// </summary>
+public sealed class AgentToolInputValidationException : InvalidOperationException, IAgentToolFailureEffectEvidence
 {
     public const string FailureCode = "InvalidToolInput";
 
@@ -53,6 +58,8 @@ public sealed class AgentToolInputValidationException : InvalidOperationExceptio
 
     public bool CanRetryWithCorrectedInput => true;
 
+    public AgentToolEffectState EffectState => AgentToolEffectState.None;
+
     public static AgentToolInputValidationException Create(string safeMessage)
         => new(safeMessage);
 
@@ -63,7 +70,11 @@ public sealed class AgentToolInputValidationException : InvalidOperationExceptio
     }
 }
 
-public sealed class AgentToolConflictException : InvalidOperationException, IAgentToolFailure
+/// <summary>
+/// A tool refused to proceed because its target already exists or otherwise conflicts with the request. The
+/// conflict is detected before anything is written, so the attempt is recorded as a proven no-effect rejection.
+/// </summary>
+public sealed class AgentToolConflictException : InvalidOperationException, IAgentToolFailureEffectEvidence
 {
     public const string FailureCode = "ToolConflict";
 
@@ -79,6 +90,8 @@ public sealed class AgentToolConflictException : InvalidOperationException, IAge
     public bool IsSafeToExpose => true;
 
     public bool CanRetryWithCorrectedInput => true;
+
+    public AgentToolEffectState EffectState => AgentToolEffectState.None;
 
     public static AgentToolConflictException Create(string safeMessage)
         => new(safeMessage);
@@ -98,16 +111,23 @@ public enum WorkspaceReadOnlyAncestorMutationOperation
     ExtractInto
 }
 
-public sealed class WorkspaceToolAccessDeniedException : InvalidOperationException, IAgentToolFailure
+/// <summary>
+/// A workspace tool refused an operation. Access guards run before the operation starts, so their denials carry a
+/// proven no-effect state; an access failure observed while the operation was already running keeps an unknown
+/// effect state because part of the requested tree may have changed.
+/// </summary>
+public sealed class WorkspaceToolAccessDeniedException : InvalidOperationException, IAgentToolFailureEffectEvidence
 {
     public const string FailureCode = "WorkspaceAccessDenied";
 
     private WorkspaceToolAccessDeniedException(
         string safeMessage,
-        bool canRetryWithCorrectedInput)
+        bool canRetryWithCorrectedInput,
+        AgentToolEffectState effectState = AgentToolEffectState.None)
         : base(NormalizeSafeMessage(safeMessage))
     {
         CanRetryWithCorrectedInput = canRetryWithCorrectedInput;
+        EffectState = effectState;
     }
 
     public string ErrorCode => FailureCode;
@@ -117,6 +137,8 @@ public sealed class WorkspaceToolAccessDeniedException : InvalidOperationExcepti
     public bool IsSafeToExpose => true;
 
     public bool CanRetryWithCorrectedInput { get; }
+
+    public AgentToolEffectState EffectState { get; }
 
     public static WorkspaceToolAccessDeniedException FileReadDisabled()
         => new(
@@ -173,14 +195,16 @@ public sealed class WorkspaceToolAccessDeniedException : InvalidOperationExcepti
     public static WorkspaceToolAccessDeniedException InaccessiblePath(string path)
         => new(
             $"Workspace path '{NormalizePathForMessage(path)}' could not be fully inspected because access to part of the requested tree was denied. Narrow the path or ask the operator to grant access, then retry.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            AgentToolEffectState.Unknown);
 
     public static WorkspaceToolAccessDeniedException InaccessiblePaths(
         string firstPath,
         string secondPath)
         => new(
             $"Workspace paths '{NormalizePathForMessage(firstPath)}' and '{NormalizePathForMessage(secondPath)}' could not be fully accessed for the requested operation. Narrow the paths or ask the operator to grant access, then retry.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            AgentToolEffectState.Unknown);
 
     private static string NormalizeSafeMessage(string safeMessage)
     {

@@ -408,7 +408,7 @@ public sealed class LlmChatDefinitionUiTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private static BunitContext CreateContext(
+    internal static BunitContext CreateContext(
         ILlmChatDefinitionUiGateway definitions,
         ILlmChatProviderUiGateway providers,
         ILlmChatUiAuthorizationFacade authorization,
@@ -416,6 +416,7 @@ public sealed class LlmChatDefinitionUiTests
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(definitions);
         context.Services.AddSingleton(providers);
@@ -424,7 +425,7 @@ public sealed class LlmChatDefinitionUiTests
         return context;
     }
 
-    private static LlmChatDefinitionEditor CreateEditor(
+    internal static LlmChatDefinitionEditor CreateEditor(
         string name = "Research assistant",
         string summary = "Summarizes research.",
         long concurrencyToken = 7,
@@ -460,13 +461,20 @@ public sealed class LlmChatDefinitionUiTests
             "Previous revision");
     }
 
-    private sealed class StubDefinitionGateway(params LlmChatDefinitionEditor[] editorValues)
+    internal sealed class StubDefinitionGateway(params LlmChatDefinitionEditor[] editorValues)
         : ILlmChatDefinitionUiGateway
     {
         private readonly Queue<LlmChatDefinitionEditor> editors = new(editorValues);
         private LlmChatDefinitionEditor current = editorValues[0];
 
         public int GetEditorCalls { get; private set; }
+        public List<Guid> EditorTargets { get; } = [];
+        public Func<LlmChatDefinitionQuery, CancellationToken, Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>>>? ListHandler { get; set; }
+        public Func<Guid, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? EditorHandler { get; set; }
+        public Func<Guid, CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? EditorRead { get; set; }
+        public Func<LlmChatDefinitionMutation, CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? SaveHandler { get; set; }
+        public Func<CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionListItem>>>? StatusHandler { get; set; }
+
 
         public IReadOnlyList<LlmChatDefinitionListItem>? ListItems { get; init; }
 
@@ -489,6 +497,9 @@ public sealed class LlmChatDefinitionUiTests
             CancellationToken cancellationToken = default)
         {
             ListQueries.Add(query);
+            if (ListHandler is not null) {
+                return ListHandler(query, cancellationToken);
+            }
             var items = (ListItems ?? [current.Definition])
                 .Where(item => query.Status is null || item.Status == query.Status)
                 .Where(item => MatchesSearch(item, query.SearchText))
@@ -510,6 +521,13 @@ public sealed class LlmChatDefinitionUiTests
             CancellationToken cancellationToken = default)
         {
             GetEditorCalls++;
+            EditorTargets.Add(definitionId);
+            if (EditorRead is not null) {
+                return EditorRead(definitionId, cancellationToken);
+            }
+            if (EditorHandler is not null) {
+                return EditorHandler(definitionId);
+            }
             if (editors.Count > 0)
             {
                 current = editors.Dequeue();
@@ -523,6 +541,9 @@ public sealed class LlmChatDefinitionUiTests
             CancellationToken cancellationToken = default)
         {
             CreatedMutation = mutation;
+            if (SaveHandler is not null) {
+                return SaveHandler(mutation, cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Success(current));
         }
 
@@ -534,6 +555,9 @@ public sealed class LlmChatDefinitionUiTests
         {
             UpdatedMutation = mutation;
             UpdateExpectedConcurrencyToken = expectedConcurrencyToken;
+            if (SaveHandler is not null) {
+                return SaveHandler(mutation, cancellationToken);
+            }
             return Task.FromResult(UpdateFailure is null
                 ? LlmChatUiResult<LlmChatDefinitionEditor>.Success(current)
                 : LlmChatUiResult<LlmChatDefinitionEditor>.Failure(UpdateFailure));
@@ -547,6 +571,9 @@ public sealed class LlmChatDefinitionUiTests
         {
             RequestedStatus = status;
             StatusExpectedConcurrencyToken = expectedConcurrencyToken;
+            if (StatusHandler is not null) {
+                return StatusHandler(cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatDefinitionListItem>.Success(
                 current.Definition with { Status = status }));
         }
@@ -564,7 +591,7 @@ public sealed class LlmChatDefinitionUiTests
         }
     }
 
-    private sealed class StubProviderGateway(
+    internal sealed class StubProviderGateway(
         string defaultModel = "model-a",
         string? suggestedModel = null, bool sourceManaged = false) : ILlmChatProviderUiGateway
     {
@@ -603,12 +630,13 @@ public sealed class LlmChatDefinitionUiTests
             ]));
     }
 
-    private sealed class StubAuthorization(bool canRead, bool canManage)
+    internal sealed class StubAuthorization(bool canRead, bool canManage)
         : ILlmChatUiAuthorizationFacade
     {
+        public Func<CancellationToken, ValueTask<LlmChatUiAuthorizationSnapshot>>? Read { get; set; }
         public ValueTask<LlmChatUiAuthorizationSnapshot> GetAsync(
             CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(new LlmChatUiAuthorizationSnapshot(canRead, canManage, false));
+            => Read?.Invoke(cancellationToken) ?? ValueTask.FromResult(new LlmChatUiAuthorizationSnapshot(canRead, canManage, false));
 
         public ValueTask<bool> IsAllowedAsync(
             LlmChatUiPermission permission,

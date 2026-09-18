@@ -1,4 +1,6 @@
 using System.Xml.Linq;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Persistence;
 
 namespace CanDoItAll.Tests.Unit.Processes;
 
@@ -34,10 +36,40 @@ public sealed class ProcessModuleBoundaryTests
         ["CanDoItAll.Processes.Templates"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core"],
         ["CanDoItAll.Processes.Builder"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Templates", "CanDoItAll.Processes.Drivers.Abstractions"],
         ["CanDoItAll.Processes.Runtime"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Drivers.Abstractions"],
-        ["CanDoItAll.Processes.Persistence"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Projections"],
+        ["CanDoItAll.Processes.Persistence"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Projections", "CanDoItAll.Processes.Application"],
         ["CanDoItAll.Processes.Application"] = ["CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Templates", "CanDoItAll.Processes.Projections", "CanDoItAll.Git", "CanDoItAll.Processes.Drivers.Abstractions"],
         ["CanDoItAll.Components.Git"] = ["CanDoItAll.Git"],
         ["CanDoItAll.Modules.Processes"] = ["CanDoItAll.Processes.Application", "CanDoItAll.Processes.Builder", "CanDoItAll.Processes.Drivers.Abstractions", "CanDoItAll.Processes.Drivers.Standard", "CanDoItAll.Processes.Persistence", "CanDoItAll.Processes.Projections", "CanDoItAll.Processes.Runtime", "CanDoItAll.Processes.Templates", "CanDoItAll.Components.Git"]
+    };
+
+    // Edges the host composition relies on. They are checked separately from the allowed edges: removing an
+    // unnecessary allowed reference is fine, removing one of these disconnects the process boundary from the host.
+    private static readonly (string From, string To)[] RequiredProcessReferences =
+    [
+        ("CanDoItAll.Modules.Processes", "CanDoItAll.Processes.Application"),
+        ("CanDoItAll.Modules.Processes", "CanDoItAll.Processes.Persistence"),
+        ("CanDoItAll.Processes.Persistence", "CanDoItAll.Processes.Application"),
+        ("CanDoItAll.Components.Git", "CanDoItAll.Git")
+    ];
+
+    // References outside the process boundary set that each project may take. Every other reference is classified as a
+    // violation instead of being filtered out before the comparison.
+    private static readonly Dictionary<string, string[]> AllowedExternalReferences = new(StringComparer.Ordinal)
+    {
+        ["CanDoItAll.Processes.Contracts"] = ["CanDoItAll.SharedKernel"],
+        ["CanDoItAll.Processes.Application"] = ["CanDoItAll.SharedKernel", "CanDoItAll.Infrastructure.Abstractions"],
+        ["CanDoItAll.Processes.Persistence"] = ["CanDoItAll.Infrastructure"],
+        ["CanDoItAll.Git"] = ["CanDoItAll.SharedKernel", "CanDoItAll.Infrastructure.Abstractions"],
+        ["CanDoItAll.Modules.Processes"] =
+        [
+            "CanDoItAll.SharedKernel", "CanDoItAll.Infrastructure", "CanDoItAll.AppComponents",
+            "CanDoItAll.FileTools.Integration.Abstractions", "CanDoItAll.Memory.Abstractions", "CanDoItAll.Memory.Application",
+            "CanDoItAll.AgentFramework.Capabilities.Abstractions", "CanDoItAll.AgentFramework.Tooling",
+            "CanDoItAll.AgentFramework.Components", "CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models",
+            "CanDoItAll.AgentFramework.Mcp.Abstractions", "CanDoItAll.AgentFramework.Workflows.Abstractions",
+            // Documented owner adapters: process step execution through the Agents Hosting API and project admission.
+            "CanDoItAll.Modules.Projects", "CanDoItAll.Modules.AgentFramework"
+        ]
     };
 
     [Fact]
@@ -59,30 +91,114 @@ public sealed class ProcessModuleBoundaryTests
     }
 
     [Fact]
-    public void Process_boundary_projects_only_reference_allowed_inner_layers()
+    public void Process_boundary_projects_only_reference_allowed_layers_and_keep_required_edges()
     {
-        var root = FindRepositoryRoot();
-        var knownProjects = OrderedProcessBoundaryProjects.ToHashSet(StringComparer.Ordinal);
+        Assert.True(typeof(IProcessPreparedLaunchStore).IsAssignableFrom(typeof(EfProcessPreparedLaunchStore)));
+        Assert.True(typeof(IProcessExecutionMutationGuard).IsAssignableFrom(typeof(EfProcessExecutionMutationGuard)));
 
+        var violations = EvaluateProcessBoundary(ReadProcessBoundaryReferences(FindRepositoryRoot()));
+
+        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+    }
+
+    [Theory]
+    [InlineData("foreign-module-reference", true)]
+    [InlineData("forbidden-inner-edge", true)]
+    [InlineData("missing-required-edge", true)]
+    [InlineData("unnecessary-allowed-dependency-removed", false)]
+    public void Process_boundary_policy_rejects_forbidden_edges_but_allows_removing_unneeded_ones(
+        string change,
+        bool rejected)
+    {
+        var graph = ReadProcessBoundaryReferences(FindRepositoryRoot())
+            .ToDictionary(pair => pair.Key, pair => pair.Value.ToList(), StringComparer.Ordinal);
+        switch (change)
+        {
+            case "foreign-module-reference":
+                graph["CanDoItAll.Processes.Runtime"].Add("CanDoItAll.Modules.Workbench");
+                break;
+            case "forbidden-inner-edge":
+                graph["CanDoItAll.Processes.Core"].Add("CanDoItAll.Processes.Persistence");
+                break;
+            case "missing-required-edge":
+                Assert.True(graph["CanDoItAll.Modules.Processes"].Remove("CanDoItAll.Processes.Application"));
+                break;
+            case "unnecessary-allowed-dependency-removed":
+                Assert.True(graph["CanDoItAll.Processes.Persistence"].Remove("CanDoItAll.Processes.Projections"));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(change));
+        }
+
+        var violations = EvaluateProcessBoundary(graph.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyCollection<string>)pair.Value,
+            StringComparer.Ordinal));
+
+        Assert.Equal(rejected, violations.Count > 0);
+    }
+
+    private static Dictionary<string, IReadOnlyCollection<string>> ReadProcessBoundaryReferences(string root)
+    {
+        var graph = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal);
         foreach (var project in OrderedProcessBoundaryProjects)
         {
-            var projectFile = GetSolutionProjectFile(root, project);
-            var document = XDocument.Load(projectFile);
-            var actualReferences = document.Descendants("ProjectReference")
+            var document = XDocument.Load(GetSolutionProjectFile(root, project));
+            var references = document.Descendants("ProjectReference").ToArray();
+            // Without conditions the declared references are the effective project graph. A conditional reference would
+            // make project text an incomplete answer, so it must be evaluated through MSBuild instead of silently here.
+            Assert.DoesNotContain(references, element =>
+                element.Attribute("Condition") is not null ||
+                element.Ancestors().Any(ancestor => ancestor.Attribute("Condition") is not null || ancestor.Name.LocalName == "Choose"));
+            graph[project] = references
                 .Select(element => element.Attribute("Include")?.Value)
                 .OfType<string>()
                 .Where(include => !string.IsNullOrWhiteSpace(include))
                 .Select(include => Path.GetFileNameWithoutExtension(include.Replace('\\', '/')))
-                .Where(reference => reference is not null && knownProjects.Contains(reference))
-                .Cast<string>()
-                .Order(StringComparer.Ordinal)
                 .ToArray();
-            var allowedReferences = AllowedProcessReferences[project]
-                .Order(StringComparer.Ordinal)
-                .ToArray();
-
-            Assert.Equal(allowedReferences, actualReferences);
         }
+
+        return graph;
+    }
+
+    private static IReadOnlyList<string> EvaluateProcessBoundary(
+        IReadOnlyDictionary<string, IReadOnlyCollection<string>> actualReferences)
+    {
+        var violations = new List<string>();
+        var boundary = OrderedProcessBoundaryProjects.ToHashSet(StringComparer.Ordinal);
+        foreach (var project in OrderedProcessBoundaryProjects)
+        {
+            if (!actualReferences.TryGetValue(project, out var references))
+            {
+                violations.Add($"{project}: its project references were not observed.");
+                continue;
+            }
+
+            var allowedExternal = AllowedExternalReferences.GetValueOrDefault(project, []);
+            foreach (var reference in references.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+            {
+                if (AllowedProcessReferences[project].Contains(reference, StringComparer.Ordinal) ||
+                    allowedExternal.Contains(reference, StringComparer.Ordinal))
+                {
+                    continue;
+                }
+
+                violations.Add(boundary.Contains(reference)
+                    ? $"{project} -> {reference}: not an allowed process layer edge."
+                    : $"{project} -> {reference}: unclassified reference outside the process boundary.");
+            }
+        }
+
+        foreach (var (from, to) in RequiredProcessReferences)
+        {
+            if (!actualReferences.TryGetValue(from, out var references) ||
+                !references.Contains(to, StringComparer.Ordinal))
+            {
+                violations.Add($"{from} -> {to}: required composition edge is missing.");
+            }
+        }
+
+        return violations;
     }
 
     [Fact]
@@ -279,33 +395,6 @@ public sealed class ProcessModuleBoundaryTests
             .ToArray();
 
         Assert.Contains(expectedPattern, findings);
-    }
-
-    [Fact]
-    public void Process_driver_projects_reference_only_the_declared_inward_process_contracts()
-    {
-        var root = FindRepositoryRoot();
-        var driverProjects = new[]
-        {
-            "CanDoItAll.Processes.Drivers.Abstractions",
-            "CanDoItAll.Processes.Drivers.Standard"
-        };
-
-        foreach (var project in driverProjects)
-        {
-            var document = XDocument.Load(GetSolutionProjectFile(root, project));
-            var actualReferences = document.Descendants("ProjectReference")
-                .Select(element => element.Attribute("Include")?.Value)
-                .OfType<string>()
-                .Select(include => Path.GetFileNameWithoutExtension(include.Replace('\\', '/')))
-                .Order(StringComparer.Ordinal)
-                .ToArray();
-            var allowedReferences = AllowedProcessReferences[project]
-                .Order(StringComparer.Ordinal)
-                .ToArray();
-
-            Assert.Equal(allowedReferences, actualReferences);
-        }
     }
 
     [Fact]
@@ -546,18 +635,5 @@ public sealed class ProcessModuleBoundaryTests
         => Path.Combine(root, GetSolutionProjectPath(root, project).Replace('/', Path.DirectorySeparatorChar));
 
     private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the repository root.");
-    }
+        => CanDoItAll.Tests.Support.TestRepositoryRoot.Find();
 }

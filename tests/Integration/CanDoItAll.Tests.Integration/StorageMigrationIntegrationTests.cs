@@ -29,18 +29,20 @@ public sealed class StorageMigrationIntegrationTests
         {
             DbContextOptions<AppDbContext> options = database.CreateAppDbContextOptions();
             Guid storageId = Guid.NewGuid();
+            var original = new StorageCatalogRecord {
+                Id = storageId,
+                Name = "Legacy filesystem",
+                ProviderKind = StorageProviderKind.FileSystem,
+                EndpointOrRoot = legacyRoot,
+                IsEnabled = true
+            };
+            string originalJson;
             await using (var seed = new AppDbContext(options))
             {
                 await seed.Database.EnsureCreatedAsync();
-                seed.Add(new StorageCatalogRecord
-                {
-                    Id = storageId,
-                    Name = "Legacy filesystem",
-                    ProviderKind = StorageProviderKind.FileSystem,
-                    EndpointOrRoot = legacyRoot,
-                    IsEnabled = true
-                });
+                seed.Add(original);
                 await seed.SaveChangesAsync();
+                originalJson = JsonSerializer.Serialize(original);
             }
 
             StorageCatalogService firstService = CreateStorageCatalogService(options, workspaceRoot);
@@ -61,15 +63,30 @@ public sealed class StorageMigrationIntegrationTests
                 Assert.Equal(HostBoundPathState.NeedsRebind, migrated.RootPathState);
                 Assert.Equal(HostBoundPathRecord.CurrentFormatVersion, migrated.RootBindingFormatVersion);
                 Assert.False(migrated.IsEnabled);
+                Assert.Empty(migrated.RootHostBindingId);
+                Assert.Null(migrated.RootLastValidatedAtUtc);
+                var expected = Assert.IsType<StorageCatalogRecord>(JsonSerializer.Deserialize<StorageCatalogRecord>(originalJson));
+                expected.RootBindingFormatVersion = HostBoundPathRecord.CurrentFormatVersion;
+                expected.RootPlatformFamily = HostPathContext.CaptureCurrent().PlatformFamily;
+                expected.RootPathSyntax = PhysicalPathSyntaxClassifier.Classify(legacyRoot);
+                expected.IsEnabled = false;
+                expected.HealthStatus = StorageHealthStatus.Unavailable;
+                expected.LastHealthMessage = "Storage root requires explicit host rebind.";
+                Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(migrated));
             }
 
             Assert.Equal(StorageCatalogPathMigrationState.PointerCommitted, committed.State);
             Assert.Equal(StorageCatalogPathMigrationState.PointerCommitted, repaired.State);
             Assert.True(File.Exists(Path.Combine(migrationRoot, "commit.json")));
 
-            StorageCatalogRecord rebound = await restartedService.RebindRootAsync(storageId, legacyRoot);
+            StorageCatalogSnapshot rebound = await restartedService.RebindRootAsync(storageId, legacyRoot);
             Assert.Equal(HostBoundPathState.Active, rebound.RootPathState);
             Assert.NotEmpty(rebound.RootHostBindingId);
+            DateTimeOffset reboundUpdatedAt;
+            await using (var reboundContext = new AppDbContext(options)) {
+                reboundUpdatedAt = await reboundContext.Set<StorageCatalogRecord>().AsNoTracking()
+                    .Where(item => item.Id == storageId).Select(item => item.UpdatedAtUtc).SingleAsync();
+            }
 
             StorageCatalogPathMigrationReport rolledBack = await restartedService.RollbackAsync();
             await using var rolledBackContext = new AppDbContext(options);
@@ -78,6 +95,11 @@ public sealed class StorageMigrationIntegrationTests
             Assert.Equal(StorageCatalogPathMigrationState.RolledBack, rolledBack.State);
             Assert.Equal(legacyRoot, restored.EndpointOrRoot);
             Assert.Equal(0, restored.RootBindingFormatVersion);
+            var expectedRestored = Assert.IsType<StorageCatalogRecord>(JsonSerializer.Deserialize<StorageCatalogRecord>(originalJson));
+            expectedRestored.UpdatedAtUtc = reboundUpdatedAt;
+            Assert.Equal(JsonSerializer.Serialize(expectedRestored), JsonSerializer.Serialize(restored));
+            Assert.Empty(restored.RootHostBindingId);
+            Assert.Null(restored.RootLastValidatedAtUtc);
         }
         finally
         {
@@ -211,10 +233,17 @@ public sealed class StorageMigrationIntegrationTests
         DbContextOptions<AppDbContext> options,
         string workspaceRoot)
     {
+        using var schema = new AppDbContext(options);
+        var profile = new ResolvedDatabaseProfile(new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.PostgreSql },
+            DatabaseProfileResolutionSource.ExplicitOverride, schema.Database.GetConnectionString()!);
+        var ownerOptions = new DbContextOptionsBuilder<StorageDbContext>();
+        AppDbContextOptionsConfigurator.Configure(ownerOptions, profile);
         return new StorageCatalogService(
-            new TestDbContextFactory(options),
+            new TestDbContextFactory(ownerOptions.Options),
             new StaticWorkspacePathResolver(workspaceRoot),
-            new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)));
+            new TestClock(new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.Zero)),
+            ownerOptions.Options,
+            CoordinatedDatabaseTransaction.ForProfile(profile));
     }
 
     private sealed class StaticControlPlanePathResolver(string rootPath) : IControlPlanePathResolver
@@ -253,12 +282,11 @@ public sealed class StorageMigrationIntegrationTests
         public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, "manager-artifacts");
     }
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext() => new(options);
+    private sealed class TestDbContextFactory(DbContextOptions<StorageDbContext> options) : IDbContextFactory<StorageDbContext> {
+        public StorageDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new AppDbContext(options));
+        public Task<StorageDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new StorageDbContext(options));
     }
 
     private sealed class TestClock(DateTimeOffset currentUtc) : IClock

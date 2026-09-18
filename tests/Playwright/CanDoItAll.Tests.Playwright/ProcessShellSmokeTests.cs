@@ -219,11 +219,14 @@ public sealed class ProcessShellSmokeTests
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         var projectId = await CreateProjectAsync(page, "Playwright Process Shell", "Discovery");
-        var runId = Guid.Parse("55555555-5555-5555-5555-555555555555");
-        var projectResponse = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes?runId={runId:D}");
+        var projectResponse = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes");
         Assert.NotNull(projectResponse);
         Assert.True(projectResponse!.Ok, $"Expected project-scoped processes route to return 2xx, got {(int)projectResponse.Status}.");
+        await Assertions.Expect(page.GetByRole(AriaRole.Tablist, new() { Name = "Open workspace tabs", Exact = true })
+            .GetByRole(AriaRole.Tab, new() { Name = "Playwright Process Shell · Processes", Exact = true }))
+            .ToHaveAttributeAsync("aria-selected", "true");
         await page.GetByTestId("processes-shell").WaitForAsync();
+        await page.GetByTestId("processes-detail-tab-runs").ClickAsync();
         await page.GetByTestId("processes-detail-panel-runs").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -231,6 +234,13 @@ public sealed class ProcessShellSmokeTests
             FullPage = true
         });
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+        var runId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var deniedResponse = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes?runId={runId:D}");
+        Assert.NotNull(deniedResponse);
+        Assert.True(deniedResponse.Ok);
+        await Assertions.Expect(page.GetByTestId("processes-shell-error"))
+            .ToContainTextAsync("The selected Process run does not belong to this exact project lifetime.");
+        await Assertions.Expect(page.GetByTestId("processes-shell")).ToHaveCountAsync(0);
         await WriteBrowserValidationSummaryAsync(artifactDirectory, consoleMessages, failedRequests, ignoredFailedRequests, pageErrors);
         Assert.Empty(pageErrors);
         Assert.Empty(failedRequests);

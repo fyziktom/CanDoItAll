@@ -175,9 +175,9 @@ public partial class ExternalWorkspaceRootSelectionField
         {
             pathRegistry = ExternalTargetPathRegistryFactory.Create(selectedBindings);
         }
-        catch (InvalidOperationException exception)
+        catch (InvalidOperationException)
         {
-            registryLoadError = exception.Message;
+            registryLoadError = "The saved workspace root bindings could not be resolved on this host.";
             pathRegistry = ExternalTargetPathRegistryFactory.Create([]);
         }
     }

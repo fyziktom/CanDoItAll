@@ -65,6 +65,10 @@ public sealed record ProcessRuntimeStateSnapshot(
     IReadOnlySet<ArtifactSlotId> AvailableArtifactSlots,
     DateTimeOffset UpdatedAtUtc)
 {
+    public ProcessProjectAdmission? ProjectAdmission { get; init; }
+
+    public ProcessLaunchAdmissionId? LaunchAdmissionId { get; init; }
+
     public IReadOnlyList<ProcessRuntimeInputArtifactReceipt> ConnectedInputArtifacts { get; init; } = [];
 
     public IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> BlockedRecoveryActions { get; init; } = [];
@@ -332,6 +336,8 @@ public sealed record ProcessRuntimeCommitRequest(
     public ProcessRuntimeBlockedRecoveryAuthorization? BlockedRecoveryAuthorization { get; init; }
 
     public IReadOnlyList<ProcessRuntimeStepAssignment>? InitialAssignments { get; init; }
+
+    public ProcessLaunchAdmissionReference? InitialLaunchAdmission { get; init; }
 }
 
 public sealed record ProcessRuntimeCommitResult(

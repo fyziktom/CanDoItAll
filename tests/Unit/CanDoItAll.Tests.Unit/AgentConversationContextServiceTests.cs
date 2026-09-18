@@ -11,6 +11,8 @@ public sealed class AgentConversationContextServiceTests
 {
     private static readonly Guid ProjectXId = Guid.NewGuid();
     private static readonly Guid ProjectYId = Guid.NewGuid();
+    private static readonly Guid ProfileId = Guid.NewGuid();
+    private static readonly Guid LifetimeId = Guid.NewGuid();
 
     [Fact]
     public void Canvas_to_gantt_is_a_view_change_in_the_same_epoch()
@@ -351,7 +353,9 @@ public sealed class AgentConversationContextServiceTests
                 $"/projects/{sourceId:D}/structure",
                 selectionId is null
                     ? null
-                    : new AgentChatContextEntityReference("task", selectionId, selectionId)));
+                    : new AgentChatContextEntityReference("task", selectionId, selectionId)),
+            observedProjectLifetime: workspaceScope?.Kind == WorkspaceScopeKind.Project
+                ? new(ProfileId, Guid.Parse(workspaceScope.Key), LifetimeId) : null);
         return new AgentChatContextSnapshot(
             scope,
             [
@@ -447,14 +451,16 @@ public sealed class AgentConversationContextServiceTests
             => ValueTask.FromResult(new AgentExecutionAuthorityRecord(
                 AgentExecutionAuthorityId.Create(),
                 request.AgentId,
-                Guid.NewGuid(),
+                ProfileId,
                 request.ExpectedDatabaseProfileGeneration,
                 scope,
                 readAllowed: true,
                 mutationAllowed: false,
                 "test",
                 "test-fingerprint",
-                DateTimeOffset.UtcNow));
+                DateTimeOffset.UtcNow,
+                schemaVersion: AgentExecutionAuthorityRecord.CurrentSchemaVersion,
+                sourceProjectLifetime: scope.Kind == WorkspaceScopeKind.Project ? new(ProfileId, Guid.Parse(scope.Key), LifetimeId) : null));
     }
 
     private static string FindRepoRoot()

@@ -1,3 +1,5 @@
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +16,10 @@ public static class PluginsModuleServiceCollectionExtensions
         IConfiguration? configuration = null,
         string? contentRootPath = null)
     {
+        services.AddPooledDbContextFactory<PluginsDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
         var packageOptions = PluginPackageOptions.FromConfiguration(configuration, contentRootPath);
         services.TryAddSingleton(packageOptions);
         RuntimePluginAssemblyRegistrar.RegisterInstalledPackages(services, packageOptions);

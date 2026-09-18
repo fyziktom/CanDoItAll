@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Workflows.Runtime;
 
@@ -16,6 +17,7 @@ public sealed class WorkflowLlmComponentInvoker(
     ILlmInvocationPort llmInvocationPort,
     IProviderRuntimeProfileSource providerSource,
     IProviderProfileService providerProfileService,
+    IWorkflowProviderInputAdmission inputAdmission,
     TimeProvider? timeProvider = null) : IWorkflowLlmComponentInvoker
 {
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -65,6 +67,8 @@ public sealed class WorkflowLlmComponentInvoker(
             correlationId: $"workflow:{definition.Id:N}:{node.Id}") {
                 History = WorkflowHistoryInvocation.Create(invocationId)
             };
+
+        await inputAdmission.RequireAsync(definition, node, input, cancellationToken);
 
         LlmInvocationResult response;
         try

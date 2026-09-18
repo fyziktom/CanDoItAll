@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
@@ -13,7 +14,7 @@ public sealed class CapabilityContractsTests
     [Fact]
     public void INV_NAMES_001_existing_runtime_tool_names_agent_capability_keys_and_process_operations_are_compatible()
     {
-        var invalidRuntimeToolNames = ToolContractCatalog.KnownToolNames
+        var invalidRuntimeToolNames = ProductToolPolicies.Capabilities.Select(policy => policy.Name)
             .Where(name => !RuntimeToolName.TryCreate(name, out _))
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();

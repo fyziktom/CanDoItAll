@@ -3,7 +3,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
-public sealed class HistoryRetentionStore(IDbContextFactory<AppDbContext> factory, TimeProvider clock) {
+public sealed class HistoryRetentionStore(
+    IDbContextFactory<ProviderHistoryDbContext> factory,
+    DbContextOptions<ProviderHistoryDbContext> options,
+    CoordinatedDatabaseTransaction transactions,
+    TimeProvider clock) {
+    public async Task<DateTimeOffset> ResolveMetadataRetentionForWriteAsync(DateTimeOffset startedAtUtc,
+        DateTimeOffset? requestedDeadline, CancellationToken cancellationToken) {
+        if (requestedDeadline is { } deadline) {
+            return HistoryStorageTimestamp.Normalize(deadline);
+        }
+        await using var db = await transactions.CreateEnlistedAsync(options, static value => new ProviderHistoryDbContext(value), cancellationToken);
+        var partition = await HistoryPartitionStore.GetForWriteAsync(db, cancellationToken);
+        var policy = db.Set<HistoryPolicyRow>().Local.SingleOrDefault(row => row.PartitionId == partition.StorageLineageId)
+            ?? await db.Set<HistoryPolicyRow>().AsNoTracking()
+                .SingleAsync(row => row.PartitionId == partition.StorageLineageId, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return startedAtUtc.AddDays(policy.MetadataRetentionDays);
+    }
+
     public async Task<int> PurgeExpiredDetailAsync(HistoryPartition partition, int maximumItems, CancellationToken cancellationToken) {
         ValidateBatch(maximumItems);
         await using var db = await factory.CreateDbContextAsync(cancellationToken);

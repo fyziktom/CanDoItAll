@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -13,6 +14,9 @@ public static class ResourcesModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddResourcesModule(this IServiceCollection services)
     {
+        services.AddPooledDbContextFactory<ResourcesDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             ResourcesProjectTransferTargetStateParticipant>());

@@ -2,7 +2,6 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Memory.Context;
 using CanDoItAll.AgentFramework.Memory.DependencyInjection;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Mock;
@@ -81,7 +80,7 @@ public sealed class AgentMemoryProviderEndToEndTests
     private static ServiceProvider CreateServiceProvider()
     {
         var services = new ServiceCollection();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"agent-memory-e2e-{Guid.NewGuid():N}"));
         services.AddDeterministicMockMemoryProviderDriver();
         services.AddGenericMemoryModule();

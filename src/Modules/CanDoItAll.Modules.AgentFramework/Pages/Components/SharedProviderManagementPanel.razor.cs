@@ -1,217 +1,291 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
-using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class SharedProviderManagementPanel
-{
-    [Inject]
-    public ISharedProviderManagementService ManagementService { get; set; } = default!;
-
-    [Inject]
-    public NotificationService NotificationService { get; set; } = default!;
-
-    [Parameter]
-    public Guid? ProviderProfileId { get; set; }
-
-    [Parameter]
-    public EventCallback ProvidersChanged { get; set; }
+public partial class SharedProviderManagementPanel : IDisposable {
+    [Inject] public ISharedProviderManagementService ManagementService { get; set; } = default!;
+    [Inject] public SharedProviderRecovery Recovery { get; set; } = default!;
+    [Inject] public NotificationService NotificationService { get; set; } = default!;
+    [Parameter] public Guid? ProviderProfileId { get; set; }
+    [Parameter] public long Revision { get; set; }
+    [Parameter] public EventCallback<SharedProviderChangeDelivery> ProvidersChanged { get; set; }
 
     private SharedProviderProfileSharingSnapshot? profileState;
+    private CancellationTokenSource? owner;
     private Guid? loadedProviderProfileId;
+    private long loadedRevision = -1;
+    private long generation;
+    private bool disposed;
+    private bool isLoading;
+    private bool isBusy;
+    private bool hasPendingAttempt => Recovery.FindTarget(ProviderProfileId) is not null;
+    private string? warning;
     private string confirmationTitle = string.Empty;
     private string confirmationMessage = string.Empty;
     private string confirmationActionText = string.Empty;
     private ConfirmationAction confirmationAction;
-    private bool isLoading;
-    private bool isBusy;
     private bool confirmationDialogOpen;
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (loadedProviderProfileId == ProviderProfileId)
-        {
+    protected override async Task OnParametersSetAsync() {
+        if (disposed) {
             return;
         }
-
+        if (loadedProviderProfileId == ProviderProfileId && loadedRevision == Revision) {
+            return;
+        }
         loadedProviderProfileId = ProviderProfileId;
-        await LoadAsync();
+        loadedRevision = Revision;
+        owner?.Cancel();
+        owner?.Dispose();
+        owner = new();
+        generation++;
+        profileState = null;
+        isBusy = false;
+        warning = Recovery.FindTarget(ProviderProfileId) is { } pending
+            ? Recovery.PendingDelivery(pending.AttemptId) is null
+                ? "The sharing write is unresolved. Verify its exact intended state before another change."
+                : DeliveryPendingMessage
+            : null;
+        CloseConfirmationDialog();
+        await LoadAsync(generation, owner.Token);
     }
 
-    private async Task LoadAsync()
-    {
+    private bool IsCurrent(long operation, CancellationToken token) =>
+        !disposed && operation == generation && !token.IsCancellationRequested;
+
+    private async Task LoadAsync(long operation, CancellationToken token, bool verify = false) {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(token);
+        token = request.Token;
+        var targetId = ProviderProfileId;
+        var unresolved = Recovery.FindTarget(targetId);
         isLoading = true;
-        try
-        {
-            profileState = await LoadProfileSharingAsync();
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Shared providers failed", exception.Message);
-        }
-        finally
-        {
-            isLoading = false;
+        try {
+            var state = targetId is { } id ? await ManagementService.GetProfileSharingAsync(id, token) : null;
+            if (!IsCurrent(operation, token)) {
+                return;
+            }
+            if (state is not null && state.ProviderProfileId != targetId) {
+                throw new InvalidOperationException("The sharing response has a different provider identity.");
+            }
+            profileState = state;
+            if (!verify || state is null) {
+                return;
+            }
+            if (unresolved is null) {
+                warning = null;
+                return;
+            }
+            if (Recovery.FindTarget(targetId)?.AttemptId != unresolved.AttemptId) {
+                return;
+            }
+            var verification = SharedProviderTargetVerification.Evaluate(unresolved, state);
+            switch (verification.Disposition) {
+                case SharedProviderTargetVerificationDisposition.Satisfied:
+                    Recovery.RecordCommit(unresolved.AttemptId, verification.Change);
+                    if (Recovery.PendingDelivery(unresolved.AttemptId) is not null) {
+                        await DeliverAsync(unresolved, operation, token);
+                    } else if (Recovery.CompleteTarget(unresolved)) {
+                        warning = null;
+                    }
+                    break;
+                case SharedProviderTargetVerificationDisposition.NotApplied:
+                    if (Recovery.CompleteTarget(unresolved)) {
+                        warning = "The sharing write was not applied. Current state is unchanged; you can make a deliberate new change.";
+                    }
+                    break;
+                default:
+                    warning = "The sharing write remains unresolved. Current state does not establish the requested outcome; no write was repeated.";
+                    break;
+            }
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception) {
+            if (IsCurrent(operation, token)) {
+                profileState = null;
+                warning = "Sharing state could not be read. Retry this target.";
+            }
+        } finally {
+            if (IsCurrent(operation, token)) {
+                isLoading = false;
+            }
         }
     }
 
-    private Task<SharedProviderProfileSharingSnapshot?> LoadProfileSharingAsync()
-        => ProviderProfileId.HasValue
-            ? LoadProfileSharingCoreAsync(ProviderProfileId.Value)
-            : Task.FromResult<SharedProviderProfileSharingSnapshot?>(null);
-
-    private async Task<SharedProviderProfileSharingSnapshot?> LoadProfileSharingCoreAsync(
-        Guid providerProfileId)
-        => await ManagementService.GetProfileSharingAsync(providerProfileId);
-
-    private Task PublishAsync()
-        => ChangePublicationAsync(SharedProviderPublicationAction.Publish);
-
-    private async Task ChangePublicationAsync(SharedProviderPublicationAction action)
-    {
-        if (profileState?.Publication is not { } publication)
-        {
+    private async Task RetryAsync() {
+        if (owner is null || disposed || isBusy || isLoading) {
             return;
         }
-
-        isBusy = true;
-        try
-        {
-            profileState = await ManagementService.SetPublicationAsync(
-                profileState.ProviderProfileId,
-                action,
-                publication.ConcurrencyToken);
-            NotificationService.Success(
-                action == SharedProviderPublicationAction.Publish
-                    ? "Provider published"
-                    : "Provider unpublished",
-                action == SharedProviderPublicationAction.Publish
-                    ? "The provider is now present in the shared-provider catalog."
-                    : "New remote requests can no longer discover or invoke this provider.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Publication change failed", exception.Message);
-            await LoadAsync();
-        }
-        finally
-        {
-            isBusy = false;
-            confirmationDialogOpen = false;
+        var operation = ++generation;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        var token = request.Token;
+        if (Recovery.FindTarget(ProviderProfileId) is { } pending && Recovery.PendingDelivery(pending.AttemptId) is not null) {
+            isBusy = true;
+            try {
+                await DeliverAsync(pending, operation, token);
+                if (IsCurrent(operation, token) && Recovery.FindTarget(ProviderProfileId) is null) {
+                    await LoadAsync(operation, token);
+                }
+            } finally {
+                if (IsCurrent(operation, token)) {
+                    isBusy = false;
+                }
+            }
+        } else {
+            await LoadAsync(operation, token, verify: true);
         }
     }
 
-    private void OpenUnpublishConfirmation()
-    {
+    private Task PublishAsync() => ChangePublicationAsync(SharedProviderPublicationAction.Publish);
+
+    private Task ChangePublicationAsync(SharedProviderPublicationAction action) {
+        if (profileState is not { Ownership: SharedProviderProfileOwnership.Local } state) {
+            return Task.CompletedTask;
+        }
+        return RunMutationAsync(token => ManagementService.SetPublicationAsync(
+            state.ProviderProfileId, action, state.Publication?.ConcurrencyToken, token), "Publication updated",
+            action == SharedProviderPublicationAction.Publish ? SharedProviderTargetMutationKind.Publish : SharedProviderTargetMutationKind.Unpublish);
+    }
+
+    private Task SaveImportedProfileAsync(SharedProviderImportedProfileEditModel model) {
+        if (profileState?.Import is not { } import) {
+            return Task.CompletedTask;
+        }
+        var request = new SharedProviderImportedProfileUpdateRequest(import.ImportId, import.ProviderProfileId,
+            model.LocalAlias, model.IsEnabled, import.ImportConcurrencyToken, import.ProviderConcurrencyToken);
+        return RunMutationAsync(token => ManagementService.UpdateImportedProfileAsync(request, token),
+            "Imported provider updated", SharedProviderTargetMutationKind.ImportedSettings, request);
+    }
+
+    private Task RetireImportedProfileAsync() {
+        if (profileState?.Import is not { } import) {
+            return Task.CompletedTask;
+        }
+        var request = new SharedProviderImportedProfileRetireRequest(import.ImportId, import.ProviderProfileId,
+            import.ImportConcurrencyToken, import.ProviderConcurrencyToken);
+        return RunMutationAsync(token => ManagementService.RetireImportedProfileAsync(request, token),
+            "Imported provider retired", SharedProviderTargetMutationKind.Retirement);
+    }
+
+    private async Task RunMutationAsync(Func<CancellationToken, Task<SharedProviderProfileSharingSnapshot>> mutation,
+        string title, SharedProviderTargetMutationKind kind, SharedProviderImportedProfileUpdateRequest? request = null) {
+        if (disposed || owner is null || isBusy || isLoading || hasPendingAttempt ||
+            profileState?.ProviderProfileId != ProviderProfileId) {
+            return;
+        }
+        SharedProviderTargetAttempt attempt;
+        try {
+            attempt = Recovery.BeginTarget(ProviderProfileId!.Value, kind, profileState!, request);
+        } catch (ArgumentException) {
+            warning = "The requested local settings are invalid. Correct the alias and retry.";
+            return;
+        }
+        var operation = ++generation;
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        var token = lifetime.Token;
+        isBusy = true;
+        warning = null;
+        try {
+            var result = await mutation(token);
+            if (result.ProviderProfileId != attempt.ProviderId) {
+                throw new InvalidOperationException("The sharing response has a different provider identity.");
+            }
+            Recovery.RecordCommit(attempt.AttemptId, result.Change);
+            if (!IsCurrent(operation, token)) {
+                return;
+            }
+            profileState = result;
+            if (result.Change is null) {
+                Recovery.CompleteTarget(attempt);
+            } else {
+                await DeliverAsync(attempt, operation, token);
+            }
+            if (IsCurrent(operation, token) && Recovery.FindTarget(ProviderProfileId) is null) {
+                warning = result.Change?.Warning;
+                if (warning is null) {
+                    NotificationService.Success(title, "The authoritative sharing state was saved.");
+                } else {
+                    NotificationService.Warning(title, warning);
+                }
+            }
+        } catch (SharedProviderCommittedException exception) {
+            Recovery.RecordCommit(attempt.AttemptId, exception.Change);
+            if (IsCurrent(operation, token)) {
+                profileState = null;
+                await DeliverAsync(attempt, operation, token);
+                if (IsCurrent(operation, token) && Recovery.FindTarget(ProviderProfileId) is null) {
+                    warning = exception.Change.Warning;
+                }
+            }
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            var rejected = exception is SharedProviderConcurrencyException or SharedProviderPublicationEligibilityException
+                or ArgumentException or KeyNotFoundException;
+            if (rejected) {
+                Recovery.CompleteTarget(attempt);
+            }
+            if (IsCurrent(operation, token)) {
+                warning = rejected
+                    ? "The sharing change was rejected. Retry loading the current state before another change."
+                    : "The sharing write is unconfirmed. Verify the authoritative state before another change.";
+                NotificationService.Warning("Sharing change needs attention", warning);
+            }
+        } finally {
+            if (IsCurrent(operation, token)) {
+                isBusy = false;
+                CloseConfirmationDialog();
+            }
+        }
+    }
+
+    private async Task DeliverAsync(SharedProviderTargetAttempt attempt, long operation, CancellationToken token) {
+        var result = await Recovery.DeliverTargetAsync(attempt, ProviderProfileId,
+            () => IsCurrent(operation, token), delivery => ProvidersChanged.InvokeAsync(delivery));
+        if (IsCurrent(operation, token)) {
+            warning = result == SharedProviderDeliveryDisposition.Acknowledged ? null : DeliveryPendingMessage;
+        }
+    }
+
+    private const string DeliveryPendingMessage =
+        "The sharing write is resolved, but workspace reconciliation delivery is pending. Retry delivery without repeating the write.";
+
+    private void OpenUnpublishConfirmation() {
         confirmationAction = ConfirmationAction.Unpublish;
         confirmationTitle = "Unpublish this provider?";
-        confirmationMessage = "The provider disappears from discovery and new remote invocations fail closed.";
+        confirmationMessage = "New remote requests stop. The permanent public identity and deletion protection remain.";
         confirmationActionText = "Unpublish";
         confirmationDialogOpen = true;
     }
 
-    private void OpenRetireConfirmation()
-    {
+    private void OpenRetireConfirmation() {
         confirmationAction = ConfirmationAction.RetireImport;
         confirmationTitle = "Retire this imported provider?";
-        confirmationMessage = "The local profile remains for audit and can be reactivated by selecting it during a later catalog import.";
+        confirmationMessage = "The profile remains for audit and can be reactivated through a later catalog import.";
         confirmationActionText = "Retire import";
         confirmationDialogOpen = true;
     }
 
-    private async Task ConfirmDestructiveActionAsync()
-    {
-        if (confirmationAction == ConfirmationAction.Unpublish)
-        {
-            await ChangePublicationAsync(SharedProviderPublicationAction.Unpublish);
-            return;
-        }
+    private Task ConfirmDestructiveActionAsync() => confirmationAction switch {
+        ConfirmationAction.Unpublish => ChangePublicationAsync(SharedProviderPublicationAction.Unpublish),
+        ConfirmationAction.RetireImport => RetireImportedProfileAsync(),
+        _ => Task.CompletedTask
+    };
 
-        if (confirmationAction == ConfirmationAction.RetireImport)
-        {
-            await RetireImportedProfileAsync();
-        }
-    }
-
-    private void CloseConfirmationDialog()
-    {
+    private void CloseConfirmationDialog() {
         confirmationDialogOpen = false;
         confirmationAction = ConfirmationAction.None;
     }
 
-    private async Task SaveImportedProfileAsync(SharedProviderImportedProfileEditModel editModel)
-    {
-        if (profileState?.Import is not { } import)
-        {
+    public void Dispose() {
+        if (disposed) {
             return;
         }
-
-        isBusy = true;
-        try
-        {
-            profileState = await ManagementService.UpdateImportedProfileAsync(
-                new SharedProviderImportedProfileUpdateRequest(
-                    import.ImportId,
-                    import.ProviderProfileId,
-                    editModel.LocalAlias,
-                    editModel.IsEnabled,
-                    import.ImportConcurrencyToken,
-                    import.ProviderConcurrencyToken));
-            await ProvidersChanged.InvokeAsync();
-            NotificationService.Success(
-                "Imported provider updated",
-                "The local alias and enabled intent were saved. Remote-owned fields were not changed.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Imported provider update failed", exception.Message);
-            await LoadAsync();
-        }
-        finally
-        {
-            isBusy = false;
-        }
+        disposed = true;
+        owner?.Cancel();
+        owner?.Dispose();
+        owner = null;
+        CloseConfirmationDialog();
     }
 
-    private async Task RetireImportedProfileAsync()
-    {
-        if (profileState?.Import is not { } import)
-        {
-            return;
-        }
-
-        isBusy = true;
-        try
-        {
-            profileState = await ManagementService.RetireImportedProfileAsync(
-                new SharedProviderImportedProfileRetireRequest(
-                    import.ImportId,
-                    import.ProviderProfileId,
-                    import.ImportConcurrencyToken,
-                    import.ProviderConcurrencyToken));
-            await ProvidersChanged.InvokeAsync();
-            NotificationService.Success(
-                "Imported provider retired",
-                "The provider is no longer selected for runtime use.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Imported provider retirement failed", exception.Message);
-            await LoadAsync();
-        }
-        finally
-        {
-            isBusy = false;
-            confirmationDialogOpen = false;
-        }
-    }
-
-    private enum ConfirmationAction
-    {
-        None,
-        Unpublish,
-        RetireImport
-    }
+    private enum ConfirmationAction { None, Unpublish, RetireImport }
 }

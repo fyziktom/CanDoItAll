@@ -10,7 +10,8 @@ internal sealed record ProjectStructureTaskPricingCommitPlan(
     ProjectTaskExecutionSnapshot ExpectedExecution,
     ProjectTaskEstimate ExpectedEstimate,
     ProjectTaskExpectedCostBasis? ExpectedCostBasis,
-    ProjectStructureTaskEstimateRefreshResult Pricing);
+    ProjectStructureTaskEstimateRefreshResult Pricing,
+    ProjectStructureAgentContext? MutationOwner = null);
 
 public sealed class ProjectStructureTaskPricingCommitService(
     ProjectWorkbenchService projectWorkbenchService,
@@ -26,14 +27,15 @@ public sealed class ProjectStructureTaskPricingCommitService(
         ProjectStructureTaskResourceSelection resource,
         ProjectTaskExecutionSnapshot previousExecution,
         ProjectTaskExecutionSnapshot expectedCurrentExecution,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
         => PrepareCoreAsync(
             projectId,
             taskNodeId,
             resource,
             previousExecution,
             expectedCurrentExecution,
-            cancellationToken);
+            cancellationToken, mutationOwner);
 
     private async Task<ProjectStructureTaskPricingCommitPlan> PrepareCoreAsync(
         Guid projectId,
@@ -41,7 +43,8 @@ public sealed class ProjectStructureTaskPricingCommitService(
         ProjectStructureTaskResourceSelection resource,
         ProjectTaskExecutionSnapshot? previousExecution,
         ProjectTaskExecutionSnapshot? expectedCurrentExecution,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         if (projectId == Guid.Empty)
         {
@@ -98,7 +101,7 @@ public sealed class ProjectStructureTaskPricingCommitService(
             execution,
             currentEstimate,
             currentCostBasis,
-            pricing);
+            pricing, mutationOwner);
     }
 
     internal async Task<ProjectStructureTaskEstimateRefreshResult> CommitAsync(

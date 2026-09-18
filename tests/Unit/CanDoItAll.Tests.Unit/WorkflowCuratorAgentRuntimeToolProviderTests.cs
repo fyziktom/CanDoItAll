@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,9 +14,42 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
-public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
+public sealed partial class WorkflowCuratorAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
+    [Theory]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorCatalogSearch, WorkflowCuratorToolPolicy.WorkflowCuratorCatalogSearch)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorAuthoringOptionsGet, WorkflowCuratorToolPolicy.WorkflowCuratorAuthoringOptionsGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorDraftCreate, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorDraftUpdate, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    [InlineData(WorkflowCuratorToolPolicy.WorkflowCuratorLifecycleChange, WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet)]
+    public async Task Saved_results_revalidate_the_current_read_capability_without_repeating_the_action(
+        string toolName, string readTool) {
+        var harness = CreateHarness();
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item => item.ToolName == toolName);
+        var authorize = Assert.IsType<Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>>(
+            metadata.AuthorizeResultDisclosureAsync);
+        var disclosure = ManagedToolDisclosureTestData.Create(metadata, null);
+        var readKeys = new HashSet<string>(StringComparer.Ordinal) { WorkflowCuratorAgentCapabilityKeys.ToolNameToCapabilityKey[readTool] };
+        var readActor = harness.Context.Agent with {
+            Capabilities = harness.Context.Agent.Capabilities.Where(item => readKeys.Contains(item.CapabilityKey)).ToArray()
+        };
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var allowed = await authorize(disclosure, default)) {
+            Assert.Null(allowed);
+        }
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id
+            ? readActor with { Capabilities = [] } : item).ToArray();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(disclosure, default).AsTask());
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var restored = await authorize(disclosure, default)) {
+            Assert.Null(restored);
+        }
+        Assert.Equal(AgentToolEffectState.Unknown, disclosure.EffectState);
+    }
 
     [Fact]
     public async Task Provider_fails_closed_for_identity_lifecycle_permission_purpose_and_catalog_spoofs()
@@ -162,7 +196,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
             .ToDictionary(tool => tool.Name, StringComparer.Ordinal);
 
         var created = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftCreate],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorDraftCreate],
             new WorkflowCuratorDraftCreateInput(
                 "Curator acceptance workflow",
                 "A minimal workflow authored through the managed curator."));
@@ -187,14 +221,14 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
         Assert.Equal("end", originalEdge.TargetNodeId.Value);
 
         var editor = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorDefinitionEditorGet],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet],
             new WorkflowCuratorDefinitionEditorInput(
                 created.Definition.Id.Value,
                 created.Definition.VersionId.Value));
         Assert.Equal(created.Definition.VersionId, editor.Definition.VersionId);
 
         var updated = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate],
             new WorkflowCuratorNodeUpdateInput(
                 editor.Definition.Id.Value,
                 editor.Definition.VersionId.Value,
@@ -218,7 +252,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
 
         var staleException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-                tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate],
+                tools[WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate],
                 new WorkflowCuratorNodeUpdateInput(
                     editor.Definition.Id.Value,
                     editor.Definition.VersionId.Value,
@@ -227,7 +261,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
         Assert.Contains("updated by another request", staleException.Message, StringComparison.OrdinalIgnoreCase);
 
         var active = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorLifecycleChange],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorLifecycleChange],
             new WorkflowCuratorLifecycleChangeInput(
                 updated.Definition.Id.Value,
                 updated.Definition.VersionId.Value,
@@ -352,7 +386,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
         };
 
         var created = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftCreate],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorDraftCreate],
             new WorkflowCuratorDraftCreateInput(
                 "Lossless graph workflow",
                 startNodeId: "start",
@@ -394,7 +428,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
         Assert.Equal(WorkflowRoutingLanguages.LegacyConditionExpression, createdLegacy.Routing.RoutingLanguage);
 
         var updated = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorDraftUpdate],
             new WorkflowCuratorDraftUpdateInput(
                 created.Definition.Id.Value,
                 created.Definition.VersionId.Value,
@@ -451,7 +485,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
         };
 
         var created = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftCreate],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorDraftCreate],
             new WorkflowCuratorDraftCreateInput(
                 "Nullable node settings workflow",
                 nodes: nodes));
@@ -471,7 +505,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
         Assert.Equal(explicitPolicy, explicitExecutor.Settings.ExecutionPolicy);
 
         var updated = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
-            tools[AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate],
+            tools[WorkflowCuratorToolPolicy.WorkflowCuratorDraftUpdate],
             new WorkflowCuratorDraftUpdateInput(
                 created.Definition.Id.Value,
                 created.Definition.VersionId.Value,
@@ -494,32 +528,32 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
     {
         var mutationNames = new[]
         {
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftCreate,
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate,
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate,
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorLifecycleChange
+            WorkflowCuratorToolPolicy.WorkflowCuratorDraftCreate,
+            WorkflowCuratorToolPolicy.WorkflowCuratorDraftUpdate,
+            WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate,
+            WorkflowCuratorToolPolicy.WorkflowCuratorLifecycleChange
         };
         var readNames = new[]
         {
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorCatalogSearch,
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorDefinitionEditorGet,
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorAuthoringOptionsGet
+            WorkflowCuratorToolPolicy.WorkflowCuratorCatalogSearch,
+            WorkflowCuratorToolPolicy.WorkflowCuratorDefinitionEditorGet,
+            WorkflowCuratorToolPolicy.WorkflowCuratorAuthoringOptionsGet
         };
 
         Assert.All(mutationNames, toolName =>
         {
-            Assert.True(ToolContractCatalog.IsKnownToolName(toolName));
-            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName));
-            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out _));
+            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies));
+            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out var metadata));
             Assert.Equal(ToolCapabilitySideEffectKind.InternalStateMutation, metadata.SideEffectKind);
         });
         Assert.All(readNames, toolName =>
         {
-            Assert.True(ToolContractCatalog.IsKnownToolName(toolName));
-            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName));
-            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out _));
+            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies));
+            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
+            Assert.True(ProductToolPolicies.TryResolve(toolName, out var metadata));
             Assert.Equal(ToolCapabilitySideEffectKind.InternalDataRead, metadata.SideEffectKind);
         });
 
@@ -537,16 +571,16 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
             instructions
         };
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate,
+            WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate,
         [
             new KeyValuePair<string, object?>("request", request)
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate,
+            WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate,
             redacted);
         var audit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate,
-            JsonSerializer.Serialize(new { request }));
+            WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate,
+            JsonSerializer.Serialize(new { request }), ProductToolPolicies);
 
         Assert.Contains(expectedVersionId.ToString("D"), signature, StringComparison.Ordinal);
         Assert.DoesNotContain(name, signature, StringComparison.Ordinal);
@@ -693,7 +727,8 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
 
     private static RuntimeHarness CreateHarness(
         IEnumerable<string>? capabilityKeys = null,
-        IWorkflowCatalogSearchService? catalogSearch = null)
+        IWorkflowCatalogSearchService? catalogSearch = null,
+        IWorkflowCatalogService? owner = null)
     {
         var now = DateTimeOffset.Parse("2026-07-19T12:00:00Z");
         var keys = (capabilityKeys ?? WorkflowCuratorAgentCapabilityKeys.ToolNameToCapabilityKey.Values)
@@ -771,7 +806,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
             new InMemoryWorkflowCatalogStore(),
             new WorkflowDefinitionValidator());
         var runtimeProvider = new WorkflowCuratorAgentRuntimeToolProvider(
-            catalog,
+            owner ?? catalog,
             catalogSearch ?? catalog,
             catalog,
             WorkflowExecutorCatalog.FromDescriptors([]),
@@ -792,18 +827,21 @@ public sealed class WorkflowCuratorAgentRuntimeToolProviderTests
     private static async Task<TResult> InvokeAsync<TResult>(AITool tool, object request)
     {
         var function = Assert.IsAssignableFrom<AIFunction>(tool);
+        using var capture = AgentToolInvocationEffectScope.Begin();
         var rawResult = await function.InvokeAsync(new AIFunctionArguments
         {
             ["request"] = request
         });
-        return rawResult switch
+        var result = rawResult switch
         {
-            TResult result => result,
+            TResult typed => typed,
             JsonElement element => JsonSerializer.Deserialize<TResult>(element.GetRawText(), JsonOptions)
                 ?? throw new InvalidOperationException("Workflow Curator runtime tool returned null JSON."),
             _ => throw new InvalidOperationException(
                 $"Unexpected Workflow Curator runtime tool result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
         };
+        AssertOwnerAcknowledgement(tool.Name, result, capture.CommittedEffect);
+        return result;
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

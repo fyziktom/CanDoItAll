@@ -38,7 +38,7 @@
     </Header>
 
     <ChildContent>
-        <PromptGallerySearchList @key="listKey"
+        <PromptGallerySearchHost @ref="searchHost"
                                  PageSize="25"
                                  Compact="false"
                                  AllowEdit="true"
@@ -57,20 +57,27 @@
         TestId="prompt-gallery-editor-dialog"
         OnClose="CloseEditorAsync">
     <ChildContent>
-        <PromptGalleryItemEditor ItemId="@selectedItemId"
-                                 Saved="HandleSavedAsync"
-                                 Cancelled="CloseEditorAsync" />
+        @if (editorOpen)
+        {
+            <PromptGalleryItemEditorHost ItemId="@selectedItemId"
+                                         Committed="HandleCommittedAsync"
+                                         Cancelled="CloseEditorAsync" />
+        }
     </ChildContent>
 </Dialog>
 
 @code {
-    private Guid listKey = Guid.NewGuid();
+    private readonly CancellationTokenSource lifetime = new();
+    private PromptGallerySearchHost? searchHost;
     private Guid? selectedItemId;
-    private Guid? openedQueryItemId;
+    private Guid? observedPromptIdQuery;
+    private bool promptIdObserved;
     private bool editorDirty;
     private bool editorOpen;
     private bool isOpeningCurator;
     private bool isLoadingCuratorPresentation;
+    private bool curatorContextFailed;
+    private bool disposed;
     private PromptGalleryCuratorPresentation? curatorPresentation;
     private IPromptGalleryCuratorContextLease? curatorContextLease;
 
@@ -81,25 +88,48 @@
 
     private string CuratorDisplayName => curatorPresentation?.Name ?? "Prompts Curator Agent";
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        if (CuratorLauncher.IsAvailable)
-        {
-            curatorContextLease ??= CuratorLauncher.ActivateContext();
-            curatorContextLease.SynchronizeNavigation();
+        SynchronizeCurator();
 
-            await LoadCuratorPresentationAsync();
-        }
-
-        if (!PromptIdQuery.HasValue || openedQueryItemId == PromptIdQuery)
+        // A changed promptId request opens the editor; the same value echoed by a rerender never reopens a closed one.
+        if (promptIdObserved && observedPromptIdQuery == PromptIdQuery)
         {
             return;
         }
 
-        openedQueryItemId = PromptIdQuery;
-        selectedItemId = PromptIdQuery;
-        editorDirty = false;
-        editorOpen = true;
+        promptIdObserved = true;
+        observedPromptIdQuery = PromptIdQuery;
+        if (PromptIdQuery.HasValue)
+        {
+            selectedItemId = PromptIdQuery;
+            editorDirty = false;
+            editorOpen = true;
+        }
+    }
+
+    private void SynchronizeCurator()
+    {
+        if (disposed || !CuratorLauncher.IsAvailable || curatorContextFailed)
+        {
+            return;
+        }
+
+        try
+        {
+            curatorContextLease ??= CuratorLauncher.ActivateContext();
+            curatorContextLease.SynchronizeNavigation();
+        }
+        catch (Exception exception)
+        {
+            // The Curator integration is optional; its failure never blocks the gallery itself.
+            curatorContextFailed = true;
+            Notifications.Error("Unable to prepare Prompts Curator", exception.Message);
+            return;
+        }
+
+        // The presentation read runs beside the gallery, never ahead of promptId handling or the first render.
+        _ = LoadCuratorPresentationAsync();
     }
 
     private Task CreateNewAsync()
@@ -120,7 +150,7 @@
 
     private async Task OpenCuratorAsync()
     {
-        if (isOpeningCurator || isLoadingCuratorPresentation || !CuratorLauncher.IsAvailable)
+        if (disposed || isOpeningCurator || isLoadingCuratorPresentation || !CuratorLauncher.IsAvailable)
         {
             return;
         }
@@ -129,27 +159,42 @@
         try
         {
             await LoadCuratorPresentationAsync();
-            if (curatorPresentation is null)
+            if (disposed || curatorPresentation is null)
             {
                 return;
             }
 
-            await CuratorLauncher.OpenAsync();
+            await CuratorLauncher.OpenAsync(lifetime.Token);
+            if (disposed)
+            {
+                // The chat may already exist; only this page's stale presentation of that fact is suppressed.
+                return;
+            }
+
             Notifications.Success("Chat ready", "Opened a new chat with Prompts Curator Agent.");
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
         }
         catch (Exception exception)
         {
-            Notifications.Error("Unable to open Prompts Curator", exception.Message);
+            if (!disposed)
+            {
+                Notifications.Error("Unable to open Prompts Curator", exception.Message);
+            }
         }
         finally
         {
-            isOpeningCurator = false;
+            if (!disposed)
+            {
+                isOpeningCurator = false;
+            }
         }
     }
 
     private async Task LoadCuratorPresentationAsync()
     {
-        if (curatorPresentation is not null || isLoadingCuratorPresentation)
+        if (disposed || curatorPresentation is not null || isLoadingCuratorPresentation)
         {
             return;
         }
@@ -157,41 +202,91 @@
         isLoadingCuratorPresentation = true;
         try
         {
-            curatorPresentation = await CuratorLauncher.GetPresentationAsync();
+            var presentation = await CuratorLauncher.GetPresentationAsync(lifetime.Token);
+            if (disposed)
+            {
+                return;
+            }
+
+            curatorPresentation = presentation;
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+            return;
         }
         catch (Exception exception)
         {
+            if (disposed)
+            {
+                return;
+            }
+
+            // A transient failure keeps the action available; the next click retries the read.
             Notifications.Error("Unable to load Prompts Curator", exception.Message);
         }
         finally
         {
-            isLoadingCuratorPresentation = false;
+            if (!disposed)
+            {
+                isLoadingCuratorPresentation = false;
+            }
+        }
+
+        await RenderIfAliveAsync();
+    }
+
+    private async Task RenderIfAliveAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception) when (disposed)
+        {
+            // The page went away while the render was queued; there is nothing left to show.
         }
     }
 
-    private Task HandleSavedAsync(Guid itemId)
+    private Task HandleCommittedAsync(PromptGalleryEditorCommit commit)
     {
-        selectedItemId = itemId;
+        // The editor reports the identity it owns; the page echoes it back as the requested target.
+        selectedItemId = commit.ItemId;
         editorDirty = true;
         return Task.CompletedTask;
     }
 
-    private Task CloseEditorAsync()
+    private async Task CloseEditorAsync()
     {
         editorOpen = false;
         selectedItemId = null;
-        if (editorDirty)
+        if (disposed || !editorDirty)
         {
-            listKey = Guid.NewGuid();
-            editorDirty = false;
+            return;
         }
 
-        return Task.CompletedTask;
+        // Persisted changes invalidate the catalog data in place; filters and paging are preserved.
+        editorDirty = false;
+        if (searchHost is not null)
+        {
+            await searchHost.RefreshAsync();
+        }
     }
 
     public void Dispose()
     {
-        curatorContextLease?.Dispose();
-        curatorContextLease = null;
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+        Interlocked.Exchange(ref curatorContextLease, null)?.Dispose();
     }
 }

@@ -37,6 +37,53 @@ Each module should:
 Module-to-module references are acceptable only for an intentional product dependency.
 Provider, transport, and persistence details remain behind their owning adapter boundary.
 
+## Owner contracts and adapters
+
+The module-decoupling refactor gave each business fact one authoritative writer and one
+owner context. The composition root wires the owners together through typed contracts;
+a projection or cache carries its source, scope and revision and never becomes a
+fallback master. The table lists the owners, the ordinary entry point other modules,
+HTTP endpoints, agent tools and UI must use, and the adapter that translates between
+owners. [The coverage record](modules-decoupling/COVERAGE.md) keeps the per-owner test
+evidence.
+
+| Owner | Authoritative facts | Ordinary entry point | Integration adapter |
+|---|---|---|---|
+| Agents / Providers (`Modules.AgentFramework`, `src/MAF`) | technical agent definitions, capabilities, provider and model configuration, AI tariffs and usage evidence | `IAgentFrameworkWorkspaceService` through `ICanDoItAllAgentWorkspaceFactory`; `/api/agents` | `AgentFrameworkAiTechnicalAgentBridge` is the only caller of the CRM projection store; the CRM `LegacyAiTechnicalAgentBridge` is a fallback for hosts without the Agents module and is replaced whenever the module is registered |
+| CRM/HR (`Modules.CrmHr`, `CrmHrDbContext`) | parties, contacts, affiliations, workforce facts and human rates, staffing and capacity, technical-agent projections | `CrmHrServices`; `/api/crm-hr`; `crm_planning_*` agent tools (privacy-filtered, no rate disclosure) | implements the Projects-owned `IProjectPartyIntegrationBridge`, `IProjectPartyCostRateBridge` and `IProjectWorkAssignmentPartyFacts`; `IAiTechnicalAgentProjectionStore` accepts only the Agents bridge with a profile- and revision-pinned cursor |
+| Projects (`Modules.Projects`, `ProjectsDbContext`) | project lifecycle, hierarchy, identity and lifetime admission | `ProjectsService`, `ProjectWriteAdmissionService`; `/api/projects` | owns the bridge contracts with no-op defaults that the owning modules replace; creation receipts and fingerprinted compensation for multi-owner journeys |
+| Project Structure / Workbench (`Modules.Workbench`, `WorkbenchDbContext`) | native notes, nodes, placements, links, assets, canonical tasks, dependencies and assignments | `ProjectWorkbenchService`, `ProjectStructureAgentService`; `/api/project-structure`; `project_structure_*` and `project_task_*` tools | `ProjectNodeScopeBridge`, `ProjectNodeDetailsBridge`, `ProjectNodeAssignmentPolicyBridge`, `ProjectWorkItemAssignmentMutationBridge`; plan analytics read the recorded task execution state as the progress truth on every surface |
+| Workflows and Processes (`Modules.Processes`, `src/Processes`, `WorkflowDbContext`, `ProcessPersistenceDbContext`) | definitions, admitted executions, checkpoints, approvals, cancellation, recovery and outcomes | `IProcessRuntimeUnitOfWork`, `IProcessPreparedLaunchStore`; `/api/processes`, `/api/workflows` | `AgentFrameworkProcessStepExecutor` uses the Agents hosting API only; the pre-dispatch tool preflight receives inert inventories from owner tool providers |
+| Resources / Storage (`Modules.Resources`, `StorageDbContext`) | resource catalog metadata versus bytes, locators, placement and file-operation receipts | `StorageStablePlacementService`; `/storage`, `/api/storage-placement-recovery`; `storage_*` tools | intent states including `Uncertain`; native continuation enlists in the owner transaction |
+| Simple Chats (`src/MAF/SimpleChats`, `SimpleChatsDbContext`) | ordinary definitions, conversations and turns | `LlmChatDefinitionApplicationService`; `/api/llm-chats` | `HrSimpleChatRuntimeToolProvider` administers definitions without transcript access or tools |
+| Composition (`CanDoItAll.Composition`) | wiring only | `RuntimeHostServiceCollectionExtensions` | the complete `AppDbContext` model exists for migrations, transfer and schema health through `IProfileAppDbContextFactory`; product modules never inject the global context (guarded by `DatabaseCanonicalityArchitectureTests`) |
+
+## Rendering libraries and contracts assemblies
+
+Two modules have moved their rendering out of the module and into a feature UI library that binds to
+a contract the routed host implements:
+
+| Module | Contracts assembly | Rendering library | Scenario host |
+|---|---|---|---|
+| CRM / HR | `CanDoItAll.Modules.CrmHr.Contracts` | `CanDoItAll.CrmHr.UI` | `CanDoItAll.CrmHr.UiSandbox` |
+| Prompts | `CanDoItAll.Modules.Prompts.Contracts` | `CanDoItAll.Prompts.UI` | `CanDoItAll.Prompts.UiSandbox` |
+
+`CanDoItAll.Modules.Projects.Contracts` exists for the same reason in the other direction: it lets a
+renderer or another module name a project, its write admission and its assignment queries without
+referencing the Projects implementation. A contracts assembly keeps the namespace of its module, so
+no consumer had to be rewritten when the types moved.
+
+The owners above are unchanged by that move: a rendering library performs no write and holds no
+session. [UI component seams](ui-component-seams.md) describes the seam, and the per-module records
+under this directory describe what each slice moved and what it deliberately left behind.
+
+Stable seams for the next UI decoupling are the owner application services and the
+Projects-owned bridge contracts above, together with the agent chat context registry
+(`IAgentChatContextRegistry`, one active scope per circuit with `IsActive` leases) and the
+`IAgentRuntimeToolProvider` composition. Presentation-only coupling that remains in module
+Razor pages (Agents pages importing CRM, Security, Prompts and Workspace types) is
+intentionally deferred to that work and does not introduce a second writer.
+
 The ordinary multi-turn LLM conversation foundation under `src/MAF/Common` is not globally active. The
 LLM Chats persistence adapter constructs it only inside the scoped product engine, paired with canonical
 PostgreSQL state and profile-generation fencing. Other products must opt in through their own explicit

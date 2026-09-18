@@ -20,6 +20,8 @@ public sealed class AgentProjectStructureAccessSettings
     public bool AllowAllProjects { get; set; }
 
     public List<Guid> AllowedProjectIds { get; set; } = [];
+
+    public List<AgentProjectStructureLifetime> AllowedProjectLifetimes { get; set; } = [];
 }
 
 public readonly record struct AgentProjectStructureAccessRevocationResult(
@@ -34,7 +36,7 @@ public sealed class AgentProjectStructureAccessMetadataException : Exception
     }
 }
 
-public static class AgentProjectStructureAccessMetadata
+public static partial class AgentProjectStructureAccessMetadata
 {
     private const string RootPropertyName = "projectStructure";
     private const string CanReadPropertyName = "canRead";
@@ -87,9 +89,10 @@ public static class AgentProjectStructureAccessMetadata
                 settings.AllowedProjectIds = ReadProjectIds(allowedProjectIds);
             }
 
+            settings.AllowedProjectLifetimes = ReadProjectLifetimesForMutation(projectStructure).Select(item => item.Lifetime).ToList();
             return Normalize(settings);
         }
-        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException or AgentProjectStructureAccessMetadataException)
         {
             return new AgentProjectStructureAccessSettings();
         }
@@ -100,6 +103,11 @@ public static class AgentProjectStructureAccessMetadata
         AgentProjectStructureAccessSettings? settings)
     {
         var normalized = Normalize(settings ?? new AgentProjectStructureAccessSettings());
+        normalized.AllowedProjectLifetimes = normalized.AllowedProjectLifetimes
+            .Concat(Read(configurationJson).AllowedProjectLifetimes)
+            .Where(lifetime => normalized.AllowedProjectIds.Contains(lifetime.ProjectId))
+            .Distinct().OrderBy(lifetime => lifetime.DatabaseProfileId).ThenBy(lifetime => lifetime.ProjectId)
+            .ThenBy(lifetime => lifetime.LifetimeId).ToList();
         var root = ParseObject(configurationJson);
 
         if (!normalized.CanRead &&
@@ -129,6 +137,10 @@ public static class AgentProjectStructureAccessMetadata
                     .Select(projectId => JsonValue.Create(projectId.ToString("D")))
                     .ToArray())
         };
+        if (normalized.AllowedProjectLifetimes.Count > 0) {
+            root[RootPropertyName]![AllowedProjectLifetimesPropertyName] = new JsonArray(
+                normalized.AllowedProjectLifetimes.Select(WriteProjectLifetime).Cast<JsonNode>().ToArray());
+        }
 
         return root.ToJsonString();
     }
@@ -167,6 +179,7 @@ public static class AgentProjectStructureAccessMetadata
             projectStructure,
             AllowAllProjectsPropertyName);
         var allowedProjectIds = ReadProjectIdsForMutation(projectStructure);
+        var lifetimes = ReadProjectLifetimesForMutation(projectStructure);
         if (allowAllProjects || !allowedProjectIds.Any(item => item.ProjectId == projectId))
         {
             return new AgentProjectStructureAccessRevocationResult(
@@ -179,6 +192,11 @@ public static class AgentProjectStructureAccessMetadata
                 .Where(item => item.ProjectId != projectId)
                 .Select(item => JsonValue.Create(item.RawValue))
                 .ToArray());
+
+        if (projectStructure.ContainsKey(AllowedProjectLifetimesPropertyName)) {
+            projectStructure[AllowedProjectLifetimesPropertyName] = new JsonArray(lifetimes
+                .Where(item => item.Lifetime.ProjectId != projectId).Select(item => item.Node.DeepClone()).ToArray());
+        }
 
         return new AgentProjectStructureAccessRevocationResult(
             Changed: true,
@@ -213,7 +231,11 @@ public static class AgentProjectStructureAccessMetadata
             CanCreateProjects = settings.CanCreateProjects,
             CanCreateSubprojects = settings.CanCreateSubprojects,
             AllowAllProjects = settings.AllowAllProjects,
-            AllowedProjectIds = allowedProjectIds
+            AllowedProjectIds = allowedProjectIds,
+            AllowedProjectLifetimes = settings.AllowedProjectLifetimes
+                .Where(lifetime => allowedProjectIds.Contains(lifetime.ProjectId)).Distinct()
+                .OrderBy(lifetime => lifetime.DatabaseProfileId).ThenBy(lifetime => lifetime.ProjectId)
+                .ThenBy(lifetime => lifetime.LifetimeId).ToList()
         };
     }
 

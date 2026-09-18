@@ -20,11 +20,11 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         "CanDoItAll.Modules.AgentFramework.WorkflowExternalResponsePayload.v1";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<WorkflowDbContext> dbContextFactory;
     private readonly IDataProtector responseProtector;
 
     public PersistentWorkflowExternalResponseOperationStore(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkflowDbContext> dbContextFactory,
         IDataProtectionProvider dataProtectionProvider)
     {
         this.dbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
@@ -547,7 +547,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
     }
 
     private static Task<WorkflowExternalRequestRecordEntity?> LockRequestAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalRequestId requestId,
         CancellationToken cancellationToken)
         => WorkflowPersistenceProvider.IsInMemory(dbContext)
@@ -564,7 +564,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
                 .SingleOrDefaultAsync(cancellationToken);
 
     private static Task<WorkflowExternalResponseOperationEntity?> LockOperationByRequestAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalRequestId requestId,
         CancellationToken cancellationToken)
         => WorkflowPersistenceProvider.IsInMemory(dbContext)
@@ -581,7 +581,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
                 .SingleOrDefaultAsync(cancellationToken);
 
     internal static Task<WorkflowExternalResponseOperationEntity?> LockOperationAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalResponseOperationId operationId,
         CancellationToken cancellationToken)
         => WorkflowPersistenceProvider.IsInMemory(dbContext)

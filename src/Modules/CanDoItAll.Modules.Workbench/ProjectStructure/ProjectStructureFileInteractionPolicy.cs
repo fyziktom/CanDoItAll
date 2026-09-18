@@ -19,7 +19,7 @@ internal static class ProjectStructureFileInteractionPolicy
     public static FileToolsKnownFileIntent ResolveIntent(
         string fileName,
         string? mediaType,
-        StorageCatalogRecord storage,
+        StorageCatalogSnapshot storage,
         IStorageDriver driver)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);

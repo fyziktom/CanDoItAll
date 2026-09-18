@@ -74,13 +74,13 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
         var assetArguments = $"projectId '{asset.ProjectId:D}' and nodeId '{asset.NodeId}'";
         if (IsSvgContentType(contentType))
         {
-            return $"Use {AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet} with {assetArguments} to inspect the SVG source as inert text.";
+            return $"Use {ProjectStructureToolPolicy.ProjectStructureAssetTextGet} with {assetArguments} to inspect the SVG source as inert text.";
         }
 
         if (IsImageContentType(contentType))
         {
             return canTransformArtifacts
-                ? $"Use {AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze} with {assetArguments}; do not pass this asset path to a workspace image tool."
+                ? $"Use {ProjectStructureToolPolicy.ProjectStructureAssetImageAnalyze} with {assetArguments}; do not pass this asset path to a workspace image tool."
                 : "The selected agent lacks artifact-transformation access. Choose a project-authorized agent that can analyze images; do not pass this asset path to a workspace image tool.";
         }
 
@@ -102,7 +102,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
 
         if (ProjectStructureAgentRuntimeAssetTextReader.IsSupported(asset))
         {
-            return $"Use {AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet} with {assetArguments} to inspect bounded UTF-8 text.";
+            return $"Use {ProjectStructureToolPolicy.ProjectStructureAssetTextGet} with {assetArguments} to inspect bounded UTF-8 text.";
         }
 
         return $"Use a bounded workspace tool against '{mediaPath}' only when the step contract requires inspecting the asset bytes.";

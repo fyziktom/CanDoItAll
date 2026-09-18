@@ -147,7 +147,8 @@ redacted `500`. The workflow response boundary never uses `502`.
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Discover the route contract. |
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
-| `POST` | `/api/processes/launch` | Create and optionally queue a durable run. |
+| `POST` | `/api/processes/launch` | Accept a prepared launch and optionally queue its durable run. |
+| `GET` | `/api/processes/launch/{admissionId}` | Observe the original preparation, accepted run and delivery state without executing it. |
 | `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
 | `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
@@ -161,7 +162,7 @@ redacted `500`. The workflow response boundary never uses `502`.
 | `GET` | `/api/processes/events/stream` | Subscribe to bounded all-run lifecycle signals. |
 | `GET` | `/api/processes/runs/{runId}/events/stream` | Subscribe to bounded exact-run lifecycle signals. |
 
-`launch/check` is non-mutating. `launch` persists the run when readiness permits; `execute: false` prevents immediate dispatch queueing but does not turn the launch into a dry run. See the [operator runbook](process-agent-operator-runbook.md) for triage and configuration.
+`launch/check` persists a reviewable preparation but does not create or dispatch a run. Retain its `callerIntentId` and returned admission identity for the subsequent launch and retry. The optional `callerIntentId` and `preparedAdmissionId` fields reuse the original plan and source; changed input conflicts. Callers omitting these identities retain intentional-repeat behavior and cannot safely infer whether an unacknowledged call created a run. `launch` persists the run when readiness permits; `execute: false` prevents immediate queueing but still accepts the run. Its `observation` distinguishes acceptance, continuation and Structure delivery. See the [operator runbook](process-agent-operator-runbook.md) for recovery and configuration.
 
 ## Agent Approval And Usage Contract
 
@@ -199,6 +200,8 @@ An HTTP route is not automatically available as an in-agent tool. Runtime tools 
 
 Attachment remains subject to execution purpose, agent permissions, assigned capabilities, project/process scope, and invocation policy. See [Agent runtime tool surface](agent-runtime-tool-surface.md).
 
+For supported durably admitted Agent runs, `POST /api/agents/execution-runs/{executionRunId}/recover` resumes the original run and provider segment under current authority. It does not start a replacement conversation or issue a new business intent. Pending approvals use the existing pending-approvals endpoint. `POST /api/agents/execution-runs/{executionRunId}/reconcile-cancellation` only reads approved owner receipts and retains confirmed effects; a missing receipt remains uncertain while an earlier owner transaction could still commit. Both requests accept an optional `activityOperationId` and expose the activity operation header. When HTTP authorization is enabled, both require the general `api` scope. Reconciliation projects effect identity and uncertainty without exposing the internal receipt protocol. See the [HR definition adapter contract](../src/Integration/CanDoItAll.Agents.SimpleChats/README.md) for recovery limits.
+
 ## Operator Skills
 
 Reusable `candoitall-api-*` skills are maintained in the canonical [CanDoItAll.SharedInfo skill source](https://github.com/fyziktom/CanDoItAll.SharedInfo/tree/main/codex/skills). No product-repository source copy is maintained.
@@ -219,3 +222,11 @@ git diff --check
 ```
 
 For API behavior changes, add focused route and application-service tests, then use the stable repository gate in [Testing](testing.md).
+
+## Capability verification and recovery
+
+`POST /api/agents/{agentId}/capabilities/{capabilityId}/verify` retains its successful `ApiAck` response. Invalid agent, capability, attachment, or required provider identity returns HTTP 400 with `outcome: Rejected`. Infrastructure unavailable before diagnostic dispatch returns HTTP 409 with `outcome: InfrastructureUnavailable`; other non-completed outcomes also return 409. Typed failure responses include the target identities, available proof receipt identity/time, and `automaticReplaySafe: false`. They contain no internal exception detail. Do not automatically retry this diagnostic POST.
+
+Agent `UpdatedAtUtc` is a strictly increasing concurrency revision for accepted configuration writes, even when the wall clock repeats or moves backwards. Keep sending the authoritative expected revision when updating an agent. Proof `LastVerifiedAtUtc` retains the actual observation time independently of that revision.
+
+The capabilities workspace keeps unresolved operations within the circuit. Retained assignment submissions and proof receipts use canonical reads for recovery, without replaying a write or diagnostic. If a diagnostic returns no correlatable receipt, explicit acknowledgement releases only the circuit block and does not prove rollback. Unknown Curator creation likewise requires inspecting managed chats and acknowledging uncertainty; it neither deletes a chat nor launches another. A subsequent diagnostic or launch is a new explicit user action. Recovery is not durable across a new circuit or process restart.

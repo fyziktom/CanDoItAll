@@ -60,6 +60,13 @@
             return;
         }
 
+        if (scopeLease is { IsActive: false })
+        {
+            // A newer surface published its own scope; this provider's registrations are finished and must not
+            // overwrite the live scope. A selection change still activates a fresh scope above.
+            return;
+        }
+
         activeProject = selection?.Project;
         UpdatePortfolioFragment();
         UpdateSelectionFragment(selection);
@@ -259,12 +266,27 @@
 
     private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
     {
-        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        if (isDisposed ||
+            activeSource is null ||
+            notification.Source != activeSource ||
+            notificationSubscription is not { } admittedSubscription)
         {
             return Task.CompletedTask;
         }
 
-        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+        // The refresh is dispatched on the renderer later; the same activation must still be current then.
+        return InvokeAsync(async () =>
+        {
+            if (isDisposed ||
+                activeSource is null ||
+                notification.Source != activeSource ||
+                !ReferenceEquals(notificationSubscription, admittedSubscription))
+            {
+                return;
+            }
+
+            await RefreshRequested.InvokeAsync(notification);
+        });
     }
 
     private void HandleReferenceDataInvalidated(object? sender, EventArgs eventArgs)
@@ -327,6 +349,7 @@
         return left.Source == right.Source &&
                string.Equals(left.DisplayName, right.DisplayName, StringComparison.Ordinal) &&
                Equals(left.WorkspaceScope, right.WorkspaceScope) &&
+               left.ObservedProjectLifetime == right.ObservedProjectLifetime &&
                left.AccessMode == right.AccessMode &&
                left.AccessState == right.AccessState &&
                left.AgentAccess.SequenceEqual(right.AgentAccess) &&

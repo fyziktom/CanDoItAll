@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Usage;
 
 public sealed class SimpleChatProviderUsageProjectionSource(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SimpleChatsDbContext> dbContextFactory,
     ILogger<SimpleChatProviderUsageProjectionSource> logger) : IProviderUsageProjectionSource
 {
     public const string SourceIdentity = "simple-chats-ef";

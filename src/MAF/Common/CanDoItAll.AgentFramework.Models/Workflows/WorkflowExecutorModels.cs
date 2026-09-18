@@ -621,6 +621,9 @@ public sealed record WorkflowExecutorDescriptor(
     WorkflowExecutorExecutionPolicy DefaultPolicy,
     bool IsImplemented)
 {
+    [JsonIgnore]
+    public WorkflowDisclosureOwnerId? ProviderReadOwner { get; init; }
+
     public WorkflowExecutorSourceDescriptor Source { get; init; } = WorkflowExecutorSourceDescriptor.BuiltIn();
 
     public WorkflowExecutorAvailabilityDescriptor Availability { get; init; } = IsImplemented
