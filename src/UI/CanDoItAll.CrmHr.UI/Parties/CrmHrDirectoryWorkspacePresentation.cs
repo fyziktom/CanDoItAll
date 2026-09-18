@@ -123,6 +123,16 @@ public sealed class PartyEditorViewModel
         return new PartyEditorViewModel();
     }
 
+    // Owner-assigned state the form never edits: the primary contact points the next save updates instead of
+    // recreating. A host that keeps this draft after its own commit (the operator typed on while the write was in
+    // flight) takes them from the owner's accepted record, so the identities stay the committed ones.
+    public void AdoptOwnerContactPoints(PartyEditorViewModel owner)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        PrimaryEmailContactPoint = owner.PrimaryEmailContactPoint;
+        PrimaryPhoneContactPoint = owner.PrimaryPhoneContactPoint;
+    }
+
     public static PartyEditorViewModel FromEditorModel(PartyEditorModel model)
     {
         var roles = model.Roles.Select(CloneRole).ToList();

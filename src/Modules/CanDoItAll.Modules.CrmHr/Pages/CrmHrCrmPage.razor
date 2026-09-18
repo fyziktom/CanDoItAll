@@ -385,7 +385,9 @@
             accountChanged,
             committed.HasFlag(CrmAccountEditor.Profile));
         var previousConnections = connectedRecordEditors;
-        connectedRecordEditors = drafts.Reconcile(
+        // Rows are paired by the directory record and role the owner keeps unique per account, so a row this commit
+        // created adopts the connection identity the owner assigned even when the operator kept editing the list.
+        connectedRecordEditors = drafts.ReconcileList(
             ConnectionsDraft,
             connectedRecordEditors,
             () => account.ConnectedRecords
@@ -400,7 +402,9 @@
                 })
                 .ToList(),
             accountChanged,
-            committed.HasFlag(CrmAccountEditor.Connections));
+            committed.HasFlag(CrmAccountEditor.Connections),
+            nameof(CrmAccountConnectionEditorModel.RelatedPartyId),
+            nameof(CrmAccountConnectionEditorModel.Role));
         if (!ReferenceEquals(previousConnections, connectedRecordEditors))
         {
             // A kept connection draft still names the parties the operator picked for it and its open picker row.
@@ -751,9 +755,12 @@
             return;
         }
 
-        var result = await CrmService.SaveAccountProfileAsync(profileEditor.Snapshot());
+        var result = await CrmService.SaveAccountProfileAsync(
+            drafts.Submit(ProfileDraft, profileEditor, static editor => editor.Snapshot()));
         if (result.IsFailure)
         {
+            // Nothing was written: the draft stays exactly as the operator left it and owns all of its fields again.
+            drafts.Retire(ProfileDraft);
             if (IsCurrentCrmAction(action))
             {
                 NotifyError("CRM account save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -902,10 +909,14 @@
 
         var result = await CrmService.SaveConnectedRecordsAsync(
             action.AccountId,
-            connectedRecordEditors.Select(connection => connection.Snapshot()).ToList(),
+            drafts.Submit(
+                ConnectionsDraft,
+                connectedRecordEditors,
+                static rows => rows.Select(connection => connection.Snapshot()).ToList()),
             profileEditor.LastChangedBy);
         if (result.IsFailure)
         {
+            drafts.Retire(ConnectionsDraft);
             if (IsCurrentCrmAction(action))
             {
                 NotifyError(
@@ -939,10 +950,11 @@
 
         var result = await CrmService.AddInteractionAsync(
             action.AccountId,
-            interactionEditor.Snapshot(),
+            drafts.Submit(InteractionDraft, interactionEditor, static editor => editor.Snapshot()),
             profileEditor.LastChangedBy);
         if (result.IsFailure)
         {
+            drafts.Retire(InteractionDraft);
             if (IsCurrentCrmAction(action))
             {
                 NotifyError("Interaction save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -951,7 +963,14 @@
             return;
         }
 
-        if (!await ReloadSelectedAccountAsync(action, clearMessage: false, committed: CrmAccountEditor.Interaction))
+        // The create editor starts over once the owner accepted it, unless the operator already typed the next
+        // interaction into it while the write was in flight; that draft is theirs and survives the read-back whole.
+        var interactionStartsOver = !drafts.ChangedAfterSubmission(InteractionDraft, interactionEditor);
+        drafts.Retire(InteractionDraft);
+        if (!await ReloadSelectedAccountAsync(
+                action,
+                clearMessage: false,
+                committed: interactionStartsOver ? CrmAccountEditor.Interaction : CrmAccountEditor.None))
         {
             return;
         }

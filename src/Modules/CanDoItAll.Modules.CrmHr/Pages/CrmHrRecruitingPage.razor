@@ -399,14 +399,18 @@
             return;
         }
 
-        var result = await RecruitingService.SaveRecruitmentApplicationAsync(applicationEditor.Snapshot());
+        var result = await RecruitingService.SaveRecruitmentApplicationAsync(
+            drafts.Submit(ApplicationDraft, applicationEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(ApplicationDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            // Nothing was written: the draft stays as the operator left it and owns all of its fields again.
+            drafts.Retire(ApplicationDraft);
             SetError(result.Errors);
             return;
         }
@@ -455,20 +459,27 @@
         }
 
         interviewEditor.ApplicationId = currentWorkspace.Application.Id.Value;
-        var result = await RecruitingService.SaveRecruitmentInterviewAsync(interviewEditor.Snapshot());
+        var result = await RecruitingService.SaveRecruitmentInterviewAsync(
+            drafts.Submit(InterviewDraft, interviewEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(InterviewDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(InterviewDraft);
             SetError(result.Errors);
             return;
         }
 
         NotificationService.Success("Interview saved", "Interview saved.");
-        await RefreshAfterCommitAsync(RecruitingEditor.Interview);
+        // The create editor starts over once the owner accepted it, unless the operator already typed the next
+        // interview into it while the write was in flight; that draft is theirs and survives the read-back whole.
+        var interviewStartsOver = !drafts.ChangedAfterSubmission(InterviewDraft, interviewEditor);
+        drafts.Retire(InterviewDraft);
+        await RefreshAfterCommitAsync(interviewStartsOver ? RecruitingEditor.Interview : RecruitingEditor.None);
     }
 
     private Task ResetInterviewAsync()
@@ -526,20 +537,25 @@
         }
 
         taskEditor.PartyId = currentWorkspace.Application.PartyId.Value;
-        var result = await RecruitingService.SaveLifecycleTaskAsync(taskEditor.Snapshot());
+        var result = await RecruitingService.SaveLifecycleTaskAsync(
+            drafts.Submit(TaskDraft, taskEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(TaskDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(TaskDraft);
             SetError(result.Errors);
             return;
         }
 
         NotificationService.Success("Lifecycle task saved", "Lifecycle task saved.");
-        await RefreshAfterCommitAsync(RecruitingEditor.Task);
+        var taskStartsOver = !drafts.ChangedAfterSubmission(TaskDraft, taskEditor);
+        drafts.Retire(TaskDraft);
+        await RefreshAfterCommitAsync(taskStartsOver ? RecruitingEditor.Task : RecruitingEditor.None);
     }
 
     private Task ResetTaskAsync()
@@ -620,14 +636,17 @@
         }
 
         supportEditor.PartyId = currentWorkspace.Application.PartyId.Value;
-        var result = await RecruitingService.SaveSupportAssignmentsAsync(supportEditor.Snapshot());
+        var result = await RecruitingService.SaveSupportAssignmentsAsync(
+            drafts.Submit(SupportDraft, supportEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(SupportDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(SupportDraft);
             SetError(result.Errors);
             return;
         }
@@ -657,14 +676,17 @@
         }
 
         conversionEditor.ApplicationId = currentWorkspace.Application.Id.Value;
-        var result = await RecruitingService.ConvertCandidateAsync(conversionEditor.Snapshot());
+        var result = await RecruitingService.ConvertCandidateAsync(
+            drafts.Submit(ConversionDraft, conversionEditor, static editor => editor.Snapshot()));
         if (!IsCurrentRecruitmentAction(action))
         {
+            drafts.Retire(ConversionDraft);
             return;
         }
 
         if (!result.IsSuccess)
         {
+            drafts.Retire(ConversionDraft);
             SetError(result.Errors);
             return;
         }

@@ -674,9 +674,12 @@
             return;
         }
 
-        var result = await HrService.SaveWorkforceProfileAsync(profileEditor.Snapshot());
+        var result = await HrService.SaveWorkforceProfileAsync(
+            drafts.Submit(ProfileDraft, profileEditor, static editor => editor.Snapshot()));
         if (result.IsFailure)
         {
+            // Nothing was written: the draft stays exactly as the operator left it and owns all of its fields again.
+            drafts.Retire(ProfileDraft);
             if (IsCurrentWorkforceAction(action))
             {
                 NotificationService.Error("Workforce profile save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -746,9 +749,11 @@
         }
 
         skillEditor.PartyId = partyId;
-        var result = await HrService.SavePartySkillAsync(skillEditor.Snapshot());
+        var result = await HrService.SavePartySkillAsync(
+            drafts.Submit(SkillDraft, skillEditor, static editor => editor.Snapshot()));
         if (result.IsFailure)
         {
+            drafts.Retire(SkillDraft);
             if (IsCurrentWorkforceAction(action))
             {
                 NotificationService.Error("Skill save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -762,8 +767,16 @@
             return;
         }
 
-        skillEditor = drafts.Replace(SkillDraft, CreatePartySkillEditor(partyId));
-        if (!await ReloadAfterActionAsync(action, WorkforceEditor.Skill))
+        // The create editor starts over once the owner accepted it, unless the operator already typed the next skill
+        // into it while the write was in flight; that draft is theirs and survives the read-back whole.
+        var skillStartsOver = !drafts.ChangedAfterSubmission(SkillDraft, skillEditor);
+        drafts.Retire(SkillDraft);
+        if (skillStartsOver)
+        {
+            skillEditor = drafts.Replace(SkillDraft, CreatePartySkillEditor(partyId));
+        }
+
+        if (!await ReloadAfterActionAsync(action, skillStartsOver ? WorkforceEditor.Skill : WorkforceEditor.None))
         {
             return;
         }
@@ -808,9 +821,11 @@
         }
 
         capacityBlockEditor.PartyId = partyId;
-        var result = await HrService.SaveCapacityBlockAsync(capacityBlockEditor.Snapshot());
+        var result = await HrService.SaveCapacityBlockAsync(
+            drafts.Submit(CapacityDraft, capacityBlockEditor, static editor => editor.Snapshot()));
         if (result.IsFailure)
         {
+            drafts.Retire(CapacityDraft);
             if (IsCurrentWorkforceAction(action))
             {
                 NotificationService.Error("Capacity block save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -824,8 +839,14 @@
             return;
         }
 
-        capacityBlockEditor = drafts.Replace(CapacityDraft, CreateCapacityBlockEditor(partyId));
-        if (!await ReloadAfterActionAsync(action, WorkforceEditor.Capacity))
+        var capacityStartsOver = !drafts.ChangedAfterSubmission(CapacityDraft, capacityBlockEditor);
+        drafts.Retire(CapacityDraft);
+        if (capacityStartsOver)
+        {
+            capacityBlockEditor = drafts.Replace(CapacityDraft, CreateCapacityBlockEditor(partyId));
+        }
+
+        if (!await ReloadAfterActionAsync(action, capacityStartsOver ? WorkforceEditor.Capacity : WorkforceEditor.None))
         {
             return;
         }

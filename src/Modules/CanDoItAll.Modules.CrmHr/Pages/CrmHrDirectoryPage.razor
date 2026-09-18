@@ -68,6 +68,10 @@
     private bool hasHandledPartyRequest;
     private long directoryLoadGeneration;
     private readonly CrmHrMutationGate mutationGate = new();
+    private readonly CrmHrDraftReconciler drafts = new();
+    private const string PartyDraft = "party";
+    private const string AffiliationsDraft = "affiliations";
+    private const string RelationshipsDraft = "relationships";
     private long directoryBrowserVersion;
     private int selectedEditorTabIndex = ProfileTabIndex;
     private string relationshipsLoadError = string.Empty;
@@ -168,12 +172,12 @@
         }
     }
 
-    private async Task LoadAsync(Guid? selectedPartyId, bool clearMessage = true)
+    private async Task LoadAsync(Guid? selectedPartyId, bool clearMessage = true, bool committed = false)
     {
         var request = BeginDirectoryLoad(
             selectedPartyId,
             DirectoryLoadBinding.Interactive);
-        var outcome = await LoadAndCommitDirectoryAsync(request);
+        var outcome = await LoadAndCommitDirectoryAsync(request, committed);
         if (outcome == DirectoryLoadOutcome.Stale)
         {
             return;
@@ -213,7 +217,9 @@
             Interlocked.Increment(ref directoryLoadGeneration));
     }
 
-    private async Task<DirectoryLoadOutcome> LoadAndCommitDirectoryAsync(DirectoryLoadRequest request)
+    private async Task<DirectoryLoadOutcome> LoadAndCommitDirectoryAsync(
+        DirectoryLoadRequest request,
+        bool committed = false)
     {
         try
         {
@@ -223,7 +229,7 @@
                 return DirectoryLoadOutcome.Stale;
             }
 
-            CommitDirectorySnapshot(snapshot);
+            CommitDirectorySnapshot(snapshot, committed);
             return snapshot.RequestedPartyFound
                 ? DirectoryLoadOutcome.Ready
                 : DirectoryLoadOutcome.Missing;
@@ -262,17 +268,29 @@
             RequestedPartyFound: true);
     }
 
-    private void CommitDirectorySnapshot(DirectoryLoadSnapshot snapshot)
+    // The read-back of a record already on screen. Another party replaces the form; the form's own commit takes the
+    // owner's accepted values into every field the operator did not type into after the save was dispatched, in the
+    // same draft instance and EditContext, so text typed while the write was in flight is never discarded.
+    private void CommitDirectorySnapshot(DirectoryLoadSnapshot snapshot, bool committed = false)
     {
         var isPartySelectionChanged = editor.Id != snapshot.Editor.Id;
-        editor = snapshot.Editor;
+        var retainEditedRelationships = committed &&
+                                        !isPartySelectionChanged &&
+                                        drafts.ChangedAfterSubmission(RelationshipsDraft, relationships);
+        editor = drafts.Reconcile(
+            PartyDraft,
+            editor,
+            () => snapshot.Editor,
+            isPartySelectionChanged,
+            committed,
+            static (current, owner) => current.AdoptOwnerContactPoints(owner));
         if (isPartySelectionChanged)
         {
             selectedEditorTabIndex = ProfileTabIndex;
         }
 
-        ResetDirectoryDetailState();
-        ApplyAffiliations(snapshot.Affiliations);
+        ResetDirectoryDetailState(retainEditedRelationships);
+        ApplyAffiliations(snapshot.Affiliations, committed);
     }
 
     private bool IsCurrentDirectoryLoad(DirectoryLoadRequest request)
@@ -283,7 +301,8 @@
     private Task CreateNewAsync()
     {
         Interlocked.Increment(ref directoryLoadGeneration);
-        editor = PartyEditorViewModel.CreateNew();
+        drafts.Reset();
+        editor = drafts.Replace(PartyDraft, PartyEditorViewModel.CreateNew());
         selectedEditorTabIndex = ProfileTabIndex;
         ResetDirectoryDetailState();
         handledPartyKey = "new";
@@ -302,8 +321,9 @@
         }
 
         Interlocked.Increment(ref directoryLoadGeneration);
+        drafts.Reset();
         isEditorDialogOpen = false;
-        editor = PartyEditorViewModel.CreateNew();
+        editor = drafts.Replace(PartyDraft, PartyEditorViewModel.CreateNew());
         selectedEditorTabIndex = ProfileTabIndex;
         ResetDirectoryDetailState();
         handledPartyKey = "new";
@@ -325,17 +345,26 @@
             return;
         }
 
-        var submission = editor.ToEditorModel();
-        var affiliationSubmission = affiliationEditors.Select(affiliation => affiliation.Snapshot()).ToArray();
-        var relationshipSubmission = relationships.Select(relationship => relationship.Snapshot()).ToList();
+        var submission = drafts.Submit(PartyDraft, editor, static current => current.ToEditorModel());
+        var affiliationSubmission = drafts.Submit(
+            AffiliationsDraft,
+            affiliationEditors,
+            static rows => rows.Select(affiliation => affiliation.Snapshot()).ToArray());
+        var relationshipSubmission = drafts.Submit(
+            RelationshipsDraft,
+            relationships,
+            static rows => rows.Select(relationship => relationship.Snapshot()).ToList());
         var result = await PartyDirectoryService.SavePartyAsync(submission);
         if (!IsCurrentDirectoryAction(action))
         {
+            RetireDirectorySubmissions();
             return;
         }
 
         if (result.IsFailure)
         {
+            // Nothing was written: every draft stays as the operator left it and owns all of its fields again.
+            RetireDirectorySubmissions();
             NotificationService.Warning("Party was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
@@ -352,11 +381,13 @@
                 submission.LastChangedBy);
             if (!IsCurrentDirectoryAction(action))
             {
+                RetireDirectorySubmissions();
                 return;
             }
 
             if (affiliationSaveResult.IsFailure)
             {
+                RetireDirectorySubmissions();
                 directoryBrowserVersion++;
                 NotificationService.Warning(
                     "Party saved with affiliation issue",
@@ -364,7 +395,7 @@
                 return;
             }
 
-            ApplyAffiliations(affiliationSaveResult.Value ?? []);
+            ApplyAffiliationItems(affiliationSaveResult.Value ?? []);
         }
 
         if (relationshipsLoadedPartyId == savedPartyId)
@@ -375,11 +406,13 @@
                 submission.LastChangedBy);
             if (!IsCurrentDirectoryAction(action))
             {
+                RetireDirectorySubmissions();
                 return;
             }
 
             if (relationshipSaveResult.IsFailure)
             {
+                RetireDirectorySubmissions();
                 directoryBrowserVersion++;
                 duplicateCandidates = await ManagementService.FindPotentialDuplicatesAsync(savedPartyId);
                 if (!IsCurrentDirectoryAction(action))
@@ -397,7 +430,7 @@
 
         NotificationService.Success("Party saved", "Party saved.");
         directoryBrowserVersion++;
-        if (!await RefreshAfterCommitAsync(savedPartyId))
+        if (!await RefreshAfterCommitAsync(savedPartyId, committed: true))
         {
             return;
         }
@@ -757,15 +790,26 @@
 
     // The owner committed and the saved identity is already bound. A failed read-back is a warning: it never repeats
     // the write and never turns the saved party back into a new draft; the operator can reload to reconcile the view.
-    private async Task<bool> RefreshAfterCommitAsync(Guid committedPartyId)
+    // Every path that leaves a save without reading the record back: the drafts keep owning every field they hold,
+    // and no later reload may mistake a dispatched submission for the values this editor is based on.
+    private void RetireDirectorySubmissions()
+    {
+        drafts.Retire(PartyDraft);
+        drafts.Retire(AffiliationsDraft);
+        drafts.Retire(RelationshipsDraft);
+    }
+
+    private async Task<bool> RefreshAfterCommitAsync(Guid committedPartyId, bool committed = false)
     {
         try
         {
-            await LoadAsync(committedPartyId, clearMessage: false);
+            await LoadAsync(committedPartyId, clearMessage: false, committed);
             return true;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            // The read-back never ran, so the drafts keep owning every field they hold until the operator reloads.
+            RetireDirectorySubmissions();
             Logger.LogWarning(exception, "The directory record {PartyId} could not be refreshed after a committed change.", committedPartyId);
             NotificationService.Warning(
                 "Saved, refresh failed",
@@ -785,16 +829,22 @@
            action.RoutePartyId == PartyIdQuery &&
            ReferenceEquals(action.Editor, editor);
 
-    private void ResetDirectoryDetailState()
+    // A merge, an import and a new selection re-read the record detail lanes. Only the relationship rows the
+    // operator kept editing while their own save was in flight are retained; everything else is owner state.
+    private void ResetDirectoryDetailState(bool retainEditedRelationships = false)
     {
         affiliationItems = [];
         affiliationEditors = [];
         affiliationPartyDisplayNames = new Dictionary<Guid, string>();
-        relationships = [];
+        if (!retainEditedRelationships)
+        {
+            relationships = [];
+            relationshipsLoadedPartyId = null;
+        }
+
         duplicateCandidates = [];
         partyActivity.Invalidate();
         projectAssignmentsPage = PartyProjectAssignmentPage.Empty();
-        relationshipsLoadedPartyId = null;
         affiliationsLoadedPartyId = null;
         projectAssignmentsLoadedPartyId = null;
         relationshipsLoadPartyId = null;
@@ -830,13 +880,31 @@
         return Task.CompletedTask;
     }
 
+    // The owner accepted these rows. The editors keep whatever the operator typed into them after the submission was
+    // dispatched and pair with the accepted rows by person, organization and affiliation kind, so a row this commit
+    // created adopts its owner identity and expected version instead of being recreated by the next save.
     private void ApplyAffiliations(
+        IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliations,
+        bool committed = false)
+    {
+        ApplyAffiliationItems(affiliations);
+        affiliationEditors = drafts.ReconcileList(
+            AffiliationsDraft,
+            affiliationEditors.ToList(),
+            () => affiliations.Select(MapAffiliation).ToList(),
+            targetChanged: !committed,
+            committed: committed,
+            nameof(PartyOrganizationAffiliationEditorModel.PersonPartyId),
+            nameof(PartyOrganizationAffiliationEditorModel.OrganizationPartyId),
+            nameof(PartyOrganizationAffiliationEditorModel.AffiliationKind));
+    }
+
+    // The rows the owner accepted, without touching the editors: the read-back of the same commit reconciles those
+    // once, so the operator's later edits are compared against their submission exactly one time.
+    private void ApplyAffiliationItems(
         IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliations)
     {
         affiliationItems = affiliations;
-        affiliationEditors = affiliations
-            .Select(MapAffiliation)
-            .ToList();
         var displayNames = new Dictionary<Guid, string>();
         foreach (var affiliation in affiliations)
         {

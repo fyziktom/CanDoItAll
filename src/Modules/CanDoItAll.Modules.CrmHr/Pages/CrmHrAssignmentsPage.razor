@@ -80,6 +80,12 @@
     private CancellationTokenSource? selectionLifetimeCancellation;
     private long selectionLifetime;
     private readonly CrmHrMutationGate mutationGate = new();
+    // The create editors of this host record what they dispatched, so a draft the operator started while the write
+    // was in flight is never cleared by that write's own completion.
+    private readonly CrmHrDraftReconciler drafts = new();
+    private const string AssignmentDraft = "assignment";
+    private const string AllocationDraft = "allocation";
+    private const string StaffingRequestDraft = "staffing-request";
     private CancellationTokenSource? staffingRequestSearchCancellation;
     private CancellationTokenSource? relationshipAssignmentSearchCancellation;
     private CancellationTokenSource? allocationAssignmentSearchCancellation;
@@ -821,7 +827,7 @@
         }
 
         var submittedDraft = draftAssignment;
-        var submission = submittedDraft.Snapshot();
+        var submission = drafts.Submit(AssignmentDraft, submittedDraft, static draft => draft.Snapshot());
         var result = await SaveForCapturedProjectAsync(() => SaveAssignmentOwnerAsync(
             submission,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None));
@@ -832,11 +838,15 @@
         }
 
         NotificationService.Success("Assignment saved", "Project assignment saved.");
-        // A completion of a retired selection never resets the draft of the project selected since.
-        if (ReferenceEquals(draftAssignment, submittedDraft))
+        // A completion of a retired selection never resets the draft of the project selected since, and neither does
+        // one whose editor the operator already typed the next assignment into.
+        if (ReferenceEquals(draftAssignment, submittedDraft) &&
+            !drafts.ChangedAfterSubmission(AssignmentDraft, draftAssignment))
         {
             ResetDraft();
         }
+
+        drafts.Retire(AssignmentDraft);
 
         if (selectedProjectId == projectId)
         {
@@ -872,7 +882,7 @@
 
         allocationDraft.Source = "crm-hr-ui";
         var submittedDraft = allocationDraft;
-        var submission = submittedDraft.Snapshot();
+        var submission = drafts.Submit(AllocationDraft, submittedDraft, static draft => draft.Snapshot());
         var result = await SaveForCapturedProjectAsync(() => SaveAssignmentOwnerAsync(
             submission,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None));
@@ -883,10 +893,13 @@
         }
 
         NotificationService.Success("Allocation saved", "Project allocation saved.");
-        if (ReferenceEquals(allocationDraft, submittedDraft))
+        if (ReferenceEquals(allocationDraft, submittedDraft) &&
+            !drafts.ChangedAfterSubmission(AllocationDraft, allocationDraft))
         {
             ResetAllocationDraft();
         }
+
+        drafts.Retire(AllocationDraft);
 
         if (selectedProjectId == projectId)
         {
@@ -922,7 +935,7 @@
         }
 
         var submittedDraft = staffingRequestDraft;
-        var submission = submittedDraft.Snapshot();
+        var submission = drafts.Submit(StaffingRequestDraft, submittedDraft, static draft => draft.Snapshot());
         var result = await SaveForCapturedProjectAsync(() => HrService.SaveStaffingRequestAsync(
             submission,
             selectionLifetimeCancellation?.Token ?? CancellationToken.None));
@@ -933,10 +946,13 @@
         }
 
         NotificationService.Success("Staffing request saved", "Staffing request saved.");
-        if (ReferenceEquals(staffingRequestDraft, submittedDraft))
+        if (ReferenceEquals(staffingRequestDraft, submittedDraft) &&
+            !drafts.ChangedAfterSubmission(StaffingRequestDraft, staffingRequestDraft))
         {
             ResetStaffingRequestDraft();
         }
+
+        drafts.Retire(StaffingRequestDraft);
 
         if (selectedProjectId == projectId)
         {
