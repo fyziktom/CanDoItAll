@@ -151,15 +151,24 @@ constrained width and an account without sales).
 For a change anywhere in the CRM / HR module, its rendering library, its contracts or its sandbox,
 the maintained [completion record](architecture/crm-hr-ui-completion.md) maps each workspace to its
 lanes. The whole-module lanes are the Unit and Components topics (the Components topic includes the
-host invariant facts `CrmHrSameTargetRerenderTests`, `CrmHrAssignmentsMutationTests`,
-`CrmHrOpportunityConversionHostTests`, `CrmHrDirectoryRowActionTests`, the footer-save and sandbox
-facts, and the boundary guards) and the browser journeys:
+host invariant facts `CrmHrSameTargetRerenderTests`, `CrmHrPostDispatchEditTests`,
+`CrmHrCommittedReadBackTests`, `CrmHrAssignmentsMutationTests`, `CrmHrOpportunityConversionHostTests`,
+`CrmHrDirectoryRowActionTests`, `CrmHrEditorFieldCoverageTests`, the footer-save and sandbox facts,
+and the boundary guards) and the browser journeys:
 
 ```powershell
-dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CrmHr|FullyQualifiedName~CrmAgent|FullyQualifiedName~HrAgent|FullyQualifiedName~CrmPlanning" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CrmHr|FullyQualifiedName~CrmAgent|FullyQualifiedName~HrAgent|FullyQualifiedName~CrmPlanning|FullyQualifiedName~ProjectAssignmentGanttProjectionAdapterTests|FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests" /m:1
 dotnet test ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.CrmHr.|FullyQualifiedName~OpportunityBoardTests|FullyQualifiedName~AssignmentEditorAdmissionTests" /m:1
 dotnet test ./tests/Solutions/CanDoItAll.Tests.Playwright.slnx --configuration Release --no-build --no-restore --filter "(FullyQualifiedName~CrmHr|FullyQualifiedName~ProjectStructureTaskAssigneeJourneyTests)&Category!=Quarantined&Category!=LiveAgent" /m:1
 ```
+
+The six CRM / HR evidence-capture browser scripts that predated these journeys are gone. They were
+quarantined, wrote their screenshots to an absolute Windows path, asserted almost nothing, and no
+longer ran against the current UI at all. The journeys above cover their flows; the secondary
+editor fields they used to type into are covered by `CrmHrEditorFieldCoverageTests` and by their
+owners' Unit and Integration tests. The
+[completion record](architecture/crm-hr-ui-completion.md#retired-browser-scripts) lists what is
+still not driven through a browser.
 
 The opt-in live model smoke (`Category=LiveAgent`: `CrmHrLiveAgentToolUiSmokeTests` in the
 Playwright project, `CrmHrLiveAgentToolSmokeIntegrationTests` in the Integration project) returns
@@ -168,6 +177,14 @@ without effect unless both `CANDOITALL_RUN_LIVE_AGENT_VALIDATION=true` and
 profile and its configured credential, synthetic records and a bound of ten model requests per
 execution. `CANDOITALL_LIVE_AGENT_UI_REHEARSAL=true` runs the UI smoke up to its first message
 without a model request.
+
+**A runner result of passed is not live evidence in this lane.** The test runner in use does not
+honour xUnit's dynamic skip for these projects, so a closed gate and a rehearsal are both reported
+as passing tests. Read `output/live-agent-smoke/<timestamp>/evidence.json` instead: its `execution`
+field is `not-run` when the gate was closed, `rehearsal` when the journey stopped before its first
+Send, and `live` only when a model was actually reached, and `modelRequests.used` is the number of
+requests the provider journal counted. A report that claims live proof cites that manifest, the
+provider and model it names, and the persisted run and owner state it recorded.
 
 ## Broad Stable Gate
 
@@ -262,13 +279,14 @@ until the code and reviewed baseline agree and the final no-write enforcement pa
 
 ## Documentation evidence validation
 
-`./tools/Validation/Test-Documentation.ps1` rejects tracked runtime logs. Durable `.log`
-evidence inside a bundle below `codex/bundles` is accepted only when the owning tracked
-`MANIFEST.sha256` contains exactly one matching path and its hash matches the current
-file. Untracked manifests, modified logs and unsealed logs do not qualify; `.pid` and
-`.pyc` files remain forbidden. This implements the shared documentation standard's
-durable bundle evidence exception without altering historical proof. New task-specific
-evidence limits still apply.
+`./tools/Validation/Test-Documentation.ps1` rejects tracked runtime logs. It carries one
+format rule for sealed evidence: a durable `.log` below `codex/bundles` is accepted only
+when the owning tracked `MANIFEST.sha256` contains exactly one matching path and its hash
+matches the current file. Untracked manifests, modified logs and unsealed logs do not
+qualify; `.pid` and `.pyc` files remain forbidden. The rule is about the format, not about
+any particular directory: when no such path is tracked it simply never applies, and its own
+tests build a disposable fixture instead of reading a real one. New task-specific evidence
+limits still apply.
 
 Run `./tools/Validation/Test-DocumentationEvidence.ps1` to check the acceptance and
 rejection cases, then run the canonical documentation validator. Both commands only

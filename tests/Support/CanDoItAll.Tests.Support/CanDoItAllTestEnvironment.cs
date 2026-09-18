@@ -181,6 +181,15 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Return this lease's pooled connections before the database is dropped. A long test class leases one
+        // database per fixture, and every lease keeps its own client pool; without this a run of a few dozen
+        // fixtures holds more server connections than the server allows and the next fixture waits instead of
+        // working.
+        await using (var pooled = new NpgsqlConnection(ConnectionString))
+        {
+            NpgsqlConnection.ClearPool(pooled);
+        }
+
         await using var connection = new NpgsqlConnection(AdminConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();

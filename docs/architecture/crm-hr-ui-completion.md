@@ -9,6 +9,9 @@ records stay the detailed history of their slices and are linked, not repeated:
 The inventory below is a coverage tool. It is not a permanent file-count or interface-count
 assertion; the guards in `CrmHrUiModuleBoundaryTests` name dependency categories and roles.
 
+The rules this module proved, and the ones the earlier extractions proved, are written down once in
+[UI component seams](ui-component-seams.md); this record is what CRM / HR actually did with them.
+
 ## Dependency direction
 
 ```text
@@ -241,11 +244,38 @@ back through its owner by exact identity.
 | Agent integration | `CrmHrLiveAgentToolUiSmokeTests` (opt-in, live lane below) | planner grants saved in the agent settings UI; a planning read from the Project Structure chat; HR approval UI rejected once and approved once |
 | Existing regressions | `CrmHrHomeBrowserTests`, `CrmHrSensitiveDataFlowTests` | rerun unchanged |
 
-The two stale quarantined classes `CrmHrDirectoryFlowTests` and `CrmHrShellSmokeTests` were removed:
-their journeys are covered by the Directory and route journeys above. Six further classes with the
-repository's `Quarantined` trait (`CrmHrCrossModuleFlowTests`, `CrmInteractionFlowTests`,
-`OpportunityPipelineTests`, `ProjectPartyAssignmentFlowTests`, `RecruitmentFlowTests`,
-`StaffingFlowTests`) stay as they were; they are superseded by the journeys and remain visible debt.
+### Retired browser scripts
+
+Eight quarantined browser classes were removed. `CrmHrDirectoryFlowTests` and `CrmHrShellSmokeTests`
+went with the Directory and route journeys that replaced them. The remaining six
+(`CrmHrCrossModuleFlowTests`, `CrmInteractionFlowTests`, `OpportunityPipelineTests`,
+`ProjectPartyAssignmentFlowTests`, `RecruitmentFlowTests`, `StaffingFlowTests`) were audited before
+they were removed, not simply deleted:
+
+- They executed nothing. All six were run against this candidate and all six failed, on selectors
+  the product replaced (the party picker that succeeded a `<select>`, the party form that moved into
+  a dialog) and on the assignment admission that now requires a captured project lifetime.
+- They could never have run in CI. Each wrote its screenshots to an absolute
+  `C:\repositories\CanDoItAll\evidence\crm-hr\b**` path.
+- They asserted almost nothing: two to eighteen assertions each, mostly screenshots.
+- Their flows are covered by the journeys in the table above, and the party pickers of Project
+  Structure are covered by `ProjectStructurePartyPickerTests`.
+
+What they uniquely drove was a set of **secondary editor fields**. The opportunity's economics and
+attribution, the lost reason and the note of a stage change, and the recruiting interview outcome,
+recommendation and feedback, stage note and lifecycle task note are now typed into the shipped forms
+and read back from their owners by `CrmHrEditorFieldCoverageTests`.
+
+These are still not driven by any executed test and are named here rather than left implicit. Their
+persistence is covered at the owners by the Unit and Integration lanes; what is missing is a
+UI-level check that each input is still bound:
+
+| Not driven through the UI | Owner coverage |
+|---|---|
+| Recruiting candidate contact and summary fields; recruiter, hiring manager, interviewer and target unit; support manager, buddy and mentor; conversion home unit, manager, location, seniority, start date and time zone; the application ownership tab | `RecruitingService` Unit and Integration tests |
+| Staffing request requested-by and delivery unit; the allocation candidate skill filter | `HrService` staffing Integration tests |
+| The opportunity board columns and the stage and partner filters | `OpportunityBoardTests` (Components) for the board; the filters have no UI-level fact |
+| The catalog search boxes `crmhr-account-search` and `crmhr-recruiting-applications-search` | the paged record family's own Components tests |
 
 ## Project Structure, task assignees and project lifetime
 
@@ -378,10 +408,12 @@ change committed in that repository and FileTools `7c7453c`.
   version of that file no longer contains the literal. No repository source and no artifact of this
   task is flagged. The drafts were not modified, nothing was quarantined and no pattern was
   weakened.
-- Remaining limitations: the committed-with-warning read-back of the four editing hosts has no
-  dedicated automated fact (their reads have no seam); six browser classes with the repository's
-  `Quarantined` trait (`CrmHrCrossModuleFlowTests`, `CrmInteractionFlowTests`,
-  `OpportunityPipelineTests`, `ProjectPartyAssignmentFlowTests`, `RecruitmentFlowTests`,
-  `StaffingFlowTests`) still fail on selectors the product replaced before this work and stay as
-  visible debt superseded by the journeys; the repository's retained-artifact secret-scanning
-  finding is unrelated to this work and unchanged.
+- Remaining limitations: the browser-level field gaps listed under
+  [retired browser scripts](#retired-browser-scripts); the repository's retained-artifact
+  secret-scanning finding, which is unrelated to this work and unchanged.
+
+  Two admitted gaps of the first closure are now closed. The committed-with-warning read-back of the
+  four editing hosts is proven by `CrmHrCommittedReadBackTests` through a controlled failure of
+  exactly the owner read each host issues after its commit, and the draft a save leaves behind is
+  proven by `CrmHrPostDispatchEditTests`; see
+  [reconciliation after a commit](ui-component-seams.md#reconciliation-after-a-commit).

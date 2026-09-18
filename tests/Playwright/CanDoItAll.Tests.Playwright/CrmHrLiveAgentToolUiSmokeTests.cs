@@ -40,10 +40,14 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
     {
         if (!IsLiveValidationEnabled())
         {
+            await UiEvidence.WriteNotRunAsync(
+                "ui-ordinary-planner-crm-planning-read",
+                $"{LiveValidationVariable} and {LiveOpenAiSmokeVariable} were not both set.");
             return;
         }
 
         var evidence = new UiEvidence("ui-ordinary-planner-crm-planning-read");
+        var rehearsalOnly = false;
         await using var host = await LiveUiHost.StartAsync();
         try
         {
@@ -137,7 +141,9 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
             if (IsRehearsal())
             {
                 evidence.Observations["rehearsal"] = "stopped-before-send";
+                evidence.Execution = "rehearsal";
                 evidence.Passed = true;
+                rehearsalOnly = true;
                 return;
             }
 
@@ -193,6 +199,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
         }
 
         Assert.InRange(evidence.ModelRequests, IsRehearsal() ? 0 : 1, MaximumModelRequestsPerExecution);
+        Assert.Equal(rehearsalOnly, IsRehearsal());
     }
 
     [Fact]
@@ -201,10 +208,14 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
     {
         if (!IsLiveValidationEnabled())
         {
+            await UiEvidence.WriteNotRunAsync(
+                "ui-managed-hr-approved-crm-party-create",
+                $"{LiveValidationVariable} and {LiveOpenAiSmokeVariable} were not both set.");
             return;
         }
 
         var evidence = new UiEvidence("ui-managed-hr-approved-crm-party-create");
+        var rehearsalOnly = false;
         await using var host = await LiveUiHost.StartAsync();
         try
         {
@@ -233,7 +244,9 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
             if (IsRehearsal())
             {
                 evidence.Observations["rehearsal"] = "stopped-before-send";
+                evidence.Execution = "rehearsal";
                 evidence.Passed = true;
+                rehearsalOnly = true;
                 return;
             }
 
@@ -298,6 +311,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
         }
 
         Assert.InRange(evidence.ModelRequests, IsRehearsal() ? 0 : 1, MaximumModelRequestsPerExecution);
+        Assert.Equal(rehearsalOnly, IsRehearsal());
     }
 
     // The operator conversation the managed HR agent holds: it checks the directory for an exact match and asks the
@@ -631,6 +645,10 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
 
         internal bool Passed { get; set; }
 
+        // What this run actually did. A runner outcome of passed says nothing about it: the gate can be closed, or
+        // the journey can be a rehearsal that stops before its first Send.
+        internal string Execution { get; set; } = "live";
+
         internal int ModelRequests { get; private set; }
 
         internal async Task DescribeProviderAsync(LiveUiHost host, AgentDefinition agent)
@@ -719,6 +737,27 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
             }
         }
 
+        // The gate was closed, so nothing was started. The manifest still records that this scenario did not run,
+        // because the runner reports the skipped journey as a pass.
+        internal static async Task WriteNotRunAsync(string scenario, string reason)
+        {
+            var evidence = new UiEvidence(scenario) { Execution = "not-run" };
+            evidence.Observations["notRunReason"] = reason;
+            var directory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "live-agent-smoke",
+                $"{evidence.startedAtUtc:yyyyMMddTHHmmssfffZ}");
+            Directory.CreateDirectory(directory);
+            await File.WriteAllTextAsync(Path.Combine(directory, "evidence.json"), JsonSerializer.Serialize(new
+            {
+                scenario,
+                execution = evidence.Execution,
+                passed = false,
+                startedAtUtc = evidence.startedAtUtc,
+                completedAtUtc = DateTimeOffset.UtcNow,
+                modelRequests = new { used = 0, bound = MaximumModelRequestsPerExecution },
+                observations = evidence.Observations
+            }, Json));
+        }
+
         internal async Task WriteAsync(LiveUiHost host)
         {
             try
@@ -737,6 +776,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
             await File.WriteAllTextAsync(Path.Combine(directory, "evidence.json"), JsonSerializer.Serialize(new
             {
                 scenario,
+                execution = Execution,
                 passed = Passed,
                 startedAtUtc,
                 completedAtUtc = DateTimeOffset.UtcNow,

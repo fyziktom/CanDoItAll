@@ -153,6 +153,8 @@ public sealed partial class CrmHrLiveAgentToolSmokeIntegrationTests
         Assert.InRange(evidence.ModelRequests, 1, MaximumModelRequestsPerExecution);
     }
 
+    // The runner reports a closed gate as a pass, so the evidence manifest of this lane is the only place that says
+    // whether a model was actually reached; a run that returns here writes no manifest at all.
     private static bool IsLiveValidationEnabled()
         => IsEnabled(LiveValidationVariable) && IsEnabled(LiveOpenAiSmokeVariable);
 
