@@ -277,6 +277,9 @@
         var retainEditedRelationships = committed &&
                                         !isPartySelectionChanged &&
                                         drafts.ChangedAfterSubmission(RelationshipsDraft, relationships);
+        // The detail reset below clears the affiliation editors, so the rows the operator is holding are captured
+        // first; the reconciliation after a commit needs them, not the empty list the reset leaves behind.
+        var editedAffiliations = affiliationEditors;
         editor = drafts.Reconcile(
             PartyDraft,
             editor,
@@ -290,7 +293,7 @@
         }
 
         ResetDirectoryDetailState(retainEditedRelationships);
-        ApplyAffiliations(snapshot.Affiliations, committed);
+        ApplyAffiliations(snapshot.Affiliations, committed, editedAffiliations);
     }
 
     private bool IsCurrentDirectoryLoad(DirectoryLoadRequest request)
@@ -885,12 +888,13 @@
     // created adopts its owner identity and expected version instead of being recreated by the next save.
     private void ApplyAffiliations(
         IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliations,
-        bool committed = false)
+        bool committed = false,
+        IReadOnlyList<PartyOrganizationAffiliationEditorModel>? edited = null)
     {
         ApplyAffiliationItems(affiliations);
         affiliationEditors = drafts.ReconcileList(
             AffiliationsDraft,
-            affiliationEditors.ToList(),
+            (edited ?? affiliationEditors).ToList(),
             () => affiliations.Select(MapAffiliation).ToList(),
             targetChanged: !committed,
             committed: committed,

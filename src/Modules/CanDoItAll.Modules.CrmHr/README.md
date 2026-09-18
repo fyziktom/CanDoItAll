@@ -31,7 +31,19 @@ adapters `AccountSummaryPanel`, `InteractionTimeline`, `CrmFinancialsPanel`,
 `AgentRecruitingEvidencePanel`, `CrmAgentChatContextProvider` and `CrmHrSecondaryTabs`. A new
 business renderer belongs in the library; `CrmHrUiModuleBoundaryTests` lists the module's
 components by role. See the
-[completion record](../../../docs/architecture/crm-hr-ui-completion.md).
+[completion record](../../../docs/architecture/crm-hr-ui-completion.md) and
+[UI component seams](../../../docs/architecture/ui-component-seams.md).
+
+Two helpers in `Components/` keep the hosts' editing invariants. `CrmHrMutationGate` admits one
+write per editor lifetime, so a double dispatch, Enter on the form and an alternate action of the
+same form cannot produce two writes. `CrmHrDraftReconciler` decides what a read-back does to the
+drafts: a host records the submission it dispatched before its first await, so the read-back of its
+own commit can tell the owner's normalization and assigned identity from what the operator typed
+while the write was in flight. Nothing typed after the dispatch means the owner's values start a
+fresh draft; something typed after it means the draft instance and its `EditContext` survive with
+those later values, while every other field, and a list row's owner identity, comes from what the
+owner accepted. A rejected or retired write retires its submission and can never be read as a
+commit.
 
 Directory, Workforce, CRM, and Recruiting use the shared typed `PagedRecordBrowser`; party-backed routes compose it through the library's `PartyRecordBrowser` over the `IPartyRecordQueryService` read port. Queries perform source paging with deterministic ordering, the route catalogue owns an opt-in bounded card-results scroll, and complete record workspaces open in controlled full-size dialogs without displacing or recreating the catalogue. Recruiting separates application, interview, lifecycle, and conversion work into server-rendered dialog tabs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
 

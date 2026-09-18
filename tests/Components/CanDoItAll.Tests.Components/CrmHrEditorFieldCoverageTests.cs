@@ -13,6 +13,11 @@ namespace CanDoItAll.Tests.Components.CrmHr;
 // asserted almost nothing about them and no longer run at all. Here every one of them travels from the rendered input
 // to PostgreSQL and back through its owner, so a field that stops being bound fails a test instead of disappearing
 // quietly.
+//
+// The dialog's footer Save is bound to its form by the HTML form attribute, which a rendered
+// component test does not follow, so these tests submit the form the button targets. That the
+// button itself reaches it in a browser is proven by `CrmHrOpportunityJourneyTests`, which clicks
+// `crmhr-opportunity-save-button` in both the create and the edit dialog.
 public sealed class CrmHrEditorFieldCoverageTests
 {
     [Fact]

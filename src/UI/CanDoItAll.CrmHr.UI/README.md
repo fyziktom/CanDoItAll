@@ -5,6 +5,9 @@ the editors, panels, pickers and dialogs they compose, and the four presentation
 of the earlier slices. The production hosts in `CanDoItAll.Modules.CrmHr` and the scenario
 sandbox render the same components, so there is no second renderer for any of them.
 
+The rules behind this layout, and when the other seam shape is the right one, are in
+[UI component seams](../../../docs/architecture/ui-component-seams.md).
+
 ## Layout
 
 - `Home/`, `Accounts/`, `Activity/`, `Financials/`: controlled surfaces over immutable

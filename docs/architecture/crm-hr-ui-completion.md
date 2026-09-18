@@ -343,6 +343,10 @@ production composition. No faster build is claimed. Asset modes: the sandbox bui
 discovery stated before every run, SDK 10.0.303, siblings Components `7b618cda` plus the dialog
 change committed in that repository and FileTools `7c7453c`.
 
+This table is the module closure. The pre-merge closure that follows it, with its own filters,
+discovery counts and results on an isolated bundle-free copy, is in
+[CRM / HR pre-merge readiness](crm-hr-premerge-readiness.md).
+
 | Lane | Command / filter | Discovered | Result |
 |---|---|---:|---|
 | Production builds | `CanDoItAll.slnx`; the sandbox with `-p:CrmHrAssetMode=Parity` and `=Fast`; the Stable and Playwright test solutions | 5 builds | all exit 0, no errors; the Stable solution's one warning is outside CRM / HR |
