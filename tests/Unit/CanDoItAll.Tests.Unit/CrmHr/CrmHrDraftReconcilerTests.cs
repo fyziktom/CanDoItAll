@@ -215,6 +215,19 @@ public sealed class CrmHrDraftReconcilerTests
         // The row started after the dispatch is the operator's next record and the owner has never seen it.
         Assert.Null(reconciled[1].Id);
         Assert.Equal("started after the save", reconciled[1].Notes);
+        // The list is based on the owner's rows again, so it is unsaved work and an ordinary reload keeps it whole.
+        Assert.True(reconciler.IsDirty(Connections, reconciled));
+        Assert.Same(
+            reconciled,
+            reconciler.ReconcileList(
+                Connections,
+                reconciled,
+                () => [new CrmAccountConnectionEditorModel { Id = createdId, RelatedPartyId = firstParty, Notes = "submitted", IsPrimary = true }],
+                targetChanged: false,
+                committed: false,
+                nameof(CrmAccountConnectionEditorModel.RelatedPartyId),
+                nameof(CrmAccountConnectionEditorModel.Role)));
+        Assert.Equal(2, reconciled.Count);
     }
 
     [Fact]

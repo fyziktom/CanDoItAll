@@ -180,7 +180,9 @@ public sealed class CrmHrDraftReconciler
             }
         }
 
-        baselines[editor] = Fingerprint(current);
+        // The owner's rows are what this draft is now based on, so a row the operator added after the dispatch keeps
+        // the list dirty and the next ordinary reload cannot quietly replace it.
+        baselines[editor] = Fingerprint(owner);
         return current;
     }
 

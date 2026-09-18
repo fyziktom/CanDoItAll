@@ -44,7 +44,12 @@ dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile
 
 ## Fast: local assets and bounded scanning
 
+`npm ci --prefix Tailwind` is a one-time prerequisite of both modes on a fresh clone. The generated
+stylesheet is ignored, so building this sandbox in Fast mode before it exists fails with exactly
+these two commands in its message.
+
 ```sh
+npm ci --prefix Tailwind
 npm run crmhr:css:build
 npm run crmhr:watch:fast
 ```

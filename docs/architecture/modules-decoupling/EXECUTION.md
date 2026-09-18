@@ -220,7 +220,11 @@ Execution mode: **LIGHTWEIGHT_INCREMENTAL_E2E**.
 
 The operator's attached task, accepted on 2026-09-10, authorizes the complete existing-product module-boundary refactor in coherent, verified slices. This replaces the Foundation's procedural requirement for a separately approved implementation request for each slice, including the older restrictions in `START_HERE_FOR_ASTRA.md` and chapter 12. Legacy bundle/subbundle generation is waived. No new bundle framework, manifests, or per-phase proof packets are required.
 
-The architectural reference remains [CanDoItAll Architecture Foundation](../../../codex/bundles/CanDoItAll_Architecture_Foundation/). Its ownership, product preservation, security, compatibility, and evidence requirements remain binding, together with repository engineering rules, truthful validation, portability checks, and platform permissions. Keep discoveries and justified refinements in these task records without rewriting the reference snapshot.
+The architectural reference of that task was the `CanDoItAll_Architecture_Foundation` working
+bundle, a temporary coordination package that is not part of this tree. Its enduring requirements
+live in the maintained guidance: [the engineering instructions](../../../.github/copilot-instructions.md),
+[the architecture overview](../overview.md), [the module map](../modules.md) and
+[UI component seams](../ui-component-seams.md).
 
 Work only on **modules-decoupling**. No merge, rebase, squash, history rewrite, pull, other-branch implementation, pull request, or auto-merge is authorized. Keep signed checkpoints local; pushing requires separate authorization and must target this branch. Preserve the accepted Agents UI checkpoint and existing product capabilities. Sibling repositories are read-only source dependencies. Preserve user data, secrets, live hosts, and unrelated work.
 

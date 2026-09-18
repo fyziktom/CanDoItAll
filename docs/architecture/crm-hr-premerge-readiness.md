@@ -113,9 +113,10 @@ bundle roots omitted, and its results are recorded here when it completes.
 1. Publish anything the merge needs that is only local. Nothing is outstanding today: the sibling
    dialog repair `ff528974` is already the published `development` head of `CanDoItAll.Components`.
    Publishing a NuGet package that contains it is optional and only matters for a package-mode build.
-2. Remove the agreed bundle roots (`codex/bundles/**`) from the working checkout and commit the
-   removal with the usual signature. Optional in the same commit: the `.gitignore` negations and the
-   `.gitattributes` entries that name paths inside those roots.
+2. Remove the agreed working-bundle roots, the tracked bundle directories the first command below
+   names, from the working checkout and commit the removal with the usual signature. Optional in the
+   same commit: the `.gitignore` negations and the `.gitattributes` entries that name paths inside
+   those roots.
 3. Run the post-removal checks below on the resulting commit.
 4. Review and integrate `components-decoupling` into `development`.
 5. Validate the actual `development` result, because it is a tree that has not existed before.

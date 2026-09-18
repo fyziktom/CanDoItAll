@@ -211,6 +211,12 @@ pinned commits declared in its workflow, and Docker receives the same repositori
 named build contexts. Keep source roots and commits identical for the whole gate; do not
 substitute an unpublished package graph for any command.
 
+The gate is long. Measure it when you run it and compare the number with the `timeout-minutes` of
+the stable job in the CI workflow before assuming the two agree: this workstation has recorded runs
+close to, and above, that budget, and a runner that is slower than the budget fails the job without
+a test failing. Neither reducing the filter nor raising the timeout without a measurement is an
+acceptable answer to that.
+
 The filter intentionally excludes:
 
 - browser automation
@@ -280,7 +286,7 @@ until the code and reviewed baseline agree and the final no-write enforcement pa
 ## Documentation evidence validation
 
 `./tools/Validation/Test-Documentation.ps1` rejects tracked runtime logs. It carries one
-format rule for sealed evidence: a durable `.log` below `codex/bundles` is accepted only
+format rule for sealed evidence: a durable `.log` inside a tracked working bundle is accepted only
 when the owning tracked `MANIFEST.sha256` contains exactly one matching path and its hash
 matches the current file. Untracked manifests, modified logs and unsealed logs do not
 qualify; `.pid` and `.pyc` files remain forbidden. The rule is about the format, not about
