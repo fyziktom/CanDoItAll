@@ -8,6 +8,11 @@ public static class ProjectStructureTaskActionIds
     public const string CreateMode = "project-task-dialog";
 }
 
+/// <summary>
+/// Kind of resource selected for a task, as a JSON integer: 0 Person (a CRM/HR person party), 1 Agent (an AI agent
+/// party), 2 Workflow (a workflow definition), 3 Process (a process definition). Only Person and Agent can be direct
+/// task assignees.
+/// </summary>
 public enum ProjectStructureTaskResourceKind
 {
     Person,
@@ -16,6 +21,18 @@ public enum ProjectStructureTaskResourceKind
     Process
 }
 
+/// <summary>
+/// Resource selected for a task: a person or agent that works on it, or a workflow or process definition that
+/// executes it.
+/// </summary>
+/// <param name="Kind">Kind of the selected resource.</param>
+/// <param name="ResourceId">
+/// Identifier of the selected resource: the party identifier of a person or agent, or the definition identifier of
+/// a workflow or process. Must not be the empty GUID.
+/// </param>
+/// <param name="VersionId">
+/// Exact workflow version for a Workflow selection; must be null or omitted for every other kind.
+/// </param>
 public sealed record ProjectStructureTaskResourceSelection(
     ProjectStructureTaskResourceKind Kind,
     Guid ResourceId,

@@ -21,6 +21,10 @@ The default development profile listens on `http://localhost:5032`.
 
 OpenAPI endpoints require authorization when API authorization is enabled.
 
+The operation, parameter and schema descriptions in that document come from the C# XML documentation
+of the route handlers and serialized types; [HTTP API documentation](architecture/api-documentation.md)
+describes that pipeline, its authoring conventions and the coverage gates.
+
 ## Access Configuration
 
 Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettings.json).

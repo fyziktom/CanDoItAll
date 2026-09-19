@@ -25,6 +25,7 @@ public static class ProjectStructureAgentApi
     public static IEndpointRouteBuilder MapProjectStructureAgentApi(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/project-structure")
+            .WithTags("Project Structure")
             .DisableAntiforgery();
         group.WithMetadata(ProjectStructureHttpResponseContract.Instance);
         group.ApplyApiAuthorization(endpoints, ApiAuthorizationPolicies.WriteProjectStructure);
@@ -225,53 +226,13 @@ public static class ProjectStructureAgentApi
                 },
                 cancellationToken));
 
-        group.MapPut("/projects/{projectId:guid}/tasks/{taskId}", async (
-            Guid projectId,
-            string taskId,
-            HttpContext httpContext,
-            ProjectStructureTaskUpdateAgentInput request,
-            ProjectStructureTaskDetailsService taskDetailsService,
-            ProjectStructureAnalyticsService analyticsService,
-            CancellationToken cancellationToken) =>
-            await ExecuteAsync(
-                httpContext,
-                analyticsService,
-                "tasks.update",
-                projectId,
-                taskId,
-                ProjectStructureLeaseScopeKind.Project,
-                projectId.ToString(),
-                request,
-                async (agent, cancellationToken) =>
-                {
-                    if (!string.Equals(taskId, request.TaskId, StringComparison.Ordinal))
-                    {
-                        throw new ProjectStructureAgentException(
-                            StatusCodes.Status400BadRequest,
-                            "TaskRouteMismatch",
-                            "The task id in the route must match request.taskId.");
-                    }
-
-                    var update = request.ToRequest();
-                    var expected = RequireProjectAdmission(projectId, update.ExpectedProjectAdmission);
-                    var owner = agent with { ExpectedProjectAdmission = expected };
-                    try
-                    {
-                        return await taskDetailsService.UpdateAsync(
-                            projectId,
-                            update with { MutationOwner = owner },
-                            cancellationToken);
-                    }
-                    catch (ProjectStructureTaskDetailsException exception)
-                    {
-                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
-                    }
-                    catch (ProjectStructureGanttMutationException exception)
-                    {
-                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
-                    }
-                },
-                cancellationToken));
+        group.MapPut("/projects/{projectId:guid}/tasks/{taskId}", UpdateTaskAsync)
+            .Produces<ProjectStructureGanttMutationResult>()
+            .ProducesProjectStructureErrors(
+                StatusCodes.Status400BadRequest,
+                StatusCodes.Status404NotFound,
+                StatusCodes.Status409Conflict,
+                StatusCodes.Status500InternalServerError);
 
         group.MapPost("/projects/{projectId:guid}/tasks/{taskId}/resource", async (
             Guid projectId,
@@ -1378,6 +1339,128 @@ public static class ProjectStructureAgentApi
 
         return endpoints;
     }
+
+    /// <summary>
+    /// Update a canonical project task using the task state previously read by the caller.
+    /// </summary>
+    /// <remarks>
+    /// Changes the title, progress, estimate, planned schedule, execution state or direct assignee of a canonical task
+    /// (one created with <c>POST /api/project-structure/projects/{projectId}/tasks</c>). Generic node operations
+    /// reject canonical tasks; workflow and process resources are attached with
+    /// <c>POST /api/project-structure/projects/{projectId}/tasks/{taskId}/resource</c> instead.
+    ///
+    /// Read, modify, write:
+    ///
+    /// 1. Call <c>POST /api/project-structure/projects/{projectId}/structure/read</c> with
+    /// <c>{ "includeMetadata": true }</c> and keep its <c>expectedProjectAdmission</c>.
+    /// 2. Take the task from <c>nodes</c> by its <c>id</c> and copy <c>title</c>, <c>progressPercent</c>,
+    /// <c>startUtc</c> and <c>endUtc</c>.
+    /// 3. Parse the task's <c>metadataJson</c> string. Under <c>workItem</c>: <c>expectedEffortHours</c>,
+    /// <c>expectedEffortUnit</c>, <c>expectedCostAmount</c> and <c>expectedCostCurrencyCode</c> form the current
+    /// estimate; <c>executionState</c>, <c>actualStartedAtUtc</c> and <c>actualEndedAtUtc</c> the current execution;
+    /// <c>expectedCostBasis</c> the current cost basis; <c>directAssignmentRevision</c> the current direct-assignment
+    /// revision. A member missing there is null, and a missing revision is 0.
+    /// 4. Send every current value unchanged and change only the proposed values you intend to change.
+    /// 5. Read the structure again to see the stored result.
+    ///
+    /// <c>metadataJson</c> writes enums as camel-case text (for example <c>"manDays"</c> or <c>"notStarted"</c>), but
+    /// this request expects the JSON integers listed on each enum schema. Always include <c>currentCostBasis</c>, using
+    /// null when the read had none.
+    ///
+    /// Authority: when API authorization is enabled, a bearer token with the <c>api</c> or
+    /// <c>api.project-structure.write</c> scope. The body must also carry the project write admission from the read;
+    /// it carries no lease token.
+    ///
+    /// Failures handled by the operation use the Project Structure error envelope. HTTP 409 means the task, its
+    /// assignments or the project changed after your read, or the admission is missing or stale: read again and
+    /// reapply the intended change; never resend an obsolete body with only its preconditions refreshed. A body the
+    /// framework cannot bind (malformed JSON, a wrong JSON type such as text for an integer enum, or a missing
+    /// <c>currentCostBasis</c> member) is rejected with HTTP 400 before the operation runs and has no envelope.
+    /// </remarks>
+    /// <param name="projectId">
+    /// Identifier of the project that contains the task. The body's <c>expectedProjectAdmission</c> must name this
+    /// project.
+    /// </param>
+    /// <param name="taskId">
+    /// String node identifier of the task as returned in <c>nodes[].id</c> by the structure read, for example
+    /// <c>custom:3f2504e04f8911d39a0c0305e82c3301</c>; not a GUID in general. It must equal <c>taskId</c> in the body.
+    /// </param>
+    /// <param name="request">Current task state as last read, the proposed values and the project write admission.</param>
+    /// <response code="200">
+    /// The update was committed. The body lists the tasks whose stored values changed; read the structure again for the
+    /// stored values, which the owner may have normalized or repriced.
+    /// </response>
+    /// <response code="400">
+    /// The request was rejected before any change: <c>TaskRouteMismatch</c> (route and body task identifiers differ),
+    /// <c>TaskUpdateRequestInvalid</c> (blank identifier, unknown gesture or empty interval), <c>InvalidRequest</c>
+    /// (blank title, out-of-range progress, invalid estimate, cost basis or execution transition, or a direct assignee
+    /// that is not a person or agent), <c>InvalidTask</c> or <c>InvalidTitle</c> (the node is not an editable task or
+    /// the title is not accepted), <c>InvalidSchedule</c> or <c>ProjectionOnlySchedule</c> (the schedule change does not
+    /// fit the stored schedule). A body the framework cannot bind is rejected with HTTP 400 without an envelope.
+    /// </response>
+    /// <response code="404">
+    /// The task was not found in the project (<c>WorkItemNotFound</c> or <c>TaskNotFound</c>), or the project was not
+    /// found (<c>ProjectNotFound</c>).
+    /// </response>
+    /// <response code="409">
+    /// The read state is no longer current or the write is not admitted: <c>ProjectLifetimeRefreshRequired</c> (the
+    /// admission is missing or names another project), <c>StaleTask</c> (a current title, progress, estimate,
+    /// execution, cost basis, assignment revision or interval differs from the stored value),
+    /// <c>ConcurrencyConflict</c>, <c>AssignmentConflict</c> (for example several direct assignees) or
+    /// <c>ProjectStructureConcurrentMutation</c>. Read the task again before deciding whether to retry.
+    /// </response>
+    /// <response code="500">
+    /// The update failed unexpectedly (<c>UnhandledError</c>), or an assignee change was rolled back but its previous
+    /// assignee or pricing could not be restored (<c>AssignmentCompensationFailed</c>). Read the project before making
+    /// another change.
+    /// </response>
+    internal static Task<IResult> UpdateTaskAsync(
+        Guid projectId,
+        string taskId,
+        HttpContext httpContext,
+        ProjectStructureTaskUpdateAgentInput request,
+        ProjectStructureTaskDetailsService taskDetailsService,
+        ProjectStructureAnalyticsService analyticsService,
+        CancellationToken cancellationToken)
+        => ExecuteAsync(
+            httpContext,
+            analyticsService,
+            "tasks.update",
+            projectId,
+            taskId,
+            ProjectStructureLeaseScopeKind.Project,
+            projectId.ToString(),
+            request,
+            async (agent, cancellationToken) =>
+            {
+                if (!string.Equals(taskId, request.TaskId, StringComparison.Ordinal))
+                {
+                    throw new ProjectStructureAgentException(
+                        StatusCodes.Status400BadRequest,
+                        "TaskRouteMismatch",
+                        "The task id in the route must match request.taskId.");
+                }
+
+                var update = request.ToRequest();
+                var expected = RequireProjectAdmission(projectId, update.ExpectedProjectAdmission);
+                var owner = agent with { ExpectedProjectAdmission = expected };
+                try
+                {
+                    return await taskDetailsService.UpdateAsync(
+                        projectId,
+                        update with { MutationOwner = owner },
+                        cancellationToken);
+                }
+                catch (ProjectStructureTaskDetailsException exception)
+                {
+                    throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
+                }
+                catch (ProjectStructureGanttMutationException exception)
+                {
+                    throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
+                }
+            },
+            cancellationToken);
 
     private static ProjectStructureReadRequest ResolveHttpReadRequest(
         ProjectStructureReadRequest request)

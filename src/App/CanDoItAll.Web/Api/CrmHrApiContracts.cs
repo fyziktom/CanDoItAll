@@ -20,18 +20,45 @@ internal static class CrmHrApiContractDefaults
     }
 }
 
+/// <summary>
+/// Query-string filters for listing CRM/HR parties. Every filter is optional.
+/// </summary>
 internal sealed class CrmHrPartyPageApiQuery
 {
+    /// <summary>
+    /// Text matched case-insensitively as a substring of the display name and, for parties that are not sensitive,
+    /// of the external code and summary. Surrounding whitespace is ignored; at most 200 characters. Omitted or empty
+    /// applies no text filter.
+    /// </summary>
     public string? Search { get; init; }
 
+    /// <summary>
+    /// Tags a party must all have (whole-tag, case-insensitive match). Repeat the parameter for several tags, for
+    /// example <c>?Tags=vip&amp;Tags=partner</c>. Blank values are ignored and duplicates merged; at most 20 distinct
+    /// tags. Sensitive parties never match a tag filter.
+    /// </summary>
     public string[]? Tags { get; init; }
 
+    /// <summary>
+    /// Party types to include, as a flags value: 1 People, 2 Organizations, 4 OrganizationUnits, 8 AiAgents; add the
+    /// values to combine types (for example 3 for people and organizations). Omitted means all types (15). A value
+    /// with no supported type, or with other bits, is rejected.
+    /// </summary>
     public PartyRecordScope? Scope { get; init; }
 
+    /// <summary>
+    /// Zero-based page number. Omitted means 0; must not be negative.
+    /// </summary>
     public int? PageIndex { get; init; }
 
+    /// <summary>
+    /// Number of parties per page, from 1 through 100. Omitted means 24.
+    /// </summary>
     public int? PageSize { get; init; }
 
+    /// <summary>
+    /// True to include archived parties. Omitted or false excludes them.
+    /// </summary>
     public bool? IncludeArchived { get; init; }
 
     public PartyRecordQuery ToQuery(PartyRecordPopulation population)

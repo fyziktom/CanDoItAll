@@ -33,16 +33,10 @@ internal static class CrmHrApi
 
     private static void MapPartyEndpoints(RouteGroupBuilder crmHr)
     {
-        crmHr.MapGet("/parties", async (
-                [AsParameters] CrmHrPartyPageApiQuery query,
-                IPartyRecordQueryService partyQueryService,
-                CancellationToken cancellationToken) =>
-            await ExecuteBoundedQueryAsync(
-                async () => Results.Ok(await partyQueryService.SearchAsync(
-                    query.ToQuery(PartyRecordPopulation.All),
-                    cancellationToken)),
-                "crmhr.party.query-invalid"))
-            .WithName("ListCrmHrParties");
+        crmHr.MapGet("/parties", ListPartiesAsync)
+            .WithName("ListCrmHrParties")
+            .Produces<PartyRecordPage>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest);
 
         crmHr.MapGet("/parties/{partyId:guid}", async (
                 Guid partyId,
@@ -270,6 +264,41 @@ internal static class CrmHrApi
                 ConversionPartyNotFoundCode))
             .WithName("ConvertCrmHrRecruitmentCandidate");
     }
+
+    /// <summary>
+    /// List CRM/HR parties that match optional text, tag and party-type filters, one page at a time.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Returns people, organizations, organization units and AI agents recorded as CRM/HR parties, ordered by display
+    /// name and then party identifier. Archived parties are excluded unless <c>IncludeArchived</c> is true. Use the
+    /// returned <c>id</c> with the other <c>/api/crm-hr/parties/{partyId}</c> operations; a party identifier is not a
+    /// login account, workforce-profile or recruitment-application identifier.
+    /// </para>
+    /// <para>
+    /// Sensitive parties are listed with their display name, type and status, but their external code, summary and
+    /// tags are returned empty, their external code and summary are not searched and they never match a tag filter.
+    /// </para>
+    /// <para>
+    /// Paging is zero-based: request the next page with <c>PageIndex</c> + 1 while <c>pageIndex</c> + 1 is less than
+    /// <c>totalPages</c>. Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// </para>
+    /// </remarks>
+    /// <param name="query">Search, tag, party-type, paging and archive filters.</param>
+    /// <response code="200">The requested page. An empty <c>items</c> array means no party matched.</response>
+    /// <response code="400">
+    /// A filter is out of range (<c>crmhr.party.query-invalid</c>): negative page index, page size outside 1 through
+    /// 100, search text longer than 200 characters, more than 20 tags, or a party-type scope without a supported type.
+    /// </response>
+    internal static Task<IResult> ListPartiesAsync(
+        [AsParameters] CrmHrPartyPageApiQuery query,
+        IPartyRecordQueryService partyQueryService,
+        CancellationToken cancellationToken)
+        => ExecuteBoundedQueryAsync(
+            async () => Results.Ok(await partyQueryService.SearchAsync(
+                query.ToQuery(PartyRecordPopulation.All),
+                cancellationToken)),
+            "crmhr.party.query-invalid");
 
     private static async Task<IResult> ExecuteBoundedQueryAsync(
         Func<Task<IResult>> query,

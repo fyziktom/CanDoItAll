@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>CanDoItAll.Modules.Projects</RootNamespace>
     <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

@@ -33,6 +33,17 @@ public sealed class ProjectStructureGanttMutationException : InvalidOperationExc
     public ProjectStructureGanttMutationErrorCode Code { get; }
 }
 
+/// <summary>
+/// Committed result of a Gantt task or schedule mutation: which tasks the owner changed and how many dependencies it
+/// added or removed. It carries no task state; read the project structure again to obtain the stored values,
+/// including those the owner normalized or recalculated.
+/// </summary>
+/// <param name="AffectedTaskIds">
+/// Tasks whose stored values the mutation changed. Each item is an object whose <c>value</c> member holds the task's
+/// string node identifier, for example <c>{ "value": "custom:3f2504e04f8911d39a0c0305e82c3301" }</c>.
+/// </param>
+/// <param name="AddedDependencyCount">Number of task dependencies the mutation added.</param>
+/// <param name="RemovedDependencyCount">Number of task dependencies the mutation removed.</param>
 public sealed record ProjectStructureGanttMutationResult(
     IReadOnlyList<GanttTaskId> AffectedTaskIds,
     int AddedDependencyCount,

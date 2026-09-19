@@ -8,6 +8,11 @@ public enum ProjectStructureTaskResourceCostQuoteStatus
     Unavailable
 }
 
+/// <summary>
+/// Source the owner used to price a task resource, as a JSON integer: 0 Unknown (no usable source), 1 CrmWorkforceRate
+/// (a CRM/HR person's rate), 2 AgentRunHistory, 3 WorkflowRunHistory and 4 ProcessRunHistory (recorded execution cost
+/// of the agent, workflow or process).
+/// </summary>
 public enum ProjectStructureTaskResourceCostSource
 {
     Unknown,

@@ -62,7 +62,9 @@ public static class ApiServiceCollectionExtensions
         services.ConfigureLlmChatApiJson();
         services.AddOpenApi(options =>
         {
+            options.AddSchemaTransformer(new OpenApiNullableTypeDescriptions());
             options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
+            options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
             options.AddOperationTransformer(
@@ -71,6 +73,7 @@ public static class ApiServiceCollectionExtensions
                 SharedProviderCatalogOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(
                 SharedProviderInferenceOpenApiContract.TransformOperationAsync);
+            options.AddDocumentTransformer(OpenApiDescriptionText.TransformDocumentAsync);
         });
         services.AddAuthorization(options =>
         {

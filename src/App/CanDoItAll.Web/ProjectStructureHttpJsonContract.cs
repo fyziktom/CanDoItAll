@@ -460,18 +460,27 @@ internal static class ProjectStructureHttpJsonContract
     {
         if (schema is OpenApiSchemaReference reference)
         {
+            // A description on the reference describes the role of this use (for example a property); the inlined
+            // copy keeps it instead of falling back to the referenced type's description.
+            var useDescription = reference.Reference.Description;
             if (string.Equals(
                     reference.Reference.Id,
                     nameof(ProjectObjectType),
                     StringComparison.Ordinal))
             {
-                return CreateObjectTypeResponseSchema();
+                return CreateObjectTypeResponseSchema(useDescription);
             }
 
             var target = reference.Target ??
                 throw new InvalidOperationException(
                     $"OpenAPI response schema reference '{reference.Reference.Id}' is unresolved.");
-            return CloneProjectStructureResponseSchema(target, recursionPath);
+            var inlined = CloneProjectStructureResponseSchema(target, recursionPath);
+            if (!string.IsNullOrWhiteSpace(useDescription) && inlined is OpenApiSchema inlinedSchema)
+            {
+                inlinedSchema.Description = useDescription;
+            }
+
+            return inlined;
         }
 
         if (schema is not OpenApiSchema concreteSchema)
@@ -572,11 +581,13 @@ internal static class ProjectStructureHttpJsonContract
             ? null
             : CloneProjectStructureResponseSchema(schema, recursionPath);
 
-    private static OpenApiSchema CreateObjectTypeResponseSchema()
+    private static OpenApiSchema CreateObjectTypeResponseSchema(string? useDescription)
         => new()
         {
             Type = JsonSchemaType.String,
-            Description = "Canonical ProjectObjectType response symbol.",
+            Description = string.IsNullOrWhiteSpace(useDescription)
+                ? "Canonical ProjectObjectType response symbol."
+                : $"{useDescription.TrimEnd()} Returned as the canonical ProjectObjectType symbol.",
             Enum = CreateSymbolEnum()
         };
 
