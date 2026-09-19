@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -78,7 +79,7 @@ public sealed class CrmPlanningAgentRuntimeToolProvider(ICrmHrAgentQueryService 
         var payload = RequireInvocation(context, CrmPlanningToolPolicy.Search,
             JsonSerializer.SerializeToElement(new CrmPlanningSearchArguments(request), CrmPlanningProposalPreparer.Json));
         await using var held = await AcquireReadAsync(context, payload, cancellationToken);
-        var result = Require(await queries.SearchAsync(request, cancellationToken));
+        var result = RequireQueryResult(await queries.SearchAsync(request, cancellationToken));
         await RequireUnchangedSourceAsync(payload, held, cancellationToken);
         return result;
     }
@@ -88,7 +89,7 @@ public sealed class CrmPlanningAgentRuntimeToolProvider(ICrmHrAgentQueryService 
         var payload = RequireInvocation(context, CrmPlanningToolPolicy.Summary,
             JsonSerializer.SerializeToElement(new CrmPlanningSummaryArguments(request), CrmPlanningProposalPreparer.Json));
         await using var held = await AcquireReadAsync(context, payload, cancellationToken);
-        var result = Require(await queries.GetSummaryAsync(request, cancellationToken));
+        var result = RequireQueryResult(await queries.GetSummaryAsync(request, cancellationToken));
         await RequireUnchangedSourceAsync(payload, held, cancellationToken);
         return result;
     }
@@ -125,6 +126,15 @@ public sealed class CrmPlanningAgentRuntimeToolProvider(ICrmHrAgentQueryService 
                     disclosure.Result.TryGetProperty("succeeded", out var succeeded) && succeeded.ValueKind == JsonValueKind.False &&
                     CrmPlanningProposalPreparer.Read<AgentToolFailureResult>(disclosure.Result) is {
                         Succeeded: false, ErrorCode: CrmPlanningToolPolicy.PolicyDeniedCode, EffectState: AgentToolEffectState.NotCommitted
+                    }) {
+                await RequireUnchangedSourceAsync(disclosure.Payload, held, cancellationToken);
+                return held;
+            }
+            // A rejected query carries only the query service's correction text, never a planning record.
+            if (disclosure.IsNoEffectTypedFailure &&
+                    CrmPlanningProposalPreparer.Read<AgentToolFailureResult>(disclosure.Result) is {
+                        Succeeded: false, ErrorCode: AgentToolInputValidationException.FailureCode,
+                        EffectState: AgentToolEffectState.None, CanRetryWithCorrectedInput: true
                     }) {
                 await RequireUnchangedSourceAsync(disclosure.Payload, held, cancellationToken);
                 return held;
@@ -221,6 +231,28 @@ public sealed class CrmPlanningAgentRuntimeToolProvider(ICrmHrAgentQueryService 
         }
         return result.Value ?? throw new InvalidOperationException("The CRM owner returned no planning result.");
     }
+
+    // The planning tools only read. A query the owner rejects for its input or an unknown record is a no-effect
+    // failure the model can correct; any other owner failure stays opaque.
+    private static T RequireQueryResult<T>(Result<T> result) where T : class {
+        if (result.IsFailure && result.Errors.Count > 0 && result.Errors.All(error => CorrectableQueryErrors.Contains(error.Code))) {
+            var reason = string.Join(" ", result.Errors.Select(error => error.Message.Trim()));
+            throw AgentToolInputValidationException.Create(
+                result.Errors.Any(error => error.Code == CrmHrAgentQueryErrorCodes.RecordNotFound)
+                    ? $"{reason} Search CRM planning records and retry with an exact kind and id from the results."
+                    : $"{reason} Correct the request and retry.");
+        }
+        return Require(result);
+    }
+
+    private static readonly FrozenSet<string> CorrectableQueryErrors = new[] {
+        CrmHrAgentQueryErrorCodes.SearchRequired,
+        CrmHrAgentQueryErrorCodes.SearchTooLong,
+        CrmHrAgentQueryErrorCodes.TakeOutOfRange,
+        CrmHrAgentQueryErrorCodes.RecordKindInvalid,
+        CrmHrAgentQueryErrorCodes.RecordIdRequired,
+        CrmHrAgentQueryErrorCodes.RecordNotFound
+    }.ToFrozenSet(StringComparer.Ordinal);
 
     private sealed record Attachment(IReadOnlyDictionary<string, CrmPlanningProposalPreparer> Preparers);
 

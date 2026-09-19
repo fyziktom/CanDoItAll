@@ -1150,13 +1150,19 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailureEffect
 public sealed class ProjectStructureLeaseConflictException : ProjectStructureAgentException
 {
     public ProjectStructureLeaseConflictException(ProjectStructureLeaseConflict conflict)
+        : this(conflict, AgentToolEffectState.Unknown)
+    {
+    }
+
+    public ProjectStructureLeaseConflictException(ProjectStructureLeaseConflict conflict, AgentToolEffectState effectState)
         : base(
             409,
             "LeaseConflict",
             "Another active operation currently holds the project-structure mutation lease. Wait for that operation to finish or for its lease to expire, then retry.",
             details: null,
             isSafeToExpose: true,
-            canRetryWithCorrectedInput: false)
+            canRetryWithCorrectedInput: false,
+            effectState)
     {
         Conflict = conflict;
     }

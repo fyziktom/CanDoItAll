@@ -1,4 +1,5 @@
 using System.Text;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -8,14 +9,19 @@ internal static class ProjectStructureAgentRuntimeAssetTextReader {
         encoderShouldEmitUTF8Identifier: false,
         throwOnInvalidBytes: true);
 
+    // Reading an asset as text changes nothing, so an unsupported asset is a no-effect failure the agent can work around.
     public static ProjectStructureAssetTextDescriptor Read(ProjectStructureAssetBinaryContent content) {
         ArgumentNullException.ThrowIfNull(content);
         if (!IsSupported(content.Asset)) {
+            var nextAction = NormalizeContentType(content.Asset.MediaContentType).StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+                ? $" Use {ProjectStructureToolPolicy.ProjectStructureAssetImageAnalyze} to inspect an image asset."
+                : string.Empty;
             throw ProjectStructureAgentException.CreateAgentVisible(
                 415,
                 "AssetTextContentTypeUnsupported",
-                $"Asset '{content.Asset.NodeId}' has content type '{content.Asset.MediaContentType}', which is not a supported text asset.",
-                canRetryWithCorrectedInput: false);
+                $"Asset '{content.Asset.NodeId}' has content type '{content.Asset.MediaContentType}', which is not a supported text asset.{nextAction}",
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
 
         string text;
@@ -26,7 +32,8 @@ internal static class ProjectStructureAgentRuntimeAssetTextReader {
                 415,
                 "AssetTextEncodingUnsupported",
                 $"Asset '{content.Asset.NodeId}' is not valid UTF-8 text.",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
 
         if (text.Length > 0 && text[0] == '\uFEFF') {

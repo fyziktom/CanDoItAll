@@ -1573,8 +1573,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         await workspaceService.SaveCapabilityAsync(firstEditor);
         staleEditor.Description = "Stale overwrite.";
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var stale = await Assert.ThrowsAsync<CapabilityCatalogRejectedException>(() =>
             workspaceService.SaveCapabilityAsync(staleEditor));
+        Assert.True(stale.IsConcurrencyConflict);
         var saved = await workspaceService.GetCapabilityEditorAsync(capabilityId);
         Assert.Equal("First accepted update.", saved.Description);
     }

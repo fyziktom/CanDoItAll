@@ -229,7 +229,7 @@ public static class ProjectStructureAgentApi
             Guid projectId,
             string taskId,
             HttpContext httpContext,
-            ProjectStructureTaskDetailsUpdateRequest request,
+            ProjectStructureTaskUpdateAgentInput request,
             ProjectStructureTaskDetailsService taskDetailsService,
             ProjectStructureAnalyticsService analyticsService,
             CancellationToken cancellationToken) =>
@@ -244,7 +244,7 @@ public static class ProjectStructureAgentApi
                 request,
                 async (agent, cancellationToken) =>
                 {
-                    if (!string.Equals(taskId, request.TaskId.Value, StringComparison.Ordinal))
+                    if (!string.Equals(taskId, request.TaskId, StringComparison.Ordinal))
                     {
                         throw new ProjectStructureAgentException(
                             StatusCodes.Status400BadRequest,
@@ -252,13 +252,14 @@ public static class ProjectStructureAgentApi
                             "The task id in the route must match request.taskId.");
                     }
 
-                    var expected = RequireProjectAdmission(projectId, request.ExpectedProjectAdmission);
+                    var update = request.ToRequest();
+                    var expected = RequireProjectAdmission(projectId, update.ExpectedProjectAdmission);
                     var owner = agent with { ExpectedProjectAdmission = expected };
                     try
                     {
                         return await taskDetailsService.UpdateAsync(
                             projectId,
-                            request with { MutationOwner = owner },
+                            update with { MutationOwner = owner },
                             cancellationToken);
                     }
                     catch (ProjectStructureTaskDetailsException exception)

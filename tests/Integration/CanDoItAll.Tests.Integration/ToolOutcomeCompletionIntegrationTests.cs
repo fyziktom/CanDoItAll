@@ -95,6 +95,65 @@ public sealed class ToolOutcomeCompletionIntegrationTests
     }
 
     [Fact]
+    public void The_latest_unresolved_attempt_explains_the_failure_after_the_agent_corrected_earlier_input()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.NotCommitted,
+                    correlationKey: "operation-a",
+                    failureMessage: "Proposed progress must be between 0 and 100 percent."),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.NotCommitted,
+                    correlationKey: "operation-a",
+                    failureMessage: "Work item 'missing' was not found."),
+                CreateMutationTrace(
+                    sequence: 3,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.NotCommitted,
+                    correlationKey: "operation-b",
+                    failureMessage: "The task starts before its predecessor finishes.")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Equal(AgentToolCompletionFailureKind.RequiredMutation, assessment.FailureKind);
+        Assert.Equal(
+            "Required mutation 'project_structure_asset_create' did not complete: The task starts before its predecessor finishes.",
+            assessment.FailureSummary);
+    }
+
+    [Fact]
+    public void An_uncertain_effect_is_named_before_a_later_rejection_with_no_effect()
+    {
+        var assessment = AgentToolCompletionAssessment.Create(
+            [
+                CreateMutationTrace(
+                    sequence: 1,
+                    AgentToolInvocationOutcome.Unknown,
+                    AgentToolEffectState.Unknown,
+                    correlationKey: "operation-a",
+                    failureMessage: "The write may have been stored."),
+                CreateMutationTrace(
+                    sequence: 2,
+                    AgentToolInvocationOutcome.Failed,
+                    AgentToolEffectState.None,
+                    correlationKey: "operation-b",
+                    failureMessage: "The target was rejected before anything was stored.")
+            ],
+            pendingApprovalCount: 0,
+            portableOutputValid: true);
+
+        Assert.Equal(ExecutionState.Failed, assessment.State);
+        Assert.Contains("The write may have been stored.", assessment.FailureSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Later_success_for_an_unrelated_operation_does_not_resolve_the_failure()
     {
         var assessment = AgentToolCompletionAssessment.Create(

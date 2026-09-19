@@ -250,7 +250,7 @@ public sealed partial class WorkflowCuratorAgentRuntimeToolProviderTests
         Assert.Equal("Deliver accepted result", updatedEnd.Name);
         Assert.Equal("Return the final accepted workflow result.", updatedEnd.Settings.Instructions);
 
-        var staleException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var staleException = await Assert.ThrowsAsync<AgentToolConflictException>(() =>
             InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
                 tools[WorkflowCuratorToolPolicy.WorkflowCuratorNodeUpdate],
                 new WorkflowCuratorNodeUpdateInput(
@@ -259,6 +259,8 @@ public sealed partial class WorkflowCuratorAgentRuntimeToolProviderTests
                     "end",
                     name: "Stale overwrite")));
         Assert.Contains("updated by another request", staleException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AgentToolEffectState.None, staleException.EffectState);
+        Assert.True(staleException.CanRetryWithCorrectedInput);
 
         var active = await InvokeAsync<WorkflowCuratorDefinitionEditorResult>(
             tools[WorkflowCuratorToolPolicy.WorkflowCuratorLifecycleChange],

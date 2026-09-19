@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
@@ -270,41 +271,37 @@ public sealed class ProjectStructureTaskCreationService(
     {
         if (projectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "ProjectIdRequired", "A project id is required.");
+            throw InvalidTaskRequest("ProjectIdRequired", "A project id is required.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Title))
         {
-            throw new ProjectStructureAgentException(400, "TaskTitleRequired", "A task title is required.");
+            throw InvalidTaskRequest("TaskTitleRequired", "A task title is required.");
         }
 
         var title = request.Title.Trim();
         if (title.Length > MaximumTaskTitleLength)
         {
-            throw new ProjectStructureAgentException(
-                400,
-                "TaskTitleTooLong",
+            throw InvalidTaskRequest("TaskTitleTooLong",
                 $"Task title cannot exceed {MaximumTaskTitleLength} characters.");
         }
 
         if (request.StartUtc == default || request.EndUtc == default)
         {
-            throw new ProjectStructureAgentException(400, "TaskDatesRequired", "Task start and end dates are required.");
+            throw InvalidTaskRequest("TaskDatesRequired", "Task start and end dates are required.");
         }
 
         var startUtc = request.StartUtc.ToUniversalTime();
         var endUtc = request.EndUtc.ToUniversalTime();
         if (endUtc <= startUtc)
         {
-            throw new ProjectStructureAgentException(400, "TaskDateRangeInvalid", "Task end must be later than task start.");
+            throw InvalidTaskRequest("TaskDateRangeInvalid", "Task end must be later than task start.");
         }
 
         var durationSeconds = (endUtc - startUtc).TotalSeconds;
         if (durationSeconds > int.MaxValue)
         {
-            throw new ProjectStructureAgentException(
-                400,
-                "TaskDurationTooLong",
+            throw InvalidTaskRequest("TaskDurationTooLong",
                 $"Task duration cannot exceed {int.MaxValue} seconds.");
         }
 
@@ -340,10 +337,17 @@ public sealed class ProjectStructureTaskCreationService(
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or OverflowException)
         {
-            throw new ProjectStructureAgentException(
-                400,
-                "TaskEstimateInvalid",
+            throw InvalidTaskRequest("TaskEstimateInvalid",
                 exception.Message);
         }
     }
+
+    // Task requests are validated before the task, its backlog, or its resource are written.
+    private static ProjectStructureAgentException InvalidTaskRequest(string errorCode, string message)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            400,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.None);
 }

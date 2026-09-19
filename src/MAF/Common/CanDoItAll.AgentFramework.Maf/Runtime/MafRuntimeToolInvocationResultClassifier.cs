@@ -21,7 +21,8 @@ internal static class MafRuntimeToolInvocationResultClassifier
         string toolName,
         ToolInvocationClassification classification,
         object? result,
-        AgentToolPreDispatchFailure? preDispatchFailure = null)
+        AgentToolPreDispatchFailure? preDispatchFailure = null,
+        bool rejectedBeforeEffect = false)
     {
         if (preDispatchFailure is not null) {
             return new(AgentToolInvocationOutcome.Failed, AgentToolEffectState.NotCommitted,
@@ -52,6 +53,8 @@ internal static class MafRuntimeToolInvocationResultClassifier
                 ToolInvocationClassification.Read => AgentToolEffectState.None,
                 ToolInvocationClassification.Mutation when succeeded &&
                     directReceiptExecutionRunId.HasValue => AgentToolEffectState.Committed,
+                // The owner recorded that it rejected the request before any effect.
+                ToolInvocationClassification.Mutation when !succeeded && rejectedBeforeEffect => AgentToolEffectState.NotCommitted,
                 ToolInvocationClassification.Mutation => AgentToolEffectState.Unknown,
                 _ => AgentToolEffectState.None
             };
@@ -82,7 +85,9 @@ internal static class MafRuntimeToolInvocationResultClassifier
     }
 
     private static readonly HashSet<string> TrustedWorkspaceReceiptToolNames =
-        ToolContractCatalog.WorkspaceToolNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        ToolContractCatalog.WorkspaceToolNames
+            .Append(AgentToolInvocationPolicyMetadata.RunSkillScript)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static readonly string[] ResultEnvelopePropertyNames =
     [
@@ -102,7 +107,9 @@ internal static class MafRuntimeToolInvocationResultClassifier
     private static readonly IReadOnlyDictionary<string, string> TrustedReceiptOperationAliases =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            [ToolContractCatalog.WorkspaceInspectSpreadsheet] = "workspace_spreadsheet_preview"
+            [ToolContractCatalog.WorkspaceInspectSpreadsheet] = "workspace_spreadsheet_preview",
+            // The skill script runner records its command receipt under the recipe operation it executes.
+            [AgentToolInvocationPolicyMetadata.RunSkillScript] = "skill_script_run"
         };
 
     public static bool IsSuccessful(object? result)

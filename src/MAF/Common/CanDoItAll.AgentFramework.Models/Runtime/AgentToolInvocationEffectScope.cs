@@ -25,6 +25,28 @@ public sealed class AgentToolInvocationEffectScope : IDisposable {
     public AgentToolProtocolEnvelope? DisclosureEvidence => Volatile.Read(ref capture.DisclosureEvidence);
     public AgentToolPreDispatchFailure? PreDispatchFailure => capture.PreDispatchFailure;
 
+    /// <summary>
+    /// The owner returned an unsuccessful result it decided before changing anything. A committed effect always wins.
+    /// </summary>
+    public bool RejectedBeforeEffect => capture.RejectedBeforeEffect && capture.CommittedEffect is null;
+
+    /// <summary>
+    /// Records that the owner rejected this invocation before any write, launch or other effect, so its returned
+    /// failure is a proven no-effect rejection the model may correct. Without an active invocation scope nothing is
+    /// recorded.
+    /// </summary>
+    public static void RecordRejectedBeforeEffect() {
+        if (CurrentCapture.Value is { } current) {
+            current.RejectedBeforeEffect = true;
+        }
+    }
+
+    /// <summary>
+    /// Whether the owner of the active invocation has recorded a rejection before any effect and nothing committed.
+    /// </summary>
+    public static bool IsCurrentRejectedBeforeEffect =>
+        CurrentCapture.Value is { RejectedBeforeEffect: true, CommittedEffect: null };
+
     public static void RecordPreDispatchFailure(AgentToolPreDispatchFailure failure) {
         ArgumentNullException.ThrowIfNull(failure);
         ArgumentException.ThrowIfNullOrWhiteSpace(failure.FailureCode);
@@ -83,6 +105,7 @@ public sealed class AgentToolInvocationEffectScope : IDisposable {
     private sealed class EffectCapture {
         public AgentToolCommittedEffect? CommittedEffect { get; set; }
         public AgentToolPreDispatchFailure? PreDispatchFailure { get; set; }
+        public bool RejectedBeforeEffect { get; set; }
         public AgentToolProtocolEnvelope? DisclosureEvidence;
     }
 }

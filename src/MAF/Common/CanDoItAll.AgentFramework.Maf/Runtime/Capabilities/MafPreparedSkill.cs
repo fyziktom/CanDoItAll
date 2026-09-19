@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 
@@ -33,7 +34,13 @@ internal sealed class MafPreparedSkill(AgentSkill inner, MafSkillOrigin origin, 
 
     public override async ValueTask<string> GetContentAsync(CancellationToken cancellationToken = default) {
         await RequireAsync(cancellationToken);
-        var result = await inner.GetContentAsync(cancellationToken);
+        string result;
+        try {
+            result = await inner.GetContentAsync(cancellationToken);
+        } catch (Exception failure) when (IsKnownFailure(failure)) {
+            await CompleteKnownFailureAsync(failure, MafSkillResultKind.Content, string.Empty, string.Empty, cancellationToken);
+            throw;
+        }
         await CompleteAsync(MafSkillResultKind.Content, string.Empty, string.Empty, cancellationToken);
         return result;
     }
@@ -60,14 +67,36 @@ internal sealed class MafPreparedSkill(AgentSkill inner, MafSkillOrigin origin, 
             ? disclosure.RecordAsync(new(Frontmatter.Name, origin), kind, name, path, cancellationToken)
             : ValueTask.CompletedTask;
 
+    // A rejection proven to have no effect is disclosed under the same skill, resource and script authority as its
+    // success would be, so it records the same evidence before the rejection reaches the model.
+    private static bool IsKnownFailure(Exception failure) => failure is IAgentToolFailureEffectEvidence {
+        IsSafeToExpose: true, EffectState: AgentToolEffectState.None or AgentToolEffectState.NotCommitted
+    };
+
+    private async ValueTask CompleteKnownFailureAsync(Exception failure, MafSkillResultKind kind, string name, string path,
+        CancellationToken cancellationToken) {
+        try {
+            await CompleteAsync(kind, name, path, cancellationToken);
+        } catch (Exception completionFailure) when (completionFailure is not OperationCanceledException) {
+            throw new AggregateException("The rejected skill operation has no completed disclosure checkpoint.",
+                failure, completionFailure);
+        }
+    }
+
     private sealed class PreparedResource(AgentSkillResource resource, MafPreparedSkill skill)
         : AgentSkillResource(resource.Name, resource.Description) {
         public override async Task<object?> ReadAsync(IServiceProvider? serviceProvider = null, CancellationToken cancellationToken = default) {
             await skill.RequireAsync(cancellationToken);
-            var result = await resource.ReadAsync(serviceProvider, cancellationToken);
             var path = skill.ResolveResourcePath(resource);
             var kind = path.Length > 0 ? MafSkillResultKind.FileResource
                 : skill.Origin.Kind == MafSkillOriginKind.Inline ? MafSkillResultKind.InlineResource : MafSkillResultKind.Unsupported;
+            object? result;
+            try {
+                result = await resource.ReadAsync(serviceProvider, cancellationToken);
+            } catch (Exception failure) when (IsKnownFailure(failure)) {
+                await skill.CompleteKnownFailureAsync(failure, kind, resource.Name, path, cancellationToken);
+                throw;
+            }
             await skill.CompleteAsync(kind, resource.Name, path, cancellationToken);
             return result;
         }
@@ -80,9 +109,16 @@ internal sealed class MafPreparedSkill(AgentSkill inner, MafSkillOrigin origin, 
         public override async Task<object?> RunAsync(AgentSkill invokingSkill, JsonElement? arguments = null,
             IServiceProvider? serviceProvider = null, CancellationToken cancellationToken = default) {
             await skill.RequireAsync(cancellationToken);
-            var result = await script.RunAsync(original, arguments, serviceProvider, cancellationToken);
-            await skill.CompleteAsync(script is AgentFileSkillScript ? MafSkillResultKind.FileScript : MafSkillResultKind.Unsupported,
-                script.Name, script is AgentFileSkillScript file ? file.FullPath : string.Empty, cancellationToken);
+            var kind = script is AgentFileSkillScript ? MafSkillResultKind.FileScript : MafSkillResultKind.Unsupported;
+            var path = script is AgentFileSkillScript file ? file.FullPath : string.Empty;
+            object? result;
+            try {
+                result = await script.RunAsync(original, arguments, serviceProvider, cancellationToken);
+            } catch (Exception failure) when (IsKnownFailure(failure)) {
+                await skill.CompleteKnownFailureAsync(failure, kind, script.Name, path, cancellationToken);
+                throw;
+            }
+            await skill.CompleteAsync(kind, script.Name, path, cancellationToken);
             return result;
         }
     }

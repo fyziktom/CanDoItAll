@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -33,7 +34,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
     {
         if (request is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskResourceAttachRequestRequired",
                 "A task resource attachment request is required.");
@@ -67,7 +68,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         ValidateRequiredRequestValues(resource, previousExecution);
         if (expectedCurrentExecution is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskExecutionSnapshotRequired",
                 "The current task execution snapshot is required.");
@@ -97,7 +98,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         ValidateRequiredRequestValues(resource, previousExecution);
         if (expectedCurrentExecution is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskExecutionSnapshotRequired",
                 "The current task execution snapshot is required.");
@@ -192,6 +193,16 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         }
     }
 
+
+    // The attach request is validated before any resource, pricing, or task change is written.
+    private static ProjectStructureAgentException InvalidAttachRequest(int statusCode, string errorCode, string message)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            statusCode,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.None);
+
     private static ProjectStructureAgentException BuildCompensationException(
         ProjectStructureTaskResourceSelection resource,
         Exception failure,
@@ -215,7 +226,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
     {
         if (resource is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskResourceRequired",
                 "A task resource is required.");
@@ -223,7 +234,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
 
         if (execution is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskExecutionSnapshotRequired",
                 "The current task execution snapshot is required.");

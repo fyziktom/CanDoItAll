@@ -37,7 +37,15 @@ public sealed class ImageGenerationResultDisclosureService(
     internal async ValueTask<IAsyncDisposable?> AuthorizeAsync(AgentRuntimeToolProviderContext context,
         AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
         var session = await RequireSessionAsync(context, cancellationToken);
-        if (disclosure.Payload.ToolName != ImageGenerationToolPolicy.ImageGenerationCreate || disclosure.Evidence is null) {
+        if (disclosure.Payload.ToolName != ImageGenerationToolPolicy.ImageGenerationCreate) {
+            throw Unavailable();
+        }
+        if (disclosure.IsNoEffectTypedFailure) {
+            // A rejected generation wrote no image and carries only its correction text, so re-disclosing it needs the
+            // agent's current image-generation authority rather than original source and output boundaries.
+            return await AcquireImageActorAsync(session, cancellationToken);
+        }
+        if (disclosure.Evidence is null) {
             throw Unavailable();
         }
         ImageGenerationDisclosureEvidence evidence;
@@ -61,14 +69,9 @@ public sealed class ImageGenerationResultDisclosureService(
             throw Denied();
         }
         await RequireSessionAsync(context, cancellationToken);
-        var held = await catalogLeases.AcquireAgentReadLeaseAsync(session.AgentId, cancellationToken);
+        var held = await AcquireImageActorAsync(session, cancellationToken);
         try {
-            var actor = held.Agent;
-            if (held.Scope != WorkspaceScopeDescriptor.Organization(session.Profile.ProfileId.ToString("N")) ||
-                    actor is null || actor.Id != session.AgentId || actor.IsTemplate || actor.Status != AgentLifecycleStatus.Active ||
-                    !actor.Permissions.CanUseTools || !AgentImageGenerationAccessMetadata.Read(actor.ConfigurationJson).CanGenerateImages) {
-                throw Denied();
-            }
+            var actor = held.Agent!;
             var access = AgentProjectStructureAccessMetadata.Read(actor.ConfigurationJson);
             foreach (var original in evidence.SourceProjects) {
                 if (!access.CanRead || !access.AllowAllProjects &&
@@ -78,10 +81,11 @@ public sealed class ImageGenerationResultDisclosureService(
                     throw Denied();
                 }
             }
+            var runPaths = AgentRuntimeWorkspacePaths.ForRun(workspacePaths, context);
             foreach (var original in evidence.SourcePaths.Append(evidence.Output)) {
                 WorkspaceResolvedPath current;
                 try {
-                    current = workspacePaths.ResolveFilePath(original.RelativePath, allowMissing: true);
+                    current = runPaths.ResolveFilePath(original.RelativePath, allowMissing: true);
                 } catch (WorkspacePathResolutionException) {
                     throw Denied();
                 }
@@ -89,6 +93,23 @@ public sealed class ImageGenerationResultDisclosureService(
                         !PathEquals(current.FullPath, original.FullPath)) {
                     throw Denied();
                 }
+            }
+            return held;
+        } catch {
+            await held.DisposeAsync();
+            throw;
+        }
+    }
+
+    private async Task<IAgentCatalogReadLease> AcquireImageActorAsync(AgentToolSessionAdmission session,
+        CancellationToken cancellationToken) {
+        var held = await catalogLeases.AcquireAgentReadLeaseAsync(session.AgentId, cancellationToken);
+        try {
+            var actor = held.Agent;
+            if (held.Scope != WorkspaceScopeDescriptor.Organization(session.Profile.ProfileId.ToString("N")) ||
+                    actor is null || actor.Id != session.AgentId || actor.IsTemplate || actor.Status != AgentLifecycleStatus.Active ||
+                    !actor.Permissions.CanUseTools || !AgentImageGenerationAccessMetadata.Read(actor.ConfigurationJson).CanGenerateImages) {
+                throw Denied();
             }
             return held;
         } catch {
@@ -107,8 +128,9 @@ public sealed class ImageGenerationResultDisclosureService(
             : JsonSerializer.SerializeToElement(value, Json)).Deserialize<ImageGenerationCreateInput>(Json) ?? throw Unavailable();
         var sourceIds = (request.SourceProjectAssets ?? []).Select(source => source.ProjectId).Distinct().ToArray();
         var paths = (request.SourceWorkspacePaths ?? []).Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.Ordinal).ToArray();
+        var runPaths = AgentRuntimeWorkspacePaths.ForRun(workspacePaths, context);
         if (sourceIds.Length + paths.Length > ImageGenerationDisclosureEvidenceCodec.MaximumSources) {
-            return new(session, ImageGenerationDisclosureState.SourceLimitExceeded, [], []);
+            return new(session, ImageGenerationDisclosureState.SourceLimitExceeded, [], [], runPaths);
         }
         var sourceProjects = new List<ProjectWriteAdmission>();
         var state = ImageGenerationDisclosureState.Complete;
@@ -123,7 +145,7 @@ public sealed class ImageGenerationResultDisclosureService(
         var resolvedPaths = new List<ImageGenerationDisclosurePath>();
         foreach (var path in paths) {
             try {
-                var resolved = workspacePaths.ResolveFilePath(path, allowMissing: false);
+                var resolved = runPaths.ResolveFilePath(path, allowMissing: false);
                 if (resolved.IsWorkspacePath) {
                     resolvedPaths.Add(new(NormalizePath(resolved.RelativePath), Path.GetFullPath(resolved.FullPath)));
                 } else {
@@ -133,7 +155,7 @@ public sealed class ImageGenerationResultDisclosureService(
                 state = ImageGenerationDisclosureState.MissingOriginalPath;
             }
         }
-        return new(session, state, sourceProjects.ToImmutableArray(), resolvedPaths.ToImmutableArray());
+        return new(session, state, sourceProjects.ToImmutableArray(), resolvedPaths.ToImmutableArray(), runPaths);
     }
 
     private async Task CompleteAsync(ImageGenerationDisclosureCapture capture, ImageGenerationCreateResult result,
@@ -145,13 +167,15 @@ public sealed class ImageGenerationResultDisclosureService(
             }
         }
         var evidence = new ImageGenerationDisclosureEvidence(capture.Session.Reference, capture.Session.Profile.ProfileId,
-            capture.Session.AgentId, state, result.ProviderProfileId, CapturePath(result.OutputWorkspacePath, allowMissing: true),
+            capture.Session.AgentId, state, result.ProviderProfileId,
+            CapturePath(capture.RunPaths, result.OutputWorkspacePath, allowMissing: true),
             capture.SourceProjects, capture.SourcePaths);
         AgentToolInvocationEffectScope.RecordDisclosureEvidence(ImageGenerationDisclosureEvidenceCodec.Write(evidence));
     }
 
-    private ImageGenerationDisclosurePath CapturePath(string path, bool allowMissing) {
-        var resolution = workspacePaths.ResolveFilePath(path, allowMissing);
+    private static ImageGenerationDisclosurePath CapturePath(IWorkspacePathResolutionService runPaths, string path,
+        bool allowMissing) {
+        var resolution = runPaths.ResolveFilePath(path, allowMissing);
         if (!resolution.IsWorkspacePath) {
             throw Denied();
         }
@@ -214,7 +238,8 @@ public sealed class ImageGenerationResultDisclosureService(
         "Current read authority does not permit the original image result and source boundaries.");
 
     private sealed record ImageGenerationDisclosureCapture(AgentToolSessionAdmission Session, ImageGenerationDisclosureState State,
-        ImmutableArray<ProjectWriteAdmission> SourceProjects, ImmutableArray<ImageGenerationDisclosurePath> SourcePaths);
+        ImmutableArray<ProjectWriteAdmission> SourceProjects, ImmutableArray<ImageGenerationDisclosurePath> SourcePaths,
+        IWorkspacePathResolutionService RunPaths);
 
     private sealed class DisclosureFunction(AIFunction inner, ImageGenerationResultDisclosureService owner,
         AgentRuntimeToolProviderContext context) : DelegatingAIFunction(inner) {

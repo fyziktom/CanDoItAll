@@ -335,6 +335,7 @@ public sealed class ProjectStructureLeaseService(
                 acquiredLeases.Add(acquiredLease);
             }
 
+            ProjectStructureToolEffectObservation.RecordLeasedCallbackStarted();
             result = await callback(cancellationToken);
         }
         catch (Exception exception)

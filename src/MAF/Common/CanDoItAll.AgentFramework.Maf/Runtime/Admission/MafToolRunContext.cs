@@ -375,7 +375,7 @@ internal sealed class MafToolRunContext {
             var checkpoint = CaptureResult(result, effectScope.PreDispatchFailure, effectScope.CommittedEffect);
             var effect = effectScope.CommittedEffect is not null ? AgentToolEffectState.Committed :
                 MafRuntimeToolInvocationResultClassifier.Assess(call.Name,
-                    toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure).EffectState;
+                    toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure, effectScope.RejectedBeforeEffect).EffectState;
             var requiresReconciliation = result is IAgentToolOwnerObservationEvidence { RequiresOwnerReconciliation: true };
             await journal.CompleteInvocationAsync(claim, checkpoint, effect, cancellationToken, requiresReconciliation,
                 effectScope.DisclosureEvidence);

@@ -1,7 +1,9 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Workbench;
 
+// The policy checks an asset before any image analysis is requested, so each rejection is a no-effect failure.
 internal static class ProjectStructureAgentRuntimeImageAssetPolicy {
     private const long MaxImageAnalysisBytes = 10 * 1024 * 1024;
 
@@ -13,7 +15,8 @@ internal static class ProjectStructureAgentRuntimeImageAssetPolicy {
                 413,
                 "AssetImageAnalysisTooLarge",
                 $"Image asset '{content.Asset.NodeId}' exceeds the {MaxImageAnalysisBytes / (1024 * 1024)} MiB image-analysis limit.",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
 
         var detectedContentType = DetectContentType(content.Bytes);
@@ -25,7 +28,8 @@ internal static class ProjectStructureAgentRuntimeImageAssetPolicy {
                 415,
                 "AssetImageFormatUnsupported",
                 $"Asset '{content.Asset.NodeId}' is not a supported PNG, JPEG, GIF, or WebP image.{nextAction}",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
 
         var declaredContentType = NormalizeRasterContentType(content.Asset.MediaContentType);
@@ -35,7 +39,8 @@ internal static class ProjectStructureAgentRuntimeImageAssetPolicy {
                 400,
                 "AssetImageContentTypeMismatch",
                 $"Asset '{content.Asset.NodeId}' declares '{content.Asset.MediaContentType}' but its bytes are '{detectedContentType}'.",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
 
         var fileName = Path.GetFileName(content.Asset.MediaOriginalFileName);

@@ -147,11 +147,14 @@ internal sealed class ProjectStructureAccessState {
                     "The project-structure chat does not identify a valid active project. Reopen the chat from the intended project.");
             }
 
+            // Project scope is checked before any read or write, so choosing another project is a correctable request.
             if (activeProjectId != projectId && !sessionCreatedProjectIds.Contains(projectId)) {
-                throw new ProjectStructureAgentException(
+                throw ProjectStructureAgentException.CreateAgentVisible(
                     403,
                     "ProjectStructureContextProjectDenied",
-                    $"Project '{projectId:D}' is outside the active project-structure chat project '{activeProjectId:D}'.");
+                    $"Project '{projectId:D}' is outside the active project-structure chat project '{activeProjectId:D}'. Use project '{activeProjectId:D}' and retry.",
+                    canRetryWithCorrectedInput: true,
+                    effectState: AgentToolEffectState.None);
             }
         }
 
@@ -159,10 +162,12 @@ internal sealed class ProjectStructureAccessState {
             return;
         }
 
-        throw new ProjectStructureAgentException(
+        throw ProjectStructureAgentException.CreateAgentVisible(
             403,
             "ProjectStructureProjectDenied",
-            $"Project '{projectId:D}' is outside the agent's allowed project-structure scope.");
+            $"Project '{projectId:D}' is outside the agent's allowed project-structure scope. List the allowed projects and retry with one of them.",
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.None);
     }
 
     public void EnsureReadAllowed() {

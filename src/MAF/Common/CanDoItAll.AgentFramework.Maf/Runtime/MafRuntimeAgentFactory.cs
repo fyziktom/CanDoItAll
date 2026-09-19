@@ -689,7 +689,8 @@ internal sealed class MafRuntimeAgentFactory
                     functionName,
                     classification,
                     result,
-                    effectScope.PreDispatchFailure);
+                    effectScope.PreDispatchFailure,
+                    effectScope.RejectedBeforeEffect);
                 directReceiptExecutionRunId = assessment.DirectReceiptExecutionRunId;
                 succeeded = assessment.Succeeded;
                 outcome = assessment.Outcome;

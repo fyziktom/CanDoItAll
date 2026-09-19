@@ -374,7 +374,7 @@ public sealed class SchedulerPlannerService(
             return target;
         }
 
-        throw new InvalidOperationException(
+        throw new SchedulerPlanValidationException(
             $"Scheduler target '{targetKind}:{targetId:D}' was not found. Create or publish the target before scheduling it.");
     }
 
@@ -404,7 +404,7 @@ public sealed class SchedulerPlannerService(
                 string.IsNullOrWhiteSpace(issue.ParameterKey)
                     ? issue.Message
                     : $"{issue.ParameterKey}: {issue.Message}"));
-        throw new InvalidOperationException($"Scheduler workflow input is invalid: {issues}");
+        throw new SchedulerPlanValidationException($"Scheduler workflow input is invalid: {issues}");
     }
 
     private async Task<IReadOnlyList<SchedulerPlanRunSummary>> SearchHistoryAsync(
@@ -677,35 +677,52 @@ public sealed class SchedulerPlannerService(
     {
         if (string.IsNullOrWhiteSpace(editor.Name))
         {
-            throw new InvalidOperationException("Schedule name is required.");
+            throw new SchedulerPlanValidationException("Schedule name is required.");
         }
 
         if (editor.TargetId == Guid.Empty)
         {
-            throw new InvalidOperationException("A workflow or process target is required.");
+            throw new SchedulerPlanValidationException("A workflow or process target is required.");
         }
 
         if (string.IsNullOrWhiteSpace(editor.TimeZoneId))
         {
-            throw new InvalidOperationException("Schedule time zone is required.");
+            throw new SchedulerPlanValidationException("Schedule time zone is required.");
         }
 
-        _ = TimeZoneInfo.FindSystemTimeZoneById(editor.TimeZoneId);
+        try
+        {
+            _ = TimeZoneInfo.FindSystemTimeZoneById(editor.TimeZoneId);
+        }
+        catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            throw new SchedulerPlanValidationException(
+                $"Schedule time zone '{editor.TimeZoneId}' is not a known time zone. Use an IANA id such as 'UTC' or 'Europe/Prague'.",
+                exception);
+        }
 
         if (string.IsNullOrWhiteSpace(editor.CronExpression) ||
             !CronExpression.IsValidExpression(editor.CronExpression))
         {
-            throw new InvalidOperationException($"CRON expression '{editor.CronExpression}' is not a valid Quartz CRON expression.");
+            throw new SchedulerPlanValidationException(
+                $"CRON expression '{editor.CronExpression}' is not a valid Quartz CRON expression. Quartz expressions start with a seconds field, for example '0 0 9 ? * MON-FRI'.");
         }
 
         if (editor.EndAtUtc.HasValue &&
             editor.StartAtUtc.HasValue &&
             editor.EndAtUtc.Value <= editor.StartAtUtc.Value)
         {
-            throw new InvalidOperationException("Schedule end time must be later than start time.");
+            throw new SchedulerPlanValidationException("Schedule end time must be later than start time.");
         }
 
-        _ = NormalizeJson(editor.InputJson);
+        try
+        {
+            _ = NormalizeJson(editor.InputJson);
+        }
+        catch (JsonException exception)
+        {
+            throw new SchedulerPlanValidationException("Schedule input must be a valid JSON document.", exception);
+        }
     }
 
     private static string NormalizeJson(string? inputJson)
@@ -750,6 +767,12 @@ public sealed class SchedulerPlannerService(
             .ToList();
     }
 }
+
+/// <summary>
+/// A schedule request the owner rejected while validating it, before it resolved authority or saved anything.
+/// </summary>
+public sealed class SchedulerPlanValidationException(string message, Exception? innerException = null)
+    : InvalidOperationException(message, innerException);
 
 public sealed class QuartzCronDescriptionService : ICronDescriptionService
 {

@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Components.Gantt;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
@@ -506,6 +507,62 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
 
         Assert.Equal(ProjectObjectType.ImageAsset, corrected.ObjectType);
         Assert.Equal($"project:{projectId:D}", corrected.ParentId);
+    }
+
+    [Fact]
+    public async Task Task_update_binds_model_json_rejects_a_missing_task_without_effect_and_commits_a_reschedule()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId, canWriteTasks: true);
+        var start = new DateTimeOffset(2026, 9, 18, 9, 0, 0, TimeSpan.Zero);
+        var created = await InvokeAsync<ProjectStructureTaskCreateResult>(
+            FindTool(tools, ProjectStructureToolPolicy.ProjectTaskCreate),
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureTaskCreateRequest("Deterministic game loop", start, start.AddDays(1))
+            });
+        var task = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Id == created.TaskNodeId);
+        var update = Assert.IsAssignableFrom<AIFunction>(FindTool(tools, ProjectStructureToolPolicy.ProjectTaskUpdate));
+        var proposedStart = new DateTimeOffset(2026, 9, 21, 9, 0, 0, TimeSpan.Zero);
+        var proposedEnd = new DateTimeOffset(2026, 9, 23, 17, 0, 0, TimeSpan.Zero);
+
+        // The owner rejects a task id it cannot find while it is still reading, so the model gets a correctable
+        // failure with no effect instead of an uncertain mutation that fails the run.
+        using (var rejected = AgentToolInvocationEffectScope.Begin())
+        {
+            var missing = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => update.InvokeAsync(
+                ToModelArguments(update, projectId,
+                    CreateRescheduleInput(task, "custom:task-that-does-not-exist", proposedStart, proposedEnd))).AsTask());
+
+            Assert.Equal("WorkItemNotFound", missing.ErrorCode);
+            Assert.True(missing.IsSafeToExpose);
+            Assert.True(missing.CanRetryWithCorrectedInput);
+            Assert.Equal(AgentToolEffectState.NotCommitted, missing.EffectState);
+            Assert.Null(rejected.CommittedEffect);
+        }
+
+        var unchanged = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Id == task.Id);
+        Assert.Equal(task.StartUtc, unchanged.StartUtc);
+        Assert.Equal(task.EndUtc, unchanged.EndUtc);
+
+        using (var committed = AgentToolInvocationEffectScope.Begin())
+        {
+            await update.InvokeAsync(ToModelArguments(update, projectId,
+                CreateRescheduleInput(task, task.Id, proposedStart, proposedEnd)));
+
+            Assert.Equal(
+                new AgentToolCommittedEffect(ProjectStructureAccessState.ProjectStructureSourceKind, projectId.ToString("D")),
+                committed.CommittedEffect);
+        }
+
+        var moved = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Id == task.Id);
+        Assert.Equal(proposedStart, moved.StartUtc);
+        Assert.Equal(proposedEnd, moved.EndUtc);
     }
 
     [Fact]
@@ -1182,7 +1239,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             ]);
     }
 
-    private static async Task<AgentDefinition> CreateAgentAsync(IServiceProvider services, Guid projectId) {
+    private static async Task<AgentDefinition> CreateAgentAsync(IServiceProvider services, Guid projectId, bool canWriteTasks = false) {
         var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agentId = await workspace.SaveAgentAsync(new AgentEditorModel {
             Name = "Project Structure Integration Agent",
@@ -1197,7 +1254,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 CanRead = true,
                 CanWrite = false,
                 CanWriteNonTaskStructure = true,
-                CanWriteTasks = false,
+                CanWriteTasks = canWriteTasks,
                 AllowAllProjects = false,
                 AllowedProjectIds = [projectId]
             }
@@ -1251,7 +1308,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
     private static async Task<IReadOnlyList<AITool>> CreateToolsAsync(
         IServiceProvider services,
         Guid projectId,
-        AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat)
+        AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat,
+        bool canWriteTasks = false)
     {
         var provider = services
             .GetServices<IAgentRuntimeToolProvider>()
@@ -1259,8 +1317,49 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             .Single();
 
         return await provider.CreateToolsAsync(
-            CreateContext(await CreateAgentAsync(services, projectId), projectId, purpose),
+            CreateContext(await CreateAgentAsync(services, projectId, canWriteTasks), projectId, purpose),
             CancellationToken.None);
+    }
+
+    private static ProjectStructureTaskUpdateAgentInput CreateRescheduleInput(
+        ProjectStructureNode task,
+        string taskId,
+        DateTimeOffset proposedStart,
+        DateTimeOffset proposedEnd)
+    {
+        var state = ProjectStructureTaskEditStatePolicy.Read(task);
+        return new ProjectStructureTaskUpdateAgentInput(
+            taskId,
+            task.Title,
+            task.Title,
+            task.ProgressPercent,
+            Math.Clamp(task.ProgressPercent, 0, 100),
+            state.Estimate,
+            state.Estimate,
+            new ProjectStructureTaskScheduleAgentChange(
+                GanttScheduleGesture.SetInterval,
+                [new ProjectStructureTaskDateAgentChange(taskId, task.StartUtc!.Value, task.EndUtc!.Value, proposedStart, proposedEnd)]),
+            AssigneeChanged: false,
+            ProposedAssignee: null,
+            state.Execution,
+            state.Execution,
+            state.CostBasis,
+            state.DirectAssignmentRevision);
+    }
+
+    // A model sends every argument as JSON, so the tool must bind its input records from that JSON. The tool schema
+    // requires every property, so the model also sends the ones whose value is null.
+    private static AIFunctionArguments ToModelArguments(AIFunction function, Guid projectId, object request)
+    {
+        var options = new JsonSerializerOptions(function.JsonSerializerOptions)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.Never
+        };
+        return new()
+        {
+            ["projectId"] = JsonSerializer.SerializeToElement(projectId, options),
+            ["request"] = JsonSerializer.SerializeToElement(request, request.GetType(), options)
+        };
     }
 
     private static JsonSerializerOptions CreateFunctionResultJsonOptions()

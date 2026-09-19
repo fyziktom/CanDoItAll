@@ -400,8 +400,8 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
         var current = await EnsureCurrentVersionAsync(workflowId, expectedVersionId, cancellationToken);
         if (current.Status != WorkflowLifecycleStatus.Draft)
         {
-            throw new InvalidOperationException(
-                $"Workflow '{workflowId:D}' is '{current.Status}'. Definition edits require a Draft workflow.");
+            throw AgentToolConflictException.Create(
+                $"Workflow '{workflowId:D}' is '{current.Status}'. Definition edits require a Draft workflow; change its lifecycle to Draft first.");
         }
 
         return current;
@@ -416,7 +416,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
             ?? throw new KeyNotFoundException($"Workflow definition '{workflowId:D}' was not found.");
         if (detail.Definition.VersionId.Value != expectedVersionId)
         {
-            throw new InvalidOperationException(
+            throw AgentToolConflictException.Create(
                 $"Workflow definition '{workflowId:D}' was updated by another request. Read the editor again before retrying.");
         }
 
@@ -444,7 +444,7 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
         if (requestedNodes is null)
         {
             nodes = currentGraph?.Nodes
-                ?? throw new InvalidOperationException("Workflow nodes are required for this graph update.");
+                ?? throw AgentToolInputValidationException.Create("Workflow nodes are required for this graph update. Supply nodes and retry.");
         }
         else if (requestedNodes.Count == 0 && defaultWhenEmpty)
         {
@@ -658,7 +658,25 @@ public sealed class WorkflowCuratorAgentRuntimeToolProvider(
             actorAgentId,
             toolName,
             cancellationToken);
-        return await action(cancellationToken);
+        try
+        {
+            return await action(cancellationToken);
+        }
+        // Each curator mutation reads and validates its definition before one catalog save; a failure after that save
+        // stays uncertain because the runtime ignores typed failures once the save recorded its committed effect.
+        catch (KeyNotFoundException exception)
+        {
+            throw AgentToolInputValidationException.Create(
+                $"{exception.Message} Search the workflow catalog and retry with an existing workflow or node id.");
+        }
+        catch (WorkflowDefinitionValidationException exception)
+        {
+            throw AgentToolInputValidationException.Create($"{exception.Message} Correct the definition and retry.");
+        }
+        catch (WorkflowDefinitionConcurrencyException exception)
+        {
+            throw AgentToolConflictException.Create($"{exception.Message} Read the editor again and retry with its current version id.");
+        }
     }
 
     private const string WorkflowEffectSourceKind = "workflow-definition";

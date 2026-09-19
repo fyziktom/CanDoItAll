@@ -87,7 +87,7 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
         if (!context.Agent.Permissions.CanUseTools || disclosure.Payload.ToolName != toolName) {
             throw new UnauthorizedAccessException("The saved Prompt Gallery result does not match the current tool context.");
         }
-        if (disclosure.EffectState == AgentToolEffectState.NotCommitted) {
+        if (disclosure.EffectState == AgentToolEffectState.NotCommitted || disclosure.IsNoEffectTypedFailure) {
             return null;
         }
         PromptGalleryAgentItemResult? item = null;
@@ -171,8 +171,9 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        // Every rejection below is a read that changed nothing, so the agent is told why and can choose another item.
         var itemResult = await promptGallery.GetItemAsync(request.PromptArtifactId, cancellationToken);
-        var item = RequireValue(itemResult, "Prompt Gallery item");
+        var item = RequireRequestedValue(itemResult, "Prompt Gallery item");
         var compatibility = compatibilityEvaluator.Evaluate(
             item,
             new PromptGalleryConsumerContext(
@@ -183,19 +184,21 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
                 RequiresFinalVersion: true));
         if (!compatibility.CanUse)
         {
-            throw new InvalidOperationException(
-                string.Join(" ", compatibility.Issues.Select(issue => issue.Message)));
+            throw AgentToolInputValidationException.Create(
+                $"Prompt Gallery item '{item.Id}' cannot be used by this agent. " +
+                string.Join(" ", compatibility.Issues.Select(issue => issue.Message)) +
+                " Search the Prompt Gallery and choose a compatible item.");
         }
 
         var versionResult = await promptGallery.GetVersionSnapshotAsync(
             item.Id,
             item.CurrentVersionNumber,
             cancellationToken);
-        var version = RequireValue(versionResult, "Prompt Gallery version");
+        var version = RequireRequestedValue(versionResult, "Prompt Gallery version");
         if (version.Content.Length > PromptGalleryLimits.MaximumContentLength)
         {
-            throw new InvalidOperationException(
-                $"Prompt Gallery item '{item.Id}' exceeds the runtime tool limit of {PromptGalleryLimits.MaximumContentLength:N0} characters.");
+            throw AgentToolInputValidationException.Create(
+                $"Prompt Gallery item '{item.Id}' exceeds the runtime tool limit of {PromptGalleryLimits.MaximumContentLength:N0} characters. Choose another item.");
         }
 
         return MapItem(item, version);
@@ -225,11 +228,24 @@ public sealed class PromptGalleryAgentRuntimeToolProvider(
             return result.Value;
         }
 
-        var detail = result.Errors.Count == 0
+        throw new InvalidOperationException($"{resourceName} could not be loaded. {DescribeErrors(result)}");
+    }
+
+    private static T RequireRequestedValue<T>(Result<T> result, string resourceName)
+    {
+        if (result.IsSuccess && result.Value is not null)
+        {
+            return result.Value;
+        }
+
+        throw AgentToolInputValidationException.Create(
+            $"{resourceName} could not be loaded. {DescribeErrors(result)} Search the Prompt Gallery and retry with a listed item.");
+    }
+
+    private static string DescribeErrors<T>(Result<T> result)
+        => result.Errors.Count == 0
             ? "The operation did not return a value."
             : string.Join(" ", result.Errors.Select(error => $"{error.Code}: {error.Message}"));
-        throw new InvalidOperationException($"{resourceName} could not be loaded. {detail}");
-    }
 
     private AgentRuntimeToolMetadata CreateMetadata(AgentRuntimeToolProviderContext context, string toolName)
         => PromptGalleryToolPolicy.CreateRuntimeMetadata(

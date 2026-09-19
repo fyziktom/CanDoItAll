@@ -191,7 +191,8 @@ public sealed class SchedulerAgentRuntimeToolProvider(
         ArgumentNullException.ThrowIfNull(request);
         if (request.WorkflowId == Guid.Empty)
         {
-            throw new ArgumentException("Workflow id is required.", nameof(request));
+            throw AgentToolInputValidationException.Create(
+                "Workflow id is required. Search workflow targets and retry with a workflow id.");
         }
 
         var workspace = await schedulerPlannerService.GetWorkspaceAsync(
@@ -200,29 +201,38 @@ public sealed class SchedulerAgentRuntimeToolProvider(
             item.Kind == SchedulerPlanTargetKind.Workflow &&
             item.Id == request.WorkflowId &&
             (!request.WorkflowVersionId.HasValue || item.VersionId == request.WorkflowVersionId.Value))
-            ?? throw new InvalidOperationException(
-                $"Workflow scheduler target '{request.WorkflowId:D}' with the requested version is not available.");
+            ?? throw AgentToolInputValidationException.Create(
+                $"Workflow scheduler target '{request.WorkflowId:D}' with the requested version is not available. Search workflow targets and retry with an available workflow id and version.");
 
-        var saved = await schedulerPlannerService.SavePlanAsync(
-            new SchedulerPlanEditorModel
-            {
-                Name = request.Name,
-                Description = request.Description,
-                TargetKind = SchedulerPlanTargetKind.Workflow,
-                TargetId = target.Id,
-                TargetVersionId = target.VersionId,
-                CronExpression = request.CronExpression,
-                TimeZoneId = request.TimeZoneId,
-                MisfirePolicy = request.MisfirePolicy,
-                InputJson = request.InputJson,
-                IsEnabled = request.IsEnabled,
-                StartAtUtc = request.StartAtUtc,
-                EndAtUtc = request.EndAtUtc,
-                StructureAuthority = context.Governance is { } governance
-                    ? await structureAuthorityFactory.CaptureAgentAsync(context.Agent, governance, cancellationToken, context.AdmittedToolSession)
-                    : null
-            },
-            cancellationToken);
+        SchedulerPlanSummary saved;
+        try
+        {
+            saved = await schedulerPlannerService.SavePlanAsync(
+                new SchedulerPlanEditorModel
+                {
+                    Name = request.Name,
+                    Description = request.Description,
+                    TargetKind = SchedulerPlanTargetKind.Workflow,
+                    TargetId = target.Id,
+                    TargetVersionId = target.VersionId,
+                    CronExpression = request.CronExpression,
+                    TimeZoneId = request.TimeZoneId,
+                    MisfirePolicy = request.MisfirePolicy,
+                    InputJson = request.InputJson,
+                    IsEnabled = request.IsEnabled,
+                    StartAtUtc = request.StartAtUtc,
+                    EndAtUtc = request.EndAtUtc,
+                    StructureAuthority = context.Governance is { } governance
+                        ? await structureAuthorityFactory.CaptureAgentAsync(context.Agent, governance, cancellationToken, context.AdmittedToolSession)
+                        : null
+                },
+                cancellationToken);
+        }
+        catch (SchedulerPlanValidationException exception)
+        {
+            // The owner validates the schedule before resolving its authority or saving it.
+            throw AgentToolInputValidationException.Create(exception.Message);
+        }
 
         if (saved.Id == Guid.Empty) {
             throw new InvalidOperationException("The Scheduler owner returned an empty committed plan identity.");

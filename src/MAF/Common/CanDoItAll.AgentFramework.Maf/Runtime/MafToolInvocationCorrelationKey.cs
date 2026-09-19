@@ -15,6 +15,11 @@ internal static class MafToolInvocationCorrelationKey
             ["parent_node_key"] = "parentNodeKey",
             ["nodeId"] = "nodeId",
             ["node_id"] = "nodeId",
+            // Task tools address their task by its node id under these names.
+            ["taskId"] = "taskId",
+            ["task_id"] = "taskId",
+            ["taskNodeId"] = "taskId",
+            ["task_node_id"] = "taskId",
             ["sourceId"] = "sourceId",
             ["source_id"] = "sourceId",
             ["targetId"] = "targetId",

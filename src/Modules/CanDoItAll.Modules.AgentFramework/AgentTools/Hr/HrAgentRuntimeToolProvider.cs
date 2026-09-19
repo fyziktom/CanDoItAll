@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -367,7 +368,7 @@ public sealed class HrAgentRuntimeToolProvider(
             if (!IsKnownQueryFailure()) {
                 throw new UnauthorizedAccessException("The saved HR query failure has no supported outcome evidence.");
             }
-        } else if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
+        } else if (disclosure.EffectState != AgentToolEffectState.NotCommitted && !disclosure.IsNoEffectTypedFailure) {
             switch (toolName) {
                 case HrAgentToolPolicy.HrCrmSearch:
                     foreach (var item in ReadResult<CrmHrAgentQueryItem[]>()) {
@@ -459,7 +460,17 @@ public sealed class HrAgentRuntimeToolProvider(
             toolName,
             requiresCrmScope,
             cancellationToken);
-        var result = await action(cancellationToken);
+        TResult result;
+        try {
+            result = await action(cancellationToken);
+        } catch (AgentCatalogConcurrencyException exception) {
+            // The agent catalog compares the expected revision before it saves anything.
+            throw AgentToolConflictException.Create(
+                $"{exception.Message} Read the agent settings again and retry with the current UpdatedAtUtc.");
+        } catch (AgentEditorValidationException exception) {
+            // The agent catalog validates the edited definition before it saves anything.
+            throw AgentToolInputValidationException.Create(exception.Message);
+        }
         if (committedEffect is not null) {
             var acknowledged = committedEffect(result);
             AgentToolInvocationEffectScope.RecordCommitted(acknowledged.SourceKind, acknowledged.SourceId);
@@ -492,7 +503,7 @@ public sealed class HrAgentRuntimeToolProvider(
             request,
             BuildActor(actorAgentId),
             cancellationToken);
-        return RequireResult(result, "CRM party creation");
+        return RequireCommandResult(result, "CRM party creation");
     }
 
     private async Task<IReadOnlyList<CrmPartyAffiliationResult>>
@@ -503,7 +514,7 @@ public sealed class HrAgentRuntimeToolProvider(
         var result = await crmPartyCommandService.ListAffiliationsAsync(
             request.PersonPartyId,
             cancellationToken);
-        return RequireResult(result, "CRM party affiliation list");
+        return RequireCommandResult(result, "CRM party affiliation list");
     }
 
     private async Task<CrmPartyAffiliationResult> UpsertCrmAffiliationAsync(
@@ -515,7 +526,7 @@ public sealed class HrAgentRuntimeToolProvider(
             request,
             BuildActor(actorAgentId),
             cancellationToken);
-        return RequireResult(result, "CRM affiliation update");
+        return RequireCommandResult(result, "CRM affiliation update");
     }
 
     private static string BuildActor(Guid actorAgentId)
@@ -545,6 +556,28 @@ public sealed class HrAgentRuntimeToolProvider(
         public bool CanRetryWithCorrectedInput => true;
         public AgentToolEffectState EffectState => AgentToolEffectState.None;
     }
+
+    // The CRM party owner validates the command, checks record visibility and compares the expected revision before it
+    // saves, and rolls back a conflicting save, so a failed result changed nothing and the HR agent may correct it.
+    private static T RequireCommandResult<T>(Result<T> result, string operation)
+    {
+        if (result.IsFailure)
+        {
+            var details = string.Join(
+                "; ",
+                result.Errors.Select(error => $"{error.Code}: {error.Message}"));
+            throw result.Errors.Any(error => CrmCommandConflictCodes.Contains(error.Code))
+                ? AgentToolConflictException.Create(
+                    $"{operation} was rejected. {details} List the person's affiliations again and retry with the current UpdatedAtUtc.")
+                : AgentToolInputValidationException.Create($"{operation} was rejected. {details}");
+        }
+
+        return RequireResult(result, operation);
+    }
+
+    private static readonly FrozenSet<string> CrmCommandConflictCodes = FrozenSet.ToFrozenSet(
+        ["crmhr.affiliation.concurrency-conflict", "crmhr.affiliation.persistence-conflict"],
+        StringComparer.Ordinal);
 
     private static T RequireResult<T>(Result<T> result, string operation)
     {

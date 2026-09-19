@@ -1,6 +1,7 @@
 using CanDoItAll.Agents.Storage;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit.Storage;
@@ -142,10 +143,11 @@ public sealed class StorageRuntimePluginTests
                 AllowAllStorageCatalogs = true
             });
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
             sut.BrowseStorage(storage.Id, includeMetadata: true));
 
         Assert.Contains("includeMetadata=false", exception.Message, StringComparison.Ordinal);
+        AssertCorrectableNoEffectRejection(exception);
         Assert.Equal(0, driver.InvocationCount);
     }
 
@@ -163,10 +165,11 @@ public sealed class StorageRuntimePluginTests
                 AllowAllStorageCatalogs = true
             });
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
             sut.BrowseStorage(storage.Id));
 
         Assert.Contains("required capability 'Read'", exception.Message, StringComparison.Ordinal);
+        AssertCorrectableNoEffectRejection(exception);
         Assert.Equal(0, driver.InvocationCount);
     }
 
@@ -186,10 +189,11 @@ public sealed class StorageRuntimePluginTests
             },
             contentDriver);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
             sut.BrowseStorage(storage.Id));
 
         Assert.Contains("required capability 'Read'", exception.Message, StringComparison.Ordinal);
+        AssertCorrectableNoEffectRejection(exception);
         Assert.Equal(0, browseDriver.InvocationCount);
     }
 
@@ -244,10 +248,11 @@ public sealed class StorageRuntimePluginTests
             },
             contentDriver);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
             sut.ReadStorageTextFile(storage.Id, locator));
 
         Assert.Contains("'.' or '..' segments", exception.Message, StringComparison.Ordinal);
+        AssertCorrectableNoEffectRejection(exception);
         Assert.Null(contentDriver.LastReadReference);
     }
 
@@ -276,6 +281,112 @@ public sealed class StorageRuntimePluginTests
 
         var entry = Assert.Single(result.Entries);
         Assert.Equal(AgentStorageBrowseEntryCapability.Read, entry.Capabilities);
+    }
+
+    [Fact]
+    public async Task WriteStorageTextFile_records_the_committed_storage_object()
+    {
+        var storage = CreateStorage(StorageCapability.Read | StorageCapability.Write);
+        var contentDriver = new RecordingStorageDriver(storage.ProviderKind, StorageCapability.Read | StorageCapability.Write);
+        var sut = CreatePlugin(
+            storage,
+            new RecordingBrowseDriver(),
+            new AgentWorkspaceToolAccessSettings { CanReadStorage = true, CanWriteStorage = true, AllowAllStorageCatalogs = true },
+            contentDriver);
+        using var effects = AgentToolInvocationEffectScope.Begin();
+
+        var result = await sut.WriteStorageTextFile(storage.Id, "reports/summary.md", "# Summary");
+
+        Assert.Equal("reports/summary.md", result.Locator);
+        Assert.Equal(new AgentToolCommittedEffect(StorageRuntimePlugin.StorageObjectSourceKind, $"{storage.Id:D}/reports/summary.md"),
+            effects.CommittedEffect);
+    }
+
+    [Fact]
+    public async Task DeleteStorageObject_records_the_committed_storage_object()
+    {
+        var storage = CreateStorage(StorageCapability.Read | StorageCapability.Delete);
+        var contentDriver = new RecordingStorageDriver(storage.ProviderKind, StorageCapability.Read | StorageCapability.Delete);
+        var sut = CreatePlugin(
+            storage,
+            new RecordingBrowseDriver(),
+            new AgentWorkspaceToolAccessSettings { CanReadStorage = true, CanWriteStorage = true, AllowAllStorageCatalogs = true },
+            contentDriver);
+        using var effects = AgentToolInvocationEffectScope.Begin();
+
+        var result = await sut.DeleteStorageObject(storage.Id, "reports/old.md");
+
+        Assert.True(result.Deleted);
+        Assert.Equal("reports/old.md", contentDriver.LastDeletedReference?.Locator);
+        Assert.Equal(new AgentToolCommittedEffect(StorageRuntimePlugin.StorageObjectSourceKind, $"{storage.Id:D}/reports/old.md"),
+            effects.CommittedEffect);
+    }
+
+    [Fact]
+    public async Task WriteStorageTextFile_rejects_a_read_only_catalog_as_a_correctable_uncommitted_write()
+    {
+        var storage = CreateStorage(StorageCapability.Read | StorageCapability.Write);
+        storage.IsReadOnly = true;
+        var contentDriver = new RecordingStorageDriver(storage.ProviderKind, StorageCapability.Read | StorageCapability.Write);
+        var sut = CreatePlugin(
+            storage,
+            new RecordingBrowseDriver(),
+            new AgentWorkspaceToolAccessSettings { CanReadStorage = true, CanWriteStorage = true, AllowAllStorageCatalogs = true },
+            contentDriver);
+
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+            sut.WriteStorageTextFile(storage.Id, "reports/summary.md", "# Summary"));
+
+        var failure = Assert.IsAssignableFrom<IAgentToolFailureEffectEvidence>(exception);
+        Assert.True(failure.IsSafeToExpose);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, failure.EffectState);
+        Assert.Contains("read-only", failure.SafeMessage, StringComparison.Ordinal);
+        Assert.Equal(0, contentDriver.WriteCount);
+    }
+
+    [Fact]
+    public async Task A_saved_request_rejection_is_redisclosed_under_the_current_storage_grant_only()
+    {
+        var storage = CreateStorage(StorageCapability.Read | StorageCapability.Write);
+        storage.IsReadOnly = true;
+        var sut = CreatePlugin(
+            storage,
+            new RecordingBrowseDriver(),
+            new AgentWorkspaceToolAccessSettings { CanReadStorage = true, CanWriteStorage = true, AllowAllStorageCatalogs = true });
+        var rejection = Assert.IsAssignableFrom<IAgentToolFailureEffectEvidence>(await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+            sut.WriteStorageTextFile(storage.Id, "reports/summary.md", "# Summary")));
+        var arguments = System.Text.Json.JsonSerializer.Serialize(
+            new { storageId = storage.Id, locator = "reports/summary.md", content = "# Summary" });
+        var disclosure = new AgentToolResultDisclosure(
+            new AgentToolBusinessIntentId(Guid.NewGuid()),
+            new AgentToolPreparedPayload(StorageToolPolicy.StorageWriteTextFile, 1, AgentToolProtocolEnvelope.ComputeDigest(arguments),
+                arguments, AgentToolProposalEffect.Mutation, AgentToolProposalRecovery.ReconcileBeforeRetry),
+            rejection.EffectState,
+            System.Text.Json.JsonSerializer.SerializeToElement(new { succeeded = false, errorCode = rejection.ErrorCode }))
+        {
+            IsTypedFailure = true
+        };
+
+        // The rejected catalog is still read-only and has no planning fact; the saved rejection carries no catalog content.
+        sut.AuthorizeResultDisclosure(StorageToolPolicy.StorageWriteTextFile, disclosure, []);
+
+        var withoutReadGrant = CreatePlugin(
+            storage,
+            new RecordingBrowseDriver(),
+            new AgentWorkspaceToolAccessSettings { AllowAllStorageCatalogs = true });
+        Assert.ThrowsAny<Exception>(() =>
+            withoutReadGrant.AuthorizeResultDisclosure(StorageToolPolicy.StorageWriteTextFile, disclosure, []));
+        Assert.ThrowsAny<Exception>(() =>
+            sut.AuthorizeResultDisclosure(StorageToolPolicy.StorageWriteTextFile, disclosure with { IsTypedFailure = false }, []));
+    }
+
+    private static void AssertCorrectableNoEffectRejection(Exception exception)
+    {
+        var failure = Assert.IsAssignableFrom<IAgentToolFailureEffectEvidence>(exception);
+        Assert.True(failure.IsSafeToExpose);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.None, failure.EffectState);
     }
 
     private static StorageRuntimePlugin CreatePlugin(
@@ -367,6 +478,10 @@ public sealed class StorageRuntimePluginTests
 
         public StorageObjectReference? LastReadReference { get; private set; }
 
+        public StorageObjectReference? LastDeletedReference { get; private set; }
+
+        public int WriteCount { get; private set; }
+
         public Task<StorageConnectionTestResult> TestConnectionAsync(
             StorageDriverInput storage,
             string? secretValue,
@@ -377,7 +492,15 @@ public sealed class StorageRuntimePluginTests
             StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        {
+            WriteCount++;
+            var locator = request.RelativePathHint ?? request.FileName;
+            return Task.FromResult(new StorageWriteResult(
+                new StorageObjectReference(storage.Id, storage.ProviderKind, StorageLocatorKind.RelativePath, locator,
+                    request.FileName, request.ContentType, request.Content.LongLength),
+                new StorageAccessDescriptor(string.Empty, string.Empty, null, false, true, false, request.FileName,
+                    request.ContentType, request.Content.LongLength, string.Empty)));
+        }
 
         public Task<Stream> OpenReadAsync(
             StorageDriverInput storage,
@@ -392,7 +515,10 @@ public sealed class StorageRuntimePluginTests
             StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        {
+            LastDeletedReference = reference;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class StaticStorageCatalogService(StorageCatalogRecord storage) : IStorageCatalogService

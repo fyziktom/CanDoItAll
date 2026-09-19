@@ -865,7 +865,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
                 TerminalizePersistedActivity(
                     activityOperation,
-                    completionState);
+                    completionState,
+                    toolCompletionAssessment);
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
@@ -1734,7 +1735,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
                 TerminalizePersistedActivity(
                     activityOperation,
-                    completionState);
+                    completionState,
+                    toolCompletionAssessment);
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
@@ -2086,7 +2088,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private static void TerminalizePersistedActivity(
         IAgentExecutionActivityOperationLease activityOperation,
-        ExecutionState completionState)
+        ExecutionState completionState,
+        AgentToolCompletionAssessment? completionAssessment = null)
     {
         if (activityOperation.IsTerminal)
         {
@@ -2109,6 +2112,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             {
                 case ExecutionState.Completed:
                     activityOperation.Complete("The agent operation completed.");
+                    break;
+                // The agent answered, but a mutation it attempted neither committed nor was replaced by a committed retry.
+                case ExecutionState.Failed when completionAssessment is
+                {
+                    FailureKind: AgentToolCompletionFailureKind.RequiredMutation,
+                    FailureSummary.Length: > 0
+                }:
+                    activityOperation.Fail(
+                        completionAssessment.FailureSummary,
+                        AgentExecutionActivityFailureCodes.RequiredMutationFailure);
                     break;
                 case ExecutionState.Failed:
                     activityOperation.Fail(

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using CanDoItAll.Modules.Projects;
@@ -318,7 +319,7 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         var party = await partyIntegrationBridge.GetPartyOptionAsync(selection.ResourceId, cancellationToken);
         if (party is null)
         {
-            throw new ProjectStructureAgentException(
+            throw Rejected(
                 404,
                 "TaskAssigneeNotFound",
                 $"Party assignee '{selection.ResourceId:D}' is not available for project '{projectId:D}'.");
@@ -332,7 +333,7 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         };
         if (party.PartyType != expectedPartyType)
         {
-            throw new ProjectStructureAgentException(
+            throw Rejected(
                 400,
                 "TaskAssigneeTypeMismatch",
                 $"Party '{selection.ResourceId:D}' is '{party.PartyType}', not '{expectedPartyType}'.");
@@ -354,13 +355,13 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         var task = surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, taskNodeId, StringComparison.Ordinal));
         if (task is null)
         {
-            throw new ProjectStructureAgentException(404, "WorkItemNotFound", $"Work item '{taskNodeId}' was not found.");
+            throw Rejected(404, "WorkItemNotFound", $"Work item '{taskNodeId}' was not found.");
         }
 
         if (task.IsSystemManaged ||
             task.ObjectType != ProjectObjectType.WorkItem)
         {
-            throw new ProjectStructureAgentException(
+            throw Rejected(
                 400,
                 "CanonicalWorkItemRequired",
                 $"Node '{taskNodeId}' is not a canonical editable WorkItem node.");
@@ -482,7 +483,7 @@ public sealed class ProjectStructureWorkItemAssigneeService(
     {
         if (selection.Kind is not (ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent))
         {
-            throw new ProjectStructureAgentException(
+            throw Rejected(
                 400,
                 "TaskAssigneeKindInvalid",
                 $"Resource kind '{selection.Kind}' cannot be assigned directly to a task.");
@@ -490,12 +491,12 @@ public sealed class ProjectStructureWorkItemAssigneeService(
 
         if (selection.ResourceId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "TaskAssigneeRequired", "A task assignee id is required.");
+            throw Rejected(400, "TaskAssigneeRequired", "A task assignee id is required.");
         }
 
         if (selection.VersionId.HasValue)
         {
-            throw new ProjectStructureAgentException(
+            throw Rejected(
                 400,
                 "TaskAssigneeVersionNotSupported",
                 "Person and agent task assignees do not use a resource version.");
@@ -526,7 +527,19 @@ public sealed class ProjectStructureWorkItemAssigneeService(
     {
         if (projectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "ProjectIdRequired", "A project id is required.");
+            throw Rejected(400, "ProjectIdRequired", "A project id is required.");
         }
     }
+
+    // Task, assignee and project checks run while the edit is still reading. Once this invocation has saved a domain
+    // write, the same rejection keeps its uncertain outcome.
+    private static ProjectStructureAgentException Rejected(int statusCode, string errorCode, string message)
+        => ProjectStructureToolEffectObservation.Current is { DomainWriteSaved: true }
+            ? new ProjectStructureAgentException(statusCode, errorCode, message)
+            : ProjectStructureAgentException.CreateAgentVisible(
+                statusCode,
+                errorCode,
+                message,
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.NotCommitted);
 }

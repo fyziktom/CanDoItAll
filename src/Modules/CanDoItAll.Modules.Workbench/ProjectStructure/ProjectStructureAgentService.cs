@@ -127,7 +127,7 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureProjectSaveRequest request, ProjectStructureAgentContext agent, CancellationToken cancellationToken) {
         if (newProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "ProjectIdRequired", "A reserved project id is required.");
+            throw InvalidAgentRequest(400, "ProjectIdRequired", "A reserved project id is required.");
         }
 
         ValidateProjectRequest(request);
@@ -170,12 +170,12 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureProjectSaveRequest request, ProjectStructureAgentContext agent, CancellationToken cancellationToken) {
         if (parentProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "ParentProjectRequired", "A parent project id is required.");
+            throw InvalidAgentRequest(400, "ParentProjectRequired", "A parent project id is required.");
         }
 
         if (newProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "SubprojectIdRequired", "A reserved subproject id is required.");
+            throw InvalidAgentRequest(400, "SubprojectIdRequired", "A reserved subproject id is required.");
         }
 
         ValidateProjectRequest(request);
@@ -205,7 +205,7 @@ public sealed partial class ProjectStructureAgentService(
     {
         if (request.ChildProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "ChildProjectRequired", "A child project id is required.");
+            throw InvalidAgentRequest(400, "ChildProjectRequired", "A child project id is required.");
         }
 
         await leaseService.RunWithProjectMutationLeaseAsync(
@@ -449,7 +449,7 @@ public sealed partial class ProjectStructureAgentService(
                         cancellationToken);
                     if (updatedNode is null)
                     {
-                        throw new ProjectStructureAgentException(
+                        throw RejectedBeforeWrite(
                             400,
                             "NodeReclassificationUnavailable",
                             $"Node '{nodeId}' cannot be reclassified from '{existingNode.ObjectType}:{existingNode.ObjectSubtype}' to '{targetObjectType}:{targetObjectSubtype}'.");
@@ -722,7 +722,7 @@ public sealed partial class ProjectStructureAgentService(
                 var result = await projectWorkbenchService.RecomposeSubtreeAsync(projectId, request.RootNodeId, cancellationToken, agent);
                 if (result is null)
                 {
-                    throw new ProjectStructureAgentException(
+                    throw RejectedBeforeWrite(
                         400,
                         "RecompositionUnavailable",
                         $"Node '{request.RootNodeId}' could not be recomposed because it has no descendants or does not exist.");
@@ -739,7 +739,7 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
-        return await leaseService.RunWithProjectMutationLeaseAsync(
+        return await RejectInvariantViolationsAsync(() => leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
             agent,
@@ -753,7 +753,7 @@ public sealed partial class ProjectStructureAgentService(
                 var updatedNode = await projectWorkbenchService.ReparentObjectAsync(projectId, request.NodeId, request.ParentNodeKey, cancellationToken, agent);
                 return MapRequiredNode(updatedNode, request.NodeId);
             },
-            cancellationToken);
+            cancellationToken));
     }
 
     public async Task<ProjectStructureNodesCopyResult> CopyNodesAsync(
@@ -772,7 +772,8 @@ public sealed partial class ProjectStructureAgentService(
                 400,
                 "NodeCopySourceRequired",
                 "At least one explicit source node id is required for a project-structure copy.",
-                canRetryWithCorrectedInput: true);
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.None);
         }
 
         if (request.SourceNodeIds.Any(string.IsNullOrWhiteSpace))
@@ -781,7 +782,8 @@ public sealed partial class ProjectStructureAgentService(
                 400,
                 "NodeCopySourceInvalid",
                 "Project-structure copy source node ids cannot be blank.",
-                canRetryWithCorrectedInput: true);
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.None);
         }
 
         if (string.IsNullOrWhiteSpace(request.DestinationParentNodeId))
@@ -790,7 +792,8 @@ public sealed partial class ProjectStructureAgentService(
                 400,
                 "NodeCopyDestinationRequired",
                 "An explicit destination parent node id is required for a project-structure copy.",
-                canRetryWithCorrectedInput: true);
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.None);
         }
 
         var sourceNodeIds = request.SourceNodeIds
@@ -864,7 +867,9 @@ public sealed partial class ProjectStructureAgentService(
                 reason = exception.Reason.ToString(),
                 subjectNodeId = exception.SubjectNodeId,
                 deferredState = exception.DeferredState?.ToString()
-            });
+            },
+            // The clipboard owner rejects a copy while planning it, before it saves any copied node.
+            effectState: AgentToolEffectState.NotCommitted);
     }
 
     public Task<ProjectStructureLinkChangeResult> LinkNodesAsync(
@@ -872,12 +877,12 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureLinkInput request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
-        => LinkNodesCoreAsync(
+        => RejectInvariantViolationsAsync(() => LinkNodesCoreAsync(
             projectId,
             request,
             agent,
             allowCanonicalTaskResourceLink: false,
-            cancellationToken);
+            cancellationToken));
 
     private async Task<ProjectStructureLinkChangeResult> LinkNodesCoreAsync(
         Guid projectId,
@@ -1010,7 +1015,7 @@ public sealed partial class ProjectStructureAgentService(
     {
         if (request.ProcessDefinitionId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "ProcessDefinitionRequired", "A process definition id is required.");
+            throw InvalidAgentRequest(400, "ProcessDefinitionRequired", "A process definition id is required.");
         }
 
         return LinkNodesAsync(
@@ -1033,7 +1038,7 @@ public sealed partial class ProjectStructureAgentService(
     {
         if (request.ProcessDefinitionId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAgentRequest(
                 400,
                 "ProcessDefinitionRequired",
                 "A process definition id is required.");
@@ -1073,7 +1078,7 @@ public sealed partial class ProjectStructureAgentService(
                     sourceNode.ObjectType,
                     sourceNode.ObjectSubtype))
             {
-                throw new ProjectStructureAgentException(
+                throw RejectedBeforeWrite(
                     400,
                     "CanonicalTaskRequired",
                     $"Node '{request.SourceNodeId}' is not a canonical WorkItem/task node.");
@@ -1096,12 +1101,12 @@ public sealed partial class ProjectStructureAgentService(
     {
         if (request.TargetProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "TargetProjectRequired", "A target project id is required.");
+            throw InvalidAgentRequest(400, "TargetProjectRequired", "A target project id is required.");
         }
 
         if (request.TargetProjectId == sourceProjectId)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAgentRequest(
                 400,
                 "TargetProjectMustDiffer",
                 "The target project must differ from the source project.");
@@ -1164,17 +1169,17 @@ public sealed partial class ProjectStructureAgentService(
         var requestedNodeIds = NormalizeTransferNodeIds(request.NodeIds);
         if (targetProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "SubprojectIdRequired", "A reserved subproject id is required.");
+            throw InvalidAgentRequest(400, "SubprojectIdRequired", "A reserved subproject id is required.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Name))
         {
-            throw new ProjectStructureAgentException(400, "SubprojectNameRequired", "A subproject name is required.");
+            throw InvalidAgentRequest(400, "SubprojectNameRequired", "A subproject name is required.");
         }
 
         if (requestedNodeIds.Count == 0)
         {
-            throw new ProjectStructureAgentException(400, "SelectedNodesRequired", "At least one selected project-structure node id is required.");
+            throw InvalidAgentRequest(400, "SelectedNodesRequired", "At least one selected project-structure node id is required.");
         }
 
         return await ExecuteWithAgentFailureMappingAsync(() =>
@@ -1275,7 +1280,7 @@ public sealed partial class ProjectStructureAgentService(
                     cancellationToken, agent);
                 if (artifact is null)
                 {
-                    throw new ProjectStructureAgentException(
+                    throw RejectedBeforeWrite(
                         400,
                         "NodeCommandUnavailable",
                         $"Command '{request.CommandKind}' is not available for node '{nodeId}'.");
@@ -1415,6 +1420,7 @@ public sealed partial class ProjectStructureAgentService(
         }
         catch (ProjectStructureDeletionRecoveryNotFoundException exception)
         {
+            // The owner resolves the exact durable cleanup before it deletes anything.
             throw ProjectStructureAgentException.CreateAgentVisible(
                 404,
                 "ProjectStructureDeletionRecoveryNotFound",
@@ -1426,7 +1432,8 @@ public sealed partial class ProjectStructureAgentService(
                     RootNodeId = nodeId,
                     DurableMutationId = durableMutationId.Value,
                     FailureType = exception.GetType().Name
-                });
+                },
+                effectState: AgentToolEffectState.NotCommitted);
         }
     }
 
@@ -1511,7 +1518,7 @@ public sealed partial class ProjectStructureAgentService(
         throw ProjectStructureAgentException.CreateAgentVisible(
             400,
             "ProjectStructureManagedStorageDispositionRequired",
-            "Choose whether deletion retains managed files or deletes owned managed files.",
+            "Choose whether deletion retains managed files or deletes owned managed files: set managedStorageDisposition to RetainManagedFiles or DeleteOwnedManagedFiles and retry.",
             canRetryWithCorrectedInput: true,
             diagnosticDetails: new
             {
@@ -1521,7 +1528,8 @@ public sealed partial class ProjectStructureAgentService(
                     ProjectStructureManagedStorageDisposition.RetainManagedFiles,
                     ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles
                 }
-            });
+            },
+            effectState: AgentToolEffectState.None);
     }
 
     public async Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(
@@ -1532,12 +1540,12 @@ public sealed partial class ProjectStructureAgentService(
     {
         if (string.IsNullOrWhiteSpace(request.Title))
         {
-            throw new ProjectStructureAgentException(400, "ApprovalTitleRequired", "Approval request title is required.");
+            throw InvalidAgentRequest(400, "ApprovalTitleRequired", "Approval request title is required.");
         }
 
         if (string.IsNullOrWhiteSpace(request.RequestedOperation))
         {
-            throw new ProjectStructureAgentException(400, "ApprovalOperationRequired", "Approval requests must describe the blocked operation.");
+            throw InvalidAgentRequest(400, "ApprovalOperationRequired", "Approval requests must describe the blocked operation.");
         }
 
         return await leaseService.RunWithProjectMutationLeaseAsync(
@@ -1820,17 +1828,39 @@ public sealed partial class ProjectStructureAgentService(
         var node = surface.Nodes.FirstOrDefault(item => string.Equals(item.Id, nodeId, StringComparison.Ordinal));
         if (node is null)
         {
-            throw new ProjectStructureAgentException(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
+            throw NodeNotFound(nodeId);
         }
 
         return node;
     }
 
+
+    // Request validation that runs before the owner reads or writes anything.
+    private static ProjectStructureAgentException InvalidAgentRequest(int statusCode, string errorCode, string message,
+        object? diagnosticDetails = null)
+        => ProjectStructureAgentException.CreateAgentVisible(statusCode, errorCode, message, canRetryWithCorrectedInput: true,
+            diagnosticDetails, AgentToolEffectState.None);
+
+    // A rejection the owner decides from its current state or a downloaded source before it writes the mutation.
+    private static ProjectStructureAgentException RejectedBeforeWrite(int statusCode, string errorCode, string message,
+        object? diagnosticDetails = null)
+        => ProjectStructureAgentException.CreateAgentVisible(statusCode, errorCode, message, canRetryWithCorrectedInput: true,
+            diagnosticDetails, AgentToolEffectState.NotCommitted);
+
+    // Mutations read their node, or return no node when it is missing, before they change anything.
+    private static ProjectStructureAgentException NodeNotFound(string nodeId)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            404,
+            "NodeNotFound",
+            $"Node '{nodeId}' was not found. Read the current structure and retry with an existing node id.",
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
+
     private ProjectStructureNodeSummary MapRequiredNode(ProjectStructureNode? node, string nodeId)
     {
         if (node is null)
         {
-            throw new ProjectStructureAgentException(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
+            throw NodeNotFound(nodeId);
         }
 
         return MapNodeSummary(node, node.Priority, FullNodeReadRequest);
@@ -2025,7 +2055,7 @@ public sealed partial class ProjectStructureAgentService(
             }
             catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
             {
-                throw new ProjectStructureAgentException(
+                throw RejectedBeforeWrite(
                     504,
                     "SourceUrlTimeout",
                     $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' did not respond before the download timeout.",
@@ -2037,7 +2067,7 @@ public sealed partial class ProjectStructureAgentService(
             }
             catch (HttpRequestException ex)
             {
-                throw new ProjectStructureAgentException(
+                throw RejectedBeforeWrite(
                     502,
                     "SourceUrlDownloadFailed",
                     $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' could not be downloaded.",
@@ -2061,7 +2091,7 @@ public sealed partial class ProjectStructureAgentService(
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    throw new ProjectStructureAgentException(
+                    throw RejectedBeforeWrite(
                         502,
                         "SourceUrlDownloadFailed",
                         $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' returned {(int)response.StatusCode} {response.ReasonPhrase}.");
@@ -2070,7 +2100,7 @@ public sealed partial class ProjectStructureAgentService(
                 var declaredLength = response.Content.Headers.ContentLength;
                 if (declaredLength is > MaxExternalAssetSourceBytes)
                 {
-                    throw new ProjectStructureAgentException(
+                    throw RejectedBeforeWrite(
                         413,
                         "SourceUrlTooLarge",
                         $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
@@ -2113,7 +2143,7 @@ public sealed partial class ProjectStructureAgentService(
             totalBytes += read;
             if (totalBytes > MaxExternalAssetSourceBytes)
             {
-                throw new ProjectStructureAgentException(
+                throw RejectedBeforeWrite(
                     413,
                     "SourceUrlTooLarge",
                     $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(sourceUri)}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
@@ -2124,7 +2154,7 @@ public sealed partial class ProjectStructureAgentService(
 
         if (memory.Length == 0)
         {
-            throw new ProjectStructureAgentException(
+            throw RejectedBeforeWrite(
                 400,
                 "SourceUrlEmpty",
                 $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(sourceUri)}' returned no content.");
@@ -2138,7 +2168,7 @@ public sealed partial class ProjectStructureAgentService(
         if (string.IsNullOrWhiteSpace(sourceUrl) ||
             !Uri.TryCreate(sourceUrl.Trim(), UriKind.Absolute, out var uri))
         {
-            throw new ProjectStructureAgentException(
+            throw RejectedBeforeWrite(
                 400,
                 "SourceUrlInvalid",
                 "External asset source URLs must be absolute http or https URLs.");
@@ -2243,12 +2273,45 @@ public sealed partial class ProjectStructureAgentService(
     {
         if (string.IsNullOrWhiteSpace(request.SourceNodeId))
         {
-            throw new ProjectStructureAgentException(400, "SourceNodeRequired", "A source node id is required.");
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                400, "SourceNodeRequired", "A source node id is required.", canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.None);
         }
 
         if (string.IsNullOrWhiteSpace(request.TargetNodeId))
         {
-            throw new ProjectStructureAgentException(400, "TargetNodeRequired", "A target node id is required.");
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                400, "TargetNodeRequired", "A target node id is required.", canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.None);
+        }
+    }
+
+    // A structure invariant is checked while a single mutation is planned, before its transaction saves anything, so
+    // the violation is a no-effect rejection the model can correct.
+    private static async Task<T> RejectInvariantViolationsAsync<T>(Func<Task<T>> mutation)
+    {
+        try
+        {
+            return await mutation();
+        }
+        catch (ProjectStructureInvariantViolationException exception)
+        {
+            var (statusCode, errorCode, guidance) = exception.Violation switch
+            {
+                ProjectStructureInvariantViolation.NodeNotFound =>
+                    (404, "NodeNotFound", " Read the current structure and retry with existing node ids."),
+                ProjectStructureInvariantViolation.HierarchyLink =>
+                    (400, "HierarchyLinkNotAllowed", " Use the node's parent (parentNodeKey or reparent) for hierarchy, and a DependsOn or Uses link for other relationships."),
+                ProjectStructureInvariantViolation.HierarchyCycle =>
+                    (409, "HierarchyCycle", " Choose a parent outside the node's own subtree."),
+                _ => (400, "InvalidStructureRelationship", " Choose two different nodes and retry.")
+            };
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                statusCode,
+                errorCode,
+                exception.Message + guidance,
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.NotCommitted);
         }
     }
 
@@ -2272,7 +2335,7 @@ public sealed partial class ProjectStructureAgentService(
     {
         if (string.IsNullOrWhiteSpace(request.Name))
         {
-            throw new ProjectStructureAgentException(400, "ProjectNameRequired", "Project name is required.");
+            throw InvalidAgentRequest(400, "ProjectNameRequired", "Project name is required.");
         }
     }
 

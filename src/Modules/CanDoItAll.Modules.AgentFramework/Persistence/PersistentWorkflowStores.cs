@@ -1296,19 +1296,16 @@ public sealed class PersistentWorkflowCatalogService(
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new WorkflowDefinitionValidationException(
             $"{messagePrefix}: {string.Join(" ", validation.Issues.Select(issue => issue.Message))}");
     }
 
     private static InvalidOperationException CreateDefinitionConcurrencyException(
         WorkflowId workflowId,
         Exception? innerException = null)
-    {
-        var message = $"Workflow definition '{workflowId}' was updated by another request.";
-        return innerException is null
-            ? new InvalidOperationException(message)
-            : new InvalidOperationException(message, innerException);
-    }
+        => new WorkflowDefinitionConcurrencyException(
+            $"Workflow definition '{workflowId}' was updated by another request.",
+            innerException);
 
     private static InvalidOperationException CreateExternalIdentityConflictException(
         string externalNamespace,
@@ -3430,3 +3427,10 @@ internal sealed class WorkflowArtifactRecordEntityConfiguration : IEntityTypeCon
         builder.HasIndex(item => new { item.RunId, item.CreatedAtUtc });
     }
 }
+
+/// <summary>A workflow definition the store rejected because it failed validation; nothing was saved.</summary>
+public sealed class WorkflowDefinitionValidationException(string message) : InvalidOperationException(message);
+
+/// <summary>A workflow definition save that lost to a concurrent update; its transaction saved nothing.</summary>
+public sealed class WorkflowDefinitionConcurrencyException(string message, Exception? innerException = null)
+    : InvalidOperationException(message, innerException);

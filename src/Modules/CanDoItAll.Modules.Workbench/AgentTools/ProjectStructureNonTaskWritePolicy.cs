@@ -87,11 +87,14 @@ internal static class ProjectStructureNonTaskWritePolicy
                 StringComparison.Ordinal);
     }
 
+    // The policy is checked before the non-task write starts, so the model can leave the task nodes untouched.
     private static void ThrowTaskWriteDenied()
     {
-        throw new ProjectStructureAgentException(
+        throw ProjectStructureAgentException.CreateAgentVisible(
             403,
             "ProjectTaskWriteDenied",
-            "This agent may write non-task project structure, but it may not create, change, move, reclassify, or delete task nodes. Enable project-task or full project-structure write access.");
+            "This agent may write non-task project structure, but it may not create, change, move, reclassify, or delete task nodes. Enable project-task or full project-structure write access.",
+            canRetryWithCorrectedInput: false,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 }

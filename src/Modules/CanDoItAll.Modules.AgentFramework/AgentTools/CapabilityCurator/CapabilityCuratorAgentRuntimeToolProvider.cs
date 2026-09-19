@@ -213,7 +213,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
             _ => toolName
         };
         await RequireReadAsync(readTool);
-        if (disclosure.EffectState != AgentToolEffectState.NotCommitted && toolName is
+        if (disclosure.EffectState != AgentToolEffectState.NotCommitted && !disclosure.IsNoEffectTypedFailure && toolName is
             CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet or
             CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate or
             CapabilityCuratorToolPolicy.CapabilityCuratorVerify) {
@@ -283,6 +283,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         CancellationToken cancellationToken)
     {
         EnsureNonEmpty(request.CapabilityId, nameof(request.CapabilityId));
+        await RequireRequestedCapabilityAsync(request.CapabilityId, cancellationToken);
         return await LoadEditorAsync(request.CapabilityId, cancellationToken);
     }
 
@@ -299,7 +300,19 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         var editor = await PrepareCandidateEditorAsync(request, cancellationToken);
         ConsumeSetupAttestationIfRequired(request, editor, attestationScopeKey);
 
-        var savedId = await workspaceService.SaveCapabilityAsync(editor, cancellationToken);
+        Guid savedId;
+        try
+        {
+            savedId = await workspaceService.SaveCapabilityAsync(editor, cancellationToken);
+        }
+        catch (CapabilityCatalogRejectedException exception)
+        {
+            // The catalog checks existence, identity and fingerprint before it persists anything.
+            throw exception.IsConcurrencyConflict
+                ? AgentToolConflictException.Create($"{exception.Message} Read the editor again and retry with its current fingerprint.")
+                : Rejected($"{exception.Message} Search the capability catalog and correct the candidate before retrying.");
+        }
+
         RecordCommitted(CapabilityEffectSourceKind, savedId);
         if (request.CapabilityId.HasValue && savedId != request.CapabilityId.Value)
         {
@@ -377,27 +390,22 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         EnsureNonEmpty(request.CapabilityId, nameof(request.CapabilityId));
         if (request.ExpectedUpdatedAtUtc == default)
         {
-            throw new ArgumentException("ExpectedUpdatedAtUtc is required.", nameof(request));
+            throw Rejected("ExpectedUpdatedAtUtc is required. Read the assignment editor and pass its UpdatedAtUtc.");
         }
 
-        var capability = await LoadExactCapabilityAsync(request.CapabilityId, cancellationToken);
+        var capability = await RequireRequestedCapabilityAsync(request.CapabilityId, cancellationToken);
         if (ManagedAgentPrivilegedCapabilityKeys.All.Contains(capability.Key))
         {
             throw new UnauthorizedAccessException(
                 $"Managed privileged capability '{capability.Key}' cannot be reassigned by the Capability Curator.");
         }
 
-        var editor = await workspaceService.GetAgentEditorAsync(request.AgentId, cancellationToken);
-        if (editor.Id != request.AgentId)
-        {
-            throw new KeyNotFoundException($"Agent '{request.AgentId:D}' was not found exactly once.");
-        }
-
+        var editor = await RequireRequestedAgentEditorAsync(request.AgentId, cancellationToken);
         EnsureAssignmentTargetIsNotTemplate(editor);
 
         if (editor.ExpectedUpdatedAtUtc != request.ExpectedUpdatedAtUtc)
         {
-            throw new InvalidOperationException(
+            throw AgentToolConflictException.Create(
                 $"Agent '{request.AgentId:D}' changed after it was read. Read the editor again before retrying.");
         }
 
@@ -446,10 +454,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
     {
         EnsureNonEmpty(request.AgentId, nameof(request.AgentId));
         EnsureTargetAgentIsNotPrivileged(request.AgentId);
-        var editor = await workspaceService.GetAgentEditorAsync(request.AgentId, cancellationToken);
-        if (editor.Id != request.AgentId || editor.ExpectedUpdatedAtUtc is null)
+        var editor = await RequireRequestedAgentEditorAsync(request.AgentId, cancellationToken);
+        if (editor.ExpectedUpdatedAtUtc is null)
         {
-            throw new KeyNotFoundException($"Agent '{request.AgentId:D}' was not found exactly once.");
+            throw new KeyNotFoundException($"Agent '{request.AgentId:D}' has no concurrency revision.");
         }
 
         EnsureAssignmentTargetIsNotTemplate(editor);
@@ -470,14 +478,14 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         EnsureNonEmpty(request.CapabilityId, nameof(request.CapabilityId));
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var agent = agents.SingleOrDefault(item => item.Id == request.AgentId)
-            ?? throw new KeyNotFoundException($"Agent '{request.AgentId:D}' was not found.");
+            ?? throw Rejected($"Agent '{request.AgentId:D}' was not found. Search the agent catalog and retry with a non-template agent id.");
         if (!agent.Capabilities.Any(item => item.CapabilityId == request.CapabilityId))
         {
-            throw new InvalidOperationException(
-                $"Capability '{request.CapabilityId:D}' is not assigned to agent '{request.AgentId:D}'.");
+            throw Rejected(
+                $"Capability '{request.CapabilityId:D}' is not assigned to agent '{request.AgentId:D}'. Attach it before verifying.");
         }
 
-        await LoadExactCapabilityAsync(request.CapabilityId, cancellationToken);
+        await RequireRequestedCapabilityAsync(request.CapabilityId, cancellationToken);
         await workspaceService.VerifyCapabilityAsync(request.AgentId, request.CapabilityId, cancellationToken);
         RecordCommitted(CapabilityEffectSourceKind, request.CapabilityId);
         var verified = await LoadExactCapabilityAsync(request.CapabilityId, cancellationToken);
@@ -498,8 +506,8 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         ArgumentNullException.ThrowIfNull(request.Candidate);
         if (request.Candidate.Kind != expectedKind)
         {
-            throw new InvalidOperationException(
-                $"Setup candidate is '{request.Candidate.Kind}', not '{expectedKind}'.");
+            throw Rejected(
+                $"Setup candidate is '{request.Candidate.Kind}', not '{expectedKind}'. Use the setup test that matches the candidate kind.");
         }
 
         return await PrepareCandidateEditorAsync(request.Candidate, cancellationToken);
@@ -515,13 +523,14 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
             EnsureNonEmpty(request.CapabilityId.Value, nameof(request.CapabilityId));
             if (string.IsNullOrWhiteSpace(request.ExpectedFingerprint))
             {
-                throw new ArgumentException("ExpectedFingerprint is required for capability updates.", nameof(request));
+                throw Rejected("ExpectedFingerprint is required for capability updates. Read the editor and pass its fingerprint.");
             }
 
+            await RequireRequestedCapabilityAsync(request.CapabilityId.Value, cancellationToken);
             current = await LoadExactEditorModelAsync(request.CapabilityId.Value, cancellationToken);
             if (current.IsBuiltIn)
             {
-                throw new InvalidOperationException(
+                throw Rejected(
                     $"Built-in capability '{current.Key}' is managed by seed refresh and cannot be updated by the Capability Curator.");
             }
 
@@ -538,16 +547,25 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
 
             if (!string.Equals(actualFingerprint, request.ExpectedFingerprint, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException(
+                throw AgentToolConflictException.Create(
                     $"Capability '{request.CapabilityId.Value:D}' changed after the editor was read. Read it again before retrying.");
             }
         }
         else if (!string.IsNullOrWhiteSpace(request.ExpectedFingerprint))
         {
-            throw new ArgumentException("ExpectedFingerprint must be omitted when creating a capability.", nameof(request));
+            throw Rejected("ExpectedFingerprint must be omitted when creating a capability.");
         }
 
-        var editor = CapabilityCuratorCapabilityConfigurationMapper.BuildEditor(request, current);
+        CapabilityEditorModel editor;
+        try
+        {
+            editor = CapabilityCuratorCapabilityConfigurationMapper.BuildEditor(request, current);
+        }
+        catch (ArgumentException exception)
+        {
+            throw Rejected(DescribeRejectedArgument(exception));
+        }
+
         if (ManagedAgentPrivilegedCapabilityKeys.All.Contains(editor.Key))
         {
             throw new UnauthorizedAccessException(
@@ -556,11 +574,51 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
 
         if (editor.IsBuiltIn)
         {
-            throw new InvalidOperationException("Capability Curator candidates cannot create or update built-in capabilities.");
+            throw Rejected("Capability Curator candidates cannot create or update built-in capabilities.");
         }
 
         return editor;
     }
+
+    // Reads the capability a request names before any save, setup probe or verification, so a missing capability is a
+    // correctable request rather than a runtime failure.
+    private async Task<CapabilityCatalogItem> RequireRequestedCapabilityAsync(
+        Guid capabilityId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await LoadExactCapabilityAsync(capabilityId, cancellationToken);
+        }
+        catch (KeyNotFoundException exception)
+        {
+            throw Rejected($"{exception.Message} Search the capability catalog and retry with a listed capability id.");
+        }
+    }
+
+    private async Task<AgentEditorModel> RequireRequestedAgentEditorAsync(
+        Guid agentId,
+        CancellationToken cancellationToken)
+    {
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: true, cancellationToken);
+        if (agents.Count(agent => agent.Id == agentId) != 1)
+        {
+            throw Rejected($"Agent '{agentId:D}' was not found. Search the agent catalog and retry with an existing agent id.");
+        }
+
+        var editor = await workspaceService.GetAgentEditorAsync(agentId, cancellationToken);
+        return editor.Id == agentId
+            ? editor
+            : throw new KeyNotFoundException($"Agent '{agentId:D}' was not found exactly once.");
+    }
+
+    private static AgentToolInputValidationException Rejected(string message)
+        => AgentToolInputValidationException.Create(message);
+
+    private static string DescribeRejectedArgument(ArgumentException exception)
+        => exception.ParamName is { Length: > 0 } parameter
+            ? exception.Message.Replace($" (Parameter '{parameter}')", string.Empty, StringComparison.Ordinal)
+            : exception.Message;
 
     private async Task<CapabilityCuratorEditorResult> LoadEditorAsync(
         Guid capabilityId,
@@ -647,14 +705,27 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
             actorAgentId,
             toolName,
             cancellationToken);
-        return await action(cancellationToken);
+        try
+        {
+            return await action(cancellationToken);
+        }
+        catch (AgentCatalogConcurrencyException exception)
+        {
+            // The agent catalog compares the expected revision before it saves an assignment.
+            throw AgentToolConflictException.Create(
+                $"{exception.Message} Read the assignment editor again and retry with its current UpdatedAtUtc.");
+        }
+        catch (AgentEditorValidationException exception)
+        {
+            throw Rejected(exception.Message);
+        }
     }
 
     private static void EnsureNonEmpty(Guid id, string parameterName)
     {
         if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identifier cannot be empty.", parameterName);
+            throw Rejected($"{parameterName} cannot be empty.");
         }
     }
 
@@ -747,7 +818,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
     private const string McpSetupEffectSourceKind = "capability-mcp-setup";
 
     private static void RecordCommitted(string sourceKind, Guid id) {
-        EnsureNonEmpty(id, nameof(id));
+        if (id == Guid.Empty) {
+            throw new InvalidOperationException("The capability owner acknowledged an empty identity.");
+        }
         AgentToolInvocationEffectScope.RecordCommitted(sourceKind, id.ToString("D"));
     }
 

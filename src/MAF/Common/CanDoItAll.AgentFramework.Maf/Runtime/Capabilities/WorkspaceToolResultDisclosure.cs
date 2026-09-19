@@ -35,7 +35,9 @@ internal sealed partial class WorkspaceToolResultDisclosure(IAgentWorkspaceToolR
         } catch (Exception exception) when (exception is InvalidDataException or JsonException or ArgumentException) {
             throw Unavailable();
         }
-        if (evidence.State != WorkspaceToolResultEvidenceState.Complete) {
+        if (evidence.State == WorkspaceToolResultEvidenceState.KnownFailure
+                ? disclosure.EffectState is not (AgentToolEffectState.None or AgentToolEffectState.NotCommitted)
+                : evidence.State != WorkspaceToolResultEvidenceState.Complete) {
             throw Unavailable();
         }
         if (evidence.ToolName != disclosure.Payload.ToolName || evidence.Scope != workspace.Scope.Scope ||
@@ -117,11 +119,33 @@ internal sealed partial class WorkspaceToolResultDisclosure(IAgentWorkspaceToolR
         } catch (Exception exception) when (exception is JsonException or InvalidDataException) {
             state = WorkspaceToolResultEvidenceState.UnsupportedResult;
         }
+        if (state != WorkspaceToolResultEvidenceState.Complete &&
+                (AgentToolInvocationEffectScope.IsCurrentRejectedBeforeEffect || IsFailedRead(capture.ToolName, returned))) {
+            // A rejection or failed read returned only its reason, so a path it could not use discloses nothing more.
+            state = WorkspaceToolResultEvidenceState.KnownFailure;
+            selection = null;
+        }
         var completedSource = await RequireSource().CompleteAsync(capture.Source, cancellationToken);
         AgentToolInvocationEffectScope.RecordDisclosureEvidence(WorkspaceToolResultEvidence.Write(new(capture.ToolName,
             workspace.Scope.WorkspaceRoot, workspace.Scope.Scope, completedSource, state, capture.Paths.ToImmutableArray(),
             capture.ExecutionWorkspaceScope, selection)));
     }
+
+    // A rejection proven to have no effect discloses only its correction text. Its evidence keeps the original source
+    // and every request path that resolved, so a replay still requires the tool, the source and those paths to be
+    // current; a request path that never resolved revealed nothing beyond the rejection itself.
+    private async Task CompleteKnownFailureAsync(Capture capture, CancellationToken cancellationToken) {
+        var completedSource = await RequireSource().CompleteAsync(capture.Source, cancellationToken);
+        AgentToolInvocationEffectScope.RecordDisclosureEvidence(WorkspaceToolResultEvidence.Write(new(capture.ToolName,
+            workspace.Scope.WorkspaceRoot, workspace.Scope.Scope, completedSource, WorkspaceToolResultEvidenceState.KnownFailure,
+            capture.Paths.ToImmutableArray(), capture.ExecutionWorkspaceScope)));
+    }
+
+    // A read that reports failure returned no workspace content, only its reason, so it is disclosed like a rejection.
+    private static bool IsFailedRead(string toolName, JsonElement returned)
+        => AgentToolPolicyCatalog.BuiltIn.Classify(toolName) == ToolInvocationClassification.Read &&
+           returned.ValueKind == JsonValueKind.Object &&
+           returned.TryGetProperty("succeeded", out var succeeded) && succeeded.ValueKind == JsonValueKind.False;
 
     private void CapturePath(string path, WorkspaceRuntimeFileAccessGuard guard, WorkspaceScopeDescriptor? executionScope,
         List<WorkspaceToolResultPath> captured, ref WorkspaceToolResultEvidenceState state) {
@@ -249,7 +273,20 @@ internal sealed partial class WorkspaceToolResultDisclosure(IAgentWorkspaceToolR
                 return denied;
             }
             using var collection = IsCollectionTool(Name) ? new CollectionCapture(Name) : null;
-            var result = await base.InvokeCoreAsync(arguments, cancellationToken);
+            object? result;
+            try {
+                result = await base.InvokeCoreAsync(arguments, cancellationToken);
+            } catch (Exception failure) when (failure is IAgentToolFailureEffectEvidence {
+                IsSafeToExpose: true, EffectState: AgentToolEffectState.None or AgentToolEffectState.NotCommitted
+            }) {
+                try {
+                    await owner.CompleteKnownFailureAsync(capture, cancellationToken);
+                } catch (Exception completionFailure) when (completionFailure is not OperationCanceledException) {
+                    throw new AggregateException("The rejected workspace operation has no completed disclosure checkpoint.",
+                        failure, completionFailure);
+                }
+                throw;
+            }
             await owner.CompleteAsync(capture, result, JsonSerializerOptions, collection, cancellationToken);
             return result;
         }
@@ -262,7 +299,8 @@ internal enum WorkspaceToolResultEvidenceState {
     UnsupportedResult,
     PathChangedDuringOperation,
     UncapturedWorkspaceScope,
-    PathLimitExceeded
+    PathLimitExceeded,
+    KnownFailure
 }
 
 internal sealed record WorkspaceToolResultPath(string RequestPath, string RelativePath, string FullPath, bool IsWorkspacePath);

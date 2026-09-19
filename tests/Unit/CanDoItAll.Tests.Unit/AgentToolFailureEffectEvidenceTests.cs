@@ -179,6 +179,34 @@ public sealed class AgentToolFailureEffectEvidenceTests
         Assert.Equal(firstKey, secondKey);
     }
 
+    [Fact]
+    public void Each_task_is_its_own_operation_so_an_update_of_another_task_cannot_resolve_a_rejection()
+    {
+        var projectId = Guid.NewGuid();
+        static AIFunctionArguments Update(Guid projectId, string taskId, int progress) => new()
+        {
+            ["projectId"] = projectId,
+            ["request"] = JsonSerializer.SerializeToElement(new { taskId, proposedProgressPercent = progress })
+        };
+        static AIFunctionArguments Attach(Guid projectId, string taskNodeId) => new()
+        {
+            ["projectId"] = projectId,
+            ["taskNodeId"] = taskNodeId,
+            ["request"] = JsonSerializer.SerializeToElement(new { resource = new { kind = "Process" } })
+        };
+
+        var rejected = MafToolInvocationCorrelationKey.Create("project_task_update", Update(projectId, "custom:a", 150));
+        var corrected = MafToolInvocationCorrelationKey.Create("project_task_update", Update(projectId, "custom:a", 50));
+        var otherTask = MafToolInvocationCorrelationKey.Create("project_task_update", Update(projectId, "custom:b", 50));
+
+        Assert.NotEmpty(rejected);
+        Assert.Equal(rejected, corrected);
+        Assert.NotEqual(rejected, otherTask);
+        Assert.NotEqual(
+            MafToolInvocationCorrelationKey.Create("project_task_resource_attach", Attach(projectId, "custom:a")),
+            MafToolInvocationCorrelationKey.Create("project_task_resource_attach", Attach(projectId, "custom:b")));
+    }
+
     private static AIFunctionArguments CreateSpreadsheetArguments(string workbookPath, string rangeAddress)
         => new()
         {

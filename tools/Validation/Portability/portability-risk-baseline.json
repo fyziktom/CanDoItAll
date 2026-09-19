@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-18T19:47:50.015602+00:00",
+  "generated_utc": "2026-09-19T01:52:08.179954+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14719,
+  "allowance_count": 14727,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -23230,6 +23230,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathResolutionContracts.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "332e24586402ed2101e127eb0e0e1a0a2d1b994bbca6d5dbb656ed02a387b9a0",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathResolutionContracts.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "35712b474eee686556b0b79ca3e257da6b3c5d1da9ae19d81ab6d2d04172dd64",
       "count": 1
     },
@@ -27346,6 +27352,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/WorkspaceToolResultDisclosure.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "f8b6b6ace3bb84509cac373995568103933a72cb8a3853d5e01a6e01c3d5766e",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/WorkspaceToolResultDisclosure.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "f9add9be0f79490834ad7e42ad7f4bdfa528202b776adda84ade32a91585a59a",
       "count": 1
     },
@@ -28330,6 +28342,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs",
       "category": "case-policy",
+      "source_fingerprint": "d299763c397bf2cf6bb1acd8a6d41025e83f0163aa1085578c5d58c9221289f9",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs",
+      "category": "case-policy",
       "source_fingerprint": "f6ed5103e14bd438a5dd9caabc7ec3322512c35a29c5f1463f6f84cc5931a235",
       "count": 1
     },
@@ -28337,12 +28355,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs",
       "category": "case-policy",
       "source_fingerprint": "f9c3fa607d5b7fab80208c0d6f04b269b2004bfe8f6b018307e87d31fed984f0",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeToolInvocationResultClassifier.cs",
-      "category": "case-policy",
-      "source_fingerprint": "fb88e9930a9326e54444fbf6de59a227743a419f0ac795dc9e124f28b0c4bd35",
       "count": 1
     },
     {
@@ -35188,6 +35200,12 @@
     {
       "path": "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpSetupTestService.cs",
       "category": "mcp",
+      "source_fingerprint": "3107e429eb1f57866ec9aed1a4e839a2004b1c2dbcb5f85ab1a55b4a840e437d",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpSetupTestService.cs",
+      "category": "mcp",
       "source_fingerprint": "3b36c87c74d4da2b978c2e9a2bde42750b594551a5e45abf7b97e9401bdb0fd7",
       "count": 1
     },
@@ -40510,7 +40528,13 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs",
       "category": "atomic-write",
-      "source_fingerprint": "c35fadfe6ddb90776f1a61270ac2cab064186aef8d8c78514b00aef3f3b3d604",
+      "source_fingerprint": "1932723a04fe13ca94fc5e0b3696ef44d88bda2b60dabf6c0b1eddd9a98b569d",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "1fe2abe7260b450fc23829ab2f737fae648c889af993e84a49a8fedf006a880c",
       "count": 1
     },
     {
@@ -44602,6 +44626,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilitySetup/AgentCapabilitySetupFlowService.cs",
       "category": "external-tool",
+      "source_fingerprint": "69424c4f2a78d305d878726a1ab371683ff4976311397011ac75f65dcac93b8e",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilitySetup/AgentCapabilitySetupFlowService.cs",
+      "category": "external-tool",
       "source_fingerprint": "f81368fda5b25fd19f63eff85aa6b7e8e58bed30f49039dd94bbf186f11d55ec",
       "count": 1
     },
@@ -44693,6 +44723,12 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilitySetup/AgentCapabilitySetupFlowService.cs",
       "category": "mcp",
       "source_fingerprint": "f91a89c8e6ad722338655e539a683a628a41a94d8f3ce7ed921e4d01c43fe161",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilitySetup/AgentCapabilitySetupFlowService.cs",
+      "category": "mcp",
+      "source_fingerprint": "fc67b73ab6ef0e1717ef997495c3f60f5924cd0fa60830ed8b388e7b75900c19",
       "count": 1
     },
     {
@@ -58210,6 +58246,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeAssetTextReader.cs",
       "category": "case-policy",
+      "source_fingerprint": "f77b8b4d2af8a042ea36c3645e517f6be9be152a05116c2c995840b0c5fac5ad",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeAssetTextReader.cs",
+      "category": "case-policy",
       "source_fingerprint": "fbb8548e15b3c96d3f6a61fd9ef10fd2f0dc15f3e241d644c3190c8619087731",
       "count": 1
     },
@@ -60676,7 +60718,13 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssetSourcePolicy.cs",
       "category": "atomic-write",
-      "source_fingerprint": "f1811a01674004a9bf1e5e28b466cddff0de541f47882f20562335d30f241718",
+      "source_fingerprint": "26fe18c832d727286e5dd566389f02679c1a3be705e672a7b13095e5bc45c728",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAssetSourcePolicy.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "448318d0b072273eb4143a1726ffc30bc4dd1fd5d73b37095e979f8737f41ea3",
       "count": 1
     },
     {

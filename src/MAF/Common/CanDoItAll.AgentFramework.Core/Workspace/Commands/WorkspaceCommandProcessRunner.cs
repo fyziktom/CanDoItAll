@@ -71,8 +71,14 @@ internal sealed class WorkspaceCommandProcessRunner
             StderrTruncated: false);
     }
 
-    public WorkspaceCommandExecutionResult CreateDeniedResult(string toolName, string recipeId, string riskClass, bool approvalRequired, string message)
+    public WorkspaceCommandExecutionResult CreateDeniedResult(string toolName, string recipeId, string riskClass, bool approvalRequired, string message,
+        bool rejectedBeforeLaunch = false)
     {
+        if (rejectedBeforeLaunch)
+        {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+        }
+
         var boundary = DescribeBoundary();
         var now = DateTimeOffset.UtcNow;
         var receipt = receiptWriter.CreateAuditedReceipt(
