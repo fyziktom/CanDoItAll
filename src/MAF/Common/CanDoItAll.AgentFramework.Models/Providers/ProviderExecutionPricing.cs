@@ -3,6 +3,10 @@ using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Tariff of a priced model, as a JSON integer: 0 Unspecified (priced by the configured rates), 1 Configured (not
+/// used), 2 ExplicitFree (free of charge; every rate must be 0).
+/// </summary>
 public enum ProviderTariffKind { Unspecified, Configured, ExplicitFree }
 public enum ProviderPriceEvidenceKind {
     LegacyUnavailable, ProviderReported, Calculated, ExplicitFree, PartialEstimate,

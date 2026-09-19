@@ -17,7 +17,7 @@ namespace CanDoItAll.Modules.Workbench;
 /// String node identifier of the canonical task, exactly as returned in <c>nodes[].id</c> by the structure read,
 /// for example <c>custom:3f2504e04f8911d39a0c0305e82c3301</c>. It must equal the <c>taskId</c> route value (ordinal,
 /// case-sensitive comparison); a different value is rejected with HTTP 400 <c>TaskRouteMismatch</c>. It is not the
-/// task title and not a <c>{ "value": "..." }</c> wrapper object.
+/// task title and not an object with a <c>value</c> member.
 /// </param>
 /// <param name="CurrentTitle">
 /// Task title from the caller's latest read (<c>nodes[].title</c>). It must match the stored title exactly

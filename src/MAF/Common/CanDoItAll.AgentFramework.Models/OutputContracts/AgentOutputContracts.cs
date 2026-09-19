@@ -34,6 +34,11 @@ public enum AgentExecutionFailureKind
     RuntimeException
 }
 
+/// <summary>
+/// How a typed final answer must be submitted, as a string: <c>Disabled</c> (no finalizer tool), <c>Shadow</c> (the
+/// finalizer tool is offered and its result checked without failing the run), <c>Required</c> (the answer must be
+/// submitted through the finalizer tool; otherwise the run fails unless the policy allows recovery).
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AgentFinalizerMode>))]
 public enum AgentFinalizerMode
 {
@@ -100,6 +105,31 @@ public static class AgentJsonSchemaOutputContractVersions
     public const string Kind = "json-schema";
 }
 
+/// <summary>
+/// JSON Schema that the final answer of an agent execution run must satisfy, sent as <c>structuredOutput</c> when a
+/// run is started. The contract is checked before the run starts; an unsupported contract is rejected with HTTP 400
+/// and an <c>agents.structured-output-*</c> code. When the run finishes, the answer is validated and the result is
+/// returned as <c>structuredOutput</c> of the run result.
+/// </summary>
+/// <param name="Kind">Contract kind; must be <c>json-schema</c>.</param>
+/// <param name="Version">Contract version; must be <c>1.0</c>.</param>
+/// <param name="Name">
+/// Name of the output: a letter followed by at most 63 ASCII letters, digits, underscores or hyphens.
+/// </param>
+/// <param name="Schema">
+/// The JSON Schema, a JSON object of at most 64 KiB (UTF-8) with at most 16 nesting levels, 512 schema nodes and 128
+/// properties per object; the root must declare type <c>object</c>. Supported keywords: <c>$schema</c>, <c>$id</c>,
+/// <c>title</c>, <c>description</c>, <c>type</c>, <c>properties</c>, <c>required</c>, <c>additionalProperties</c>,
+/// <c>items</c>, <c>enum</c> (1 to 128 values), <c>const</c>, <c>minimum</c>, <c>maximum</c>,
+/// <c>exclusiveMinimum</c>, <c>exclusiveMaximum</c>, <c>minLength</c>, <c>maxLength</c>, <c>pattern</c> (at most 256
+/// characters), <c>minItems</c>, <c>maxItems</c>, <c>uniqueItems</c>, <c>minProperties</c> and <c>maxProperties</c>.
+/// Supported types: <c>object</c>, <c>array</c>, <c>string</c>, <c>number</c>, <c>integer</c>, <c>boolean</c> and
+/// <c>null</c>.
+/// </param>
+/// <param name="Strict">
+/// True (the default) requires every object schema to set <c>additionalProperties</c> to false and to list every
+/// declared property in <c>required</c>; use a type that includes <c>null</c> for optional values.
+/// </param>
 public sealed record AgentJsonSchemaOutputContract(
     string Kind,
     string Version,
@@ -107,6 +137,12 @@ public sealed record AgentJsonSchemaOutputContract(
     JsonElement Schema,
     bool Strict = true);
 
+/// <summary>
+/// Result of validating a model answer against a JSON Schema output contract, as a string: <c>Valid</c>,
+/// <c>ProviderRefusal</c> (the model refused), <c>MalformedJson</c> (not one complete JSON value, or larger than
+/// 1 MiB) or <c>SchemaValidationFailed</c>. Server-sent event streams write it as camel-case text, for example
+/// <c>schemaValidationFailed</c>.
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AgentJsonSchemaOutputValidationStatus>))]
 public enum AgentJsonSchemaOutputValidationStatus
 {

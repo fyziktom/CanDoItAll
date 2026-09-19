@@ -54,6 +54,11 @@ public enum AgentToolProposalState {
     Cancelled
 }
 
+/// <summary>
+/// How the cancellation of an agent execution run resolved one admitted tool call, as a JSON integer: 0 NotDispatched
+/// (never started), 1 NoExternalMutation (a read that changed nothing), 2 ReceiptCommitted (the owner's receipt shows
+/// the change was made), 3 CancelledUnreconciled (started, and its effect could not be confirmed).
+/// </summary>
 public enum AgentToolCancellationDisposition {
     NotDispatched,
     NoExternalMutation,
@@ -61,6 +66,11 @@ public enum AgentToolCancellationDisposition {
     CancelledUnreconciled
 }
 
+/// <summary>
+/// Why a cancellation disposition applies to a tool call, as a JSON integer: 0 NeverDispatched, 1 ReceiptFound,
+/// 2 ReceiptNotObserved (the owner reported no receipt), 3 NoReceiptProtocol (the tool offers no receipt lookup),
+/// 4 CurrentAccessDenied (the receipt lookup was refused by current access), 5 ReadOnlyInvocation.
+/// </summary>
 public enum AgentToolCancellationReason {
     NeverDispatched,
     ReceiptFound,

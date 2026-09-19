@@ -558,6 +558,12 @@ public sealed record ExecutionArtifactRecord(
     string Summary,
     DateTimeOffset CreatedAtUtc);
 
+/// <summary>
+/// Side effect a tool declares, as a JSON integer: 0 Unspecified, 1 NoMutation (reads only), 2 ManagedProcessArtifacts
+/// (writes managed workspace or process files), 3 ExternalArtifactDestination (acts outside the product, for example
+/// external actions or media generation), 4 ProductMutation (changes product data such as processes or project
+/// structure).
+/// </summary>
 public enum ToolExecutionSideEffectMode
 {
     Unspecified = 0,
@@ -622,6 +628,37 @@ public sealed record ExecutionWorkflowCheckpointRecord(
     string TraceId,
     string SpanId);
 
+/// <summary>
+/// Origin labels of an agent execution run, sent as <c>context</c> when a run is started. The caller chooses them; they
+/// are stored with the run as sent, without length limits, and can be used as filters of
+/// <c>GET /api/agents/execution-runs</c>. Process automation sets them too: a run whose source kind is
+/// <c>process-step</c> or that carries a process run or process step identifier is handled as a governed process run,
+/// with different validation, approval and tool rules, so other clients must not send those values.
+/// </summary>
+/// <param name="SourceKind">
+/// Kind of source that started the run, for example <c>manual</c> or <c>chat-session</c>; blank becomes
+/// <c>manual</c>.
+/// </param>
+/// <param name="SourceId">
+/// Identifier of the source record; with source kind <c>chat-session</c> a blank value becomes the chat session
+/// identifier.
+/// </param>
+/// <param name="CorrelationId">Correlation identifier chosen by the caller; free text.</param>
+/// <param name="CausationId">Identifier of what caused the run; free text.</param>
+/// <param name="RequestedBy">Who requested the run; free text.</param>
+/// <param name="RequestedByKind">Kind of requester, for example <c>interactive</c>; free text.</param>
+/// <param name="MetadataJson">
+/// Additional metadata as the text of a JSON object, for example <c>{}</c>; text that is not a JSON object is replaced
+/// by <c>{}</c>. Keys whose names start with <c>agent</c> are reserved for the product and must not be sent.
+/// </param>
+/// <param name="ProcessRunId">Identifier of the owning process run; set only by process automation.</param>
+/// <param name="ProcessStepId">Identifier of the owning process step; set only by process automation.</param>
+/// <param name="SchedulerRunId">Identifier of the scheduler run that started the run; free text.</param>
+/// <param name="MessageId">Identifier of the message that started the run; free text.</param>
+/// <param name="Policy">
+/// Optional structured-output policy stored in the run metadata. It applies only to runs with a built-in typed output
+/// contract, which runs started through the HTTP API do not have, so it has no effect on them.
+/// </param>
 public sealed record ExecutionInvocationContext(
     string SourceKind,
     string SourceId,
@@ -654,6 +691,23 @@ public sealed record ExecutionInvocationContext(
         Policy: null);
 }
 
+/// <summary>
+/// Structured-output policy of an agent execution run, stored in the run metadata. It applies only to runs with a
+/// built-in typed output contract started by process automation; runs started through the HTTP API have no such
+/// contract, so the policy has no effect on them.
+/// </summary>
+/// <param name="FinalizerMode">
+/// How a typed final answer must be submitted, as a string: <c>Disabled</c>, <c>Shadow</c> or <c>Required</c>; null
+/// keeps the default.
+/// </param>
+/// <param name="MaxStructuredOutputRepairAttempts">
+/// Number of repair attempts for an invalid typed answer, clamped to 0 through 2; null keeps the default.
+/// </param>
+/// <param name="RequireStructuredOutputValidation">True (the default) to validate the typed answer.</param>
+/// <param name="AllowRequiredFinalizerStructuredOutputRecovery">
+/// True to recover the typed answer from the model's text when the required finalizer tool call is missing; the
+/// default is false.
+/// </param>
 public sealed record ExecutionInvocationPolicy(
     AgentFinalizerMode? FinalizerMode = null,
     int? MaxStructuredOutputRepairAttempts = null,

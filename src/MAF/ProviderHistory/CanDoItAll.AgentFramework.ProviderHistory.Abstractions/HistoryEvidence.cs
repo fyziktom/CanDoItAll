@@ -10,6 +10,12 @@ public enum HistoryRetentionAuthority { HistoryPolicy, CanonicalOwner }
 public enum HistoryOutcome { Started, Succeeded, Failed, Cancelled, TimedOut, Interrupted, Unknown }
 public enum HistoryUsageState { Unavailable, Partial, Complete }
 public enum HistoryPriceState { Unpriced, ProviderReported, CalculatedAtExecution, ExplicitFree, PartialEstimate, MissingTariff, MissingUsage, UnsupportedUnit, InvalidEvidence }
+/// <summary>
+/// How the caller of a recorded operation authenticated, as a JSON integer: 0 Unknown (not recorded, for example work
+/// started by a background owner), 1 TrustedLocalOperator (the local operator of this host), 2 ManagedCredential (a
+/// managed API credential issued by this host), 3 LegacyAuthenticated (a valid bearer token that is not a managed
+/// credential), 4 AuthenticationDisabled (API authorization was disabled for the request).
+/// </summary>
 public enum HistoryAuthenticationKind { Unknown, TrustedLocalOperator, ManagedCredential, LegacyAuthenticated, AuthenticationDisabled }
 public enum HistoryOperation { CompleteChat, AnalyzeImage, GenerateImage, EditImage, TranscribeSpeech, SynthesizeSpeech, ListModels, TestHealth, CreateOrUpdateModel }
 public enum HistoryWorkload { Direct, Agent, SimpleChat, Workflow, Process, Batch, SharedRelay, Diagnostic }
@@ -22,6 +28,23 @@ public enum HistoryFailure { Denied, InvalidQuery, StaleContext, InvalidCursor, 
 [Flags]
 public enum HistoryDetailFlags { None = 0, Truncated = 1, Redacted = 2, PriorContextNotCaptured = 4 }
 
+/// <summary>
+/// Caller recorded for an operation: how it authenticated and, for a managed API credential, which one. It identifies
+/// the caller for audit and grants nothing.
+/// </summary>
+/// <param name="Kind">
+/// How the caller authenticated, as a JSON integer: 0 Unknown, 1 TrustedLocalOperator, 2 ManagedCredential, 3
+/// LegacyAuthenticated, 4 AuthenticationDisabled.
+/// </param>
+/// <param name="CredentialId">Managed API credential that authenticated the caller; null for every other kind.</param>
+/// <param name="Issuer">Issuer of the caller's credential or token; null when unknown.</param>
+/// <param name="Subject">
+/// Subject of the caller's token; <c>api-authorization-disabled</c> when API authorization was disabled for the
+/// request; null when unknown.
+/// </param>
+/// <param name="DisplayName">
+/// Display name of the managed credential, or <c>Local operator</c> for the local operator; null otherwise.
+/// </param>
 public sealed record HistoryCaller(
     HistoryAuthenticationKind Kind,
     ManagedCredentialId? CredentialId = null,

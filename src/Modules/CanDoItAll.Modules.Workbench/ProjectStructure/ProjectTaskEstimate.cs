@@ -22,7 +22,8 @@ public enum ProjectWorkItemEffortUnit
 /// unconverted man-day quantity here.
 /// </param>
 /// <param name="ExpectedEffortUnit">
-/// Unit selected for entering and displaying the effort. It does not change the unit of <c>expectedEffortHours</c>.
+/// Unit selected for entering and displaying the effort, as a JSON integer: 0 Hours, 1 ManDays. It does not change the
+/// unit of <c>expectedEffortHours</c>.
 /// </param>
 /// <param name="ExpectedCostAmount">
 /// Expected total monetary cost of the task, or null when no cost is recorded. A supplied amount must be from 0

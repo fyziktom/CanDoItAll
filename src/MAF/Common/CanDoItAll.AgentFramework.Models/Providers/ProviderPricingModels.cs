@@ -6,26 +6,53 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Token prices of one model of a provider profile, in US dollars per 1,000,000 tokens, used to estimate run costs. A
+/// row whose standard rates are all 0 counts as unpriced unless <c>tariffKind</c> is 2 ExplicitFree.
+/// </summary>
+/// <param name="Model">Model identifier the prices apply to, matched ignoring case; unique within a profile.</param>
+/// <param name="InputPerMillionTokensUsd">Rate for input tokens not served from the prompt cache; not negative.</param>
+/// <param name="CachedInputPerMillionTokensUsd">
+/// Rate for input tokens served from the prompt cache; not negative.
+/// </param>
+/// <param name="OutputPerMillionTokensUsd">Rate for output tokens; not negative.</param>
 public sealed record ProviderModelTokenPrice(
     string Model,
     decimal InputPerMillionTokensUsd,
     decimal CachedInputPerMillionTokensUsd,
     decimal OutputPerMillionTokensUsd)
 {
+    /// <summary>
+    /// Tariff of the model, as a JSON integer: 0 Unspecified (priced by the rates), 1 Configured (not used),
+    /// 2 ExplicitFree (free of charge; every rate must be 0).
+    /// </summary>
     public ProviderTariffKind TariffKind { get; init; }
 
+    /// <summary>
+    /// Rate for prompt-cache write tokens, or null when the model has no separate rate; not negative.
+    /// </summary>
     public decimal? CacheWritePerMillionTokensUsd { get; init; }
 
+    /// <summary>
+    /// Input size in tokens above which the long-context rates apply, or null when the model has none. When any
+    /// long-context value is set, this must be positive and the long-context input, cached input and output rates
+    /// must be set.
+    /// </summary>
     public int? LongContextThresholdTokens { get; init; }
 
+    /// <summary>Long-context rate for uncached input tokens, or null; not negative.</summary>
     public decimal? LongContextInputPerMillionTokensUsd { get; init; }
 
+    /// <summary>Long-context rate for cached input tokens, or null; not negative.</summary>
     public decimal? LongContextCachedInputPerMillionTokensUsd { get; init; }
 
+    /// <summary>Long-context rate for prompt-cache write tokens, or null; not negative.</summary>
     public decimal? LongContextCacheWritePerMillionTokensUsd { get; init; }
 
+    /// <summary>Long-context rate for output tokens, or null; not negative.</summary>
     public decimal? LongContextOutputPerMillionTokensUsd { get; init; }
 
+    /// <summary>Set by the server: true when at least one standard rate is above 0.</summary>
     public bool HasConfiguredStandardPrice =>
         InputPerMillionTokensUsd > 0m ||
         CachedInputPerMillionTokensUsd > 0m ||
@@ -49,28 +76,49 @@ public sealed record ProviderModelPricingMergeResult(
     int ExplicitPriceCount,
     int ModelNameOnlyCount);
 
+/// <summary>
+/// Editable token prices of one model of a provider profile, in US dollars per 1,000,000 tokens. Rows must have a
+/// model name that is unique ignoring case, no negative rate, only zero rates for an explicitly free tariff and, when
+/// any long-context value is set, a positive threshold with long-context input, cached input and output rates.
+/// </summary>
 public sealed class ProviderModelTokenPriceEditorModel
 {
+    /// <summary>Model identifier the prices apply to; trimmed.</summary>
     public string Model { get; set; } = string.Empty;
 
+    /// <summary>Rate for input tokens not served from the prompt cache.</summary>
     public decimal InputPerMillionTokensUsd { get; set; }
 
+    /// <summary>Rate for input tokens served from the prompt cache.</summary>
     public decimal CachedInputPerMillionTokensUsd { get; set; }
 
+    /// <summary>Rate for output tokens.</summary>
     public decimal OutputPerMillionTokensUsd { get; set; }
 
+    /// <summary>
+    /// Tariff of the model, as a JSON integer: 0 Unspecified (priced by the rates, the default), 1 Configured (not
+    /// used), 2 ExplicitFree (free of charge; every rate must be 0).
+    /// </summary>
     public ProviderTariffKind TariffKind { get; set; }
 
+    /// <summary>Rate for prompt-cache write tokens, or null when the model has no separate rate.</summary>
     public decimal? CacheWritePerMillionTokensUsd { get; set; }
 
+    /// <summary>
+    /// Input size in tokens above which the long-context rates apply, or null when the model has none.
+    /// </summary>
     public int? LongContextThresholdTokens { get; set; }
 
+    /// <summary>Long-context rate for uncached input tokens, or null.</summary>
     public decimal? LongContextInputPerMillionTokensUsd { get; set; }
 
+    /// <summary>Long-context rate for cached input tokens, or null.</summary>
     public decimal? LongContextCachedInputPerMillionTokensUsd { get; set; }
 
+    /// <summary>Long-context rate for prompt-cache write tokens, or null.</summary>
     public decimal? LongContextCacheWritePerMillionTokensUsd { get; set; }
 
+    /// <summary>Long-context rate for output tokens, or null.</summary>
     public decimal? LongContextOutputPerMillionTokensUsd { get; set; }
 }
 

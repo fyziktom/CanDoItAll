@@ -58,12 +58,14 @@ public readonly record struct ProcessInstanceId
     public override string ToString() => Value.ToString("D");
 }
 
+/// <summary>Identifier of a process run.</summary>
 public readonly record struct ProcessRunId {
     [JsonConstructor]
     public ProcessRunId(Guid value) {
         Value = ProcessIdentifierValidation.RequireGuid(value, nameof(value));
     }
 
+    /// <summary>The run identifier, a non-empty GUID.</summary>
     public Guid Value { get; }
 
     public static ProcessRunId New() => new(Guid.NewGuid());

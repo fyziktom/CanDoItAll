@@ -8,6 +8,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// How far a workflow run's result has been delivered to its project structure node, as a JSON integer. 0 Prepared
+/// (the launch admission is recorded), 1 Pending (the run or its outputs are not fully observed and delivered yet),
+/// 2 Applied (the run's status and outputs are applied to the node), 3 Superseded (a newer launch of the node replaced
+/// it), 4 TargetChanged (the node's workflow settings changed after the launch, so the result is not applied),
+/// 5 TargetDeleted (the node or its project lifetime no longer exists), 6 LegacyObservation (a run started before
+/// launch admissions were recorded), 7 AuthorityBlocked (the launching authority no longer allows the delivery).
+/// </summary>
 public enum ProjectWorkflowDeliveryState {
     Prepared,
     Pending,

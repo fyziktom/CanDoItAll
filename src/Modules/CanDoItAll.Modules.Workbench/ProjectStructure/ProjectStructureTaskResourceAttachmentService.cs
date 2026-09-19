@@ -5,13 +5,43 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// Task resource attachment request: a workflow or process definition to attach to a canonical task, the task's
+/// execution state as last read and, for a workflow, its run input settings. Persons and agents are assigned with the
+/// task update instead.
+/// </summary>
+/// <param name="Resource">
+/// Workflow (with its exact <c>versionId</c>) or process definition to attach; required. Person and Agent are rejected
+/// with HTTP 400 <c>TaskAttachedResourceKindInvalid</c>.
+/// </param>
+/// <param name="CurrentExecution">
+/// Execution state of the task from the caller's latest read, taken from <c>workItem.executionState</c>,
+/// <c>workItem.actualStartedAtUtc</c> and <c>workItem.actualEndedAtUtc</c> in its <c>metadataJson</c>; required. It
+/// is checked against the stored state before the task is repriced.
+/// </param>
+/// <param name="WorkflowInputSettings">
+/// Run input settings for a workflow resource; null uses the defaults. Sending them for a process is rejected with HTTP
+/// 400 <c>TaskWorkflowInputSettingsResourceKindInvalid</c>.
+/// </param>
 public sealed record ProjectStructureTaskResourceAttachRequest(
     [property: JsonRequired] ProjectStructureTaskResourceSelection Resource,
     [property: JsonRequired] ProjectTaskExecutionSnapshot CurrentExecution,
     ProjectStructureWorkflowInputSettings? WorkflowInputSettings = null) {
+    /// <summary>
+    /// Project write admission returned as <c>expectedProjectAdmission</c> by the structure read, sent back unchanged.
+    /// Required: when it is omitted, null or names another project, the request is rejected with HTTP 409
+    /// <c>ProjectLifetimeRefreshRequired</c> and nothing is attached.
+    /// </summary>
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 }
 
+/// <summary>Result of a committed task resource attachment, with the repricing it caused.</summary>
+/// <param name="Resource">The attached resource.</param>
+/// <param name="Pricing">How the task's estimate was repriced for the resource.</param>
+/// <param name="CreatedNodeId">
+/// Identifier of the node created under the task for the resource (for example a workflow node); null when no node was
+/// created.
+/// </param>
 public sealed record ProjectStructureTaskResourceAttachResult(
     ProjectStructureTaskResourceSelection Resource,
     ProjectStructureTaskEstimateRefreshResult Pricing,

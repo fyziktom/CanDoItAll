@@ -44,8 +44,13 @@ public sealed record PartyRecordQuery(
 /// </summary>
 /// <param name="Id">Party identifier, used by the other party operations.</param>
 /// <param name="DisplayName">Name shown for the party. Always returned, also for sensitive parties.</param>
-/// <param name="PartyType">Kind of party (person, organization, organization unit or AI agent).</param>
-/// <param name="LifecycleStatus">Current lifecycle status of the party record.</param>
+/// <param name="PartyType">
+/// Kind of party, as a JSON integer: 0 Person, 1 Organization, 2 OrganizationUnit, 3 AiAgent.
+/// </param>
+/// <param name="LifecycleStatus">
+/// Current lifecycle status of the party record, as a JSON integer: 0 Draft, 1 Active, 2 Inactive, 3 Archived
+/// (party lists include archived parties only on request), 4 Former, 5 Candidate, 6 Prospect.
+/// </param>
 /// <param name="ExternalCode">
 /// Business reference supplied by the organization, for example an ERP or customer number. It is not guaranteed to
 /// be unique. Empty for sensitive parties.

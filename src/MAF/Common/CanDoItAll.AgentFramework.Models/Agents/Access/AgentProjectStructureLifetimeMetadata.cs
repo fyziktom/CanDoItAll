@@ -2,7 +2,19 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Binding of an agent's Project Structure access to one incarnation (lifetime) of a project in one database profile.
+/// A project that is deleted and recreated gets a new lifetime, so an old binding no longer admits writes to it. The
+/// server creates and removes these bindings; clients send them back unchanged. All three identifiers are required and
+/// must not be the all-zero GUID.
+/// </summary>
 public sealed record AgentProjectStructureLifetime {
+    /// <summary>
+    /// Creates a binding.
+    /// </summary>
+    /// <param name="databaseProfileId">Identifier of the database profile that holds the project.</param>
+    /// <param name="projectId">Identifier of the project.</param>
+    /// <param name="lifetimeId">Identifier of the project's lifetime (incarnation) the access applies to.</param>
     public AgentProjectStructureLifetime(Guid databaseProfileId, Guid projectId, Guid lifetimeId) {
         if (databaseProfileId == Guid.Empty || projectId == Guid.Empty || lifetimeId == Guid.Empty) {
             throw new ArgumentException("Project access requires nonempty database profile, project and lifetime identifiers.");
@@ -12,8 +24,16 @@ public sealed record AgentProjectStructureLifetime {
         LifetimeId = lifetimeId;
     }
 
+    /// <summary>Identifier of the database profile that holds the project.</summary>
     public Guid DatabaseProfileId { get; }
+
+    /// <summary>Identifier of the project; it must also appear in <c>allowedProjectIds</c>.</summary>
     public Guid ProjectId { get; }
+
+    /// <summary>
+    /// Identifier of the project lifetime (incarnation) the access applies to. It is not exposed by the Projects API;
+    /// take it from a previous agent read.
+    /// </summary>
     public Guid LifetimeId { get; }
 
     public bool MatchesScope(Guid databaseProfileId, WorkspaceScopeDescriptor? scope)

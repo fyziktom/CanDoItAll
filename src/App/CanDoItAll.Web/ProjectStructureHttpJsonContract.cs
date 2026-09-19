@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -64,9 +65,31 @@ internal static class ProjectStructureHttpJsonContract
                 bodyContract.Shape == ProjectStructureObjectTypeBodyShape.OptionalArray
                     ? CreateObjectTypeArrayInputSchema(bodyContract)
                     : CreateObjectTypeInputSchema(bodyContract);
+
+            // These routes read the body themselves, so no handler parameter carries a request-body description.
+            if (requestBody is OpenApiRequestBody concreteRequestBody &&
+                string.IsNullOrWhiteSpace(concreteRequestBody.Description))
+            {
+                concreteRequestBody.Description = DescribeRequestBody(requestSchema, bodyContract);
+            }
         }
 
         return Task.CompletedTask;
+    }
+
+    private static string DescribeRequestBody(
+        IOpenApiSchema requestSchema,
+        ProjectStructureHttpBodyContract bodyContract)
+    {
+        var transport =
+            "Send one JSON object as `application/json` or `application/*+json`. The Project Structure reader " +
+            "rejects other content types with HTTP 415 `ProjectStructureContentTypeUnsupported`, a body larger than " +
+            $"{bodyContract.MaximumBodyBytes.ToString("N0", CultureInfo.InvariantCulture)} bytes with HTTP 413 " +
+            "`ProjectStructureRequestBodyTooLarge`, and malformed JSON or members of the wrong JSON type with " +
+            "HTTP 400 `ProjectStructureRequestInvalid`.";
+        return string.IsNullOrWhiteSpace(requestSchema.Description)
+            ? transport
+            : $"{requestSchema.Description.TrimEnd()} {transport}";
     }
 
     public static async Task<TRequest> ReadRequestAsync<TRequest>(
@@ -387,9 +410,13 @@ internal static class ProjectStructureHttpJsonContract
         {
             Description = bodyContract.AllowNodeKindAliases
                 ? bodyContract.Shape == ProjectStructureObjectTypeBodyShape.OptionalSingle
-                    ? "Case-insensitive canonical ProjectObjectType symbol, existing node-kind alias, defined numeric value, or null to preserve the current type."
-                    : "Case-insensitive canonical ProjectObjectType symbol, existing node-kind alias, or defined numeric value."
-                : "Case-insensitive canonical ProjectObjectType symbol or defined numeric value.",
+                    ? "Object type to give the node: its name in any casing (for example `WorkItem`), a node-kind " +
+                      "alias that also sets the subtype (for example `FeatureBlock` or `Folder`) or its integer from " +
+                      "0 through 30; null or omitted keeps the current type."
+                    : "Object type of the new node: its name in any casing (for example `WorkItem`), a node-kind " +
+                      "alias that also sets the subtype (for example `FeatureBlock` or `Folder`) or its integer from " +
+                      "0 through 30."
+                : "Object type as its name in any casing (for example `WorkItem`) or its integer from 0 through 30.",
             OneOf = alternatives
         };
     }
@@ -413,7 +440,8 @@ internal static class ProjectStructureHttpJsonContract
         ProjectStructureHttpBodyContract bodyContract)
         => new()
         {
-            Description = "Optional ProjectObjectType filters. A null collection means no object-type filter; null array items are not supported.",
+            Description = "Object types to keep, each as its name in any casing (for example `WorkItem`) or its " +
+                "integer from 0 through 30; null or an empty array keeps every type. Null items are rejected.",
             OneOf =
             [
                 new OpenApiSchema
@@ -586,8 +614,8 @@ internal static class ProjectStructureHttpJsonContract
         {
             Type = JsonSchemaType.String,
             Description = string.IsNullOrWhiteSpace(useDescription)
-                ? "Canonical ProjectObjectType response symbol."
-                : $"{useDescription.TrimEnd()} Returned as the canonical ProjectObjectType symbol.",
+                ? "Object type name, for example `WorkItem`."
+                : $"{useDescription.TrimEnd()} Returned as the object type name, for example `WorkItem`.",
             Enum = CreateSymbolEnum()
         };
 
@@ -686,6 +714,67 @@ internal static class ProjectStructureHttpBodyContracts
             AssetMutationBodyBytes);
 }
 
+/// <summary>
+/// Acknowledgement returned by Project Structure operations that have no other result, always
+/// <c>{ "ok": true }</c>. It only confirms that the operation completed; read the affected project or structure again
+/// to see the stored result.
+/// </summary>
+/// <param name="Ok">Always true. Failures return the Project Structure error envelope instead.</param>
+internal sealed record ProjectStructureOkResponse(bool Ok);
+
+/// <summary>
+/// Node creation request: the kind of node, its display fields and an optional parent, schedule, file, metadata and
+/// canvas position. Canonical tasks (WorkItem with subtype <c>task</c>) are created with the task operation, and File
+/// nodes and <c>mermaid</c> subtypes with the asset operation. Every string member may be omitted; omitted strings are
+/// stored as empty.
+/// </summary>
+/// <param name="ObjectType">
+/// Object type of the new node: its name in any casing, a typed alias that also sets the subtype, or its integer.
+/// </param>
+/// <param name="Title">Title of the new node.</param>
+/// <param name="Subtitle">Secondary display text.</param>
+/// <param name="Notes">Free-text notes.</param>
+/// <param name="ParentNodeKey">
+/// Identifier of the parent node, as returned in <c>nodes[].id</c>; null or blank places the node under the project
+/// root. An unknown parent is rejected with HTTP 404 <c>ParentNodeNotFound</c>.
+/// </param>
+/// <param name="X">
+/// Preferred horizontal canvas position; used as a hint only when <c>y</c> is also sent. The node is placed near its
+/// parent automatically.
+/// </param>
+/// <param name="Y">Preferred vertical canvas position; used as a hint only when <c>x</c> is also sent.</param>
+/// <param name="StartUtc">Planned start as an instant with offset; null or omitted leaves the node unscheduled.</param>
+/// <param name="EndUtc">
+/// Planned end as an instant with offset. When omitted and <c>startUtc</c> is sent, the end is the start plus
+/// <c>durationSeconds</c> (one hour when that is omitted or not positive).
+/// </param>
+/// <param name="ObjectSubtype">
+/// Lower-case subtype, for example <c>feature</c> for a ProjectBlock; known synonyms are normalized. A typed alias in
+/// <c>objectType</c> supplies it when omitted. See <c>objectTypes[].creatableSubtypes</c> in the node catalog.
+/// </param>
+/// <param name="Media">
+/// Optional file content stored with the node, for example the picture of an ImageAsset. File nodes are created with
+/// the asset operation instead.
+/// </param>
+/// <param name="MetadataJson">
+/// Optional metadata as a JSON string that contains a JSON object, with the section for the node's type (see the node
+/// catalog guidance). It takes precedence over <c>metadata</c> when not blank. Script, Environment and Infrastructure
+/// metadata is validated.
+/// </param>
+/// <param name="Metadata">
+/// Optional metadata as a JSON object instead of a string; used only when <c>metadataJson</c> is null or blank.
+/// </param>
+/// <param name="LeaseToken">
+/// Optional token of the caller's active Project lease on this project, from <c>POST
+/// /api/project-structure/leases/acquire</c>. When omitted, the operation uses the project lease the caller's identity
+/// already holds, or else takes a five-minute project lease for its own duration, waiting for another identity's lease
+/// that ends within 30 seconds (a longer one fails with HTTP 409 <c>LeaseConflict</c>); when sent, it must match the
+/// caller's active project lease, otherwise HTTP 409 <c>LeaseMissing</c> or <c>LeaseConflict</c>.
+/// </param>
+/// <param name="DurationSeconds">
+/// Planned duration in seconds; a value of 0 or less stores no duration. When omitted it is computed from the planned
+/// start and end.
+/// </param>
 internal sealed record ProjectStructureNodeCreateOpenApiRequest(
     ProjectObjectType ObjectType,
     string Title,
@@ -703,6 +792,48 @@ internal sealed record ProjectStructureNodeCreateOpenApiRequest(
     string? LeaseToken = null,
     int? DurationSeconds = null);
 
+/// <summary>
+/// Node update request for a generic node. It replaces the node's subtitle, notes and schedule with the sent values,
+/// so send the current values of members you do not want to change: an omitted or null <c>subtitle</c> or
+/// <c>notes</c> clears it, and omitted schedule members clear the planned interval unless the request also
+/// reclassifies the node. A blank <c>title</c> keeps the
+/// current title, and blank <c>metadataJson</c> and <c>metadata</c> keep the stored metadata. A new
+/// <c>objectType</c> or <c>objectSubtype</c> reclassifies the node, which only some kind changes allow.
+/// </summary>
+/// <param name="Title">New title; blank or omitted keeps the current title.</param>
+/// <param name="Subtitle">New subtitle; omitted or null clears it.</param>
+/// <param name="Notes">New notes; omitted or null clears them.</param>
+/// <param name="ObjectType">
+/// New object type: its name in any casing, a typed alias or its integer; null or omitted keeps the current type.
+/// </param>
+/// <param name="ObjectSubtype">
+/// New lower-case subtype; null or omitted keeps the current subtype, or clears it when the object type changes.
+/// </param>
+/// <param name="StartUtc">
+/// Planned start as an instant with offset; omitted or null clears it when the type stays the same.
+/// </param>
+/// <param name="EndUtc">
+/// Planned end as an instant with offset. When omitted and <c>startUtc</c> is sent, the end is the start plus
+/// <c>durationSeconds</c> (one hour when that is omitted or not positive).
+/// </param>
+/// <param name="MetadataJson">
+/// New metadata as a JSON string that contains a JSON object; it replaces the stored metadata and takes precedence
+/// over <c>metadata</c>. Blank keeps the stored metadata.
+/// </param>
+/// <param name="Metadata">
+/// New metadata as a JSON object instead of a string; used only when <c>metadataJson</c> is null or blank.
+/// </param>
+/// <param name="LeaseToken">
+/// Optional token of the caller's active Project lease on this project, from <c>POST
+/// /api/project-structure/leases/acquire</c>. When omitted, the operation uses the project lease the caller's identity
+/// already holds, or else takes a five-minute project lease for its own duration, waiting for another identity's lease
+/// that ends within 30 seconds (a longer one fails with HTTP 409 <c>LeaseConflict</c>); when sent, it must match the
+/// caller's active project lease, otherwise HTTP 409 <c>LeaseMissing</c> or <c>LeaseConflict</c>.
+/// </param>
+/// <param name="DurationSeconds">
+/// Planned duration in seconds; a value of 0 or less stores no duration. When omitted it is computed from the planned
+/// start and end.
+/// </param>
 internal sealed record ProjectStructureNodeEditOpenApiRequest(
     string Title,
     string Subtitle,

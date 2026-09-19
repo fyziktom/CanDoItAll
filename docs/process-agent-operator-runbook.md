@@ -34,7 +34,7 @@ This runbook covers the current PostgreSQL-backed process runtime, local dispatc
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
 | `POST` | `/api/processes/launch` | Accept the prepared durable run and optionally queue it. |
 | `GET` | `/api/processes/launch/{admissionId}` | Read preparation, acceptance, continuation and link delivery without executing them. |
-| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work once. |
+| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready steps within the request until none is ready or the run is blocked, cancel-requested or finished (at most 200 passes). |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
 | `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
 | `GET` | `/api/processes/live` | Read live projections. |

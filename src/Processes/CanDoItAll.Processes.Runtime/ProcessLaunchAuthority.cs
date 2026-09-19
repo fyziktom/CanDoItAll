@@ -3,6 +3,7 @@ using CanDoItAll.Processes.Abstractions;
 
 namespace CanDoItAll.Processes.Runtime;
 
+/// <summary>Identifier of a prepared process launch (its admission).</summary>
 public readonly record struct ProcessLaunchAdmissionId {
     [JsonConstructor]
     public ProcessLaunchAdmissionId(Guid value) {
@@ -11,6 +12,7 @@ public readonly record struct ProcessLaunchAdmissionId {
         }
         Value = value;
     }
+    /// <summary>The admission identifier, a non-empty GUID.</summary>
     public Guid Value { get; }
 }
 

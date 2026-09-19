@@ -4,6 +4,19 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
+/// <summary>
+/// Outcome of one capability verification attempt, written in HTTP responses as the text name of the member.
+/// Rejected: the agent or capability does not exist, the capability is not assigned exactly once to the agent, or the
+/// agent's provider profile cannot be resolved; no diagnostic ran. CanceledBeforeDiagnostic: the request was cancelled
+/// before the diagnostic started. DiagnosticInterrupted: the diagnostic failed or was interrupted without a proof;
+/// nothing was published. Superseded: the agent, the capability or the agent's provider changed while the diagnostic
+/// ran, so its proof was not published. PublicationCanceled: the request was cancelled after the diagnostic and before
+/// publication.
+/// PublicationNotStarted: the current catalog could not be read after the diagnostic, so nothing was published.
+/// Committed: the proof was published on the agent's capability assignment and on the catalog capability.
+/// Unconfirmed: the publication write failed and the proof may or may not have been stored.
+/// InfrastructureUnavailable: the catalog or provider state could not be read before the diagnostic.
+/// </summary>
 public enum CapabilityVerificationDisposition {
     Rejected, CanceledBeforeDiagnostic, DiagnosticInterrupted, Superseded, PublicationCanceled, PublicationNotStarted, Committed, Unconfirmed, InfrastructureUnavailable
 }

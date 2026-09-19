@@ -25,13 +25,21 @@ document. Do not add SwaggerGen or a second generator.
    from a NuGet package contributes no XML.
 3. The product's own transformers run after the generated ones, in this order:
    - `OpenApiNullableTypeDescriptions` gives a component schema that was first generated from an optional
-     value type (`Nullable<T>`) the XML description of `T`, using the same generated transformer.
+     value type (`Nullable<T>`) the XML descriptions of `T` and of its properties, using the same generated
+     transformer; the framework visits neither for `Nullable<T>`.
    - `SharedProviderOpenApiSchemas` builds the shared-provider relay schemas, which have no CLR type.
    - `OpenApiExternalSchemaDescriptions` describes the few framework and Components types the API exposes
-     (`ProblemDetails`, `JsonElement`, `IFormFile`, Gantt identifiers and gestures).
+     (`ProblemDetails`, `JsonElement`, `IFormFile`, `Stream`, Gantt identifiers and gestures).
    - The Project Structure, workflow-response and shared-provider operation transformers adjust their
      operations. The Project Structure transformer inlines response schemas; it keeps the description of each
      use of a referenced type.
+   - `OpenApiFormParameterDescriptions` copies the `[Description]` of a form handler parameter, such as a bare
+     `IFormFile`, to its property in the generated form request-body schema, which XML comments cannot reach.
+   - `OpenApiDuplicateParameters` keeps one parameter when a handler parameter and an `[AsParameters]` property
+     bind the same route value, as OpenAPI requires unique parameter names per location. An XML `<param>` for
+     such a name makes the generator fail; describe it with `[Description]`.
+   - `OpenApiDiscriminatorDescriptions` describes the discriminator property (such as `$origin`) that the
+     generator adds to each variant of a polymorphic type, using the value from the base schema's mapping.
    - `OpenApiDescriptionText` normalizes all prose last: it joins wrapped lines, keeps paragraphs and list
      items, decodes XML entities and removes platform line endings, so the document is byte-identical on
      every build platform.
@@ -51,6 +59,15 @@ document. Do not add SwaggerGen or a second generator.
   Never document service, `HttpContext` or `CancellationToken` parameters: every documented parameter that
   is not an HTTP parameter overwrites the request-body description. CS1573 is suppressed in the Web project
   for that reason.
+- **Header parameters with a wire name.** The generator matches `<param>` by the OpenAPI parameter name, so
+  a `[FromHeader(Name = "If-Match")]` or `Idempotency-Key` parameter cannot be reached from XML. Describe it
+  with `[Description]` from `System.ComponentModel` and leave its `<param>` out.
+- **Form parameters.** The `<param>` of a bare form parameter such as `IFormFile file` describes the request
+  body; give the parameter a `[Description]` as well, which `OpenApiFormParameterDescriptions` puts on its
+  form field.
+- **Bodies read by the handler.** When a handler reads the body itself and declares it with `Accepts<T>`,
+  describe the body with the `<param>` of its `HttpRequest` parameter; that text becomes the request-body
+  description.
 - **Responses.** Declare every status the handler can return with `.Produces<T>(status)`, the family's error
   helper (`ProducesApiErrors`, `ProducesProjectStructureErrors`) or `ProducesProblem`, using the type and
   media type the handler really writes. Document each declared status with `<response code="...">`. A
@@ -71,6 +88,9 @@ Follow the SharedInfo standard. In this repository in particular:
 - State the wire form of every enum: JSON integers unless a string converter is registered for that enum
   in `ApiServiceCollectionExtensions` or on the type. Project Structure responses use their own serializer,
   which writes `ProjectObjectType` as its symbol.
+- Repeat the wire form and the accepted values on every enum-typed property and parameter. Swagger UI
+  shows the property's own description instead of the enum type's, and an integer enum schema carries no
+  list of values.
 - Name the family's error envelope: the general `errors` array (`ApiErrorResponse`), the Project Structure
   `error` object, `ProblemDetails` for LLM Chats, and the shared-provider relay errors.
 - Distinguish required, nullable, omitted and empty. Constructor parameters of request records appear as
@@ -85,7 +105,15 @@ Follow the SharedInfo standard. In this repository in particular:
   Structure responses and platform-independent text.
 - `ApiDocumentationCoverageTests` fail when an operation, parameter, request body, response, component
   schema or property of the generated document has no description, except for the reviewed exclusions
-  listed in the test.
+  listed in the test, and when an integer enum schema, or a property or parameter of that type, does not
+  list its values.
+- `ProjectStructureTaskUpdateRawJsonTests` send the documented task update as literal JSON built only from
+  the structure read, including the `metadataJson` extraction, and check the documented success, conflict
+  and rejection behavior.
+- `SwaggerApiDocumentationBrowserTests` (Playwright) open the rendered Swagger UI, check operation,
+  parameter, response and nested schema descriptions, and run the task update from "Try it out" on a
+  synthetic project. Set `CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE=true` to save focused screenshots under
+  `output/playwright/swagger-api-documentation`.
 - Structural changes to the document are reviewed separately from prose: compare the route, operation
   identifier, schema, required-member, enum, media-type and security metadata of the documents before and
   after a change, and justify every difference with runtime evidence.

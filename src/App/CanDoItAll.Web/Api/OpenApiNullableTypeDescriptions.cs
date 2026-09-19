@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
@@ -5,13 +6,15 @@ namespace CanDoItAll.Web.Api;
 
 // The generated XML comment transformer finds a schema's description through the CLR type of its JsonTypeInfo. When a
 // component schema is first generated from an optional value type, that type is Nullable<T>, which has no
-// documentation, so enums and structs used as optional members or query parameters would lose their descriptions.
-// This transformer passes the underlying type to the same generated transformer, so the text still comes from the
-// type's XML documentation. Only component schemas are filled; a property's own role description is never replaced.
+// documentation and no properties, so the framework neither describes the component nor visits its property schemas:
+// enums and structs used as optional members or query parameters would lose their descriptions. This transformer
+// passes the underlying type, and each of its properties, to the same generated transformer, so the text still comes
+// from the type's XML documentation. It only fills descriptions that are still empty.
 internal sealed class OpenApiNullableTypeDescriptions : IOpenApiSchemaTransformer
 {
     private const string GeneratedTransformerName = "XmlCommentSchemaTransformer";
     private const string SchemaIdMetadataKey = "x-schema-id";
+    private const int MaximumPropertyDepth = 8;
 
     private readonly IOpenApiSchemaTransformer xmlCommentTransformer = CreateGeneratedTransformer();
 
@@ -20,8 +23,7 @@ internal sealed class OpenApiNullableTypeDescriptions : IOpenApiSchemaTransforme
         OpenApiSchemaTransformerContext context,
         CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(schema.Description) ||
-            Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) is not { } underlyingType ||
+        if (Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) is not { } underlyingType ||
             schema.Metadata is null ||
             !schema.Metadata.TryGetValue(SchemaIdMetadataKey, out var schemaId) ||
             string.IsNullOrEmpty(schemaId as string))
@@ -29,15 +31,56 @@ internal sealed class OpenApiNullableTypeDescriptions : IOpenApiSchemaTransforme
             return Task.CompletedTask;
         }
 
-        var underlyingContext = new OpenApiSchemaTransformerContext
+        return DescribeAsync(
+            schema,
+            context.JsonTypeInfo.Options.GetTypeInfo(underlyingType),
+            propertyInfo: null,
+            context,
+            depth: 0,
+            cancellationToken);
+    }
+
+    private async Task DescribeAsync(
+        OpenApiSchema schema,
+        JsonTypeInfo typeInfo,
+        JsonPropertyInfo? propertyInfo,
+        OpenApiSchemaTransformerContext context,
+        int depth,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(schema.Description))
         {
-            DocumentName = context.DocumentName,
-            JsonTypeInfo = context.JsonTypeInfo.Options.GetTypeInfo(underlyingType),
-            JsonPropertyInfo = null,
-            ParameterDescription = null,
-            ApplicationServices = context.ApplicationServices
-        };
-        return xmlCommentTransformer.TransformAsync(schema, underlyingContext, cancellationToken);
+            var underlyingContext = new OpenApiSchemaTransformerContext
+            {
+                DocumentName = context.DocumentName,
+                JsonTypeInfo = typeInfo,
+                JsonPropertyInfo = propertyInfo,
+                ParameterDescription = null,
+                ApplicationServices = context.ApplicationServices
+            };
+            await xmlCommentTransformer.TransformAsync(schema, underlyingContext, cancellationToken);
+        }
+
+        if (depth >= MaximumPropertyDepth || schema.Properties is not { Count: > 0 } properties)
+        {
+            return;
+        }
+
+        foreach (var property in typeInfo.Properties)
+        {
+            if (properties.TryGetValue(property.Name, out var propertySchema) &&
+                propertySchema is OpenApiSchema concreteSchema)
+            {
+                var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                await DescribeAsync(
+                    concreteSchema,
+                    typeInfo.Options.GetTypeInfo(propertyType),
+                    property,
+                    context,
+                    depth + 1,
+                    cancellationToken);
+            }
+        }
     }
 
     private static IOpenApiSchemaTransformer CreateGeneratedTransformer()

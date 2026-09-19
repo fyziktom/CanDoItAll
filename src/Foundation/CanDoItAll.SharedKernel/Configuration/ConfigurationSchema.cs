@@ -3,6 +3,11 @@ using System.Text.Json;
 
 namespace CanDoItAll.SharedKernel.Configuration;
 
+/// <summary>
+/// Value type of a settings field, as a JSON integer: 0 Text, 1 Url (absolute http or https URL), 2 Number (see
+/// <c>numberKind</c>), 3 Boolean (<c>true</c> or <c>false</c>), 4 Json (JSON text), 5 SecretReference (identifier of a
+/// stored secret, a non-empty GUID), 6 Select (one of the field's options), 7 MultilineText, 8 Guid (a non-empty GUID).
+/// </summary>
 public enum ConfigurationFieldType
 {
     Text,
@@ -16,6 +21,10 @@ public enum ConfigurationFieldType
     Guid
 }
 
+/// <summary>
+/// Number format of a Number settings field, as a JSON integer: 0 Int32, 1 Int64, 2 Decimal, 3 Double (finite values
+/// only).
+/// </summary>
 public enum ConfigurationNumberKind
 {
     Int32,
@@ -24,11 +33,33 @@ public enum ConfigurationNumberKind
     Double
 }
 
+/// <summary>
+/// One allowed value of a Select settings field.
+/// </summary>
+/// <param name="Value">The value to store.</param>
+/// <param name="Label">Display label of the value.</param>
 public sealed record ConfigurationFieldOption(string Value, string Label)
 {
+    /// <summary>
+    /// Other values accepted as equivalent to <c>value</c> (compared case-insensitively); empty when there are none.
+    /// </summary>
     public IReadOnlyList<string> AcceptedValues { get; init; } = [];
 }
 
+/// <summary>
+/// One field of a settings form.
+/// </summary>
+/// <param name="Key">
+/// Key of the field in the settings JSON object, for example <c>label</c>; settings keys are compared
+/// case-insensitively.
+/// </param>
+/// <param name="Label">Display label of the field.</param>
+/// <param name="FieldType">
+/// Value type, as a JSON integer: 0 Text, 1 Url, 2 Number, 3 Boolean, 4 Json, 5 SecretReference, 6 Select,
+/// 7 MultilineText, 8 Guid.
+/// </param>
+/// <param name="IsRequired">True when the field must have a non-blank value.</param>
+/// <param name="HelpText">Help text shown with the field.</param>
 public record ConfigurationFieldDescriptor(
     string Key,
     string Label,
@@ -36,11 +67,23 @@ public record ConfigurationFieldDescriptor(
     bool IsRequired,
     string HelpText)
 {
+    /// <summary>Allowed values of a Select field; empty for other field types.</summary>
     public IReadOnlyList<ConfigurationFieldOption> Options { get; init; } = [];
 
+    /// <summary>
+    /// Number format of a Number field, as a JSON integer: 0 Int32, 1 Int64, 2 Decimal, 3 Double. 0 by default; ignored
+    /// for other field types.
+    /// </summary>
     public ConfigurationNumberKind NumberKind { get; init; } = ConfigurationNumberKind.Int32;
 }
 
+/// <summary>
+/// Description of a settings form: the fields of a flat JSON settings object, with their value types and whether
+/// they are required. Plugins use it for connection, plugin and workflow executor settings. It is not a JSON Schema
+/// document.
+/// </summary>
+/// <param name="Version">Version label of the form, for example <c>1.0</c>.</param>
+/// <param name="Fields">The fields, in display order; empty when there are no settings.</param>
 public record ConfigurationSchema(
     string Version,
     IReadOnlyList<ConfigurationFieldDescriptor> Fields)

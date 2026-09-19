@@ -115,6 +115,12 @@ public sealed record WorkflowBackendResumeRequest
     public WorkflowRunDisclosureDeclaration? DisclosureDeclaration { get; init; }
 }
 
+/// <summary>
+/// Outcome of a cancellation request, as a JSON integer: 0 CancellationRequested (the run was cancelled or signalled
+/// to stop), 1 AlreadyTerminal (the run had already finished), 2 NotFound (no such run), 3 NotActive (the run is not
+/// executing in this host, or its pending request is being answered), 4 BackendNotCancellable (the run's backend
+/// cannot cancel), 5 TransitionRejected (the waiting run could not be cancelled consistently).
+/// </summary>
 public enum WorkflowRunCancellationOutcome
 {
     CancellationRequested,
@@ -125,11 +131,26 @@ public enum WorkflowRunCancellationOutcome
     TransitionRejected
 }
 
+/// <summary>
+/// Result of <c>POST /api/workflows/runs/{runId}/cancel</c>, returned with every status code of that operation.
+/// </summary>
+/// <param name="Outcome">
+/// What happened, as a JSON integer: 0 CancellationRequested, 1 AlreadyTerminal, 2 NotFound, 3 NotActive,
+/// 4 BackendNotCancellable, 5 TransitionRejected. Only 0 means the request took effect.
+/// </param>
+/// <param name="Run">
+/// The stored run record as known when the outcome was decided, including the backend run identifier and the launch
+/// origin; null when the run was not found. After a signal it can still show the earlier state.
+/// </param>
+/// <param name="Message">Readable explanation of the outcome for display and logs; do not parse it.</param>
 public sealed record WorkflowRunCancellationResult(
     WorkflowRunCancellationOutcome Outcome,
     WorkflowRunSnapshot? Run,
     string Message)
 {
+    /// <summary>
+    /// True only when <c>outcome</c> is CancellationRequested.
+    /// </summary>
     public bool Succeeded => Outcome == WorkflowRunCancellationOutcome.CancellationRequested;
 }
 
@@ -311,18 +332,36 @@ public sealed record WorkflowEventPageRequest(
     int PageIndex = 0,
     int PageSize = 10);
 
+/// <summary>
+/// One page of a list, with the counts needed to page through it. Pages are zero-based and computed per request.
+/// </summary>
+/// <param name="Items">
+/// The entries on this page, in the list's order. Empty when nothing matched or the page is past the last one.
+/// </param>
+/// <param name="PageIndex">Zero-based index of this page, as used after the server applied its limits.</param>
+/// <param name="PageSize">Maximum number of entries per page, as used after the server applied its limits.</param>
+/// <param name="TotalCount">Number of entries on all pages together.</param>
 public sealed record WorkflowListPage<T>(
     IReadOnlyList<T> Items,
     int PageIndex,
     int PageSize,
     int TotalCount)
 {
+    /// <summary>
+    /// Number of pages: <c>totalCount</c> divided by <c>pageSize</c>, rounded up; 0 when nothing matched.
+    /// </summary>
     public int TotalPages => PageSize <= 0
         ? 0
         : (int)Math.Ceiling(TotalCount / (double)PageSize);
 
+    /// <summary>
+    /// True when <c>pageIndex</c> is greater than 0.
+    /// </summary>
     public bool HasPreviousPage => PageIndex > 0;
 
+    /// <summary>
+    /// True when a later page exists; request <c>pageIndex</c> + 1 to read it.
+    /// </summary>
     public bool HasNextPage => PageIndex + 1 < TotalPages;
 }
 

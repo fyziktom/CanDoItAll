@@ -17,6 +17,9 @@ public static class SharedProviderOpenAiConstants
     public const string TimeoutErrorType = "timeout_error";
 }
 
+/// <summary>
+/// One shared model in the OpenAI-style model list of <c>GET /api/shared-providers/openai/v1/models</c>.
+/// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderOpenAiModel
 {
@@ -52,19 +55,26 @@ public sealed record SharedProviderOpenAiModel
         OwnedBy = ownedBy;
     }
 
+    /// <summary>Routing identifier of the model; send it as <c>model</c> in the inference operations.</summary>
     [JsonPropertyName("id")]
     public SharedProviderRoutingModelId Id { get; }
 
+    /// <summary>Object type, always <c>model</c>.</summary>
     [JsonPropertyName("object")]
     public string Object { get; }
 
+    /// <summary>Creation time as Unix seconds; always 0, because the catalog records no creation time.</summary>
     [JsonPropertyName("created")]
     public long Created { get; }
 
+    /// <summary>Owner of the model, always <c>candoitall-shared</c>.</summary>
     [JsonPropertyName("owned_by")]
     public string OwnedBy { get; }
 }
 
+/// <summary>
+/// OpenAI-style list of every model the host shares, returned by <c>GET /api/shared-providers/openai/v1/models</c>.
+/// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderOpenAiModelList
 {
@@ -90,13 +100,22 @@ public sealed record SharedProviderOpenAiModelList
             .ToArray());
     }
 
+    /// <summary>Object type, always <c>list</c>.</summary>
     [JsonPropertyName("object")]
     public string Object { get; }
 
+    /// <summary>
+    /// The models of all shared publications, including models not suggested in pickers, sorted by <c>id</c>; empty
+    /// when nothing is shared.
+    /// </summary>
     [JsonPropertyName("data")]
     public IReadOnlyList<SharedProviderOpenAiModel> Data { get; }
 }
 
+/// <summary>
+/// Details of a failed OpenAI-compatible shared-provider request. The message is sanitized: it never contains raw
+/// upstream errors, credentials or internal diagnostics.
+/// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderOpenAiError
 {
@@ -146,15 +165,32 @@ public sealed record SharedProviderOpenAiError
         Code = code;
     }
 
+    /// <summary>
+    /// Human-readable explanation, at most 512 characters. Its wording can change; branch on <c>code</c> instead.
+    /// </summary>
     [JsonPropertyName("message")]
     public string Message { get; }
 
+    /// <summary>
+    /// Error class in OpenAI terms: <c>invalid_request_error</c>, <c>authentication_error</c>,
+    /// <c>permission_error</c>, <c>conflict_error</c>, <c>rate_limit_error</c>, <c>api_error</c> or
+    /// <c>timeout_error</c>.
+    /// </summary>
     [JsonPropertyName("type")]
     public string Type { get; }
 
+    /// <summary>
+    /// Request member or header the error refers to, for example <c>model</c>, <c>messages</c> or
+    /// <c>CanDoItAll-Access-Context-Ref</c>, at most 128 characters; null when the error concerns no single member.
+    /// </summary>
     [JsonPropertyName("param")]
     public string? Param { get; }
 
+    /// <summary>
+    /// Stable machine-readable reason, for example <c>shared_provider_request_invalid</c>,
+    /// <c>shared_provider_model_not_found</c> or <c>shared_provider_upstream_rate_limited</c>; at most 128 ASCII
+    /// letters, digits, dots, underscores and hyphens. Branch on this value.
+    /// </summary>
     [JsonPropertyName("code")]
     public string Code { get; }
 
@@ -171,6 +207,11 @@ public sealed record SharedProviderOpenAiError
                 character is '.' or '_' or '-');
 }
 
+/// <summary>
+/// Error body of the OpenAI-compatible shared-provider operations, in the OpenAI error shape: an object whose
+/// <c>error</c> member holds <c>message</c>, <c>type</c>, <c>param</c> and <c>code</c>. The native catalog operation
+/// uses the general <c>errors</c> envelope instead.
+/// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderOpenAiErrorEnvelope
 {
@@ -180,6 +221,7 @@ public sealed record SharedProviderOpenAiErrorEnvelope
         Error = error;
     }
 
+    /// <summary>Details of the failure.</summary>
     [JsonPropertyName("error")]
     public SharedProviderOpenAiError Error { get; }
 }

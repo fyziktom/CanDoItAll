@@ -2,6 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Generation of the active database profile within the running host, as an object whose <c>value</c> is a
+/// non-negative integer. It starts at 0 and increases each time the host switches its active database profile.
+/// </summary>
 public readonly record struct DatabaseProfileGeneration
 {
     [JsonConstructor]
@@ -18,6 +22,7 @@ public readonly record struct DatabaseProfileGeneration
         Value = value;
     }
 
+    /// <summary>The generation number; never negative.</summary>
     public long Value { get; }
 }
 

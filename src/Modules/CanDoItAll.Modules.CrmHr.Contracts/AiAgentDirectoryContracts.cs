@@ -4,6 +4,12 @@ using System.Collections.Immutable;
 
 namespace CanDoItAll.Modules.CrmHr;
 
+/// <summary>
+/// State of the link between an AI agent party in CRM/HR and a technical agent definition of the Agents module, as a
+/// JSON integer: 0 Unbound (no technical agent is linked), 1 PendingBackfill (a legacy CRM/HR technical profile waits
+/// to be linked to an agent definition), 2 Bound (linked to a technical agent definition), 3 Error (the linked
+/// technical agent is not available to CRM/HR).
+/// </summary>
 public enum AiResourceBindingStatus
 {
     Unbound,

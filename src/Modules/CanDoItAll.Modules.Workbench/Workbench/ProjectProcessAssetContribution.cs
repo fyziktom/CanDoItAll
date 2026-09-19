@@ -13,9 +13,31 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// Receipt of an asset that a process step created in a project structure: the step's business intent, the created
+/// node and the storage placement of its file. Only process runs executing inside the application receive it; the
+/// Project Structure HTTP API does not return it.
+/// </summary>
+/// <param name="IntentId">Business intent of the process step that created the asset.</param>
+/// <param name="NativeObjectId">Identifier of the created project object record.</param>
+/// <param name="NodeId">Identifier of the created node, as in <c>nodes[].id</c>.</param>
+/// <param name="StorageIntentId">Storage placement intent that stored the asset's file.</param>
+/// <param name="Fingerprint">Fingerprint of the committed asset request, used to recognize a repeated intent.</param>
+/// <param name="CommittedAtUtc">Instant (UTC, with offset) when the asset was committed.</param>
 public sealed record ProjectProcessAssetReceipt(AgentToolBusinessIntentId IntentId, Guid NativeObjectId,
     string NodeId, StoragePlacementIntentId StorageIntentId, string Fingerprint, DateTimeOffset CommittedAtUtc);
 
+/// <summary>
+/// Receipt of a process step's asset as observed by the call that returned it. Only process runs executing inside the
+/// application receive it; the Project Structure HTTP API omits it.
+/// </summary>
+/// <param name="Receipt">The committed receipt.</param>
+/// <param name="WasReplay">True when the call returned an earlier commit of the same intent instead of a new
+/// one.</param>
+/// <param name="TargetDeleted">True when the node created for the receipt no longer exists.</param>
+/// <param name="StorageObservationWarning">
+/// Warning about the stored file's placement when it could not be confirmed; null when there is none.
+/// </param>
 public sealed record ProjectProcessAssetReceiptObservation(ProjectProcessAssetReceipt Receipt, bool WasReplay,
     bool TargetDeleted, string? StorageObservationWarning = null);
 

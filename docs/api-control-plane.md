@@ -153,7 +153,7 @@ redacted `500`. The workflow response boundary never uses `502`.
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
 | `POST` | `/api/processes/launch` | Accept a prepared launch and optionally queue its durable run. |
 | `GET` | `/api/processes/launch/{admissionId}` | Observe the original preparation, accepted run and delivery state without executing it. |
-| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work. |
+| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready steps within the request until none is ready or the run is blocked, cancel-requested or finished (at most 200 passes). |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
 | `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
 | `GET` | `/api/processes/live` | Read live run projections. |
@@ -231,6 +231,6 @@ For API behavior changes, add focused route and application-service tests, then 
 
 `POST /api/agents/{agentId}/capabilities/{capabilityId}/verify` retains its successful `ApiAck` response. Invalid agent, capability, attachment, or required provider identity returns HTTP 400 with `outcome: Rejected`. Infrastructure unavailable before diagnostic dispatch returns HTTP 409 with `outcome: InfrastructureUnavailable`; other non-completed outcomes also return 409. Typed failure responses include the target identities, available proof receipt identity/time, and `automaticReplaySafe: false`. They contain no internal exception detail. Do not automatically retry this diagnostic POST.
 
-Agent `UpdatedAtUtc` is a strictly increasing concurrency revision for accepted configuration writes, even when the wall clock repeats or moves backwards. Keep sending the authoritative expected revision when updating an agent. Proof `LastVerifiedAtUtc` retains the actual observation time independently of that revision.
+Agent `UpdatedAtUtc` is the concurrency revision of accepted configuration writes. Saves, provisioning, archiving and verification publication advance it past the previous value even when the wall clock repeats or moves backwards; a catalog change that binds project access lifetimes stamps the current time instead, so compare revisions for equality, not order. Keep sending the authoritative expected revision from the latest read when updating an agent: a verification advances it, so read `GET /api/agents/{agentId}` again afterwards. The proof itself is read from the agent's `capabilities` entry in `GET /api/agents`. Proof `LastVerifiedAtUtc` retains the actual observation time independently of that revision.
 
 The capabilities workspace keeps unresolved operations within the circuit. Retained assignment submissions and proof receipts use canonical reads for recovery, without replaying a write or diagnostic. If a diagnostic returns no correlatable receipt, explicit acknowledgement releases only the circuit block and does not prove rollback. Unknown Curator creation likewise requires inspecting managed chats and acknowledging uncertainty; it neither deletes a chat nor launches another. A subsequent diagnostic or launch is a new explicit user action. Recovery is not durable across a new circuit or process restart.

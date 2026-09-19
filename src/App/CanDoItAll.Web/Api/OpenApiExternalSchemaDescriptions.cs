@@ -14,14 +14,18 @@ internal static class OpenApiExternalSchemaDescriptions
     private static readonly Dictionary<Type, string> TypeDescriptions = new()
     {
         [typeof(ProblemDetails)] =
-            "Problem details (RFC 9457) returned as `application/problem+json` by the LLM Chat operations. Besides " +
-            "the standard members they add `code`, a stable machine-readable reason to branch on, and, when an LLM " +
-            "Chat operation is concerned, `operationId` (that operation) and `retryable` (true when the failure is " +
-            "transient, such as an unavailable provider or an exceeded deadline, so a later attempt can succeed).",
+            "Problem details (RFC 9457) returned as `application/problem+json`. The LLM Chat operations add `code`, " +
+            "a stable machine-readable reason to branch on, and, when an LLM Chat operation is concerned, " +
+            "`operationId` (that operation) and `retryable` (true when the failure is transient, such as an " +
+            "unavailable provider, so a later attempt can succeed). The file routes return only the standard " +
+            "members, with the reason in `detail`.",
         [typeof(JsonElement)] =
             "Any JSON value. The member that uses it describes the expected shape.",
         [typeof(IFormFile)] =
             "Binary content of one file part in a `multipart/form-data` request.",
+        [typeof(Stream)] =
+            "Raw bytes of a file, sent as the whole response body. The response's `Content-Type` header gives the " +
+            "actual media type.",
         [typeof(GanttScheduleGesture)] =
             "How a planned task interval is edited, as a JSON integer: 0 Move (shift the whole interval), 1 " +
             "ResizeStart (change only the start), 2 ResizeEnd (change only the end), 3 SetInterval (set an explicit " +

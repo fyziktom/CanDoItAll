@@ -2,6 +2,11 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects;
 
+/// <summary>
+/// Role of a party in a project, as a JSON integer: 0 Customer, 1 CustomerContact, 2 DeliveryUnit, 3 TeamMember,
+/// 4 Manager, 5 Partner, 6 Vendor, 7 Stakeholder, 8 MeetingParticipant, 9 WorkItemAssignee (assigned to work on a task
+/// of the project), 10 Reviewer, 11 AiAgent, 12 BillingContact, 13 TechnicalContact.
+/// </summary>
 public enum ProjectPartyAssignmentRole
 {
     Customer,
@@ -28,6 +33,9 @@ public enum ProjectPartyType
     AiAgent
 }
 
+/// <summary>
+/// Time unit that a cost or billing rate of a person or resource refers to, as a JSON integer: 0 Hour, 1 ManDay.
+/// </summary>
 public enum ProjectResourceRateUnit
 {
     Hour,

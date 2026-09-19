@@ -2,6 +2,11 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Plugins.Abstractions;
 
+/// <summary>
+/// Identifier of a host tool recipe, a reviewed host command that a plugin may run, for example
+/// <c>docker.list-containers</c>. On the wire it is a JSON string of letters, digits, <c>.</c>, <c>-</c> and
+/// <c>_</c>, lower-cased by the server.
+/// </summary>
 [JsonConverter(typeof(PluginHostToolRecipeIdJsonConverter))]
 public readonly record struct PluginHostToolRecipeId
 {
@@ -33,6 +38,11 @@ public static class PluginHostToolRecipeIds
     public static PluginHostToolRecipeId PowerShellReviewedScript { get; } = new("powershell.reviewed-script");
 }
 
+/// <summary>
+/// Decision state of a plugin capability grant, as a JSON integer: 0 Requested (not decided yet; reported for
+/// declared capabilities without a saved decision), 1 Granted (allowed), 2 Denied (refused), 3 Revoked (withdrawn after
+/// being granted), 4 Unavailable (the saved state could not be read). Only Granted allows the capability.
+/// </summary>
 public enum PluginGrantState
 {
     Requested,
@@ -42,6 +52,10 @@ public enum PluginGrantState
     Unavailable
 }
 
+/// <summary>
+/// Scope of a plugin capability grant, as a JSON integer: 0 Plugin (the whole plugin; the only scope the runtime
+/// evaluates), 1 Connection, 2 Workflow. Grants with scope 1 or 2 are stored and listed but not currently evaluated.
+/// </summary>
 public enum PluginGrantScopeKind
 {
     Plugin,
@@ -49,6 +63,10 @@ public enum PluginGrantScopeKind
     Workflow
 }
 
+/// <summary>
+/// Risk rating of a plugin capability grant, as a JSON integer: 0 Low, 1 Medium, 2 High. Informational: it does not
+/// change how the grant is evaluated.
+/// </summary>
 public enum PluginGrantRiskKind
 {
     Low,

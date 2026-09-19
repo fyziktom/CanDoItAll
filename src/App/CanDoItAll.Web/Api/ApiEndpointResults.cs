@@ -66,8 +66,8 @@ internal sealed record ApiErrorResponse(IReadOnlyList<ApiErrorItem> Errors)
 /// </param>
 /// <param name="Message">Human-readable explanation for operators and logs. Its wording can change.</param>
 /// <param name="Severity">
-/// Severity of the reason: request validation problems are reported as Warning and failed commands as Error. Any
-/// item in an error envelope means the request did not succeed.
+/// Severity of the reason, as a JSON integer: 0 Info, 1 Warning (request validation problems), 2 Error (failed
+/// commands). Any item in an error envelope means the request did not succeed.
 /// </param>
 internal sealed record ApiErrorItem(string Code, string Message, ErrorSeverity Severity);
 

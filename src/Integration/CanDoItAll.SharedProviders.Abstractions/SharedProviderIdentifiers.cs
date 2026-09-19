@@ -3,6 +3,11 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.SharedProviders.Abstractions;
 
+/// <summary>
+/// Identifier of a shared-provider publication, as a GUID string in the hyphenated form, for example
+/// <c>3f2504e0-4f89-11d3-9a0c-0305e82c3301</c>; never the empty GUID. It stays the same while the publication exists;
+/// its <c>revision</c> tracks changes.
+/// </summary>
 [JsonConverter(typeof(SharedProviderPublicationIdJsonConverter))]
 public readonly record struct SharedProviderPublicationId
 {
@@ -38,6 +43,11 @@ public readonly record struct SharedProviderPublicationId
             : throw new InvalidOperationException("The shared-provider publication id is invalid.");
 }
 
+/// <summary>
+/// Identifier of the host instance that publishes a shared-provider catalog, as a GUID string in the hyphenated form;
+/// never the empty GUID. It stays the same for that host, so a consumer can detect that a source address now serves
+/// a different host.
+/// </summary>
 [JsonConverter(typeof(SharedProviderSourceInstanceIdJsonConverter))]
 public readonly record struct SharedProviderSourceInstanceId
 {
@@ -73,6 +83,10 @@ public readonly record struct SharedProviderSourceInstanceId
             : throw new InvalidOperationException("The shared-provider source-instance id is invalid.");
 }
 
+/// <summary>
+/// Content revision in a shared-provider catalog, as <c>sha256:</c> followed by 64 lowercase hexadecimal characters: a
+/// hash of the public representation it describes. It changes whenever that representation changes.
+/// </summary>
 [JsonConverter(typeof(SharedProviderPublicRevisionJsonConverter))]
 public readonly record struct SharedProviderPublicRevision
 {

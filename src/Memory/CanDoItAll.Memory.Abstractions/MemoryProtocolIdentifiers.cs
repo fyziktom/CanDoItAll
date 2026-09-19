@@ -93,14 +93,22 @@ public readonly record struct MemoryProtocolVersion
     public override string ToString() => Value;
 }
 
+/// <summary>
+/// Identifier of a memory provider instance, serialized as an object whose <c>value</c> member holds the identifier
+/// text, for example <c>{ "value": "team-knowledge" }</c>. The text is trimmed and must be non-blank, at most 256
+/// characters and free of control characters; an invalid value makes the request fail.
+/// </summary>
 public readonly record struct MemoryProviderInstanceId
 {
+    /// <summary>Creates an identifier from its text.</summary>
+    /// <param name="value">Identifier text; trimmed, non-blank, at most 256 characters, no control characters.</param>
     [JsonConstructor]
     public MemoryProviderInstanceId(string value)
     {
         Value = MemoryProtocolGuard.EnsureIdentifier(value, nameof(value));
     }
 
+    /// <summary>Identifier text of the memory provider instance, for example <c>team-knowledge</c>.</summary>
     public string Value { get; }
 
     public static MemoryProviderInstanceId Parse(string value) => new(value);
@@ -123,14 +131,27 @@ public readonly record struct MemoryProviderKind
     public override string ToString() => Value;
 }
 
+/// <summary>
+/// Identifier of a memory protocol capability, serialized as an object whose <c>value</c> member holds the identifier,
+/// for example <c>{ "value": "context.query.sync" }</c>. The text is lower-case tokens separated by dots or hyphens and
+/// must start with a letter; an invalid value makes the request fail.
+/// </summary>
 public readonly record struct MemoryCapabilityId
 {
+    /// <summary>Creates a capability identifier from its text.</summary>
+    /// <param name="value">
+    /// Lower-case tokens separated by dots or hyphens, for example <c>context.query.sync</c>.
+    /// </param>
     [JsonConstructor]
     public MemoryCapabilityId(string value)
     {
         Value = MemoryProtocolGuard.EnsureCapabilityId(value, nameof(value));
     }
 
+    /// <summary>
+    /// Capability identifier text, for example <c>context.query.sync</c>, <c>context.query.async</c> or
+    /// <c>operations.status</c>.
+    /// </summary>
     public string Value { get; }
 
     public static MemoryCapabilityId Parse(string value) => new(value);

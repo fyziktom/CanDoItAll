@@ -73,6 +73,9 @@ public static class ApiServiceCollectionExtensions
                 SharedProviderCatalogOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(
                 SharedProviderInferenceOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(OpenApiFormParameterDescriptions.TransformOperationAsync);
+            options.AddOperationTransformer(OpenApiDuplicateParameters.TransformOperationAsync);
+            options.AddDocumentTransformer(OpenApiDiscriminatorDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiDescriptionText.TransformDocumentAsync);
         });
         services.AddAuthorization(options =>

@@ -6,7 +6,10 @@ namespace CanDoItAll.Modules.Workbench;
 /// Started has an actual start and no actual end, Completed has both, and Cancelled has an actual end and may have an
 /// actual start. An actual end cannot precede the actual start.
 /// </summary>
-/// <param name="State">Execution state, as a JSON integer (see the execution state schema).</param>
+/// <param name="State">
+/// Execution state, as a JSON integer: 0 Unknown (no state recorded yet), 1 NotStarted, 2 Started, 3 Completed,
+/// 4 Cancelled. Completed and Cancelled are final.
+/// </param>
 /// <param name="ActualStartedAtUtc">Instant work actually started, or null when it has not started.</param>
 /// <param name="ActualEndedAtUtc">Instant work actually ended, or null when it has not ended.</param>
 public sealed record ProjectTaskExecutionSnapshot(

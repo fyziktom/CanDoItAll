@@ -6,6 +6,14 @@ using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Preset of workspace tool permissions, as a JSON integer: 0 Custom (no preset; only the explicit flags apply),
+/// 1 ReadOnly (read files), 2 SoftwareDevelopment (read, write, validation commands, local scripts, scaffolding, path
+/// management, artifact transformation), 3 QualityValidation (read, write, validation commands, local scripts,
+/// artifact transformation), 4 ArchitectureReview (read, write, artifact transformation), 5 SecurityReview (read,
+/// write, validation commands, artifact transformation), 6 BusinessAnalysis (read, write, artifact transformation). A
+/// preset is a minimum: its permissions are added to the explicit flags and cannot be switched off by them.
+/// </summary>
 public enum AgentWorkspaceToolProfileKind
 {
     Custom,
@@ -166,34 +174,88 @@ public static class AgentWorkspaceToolAccessProfiles
     }
 }
 
+/// <summary>
+/// Workspace file, command and storage tool permissions of an agent, the <c>workspaceToolAccess</c> member of the agent
+/// editor form, stored in the agent's <c>configurationJson</c> under <c>workspaceTools</c>. A save replaces that
+/// section. When the section is absent, the agent has the default: profile Custom with only file reading allowed; an
+/// omitted object in a save therefore resets the agent to that default. The tools also need the agent's
+/// <c>canUseTools</c> permission, and tools that change files or run commands need approval of each call unless the
+/// run suppresses approvals.
+/// </summary>
 public sealed class AgentWorkspaceToolAccessSettings
 {
+    /// <summary>
+    /// Permission preset, as a JSON integer: 0 Custom (the default), 1 ReadOnly, 2 SoftwareDevelopment, 3
+    /// QualityValidation, 4 ArchitectureReview, 5 SecurityReview, 6 BusinessAnalysis. The preset's permissions are
+    /// added to the explicit flags below and cannot be switched off by them; see the
+    /// <c>AgentWorkspaceToolProfileKind</c> schema for what each preset grants. An undefined value is stored as Custom.
+    /// </summary>
     public AgentWorkspaceToolProfileKind Profile { get; set; } = AgentWorkspaceToolProfileKind.Custom;
 
+    /// <summary>
+    /// Allows reading workspace files and folders (listing, search, read, compare, git history and inspection). True by
+    /// default, and implied by every write, command or external-folder permission.
+    /// </summary>
     public bool CanReadFiles { get; set; } = true;
 
+    /// <summary>
+    /// Allows creating and writing workspace files (including archives and spreadsheets). Implied by
+    /// <c>canManageWorkspacePaths</c>, <c>canScaffoldProjects</c> and <c>canTransformArtifacts</c>.
+    /// </summary>
     public bool CanWriteFiles { get; set; }
 
+    /// <summary>Allows running the .NET restore, build, test, run and stop commands in the workspace.</summary>
     public bool CanRunValidationCommands { get; set; }
 
+    /// <summary>Allows running Python files and PowerShell scripts from the workspace.</summary>
     public bool CanRunLocalScripts { get; set; }
 
+    /// <summary>Allows creating projects from .NET templates in the workspace.</summary>
     public bool CanScaffoldProjects { get; set; }
 
+    /// <summary>
+    /// Allows copying, moving and deleting workspace paths and changing git state (stage, commit, branch).
+    /// </summary>
     public bool CanManageWorkspacePaths { get; set; }
 
+    /// <summary>
+    /// Allows converting documents and analyzing images; it also enables image analysis of Project Structure assets
+    /// for agents with Project Structure read access.
+    /// </summary>
     public bool CanTransformArtifacts { get; set; }
 
+    /// <summary>
+    /// External folders outside the workspace that the agent may write under, as external-target aliases of the form
+    /// <c>external-target/v1/{rootId}/{encoded path}</c>. Values that are not aliases are dropped silently; legacy
+    /// aliases that embed a drive letter are rejected. A plain file-system path cannot be sent here. Send back the
+    /// values as read.
+    /// </summary>
     public List<string> AllowedExternalTargetAliases { get; set; } = [];
 
+    /// <summary>
+    /// Server-issued root bindings that let the aliases in <c>allowedExternalTargetAliases</c> resolve to folders on
+    /// the host. Send back the values as read; bindings that no alias uses are removed on save.
+    /// </summary>
     public List<ExternalTargetRootBinding> ExternalTargetRootBindings { get; set; } = [];
 
+    /// <summary>
+    /// Adds the storage tools that list catalogs, browse and read text files of the permitted catalogs.
+    /// </summary>
     public bool CanReadStorage { get; set; }
 
+    /// <summary>
+    /// Adds the storage tools that write text files and delete objects in the permitted catalogs (approval required by
+    /// default); implies <c>canReadStorage</c>.
+    /// </summary>
     public bool CanWriteStorage { get; set; }
 
+    /// <summary>True to permit every storage catalog; <c>allowedStorageCatalogIds</c> is then not needed.</summary>
     public bool AllowAllStorageCatalogs { get; set; }
 
+    /// <summary>
+    /// Identifiers of the storage catalogs the storage tools may use when <c>allowAllStorageCatalogs</c> is false. They
+    /// are not checked for existence when saved.
+    /// </summary>
     public List<Guid> AllowedStorageCatalogIds { get; set; } = [];
 }
 

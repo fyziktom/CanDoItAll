@@ -1,5 +1,12 @@
 namespace CanDoItAll.Memory.Abstractions;
 
+/// <summary>
+/// Driver that connects the host to a memory provider. In the memory-provider HTTP API it is a PascalCase string token:
+/// <c>Http</c> (a provider speaking the host's HTTP memory protocol), <c>Mcp</c> (a remote Model Context Protocol
+/// server), <c>NativeRemote</c> (a remote Cognitive Memory service reached over HTTP), <c>Mock</c> (a deterministic
+/// built-in provider for tests and demonstrations) or <c>InProcessMigration</c> (an internal migration driver that the
+/// HTTP API cannot configure).
+/// </summary>
 public enum MemoryProviderDriverKind
 {
     Http = 0,
@@ -9,6 +16,10 @@ public enum MemoryProviderDriverKind
     InProcessMigration = 4
 }
 
+/// <summary>
+/// Last recorded health of a memory provider. In the memory-provider HTTP API it is a PascalCase string token:
+/// <c>Unknown</c> (not checked yet), <c>Healthy</c>, <c>Degraded</c> or <c>Unreachable</c>.
+/// </summary>
 public enum MemoryProviderHealthState
 {
     Unknown = 0,
@@ -17,18 +28,32 @@ public enum MemoryProviderHealthState
     Unreachable = 3
 }
 
+/// <summary>
+/// Workspaces a memory provider serves. In the memory-provider HTTP API it is a PascalCase string token:
+/// <c>AllWorkspaces</c> or <c>SingleWorkspace</c> (never selected, because the host cannot verify the workspace).
+/// </summary>
 public enum MemoryProviderWorkspaceScope
 {
     AllWorkspaces = 0,
     SingleWorkspace = 1
 }
 
+/// <summary>
+/// Whether a memory provider may be used as the implicit default provider. In the memory-provider HTTP API it is a
+/// PascalCase string token: <c>DenyImplicitFallback</c> (only when chosen explicitly or by an assignment) or
+/// <c>AllowDefaultProviderWhenNoAssignment</c> (also as the default when no assignment applies).
+/// </summary>
 public enum MemoryProviderFallbackBehavior
 {
     DenyImplicitFallback = 0,
     AllowDefaultProviderWhenNoAssignment = 1
 }
 
+/// <summary>
+/// What the key of a memory provider assignment identifies, as a JSON integer: 0 Agent (the agent identifier), 1
+/// AgentRole (the agent's workload name), 2 Workflow (the workflow identifier), 3 WorkflowNode (the workflow node
+/// identifier), 4 Process (the process identifier).
+/// </summary>
 public enum MemoryProviderAssignmentScope
 {
     Agent = 0,
@@ -38,6 +63,14 @@ public enum MemoryProviderAssignmentScope
     Process = 4
 }
 
+/// <summary>
+/// Result of choosing a memory provider for an operation. In the memory-provider HTTP API it is a PascalCase string
+/// token: <c>Selected</c>, <c>NoProviderConfigured</c>, <c>NoEnabledProvider</c>, <c>ProviderNotFound</c>,
+/// <c>ProviderDisabled</c>, <c>CapabilityUnavailable</c> (the provider does not advertise the required capability),
+/// <c>CapabilityDenied</c> (policy denies the capability), <c>ProviderDenied</c> (policy or workspace scope excludes
+/// the provider, or the caller may not access the operation), <c>ProviderSelectionRequired</c> (no provider was named
+/// and no default applies) or <c>ProviderConfigurationFailed</c> (the provider configuration could not be loaded).
+/// </summary>
 public enum MemoryProviderSelectionStatus
 {
     Selected = 0,
@@ -52,6 +85,11 @@ public enum MemoryProviderSelectionStatus
     ProviderConfigurationFailed = 9
 }
 
+/// <summary>
+/// Why a memory provider was considered for an operation. In the memory-provider HTTP API it is a PascalCase string
+/// token: <c>None</c>, <c>ExplicitProvider</c> (named by the request), <c>AssignmentOverride</c> (assigned to the
+/// agent, workflow or process) or <c>DefaultProvider</c>.
+/// </summary>
 public enum MemoryProviderSelectionReason
 {
     None = 0,

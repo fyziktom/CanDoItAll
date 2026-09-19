@@ -24,6 +24,11 @@ public enum ProviderNativeToolFamily
     HostedMcpServer
 }
 
+/// <summary>
+/// Network addresses that calls through a provider profile may reach, as a JSON integer: 0 Default (local profiles;
+/// no shared-source network policy applies), 1 PublicOnly (public addresses only), 2 AllowPrivateNetwork (private
+/// network addresses allowed). Profiles imported from a shared provider source take the policy of their source.
+/// </summary>
 public enum ProviderNetworkAccessPolicy
 {
     Default,
@@ -31,18 +36,37 @@ public enum ProviderNetworkAccessPolicy
     AllowPrivateNetwork
 }
 
+/// <summary>
+/// What a provider credential is, as a JSON integer: 0 ProviderApiKey (an API key of the provider), 1 SourceAccessToken
+/// (the access token of a shared provider source).
+/// </summary>
 public enum ProviderCredentialPurpose
 {
     ProviderApiKey,
     SourceAccessToken
 }
 
+/// <summary>
+/// Owner of a provider credential, as a JSON integer: 0 ProviderProfile, 1 Source (a shared provider source).
+/// </summary>
 public enum ProviderCredentialConsumerKind
 {
     ProviderProfile,
     Source
 }
 
+/// <summary>
+/// Credential of a provider profile imported from a shared provider source: the source's access token, kept as a
+/// stored secret whose value is never returned. Null for local profiles.
+/// </summary>
+/// <param name="SecretId">Identifier of the stored secret.</param>
+/// <param name="Purpose">
+/// What the secret is, as a JSON integer: 0 ProviderApiKey, 1 SourceAccessToken (always for imported profiles).
+/// </param>
+/// <param name="ConsumerKind">
+/// Owner of the credential, as a JSON integer: 0 ProviderProfile, 1 Source (always for imported profiles).
+/// </param>
+/// <param name="ConsumerId">Identifier of the owner, here the shared provider source.</param>
 public sealed record ProviderCredentialBinding(
     Guid SecretId,
     ProviderCredentialPurpose Purpose,
@@ -89,6 +113,24 @@ public static class ProviderAudioCapabilityPolicy
     }
 }
 
+/// <summary>
+/// Features that a shared provider source allows for a provider profile imported from it; null for local profiles.
+/// </summary>
+/// <param name="AllowsStructuredOutput">True when every published model supports structured JSON output.</param>
+/// <param name="AllowsVision">True when every published model accepts image input.</param>
+/// <param name="AllowsNativeTools">
+/// Whether provider-native tools (code interpreter, file search, web search) may be used; false for imported profiles.
+/// </param>
+/// <param name="AllowsHostedMcp">Whether provider-hosted MCP servers may be used; false for imported profiles.</param>
+/// <param name="AllowsServiceManagedHistory">
+/// Whether the provider may keep the chat history; false for imported profiles.
+/// </param>
+/// <param name="AllowsCompaction">
+/// Whether provider-side conversation compaction may be used; false for imported profiles.
+/// </param>
+/// <param name="AllowsParallelFunctionTools">
+/// True when every published model supports parallel function tool calls.
+/// </param>
 public sealed record ProviderFeatureConstraints(
     bool AllowsStructuredOutput,
     bool AllowsVision,
@@ -98,6 +140,10 @@ public sealed record ProviderFeatureConstraints(
     bool AllowsCompaction,
     bool AllowsParallelFunctionTools = true);
 
+/// <summary>
+/// Models that a provider profile imported from a shared provider source may use; null for local profiles, which
+/// accept any model identifier.
+/// </summary>
 public sealed record ProviderModelSelectionConstraint
 {
     public ProviderModelSelectionConstraint(
@@ -122,6 +168,9 @@ public sealed record ProviderModelSelectionConstraint
         AllowedModels = Array.AsReadOnly(normalized);
     }
 
+    /// <summary>
+    /// Identifiers of the models the source publishes, compared exactly; requests for any other model are refused.
+    /// </summary>
     public IReadOnlyList<string> AllowedModels { get; }
 
     public bool Allows(string? model)
@@ -251,8 +300,65 @@ public static class ProviderNativeToolKeys
     }
 }
 
+/// <summary>
+/// Display name of a model published by a shared provider source.
+/// </summary>
+/// <param name="Id">Model identifier to use in requests.</param>
+/// <param name="DisplayName">Name to show for the model.</param>
 public sealed record ProviderModelDisplayMetadata(string Id, string DisplayName);
 
+/// <summary>
+/// A model provider profile: a configured connection to a model provider, listed by <c>GET /api/agents/providers</c>
+/// and referenced by agents through <c>providerProfileId</c>. The model is chosen separately within the profile.
+/// Local profiles are edited with <c>GET /api/agents/providers/{providerId}/editor</c> and
+/// <c>POST /api/agents/providers</c>; profiles imported from a shared provider source (<c>isSourceManaged</c> true)
+/// are managed by that source. Publishing a local profile to other hosts is a separate shared-provider publication.
+/// </summary>
+/// <param name="Id">Identifier of the profile.</param>
+/// <param name="Name">Display name of the profile.</param>
+/// <param name="Kind">
+/// Provider kind, as a JSON integer: 0 OpenAi (OpenAI or an OpenAI-compatible endpoint; also every imported profile),
+/// 1 AzureOpenAi, 2 Ollama, 3 ComfyUi.
+/// </param>
+/// <param name="BaseUrl">Base URL of the provider's API.</param>
+/// <param name="ApiKeyEnvironmentVariable">
+/// Reference to the stored credential, <c>secret:</c> followed by the secret's GUID, or an empty string when the
+/// profile has none. The credential itself is never returned.
+/// </param>
+/// <param name="DefaultModel">Model used when an agent or request names none.</param>
+/// <param name="Transport">
+/// API style used to call the models, as a JSON integer: 0 Responses, 1 ChatCompletions (always for Ollama).
+/// </param>
+/// <param name="IsEnabled">
+/// True when the profile can be used. An imported profile is false whenever its import is unavailable; the reason is
+/// in <c>healthStatus</c>.
+/// </param>
+/// <param name="SupportsStreaming">True when responses are streamed from the provider.</param>
+/// <param name="SupportsTools">True when the profile's models may be given tools.</param>
+/// <param name="PreferFrameworkManagedChatHistory">
+/// Set by the server: true when the product keeps and resends the chat history, as for Ollama, ComfyUI and the
+/// ChatCompletions transport.
+/// </param>
+/// <param name="SupportsBackgroundResponses">
+/// Set by the server: true only for OpenAI profiles on the Responses transport.
+/// </param>
+/// <param name="ConfigurationJson">
+/// Additional settings as the text of a JSON object, for example <c>timeoutSeconds</c> (the request timeout in
+/// seconds); returned as stored apart from the secret reference.
+/// </param>
+/// <param name="Notes">
+/// Display name of the provider connector for local profiles, or a fixed description for imported profiles and the
+/// built-in fallback profile; not a stored free-text note.
+/// </param>
+/// <param name="HealthStatus">
+/// For local profiles the result of the last health check, or <c>Not checked</c>; for imported profiles the
+/// availability of the import, for example <c>Available</c> or <c>SourceOffline</c>.
+/// </param>
+/// <param name="LastCheckedAtUtc">
+/// When the last health check ran, in UTC; null when the profile was never checked and for imported profiles.
+/// </param>
+/// <param name="SuggestedModels">Models offered when choosing a model for the profile.</param>
+/// <param name="Purpose">What the profile is used for, as a JSON integer: 0 Chat, 1 ImageGeneration.</param>
 public sealed record ProviderProfile(
     Guid Id,
     string Name,
@@ -273,24 +379,48 @@ public sealed record ProviderProfile(
     IReadOnlyList<string> SuggestedModels,
     ProviderProfilePurpose Purpose = ProviderProfilePurpose.Chat)
 {
+    /// <summary>
+    /// Key of the connector that manages the profile, for example <c>provider.openai</c>, <c>provider.ollama.local</c>,
+    /// <c>provider.ollama.remote</c>, <c>provider.comfyui.local</c> or <c>provider.candoitall-shared</c> (imported
+    /// profiles).
+    /// </summary>
     public string ConnectorPluginKey { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Credential of an imported profile (its shared provider source's access token); null for local profiles.
+    /// </summary>
     public ProviderCredentialBinding? CredentialBinding { get; init; }
 
+    /// <summary>
+    /// Network addresses the profile may reach, as a JSON integer: 0 Default (local profiles), 1 PublicOnly,
+    /// 2 AllowPrivateNetwork; imported profiles take the policy of their source.
+    /// </summary>
     public ProviderNetworkAccessPolicy NetworkAccessPolicy { get; init; }
 
+    /// <summary>Features the shared provider source allows for an imported profile; null for local profiles.</summary>
     public ProviderFeatureConstraints? FeatureConstraints { get; init; }
 
+    /// <summary>Models an imported profile may use; null for local profiles.</summary>
     public ProviderModelSelectionConstraint? ModelSelectionConstraint
     {
         get;
         init;
     }
 
+    /// <summary>
+    /// True for a privately hosted provider; always true for Ollama and ComfyUI profiles.
+    /// </summary>
     public bool IsPrivateProvider { get; init; }
 
+    /// <summary>
+    /// True when the profile is imported from a shared provider source and managed by it; such profiles cannot be
+    /// saved or deleted here.
+    /// </summary>
     public bool IsSourceManaged => CredentialBinding?.Purpose == ProviderCredentialPurpose.SourceAccessToken;
 
+    /// <summary>
+    /// Display names of the models published by the shared provider source; empty for local profiles.
+    /// </summary>
     public IReadOnlyList<ProviderModelDisplayMetadata> ModelCatalog { get; init; } = [];
 
     public string GetModelDisplayName(string? model) {
@@ -299,18 +429,43 @@ public sealed record ProviderProfile(
             ?? (IsSourceManaged && id.Length > 0 ? "Unavailable shared model" : id);
     }
 
+    /// <summary>
+    /// Token prices of the profile's models, used to estimate run costs; the default model's row comes first.
+    /// </summary>
     public IReadOnlyList<ProviderModelTokenPrice> ModelPrices { get; init; } = [];
+
+    /// <summary>
+    /// Version marker of the prices, recorded in the provider request history to tell which prices were used; null
+    /// for profiles without one.
+    /// </summary>
     public string? PricingSourceRevision { get; init; }
 
+    /// <summary>
+    /// Labels of the profile, lowercase and sorted, for example <c>openai</c>, <c>local</c> or <c>chat</c>.
+    /// </summary>
     public IReadOnlyList<string> Tags { get; init; } = [];
 
+    /// <summary>
+    /// Thinking-effort capabilities stored for the profile's models, for example those discovered by a health check.
+    /// Which capability applies to a model also depends on the provider kind and the profile configuration.
+    /// </summary>
     public IReadOnlyList<ProviderModelThinkingEffortCapability> ModelThinkingEffortCapabilities { get; init; } = [];
 }
 
+/// <summary>
+/// Result of a provider profile health check, returned by <c>POST /api/agents/providers/{providerId}/test</c>.
+/// </summary>
+/// <param name="Success">True when the provider answered the check as expected.</param>
+/// <param name="Summary">Human-readable result of the check; do not parse it.</param>
+/// <param name="SuggestedModels">Models the provider reported during the check; may be empty.</param>
 public sealed record ProviderHealthResult(
     bool Success,
     string Summary,
     IReadOnlyList<string> SuggestedModels)
 {
+    /// <summary>
+    /// Thinking-effort capabilities discovered for the provider's models during the check, or null when the check
+    /// does not discover them.
+    /// </summary>
     public IReadOnlyList<ProviderModelThinkingEffortCapability>? ModelThinkingEffortCapabilities { get; init; }
 }

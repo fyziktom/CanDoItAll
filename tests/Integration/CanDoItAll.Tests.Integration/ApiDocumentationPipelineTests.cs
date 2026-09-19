@@ -60,6 +60,21 @@ public sealed class ApiDocumentationPipelineTests(ApiDocumentationDocumentFixtur
     }
 
     [Fact]
+    public void Parameters_that_xml_comments_cannot_reach_keep_their_attribute_descriptions()
+    {
+        var update = fixture.Operation("/api/llm-chats/{definitionId}", "put");
+        var parameters = update["parameters"]!.AsArray().OfType<JsonObject>().ToDictionary(parameter => Text(parameter["name"]));
+        Assert.StartsWith("Strong ETag of the definition version you read", Text(parameters["If-Match"]["description"]), StringComparison.Ordinal);
+        Assert.StartsWith("The complete new configuration", Text(update["requestBody"]!["description"]), StringComparison.Ordinal);
+
+        var upload = fixture.Operation("/api/plugins/packages/upload", "post");
+        var form = upload["requestBody"]!["content"]!["multipart/form-data"]!["schema"]!;
+        Assert.StartsWith("The plugin package file (`.zip`), sent as the form field `file`.", Text(upload["requestBody"]!["description"]), StringComparison.Ordinal);
+        Assert.Equal("The plugin package file (`.zip`). It must not be empty.", Text(form["properties"]!["file"]!["description"]));
+        Assert.Equal("#/components/schemas/IFormFile", Text(form["properties"]!["file"]!["$ref"]));
+    }
+
+    [Fact]
     public void Positional_record_members_from_another_assembly_describe_their_role_at_each_reference()
     {
         var input = fixture.Schema("ProjectStructureTaskUpdateAgentInput");
@@ -94,6 +109,11 @@ public sealed class ApiDocumentationPipelineTests(ApiDocumentationDocumentFixtur
         Assert.Contains("Owner-issued evidence", Text(fixture.Schema("ProjectWriteAdmission")["description"]), StringComparison.Ordinal);
         Assert.Contains("bit flags value", Text(fixture.Schema("PartyRecordScope")["description"]), StringComparison.Ordinal);
         Assert.Contains("camel-case string", Text(fixture.Schema("AgentProviderFailureCategory")["description"]), StringComparison.Ordinal);
+
+        // A struct component first generated from an optional member keeps the descriptions of its own properties.
+        var credential = fixture.Schema("ManagedCredentialId");
+        Assert.Equal("Identifier of a managed API credential issued by this host.", Text(credential["description"]));
+        Assert.Equal("The credential's GUID.", Text(credential["properties"]!["value"]!["description"]));
     }
 
     [Fact]
@@ -114,6 +134,7 @@ public sealed class ApiDocumentationPipelineTests(ApiDocumentationDocumentFixtur
         Assert.Contains("RFC 9457", Text(fixture.Schema("ProblemDetails")["description"]), StringComparison.Ordinal);
         Assert.Contains("Any JSON value", Text(fixture.Schema("JsonElement")["description"]), StringComparison.Ordinal);
         Assert.Contains("multipart/form-data", Text(fixture.Schema("IFormFile")["description"]), StringComparison.Ordinal);
+        Assert.Contains("`Content-Type` header", Text(fixture.Schema("Stream")["description"]), StringComparison.Ordinal);
         Assert.Contains("3 SetInterval", Text(fixture.Schema("GanttScheduleGesture")["description"]), StringComparison.Ordinal);
     }
 

@@ -121,6 +121,37 @@ public sealed class ApiAuthorizationOptions
     public int MaxTokenLifetimeMinutes { get; set; } = 1440;
 }
 
+/// <summary>
+/// HTTP API access configuration of this host, returned by <c>GET /api/access/status</c>. It reflects the host's
+/// <c>Api</c> configuration section and never contains the signing key or a token.
+/// </summary>
+/// <param name="ApiEnabled">
+/// True when <c>Api:Enabled</c> is set, which maps the <c>/api</c> route families. The Project Structure
+/// (<c>/api/project-structure</c>) and runtime (<c>/api/runtime</c>) routes stay available even when it is false.
+/// Always true in a response of <c>GET /api/access/status</c>, which exists only while the API is enabled.
+/// </param>
+/// <param name="OpenApiEnabled">
+/// True when the OpenAPI document is served at <c>/openapi/v1.json</c> and <c>/swagger/v1/swagger.json</c>.
+/// </param>
+/// <param name="SwaggerUiEnabled">
+/// True when the interactive Swagger UI is served at <c>/swagger</c>; false whenever the OpenAPI document is
+/// disabled.
+/// </param>
+/// <param name="AuthorizationEnabled">
+/// True when API operations require a bearer token issued by this host (<c>Api:Authorization:Enabled</c>). When
+/// false, most operations accept calls without a token and tokens cannot be issued; operations that need an
+/// authenticated caller (answering workflow external requests, agent recruiting reviews, storage placement
+/// recovery) then always fail with HTTP 401 or 403.
+/// </param>
+/// <param name="SigningKeyConfigured">
+/// True when a token signing key is configured. Only its presence is reported, never its value.
+/// </param>
+/// <param name="Issuer">Issuer (<c>iss</c> claim) that tokens must carry to be accepted by this host.</param>
+/// <param name="Audience">Audience (<c>aud</c> claim) that tokens must carry to be accepted by this host.</param>
+/// <param name="DefaultTokenLifetimeMinutes">
+/// Lifetime in minutes given to a token issued without <c>lifetimeMinutes</c>.
+/// </param>
+/// <param name="MaxTokenLifetimeMinutes">Largest <c>lifetimeMinutes</c> accepted when a token is issued.</param>
 public sealed record ApiAccessStatus(
     bool ApiEnabled,
     bool OpenApiEnabled,
@@ -132,17 +163,57 @@ public sealed record ApiAccessStatus(
     int DefaultTokenLifetimeMinutes,
     int MaxTokenLifetimeMinutes);
 
+/// <summary>
+/// Request of <c>POST /api/access/tokens</c>: who the new bearer token represents, how long it lives and which scopes
+/// it grants. Every member is optional; an omitted member takes the default stated on it. Do not send null for
+/// <c>subject</c> or <c>displayName</c>: an explicit null is not handled and fails the request, so omit the member
+/// instead.
+/// </summary>
 public sealed class ApiTokenIssueRequest
 {
+    /// <summary>
+    /// Subject (<c>sub</c> claim) of the token: the caller identity recorded for the token and used by operations that
+    /// scope records to their caller, for example memory-provider operation status. Surrounding whitespace is
+    /// removed; a blank value is rejected. Omitted means <c>api-client</c>. Tokens with the same subject share that
+    /// identity.
+    /// </summary>
     public string Subject { get; set; } = "api-client";
 
+    /// <summary>
+    /// Human-readable name of the token, shown in token administration. Surrounding whitespace is removed; omitted or
+    /// blank means <c>API client</c>.
+    /// </summary>
     public string DisplayName { get; set; } = "API client";
 
+    /// <summary>
+    /// Token lifetime in minutes, from 1 through the configured maximum (<c>maxTokenLifetimeMinutes</c> of
+    /// <c>GET /api/access/status</c>). Omitted or null means the configured default lifetime.
+    /// </summary>
     public int? LifetimeMinutes { get; set; }
 
+    /// <summary>
+    /// Scopes to grant, for example <c>api</c> or <c>api.memory-providers.read</c>. Values are trimmed, blank values
+    /// are dropped and duplicates that differ only in letter case are merged; at least one scope must remain. Names
+    /// are not checked against the known scopes, and operations compare them exactly and case-sensitively. Omitted
+    /// means <c>["api"]</c>.
+    /// </summary>
     public List<string> Scopes { get; set; } = [ApiAccessScopeNames.Api];
 }
 
+/// <summary>
+/// A newly issued bearer token, returned once by <c>POST /api/access/tokens</c>. The token value cannot be read again
+/// later; treat it as a secret.
+/// </summary>
+/// <param name="Token">
+/// The signed JSON Web Token. Send it as <c>Authorization: Bearer {token}</c>; never put it in a URL or log.
+/// </param>
+/// <param name="TokenType">Authorization scheme to use with the token; always <c>Bearer</c>.</param>
+/// <param name="ExpiresAtUtc">Instant (UTC, with offset) after which the host rejects the token.</param>
+/// <param name="Subject">The normalized subject (<c>sub</c> claim) of the token.</param>
+/// <param name="DisplayName">The normalized display name of the token.</param>
+/// <param name="Scopes">
+/// The scopes granted by the token after normalization, sorted alphabetically without regard to letter case.
+/// </param>
 public sealed record ApiTokenIssueResult(
     string Token,
     string TokenType,

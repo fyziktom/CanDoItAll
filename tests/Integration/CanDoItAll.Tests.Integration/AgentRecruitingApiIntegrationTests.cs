@@ -611,7 +611,6 @@ public sealed class AgentRecruitingApiIntegrationTests
         AssertResponseSchema(appendAttempt, "409", "ApiErrorResponse");
         AssertResponseSchema(appendReview, "400", "ApiErrorResponse");
         AssertResponseSchema(appendReview, "404", "ApiErrorResponse");
-        AssertResponseSchema(appendReview, "409", "ApiErrorResponse");
         AssertResponseSchema(detail, "404", "ApiErrorResponse");
         AssertResponseSchema(candidateInterviews, "400", "ApiErrorResponse");
         AssertResponseSchema(readiness, "404", "ApiErrorResponse");

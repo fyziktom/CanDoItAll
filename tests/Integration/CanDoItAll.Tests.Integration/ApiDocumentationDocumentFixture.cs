@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CanDoItAll.Web;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
@@ -14,9 +15,15 @@ public sealed class ApiDocumentationDocumentFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        // Program.cs maps the runtime routes and, in Development, the diagnostics routes outside the API groups.
         host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
-            useInMemoryDatabase: true);
+            useInMemoryDatabase: true,
+            configureApplication: application =>
+            {
+                application.MapDevelopmentDiagnosticsEndpoints();
+                application.MapRuntimeEndpoints();
+            });
         OpenApiBytes = await host.Client.GetByteArrayAsync("/openapi/v1.json");
         SwaggerBytes = await host.Client.GetByteArrayAsync("/swagger/v1/swagger.json");
         Document = JsonNode.Parse(OpenApiBytes)?.AsObject()
