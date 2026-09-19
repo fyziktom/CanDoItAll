@@ -365,7 +365,18 @@ internal sealed class WorkspacePathPolicy
             return false;
         }
 
-        var normalized = NormalizeRelativePath(path);
+        string normalized;
+        try
+        {
+            normalized = NormalizeRelativePath(path);
+        }
+        catch (ArgumentException)
+        {
+            // An absolute native path, or a name a workspace-relative path cannot express, has no managed-segment
+            // spelling to correct; the caller reports the path as missing instead.
+            return false;
+        }
+
         var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var correctedSegments = segments.Select(NormalizeManagedPathAliasSegment).ToArray();
         var hasManagedAliasCorrection = segments
@@ -455,13 +466,28 @@ internal sealed class WorkspacePathPolicy
             return candidateFullPath;
         }
 
-        var relativePath = NormalizeRelativePath(Path.GetRelativePath(workspaceRoot, candidateFullPath));
+        var nativeRelativePath = Path.GetRelativePath(workspaceRoot, candidateFullPath);
+        var relativePath = NormalizeRelativePath(nativeRelativePath);
         if (string.IsNullOrWhiteSpace(relativePath) || string.Equals(relativePath, ".", StringComparison.Ordinal))
         {
             return candidateFullPath;
         }
 
         var scopedRelativePath = ApplyManagedRootScope(relativePath);
+        if (!string.Equals(
+                nativeRelativePath.Replace(Path.DirectorySeparatorChar, '/'),
+                relativePath,
+                StringComparison.Ordinal))
+        {
+            // The logical form turned a backslash inside a Linux or macOS file name into a separator, so rebuilding the
+            // path from it would select another file. Keep the exact native path when no managed root moves it, and
+            // reject a path that a managed root would move.
+            return string.Equals(scopedRelativePath, relativePath, StringComparison.Ordinal)
+                ? candidateFullPath
+                : throw WorkspacePathResolutionException.InvalidPath(
+                    $"Path '{relativePath}' contains a file or folder name that cannot be mapped into the current managed scope.");
+        }
+
         return Path.GetFullPath(Path.Combine(workspaceRoot, scopedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
     }
 

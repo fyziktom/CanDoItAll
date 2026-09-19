@@ -2569,7 +2569,9 @@ public sealed record ProjectStructureAnalyticsQueryRequest(
 /// <summary>
 /// One recorded call of a Project Structure operation, successful or failed, made over this HTTP API or by an
 /// in-process agent tool. Entries contain the complete request and response as JSON text and can therefore hold
-/// anything those contained, such as notes, metadata, inline file content and lease tokens.
+/// anything those contained, such as notes, metadata, inline file content and lease tokens. The HTTP query returns the
+/// bodies, warnings, error message and repository root only for the caller's own calls; in entries of other callers
+/// they are <c>{}</c>, <c>[]</c>, null and empty.
 /// </summary>
 /// <param name="Id">Identifier of the log entry.</param>
 /// <param name="OperationName">

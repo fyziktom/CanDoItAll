@@ -139,8 +139,9 @@ public enum WorkflowRunCancellationOutcome
 /// 4 BackendNotCancellable, 5 TransitionRejected. Only 0 means the request took effect.
 /// </param>
 /// <param name="Run">
-/// The stored run record as known when the outcome was decided, including the backend run identifier and the launch
-/// origin; null when the run was not found. After a signal it can still show the earlier state.
+/// The stored run record as known when the outcome was decided, including the backend run identifier; its launch
+/// origin is withheld (always null) because the run can belong to another caller. Null when the run was not found.
+/// After a signal it can still show the earlier state.
 /// </param>
 /// <param name="Message">Readable explanation of the outcome for display and logs; do not parse it.</param>
 public sealed record WorkflowRunCancellationResult(

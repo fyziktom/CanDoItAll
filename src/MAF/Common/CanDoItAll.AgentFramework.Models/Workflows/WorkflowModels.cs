@@ -1153,8 +1153,8 @@ public sealed record WorkflowRunStartRequest(
 
 /// <summary>
 /// Stored record of a workflow run, returned without the public safe projection only by the test-run, cancellation
-/// and analytics operations. Unlike the safe run projection it includes the backend run identifier and the launch
-/// origin; the other run operations return the projection instead.
+/// and analytics operations. Unlike the safe run projection it includes the backend run identifier and, in a test-run
+/// result for the caller's own preview run, the launch origin; the other run operations return the projection instead.
 /// </summary>
 /// <param name="RunId">Identifier of the run.</param>
 /// <param name="WorkflowId">Identifier of the workflow that runs.</param>
@@ -1188,7 +1188,8 @@ public sealed record WorkflowRunSnapshot(
 
     /// <summary>
     /// Who or what launched the run, with the authority captured for it. Internal launch lineage, not a stable client
-    /// contract; null for runs recorded without an origin.
+    /// contract; null for runs recorded without an origin, and always null in the cancellation and analytics
+    /// responses, which can return other callers' runs.
     /// </summary>
     public WorkflowLaunchOrigin? Origin { get; init; }
 }

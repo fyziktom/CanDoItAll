@@ -28,12 +28,13 @@ internal static class WorkflowRunIdempotencyApi
     /// selection, the resolved version and backend, whether the start completed, the run's current state and how often
     /// the key was replayed. It returns hashes of the key and of the request, never the key itself or the run input.
     ///
-    /// Only keys sent to the HTTP start operations are found. Keys are global across all API callers of this host,
-    /// so the lookup can find a start made by another caller with the same key. <c>claimState</c> Pending means the
-    /// original start is still in progress: read again later, or resend the same start request with the same key,
-    /// which waits for it and then returns the same run. When the original start failed before admitting a run, its
-    /// key was released and this operation returns HTTP 404. Read the run itself with
-    /// <c>GET /api/workflows/runs/{runId}</c> using <c>originalRunId</c>.
+    /// Only keys sent to the HTTP start operations are found, and only by the caller that sent them: the same bearer
+    /// token subject, or the local operator when API authorization is disabled, in the same database profile. A key
+    /// recorded by another caller reads as not found. <c>claimState</c> Pending means the original start is still in
+    /// progress: read again later, or resend the same start request with the same key, which waits for it and then
+    /// returns the same run. When the original start failed before admitting a run, its key was released and this
+    /// operation returns HTTP 404. Read the run itself with <c>GET /api/workflows/runs/{runId}</c> using
+    /// <c>originalRunId</c>.
     ///
     /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
     /// disabled (the development default) the route is open.
@@ -54,18 +55,23 @@ internal static class WorkflowRunIdempotencyApi
     /// <c>/api</c> group currently accepts any valid token, so this route does not return it today.
     /// </response>
     /// <response code="404">
-    /// No HTTP start request recorded this key (<c>workflows.idempotency-key-not-found</c>). Nothing was started with
-    /// it, or its start failed before a run was admitted; it is safe to send the start request with this key.
+    /// No HTTP start request of this caller recorded this key (<c>workflows.idempotency-key-not-found</c>): nothing
+    /// was started with it, its start failed before a run was admitted, or another caller recorded it. Sending the
+    /// start request with this key is safe; when another caller holds the key, the start is rejected with HTTP 409 and
+    /// starts nothing.
     /// </response>
     internal static async Task<IResult> GetRunByIdempotencyKeyAsync(
         string key,
+        HttpContext httpContext,
         IWorkflowLaunchIdempotencyQueryService queryService,
         CancellationToken cancellationToken)
     {
         try
         {
+            var callerKey = new WorkflowLaunchIdempotencyKey(key);
             var evidence = await queryService.FindApiKeyAsync(
-                new WorkflowLaunchIdempotencyKey(key),
+                callerKey,
+                await WorkflowsApi.ResolveApiLaunchOriginAsync(httpContext, cancellationToken),
                 cancellationToken);
             return evidence is null
                 ? ApiEndpointResults.NotFound(

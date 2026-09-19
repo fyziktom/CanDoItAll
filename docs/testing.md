@@ -217,6 +217,24 @@ close to, and above, that budget, and a runner that is slower than the budget fa
 a test failing. Neither reducing the filter nor raising the timeout without a measurement is an
 acceptable answer to that.
 
+The CI workflow gives each platform its own budget in the stable job's matrix. They come from the
+first CI run of this gate on all three platforms (commit `d0f3c41a4`, 2026-09-19), whose logs time
+every phase:
+
+| Platform | Checkout, setup and build | Components | Integration | End of the test step |
+|---|---|---|---|---|
+| Linux (`ubuntu-24.04`) | 6.7 min | 16.0 min | 90.0 min | 114 min |
+| macOS (`macos-15`) | 7.6 min | 12.1 min | 98.9 min | 120 min |
+| Windows (`windows-latest`) | 16.6 min | 32.0 min | still running after 131.4 min | cancelled at 180 min |
+
+Windows was cancelled by the former 180-minute budget without a failing test. Projecting its
+Integration run from the Components-to-Integration ratio of Linux (5.6) and of this workstation
+(4.1, already exceeded) puts it between 131 and 181 minutes, so the whole Windows job, with the
+Memory and Unit assemblies and the portability gates that follow the test step, needs about 205 to
+265 minutes; its budget is 300. Linux and macOS keep 180. The portability gates after the test step
+did not run in that measurement on any platform. Replace the projection with measured durations as
+soon as a Windows run completes, and change a budget only with a new measurement.
+
 The filter intentionally excludes:
 
 - browser automation

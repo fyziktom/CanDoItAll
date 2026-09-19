@@ -68,7 +68,8 @@ public sealed record PluginOAuthConnectionStatusItem(
 /// </param>
 /// <param name="ReturnPath">
 /// Path in this web application to return the browser to after the callback, for example <c>/plugins</c> (the
-/// default). It must start with a single <c>/</c>; any other value is replaced by <c>/plugins</c>.
+/// default). It must start with a single <c>/</c> that is not followed by <c>/</c> or <c>\</c>, and must not contain
+/// control characters; any other value, such as an address of another site, is replaced by <c>/plugins</c>.
 /// </param>
 /// <param name="Scopes">
 /// Scopes to request instead of the plugin's default scopes; omitted, null or empty means the defaults. Requested

@@ -93,7 +93,7 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/llm-chats` | Simple Chat definition catalog, lifecycle, provider/model options, and conversation creation. | [`LlmChatDefinitionEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatDefinitionEndpoints.cs) |
 | `/api/llm-conversations` | Conversation paging, transcript reads, rename/archive, turn admission, and explicit recovery. | [`LlmChatConversationEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatConversationEndpoints.cs) |
 | `/api/llm-chat-operations` | Durable turn status, replayable SSE, cancellation, and evidence-based reconciliation. | [`LlmChatOperationsApi.cs`](../src/App/CanDoItAll.Web/Api/LlmChatOperationsApi.cs) |
-| `/api/runtime` | Host capability and bounded operation-readiness snapshots. | [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs) |
+| `/api/runtime` | Host capability and bounded operation-readiness snapshots; a bearer token is required when API authorization is enabled. | [`RuntimeEndpoints.cs`](../src/App/CanDoItAll.Web/RuntimeEndpoints.cs) |
 
 Use OpenAPI for exact methods and schemas. Do not copy a complete generated endpoint inventory into maintained documentation.
 

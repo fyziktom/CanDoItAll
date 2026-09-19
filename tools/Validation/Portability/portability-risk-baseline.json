@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-19T14:07:33.393876+00:00",
+  "generated_utc": "2026-09-19T21:12:36.879987+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14921,
+  "allowance_count": 14926,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6191,6 +6191,18 @@
       "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
       "category": "secret-provider",
       "source_fingerprint": "ae3812a7edb50a5688bd5321dbf371d0a0dac03686d3a90a8432089c352b832c",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentApiRequestValidation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "1e0e85ac3ef00ffdeba9ad2bbb015cc8f1cedff8d3fb4e1fbf4870f2c3f00958",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentApiRequestValidation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d724897e15b0e68d4938b4f5897c38dc4a7993589879ad11c16829d5f3caddc0",
       "count": 1
     },
     {
@@ -23620,12 +23632,6 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "0d2c630bfdd66ff174c48f5120589b5de28706a645ef975f80e995235bd7c4e4",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
-      "category": "absolute-path-field",
       "source_fingerprint": "0efff597f43424709aa0a0166d6201c7d520a76924f53d98a1e2d81fe6aae5eb",
       "count": 1
     },
@@ -23669,6 +23675,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "383957ef8c6b5766835c5f7cb1c89c79185bd36a31a0f4c86a9f6edaa786c3c4",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "39c03ef7f177c130ed6231326ebeda758348356b4563d0ee81cc852527aaaba6",
       "count": 1
     },
     {
@@ -23986,6 +23998,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
       "category": "path-api",
+      "source_fingerprint": "301e21db163d724b1e6beea8a3180ef763cf5f5fb6af3130815ddd612b21f1b6",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
+      "category": "path-api",
       "source_fingerprint": "312a02de3502b1c6e0c80e97ab6cc8855c11178f0a02b232d6b0e48a6995dbb3",
       "count": 1
     },
@@ -24040,12 +24058,6 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
       "category": "path-api",
-      "source_fingerprint": "92471658db7733708dbd486af579a98e7511e7049217d8b42fea5a11755e2622",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
-      "category": "path-api",
       "source_fingerprint": "98088adcf2decc26d65b107de47bbce30996188edf2314895f71fe0fa111677c",
       "count": 1
     },
@@ -24065,6 +24077,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
       "category": "path-api",
       "source_fingerprint": "b527757c6351ea3c9aa29d8d049850f0e76ac10b3fdb97433712b8a451cd56d3",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
+      "category": "path-api",
+      "source_fingerprint": "ccfa60f8c8f05b705b6a5dd045fdf28f1902a7f9c84e326bcdf158dca707d698",
       "count": 1
     },
     {
@@ -24113,6 +24131,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
       "category": "path-api",
       "source_fingerprint": "f6d762c8d253a130b83365f0fa18c0da3926c2dda70547f01593d945c4861638",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
+      "category": "path-normalization",
+      "source_fingerprint": "2257e7d0e7fd10518d34b320335ecf700a53cb0c358c33fff7f036ca254ef08c",
       "count": 1
     },
     {
@@ -48419,6 +48443,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
       "category": "secret-provider",
       "source_fingerprint": "f27e1234a346784c30710d6ac5ecacf3c3f5ccedc8d03fd5077bb4cdb772b376",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs",
+      "category": "windows-path",
+      "source_fingerprint": "f47b314daec74c6bd6b69b3984c4aad3b1c811e5f2899a5baa25c0d951a47ff7",
       "count": 1
     },
     {

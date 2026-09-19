@@ -93,7 +93,7 @@ curl --fail http://127.0.0.1:5032/health
 curl --fail http://127.0.0.1:5032/api/runtime/operations
 ```
 
-Use `journalctl -u candoitall-web.service` for bounded service diagnostics. The operations endpoint reports typed platform/profile, provider/capability, path-readiness, publication, and validation state without full roots, connection strings, or secret values.
+Use `journalctl -u candoitall-web.service` for bounded service diagnostics. The operations endpoint reports typed platform/profile, provider/capability, path-readiness, publication, and validation state without full roots, connection strings, or secret values. When API authorization is enabled (`Api:Authorization:Enabled`), the operations endpoint requires a bearer token issued by the host, for example `curl --fail -H "Authorization: Bearer $CANDOITALL_API_TOKEN" http://127.0.0.1:5032/api/runtime/operations`; `/health` stays anonymous.
 
 ## macOS launchd profile
 

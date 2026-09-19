@@ -133,8 +133,8 @@ public sealed record WorkflowUsageAnalyticsTotals(
 /// Analytics entry for one matching run: the stored run record, its duration and its model usage.
 /// </summary>
 /// <param name="Run">
-/// The stored run record, not the safe projection of the run read routes: it includes the backend run identifier and
-/// the launch origin.
+/// The stored run record, not the safe projection of the run read routes: it includes the backend run identifier. The
+/// HTTP analytics operation withholds its launch origin (always null) because the run can belong to another caller.
 /// </param>
 /// <param name="Duration">
 /// Time from the run's creation to its end, as a string in the form <c>[-][d.]hh:mm:ss[.fffffff]</c>, for example
@@ -249,7 +249,8 @@ public sealed record WorkflowDurationAnalyticsSummary(
 /// <param name="ProviderModels">Usage of the matching runs per provider and model.</param>
 /// <param name="Nodes">Usage of the matching runs per node and executor.</param>
 /// <param name="RecentRuns">
-/// The most recently updated matching runs as stored run records, at most <c>Take</c> of them (8 by default).
+/// The most recently updated matching runs as stored run records, at most <c>Take</c> of them (8 by default); the HTTP
+/// analytics operation withholds their launch origins.
 /// </param>
 public sealed record WorkflowAnalyticsSnapshot(
     DateTimeOffset AsOfUtc,

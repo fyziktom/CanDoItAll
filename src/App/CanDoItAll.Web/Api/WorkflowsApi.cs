@@ -17,8 +17,8 @@ internal static class WorkflowsApi
     private const string IdempotencyKeyHeaderDescription =
         "Optional client-chosen key, 1 to 256 characters after trimming, that identifies this start request, for " +
         "example `invoice-4711-review`. Send the header at most once and without commas. A repeated request with the " +
-        "same key and the same content returns the original run instead of starting another. Keys are global across " +
-        "API callers, so include something unique to your client.";
+        "same key and the same content returns the original run instead of starting another. A key belongs to the " +
+        "caller that first sent it; another caller's request with the same key is rejected with HTTP 409.";
 
     public static RouteGroupBuilder MapWorkflowsApi(this RouteGroupBuilder group)
     {
@@ -870,8 +870,9 @@ internal static class WorkflowsApi
     /// known, and the counts of known and unknown observations say how complete the totals are. Durations of runs
     /// still in progress are measured up to the snapshot time.
     ///
-    /// Like the cancellation and test-run results, the run entries are the stored run records without the public safe
-    /// projection, including the backend run identifier and the run's launch origin.
+    /// Like the cancellation result, the run entries are the stored run records without the public safe projection:
+    /// they include the backend run identifier, but their launch origin is withheld (always null) because the runs can
+    /// belong to other callers.
     ///
     /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
     /// disabled (the development default) the route is open.
@@ -912,12 +913,13 @@ internal static class WorkflowsApi
     /// (<c>replayed</c> true, <c>idempotencyDisposition</c> ReplayedExistingRun) instead of starting another one, and
     /// a concurrent duplicate waits for the first to finish. In a replay, <c>run</c> shows the state recorded when the
     /// original start returned; read <c>GET /api/workflows/runs/{runId}</c> for the current state. A key is compared
-    /// after trimming and is global across all API callers of this host. Reusing it for another workflow, version
-    /// choice or request content is rejected with HTTP 409. When the original start failed without admitting a run,
-    /// the key is released and can be used again. After a lost response, read
-    /// <c>GET /api/workflows/runs/by-idempotency-key/{key}</c> or resend the same request with the same key. Without
-    /// a key every request starts a new run, so a request whose response was lost cannot be retried safely; look for
-    /// the run in <c>GET /api/workflows/runs</c> first.
+    /// after trimming and belongs to the caller that first sent it (the bearer token subject, or the local operator
+    /// when API authorization is disabled): the same key from another caller, or reused for another workflow, version
+    /// choice or request content, is rejected with HTTP 409; a request never replays another caller's run. When the
+    /// original start failed without admitting a run, the key is released and can be used again. After a lost
+    /// response, read <c>GET /api/workflows/runs/by-idempotency-key/{key}</c> or resend the same request with the same
+    /// key. Without a key every request starts a new run, so a request whose response was lost cannot be retried
+    /// safely; look for the run in <c>GET /api/workflows/runs</c> first.
     ///
     /// Authority: when API authorization is enabled, any valid bearer token issued by this host; its subject becomes
     /// the run's actor. With authorization disabled (the development default) the route is open and the run is
@@ -956,7 +958,7 @@ internal static class WorkflowsApi
     /// or the current version is Suspended or Archived (<c>workflows.resource-not-found</c>). Nothing was started.
     /// </response>
     /// <response code="409">
-    /// The <c>Idempotency-Key</c> was already used for a different start request
+    /// The <c>Idempotency-Key</c> was already used for a different start request or by another caller
     /// (<c>workflows.idempotency-key-conflict</c>). Nothing was started; use a new key or send the original request.
     /// </response>
     internal static async Task<IResult> StartDefinitionRunAsync(
@@ -1001,12 +1003,13 @@ internal static class WorkflowsApi
     /// (<c>replayed</c> true, <c>idempotencyDisposition</c> ReplayedExistingRun) instead of starting another one, and
     /// a concurrent duplicate waits for the first to finish. In a replay, <c>run</c> shows the state recorded when the
     /// original start returned; read <c>GET /api/workflows/runs/{runId}</c> for the current state. A key is compared
-    /// after trimming and is global across all API callers of this host. Reusing it for another workflow, version
-    /// choice or request content is rejected with HTTP 409. When the original start failed without admitting a run,
-    /// the key is released and can be used again. After a lost response, read
-    /// <c>GET /api/workflows/runs/by-idempotency-key/{key}</c> or resend the same request with the same key. Without
-    /// a key every request starts a new run, so a request whose response was lost cannot be retried safely; look for
-    /// the run in <c>GET /api/workflows/runs</c> first.
+    /// after trimming and belongs to the caller that first sent it (the bearer token subject, or the local operator
+    /// when API authorization is disabled): the same key from another caller, or reused for another workflow, version
+    /// choice or request content, is rejected with HTTP 409; a request never replays another caller's run. When the
+    /// original start failed without admitting a run, the key is released and can be used again. After a lost
+    /// response, read <c>GET /api/workflows/runs/by-idempotency-key/{key}</c> or resend the same request with the same
+    /// key. Without a key every request starts a new run, so a request whose response was lost cannot be retried
+    /// safely; look for the run in <c>GET /api/workflows/runs</c> first.
     ///
     /// Authority: when API authorization is enabled, any valid bearer token issued by this host; its subject becomes
     /// the run's actor. With authorization disabled (the development default) the route is open and the run is
@@ -1041,7 +1044,7 @@ internal static class WorkflowsApi
     /// or the current version is Suspended or Archived (<c>workflows.resource-not-found</c>). Nothing was started.
     /// </response>
     /// <response code="409">
-    /// The <c>Idempotency-Key</c> was already used for a different start request
+    /// The <c>Idempotency-Key</c> was already used for a different start request or by another caller
     /// (<c>workflows.idempotency-key-conflict</c>). Nothing was started; use a new key or send the original request.
     /// </response>
     internal static async Task<IResult> StartRunAsync(
@@ -1079,8 +1082,8 @@ internal static class WorkflowsApi
     /// <c>GET /api/workflows/runs/{runId}</c> to confirm its final state. Repeating the request is safe: once the run
     /// is terminal, it returns HTTP 409 with <c>AlreadyTerminal</c>.
     ///
-    /// The <c>run</c> in the body is the stored run record without the public safe projection, including the backend
-    /// run identifier and the run's launch origin.
+    /// The <c>run</c> in the body is the stored run record without the public safe projection: it includes the backend
+    /// run identifier, but its launch origin is withheld (always null) because the run can belong to another caller.
     ///
     /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
     /// disabled (the development default) the route is open.
@@ -1105,9 +1108,10 @@ internal static class WorkflowsApi
         Guid runId,
         IWorkflowRuntimeManager runtimeManager,
         CancellationToken cancellationToken)
-        => MapCancellationResult(await runtimeManager.RequestCancellationAsync(
-            new WorkflowRunId(runId),
-            cancellationToken));
+        => MapCancellationResult(WorkflowApiSafeProjection.WithoutLaunchOrigin(
+            await runtimeManager.RequestCancellationAsync(
+                new WorkflowRunId(runId),
+                cancellationToken)));
 
     private static async Task<IResult> ChangeDefinitionStatusAsync(
         Guid workflowId,
@@ -1161,17 +1165,11 @@ internal static class WorkflowsApi
                     workflowId,
                     new WorkflowVersionId(request.VersionId.Value))
                 : new WorkflowDefinitionSelection.LatestActive(workflowId);
-            var structureAuthority = await ResolveStructureAuthorityAsync(httpContext, cancellationToken);
             var launchResult = await launchService.LaunchAsync(
                 new WorkflowLaunchIntent(
                     selection,
                     WorkflowLaunchMode.Production,
-                    new WorkflowLaunchOrigin.Api(
-                        structureAuthority.Principal,
-                        new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)) {
-                        HistoryCaller = ProviderHistoryRequestContext.Caller(httpContext),
-                        StructureAuthority = structureAuthority
-                    },
+                    await ResolveApiLaunchOriginAsync(httpContext, cancellationToken),
                     request.InputJson ?? "{}",
                     WorkflowLaunchCompletionPolicy.WaitForStopped,
                     ResolveLaunchIdempotency(httpContext, idempotencyKey))
@@ -1268,6 +1266,21 @@ internal static class WorkflowsApi
             : new WorkflowLaunchActor(WorkflowLaunchActorKind.User, subjectId);
     }
 
+    // The launch origin of the HTTP start operations. The idempotency lookup identifies its caller the same way, so a
+    // key is found only by the caller that recorded it.
+    internal static async Task<WorkflowLaunchOrigin.Api> ResolveApiLaunchOriginAsync(
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var structureAuthority = await ResolveStructureAuthorityAsync(httpContext, cancellationToken);
+        return new WorkflowLaunchOrigin.Api(
+            structureAuthority.Principal,
+            new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)) {
+            HistoryCaller = ProviderHistoryRequestContext.Caller(httpContext),
+            StructureAuthority = structureAuthority
+        };
+    }
+
     private static Task<WorkflowStructureAuthority> ResolveStructureAuthorityAsync(HttpContext context, CancellationToken cancellationToken) {
         var factory = context.RequestServices.GetRequiredService<IWorkflowStructureAuthorityFactory>();
         if (context.User.Identity?.IsAuthenticated != true) {
@@ -1339,14 +1352,15 @@ internal static class WorkflowsApi
     {
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(analyticsQueryService);
-        return ToApiResultAsync(() => analyticsQueryService.QueryAsync(
-            new WorkflowAnalyticsQuery(
-                query.WorkflowId.HasValue ? new WorkflowId(query.WorkflowId.Value) : null,
-                query.State,
-                query.Backend,
-                query.Search ?? string.Empty,
-                NormalizeAnalyticsRecentTake(query.Take)),
-            cancellationToken));
+        return ToApiResultAsync(async () => WorkflowApiSafeProjection.WithoutLaunchOrigins(
+            await analyticsQueryService.QueryAsync(
+                new WorkflowAnalyticsQuery(
+                    query.WorkflowId.HasValue ? new WorkflowId(query.WorkflowId.Value) : null,
+                    query.State,
+                    query.Backend,
+                    query.Search ?? string.Empty,
+                    NormalizeAnalyticsRecentTake(query.Take)),
+                cancellationToken)));
     }
 
     private static async Task<IResult> ToApiResultAsync<T>(Func<Task<T>> action)

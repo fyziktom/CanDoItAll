@@ -446,9 +446,10 @@ internal static class AgentEventsApi
     /// </response>
     /// <response code="400">
     /// Rejected before the stream started (<c>agents.request-invalid</c>): the empty GUID as agent or chat session
-    /// identifier, or a blank prompt. A body the framework cannot bind, for example malformed JSON or an
-    /// <c>activityOperationId</c> that is not a non-empty GUID string, is rejected with HTTP 400 before the operation
-    /// runs and has no error envelope.
+    /// identifier, a blank prompt, or a <c>context</c> that claims a process step (source kind <c>process-step</c>, a
+    /// process run or step identifier) or whose metadata contains <c>agentExternalTargetRootBindings</c>. A body the
+    /// framework cannot bind, for example malformed JSON or an <c>activityOperationId</c> that is not a non-empty GUID
+    /// string, is rejected with HTTP 400 before the operation runs and has no error envelope.
     /// </response>
     /// <response code="401">
     /// API authorization is enabled and the request has no valid bearer token (<c>api.authorization-required</c>).
@@ -491,7 +492,8 @@ internal static class AgentEventsApi
             context,
             request.AgentId,
             request.ChatSessionId,
-            request.Prompt);
+            request.Prompt,
+            request.Context);
         if (validation is not null)
         {
             return Task.FromResult(validation);
@@ -591,9 +593,10 @@ internal static class AgentEventsApi
     /// </response>
     /// <response code="400">
     /// Rejected before the stream started (<c>agents.request-invalid</c>): the empty GUID as agent or chat session
-    /// identifier, or a blank prompt. A body the framework cannot bind, for example malformed JSON or an
-    /// <c>activityOperationId</c> that is not a non-empty GUID string, is rejected with HTTP 400 before the operation
-    /// runs and has no error envelope.
+    /// identifier, a blank prompt, or a <c>context</c> that claims a process step (source kind <c>process-step</c>, a
+    /// process run or step identifier) or whose metadata contains <c>agentExternalTargetRootBindings</c>. A body the
+    /// framework cannot bind, for example malformed JSON or an <c>activityOperationId</c> that is not a non-empty GUID
+    /// string, is rejected with HTTP 400 before the operation runs and has no error envelope.
     /// </response>
     /// <response code="401">
     /// API authorization is enabled and the request has no valid bearer token (<c>api.authorization-required</c>).
@@ -637,7 +640,8 @@ internal static class AgentEventsApi
             context,
             agentId,
             request.ChatSessionId,
-            request.Prompt);
+            request.Prompt,
+            request.Context);
         if (validation is not null)
         {
             return Task.FromResult(validation);

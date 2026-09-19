@@ -2282,8 +2282,10 @@ internal static class AgentsApi
     /// or 3 WaitingOnTool) and structured output when requested.
     /// </response>
     /// <response code="400">
-    /// Rejected before any run: an all-zero agent or session identifier or a blank prompt
-    /// (<c>agents.request-invalid</c>), or an invalid <c>structuredOutput</c> contract (codes starting with
+    /// Rejected before any run: an all-zero agent or session identifier, a blank prompt, or a <c>context</c> that
+    /// claims a process step (source kind <c>process-step</c>, a process run or step identifier) or whose metadata
+    /// contains <c>agentExternalTargetRootBindings</c> (<c>agents.request-invalid</c>), or an invalid
+    /// <c>structuredOutput</c> contract (codes starting with
     /// <c>agents.structured-output-</c>, for example <c>agents.structured-output-schema-invalid</c>). Or the run failed
     /// because the provider rejected the request as incompatible (<c>agents.provider-request-incompatible</c>; the body
     /// names the run).
@@ -2367,8 +2369,10 @@ internal static class AgentsApi
     /// or 3 WaitingOnTool) and structured output when requested.
     /// </response>
     /// <response code="400">
-    /// Rejected before any run: an all-zero agent or session identifier or a blank prompt
-    /// (<c>agents.request-invalid</c>), or an invalid <c>structuredOutput</c> contract (codes starting with
+    /// Rejected before any run: an all-zero agent or session identifier, a blank prompt, or a <c>context</c> that
+    /// claims a process step (source kind <c>process-step</c>, a process run or step identifier) or whose metadata
+    /// contains <c>agentExternalTargetRootBindings</c> (<c>agents.request-invalid</c>), or an invalid
+    /// <c>structuredOutput</c> contract (codes starting with
     /// <c>agents.structured-output-</c>). Or the run failed because the provider rejected the request as incompatible
     /// (<c>agents.provider-request-incompatible</c>).
     /// </response>
@@ -2890,7 +2894,8 @@ internal static class AgentsApi
             context,
             request.AgentId,
             request.ChatSessionId,
-            request.Prompt);
+            request.Prompt,
+            request.Context);
         if (validation is not null)
         {
             return validation;

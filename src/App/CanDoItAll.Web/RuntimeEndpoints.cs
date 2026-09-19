@@ -1,5 +1,6 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Readiness;
+using CanDoItAll.Web.Api;
 
 namespace CanDoItAll.Web;
 
@@ -14,12 +15,18 @@ internal static class RuntimeEndpoints
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
+        // The snapshots describe the host and each read probes the purpose roots on disk, so with API authorization
+        // enabled they need a bearer token like the rest of the API; the anonymous liveness probe is /health.
         endpoints.MapGet("/api/runtime/capabilities", GetCapabilities)
             .WithTags(Tag)
-            .Produces<HostCapabilitySnapshot>();
+            .Produces<HostCapabilitySnapshot>()
+            .ProducesApiErrors(StatusCodes.Status401Unauthorized)
+            .ApplyApiAuthorization(endpoints);
         endpoints.MapGet("/api/runtime/operations", GetOperations)
             .WithTags(Tag)
-            .Produces<RuntimeOperationsSnapshot>();
+            .Produces<RuntimeOperationsSnapshot>()
+            .ProducesApiErrors(StatusCodes.Status401Unauthorized)
+            .ApplyApiAuthorization(endpoints);
 
         return endpoints;
     }
@@ -37,10 +44,14 @@ internal static class RuntimeEndpoints
     /// Each read probes the application purpose roots again by creating and deleting a small temporary file in each
     /// root; it changes no application data. The response contains no paths, connection strings or secret values.
     ///
-    /// Authority: this route is outside the authorized <c>/api</c> route group. It requires no bearer token, even when
-    /// API authorization is enabled, and it is mapped even when <c>Api:Enabled</c> is false.
+    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// disabled (the development default) the route is open. It is mapped even when <c>Api:Enabled</c> is false. For
+    /// an anonymous liveness check use <c>GET /health</c>.
     /// </remarks>
     /// <response code="200">The current host capability snapshot.</response>
+    /// <response code="401">
+    /// API authorization is enabled and the request has no valid bearer token (<c>api.authorization-required</c>).
+    /// </response>
     internal static IResult GetCapabilities(
         IHostCapabilitySnapshotProvider hostCapabilities) =>
             Results.Ok(hostCapabilities.GetSnapshot());
@@ -59,10 +70,14 @@ internal static class RuntimeEndpoints
     /// Each read probes the application purpose roots again by creating and deleting a small temporary file in each
     /// root; it changes no application data. The response contains no paths, connection strings or secret values.
     ///
-    /// Authority: this route is outside the authorized <c>/api</c> route group. It requires no bearer token, even when
-    /// API authorization is enabled, and it is mapped even when <c>Api:Enabled</c> is false.
+    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// disabled (the development default) the route is open. It is mapped even when <c>Api:Enabled</c> is false. For
+    /// an anonymous liveness check use <c>GET /health</c>.
     /// </remarks>
     /// <response code="200">The current operational snapshot; read <c>state</c> for readiness.</response>
+    /// <response code="401">
+    /// API authorization is enabled and the request has no valid bearer token (<c>api.authorization-required</c>).
+    /// </response>
     internal static IResult GetOperations(
         IRuntimeDeploymentSupportProvider deploymentSupport,
         IRuntimeReadinessService readiness,

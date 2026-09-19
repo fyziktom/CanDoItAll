@@ -633,7 +633,8 @@ public sealed record ExecutionWorkflowCheckpointRecord(
 /// are stored with the run as sent, without length limits, and can be used as filters of
 /// <c>GET /api/agents/execution-runs</c>. Process automation sets them too: a run whose source kind is
 /// <c>process-step</c> or that carries a process run or process step identifier is handled as a governed process run,
-/// with different validation, approval and tool rules, so other clients must not send those values.
+/// with different validation, approval and tool rules. The HTTP run-start operations therefore reject such a context
+/// with HTTP 400 (<c>agents.request-invalid</c>).
 /// </summary>
 /// <param name="SourceKind">
 /// Kind of source that started the run, for example <c>manual</c> or <c>chat-session</c>; blank becomes
@@ -649,10 +650,16 @@ public sealed record ExecutionWorkflowCheckpointRecord(
 /// <param name="RequestedByKind">Kind of requester, for example <c>interactive</c>; free text.</param>
 /// <param name="MetadataJson">
 /// Additional metadata as the text of a JSON object, for example <c>{}</c>; text that is not a JSON object is replaced
-/// by <c>{}</c>. Keys whose names start with <c>agent</c> are reserved for the product and must not be sent.
+/// by <c>{}</c>. Keys whose names start with <c>agent</c> are reserved for the product and must not be sent; a request
+/// whose metadata contains <c>agentExternalTargetRootBindings</c> is rejected with HTTP 400, because external folders
+/// are granted only in the agent's workspace tool settings.
 /// </param>
-/// <param name="ProcessRunId">Identifier of the owning process run; set only by process automation.</param>
-/// <param name="ProcessStepId">Identifier of the owning process step; set only by process automation.</param>
+/// <param name="ProcessRunId">
+/// Identifier of the owning process run; set only by process automation. An HTTP run start that sends it is rejected.
+/// </param>
+/// <param name="ProcessStepId">
+/// Identifier of the owning process step; set only by process automation. An HTTP run start that sends it is rejected.
+/// </param>
 /// <param name="SchedulerRunId">Identifier of the scheduler run that started the run; free text.</param>
 /// <param name="MessageId">Identifier of the message that started the run; free text.</param>
 /// <param name="Policy">

@@ -4183,9 +4183,12 @@ public static class ProjectStructureAgentApi
     /// project, operation name, caller identity and outcome; the filters combine. At most 200 entries are returned
     /// and there is no paging.
     ///
-    /// The log is not limited to the caller: every caller with access sees all entries, and their request and response
-    /// bodies can contain notes, metadata, inline file content, lease tokens and internal failure messages. Treat the
-    /// response as sensitive.
+    /// Every caller with access sees the entries of all callers, but the recorded request and response bodies,
+    /// warnings, internal error message and repository root are returned only for the caller's own calls (the same
+    /// bearer token subject, or <c>local-api-operator</c> when API authorization is disabled). Entries of other callers,
+    /// including in-process agent tool calls, return <c>{}</c> bodies, an empty warning list, a null error message and an
+    /// empty repository root. The caller's own bodies can contain notes, metadata, inline file content, lease tokens and
+    /// internal failure messages; treat the response as sensitive.
     ///
     /// Authority: when API authorization is enabled, a bearer token with the <c>api</c> or
     /// <c>api.project-structure.write</c> scope (reads require the same scope).
@@ -4215,8 +4218,29 @@ public static class ProjectStructureAgentApi
             null,
             null,
             request,
-            (_, cancellationToken) => analyticsService.QueryAsync(request, cancellationToken),
+            async (caller, cancellationToken) => RedactOtherCallersAnalytics(
+                await analyticsService.QueryAsync(request, cancellationToken),
+                caller.AgentId),
             cancellationToken);
+
+    // Entries of other callers, including in-process agent tool calls, keep the facts of the call but not its recorded
+    // request and response bodies, warnings, internal error message or server directory: those can hold notes, inline
+    // file content, lease tokens and internal failures of someone else's call.
+    private static ProjectStructureAnalyticsResponse RedactOtherCallersAnalytics(
+        ProjectStructureAnalyticsResponse response,
+        string callerId)
+        => new(response.Entries
+            .Select(entry => string.Equals(entry.AgentId, callerId.Trim(), StringComparison.Ordinal)
+                ? entry
+                : entry with
+                {
+                    RepositoryRoot = string.Empty,
+                    ErrorMessage = null,
+                    RequestSummaryJson = "{}",
+                    ResponseSummaryJson = "{}",
+                    WarningsJson = "[]"
+                })
+            .ToList());
 
     private static ProjectStructureReadRequest ResolveHttpReadRequest(
         ProjectStructureReadRequest request)

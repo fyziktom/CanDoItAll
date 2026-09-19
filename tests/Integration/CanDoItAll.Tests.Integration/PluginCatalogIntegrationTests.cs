@@ -603,6 +603,46 @@ public sealed class PluginCatalogIntegrationTests
         Assert.NotEmpty(session.CodeVerifierVaultKey);
     }
 
+    [Theory]
+    [InlineData("/\\evil.example/landing")]
+    [InlineData("//evil.example/landing")]
+    [InlineData("/\t/evil.example/landing")]
+    [InlineData("https://evil.example/landing")]
+    public async Task Oauth_return_path_that_leaves_this_host_falls_back_to_the_plugins_page(string returnPath)
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var installResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{GmailPluginConstants.PluginId.Value}/install",
+            new PluginInstallRequest(Enable: true, Actor: "integration-test"));
+        Assert.True(installResponse.IsSuccessStatusCode, await installResponse.Content.ReadAsStringAsync());
+        await GrantAsync(host, GmailPluginConstants.PluginId, PluginCapabilityKind.OAuth2);
+
+        var startResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{GmailPluginConstants.PluginId.Value}/oauth/start",
+            new PluginOAuthStartRequest(GmailPluginConstants.ConnectionKey, ReturnPath: returnPath));
+        var startBody = await startResponse.Content.ReadAsStringAsync();
+        Assert.True(startResponse.IsSuccessStatusCode, startBody);
+        var start = JsonSerializer.Deserialize<PluginOAuthStartResponse>(startBody, JsonOptions)!;
+
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var session = await dbContext.Set<PluginOAuthSessionRecord>()
+                .SingleAsync(item => item.ConnectionId == start.ConnectionId.Value);
+            Assert.Equal("/plugins", session.ReturnPath);
+        }
+
+        var returnUri = await scope.ServiceProvider.GetRequiredService<PluginOAuthService>().CompleteCallbackAsync(
+            ReadQueryParameter(start.AuthorizationUrl, "state"),
+            code: null,
+            providerError: "access_denied",
+            providerErrorDescription: null);
+
+        Assert.False(returnUri.IsAbsoluteUri);
+        Assert.StartsWith("/plugins?oauth=failed&", returnUri.ToString(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Office365_oauth_start_uses_connection_settings_client_id_and_redirect_uri()
     {
