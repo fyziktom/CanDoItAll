@@ -19,7 +19,17 @@ The default development profile listens on `http://localhost:5032`.
 | `GET /openapi/v1.json` | OpenAPI document when `Api:OpenApiEnabled` is enabled. |
 | `GET /swagger/v1/swagger.json` | Swagger-compatible alias for the same document. |
 
-OpenAPI endpoints require authorization when API authorization is enabled.
+The OpenAPI documents and Swagger UI are available without a token when enabled, including
+when API authorization is enabled. `Api:SwaggerUiEnabled=false` disables the interactive
+page; `Api:OpenApiEnabled=false` disables both the documents and the page.
+
+To call protected operations from Swagger, open `/swagger` on the host's HTTPS address,
+select **Authorize**, and paste a JWT into **Bearer** without the `Bearer ` prefix. Swagger
+adds the authorization header to protected operations when you use **Try it out**.
+Obtain a session token from `POST /api/access/login` when user authentication is enabled,
+or use a scoped token issued by an administrator. The API still validates the token and
+the scopes required by each operation. **Logout** in the authorization dialog clears the
+token from Swagger; use `POST /api/access/logout` to revoke a user session.
 
 The operation, parameter and schema descriptions in that document come from the C# XML documentation
 of the route handlers and serialized types, with explicit endpoint metadata and `Description` attributes for the new access and process-authoring contracts; [HTTP API documentation](architecture/api-documentation.md)
@@ -32,8 +42,8 @@ Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettin
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `Api:Enabled` | `true` | Maps the main `/api` route families. |
-| `Api:OpenApiEnabled` | `true` | Maps the OpenAPI endpoints. |
-| `Api:SwaggerUiEnabled` | `true` | Serves the interactive `/swagger` page when OpenAPI is enabled. |
+| `Api:OpenApiEnabled` | `true` | Serves the OpenAPI documents anonymously; disabling it also disables Swagger UI. |
+| `Api:SwaggerUiEnabled` | `true` | Serves the interactive `/swagger` page anonymously when OpenAPI is enabled. |
 | `Api:Authorization:Enabled` | `false` | Requires bearer authorization for the API groups when enabled. |
 | `Api:Authorization:Issuer` | `CanDoItAll.Api` | JWT issuer. |
 | `Api:Authorization:Audience` | `CanDoItAll.Api` | JWT audience. |

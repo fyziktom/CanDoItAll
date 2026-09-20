@@ -5,28 +5,19 @@ namespace CanDoItAll.Web.Api;
 
 public static class ApiEndpointRouteBuilderExtensions
 {
-    public static WebApplication MapCanDoItAllApiDocumentation(this WebApplication app)
-    {
+    public static WebApplication MapCanDoItAllApiDocumentation(this WebApplication app) {
         ArgumentNullException.ThrowIfNull(app);
 
         var options = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
-        if (!options.OpenApiEnabled)
-        {
+        if (!options.OpenApiEnabled) {
             return app;
         }
 
-        var openApiEndpoint = app.MapOpenApi();
-        var swaggerJsonEndpoint = app.MapOpenApi("/swagger/{documentName}/swagger.json");
-        if (options.Authorization.Enabled)
-        {
-            openApiEndpoint.RequireAuthorization();
-            swaggerJsonEndpoint.RequireAuthorization();
-        }
+        app.MapOpenApi().AllowAnonymous();
+        app.MapOpenApi("/swagger/{documentName}/swagger.json").AllowAnonymous();
 
-        if (options.SwaggerUiEnabled)
-        {
-            app.UseSwaggerUI(swagger =>
-            {
+        if (options.SwaggerUiEnabled) {
+            app.UseSwaggerUI(swagger => {
                 swagger.RoutePrefix = "swagger";
                 swagger.DocumentTitle = "CanDoItAll API";
                 swagger.SwaggerEndpoint("/swagger/v1/swagger.json", "CanDoItAll API v1");

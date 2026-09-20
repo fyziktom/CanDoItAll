@@ -18,15 +18,17 @@ public sealed class ApiAccessContractTests {
         var password = Password();
         foreach (var management in new[] { false, true }) {
             await using var host = await CreateHostAsync(password, management);
-            var admin = await LoginAsync(host.Client, "admin", password);
-            SetToken(host.Client, admin.Token);
             var document = (await host.Client.GetFromJsonAsync<JsonObject>("/openapi/v1.json"))!;
             var paths = document["paths"]!.AsObject();
             Assert.Equal(management, paths.ContainsKey("/api/access/tokens"));
             Assert.Equal(management, paths.ContainsKey("/api/access/users"));
             Assert.Null(paths["/api/access/login"]!["post"]!["security"]);
             Assert.NotNull(paths["/api/access/me"]!["get"]!["security"]);
-            Assert.NotNull(document["components"]!["securitySchemes"]!["Bearer"]);
+            var bearer = document["components"]!["securitySchemes"]!["Bearer"]!;
+            Assert.Equal("http", bearer["type"]!.GetValue<string>());
+            Assert.Equal("bearer", bearer["scheme"]!.GetValue<string>());
+            Assert.Equal("JWT", bearer["bearerFormat"]!.GetValue<string>());
+            Assert.NotNull(paths["/api/access/me"]!["get"]!["security"]![0]!["Bearer"]);
             var ids = paths.SelectMany(path => path.Value!.AsObject().Where(method => method.Key is "get" or "post" or "put" or "delete" or "patch")
                 .Select(method => method.Value?["operationId"]?.GetValue<string>())).Where(id => id is not null).ToArray();
             Assert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
