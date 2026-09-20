@@ -15,10 +15,14 @@ internal static class SharedProviderMetadataUiChecks {
         string model, bool isPrivate, decimal inputRate, params string[] extraModels) {
         await OpenProviderAsync(page, baseUrl, providerName);
         await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
-        await page.GetByTestId("providers-suggested-models").FillAsync(
-            string.Join('\n', new[] { model }.Concat(extraModels)));
+        var suggestedModels = string.Join('\n', new[] { model }.Concat(extraModels));
+        await page.GetByTestId("providers-suggested-models").FillAsync(suggestedModels);
+        await page.GetByTestId("providers-suggested-models").PressAsync("Tab");
         await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
-        var rows = page.GetByTestId("provider-pricing-table").Locator("tbody tr");
+        await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("providers-suggested-models")).ToHaveValueAsync(suggestedModels);
+        await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
+        var rows = page.GetByTestId("provider-pricing-table").Locator("tbody tr[data-testid^='provider-pricing-row-']");
         if (await rows.CountAsync() == 0) {
             await page.GetByTestId("provider-pricing-add-button").ClickAsync();
         }
@@ -39,9 +43,20 @@ internal static class SharedProviderMetadataUiChecks {
             }
             await SetPriceAsync(page, row, extraModel, inputRate + 1m);
         }
+        var configuredModels = new HashSet<string>(new[] { model }.Concat(extraModels), StringComparer.Ordinal);
+        for (var row = await rows.CountAsync() - 1; row >= 0; row--) {
+            if (configuredModels.Contains(await page.GetByTestId($"provider-pricing-model-{row}").InputValueAsync())) {
+                continue;
+            }
+            await rows.Nth(row).GetByRole(AriaRole.Button, new() { Name = "Remove" }).ClickAsync();
+        }
+        await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("providers-suggested-models")).ToHaveValueAsync(suggestedModels);
         await page.GetByTestId("providers-save").ClickAsync();
-        await page.GetByText("Provider profile saved.", new() { Exact = true }).WaitForAsync();
+        await page.GetByText("Provider saved", new() { Exact = true }).WaitForAsync();
         await OpenProviderAsync(page, baseUrl, providerName);
+        await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("providers-suggested-models")).ToHaveValueAsync(suggestedModels);
         await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
         await Assertions.Expect(page.GetByTestId("provider-private-input"))
             .ToBeCheckedAsync(new() { Checked = isPrivate });
@@ -76,6 +91,7 @@ internal static class SharedProviderMetadataUiChecks {
         var dialog = page.GetByTestId("agents-details-dialog").Last;
         await dialog.GetByRole(AriaRole.Tab, new() { Name = "Runtime", Exact = true }).ClickAsync();
         var selector = dialog.GetByTestId("agents-catalog-model-choice");
+        Assert.Contains(selectedModel, await selector.Locator("option").AllTextContentsAsync());
         await selector.SelectOptionAsync(new SelectOptionValue { Label = selectedModel });
         await Assertions.Expect(selector.Locator("option")).ToHaveCountAsync(models.Count);
         var expected = models.Where(model => model != defaultModel).Append($"Provider default ({defaultModel})");

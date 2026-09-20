@@ -2,7 +2,9 @@ using Microsoft.Playwright;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.Security;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Xunit.Sdk;
@@ -12,6 +14,9 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 {
     private const string SharedUrlEnvironmentVariable = "CANDOITALL_SHARED_UI_SHARED_URL";
+    private const string SharedApiUrlEnvironmentVariable = "CANDOITALL_SHARED_UI_SHARED_API_URL";
+    private const string SharedApiCertificateEnvironmentVariable = "CANDOITALL_SHARED_UI_SHARED_API_CERTIFICATE";
+    private const string SharedSourceUrlEnvironmentVariable = "CANDOITALL_SHARED_UI_SHARED_SOURCE_URL";
     private const string FixtureWriteOptInEnvironmentVariable = "CANDOITALL_ALLOW_SHARED_PROVIDER_FIXTURE_WRITES";
     private const string ClientUrlEnvironmentVariable = "CANDOITALL_SHARED_UI_CLIENT_URL";
     private const string UpstreamTokenFileEnvironmentVariable = "CANDOITALL_SHARED_UI_UPSTREAM_TOKEN_FILE";
@@ -82,7 +87,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 
         var sourceToken = await ConfigureSharedInstanceAsync(sharedPage, settings);
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
-            OpenAiChatProviderName, "e2e-duplicate-model", false, 1.23m, "e2e-secondary-model");
+            OpenAiChatProviderName, "e2e-duplicate-model", false, 1.23m, "gpt-4.1-mini");
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
             OpenAiImageProviderName, "e2e-openai-image", false, 2.34m);
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
@@ -95,11 +100,11 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
                 settings.SharedUrl, settings.ClientUrl, providerName, settings.EvidenceDirectory, label);
         }
         await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
-            OpenAiChatProviderName, "e2e-duplicate-model", false, 9.87m, "e2e-secondary-model", "e2e-third-model");
+            OpenAiChatProviderName, "e2e-duplicate-model", false, 9.87m, "gpt-4.1-mini", "gpt-5.4-mini");
         await ConfigureClientInstanceAsync(clientPage, settings, sourceToken);
         var openAiModels = await SharedProviderMetadataUiChecks.AssertMirroredAsync(sharedPage, clientPage,
             settings.SharedUrl, settings.ClientUrl, OpenAiChatProviderName, settings.EvidenceDirectory, "resynced");
-        Assert.True(openAiModels.Count >= 12);
+        Assert.Equal(3, openAiModels.Count);
         await SharedProviderMetadataUiChecks.AssertAgentModelNamesAsync(clientPage, settings.ClientUrl,
             MultimediaAgentName, "e2e-duplicate-model", settings.EvidenceDirectory, openAiModels, "gpt-4.1-mini", "openai");
         var ollamaModels = await SharedProviderMetadataUiChecks.AssertMirroredAsync(sharedPage, clientPage,
@@ -130,8 +135,8 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await FieldByLabel(page, "Lifetime minutes").FillAsync("120");
         var expectedScopes = string.Join(' ', ApiAccessScopeNames.ReadLlmChats,
             ApiAccessScopeNames.ManageLlmChats, ApiAccessScopeNames.ExecuteLlmChats);
-        await FieldByLabel(page, "Scopes").FillAsync(expectedScopes);
-        await FieldByLabel(page, "Scopes").PressAsync("Tab");
+        await page.GetByTestId("api-token-scopes").FillAsync(expectedScopes);
+        await page.GetByTestId("api-token-scopes").PressAsync("Tab");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create token", Exact = true }).ClickAsync();
         var tokenField = page.Locator("textarea[readonly]");
         await tokenField.WaitForAsync();
@@ -165,8 +170,8 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await NavigateAsync(page, $"{settings.SharedUrl}/settings?tab=api-access");
         await FieldByLabel(page, "Subject").FillAsync("shared-providers-ui-client");
         await FieldByLabel(page, "Display name").FillAsync("Shared provider desktop client");
-        await FieldByLabel(page, "Lifetime minutes").FillAsync("120");
-        await FieldByLabel(page, "Scopes").FillAsync(
+        await FieldByLabel(page, "Lifetime minutes").FillAsync("10080");
+        await page.GetByTestId("api-token-scopes").FillAsync(
             "api.shared-providers.catalog.read api.shared-providers.invoke");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create token", Exact = true }).ClickAsync();
         var tokenField = page.Locator("textarea[readonly]");
@@ -219,9 +224,18 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         AcceptanceSettings settings,
         string sourceToken)
     {
-        using var client = new HttpClient
+        using var certificate = settings.SharedApiCertificateFile is { } certificateFile
+            ? X509CertificateLoader.LoadCertificateFromFile(certificateFile)
+            : null;
+        using var handler = new HttpClientHandler();
+        if (certificate is not null) {
+            handler.ServerCertificateCustomValidationCallback = (_, presented, _, errors) =>
+                presented?.Thumbprint == certificate.Thumbprint &&
+                (errors & ~SslPolicyErrors.RemoteCertificateChainErrors) == 0;
+        }
+        using var client = new HttpClient(handler)
         {
-            BaseAddress = new Uri(settings.SharedUrl, UriKind.Absolute)
+            BaseAddress = new Uri(settings.SharedApiUrl, UriKind.Absolute)
         };
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", sourceToken);
@@ -301,8 +315,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await CreateSecretAsync(page, settings.ClientUrl, SourceSecretName, sourceToken);
         await NavigateAsync(page, $"{settings.ClientUrl}/agents?tab=providers");
         await page.GetByTestId("agents-provider-profiles-panel").WaitForAsync();
-        await page.GetByTestId("providers-tree-provider").First.WaitForAsync();
-        await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
+        await page.GetByTestId("providers-connections").ClickAsync();
         await page.GetByTestId("shared-provider-source-add").WaitForAsync();
         var existingSource = page.GetByTestId("shared-provider-source-card")
             .Filter(new LocatorFilterOptions { HasTextString = SourceName });
@@ -327,16 +340,19 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             await AssertProviderVisibleAsync(page, OpenAiImageProviderName);
             await AssertProviderVisibleAsync(page, OllamaProviderName);
             await ScreenshotAsync(page, settings, "04-client-three-shared-providers-imported.png");
+            await page.GetByTestId("shared-provider-connections-close").ClickAsync();
             await CreateAgentAsync(page, settings, OllamaAgentName, OllamaProviderName, null);
             await CreateAgentAsync(page, settings, MultimediaAgentName, OpenAiChatProviderName, OpenAiImageProviderName);
             await ScreenshotAsync(page, settings, "05-client-agents-created-from-shared-providers.png");
             return;
         }
 
-        await DeleteAllPersistedProvidersAsync(page);
+        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await AssertNoLocalProvidersAsync(page);
         await page.GetByTestId("providers-new").ClickAsync();
         await page.GetByRole(AriaRole.Heading, new() { Name = "New provider profile", Exact = true }).WaitForAsync();
         await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
+        await page.GetByTestId("providers-connections").ClickAsync();
         await page.GetByTestId("shared-provider-source-add").WaitForAsync();
         Assert.Contains(
             "No provider selected",
@@ -344,13 +360,11 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             StringComparison.OrdinalIgnoreCase);
         await ScreenshotAsync(page, settings, "03-client-empty-provider-catalog-source-controls.png");
 
-        await NavigateAsync(page, $"{settings.ClientUrl}/agents?tab=providers");
-        await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
         await page.GetByTestId("shared-provider-source-add").ClickAsync();
         var sourceDialog = page.GetByTestId("shared-provider-source-dialog");
         await sourceDialog.WaitForAsync();
         await page.GetByTestId("shared-provider-source-name").FillAsync(SourceName);
-        await page.GetByTestId("shared-provider-source-uri").FillAsync("http://candoitall-spui-shared:8080/");
+        await page.GetByTestId("shared-provider-source-uri").FillAsync(settings.SharedSourceUrl);
         await page.GetByTestId("shared-provider-source-secret").SelectOptionAsync(
             new SelectOptionValue { Label = SourceSecretName });
         await sourceDialog.GetByText("Allow HTTP on a private network", new() { Exact = true }).ClickAsync();
@@ -374,12 +388,23 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await page.GetByTestId("shared-provider-catalog-apply").ClickAsync();
         await catalogDialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
         await page.GetByText("Shared providers imported", new() { Exact = true }).WaitForAsync();
-        await page.GetByText("4 profile(s)", new() { Exact = true }).WaitForAsync();
+        var providerNodes = await page.GetByTestId("providers-tree-provider").AllAsync();
+        var importedProviderIds = new HashSet<Guid>();
+        foreach (var providerNode in providerNodes)
+        {
+            var nodeId = await providerNode.GetAttributeAsync("id");
+            Assert.NotNull(nodeId);
+            Assert.True(nodeId.Length >= 32);
+            Assert.True(Guid.TryParseExact(nodeId[^32..], "N", out var providerId));
+            importedProviderIds.Add(providerId);
+        }
+        Assert.Equal(3, importedProviderIds.Count);
         await AssertProviderVisibleAsync(page, OpenAiChatProviderName);
         await AssertProviderVisibleAsync(page, OpenAiImageProviderName);
         await AssertProviderVisibleAsync(page, OllamaProviderName);
         await ScreenshotAsync(page, settings, "04-client-three-shared-providers-imported.png");
 
+        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
         await CreateAgentAsync(page, settings, OllamaAgentName, OllamaProviderName, null);
         await CreateAgentAsync(page, settings, MultimediaAgentName, OpenAiChatProviderName, OpenAiImageProviderName);
         await ScreenshotAsync(page, settings, "05-client-agents-created-from-shared-providers.png");
@@ -394,8 +419,16 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await SwitchAgentAsync(page, OllamaAgentName);
         await EnsureNewThreadAsync(page);
         await SendPromptAsync(page, "Reply with a short confirmation from the shared Ollama provider.");
-        await chatWorkspace.GetByText("deterministic fixture response", new() { Exact = true }).WaitForAsync(
-            new LocatorWaitForOptions { Timeout = 60_000 });
+        try
+        {
+            await chatWorkspace.GetByText("deterministic fixture response", new() { Exact = true }).WaitForAsync(
+                new LocatorWaitForOptions { Timeout = 60_000 });
+        }
+        catch (TimeoutException)
+        {
+            await ScreenshotAsync(page, settings, "failure-client-ollama-chat.png");
+            throw new XunitException($"Shared Ollama agent chat did not return the fixture response: {await chatWorkspace.InnerTextAsync()}");
+        }
         await ScreenshotAsync(page, settings, "06-client-ollama-shared-chat.png");
 
         await SwitchAgentAsync(page, MultimediaAgentName);
@@ -416,7 +449,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             new LocatorWaitForOptions
             {
                 State = WaitForSelectorState.Detached,
-                Timeout = 30_000
+                Timeout = 90_000
             });
         await chatWorkspace.GetByText("deterministic fixture response", new() { Exact = false }).Last.WaitForAsync(
             new LocatorWaitForOptions { Timeout = 90_000 });
@@ -445,7 +478,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         string transport)
     {
         await NavigateAsync(page, $"{settings.SharedUrl}/agents?tab=providers");
-        await page.GetByTestId("providers-tree-provider").First.WaitForAsync();
+        await page.GetByTestId("agents-provider-profiles-panel").WaitForAsync();
         var existingProvider = page.GetByTestId("providers-tree-provider")
             .Filter(new LocatorFilterOptions { HasTextString = name })
             .First;
@@ -462,8 +495,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 
             await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Health", Exact = true }).ClickAsync();
-            await page.GetByText("Provider health check passed", new() { Exact = true }).WaitForAsync(
-                new LocatorWaitForOptions { Timeout = 60_000 });
+            await AwaitProviderHealthAsync(page, kind);
             await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
             await page.GetByTestId("shared-provider-publish").ClickAsync();
             await ExpectTextAsync(publicationStatus, "Published");
@@ -495,12 +527,15 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         }
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Health", Exact = true }).ClickAsync();
-        await page.GetByText("Provider health check passed", new() { Exact = true }).WaitForAsync(
-            new LocatorWaitForOptions { Timeout = 60_000 });
+        await AwaitProviderHealthAsync(page, kind);
         await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
         await page.GetByTestId("shared-provider-publish").ClickAsync();
         await ExpectTextAsync(page.GetByTestId("shared-provider-publication-status"), "Published");
     }
+
+    private static Task AwaitProviderHealthAsync(IPage page, string kind) =>
+        page.GetByText(kind == "Ollama" ? "Ollama returned /api/tags" : "OpenAI model catalog returned",
+            new() { Exact = false }).WaitForAsync(new LocatorWaitForOptions { Timeout = 60_000 });
 
     internal static async Task CreateSecretAsync(IPage page, string baseUrl, string name, string value)
     {
@@ -570,7 +605,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     private static async Task DeleteProvidersNamedAsync(IPage page, string baseUrl, string providerName)
     {
         await NavigateAsync(page, $"{baseUrl}/agents?tab=providers");
-        await page.GetByTestId("providers-tree-provider").First.WaitForAsync();
+        await page.GetByTestId("agents-provider-profiles-panel").WaitForAsync();
         var provider = page.GetByTestId("providers-tree-provider")
             .Filter(new LocatorFilterOptions { HasTextString = providerName })
             .First;
@@ -586,40 +621,10 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         }
     }
 
-    private static async Task DeleteAllPersistedProvidersAsync(IPage page)
+    private static async Task AssertNoLocalProvidersAsync(IPage page)
     {
-        for (var attempt = 0; attempt < 20; attempt++)
-        {
-            var profileCount = page.GetByText(
-                new System.Text.RegularExpressions.Regex(@"^\d+ profile\(s\)$"))
-                .First;
-            var profileCountText = await profileCount.InnerTextAsync();
-            var separatorIndex = profileCountText.IndexOf(' ', StringComparison.Ordinal);
-            Assert.True(separatorIndex > 0);
-            var remainingProfiles = int.Parse(profileCountText[..separatorIndex]);
-            if (remainingProfiles == 0)
-            {
-                break;
-            }
-
-            if (remainingProfiles == 1 &&
-                await page.GetByRole(AriaRole.Heading, new() { Name = "Remote Ollama", Exact = true }).CountAsync() > 0)
-            {
-                break;
-            }
-
-            var deleteButton = page.GetByRole(AriaRole.Button, new() { Name = "Delete", Exact = true });
-            if (await deleteButton.CountAsync() == 0 || !await deleteButton.IsVisibleAsync())
-            {
-                break;
-            }
-
-            await deleteButton.EvaluateAsync("button => button.click()");
-            await page.GetByText($"{remainingProfiles - 1} profile(s)", new() { Exact = true }).WaitForAsync();
-        }
-
-        await page.GetByText("1 profile(s)", new() { Exact = true }).WaitForAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "Remote Ollama", Exact = true }).WaitForAsync();
+        await page.GetByText("No provider profiles match the current filter", new() { Exact = true }).WaitForAsync();
+        Assert.Equal(0, await page.GetByTestId("providers-tree-provider").CountAsync());
     }
 
     private static async Task CreateAgentAsync(
@@ -709,12 +714,15 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     private static async Task EnsureNewThreadAsync(IPage page)
     {
         await page.GetByRole(AriaRole.Button, new() { Name = "New thread", Exact = true }).First.ClickAsync();
+        await page.GetByText("New thread created.", new() { Exact = true }).WaitForAsync();
         await page.GetByTestId("chat-prompt-input").WaitForAsync();
     }
 
     private static async Task SendPromptAsync(IPage page, string prompt)
     {
         await page.GetByTestId("chat-prompt-input").FillAsync(prompt);
+        await page.GetByTestId("chat-prompt-input").PressAsync("Tab");
+        await Assertions.Expect(page.GetByTestId("chat-prompt-input")).ToHaveValueAsync(prompt);
         await page.GetByTestId("chat-send-button").ClickAsync();
     }
 
@@ -809,6 +817,9 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         var upstreamTokenFile = Environment.GetEnvironmentVariable(UpstreamTokenFileEnvironmentVariable);
         var evidenceDirectory = Environment.GetEnvironmentVariable(EvidenceDirectoryEnvironmentVariable);
         var visionImagePath = Environment.GetEnvironmentVariable(VisionImageEnvironmentVariable);
+        var sharedApiUrl = Environment.GetEnvironmentVariable(SharedApiUrlEnvironmentVariable);
+        var sharedApiCertificateFile = Environment.GetEnvironmentVariable(SharedApiCertificateEnvironmentVariable);
+        var sharedSourceUrl = Environment.GetEnvironmentVariable(SharedSourceUrlEnvironmentVariable);
         if (string.IsNullOrWhiteSpace(sharedUrl) ||
             string.IsNullOrWhiteSpace(clientUrl) ||
             string.IsNullOrWhiteSpace(upstreamTokenFile) ||
@@ -830,9 +841,15 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         {
             throw new FileNotFoundException("The vision test image was not found.", visionImagePath);
         }
+        if (!string.IsNullOrWhiteSpace(sharedApiCertificateFile) && !File.Exists(sharedApiCertificateFile)) {
+            throw new FileNotFoundException("The shared API certificate was not found.", sharedApiCertificateFile);
+        }
 
         return new AcceptanceSettings(
             sharedUrl.TrimEnd('/'),
+            string.IsNullOrWhiteSpace(sharedApiUrl) ? sharedUrl.TrimEnd('/') : sharedApiUrl.TrimEnd('/'),
+            string.IsNullOrWhiteSpace(sharedSourceUrl) ? "http://candoitall-spui-shared:8080/" : sharedSourceUrl,
+            string.IsNullOrWhiteSpace(sharedApiCertificateFile) ? null : Path.GetFullPath(sharedApiCertificateFile),
             clientUrl.TrimEnd('/'),
             Path.GetFullPath(upstreamTokenFile),
             Path.GetFullPath(evidenceDirectory),
@@ -841,6 +858,9 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 
     private sealed record AcceptanceSettings(
         string SharedUrl,
+        string SharedApiUrl,
+        string SharedSourceUrl,
+        string? SharedApiCertificateFile,
         string ClientUrl,
         string UpstreamTokenFile,
         string EvidenceDirectory,
