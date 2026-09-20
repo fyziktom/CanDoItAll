@@ -494,13 +494,12 @@ internal static class SharedProviderInferenceApi
         {
             await httpContext.Response.StartAsync(httpContext.RequestAborted);
             await httpContext.Response.Body.FlushAsync(httpContext.RequestAborted);
-            await foreach (var frame in stream
-                               .ReadFramesAsync(httpContext.RequestAborted)
-                               .WithCancellation(httpContext.RequestAborted))
+            await using var frames = stream.ReadFramesAsync(httpContext.RequestAborted).GetAsyncEnumerator(httpContext.RequestAborted);
+            while (await ApiStreamAuthorization.WaitAsync(httpContext, frames.MoveNextAsync().AsTask()))
             {
                 await SharedProviderOpenAiServerSentEventWriter.WriteFrameAsync(
                     httpContext.Response,
-                    frame,
+                    frames.Current,
                     httpContext.RequestAborted);
             }
 

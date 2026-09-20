@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using System.Security.Claims;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -9,7 +10,7 @@ internal static class AgentRecruitingApi
 {
     public static RouteGroupBuilder MapAgentRecruitingApi(this RouteGroupBuilder group)
     {
-        var recruiting = group.MapGroup("/agent-recruiting")
+        var recruiting = group.MapGroup("/agent-recruiting").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agent Recruiting");
 
         recruiting.MapPost("/interviews", CreateInterviewAsync)
@@ -24,7 +25,7 @@ internal static class AgentRecruitingApi
                 StatusCodes.Status403Forbidden);
 
         recruiting.MapPost("/interviews/{interviewId:guid}/attempts", AppendAttemptAsync)
-            .WithName("AppendAgentRecruitingAttempt")
+            .WithName("AppendAgentRecruitingAttempt").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AppendAgentRecruitingAttemptCommand>("application/json")
             .Produces<AgentRecruitingInterview>(StatusCodes.Status201Created)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -35,7 +36,7 @@ internal static class AgentRecruitingApi
                 StatusCodes.Status403Forbidden);
 
         recruiting.MapPost("/interviews/{interviewId:guid}/reviews", AppendReviewAsync)
-            .WithName("AppendAgentRecruitingHumanReview")
+            .WithName("AppendAgentRecruitingHumanReview").WithApiPermission(ApiAccessScopeNames.ReviewAgentRecruiting)
             .Accepts<AppendAgentRecruitingReviewCommand>("application/json")
             .Produces<AgentRecruitingInterview>(StatusCodes.Status201Created)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -100,7 +101,7 @@ internal static class AgentRecruitingApi
     /// request creates another interview, so after a lost response list the candidate's interviews before retrying.
     /// Recruiting evidence never activates or changes the agent. Text limits count UTF-16 code units after trimming.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The candidate, its current configuration version, the purpose and optional links.</param>
     /// <response code="201">
@@ -167,7 +168,7 @@ internal static class AgentRecruitingApi
     /// request appends another attempt, so after a lost response read the interview before retrying. Text limits
     /// count UTF-16 code units after trimming.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="interviewId">
     /// Identifier of the interview, as returned by <c>POST /api/agent-recruiting/interviews</c> or the candidate's
@@ -329,7 +330,7 @@ internal static class AgentRecruitingApi
     /// took effect after a lost response, and <c>GET /api/agent-recruiting/candidates/{agentId}/readiness</c> for the
     /// conclusion drawn from all interviews of the candidate.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="interviewId">
     /// Identifier of the interview, as returned by <c>POST /api/agent-recruiting/interviews</c> or the candidate's
@@ -374,7 +375,7 @@ internal static class AgentRecruitingApi
     /// the <c>currentConfigurationVersion</c> of the readiness. The candidate is not looked up, so an unknown agent
     /// gives an empty array.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="candidateAgentId">Identifier of the candidate agent (not the empty GUID).</param>
     /// <param name="recruitmentApplicationId">
@@ -430,7 +431,7 @@ internal static class AgentRecruitingApi
     /// result is evidence for a separate activation decision: reading it never activates or changes the agent. It
     /// also returns <c>currentConfigurationVersion</c>, which <c>POST /api/agent-recruiting/interviews</c> requires.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="agentId">
     /// Identifier of the candidate agent (not the empty GUID), as listed by <c>GET /api/agents</c>.

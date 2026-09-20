@@ -117,3 +117,7 @@ Follow the SharedInfo standard. In this repository in particular:
 - Structural changes to the document are reviewed separately from prose: compare the route, operation
   identifier, schema, required-member, enum, media-type and security metadata of the documents before and
   after a change, and justify every difference with runtime evidence.
+
+## Account and section authority
+
+The [API-user operating contract](../api-user-access.md) defines the exposure truth table and credential kinds. HTTP management requires a live registered configured-administrator session; no subject, role, broad scope or loopback request substitutes for it. Ordinary business routes enforce their section capabilities and retain exact privileged and resource policies. The generated document uses actual endpoint authorization metadata for bearer requirements. The new access, workspace-settings and process-authoring contracts use explicit endpoint metadata and `Description` attributes without introducing XML comments. Numeric enum value descriptions are derived from the CLR enum so clients see the actual wire values.

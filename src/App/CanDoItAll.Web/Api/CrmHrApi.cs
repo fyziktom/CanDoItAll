@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.CrmHr;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,7 +22,7 @@ internal static class CrmHrApi
 
     public static RouteGroupBuilder MapCrmHrApi(this RouteGroupBuilder group)
     {
-        var crmHr = group.MapGroup("/crm-hr")
+        var crmHr = group.MapGroup("/crm-hr").WithApiSection(ApiAccessScopeNames.ReadCrmHr, ApiAccessScopeNames.WriteCrmHr)
             .WithTags("CRM / HR");
 
         MapPartyEndpoints(crmHr);
@@ -147,7 +148,7 @@ internal static class CrmHrApi
     /// tags are returned empty, their external code and summary are not searched and they never match a tag filter.
     ///
     /// Paging is zero-based: request the next page with <c>PageIndex</c> + 1 while <c>pageIndex</c> + 1 is less than
-    /// <c>totalPages</c>. Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// <c>totalPages</c>. Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="query">Search, tag, party-type, paging and archive filters.</param>
     /// <response code="200">The requested page. An empty <c>items</c> array means no party matched.</response>
@@ -176,7 +177,7 @@ internal static class CrmHrApi
     ///
     /// For a sensitive party the external code, summary and tags are returned empty.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="partyId">
     /// Identifier of the party, as returned in <c>items[].id</c> by <c>GET /api/crm-hr/parties</c> or by
@@ -219,7 +220,7 @@ internal static class CrmHrApi
     /// - <c>isSensitive</c> true withholds the external code, summary and tags from directory reads and keeps the party
     /// out of the application search index.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host. The change is recorded
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy. The change is recorded
     /// as made by <c>crm-hr-api</c>.
     /// </remarks>
     /// <param name="request">
@@ -255,7 +256,7 @@ internal static class CrmHrApi
     /// Read this list before <c>PUT /api/crm-hr/parties/{partyId}/relationships</c>: that operation replaces the whole
     /// list, in both directions.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="partyId">
     /// Identifier of the party whose relationships are listed, as returned by <c>GET /api/crm-hr/parties</c>. Archived
@@ -305,7 +306,7 @@ internal static class CrmHrApi
     /// When any item is rejected nothing is changed. There is no concurrency check: a replacement saved by another
     /// client after your read is overwritten.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="partyId">
     /// Identifier of the party whose relationships are replaced, as returned by <c>GET /api/crm-hr/parties</c>.
@@ -354,7 +355,7 @@ internal static class CrmHrApi
     /// the display name and, for parties that are not sensitive, the external code and summary, sensitive parties
     /// return an empty external code, summary and tags, and paging is zero-based.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="query">Search, tag, paging and archive filters.</param>
     /// <response code="200">The requested page. An empty <c>items</c> array means no party matched.</response>
@@ -389,7 +390,7 @@ internal static class CrmHrApi
     /// For a sensitive party the primary email and phone are returned empty; the summary and the other fields are
     /// returned. The response contains personal and HR data: do not log it.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="partyId">
     /// Identifier of the party, as returned by <c>GET /api/crm-hr/workforce</c> or <c>GET /api/crm-hr/parties</c>; not
@@ -434,7 +435,7 @@ internal static class CrmHrApi
     /// DeliveryUnit) when it is missing. The search index and the activity feed are updated after the profile is saved,
     /// so after a server error read the workspace before retrying.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">All fields of the party's workforce profile.</param>
     /// <response code="200">
@@ -468,7 +469,7 @@ internal static class CrmHrApi
     /// catalog entry that party skills refer to by <c>skillId</c>; it is not an agent skill or capability. The list is
     /// not paged. The workforce workspace returns the same catalog in <c>skillCatalog</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">
     /// All skill definitions, including inactive ones; an empty array when the catalog is empty.
@@ -488,7 +489,7 @@ internal static class CrmHrApi
     /// renaming a definition to the name of another one fails with a server error. Setting <c>isActive</c> to false
     /// keeps the definition and the party skills that refer to it.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The skill definition fields.</param>
     /// <response code="200">
@@ -517,7 +518,7 @@ internal static class CrmHrApi
     /// matches, a new record with a new identifier is created. All fields, including the party and the skill, are
     /// overwritten with the values sent. Negative years of experience are saved as 0.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The party, the skill and the proficiency details.</param>
     /// <response code="200">
@@ -556,7 +557,7 @@ internal static class CrmHrApi
     /// is created. All fields are overwritten with the values sent. <c>startDate</c> and <c>endDate</c> are required,
     /// the end date cannot be before the start date and <c>percentage</c> must be greater than 0 and at most 100.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The party, the block kind, the date range, the percentage and an optional project.</param>
     /// <response code="200">
@@ -596,7 +597,7 @@ internal static class CrmHrApi
     /// 1) multiplied by <c>pageSize</c> is less than <c>totalCount</c>. Items carry the candidate's primary public
     /// email and phone, also for sensitive candidates.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="query">Search, stage and paging filters.</param>
     /// <response code="200">The requested page. An empty <c>items</c> array means no application matched.</response>
@@ -630,7 +631,7 @@ internal static class CrmHrApi
     /// The response contains personal data, including the contact values and summary of sensitive candidates: do not
     /// log it.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="applicationId">
     /// Identifier of the recruitment application, as returned by <c>GET /api/crm-hr/recruiting/applications</c> or
@@ -677,7 +678,7 @@ internal static class CrmHrApi
     /// updated after the application is saved. After a failure, search for the candidate and the application before
     /// retrying.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">
     /// The application fields and either the candidate party or the new candidate's details.
@@ -711,7 +712,7 @@ internal static class CrmHrApi
     /// belongs to. <c>scheduledAtUtc</c> is required and is stored in UTC. The interviewer, when set, must be an
     /// existing person party. Saving an interview or its outcome does not change the application's stage or decision.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The application, schedule, interview type, interviewer, outcome and feedback.</param>
     /// <response code="200">
@@ -748,7 +749,7 @@ internal static class CrmHrApi
     /// Required: <c>partyId</c> of an existing party, a non-blank <c>title</c>, <c>ownerPartyId</c> of an existing
     /// person and <c>dueDate</c>. <c>relatedProjectId</c>, when set, must identify an existing project.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The party, kind, title, owner, due date, status and optional project of the task.</param>
     /// <response code="200">
@@ -789,7 +790,7 @@ internal static class CrmHrApi
     ///
     /// Each assigned party must be an existing person other than the party itself.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The party and its complete set of support assignments.</param>
     /// <response code="200">
@@ -836,7 +837,7 @@ internal static class CrmHrApi
     /// and the application before retrying. Converting a converted candidate again saves the profile again and keeps
     /// the application Hired.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The application to convert and the workforce profile values.</param>
     /// <response code="200">

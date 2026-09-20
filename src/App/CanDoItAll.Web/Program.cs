@@ -77,10 +77,23 @@ builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
 builder.Services.AddScoped<TuningCoordinator>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+    options.ForwardedHeaders = webHostOptions.TrustedProxies.Length == 0 ? ForwardedHeaders.None :
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
+    foreach (var proxy in webHostOptions.TrustedProxies) {
+        options.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
+    }
 });
+if (webHostOptions.AllowedOrigins.Length > 0) {
+    if (webHostOptions.AllowedOrigins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+        uri.Scheme is not ("http" or "https") || uri.GetLeftPart(UriPartial.Authority) != origin || origin.Contains('*'))) {
+        throw new InvalidOperationException("WebHost:AllowedOrigins must contain exact HTTP(S) origins.");
+    }
+    builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+        .WithOrigins(webHostOptions.AllowedOrigins).WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        .WithHeaders("Authorization", "Content-Type", "If-Match", "Idempotency-Key", "Last-Event-ID")));
+}
 
 var app = builder.Build();
 
@@ -95,11 +108,17 @@ app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseWhen(context => !ApiTransportMiddleware.IsApiRequest(context), branch =>
+        branch.UseExceptionHandler("/Error", createScopeForErrors: true));
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseWhen(context => !ApiTransportMiddleware.IsApiRequest(context), branch =>
+    branch.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
+app.UseMiddleware<ApiTransportMiddleware>();
+if (webHostOptions.AllowedOrigins.Length > 0) {
+    app.UseCors();
+}
 if (webHostOptions.HttpsRedirectionEnabled)
 {
     app.UseHttpsRedirection();

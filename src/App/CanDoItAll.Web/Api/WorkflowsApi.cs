@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -22,11 +23,12 @@ internal static class WorkflowsApi
 
     public static RouteGroupBuilder MapWorkflowsApi(this RouteGroupBuilder group)
     {
-        var workflows = group.MapGroup("/workflows")
+        var workflows = group.MapGroup("/workflows").WithApiSection(ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows)
             .WithTags("Workflows")
             .DisableAntiforgery();
 
         workflows.MapWorkflowRunControlApi();
+        workflows.MapWorkflowTemplates();
         workflows.MapWorkflowRunReadApi();
         workflows.MapWorkflowRunIdempotencyApi();
         workflows.MapWorkflowStableIdentityApi();
@@ -104,12 +106,12 @@ internal static class WorkflowsApi
             .Produces<ApiAck>();
 
         workflows.MapPost("/definitions/{workflowId:guid}/validate", ValidateSavedDefinitionAsync)
-            .WithName("ValidateSavedWorkflowDefinition")
+            .WithName("ValidateSavedWorkflowDefinition").WithApiPermission(ApiAccessScopeNames.ReadWorkflows)
             .Produces<WorkflowValidationResult>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapPost("/validate", ValidateDraftDefinitionAsync)
-            .WithName("ValidateDraftWorkflowDefinition")
+            .WithName("ValidateDraftWorkflowDefinition").WithApiPermission(ApiAccessScopeNames.ReadWorkflows)
             .Produces<WorkflowValidationResult>();
 
         workflows.MapGet("/provider-options", ListProviderOptionsAsync)
@@ -135,7 +137,7 @@ internal static class WorkflowsApi
             .Produces<ApiAck>();
 
         workflows.MapPost("/test-runs", RunTestAsync)
-            .WithName("RunWorkflowTest")
+            .WithName("RunWorkflowTest").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
             .Produces<WorkflowTestRunResult>()
             .Produces<WorkflowTestRunResult>(StatusCodes.Status400BadRequest);
 
@@ -150,7 +152,7 @@ internal static class WorkflowsApi
     internal static RouteGroupBuilder MapWorkflowRunControlApi(this RouteGroupBuilder workflows)
     {
         workflows.MapPost("/definitions/{workflowId:guid}/runs/start", StartDefinitionRunAsync)
-            .WithName("StartWorkflowDefinitionRun")
+            .WithName("StartWorkflowDefinitionRun").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
             .Produces<WorkflowRunStartApiResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
@@ -160,7 +162,7 @@ internal static class WorkflowsApi
                 StatusCodes.Status403Forbidden);
 
         workflows.MapPost("/runs/start", StartRunAsync)
-            .WithName("StartWorkflowRun")
+            .WithName("StartWorkflowRun").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
             .Produces<WorkflowRunStartApiResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
@@ -170,7 +172,7 @@ internal static class WorkflowsApi
                 StatusCodes.Status403Forbidden);
 
         workflows.MapPost("/runs/{runId:guid}/cancel", CancelRunAsync)
-            .WithName("CancelWorkflowRun")
+            .WithName("CancelWorkflowRun").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
             .Produces<WorkflowRunCancellationResult>()
             .Produces<WorkflowRunCancellationResult>(StatusCodes.Status404NotFound)
             .Produces<WorkflowRunCancellationResult>(StatusCodes.Status409Conflict)
@@ -187,7 +189,7 @@ internal static class WorkflowsApi
     /// capability setup is validated. The list is informational: it does not reflect authorization, configuration or
     /// runtime state, and this OpenAPI document stays the exact contract for parameters, bodies and responses.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">The route list and the boundary note.</response>
@@ -195,6 +197,8 @@ internal static class WorkflowsApi
         => Results.Ok(new WorkflowApiContractResponse(
             [
                 "GET /api/workflows/contract",
+                "GET /api/workflows/templates",
+                "POST /api/workflows/templates/{templateKey}/drafts",
                 "GET /api/workflows/settings",
                 "POST /api/workflows/settings",
                 "GET /api/workflows/runtime-backends",
@@ -252,7 +256,7 @@ internal static class WorkflowsApi
     /// node-output capture, human input allowed with a 240-minute default timeout, and voice input and output
     /// disabled. Change the document with <c>POST /api/workflows/settings</c>, which replaces it as a whole.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">The saved settings, or the built-in defaults when none were saved.</response>
@@ -283,7 +287,7 @@ internal static class WorkflowsApi
     /// every definition that contains a human-input node fail validation, so it can no longer be saved, published or
     /// launched until the setting is restored.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete settings document to store. Send every member.</param>
@@ -308,7 +312,7 @@ internal static class WorkflowsApi
     /// <c>runtimePolicy.preferredBackend</c> for a definition: a backend that is not registered and runnable is
     /// rejected when a run starts and makes a definition that prefers it fail validation.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">Every known backend, runnable or not.</response>
@@ -327,7 +331,7 @@ internal static class WorkflowsApi
     /// read, so an executor can be listed but not runnable, for example when its plugin is disabled or not
     /// configured.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">The executor catalog.</response>
@@ -346,7 +350,7 @@ internal static class WorkflowsApi
     /// versions; every save, import and status change stores a new version with a new <c>versionId</c>. Read an
     /// earlier version with <c>GET /api/workflows/definitions/{workflowId}/versions/{versionId}</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">
@@ -368,7 +372,7 @@ internal static class WorkflowsApi
     /// Version identifiers come from <c>versionId</c> of a definition, a catalog item or a run. A version identifier
     /// is only found under the workflow it belongs to.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">Identifier of the workflow that owns the version.</param>
@@ -394,7 +398,7 @@ internal static class WorkflowsApi
     /// on this or another host. The envelope holds the whole definition, including node instructions and executor
     /// settings, so handle it like the definition itself. Exporting changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">Identifier of the workflow to export.</param>
@@ -443,7 +447,7 @@ internal static class WorkflowsApi
     /// lower-cased and must be unique across workflows. Leaving both empty keeps the identity of the current version,
     /// so this operation cannot remove an identity. Template provenance cannot be set here.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">
@@ -478,7 +482,7 @@ internal static class WorkflowsApi
     /// external identity and template provenance; if that workflow already exists here, the import becomes its new
     /// current version without any concurrency check.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The export envelope and the import options.</param>
@@ -506,7 +510,7 @@ internal static class WorkflowsApi
     /// Send the <c>versionId</c> you last read as <c>expectedVersionId</c> so that the change is rejected when the
     /// workflow changed in between; without it the change applies to whatever version is current.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">Identifier of the workflow to publish.</param>
@@ -544,7 +548,7 @@ internal static class WorkflowsApi
     /// The stored copy is validated like any save, so a definition that no longer validates cannot be suspended until
     /// it is fixed. Send the <c>versionId</c> you last read as <c>expectedVersionId</c> to detect concurrent changes.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">Identifier of the workflow to suspend.</param>
@@ -582,7 +586,7 @@ internal static class WorkflowsApi
     /// The stored copy is validated like any save, so a definition that no longer validates cannot be archived until
     /// it is fixed. Send the <c>versionId</c> you last read as <c>expectedVersionId</c> to detect concurrent changes.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">Identifier of the workflow to archive.</param>
@@ -620,7 +624,7 @@ internal static class WorkflowsApi
     /// The operation is idempotent: deleting an unknown or already deleted workflow also returns
     /// <c>{ "ok": true }</c>. There is no concurrency precondition.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">Identifier of the workflow to delete.</param>
@@ -642,7 +646,7 @@ internal static class WorkflowsApi
     /// components, providers, backends and settings, and returns the issues. Nothing is changed. An empty
     /// <c>issues</c> list means the version is valid now.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="workflowId">Identifier of the workflow whose current version is validated.</param>
@@ -672,7 +676,7 @@ internal static class WorkflowsApi
     /// identifiers can be sent. An empty <c>issues</c> list means that a save of this content would pass validation
     /// at this moment.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete definition to validate.</param>
@@ -692,7 +696,7 @@ internal static class WorkflowsApi
     /// <c>modelOptions</c> in a component or an LLM call node. The list contains no credentials. An empty list means
     /// no chat provider is configured.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">The provider options.</response>
@@ -710,7 +714,7 @@ internal static class WorkflowsApi
     /// instructions are kept as a Prompt Gallery prompt version, identified by <c>promptArtifactId</c> and
     /// <c>promptVersionId</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">The components; an empty array when none exist.</response>
@@ -725,7 +729,7 @@ internal static class WorkflowsApi
     /// <remarks>
     /// Returns the component with its instructions resolved from its Prompt Gallery prompt version.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="componentId">
@@ -767,7 +771,7 @@ internal static class WorkflowsApi
     /// Nodes that reference the component copy its provider, model and instructions when their definition is saved,
     /// so saved definitions keep the values they copied.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete component to store.</param>
@@ -796,7 +800,7 @@ internal static class WorkflowsApi
     ///
     /// The operation is idempotent: deleting an unknown component also returns <c>{ "ok": true }</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="componentId">Identifier of the component to delete.</param>
@@ -828,7 +832,7 @@ internal static class WorkflowsApi
     /// paths, external request and response JSON, checkpoint references and the run's launch origin. Use it only for
     /// trusted authoring clients.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open. The authenticated subject, or the local operator when
     /// authorization is disabled, becomes the preview run's actor.
     /// </remarks>
@@ -874,7 +878,7 @@ internal static class WorkflowsApi
     /// they include the backend run identifier, but their launch origin is withheld (always null) because the runs can
     /// belong to other callers.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="query">Optional filters and the size of the recent-run list.</param>
@@ -921,7 +925,7 @@ internal static class WorkflowsApi
     /// key. Without a key every request starts a new run, so a request whose response was lost cannot be retried
     /// safely; look for the run in <c>GET /api/workflows/runs</c> first.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; its subject becomes
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; its subject becomes
     /// the run's actor. With authorization disabled (the development default) the route is open and the run is
     /// attributed to the local operator.
     /// </remarks>
@@ -1011,7 +1015,7 @@ internal static class WorkflowsApi
     /// key. Without a key every request starts a new run, so a request whose response was lost cannot be retried
     /// safely; look for the run in <c>GET /api/workflows/runs</c> first.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; its subject becomes
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; its subject becomes
     /// the run's actor. With authorization disabled (the development default) the route is open and the run is
     /// attributed to the local operator.
     /// </remarks>
@@ -1085,7 +1089,7 @@ internal static class WorkflowsApi
     /// The <c>run</c> in the body is the stored run record without the public safe projection: it includes the backend
     /// run identifier, but its launch origin is withheld (always null) because the run can belong to another caller.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">

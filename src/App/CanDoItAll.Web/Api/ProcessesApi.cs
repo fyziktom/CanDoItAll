@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using System.Security.Claims;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Abstractions;
@@ -12,7 +13,7 @@ internal static class ProcessesApi
 {
     public static RouteGroupBuilder MapProcessesApi(this RouteGroupBuilder group)
     {
-        var processes = group.MapGroup("/processes")
+        var processes = group.MapGroup("/processes").WithApiSection(ApiAccessScopeNames.ReadProcesses, ApiAccessScopeNames.WriteProcesses)
             .WithTags("Processes")
             .DisableAntiforgery();
         processes.MapProcessRunRecordsApi();
@@ -21,14 +22,16 @@ internal static class ProcessesApi
             .WithName("GetProcessesApiContract")
             .Produces<ProcessApiContractResponse>();
 
+        processes.MapProcessDefinitionsApi();
+
         processes.MapPost("/launch/check", CheckLaunchAsync)
-            .WithName("CheckProcessLaunch")
+            .WithName("CheckProcessLaunch").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessLaunchApiResponse>()
             .Produces(StatusCodes.Status403Forbidden)
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         processes.MapPost("/launch", LaunchAsync)
-            .WithName("LaunchProcess")
+            .WithName("LaunchProcess").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessLaunchApiResponse>()
             .Produces(StatusCodes.Status403Forbidden)
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
@@ -40,17 +43,17 @@ internal static class ProcessesApi
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         processes.MapPost("/runs/{runId:guid}/dispatch", DispatchRunAsync)
-            .WithName("DispatchProcessRun")
+            .WithName("DispatchProcessRun").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessDispatchApiResponse>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         processes.MapPost("/runs/{runId:guid}/cancel", CancelRunAsync)
-            .WithName("CancelProcessRun")
+            .WithName("CancelProcessRun").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessRuntimeCancelApiResponse>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         processes.MapPost("/runs/{runId:guid}/steps/{stepInstanceId:guid}/rework", RequestStepReworkAsync)
-            .WithName("RequestProcessStepRework")
+            .WithName("RequestProcessStepRework").WithApiPermission(ApiAccessScopeNames.ExecuteProcesses)
             .Produces<ProcessRuntimeReworkApiResponse>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
@@ -79,7 +82,7 @@ internal static class ProcessesApi
     /// or runtime readiness and says nothing about request or response shapes, which this OpenAPI document describes.
     /// The operation reads and changes no process state.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <response code="200">The route list and the informational note.</response>
@@ -87,6 +90,10 @@ internal static class ProcessesApi
         => Results.Ok(new ProcessApiContractResponse(
             [
                 "GET /api/processes/contract",
+                "GET /api/processes/definitions",
+                "GET /api/processes/definitions/{definitionKey}",
+                "GET /api/processes/definitions/{definitionKey}/roles",
+                "GET /api/processes/definitions/{definitionKey}/steps",
                 "POST /api/processes/launch/check",
                 "POST /api/processes/launch",
                 "GET /api/processes/launch/{admissionId}",
@@ -130,7 +137,7 @@ internal static class ProcessesApi
     /// with the same intent and input then accepts exactly this reviewed plan. Different input under the same intent
     /// is rejected with HTTP 409. Without an intent, every check saves a new preparation with a new plan.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host. The preparation is
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy. The preparation is
     /// bound to the token's subject: only the same subject can launch or observe it, and the launch must happen before
     /// the token used here expires. With authorization disabled, every API caller acts as the same local operator. A
     /// <c>projectId</c> must name an existing project.
@@ -213,7 +220,7 @@ internal static class ProcessesApi
     /// Next: follow the run with <c>GET /api/processes/runs/{runId}</c>, <c>GET /api/processes/live</c> or
     /// <c>GET /api/processes/runs/{runId}/events/stream</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host. The preparation is
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy. The preparation is
     /// bound to the token's subject, and the authority saved with it (including the expiry of the token that created
     /// it) is checked again when the run is accepted. With authorization disabled, every API caller acts as the same
     /// local operator. A <c>projectId</c> must name an existing project whose lifetime has not changed since the
@@ -281,7 +288,7 @@ internal static class ProcessesApi
     /// Only the caller that prepared the launch can read it: another token subject, or with authorization disabled a
     /// preparation made in the user interface, gets HTTP 403.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host, with the
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy, with the
     /// preparation's subject; otherwise the route is open to the local operator.
     /// </remarks>
     /// <param name="admissionId">
@@ -344,7 +351,7 @@ internal static class ProcessesApi
     /// <c>GET /api/processes/runs/{runId}</c> and <c>/history</c> afterwards; that read-back, not this response, is
     /// the evidence of what happened.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">
@@ -411,7 +418,7 @@ internal static class ProcessesApi
     /// pending runtime events into the read models; confirm the result with <c>GET /api/processes/runs/{runId}</c>
     /// and, when the run record exists, <c>GET /api/processes/runs/{runId}/summary</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">
@@ -481,7 +488,7 @@ internal static class ProcessesApi
     /// Before responding, the server projects one bounded batch of pending runtime events into the read models; follow
     /// the step with <c>GET /api/processes/runs/{runId}</c> and <c>/history</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">
@@ -554,7 +561,7 @@ internal static class ProcessesApi
     /// the window, and <c>GET /api/processes/runs/{runId}</c> for one run with its result lineage. The read changes
     /// nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host, and every run is
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy, and every run is
     /// visible to that caller; otherwise the route is open.
     /// </remarks>
     /// <param name="take">
@@ -602,7 +609,7 @@ internal static class ProcessesApi
     /// The detail is a projection, updated as runtime events are projected; <c>freshness</c> shows how current it is.
     /// A run that was just accepted can be missing until its first events are projected. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">
@@ -643,7 +650,7 @@ internal static class ProcessesApi
     /// Restricted events are included with a generic summary. An unknown run returns an empty list, not HTTP 404.
     /// <c>freshness</c> is derived from the last returned event. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">

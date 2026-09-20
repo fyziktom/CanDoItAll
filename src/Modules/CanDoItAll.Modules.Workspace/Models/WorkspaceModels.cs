@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Configuration;
+using System.ComponentModel;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Security;
@@ -6,6 +7,7 @@ using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workspace;
 
@@ -42,18 +44,25 @@ internal sealed class WorkspaceSettingsConfiguration : IEntityTypeConfiguration<
     }
 }
 
+[Description("Workspace business defaults from the selected database; contains no credentials or deployment switches.")]
 public sealed class WorkspaceSettingsModel
 {
+    [Description("Default provider profile GUID, or null when no default is selected.")]
     public Guid? DefaultProviderProfileId { get; set; }
 
+    [Description("Human-readable workspace name.")]
     public string WorkspaceName { get; set; } = "CanDoItAll";
 
+    [Description("Default output format suggested for prompts, such as Markdown.")]
     public string DefaultPromptOutputFormat { get; set; } = "Markdown";
 
+    [Description("Three-letter uppercase currency code used by the workspace.")]
     public string CurrencyCode { get; set; } = CurrencyDisplaySettings.Default.CurrencyCode;
 
+    [Description(".NET culture name used to format currency values.")]
     public string CurrencyCultureName { get; set; } = CurrencyDisplaySettings.Default.CultureName;
 
+    [Description("Operator-authored notes about the workspace.")]
     public string Notes { get; set; } = string.Empty;
 }
 
@@ -65,7 +74,8 @@ public sealed partial class WorkspaceService(
     IStorageCatalogService storageCatalogService,
     IStorageDriverRegistry storageDriverRegistry,
     IActivityStream activityStream,
-    CurrencyDisplayState currencyDisplayState)
+    CurrencyDisplayState currencyDisplayState,
+    ILogger<WorkspaceService> logger)
 {
     public async Task<WorkspaceSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
@@ -95,7 +105,7 @@ public sealed partial class WorkspaceService(
         return model;
     }
 
-    public async Task SaveSettingsAsync(WorkspaceSettingsModel model, CancellationToken cancellationToken = default)
+    public async Task<WorkspaceSettingsModel> SaveSettingsAsync(WorkspaceSettingsModel model, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
 
@@ -120,12 +130,21 @@ public sealed partial class WorkspaceService(
         currencyDisplayState.Update(currencySettings);
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await activityStream.RecordAsync(new ActivityWriteRequest(
-            "workspace",
-            "save-defaults",
-            "Updated workspace defaults",
-            $"Workspace name: {settings.WorkspaceName}.",
-            Route: "/settings"), cancellationToken);
+        try {
+            await activityStream.RecordAsync(new ActivityWriteRequest(
+                "workspace", "save-defaults", "Updated workspace defaults",
+                $"Workspace name: {settings.WorkspaceName}.", Route: "/settings"), cancellationToken);
+        } catch (Exception exception) {
+            logger.LogWarning("Workspace settings committed, but activity recording failed: {ErrorType}.", exception.GetType().Name);
+        }
+        return new WorkspaceSettingsModel {
+            WorkspaceName = settings.WorkspaceName,
+            DefaultProviderProfileId = settings.DefaultProviderProfileId,
+            DefaultPromptOutputFormat = settings.DefaultPromptOutputFormat,
+            CurrencyCode = settings.CurrencyCode,
+            CurrencyCultureName = settings.CurrencyCultureName,
+            Notes = settings.Notes
+        };
     }
 
     public Task<IReadOnlyList<SecretListItem>> ListSecretsAsync(CancellationToken cancellationToken = default)

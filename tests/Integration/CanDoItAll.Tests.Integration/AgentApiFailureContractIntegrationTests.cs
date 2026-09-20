@@ -602,6 +602,7 @@ public sealed class AgentApiFailureContractIntegrationTests
             });
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
         var raw = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain(
             ProviderSaveStorageFailureProxy.Secret,

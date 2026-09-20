@@ -7,6 +7,7 @@ internal static class StoragePlacementRecoveryEndpoints {
 
     internal static IEndpointRouteBuilder MapStoragePlacementRecoveryApi(this IEndpointRouteBuilder endpoints) {
         var group = endpoints.MapGroup(Route).WithTags("Storage recovery");
+        group.ApplyApiAuthorization(endpoints, ApiAuthorizationPolicies.ReadStoragePlacementRecovery);
         group.MapGet("/context", GetContextAsync)
             .Produces<StoragePlacementRecoveryContext>()
             .ProducesStoragePlacementRecoveryFailures(StatusCodes.Status403Forbidden, StatusCodes.Status409Conflict,

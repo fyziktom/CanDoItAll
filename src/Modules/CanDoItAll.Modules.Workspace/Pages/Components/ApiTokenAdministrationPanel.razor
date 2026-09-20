@@ -6,7 +6,7 @@
     <EmptyState Title="Checking token administration access" Description="Verifying the current operator's permissions." />
 } else if (!canManage) {
     <Alert AlertStyle="AlertStyle.Warning" data-testid="api-token-access-denied">
-        Token administration requires the trusted local UI or the api.tokens.issue scope.
+        Token administration requires trusted local administration or a validated administrator session.
     </Alert>
 } else {
     <EditForm Model="model" OnValidSubmit="IssueAsync">
@@ -87,6 +87,9 @@
     }
 
     private async Task IssueAsync() {
+        if (isBusy) {
+            return;
+        }
         isBusy = true;
         error = string.Empty;
         issued = null;

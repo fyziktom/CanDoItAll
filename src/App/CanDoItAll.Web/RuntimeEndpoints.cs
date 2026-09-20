@@ -1,6 +1,7 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Readiness;
 using CanDoItAll.Web.Api;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 
 namespace CanDoItAll.Web;
 
@@ -21,12 +22,12 @@ internal static class RuntimeEndpoints
             .WithTags(Tag)
             .Produces<HostCapabilitySnapshot>()
             .ProducesApiErrors(StatusCodes.Status401Unauthorized)
-            .ApplyApiAuthorization(endpoints);
+            .ApplyApiAuthorization(endpoints, ApiAccessScopeNames.ReadRuntime);
         endpoints.MapGet("/api/runtime/operations", GetOperations)
             .WithTags(Tag)
             .Produces<RuntimeOperationsSnapshot>()
             .ProducesApiErrors(StatusCodes.Status401Unauthorized)
-            .ApplyApiAuthorization(endpoints);
+            .ApplyApiAuthorization(endpoints, ApiAccessScopeNames.ReadRuntime);
 
         return endpoints;
     }
@@ -44,7 +45,7 @@ internal static class RuntimeEndpoints
     /// Each read probes the application purpose roots again by creating and deleting a small temporary file in each
     /// root; it changes no application data. The response contains no paths, connection strings or secret values.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open. It is mapped even when <c>Api:Enabled</c> is false. For
     /// an anonymous liveness check use <c>GET /health</c>.
     /// </remarks>
@@ -70,7 +71,7 @@ internal static class RuntimeEndpoints
     /// Each read probes the application purpose roots again by creating and deleting a small temporary file in each
     /// root; it changes no application data. The response contains no paths, connection strings or secret values.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open. It is mapped even when <c>Api:Enabled</c> is false. For
     /// an anonymous liveness check use <c>GET /health</c>.
     /// </remarks>

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-19T21:12:36.879987+00:00",
+  "generated_utc": "2026-09-20T12:54:14.676161+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14926,
+  "allowance_count": 14937,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6262,6 +6262,12 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
       "category": "mcp",
+      "source_fingerprint": "07fc3b46090bd7efe685a7d4538fcf8b173db01a451e0fd0b4e6468fcb81e280",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+      "category": "mcp",
       "source_fingerprint": "0cc951b0df443ff8ae9bfa9d1393581d97f62d3086820aeb8617740a32b9a658",
       "count": 1
     },
@@ -6275,12 +6281,6 @@
       "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
       "category": "mcp",
       "source_fingerprint": "222edcfaf258b4f0c0f7af36a48d8d81f8e6f07f6ae020452332d89b5ba855ae",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
-      "category": "mcp",
-      "source_fingerprint": "433d09307215f50c643feb6f6508683f2271de24b754004d46ec8422bacb6f6e",
       "count": 1
     },
     {
@@ -6728,6 +6728,12 @@
       "count": 1
     },
     {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessDefinitionsApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9ab5fba7c007be580cf05dad352e732deee61ba588184ca57dc640bb8a1ba120",
+      "count": 1
+    },
+    {
       "path": "src/App/CanDoItAll.Web/Api/ProcessRunEventsApi.cs",
       "category": "manager-discovery",
       "source_fingerprint": "08344b393d3c4037731be92238935fdcf3befed6065a20403eea596c3d68d96c",
@@ -6766,13 +6772,13 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/ProcessRunEventsApi.cs",
       "category": "manager-discovery",
-      "source_fingerprint": "b411f7d66c89fdde08789a3d7a23c5982acd21d2a6dabb4a414f2d68499791dd",
+      "source_fingerprint": "68438ddc6328a9344b9c7530f94738869b262ed75d48145a148ee5cccae48f5a",
       "count": 1
     },
     {
       "path": "src/App/CanDoItAll.Web/Api/ProcessRunEventsApi.cs",
       "category": "manager-discovery",
-      "source_fingerprint": "e75229681b18138a79163f33c5d00febbfd34e0c2169afb3f70ce6dfac403a86",
+      "source_fingerprint": "b411f7d66c89fdde08789a3d7a23c5982acd21d2a6dabb4a414f2d68499791dd",
       "count": 1
     },
     {
@@ -6922,6 +6928,12 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
+      "source_fingerprint": "1f99d901ac13bfa07846418032105503506330e5652885f27f1d3e8eee5f79c3",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
       "source_fingerprint": "2227e49e72fd68727a893365ea496b018dd3700a78d03325d25e8530807dff43",
       "count": 1
     },
@@ -6988,6 +7000,12 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
+      "source_fingerprint": "3f901f47ef62bebb6b7b4839f6160645c3304286c76ed44e63f6c089b6b556d0",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
       "source_fingerprint": "4baa4d5aadbdc8504999c3d008a23a735b85e5c295525537874617e7a3453c7b",
       "count": 1
     },
@@ -7006,12 +7024,6 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
-      "source_fingerprint": "5447d2f51166f143587b5fcc763e3e5f0de8b843b63a1fa5d4071e35e090d9ff",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
-      "category": "manager-discovery",
       "source_fingerprint": "579ab4d2ff576fac3fad4cfb5f8f1cdb8e43a08fcac0ffb9d5f4a945dcd2c058",
       "count": 1
     },
@@ -7025,6 +7037,12 @@
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
       "source_fingerprint": "5be12cde43a24c6a98235fe039b2f0d694df08b4f0bc9640cbc50f6c9eba3f9a",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
+      "source_fingerprint": "5e1129841b62d80a9d538c523e7425d2906eeeb26fd643989d984241c3bec996",
       "count": 1
     },
     {
@@ -7139,6 +7157,18 @@
       "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
       "category": "manager-discovery",
       "source_fingerprint": "a8f757459b291b6f763f00078d11f9f7f5bf49e595357beecad0dc40ce616d11",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
+      "source_fingerprint": "afde78c9b7f6c7d957b994c877d8813f6c88eaa885c384bf75ef8c8bbd598e22",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProcessesApi.cs",
+      "category": "manager-discovery",
+      "source_fingerprint": "b3aac817e9f08947651e1af486a9a26431d93794ace6ac1d95c836129fc605b7",
       "count": 1
     },
     {
@@ -9431,6 +9461,24 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiTokenRegistry.cs",
       "category": "path-api",
       "source_fingerprint": "97911f1fb65c9a1885bc5ba06f82ddbe4d0be10f15f1fe6ced85ee2749860ba2",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "24c6a1cfbfc5df5d2bccf17aff231f27e7f12e76410e6118f5adec534cecd7f1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
+      "category": "path-api",
+      "source_fingerprint": "2100e249a5ed84f068295e010d520122452d8e9fed3d301204835eebb3582da6",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
+      "category": "path-api",
+      "source_fingerprint": "402b70cd393dfc59f9242795101971b6631a974e005a7c2ee3856419587140b2",
       "count": 1
     },
     {
@@ -42026,6 +42074,24 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowTemplateDraftService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "11b0f720307e28c0fad59e40896e08dc69d0df87ae5c389a4c3386e8ec89641f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowTemplateDraftService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "12fb785b3902c0e716699b96f1c341d511df1342c31f3e7909a23399102bd44f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowTemplateDraftService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d394f4fd5eb62d75a69b07fbcc0c854fa1b5cf71916cba8cf4d0dd6656069df7",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/DatabaseTransfer/AiAgentsDatabaseTransferHandler.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "6ab2a9206e36309578236e2c68a96e21791fa7beaba07f45cbcdbbcf2076e067",
@@ -44830,18 +44896,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
       "category": "case-policy",
-      "source_fingerprint": "43759f6d7ec96db6a220f0b9bc0b9bf29d884820bfe3f12c64d17c147169bf4b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "4c4dcd9ab7ee30acd685c1b6c1e801037bde606effcc1e1f1c426fc3011db86b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
-      "category": "case-policy",
       "source_fingerprint": "55c8d1d1e17f2ea8f3eaaa993e97471de2fe09406c35eee23a3fdbf7fcda70eb",
       "count": 1
     },
@@ -44849,12 +44903,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "b9c07b9fb876e9658f9da010c9fde9cb4d7b48228dacdcdc20ad9d6a6e10736e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f906859ffd354de2472d4742ac4caf4c11e86362a04647bc81fd83bd3326edea",
       "count": 1
     },
     {
@@ -67220,21 +67268,9 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs",
-      "category": "case-policy",
-      "source_fingerprint": "2d53c72649263a8d71816056bd76401d679a62d3f121ca37b49309b97276291a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs",
-      "category": "case-policy",
-      "source_fingerprint": "dde3325059a7f421e5776674a22792eab456f4a916a4c224f7b0d6b80f3b97a5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiJwtTokenWriter.cs",
       "category": "path-normalization",
-      "source_fingerprint": "69a4fcd40140e9ac452f2b03c455863881a33cb4c3fa1ebe944cbd6d437988f7",
+      "source_fingerprint": "69f10d62c7ff1bfe5bfd9369d663d5d413feafd6e1a29b2da050a413302fbfdd",
       "count": 1
     },
     {
@@ -67247,6 +67283,18 @@
       "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiScopeCatalog.cs",
       "category": "case-policy",
       "source_fingerprint": "614286c27e73ccb8141c73c2cb6c77eb50718b2e5892821c6f075f4e3fe61f7d",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiScopeCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ee708de1300920f26dae1144603dce46b0efa8af9ac91c77186c5219692503e2",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiUserAdministrationService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3f4b949d70162544300c73d554c76c2d561f5b57f1196b0a09126d74a91915b8",
       "count": 1
     },
     {
@@ -67367,12 +67415,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiScopePickerDialog.razor",
       "category": "case-policy",
       "source_fingerprint": "3c92e91d9710b5a3dfd640547be9464820a58f38373bb0903bb115882ccad4e0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiScopePickerDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "fcbdebcabb851bbc812e70f4b20e910470edf7f9d2a709e585c70bbd7dd66eb7",
       "count": 1
     },
     {
@@ -70210,7 +70252,19 @@
     {
       "path": "src/Processes/CanDoItAll.Processes.Projections/ProcessDefinitionStepEditorProjectionContracts.cs",
       "category": "process-domain",
+      "source_fingerprint": "20d1f5e47857463d49dc4ec51a519c9897f1b80d17b13635dfbae7671b4efe4b",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Projections/ProcessDefinitionStepEditorProjectionContracts.cs",
+      "category": "process-domain",
       "source_fingerprint": "583bb53681e7cbbb72a6b80eb8dfb2b335db68446c206d9c5c402602e12dab1f",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Projections/ProcessDefinitionStepEditorProjectionContracts.cs",
+      "category": "process-domain",
+      "source_fingerprint": "ac6ff9526e3c78f1c4139a8988689bbf115f6a3ce60d070e4d70cc130a4f8192",
       "count": 1
     },
     {
@@ -74429,6 +74483,18 @@
       "path": "src/plugins/Implementations/CanDoItAll.Plugin.Office365/README.md",
       "category": "windows-executable",
       "source_fingerprint": "20ff391aee8488cf42640f55cfabcb32d0b17bc2c768f6b807f1ae14453a4001",
+      "count": 1
+    },
+    {
+      "path": "tools/ApiAccess/ApiPasswordHash/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "5106274024ac07e0c613bd7ea7c6307a3ef6c515880b51219f6c59bf10beb3cf",
+      "count": 1
+    },
+    {
+      "path": "tools/ApiAccess/ApiPasswordHash/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "a26234de57be8ca45594baa36c6e16d85903a9514f7cadfb9ef83e74cf2a1f1c",
       "count": 1
     },
     {

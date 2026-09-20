@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Prompts;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +8,7 @@ internal static class PromptGalleryApi
 {
     public static RouteGroupBuilder MapPromptGalleryApi(this RouteGroupBuilder group)
     {
-        var prompts = group.MapGroup("/prompt-gallery")
+        var prompts = group.MapGroup("/prompt-gallery").WithApiSection(ApiAccessScopeNames.ReadPrompts, ApiAccessScopeNames.WritePrompts)
             .WithTags("Prompt Gallery")
             .DisableAntiforgery();
 
@@ -89,7 +90,7 @@ internal static class PromptGalleryApi
     ///
     /// Paging is zero-based: request the next page while <c>pageIndex</c> + 1 is less than <c>totalPages</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="query">Text, tag, classification, compatibility and paging filters.</param>
     /// <response code="200">The requested page. An empty <c>items</c> array means no item matched.</response>
@@ -115,7 +116,7 @@ internal static class PromptGalleryApi
     /// without their content). Archived items are returned too. Keep <c>updatedAtUtc</c>: draft saves and version
     /// creation require it as the item's current concurrency value.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="promptId">
     /// Identifier of the Prompt Gallery item, as returned by <c>GET /api/prompt-gallery/items</c> or in
@@ -147,7 +148,7 @@ internal static class PromptGalleryApi
     /// All request problems are reported together in <c>errors</c>. The response carries the new
     /// <c>updatedAtUtc</c>; use it for the next save or version.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The item's draft content and metadata; omit <c>id</c> to create an item.</param>
     /// <response code="200">
@@ -190,7 +191,7 @@ internal static class PromptGalleryApi
     /// Archived items and items with an empty draft cannot get a version. The item's <c>updatedAtUtc</c> changes; read
     /// the item again before the next draft save.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="promptId">Identifier of the Prompt Gallery item.</param>
     /// <param name="request">
@@ -226,7 +227,7 @@ internal static class PromptGalleryApi
     /// version was created. Version identifiers are listed in <c>versions</c> of
     /// <c>GET /api/prompt-gallery/items/{promptId}</c>. Versions of archived items stay readable.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="promptId">Identifier of the Prompt Gallery item that owns the version.</param>
     /// <param name="versionId">Identifier of the version (<c>versions[].id</c> of the item read).</param>
@@ -261,7 +262,7 @@ internal static class PromptGalleryApi
     /// evaluation; their versions stay readable. Requesting the state the item already has succeeds without a change; a
     /// change updates the item's <c>updatedAtUtc</c>. Saving a draft also restores an archived item.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="promptId">Identifier of the Prompt Gallery item.</param>
     /// <param name="request">The requested archive state.</param>
@@ -291,7 +292,7 @@ internal static class PromptGalleryApi
     /// item itself, so it is the same for every caller of this host. Requesting the current value succeeds without a
     /// change; a change updates the item's <c>updatedAtUtc</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="promptId">Identifier of the Prompt Gallery item.</param>
     /// <param name="request">The requested favorite state.</param>
@@ -332,7 +333,7 @@ internal static class PromptGalleryApi
     /// The last two are warnings for purpose Selection, where a saved suppression for the consumer marks them
     /// <c>isSuppressed</c>, and errors for purpose Execution, where they cannot be suppressed.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The item to check and the consumer context.</param>
     /// <response code="200">
@@ -368,7 +369,7 @@ internal static class PromptGalleryApi
     /// succeed when the state is already as requested. Suppressions are stored per item and consumer, not per caller,
     /// are listed in <c>warningSuppressions</c> of the item read and do not change the item's <c>updatedAtUtc</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The item, the consumer, the issue code and the requested state.</param>
     /// <response code="200">The suppression has the requested state.</response>
@@ -403,7 +404,7 @@ internal static class PromptGalleryApi
     /// the canonical items and do not depend on it. In the default host configuration the projection is disabled:
     /// <c>enabled</c> is false and <c>health</c> is Disabled.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">The projection driver, whether it is enabled, and its health.</response>
     internal static async Task<IResult> GetProjectionStatusAsync(
@@ -423,7 +424,7 @@ internal static class PromptGalleryApi
     /// When the projection is disabled the call changes nothing and returns <c>state</c> Disabled with
     /// <c>processedCount</c> 0. The rebuild runs within the request.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">
     /// The rebuild finished (<c>state</c> Applied, with the number of projected items) or was skipped because the

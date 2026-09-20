@@ -36,7 +36,7 @@ internal static class WorkflowRunIdempotencyApi
     /// operation returns HTTP 404. Read the run itself with <c>GET /api/workflows/runs/{runId}</c> using
     /// <c>originalRunId</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="key">

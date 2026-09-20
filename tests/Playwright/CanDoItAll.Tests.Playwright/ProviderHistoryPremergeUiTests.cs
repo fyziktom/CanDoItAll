@@ -14,10 +14,14 @@ using PersistedProvider = CanDoItAll.Modules.AgentFramework.ProviderManagement.P
 
 namespace CanDoItAll.Tests.Playwright;
 
-[Collection(PlaywrightCollection.Name)]
 [Trait("Category", "Playwright")]
-public sealed class ProviderHistoryPremergeUiTests(PlaywrightAppFixture fixture, ITestOutputHelper output) {
+public sealed class ProviderHistoryPremergeUiTests(ITestOutputHelper output) : IAsyncLifetime {
+    private readonly PlaywrightAppFixture fixture = new();
     private const string ProviderName = "Premerge visual fixture";
+
+    public Task InitializeAsync() => fixture.InitializeAsync();
+
+    public Task DisposeAsync() => fixture.DisposeAsync();
 
     [Fact]
     public async Task Isolated_history_paging_details_and_policy_remain_explicit() {

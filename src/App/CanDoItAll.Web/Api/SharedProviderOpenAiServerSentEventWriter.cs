@@ -29,6 +29,8 @@ internal static class SharedProviderOpenAiServerSentEventWriter
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(frame);
 
+        await ApiStreamAuthorization.EnsureActiveAsync(response.HttpContext, cancellationToken);
+
         if (frame.EventName is { } eventName)
         {
             await response.WriteAsync($"event: {eventName}\n", cancellationToken);

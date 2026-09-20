@@ -10,14 +10,22 @@ using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Api.Streaming;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
-public sealed class ApiStreamingTransportTests
-{
+public sealed class ApiStreamingTransportTests : IDisposable {
+    private readonly ServiceProvider requestServices = new ServiceCollection()
+        .AddSingleton(Options.Create(new ApiAccessOptions { Authorization = new() { Enabled = false } }))
+        .BuildServiceProvider();
+
+    private DefaultHttpContext CreateContext() => new() { RequestServices = requestServices };
+
+    public void Dispose() => requestServices.Dispose();
+
     [Fact]
     public async Task ReadAsync_reports_gap_and_replays_only_the_bounded_window()
     {
@@ -111,7 +119,7 @@ public sealed class ApiStreamingTransportTests
     [Fact]
     public void Cursor_rejects_conflicting_query_and_header_values()
     {
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         context.Request.QueryString = new QueryString("?after=3");
         context.Request.Headers[ServerSentEventCursor.LastEventIdHeaderName] = "4";
 
@@ -128,7 +136,7 @@ public sealed class ApiStreamingTransportTests
     [Fact]
     public async Task Writer_emits_valid_sse_framing_and_proxy_headers()
     {
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         await using var body = new MemoryStream();
         context.Response.Body = body;
         ServerSentEventResponseWriter.Prepare(context.Response);
@@ -153,7 +161,7 @@ public sealed class ApiStreamingTransportTests
     [Fact]
     public async Task Writer_emits_api_only_event_without_mutating_replay_cursor()
     {
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         await using var body = new MemoryStream();
         context.Response.Body = body;
 
@@ -287,7 +295,7 @@ public sealed class ApiStreamingTransportTests
     [Fact]
     public async Task Streaming_writer_emits_heartbeats_and_treats_disconnect_as_normal_completion()
     {
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         await using var body = new MemoryStream();
         using var disconnected = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
         context.Response.Body = body;
@@ -312,7 +320,7 @@ public sealed class ApiStreamingTransportTests
     [Fact]
     public async Task Streaming_writer_completes_response_when_profile_switch_ends_stream()
     {
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         await using var body = new MemoryStream();
         using var switchedProfile = new CancellationTokenSource();
         context.Response.Body = body;
@@ -336,7 +344,7 @@ public sealed class ApiStreamingTransportTests
     [Fact]
     public async Task Streaming_writer_finishes_an_in_progress_frame_before_profile_switch_closes_the_response()
     {
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         await using var body = new BlockingFirstWriteStream();
         using var switchedProfile = new CancellationTokenSource();
         context.Response.Body = body;
@@ -349,7 +357,7 @@ public sealed class ApiStreamingTransportTests
             "test.changed",
             _ => true,
             switchedProfile.Token);
-        await body.WaitForFirstWriteAsync();
+        await body.WaitForFirstWriteAsync().WaitAsync(TimeSpan.FromSeconds(10));
 
         switchedProfile.Cancel();
         body.ReleaseWrite();
@@ -364,7 +372,7 @@ public sealed class ApiStreamingTransportTests
     [Fact]
     public async Task Streaming_writer_drains_an_in_progress_read_before_profile_switch_releases_the_request_scope()
     {
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         await using var body = new MemoryStream();
         using var switchedProfile = new CancellationTokenSource();
         context.Response.Body = body;
@@ -425,7 +433,7 @@ public sealed class ApiStreamingTransportTests
             operation,
             new LlmChatOperationTextDeltaEvent(operation.Id, 3, 1, "unreachable", now),
             aggregateCharacterCount: 18));
-        var context = new DefaultHttpContext();
+        var context = CreateContext();
         await using var body = new MemoryStream();
         context.Response.Body = body;
 

@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Projections;
@@ -126,7 +127,7 @@ internal static class ProcessRunEventsApi
 
     public static RouteGroupBuilder MapProcessRunEventsApi(this RouteGroupBuilder group)
     {
-        var processes = group.MapGroup("/processes")
+        var processes = group.MapGroup("/processes").WithApiSection(ApiAccessScopeNames.ReadProcesses, ApiAccessScopeNames.WriteProcesses)
             .WithTags("Processes")
             .DisableAntiforgery();
 
@@ -167,7 +168,7 @@ internal static class ProcessRunEventsApi
     /// the recommended read-back are exactly as described for <c>GET /api/processes/events/stream</c>. A terminal
     /// event (<c>isTerminal</c> true) does not close this stream; close it yourself when you no longer need it.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">
@@ -265,7 +266,7 @@ internal static class ProcessRunEventsApi
     /// active database profile ends the response, so reconnect. The stream does not end by itself, not even after a
     /// terminal event.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host, and the stream then
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy, and the stream then
     /// shows every run to that caller; otherwise the route is open.
     /// </remarks>
     /// <response code="200">

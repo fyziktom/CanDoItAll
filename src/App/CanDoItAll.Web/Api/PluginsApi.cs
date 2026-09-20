@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using System.ComponentModel;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Plugins;
@@ -13,7 +14,7 @@ internal static class PluginsApi
 
     public static RouteGroupBuilder MapPluginsApi(this RouteGroupBuilder group)
     {
-        var plugins = group.MapGroup("/plugins")
+        var plugins = group.MapGroup("/plugins").WithApiSection(ApiAccessScopeNames.ReadPlugins, ApiAccessScopeNames.WritePlugins)
             .WithTags("Plugins")
             .DisableAntiforgery();
 
@@ -120,7 +121,7 @@ internal static class PluginsApi
 
         plugins.MapGet("/oauth/callback", CompleteOAuthCallbackAsync)
             .AllowAnonymous()
-            .WithName("CompletePluginOAuthCallback")
+            .WithName("CompletePluginOAuthCallback").WithApiPermission(ApiAccessScopeNames.WritePlugins)
             .Produces(StatusCodes.Status302Found);
 
         return group;
@@ -137,7 +138,7 @@ internal static class PluginsApi
     /// <c>descriptor</c>: workflow executors, settings forms, connection kinds and the public OAuth configuration,
     /// never secrets. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <response code="200">The plugins, ordered by display name.</response>
@@ -156,7 +157,7 @@ internal static class PluginsApi
     /// <c>POST /api/plugins/packages/catalog/{packageId}/install</c>, or upload a package with
     /// <c>POST /api/plugins/packages/upload</c>. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <response code="200">The packages, ordered by display name.</response>
@@ -176,7 +177,7 @@ internal static class PluginsApi
     /// folder and plugins bundled with the host get HTTP 404. Plugin icons of kind 2 (PackageAsset) refer to this
     /// operation.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="packageId">
@@ -222,7 +223,7 @@ internal static class PluginsApi
     /// plugin workflow executors, with secrets redacted from messages and details. There is no paging: narrow the
     /// filters to reach older entries. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="streamKind">
@@ -282,7 +283,7 @@ internal static class PluginsApi
     /// restarts: <c>restartRequired</c> is then true, and <c>POST /api/plugins/runtime/restart</c> requests the
     /// restart. Installing grants no capabilities; decide them with <c>PUT /api/plugins/{pluginId}/grants</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="packageId">
@@ -326,7 +327,7 @@ internal static class PluginsApi
     /// <c>restartRequired</c> true means that the package's code runs only after a host restart
     /// (<c>POST /api/plugins/runtime/restart</c>). Installing grants no capabilities.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="file">
@@ -368,7 +369,7 @@ internal static class PluginsApi
     /// <c>isRestartRequired</c> is false again and <c>processId</c> is that of the new host process. The read changes
     /// nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <response code="200">The restart state; every flag is false when nothing is pending.</response>
@@ -389,7 +390,7 @@ internal static class PluginsApi
     /// After the host is back, read <c>GET /api/plugins/runtime/restart-status</c> (a new <c>processId</c>) and
     /// <c>GET /api/plugins/catalog</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="request">The JSON object is required; send <c>{}</c>.</param>
@@ -416,7 +417,7 @@ internal static class PluginsApi
     /// After success the host also refreshes its managed example workflow definitions when example seeding is enabled
     /// (host setting <c>Workflows:ExampleSeed:Enabled</c>), so plugin-based examples can appear.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">
@@ -451,7 +452,7 @@ internal static class PluginsApi
     /// harmless but updates <c>updatedAtUtc</c> and writes a log entry. After success the host refreshes its example
     /// workflow definitions when example seeding is enabled.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the installed plugin, for example <c>gmail.mail</c>.</param>
@@ -481,7 +482,7 @@ internal static class PluginsApi
     /// operations are refused; saved grants and connections are kept, so enabling it again restores them. Code of an
     /// installed package stays loaded until the next host restart. Repeating the call is harmless.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the installed plugin, for example <c>gmail.mail</c>.</param>
@@ -508,7 +509,7 @@ internal static class PluginsApi
     /// OAuth configuration. Connection settings are returned as saved; OAuth tokens and client secrets are never
     /// returned. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the plugin, for example <c>gmail.mail</c>.</param>
@@ -539,7 +540,7 @@ internal static class PluginsApi
     /// installed and enabled, declares the capability, and has a plugin-scope grant in state 1 Granted for exactly that
     /// capability; a host tool recipe needs its own grant and the HostCommand grant. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the plugin, for example <c>gmail.mail</c>.</param>
@@ -574,7 +575,7 @@ internal static class PluginsApi
     ///
     /// After success the host refreshes its example workflow definitions when example seeding is enabled.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open. Grants apply to the whole host, not to one caller; a HostCommand grant lets the plugin run its
     /// reviewed host commands.
     /// </remarks>
@@ -605,7 +606,7 @@ internal static class PluginsApi
     /// exactly as saved. OAuth state is read with <c>GET /api/plugins/{pluginId}/oauth/status</c>; tokens are never
     /// returned. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the plugin, for example <c>gmail.mail</c>.</param>
@@ -639,7 +640,7 @@ internal static class PluginsApi
     /// the fields of its settings form. Settings are returned unredacted: never put secrets in them. OAuth connections
     /// are authorized afterwards with <c>POST /api/plugins/{pluginId}/oauth/start</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the plugin, for example <c>gmail.mail</c>.</param>
@@ -668,7 +669,7 @@ internal static class PluginsApi
     /// <c>lastErrorCode</c> <c>oauth-scope-missing</c>. Tokens are never returned. An unknown plugin returns an empty
     /// list. The read changes nothing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the plugin, for example <c>gmail.mail</c>.</param>
@@ -700,7 +701,7 @@ internal static class PluginsApi
     ///
     /// Next: after the browser returns, read <c>GET /api/plugins/{pluginId}/oauth/status</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the plugin, for example <c>gmail.mail</c>.</param>
@@ -734,7 +735,7 @@ internal static class PluginsApi
     /// tokens at the identity provider and keeps the connection and its settings; authorize again with
     /// <c>POST /api/plugins/{pluginId}/oauth/start</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="pluginId">Identifier of the plugin, for example <c>gmail.mail</c>.</param>

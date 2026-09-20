@@ -45,7 +45,8 @@ public sealed class ProviderHistoryAuthorizationHost : IAsyncLifetime, IAsyncDis
             Subject = Guid.NewGuid().ToString("N"), DisplayName = "History authorization fixture", Scopes = [.. scopes]
         });
         Host.Client.DefaultRequestHeaders.Authorization = new(issued.TokenType, issued.Token);
-        return Assert.Single((await Registry.SearchAsync(new(issued.Subject))).Items);
+        var summary = Assert.Single((await Registry.SearchAsync(new(issued.Subject))).Items);
+        return (await Registry.FindAsync(summary.Id))!;
     }
 
     internal async Task RewriteTokenAsync(ApiTokenRecord record) {

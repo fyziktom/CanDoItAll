@@ -13,7 +13,7 @@ namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     [Theory]
-    [InlineData(StorageRecoveryHttpGrant.None, HttpStatusCode.Forbidden, HttpStatusCode.Forbidden)]
+    [InlineData(StorageRecoveryHttpGrant.None, HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized)]
     [InlineData(StorageRecoveryHttpGrant.GeneralApi, HttpStatusCode.Forbidden, HttpStatusCode.Forbidden)]
     [InlineData(StorageRecoveryHttpGrant.StorageOnly, HttpStatusCode.Forbidden, HttpStatusCode.Forbidden)]
     [InlineData(StorageRecoveryHttpGrant.Metadata, HttpStatusCode.OK, HttpStatusCode.Forbidden)]
@@ -157,7 +157,9 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             Subject = Guid.NewGuid().ToString("N"), DisplayName = "Storage recovery fixture", Scopes = [.. scopes]
         });
         host.Client.DefaultRequestHeaders.Authorization = new(result.TokenType, result.Token);
-        return Assert.Single((await host.App.Services.GetRequiredService<IApiTokenRegistry>().SearchAsync(new(result.Subject))).Items);
+        var registry = host.App.Services.GetRequiredService<IApiTokenRegistry>();
+        var summary = Assert.Single((await registry.SearchAsync(new(result.Subject))).Items);
+        return (await registry.FindAsync(summary.Id))!;
     }
 
     private static string StorageRecoveryUrl(StoragePlacementRecoveryContext context, StoragePlacementIntentId id)

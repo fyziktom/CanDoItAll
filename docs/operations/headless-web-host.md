@@ -93,7 +93,7 @@ curl --fail http://127.0.0.1:5032/health
 curl --fail http://127.0.0.1:5032/api/runtime/operations
 ```
 
-Use `journalctl -u candoitall-web.service` for bounded service diagnostics. The operations endpoint reports typed platform/profile, provider/capability, path-readiness, publication, and validation state without full roots, connection strings, or secret values. When API authorization is enabled (`Api:Authorization:Enabled`), the operations endpoint requires a bearer token issued by the host, for example `curl --fail -H "Authorization: Bearer $CANDOITALL_API_TOKEN" http://127.0.0.1:5032/api/runtime/operations`; `/health` stays anonymous.
+Use `journalctl -u candoitall-web.service` for bounded service diagnostics. The operations endpoint reports typed platform/profile, provider/capability, path-readiness, publication, and validation state without full roots, connection strings, or secret values. When API authorization is enabled (`Api:Authorization:Enabled`), the operations endpoint requires a bearer token with `api.runtime.read` or the compatible machine `api` scope; `/health` stays anonymous. Use HTTPS when user authentication is enabled, following the [API transport configuration](../api-user-access.md).
 
 ## macOS launchd profile
 
@@ -131,3 +131,7 @@ The rollback command is idempotent and never deletes a release or data root. Kee
 - Desktop open/reveal, interactive terminal, native process discovery, Manager, MCP, and local tools are optional or outside the headless-core support claim.
 - Preserve the stable host-binding ID across normal restarts/upgrades. Changing it intentionally requires explicit rebind of host-bound paths.
 - Never attach complete environment dumps, connection strings, physical root listings, vault files, or Keychain/keyring output to support evidence.
+
+## API accounts on a headless host
+
+For password-authenticated API users, follow [API users and deployment access](../api-user-access.md): configure an operator-owned administrator hash and JWT key, enable HTTPS, and expose only approved API paths through the proxy. User login and HTTP access management are independent switches, both disabled by default. Runtime capability/readiness reads require `api.runtime.read` or the compatible broad `api` capability when API authorization is enabled. Keep the backend port private and protect SSR and the Blazor connection as a separate operator surface.

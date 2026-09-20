@@ -17,6 +17,7 @@ internal sealed class WebCurrentPrincipalResolver(
     IHttpContextAccessor http,
     IAuthorizationService authorization,
     IApiTokenRegistry tokens,
+    ApiSessionService sessions,
     IOptions<ApiAccessOptions> options,
     TimeProvider clock) {
     private const string AuthorizationRevisionClaim = "auth_rev";
@@ -45,11 +46,16 @@ internal sealed class WebCurrentPrincipalResolver(
             }
             var version = principal.FindFirstValue(ApiManagedTokenClaims.Version);
             if (version is not null) {
-                if (version != ApiManagedTokenClaims.CurrentVersion || !Guid.TryParseExact(session, "N", out var id)) {
+                if (version is not (ApiManagedTokenClaims.CurrentVersion or ApiManagedTokenClaims.SessionVersion) || !Guid.TryParseExact(session, "N", out var id)) {
                     throw Denied();
                 }
                 credential = await tokens.FindAsync(id, cancellationToken);
                 if (credential is null || credential.GetStatus(clock.GetUtcNow()) != ApiTokenStatus.Active || credential.Subject != subject) {
+                    throw Denied();
+                }
+                if (version == ApiManagedTokenClaims.SessionVersion &&
+                    (http.HttpContext?.Features.Get<ValidatedApiCredential>() is not { } verified || verified.Id != id ||
+                     await sessions.ResolveIdentityAsync(credential, cancellationToken) is null)) {
                     throw Denied();
                 }
             }
@@ -57,7 +63,8 @@ internal sealed class WebCurrentPrincipalResolver(
         if (string.IsNullOrWhiteSpace(subject) || subject.Length > 512 || issuer?.Length > 512) {
             throw Denied();
         }
-        var revision = long.TryParse(principal.FindFirstValue(AuthorizationRevisionClaim), out var value) ? value : 0;
+        var revision = credential?.AuthenticationRevision ??
+            (long.TryParse(principal.FindFirstValue(AuthorizationRevisionClaim), out var value) ? value : 0);
         var stamp = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
             subject, issuer, session, expiry, revision,
             Scopes = ApiAuthorizationPolicies.ScopeValues(principal).Order(StringComparer.Ordinal).ToArray(),

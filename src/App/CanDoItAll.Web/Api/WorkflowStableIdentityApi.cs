@@ -48,7 +48,7 @@ internal static class WorkflowStableIdentityApi
     /// <c>GET /api/workflows/definitions/by-external-key/{externalNamespace}/{externalKey}</c> instead, which also
     /// reports the resolution status.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="externalNamespace">
@@ -103,7 +103,7 @@ internal static class WorkflowStableIdentityApi
     /// came from; it is not unique and it is not the workflow identifier. Start the resolved workflow with
     /// <c>POST /api/workflows/runs/start</c> using <c>workflowId</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="templateKey">
@@ -147,7 +147,7 @@ internal static class WorkflowStableIdentityApi
     /// Use this instead of storing workflow identifiers when an external system knows workflows by its own names.
     /// Start the resolved workflow with <c>POST /api/workflows/runs/start</c> using <c>workflowId</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="externalNamespace">

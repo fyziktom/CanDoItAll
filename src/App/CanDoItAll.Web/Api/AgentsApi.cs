@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using System.ComponentModel;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
@@ -16,7 +17,7 @@ internal static class AgentsApi
 {
     public static RouteGroupBuilder MapAgentsApi(this RouteGroupBuilder group)
     {
-        var agents = group.MapGroup("/agents")
+        var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents");
 
         agents.MapGet("/", ListAgentsAsync)
@@ -152,7 +153,7 @@ internal static class AgentsApi
             .ProducesApiErrors(StatusCodes.Status409Conflict);
 
         agents.MapPost("/providers/{providerId:guid}/test", TestAgentProviderAsync)
-            .WithName("TestAgentProvider")
+            .WithName("TestAgentProvider").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<ProviderHealthResult>(StatusCodes.Status200OK)
             .Produces<ProviderCommittedApiResponse>(StatusCodes.Status202Accepted)
             .ProducesApiErrors(
@@ -162,12 +163,12 @@ internal static class AgentsApi
                 StatusCodes.Status502BadGateway);
 
         agents.MapPost("/providers/{providerId:guid}/test-chat", RunAgentProviderTestChatAsync)
-            .WithName("RunAgentProviderTestChat")
+            .WithName("RunAgentProviderTestChat").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<ProviderTestChatResult>(StatusCodes.Status200OK)
             .ProducesApiErrors(StatusCodes.Status404NotFound, StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/providers/{providerId:guid}/ollama-modelfile", CreateAgentProviderModelMaintenanceAsync)
-            .WithName("CreateAgentProviderModelMaintenance")
+            .WithName("CreateAgentProviderModelMaintenance").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<ProviderModelMaintenanceEditorResult>(StatusCodes.Status200OK)
             .Produces<ProviderCommittedApiResponse>(StatusCodes.Status202Accepted)
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound,
@@ -193,21 +194,21 @@ internal static class AgentsApi
             .Produces<ApiAck>(StatusCodes.Status200OK);
 
         agents.MapPost("/{agentId:guid}/capabilities/{capabilityId:guid}/verify", VerifyAgentCapabilityAsync)
-            .WithName("VerifyAgentCapability")
+            .WithName("VerifyAgentCapability").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<ApiAck>()
             .Produces<CapabilityVerificationApiResponse>(StatusCodes.Status400BadRequest)
             .Produces<CapabilityVerificationApiResponse>(StatusCodes.Status409Conflict);
 
         agents.MapPost("/capabilities/setup-tests/tool", TestAgentToolCapabilitySetupAsync)
-            .WithName("TestAgentToolCapabilitySetup")
+            .WithName("TestAgentToolCapabilitySetup").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<CapabilitySetupTestResult>(StatusCodes.Status200OK);
 
         agents.MapPost("/capabilities/setup-tests/mcp", TestAgentMcpCapabilitySetupAsync)
-            .WithName("TestAgentMcpCapabilitySetup")
+            .WithName("TestAgentMcpCapabilitySetup").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<McpSetupTestResult>(StatusCodes.Status200OK);
 
         agents.MapPost("/capabilities/access-preview", PreviewAgentCapabilityAccessAsync)
-            .WithName("PreviewAgentCapabilityAccess")
+            .WithName("PreviewAgentCapabilityAccess").WithApiPermission(ApiAccessScopeNames.ReadAgents)
             .Produces<CapabilityAccessPreviewResult>(StatusCodes.Status200OK);
     }
 
@@ -245,7 +246,7 @@ internal static class AgentsApi
             .Produces<AgentChatWorkspaceApiResponse>(StatusCodes.Status200OK);
 
         agents.MapPost("/{agentId:guid}/chat", SendAgentChatMessageAsync)
-            .WithName("SendAgentChatMessage")
+            .WithName("SendAgentChatMessage").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<AgentChatRunApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
@@ -286,7 +287,7 @@ internal static class AgentsApi
         agents.MapPost(
                 "/execution-runs/{executionRunId:guid}/pending-approvals",
                 RespondToAgentExecutionApprovalsAsync)
-            .WithName("RespondToAgentExecutionApprovals")
+            .WithName("RespondToAgentExecutionApprovals").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
@@ -300,7 +301,7 @@ internal static class AgentsApi
     private static void MapExecutionEndpoints(RouteGroupBuilder agents)
     {
         agents.MapPost("/execution-runs", StartAgentExecutionRunAsync)
-            .WithName("StartAgentExecutionRun")
+            .WithName("StartAgentExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunApiRequest>("application/json")
             .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
@@ -314,7 +315,7 @@ internal static class AgentsApi
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/{agentId:guid}/execution-runs", StartAgentScopedExecutionRunAsync)
-            .WithName("StartAgentScopedExecutionRun")
+            .WithName("StartAgentScopedExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunStartApiRequest>("application/json")
             .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
@@ -430,7 +431,7 @@ internal static class AgentsApi
     /// references (identifiers and display names only, never secret values). To change an agent, read its editable
     /// form with <c>GET /api/agents/{agentId}</c>, which also carries the concurrency revision.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="includeTemplates">
@@ -461,7 +462,7 @@ internal static class AgentsApi
     /// session, otherwise the first listed agent) and that agent's chat workspace. It only reads. For one agent's chat
     /// workspace use <c>GET /api/agents/{agentId}/chat-workspace</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="includeTemplates">
@@ -490,7 +491,7 @@ internal static class AgentsApi
     /// An unknown agent identifier, or stored access or thinking-effort configuration that cannot be parsed, is not
     /// translated into the error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent, as returned by <c>GET /api/agents</c>.</param>
@@ -531,7 +532,7 @@ internal static class AgentsApi
     /// fails with a generic HTTP 500 although the agent is saved; list the agents before retrying, because a repeated
     /// create is then rejected for its already used template key.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete agent form.</param>
@@ -573,7 +574,7 @@ internal static class AgentsApi
     /// Deleting an identifier that does not exist succeeds, so a repeated delete is harmless. The all-zero identifier
     /// is not translated into the error envelope and fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent to delete.</param>
@@ -630,7 +631,7 @@ internal static class AgentsApi
     /// is created. The clone is committed before the CRM/HR directory projection is refreshed; if that refresh fails,
     /// HTTP 500 is returned although the clone exists, so list the agents before retrying.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent or template to copy.</param>
@@ -661,7 +662,7 @@ internal static class AgentsApi
     /// template is committed before the CRM/HR directory projection is refreshed; if that refresh fails, HTTP 500 is
     /// returned although the template exists, so list the agents with <c>includeTemplates=true</c> before retrying.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent to copy into a template.</param>
@@ -692,7 +693,7 @@ internal static class AgentsApi
     /// An unknown agent identifier is not translated into the error envelope: the request fails with a generic
     /// HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent to export.</param>
@@ -725,7 +726,7 @@ internal static class AgentsApi
     /// envelope: the request fails with a generic HTTP 500. The agent is committed before the CRM/HR directory
     /// projection is refreshed; if that refresh fails, HTTP 500 is returned although the import is stored.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">Server path of the package to import.</param>
@@ -748,7 +749,7 @@ internal static class AgentsApi
     /// returned in case-insensitive name order, each with its member agent identifiers. Use a team's <c>id</c> with
     /// the other <c>/api/agents/teams/{teamId}</c> operations.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">Every team of the workspace; an empty array when none exist.</response>
@@ -765,7 +766,7 @@ internal static class AgentsApi
     /// form with <c>PUT /api/agents/teams/{teamId}</c>; to see the member agents' definitions, use
     /// <c>GET /api/agents/teams/{teamId}/agents</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="teamId">Identifier of the team, as returned by <c>GET /api/agents/teams</c> or a team save.</param>
@@ -794,7 +795,7 @@ internal static class AgentsApi
     /// An unknown team identifier is not translated into the error envelope; the request fails with a generic
     /// HTTP 500. Use <c>GET /api/agents/teams/{teamId}</c> first when you need a 404 for a missing team.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="teamId">Identifier of an existing team, as returned by <c>GET /api/agents/teams</c>.</param>
@@ -814,7 +815,7 @@ internal static class AgentsApi
     /// <c>includeTemplates</c> is true, so a team of templates can yield an empty array. The team and the agents are
     /// read separately, so a concurrent change can make the result differ from the team's <c>agentIds</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="teamId">Identifier of the team, as returned by <c>GET /api/agents/teams</c>.</param>
@@ -863,7 +864,7 @@ internal static class AgentsApi
     /// content on every catalog write, and a team sent with the all-zero identifier is discarded. Read the team back
     /// with <c>GET /api/agents/teams/{teamId}</c> to confirm the stored result.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete team to store.</param>
@@ -895,7 +896,7 @@ internal static class AgentsApi
     /// report success but are not kept; the all-zero identifier is likewise discarded. Read the team back to confirm
     /// the stored result.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="teamId">Identifier of the team to replace, as returned by a team read or save.</param>
@@ -927,7 +928,7 @@ internal static class AgentsApi
     /// Teams shipped with the product are reset to their shipped members on every catalog write; for them the response
     /// shows the requested members although the stored team keeps its shipped members. Read the team back to confirm.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="teamId">Identifier of an existing team, as returned by <c>GET /api/agents/teams</c>.</param>
@@ -959,7 +960,7 @@ internal static class AgentsApi
     /// Teams shipped with the product are reset to their shipped members on every catalog write; for them the response
     /// shows the requested members although the stored team keeps its shipped members. Read the team back to confirm.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="teamId">Identifier of an existing team, as returned by <c>GET /api/agents/teams</c>.</param>
@@ -984,7 +985,7 @@ internal static class AgentsApi
     /// Teams shipped with the product are restored by the same catalog write, so deleting one reports success but the
     /// team remains.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="teamId">Identifier of the team to delete.</param>
@@ -1015,7 +1016,7 @@ internal static class AgentsApi
     /// intended change again if it is still wanted; after <c>StillUnconfirmed</c>, verify again later instead of
     /// writing.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="attempt">The receipt from the unconfirmed-write response, unchanged.</param>
@@ -1065,7 +1066,7 @@ internal static class AgentsApi
     ///
     /// A profile that cannot be read makes the whole list fail with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">The provider profiles.</response>
@@ -1089,7 +1090,7 @@ internal static class AgentsApi
     /// Returns the profile's settings together with <c>expectedConcurrencyToken</c>, the token to send back when
     /// saving a change. Profiles imported from a shared provider source can be read here but cannot be saved.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="providerId">
@@ -1141,7 +1142,7 @@ internal static class AgentsApi
     /// Some invalid thinking-effort capability entries and over-long model lists are not translated into the error
     /// envelope: the request fails with a generic HTTP 500 before anything is written.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete provider profile form.</param>
@@ -1184,7 +1185,7 @@ internal static class AgentsApi
     /// unconfirmed-write receipt (see <c>POST /api/agents/providers</c>) to send to
     /// <c>POST /api/agents/providers/mutations/verify</c> before any retry.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="providerId">Identifier of the provider profile to delete.</param>
@@ -1226,7 +1227,7 @@ internal static class AgentsApi
     /// A provider that answers with an error yields HTTP 200 with <c>success</c> false. The check is recorded in the
     /// provider request history as a diagnostic.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="providerId">Identifier of the provider profile to test.</param>
@@ -1274,7 +1275,7 @@ internal static class AgentsApi
     /// and messages, a provider error or timeout, a provider that cannot chat (ComfyUI) or a model not published by a
     /// shared provider is not translated into the error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="providerId">Identifier of the provider profile to use.</param>
@@ -1326,7 +1327,7 @@ internal static class AgentsApi
     /// Only local Ollama profiles are supported. Missing values, a context length outside 2048 to 262144 and profiles
     /// of another kind are not translated into the error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="providerId">Identifier of a local Ollama provider profile.</param>
@@ -1373,7 +1374,7 @@ internal static class AgentsApi
     ///
     /// Each item includes its <c>configurationJson</c> exactly as stored, without redaction.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">The catalog capabilities.</response>
@@ -1393,7 +1394,7 @@ internal static class AgentsApi
     /// An unknown capability identifier is not translated into the error envelope: the request fails with a generic
     /// HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="capabilityId">
@@ -1428,7 +1429,7 @@ internal static class AgentsApi
     /// when the catalog is written, so edits to them can report success without being kept. Read the editor form
     /// again after every save.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete capability form.</param>
@@ -1451,7 +1452,7 @@ internal static class AgentsApi
     /// is harmless. Capabilities shipped with the product are restored by the same catalog write, so deleting one
     /// reports success but it remains.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="capabilityId">Identifier of the capability to delete.</param>
@@ -1487,7 +1488,7 @@ internal static class AgentsApi
     /// <c>automaticReplaySafe</c> is always false: do not retry automatically. After <c>Unconfirmed</c> the proof may
     /// already be stored; read the agent before deciding whether to verify again as a new, deliberate request.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent whose capability assignment is verified.</param>
@@ -1553,7 +1554,7 @@ internal static class AgentsApi
     /// <c>jsonInput</c>, a null <c>capability</c> or <c>tags</c>, or an invalid HTTP method is not translated into the
     /// error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The tool definition to test and the input to send.</param>
@@ -1593,7 +1594,7 @@ internal static class AgentsApi
     /// HTTP 200. Other failures, such as an out-of-range timeout, are not translated into the error envelope: the
     /// request fails with a generic HTTP 500 and the started server may not be stopped.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The MCP server definition to test.</param>
@@ -1628,7 +1629,7 @@ internal static class AgentsApi
     /// A null list in the request is not translated into the error envelope: the request fails with a generic
     /// HTTP 500; send empty arrays instead.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">Candidates, the policy to evaluate and the required capabilities.</param>
@@ -1650,7 +1651,7 @@ internal static class AgentsApi
     /// <c>/api/memory-providers</c>, and they are not injected into agent runs: the runtime lists them only as an
     /// excluded context source. An agent without notes, or an unknown agent identifier, yields an empty array.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent whose notes are listed.</param>
@@ -1677,7 +1678,7 @@ internal static class AgentsApi
     /// A note for an agent that does not exist (including an omitted <c>agentId</c>), or a null text member, is not
     /// translated into the error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The complete note to store.</param>
@@ -1696,7 +1697,7 @@ internal static class AgentsApi
     /// delete is harmless. Notes shipped with the product (source <c>seed</c>) are restored by the same catalog write,
     /// so deleting one reports success but the note remains. Memory held by memory providers is not affected.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="memoryId">Identifier of the note, as returned by <c>GET /api/agents/{agentId}/memory</c>.</param>
@@ -1721,7 +1722,7 @@ internal static class AgentsApi
     /// run. Sessions are returned with all their messages, newest activity first, without paging. For a lighter list
     /// with previews use <c>GET /api/agents/{agentId}/chat-workspace</c>. An unknown agent yields an empty array.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent.</param>
@@ -1745,7 +1746,7 @@ internal static class AgentsApi
     /// An unknown agent, or a <c>chatSessionId</c> that does not exist or belongs to another agent, is not translated
     /// into the error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the session.</param>
@@ -1772,7 +1773,7 @@ internal static class AgentsApi
     /// A blank or null title, an unknown session, or a session of another agent is not translated into the error
     /// envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the session.</param>
@@ -1801,7 +1802,7 @@ internal static class AgentsApi
     /// by <c>preferredSessionId</c> is selected when it exists and belongs to the agent; otherwise the most recently
     /// updated session is selected. It only reads; an unknown agent yields an empty workspace.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent.</param>
@@ -1848,7 +1849,7 @@ internal static class AgentsApi
     /// another run, an agent without a usable provider profile or an invalid attachment is not translated into the
     /// error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent to talk to.</param>
@@ -2152,7 +2153,7 @@ internal static class AgentsApi
     /// instead. An unknown run, a run that is already being continued, or a run with nothing pending that is neither
     /// completed nor failed is not translated into the error envelope: the request fails with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open. Approving a call here does not widen the agent's tool
     /// access; the call still runs under the run's policy.
     /// </remarks>
@@ -2273,7 +2274,7 @@ internal static class AgentsApi
     /// <c>context</c> for process steps is not translated into the error envelope: the request fails with a generic
     /// HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="request">The agent, the prompt and the run options.</param>
@@ -2359,7 +2360,7 @@ internal static class AgentsApi
     /// usable provider profile or an invalid attachment is not translated into the error envelope: the request fails
     /// with a generic HTTP 500.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent to run.</param>
@@ -2434,7 +2435,7 @@ internal static class AgentsApi
     /// The items are summaries; read <c>GET /api/agents/execution-runs/{executionRunId}</c> for the log, metrics,
     /// approvals, artifacts, checkpoints and tool receipts of a run.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="query">The filters and the maximum number of runs.</param>
@@ -2456,7 +2457,7 @@ internal static class AgentsApi
     /// <c>agentId</c> route value; an <c>AgentId</c> query value is ignored. Results are ordered by last update (newest
     /// first) and limited to <c>Take</c>. An unknown agent yields an empty array.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="query">The filters and the maximum number of runs.</param>
@@ -2488,7 +2489,7 @@ internal static class AgentsApi
     /// <c>GET /api/agents/{agentId}/execution-runs/{executionRunId}</c> returns HTTP 404 instead and also checks the
     /// agent.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="executionRunId">
@@ -2510,7 +2511,7 @@ internal static class AgentsApi
     /// Same content as <c>GET /api/agents/execution-runs/{executionRunId}</c>, but the run must belong to the agent in
     /// the route; an unknown run, or a run of another agent, yields HTTP 404.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the run.</param>
@@ -2548,7 +2549,7 @@ internal static class AgentsApi
     /// into the error envelope and fails with a generic HTTP 500;
     /// <c>GET /api/agents/{agentId}/execution-runs/{executionRunId}/artifacts</c> returns HTTP 404 instead.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="executionRunId">Identifier of the agent execution run.</param>
@@ -2567,7 +2568,7 @@ internal static class AgentsApi
     /// Same list as <c>GET /api/agents/execution-runs/{executionRunId}/artifacts</c>, but the run must belong to the
     /// agent in the route.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the run.</param>
@@ -2597,7 +2598,7 @@ internal static class AgentsApi
     /// translated into the error envelope and fails with a generic HTTP 500; <c>GET
     /// /api/agents/{agentId}/execution-runs/{executionRunId}/checkpoints</c> returns HTTP 404 instead.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="executionRunId">Identifier of the agent execution run.</param>
@@ -2618,7 +2619,7 @@ internal static class AgentsApi
     /// Same list as <c>GET /api/agents/execution-runs/{executionRunId}/checkpoints</c>, but the run must belong to the
     /// agent in the route.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the run.</param>
@@ -2652,7 +2653,7 @@ internal static class AgentsApi
     /// An unknown run identifier is not translated into the error envelope and fails with a generic HTTP 500;
     /// <c>GET /api/agents/{agentId}/execution-runs/{executionRunId}/tool-receipts</c> returns HTTP 404 instead.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="executionRunId">Identifier of the agent execution run.</param>
@@ -2671,7 +2672,7 @@ internal static class AgentsApi
     /// Same list as <c>GET /api/agents/execution-runs/{executionRunId}/tool-receipts</c>, but the run must belong to
     /// the agent in the route.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the run.</param>
@@ -2699,7 +2700,7 @@ internal static class AgentsApi
     /// Returns the progress entries (state, phase and message) recorded while the run advanced. The run must belong to
     /// the agent in the route. The same entries are part of <c>GET /api/agents/execution-runs/{executionRunId}</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the run.</param>
@@ -2728,7 +2729,7 @@ internal static class AgentsApi
     /// duration, token counts, tool calls and estimated cost. The run must belong to the agent in the route. The same
     /// metrics are part of <c>GET /api/agents/execution-runs/{executionRunId}</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the run.</param>
@@ -2756,7 +2757,7 @@ internal static class AgentsApi
     /// Same list as <c>GET /api/agents/execution-runs/{executionRunId}/approvals</c>, but the run must belong to the
     /// agent in the route; an unknown run, or a run of another agent, yields HTTP 404.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent that owns the run.</param>
@@ -2789,7 +2790,7 @@ internal static class AgentsApi
     /// An unknown run identifier is not translated into the error envelope and fails with a generic HTTP 500;
     /// <c>GET /api/agents/{agentId}/execution-runs/{executionRunId}/approvals</c> returns HTTP 404 instead.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="executionRunId">Identifier of the agent execution run.</param>
@@ -2815,7 +2816,7 @@ internal static class AgentsApi
     /// carry no run or session identifier; to read the log of one run use
     /// <c>GET /api/agents/{agentId}/execution-runs/{executionRunId}/log</c>. An unknown agent yields an empty array.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent.</param>
@@ -2843,7 +2844,7 @@ internal static class AgentsApi
     /// entries that are not linked to a run are left out. Use it to refresh a chat view's activity panel; for one run
     /// read <c>GET /api/agents/execution-runs/{executionRunId}</c>. An unknown agent yields empty lists.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent.</param>
@@ -2872,7 +2873,7 @@ internal static class AgentsApi
     /// <c>GET /api/agents/{agentId}/execution-runs/{executionRunId}/metrics</c>. An unknown agent yields an empty
     /// array.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="agentId">Identifier of the agent.</param>

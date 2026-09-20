@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.AgentFramework.Core;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +13,7 @@ internal static class AgentAttachmentsApi
 
     public static RouteGroupBuilder MapAgentAttachmentsApi(this RouteGroupBuilder group)
     {
-        group.MapGroup("/agents")
+        group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents")
             .DisableAntiforgery()
             .MapPost("/attachments/images", StageImageAsync)
@@ -51,7 +52,7 @@ internal static class AgentAttachmentsApi
     /// Every upload creates a new file under <c>artifacts/chat-attachments/</c> in the workspace, with a unique name
     /// derived from the uploaded file name; uploading the same image again stores another copy.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">The multipart form with the image in the file part <c>file</c>.</param>
     /// <response code="200">

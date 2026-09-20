@@ -13,7 +13,7 @@ internal static class AgentEventsApi
 {
     public static RouteGroupBuilder MapAgentEventsApi(this RouteGroupBuilder group)
     {
-        var agents = group.MapGroup("/agents")
+        var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents")
             .DisableAntiforgery();
 
@@ -31,7 +31,7 @@ internal static class AgentEventsApi
                 StatusCodes.Status404NotFound);
 
         agents.MapPost("/{agentId:guid}/chat/stream", StreamChatAsync)
-            .WithName("StreamAgentChatMessage")
+            .WithName("StreamAgentChatMessage").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentChatApiRequest>("application/json")
             .Produces<string>(
                 StatusCodes.Status200OK,
@@ -47,7 +47,7 @@ internal static class AgentEventsApi
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/execution-runs/stream", StreamExecutionRunAsync)
-            .WithName("StreamAgentExecutionRun")
+            .WithName("StreamAgentExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunApiRequest>("application/json")
             .Produces<string>(
                 StatusCodes.Status200OK,
@@ -63,7 +63,7 @@ internal static class AgentEventsApi
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/{agentId:guid}/execution-runs/stream", StreamScopedExecutionRunAsync)
-            .WithName("StreamAgentScopedExecutionRun")
+            .WithName("StreamAgentScopedExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunStartApiRequest>("application/json")
             .Produces<string>(
                 StatusCodes.Status200OK,
@@ -81,7 +81,7 @@ internal static class AgentEventsApi
         agents.MapPost(
                 "/execution-runs/{executionRunId:guid}/pending-approvals/stream",
                 StreamApprovalContinuationAsync)
-            .WithName("StreamAgentExecutionApprovalResponse")
+            .WithName("StreamAgentExecutionApprovalResponse").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<PendingApprovalApiRequest>("application/json")
             .Produces<string>(
                 StatusCodes.Status200OK,
@@ -148,7 +148,7 @@ internal static class AgentEventsApi
     /// This stream never carries the command's result or failure details: read them with
     /// <c>GET /api/agents/execution-runs/{executionRunId}</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; the stream is not
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; the stream is not
     /// limited to the caller that started the operation. Reading it does not change the operation.
     /// </remarks>
     /// <param name="operationId">
@@ -289,7 +289,7 @@ internal static class AgentEventsApi
     /// read the run with <c>GET /api/agents/execution-runs/{executionRunId}</c> (its identifier appears in the
     /// activity events) before sending the message again.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="agentId">
     /// Identifier of the agent that receives the message (not the empty GUID), as listed by <c>GET /api/agents</c>.
@@ -430,7 +430,7 @@ internal static class AgentEventsApi
     /// read the run with <c>GET /api/agents/execution-runs/{executionRunId}</c> (its identifier appears in the
     /// activity events) before starting it again.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">
     /// The run to start, the same body as for <c>POST /api/agents/execution-runs</c>: <c>agentId</c> (required, not
@@ -575,7 +575,7 @@ internal static class AgentEventsApi
     /// read the run with <c>GET /api/agents/execution-runs/{executionRunId}</c> (its identifier appears in the
     /// activity events) before starting it again.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="agentId">
     /// Identifier of the agent to run (not the empty GUID), as listed by <c>GET /api/agents</c>.
@@ -729,7 +729,7 @@ internal static class AgentEventsApi
     /// already completed, such as approved tool calls, is not undone. The last events are not replayable. After a
     /// dropped connection or a failure, read the run and its approvals again before sending new decisions.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="executionRunId">
     /// Identifier of the execution run waiting for approval (not the empty GUID): the <c>executionRunId</c> of the

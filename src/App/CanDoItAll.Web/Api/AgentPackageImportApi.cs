@@ -75,7 +75,7 @@ internal static class AgentPackageImportApi
     /// with different values is rejected with <c>agent-package.idempotency-conflict</c>. The last 2048 imports of the
     /// workspace are remembered.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">
     /// The multipart form: the package file part <c>package</c> and the import mode, external identity and optional

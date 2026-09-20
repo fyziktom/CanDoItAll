@@ -22,6 +22,7 @@ public sealed class ApiDocumentationCoverageTests(ApiDocumentationDocumentFixtur
         "/api/projects",
         "/api/prompt-gallery",
         "/api/runtime",
+        "/api/settings/workspace",
         "/api/shared-providers",
         "/api/storage-placement-recovery",
         "/api/workflows",
@@ -46,6 +47,7 @@ public sealed class ApiDocumentationCoverageTests(ApiDocumentationDocumentFixtur
     [InlineData("/api/projects")]
     [InlineData("/api/prompt-gallery")]
     [InlineData("/api/runtime")]
+    [InlineData("/api/settings/workspace")]
     [InlineData("/api/shared-providers")]
     [InlineData("/api/storage-placement-recovery")]
     [InlineData("/api/workflows")]
@@ -61,7 +63,7 @@ public sealed class ApiDocumentationCoverageTests(ApiDocumentationDocumentFixtur
 
         Assert.True(
             gaps.Count == 0,
-            $"{gaps.Count} documentation gaps in {family}:{Environment.NewLine}{string.Join(Environment.NewLine, gaps.Take(200))}");
+            $"{gaps.Count} documentation gaps in {family}:{Environment.NewLine}{string.Join(Environment.NewLine, gaps.Take(1000))}");
     }
 
     [Fact]

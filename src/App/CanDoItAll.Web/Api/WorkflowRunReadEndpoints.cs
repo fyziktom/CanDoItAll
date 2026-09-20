@@ -75,7 +75,7 @@ internal static class WorkflowRunReadEndpoints
     /// one run with <c>GET /api/workflows/runs/{runId}</c> or with its events, artifacts, pending requests and
     /// checkpoints with <c>GET /api/workflows/runs/{runId}/detail</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="query">Optional filters and the maximum number of runs.</param>
@@ -105,7 +105,7 @@ internal static class WorkflowRunReadEndpoints
     /// <c>Search</c> here is a case-sensitive substring of the run summary or backend run identifier; it does not match
     /// the run identifier, unlike <c>GET /api/workflows/runs</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="query">Optional filters and the page to read.</param>
@@ -136,7 +136,7 @@ internal static class WorkflowRunReadEndpoints
     /// <c>GET /api/workflows/runs/{runId}/events/stream</c>, to follow a run; read
     /// <c>GET /api/workflows/runs/{runId}/detail</c> for its events, artifacts, pending requests and checkpoints.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">
@@ -167,7 +167,7 @@ internal static class WorkflowRunReadEndpoints
     /// older one. Read artifact content with
     /// <c>GET /api/workflows/runs/{runId}/artifacts/{artifactId}/content</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">
@@ -204,7 +204,7 @@ internal static class WorkflowRunReadEndpoints
     ///
     /// An unknown run identifier returns an empty array, not HTTP 404.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">Identifier of the run whose events are listed.</param>
@@ -230,7 +230,7 @@ internal static class WorkflowRunReadEndpoints
     /// provider-read evidence records are not counted or listed. An unknown run identifier returns an empty page, not
     /// HTTP 404.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">Identifier of the run whose events are listed.</param>
@@ -260,7 +260,7 @@ internal static class WorkflowRunReadEndpoints
     ///
     /// An unknown run identifier returns an empty array, not HTTP 404.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">Identifier of the run whose artifacts are listed.</param>
@@ -287,7 +287,7 @@ internal static class WorkflowRunReadEndpoints
     /// (for example <c>text/plain</c> or <c>text/markdown</c>); other File artifacts, such as spreadsheets and
     /// downloads, have no content here. The content is not bounded like the metadata projections and can be large.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">Identifier of the run that recorded the artifact.</param>
@@ -325,7 +325,7 @@ internal static class WorkflowRunReadEndpoints
     ///
     /// An unknown run identifier returns an empty array, not HTTP 404.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">Identifier of the run whose checkpoints are listed.</param>
@@ -355,7 +355,7 @@ internal static class WorkflowRunReadEndpoints
     /// file names; use <c>prompt</c> and <c>responseContract</c>. Items are ordered by creation time. An unknown run
     /// identifier returns an empty array, not HTTP 404.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open. Answering a request requires the separate
     /// <c>api.workflows.respond</c> scope.
     /// </remarks>

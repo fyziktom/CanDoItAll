@@ -24,10 +24,10 @@
             @if (!string.IsNullOrEmpty(error)) {
                 <Alert AlertStyle="AlertStyle.Danger" data-testid="api-tokens-error">@error</Alert>
             }
-            <DataGrid TItem="ApiTokenRecord" Data="result.Items" Loading="isBusy"
+            <DataGrid TItem="ApiTokenSummary" Data="result.Items" Loading="isBusy"
                       EmptyText="No tokens match this search." Caption="Issued API tokens" data-testid="api-tokens-table">
                 <Columns>
-                    <DataGridColumn TItem="ApiTokenRecord" Title="Token">
+                    <DataGridColumn TItem="ApiTokenSummary" Title="Token">
                         <Template Context="token">
                             <Stack GapScale="LayoutGap.Tiny">
                                 <strong>@token.DisplayName</strong>
@@ -36,7 +36,7 @@
                             </Stack>
                         </Template>
                     </DataGridColumn>
-                    <DataGridColumn TItem="ApiTokenRecord" Title="Scopes">
+                    <DataGridColumn TItem="ApiTokenSummary" Title="Scopes">
                         <Template Context="token">
                             <Stack GapScale="LayoutGap.Tiny">
                                 @foreach (var scope in token.Scopes) {
@@ -45,7 +45,7 @@
                             </Stack>
                         </Template>
                     </DataGridColumn>
-                    <DataGridColumn TItem="ApiTokenRecord" Title="Created / expires">
+                    <DataGridColumn TItem="ApiTokenSummary" Title="Created / expires">
                         <Template Context="token">
                             <Stack GapScale="LayoutGap.Tiny">
                                 <span>@token.IssuedAtUtc.LocalDateTime.ToString("g")</span>
@@ -53,13 +53,13 @@
                             </Stack>
                         </Template>
                     </DataGridColumn>
-                    <DataGridColumn TItem="ApiTokenRecord" Title="Status">
+                    <DataGridColumn TItem="ApiTokenSummary" Title="Status">
                         <Template Context="token">
                             <StatusBadge Text="@token.GetStatus(Clock.GetUtcNow()).ToString()"
                                          Tone="@(token.GetStatus(Clock.GetUtcNow()) == ApiTokenStatus.Active ? "success" : "neutral")" />
                         </Template>
                     </DataGridColumn>
-                    <DataGridColumn TItem="ApiTokenRecord" Title="Actions">
+                    <DataGridColumn TItem="ApiTokenSummary" Title="Actions">
                         <Template Context="token">
                             <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
                                 <Button Text="Revoke" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small"
@@ -118,7 +118,7 @@
     private int offset;
     private bool isBusy;
     private ApiTokenPage result = new([], 0);
-    private ApiTokenRecord? selectedToken;
+    private ApiTokenSummary? selectedToken;
     private TokenAction action;
 
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -157,7 +157,7 @@
         return LoadAsync();
     }
 
-    private void Confirm(ApiTokenRecord token, TokenAction requestedAction) {
+    private void Confirm(ApiTokenSummary token, TokenAction requestedAction) {
         selectedToken = token;
         action = requestedAction;
     }

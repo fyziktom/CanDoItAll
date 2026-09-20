@@ -69,7 +69,7 @@ internal static class ProcessRunRecordsApi
     /// only when a record's facts are assembled (<c>factsStatus</c> Completed); records without facts never match
     /// them. <c>rootRunId</c>, <c>disposition</c>, <c>fromUtc</c> and <c>toUtc</c> apply as soon as a record exists.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host, and every record is
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy, and every record is
     /// visible to that caller; otherwise the route is open.
     /// </remarks>
     /// <param name="projectId">
@@ -168,7 +168,7 @@ internal static class ProcessRunRecordsApi
     /// root record and its children's records. For exact figures of one run tree, read the root run's own record. There is no disposition filter; the breakdown is in
     /// <c>dispositions</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="projectId">
@@ -253,7 +253,7 @@ internal static class ProcessRunRecordsApi
     /// For a run that is still active, use <c>GET /api/processes/runs/{runId}</c>: this record does not exist until
     /// the run ends, and it is withdrawn while a reactivated run runs again. Use <c>/graph</c> for step dependencies.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">
@@ -325,7 +325,7 @@ internal static class ProcessRunRecordsApi
     /// Paging: <c>stepOffset</c> is a zero-based number of steps to skip (default 0) and <c>stepTake</c> the page
     /// size, from 1 through 200 (default 100).
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; otherwise the route
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; otherwise the route
     /// is open.
     /// </remarks>
     /// <param name="runId">Identifier of the ended process run. The all-zero GUID is rejected.</param>

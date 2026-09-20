@@ -59,7 +59,7 @@ internal static class AgentExternalProvisioningApi
     /// lowercase letters, digits, <c>.</c>, <c>_</c> or <c>-</c>, starting and ending with a letter or digit. Deleting
     /// the agent with <c>DELETE /api/agents/{agentId}</c> also removes its bindings.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="externalNamespace">
     /// Namespace of the external identity, chosen by the caller when provisioning (<c>package-import</c> for package
@@ -138,7 +138,7 @@ internal static class AgentExternalProvisioningApi
     /// stored change when the CRM/HR directory refresh after the save fails: resend the identical request with the same
     /// key to receive the stored receipt (the replay does not repeat the refresh).
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="externalNamespace">
     /// Namespace of the external identity, chosen by the caller, for example <c>erp-sync</c>. It is trimmed and
@@ -265,7 +265,7 @@ internal static class AgentExternalProvisioningApi
     /// follow a stored change when the CRM/HR directory refresh after the save fails: resend the identical request with
     /// the same key to receive the stored receipt (the replay does not repeat the refresh).
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="externalNamespace">
     /// Namespace of the external identity, for example <c>erp-sync</c>; trimmed and lowered before the lookup.

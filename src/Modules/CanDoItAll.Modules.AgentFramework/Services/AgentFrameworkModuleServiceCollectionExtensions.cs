@@ -359,6 +359,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ISettingsRendererSource, WorkflowSettingsRendererSource>());
         services.AddWorkflowTemplateServices();
         services.AddScoped<WorkflowExampleCatalogSeedService>();
+        services.AddScoped<WorkflowTemplateDraftService>();
         services.AddScoped<WorkflowPromptGalleryMigrationService>();
         services.AddHostedService<WorkflowPromptGalleryMigrationHostedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();

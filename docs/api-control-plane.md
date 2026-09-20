@@ -22,12 +22,12 @@ The default development profile listens on `http://localhost:5032`.
 OpenAPI endpoints require authorization when API authorization is enabled.
 
 The operation, parameter and schema descriptions in that document come from the C# XML documentation
-of the route handlers and serialized types; [HTTP API documentation](architecture/api-documentation.md)
+of the route handlers and serialized types, with explicit endpoint metadata and `Description` attributes for the new access and process-authoring contracts; [HTTP API documentation](architecture/api-documentation.md)
 describes that pipeline, its authoring conventions and the coverage gates.
 
 ## Access Configuration
 
-Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettings.json).
+Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettings.json) and the typed [API options](../src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs). See [API users and deployment access](api-user-access.md) for the configuration truth table, administrator hash helper, account lifecycle, transport and proxy setup.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -50,8 +50,11 @@ loopback. This circuit identity is not installed in `HttpContext.User` and never
 authenticates HTTP API or authorized-file routes; those boundaries still require a
 valid bearer token.
 
-When authorization is enabled, `/api/access/tokens` requires the privileged
-`api.tokens.issue` scope. Memory-provider routes accept the existing umbrella `api`
+HTTP account and token administration, including `/api/access/tokens`, is absent unless
+`Api:AccessManagement:Enabled` is true. It requires a registered configured-administrator
+session; neither broad `api` nor old `api.tokens.issue` is sufficient.
+`Api:UserAuthentication:Enabled` independently enables login/me/logout and requires secure
+JWT configuration. Both new switches default to false. Memory-provider routes accept the existing umbrella `api`
 scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`, and
 `api.memory-providers.query` scopes for their respective operations.
 Workflow HITL response submission and operation-status reads require the exact
@@ -85,7 +88,7 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/agents` | Agent, provider, capability, memory, chat, execution, per-proposal approval, artifact, receipt, checkpoint, log, aggregate usage, metric, and runtime-snapshot operations. | [`AgentsApi.cs`](../src/App/CanDoItAll.Web/Api/AgentsApi.cs) |
 | `/api/agent-recruiting` | Candidate interviews, attempts, human reviews, interview history, and readiness. | [`AgentRecruitingApi.cs`](../src/App/CanDoItAll.Web/Api/AgentRecruitingApi.cs) |
 | `/api/prompt-gallery` | Prompt Gallery search, artifacts, versions, review, and application. | [`PromptGalleryApi.cs`](../src/App/CanDoItAll.Web/Api/PromptGalleryApi.cs) |
-| `/api/workflows` | Workflow settings, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
+| `/api/workflows` | Workflow settings, templates and draft creation, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
 | `/api/processes` | Process launch, dispatch, operator actions, live projections, durable run records, graphs, and analytics. | [`ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs) |
 | `/api/memory-providers` | Experimental provider profiles, context queries, and owned operation status. | [`MemoryProvidersApi.cs`](../src/App/CanDoItAll.Web/Api/MemoryProvidersApi.cs) |
 | `/api/plugins` | Plugin catalog, configuration, and runtime operations. | [`PluginsApi.cs`](../src/App/CanDoItAll.Web/Api/PluginsApi.cs) |
@@ -93,7 +96,8 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/llm-chats` | Simple Chat definition catalog, lifecycle, provider/model options, and conversation creation. | [`LlmChatDefinitionEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatDefinitionEndpoints.cs) |
 | `/api/llm-conversations` | Conversation paging, transcript reads, rename/archive, turn admission, and explicit recovery. | [`LlmChatConversationEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatConversationEndpoints.cs) |
 | `/api/llm-chat-operations` | Durable turn status, replayable SSE, cancellation, and evidence-based reconciliation. | [`LlmChatOperationsApi.cs`](../src/App/CanDoItAll.Web/Api/LlmChatOperationsApi.cs) |
-| `/api/runtime` | Host capability and bounded operation-readiness snapshots; a bearer token is required when API authorization is enabled. | [`RuntimeEndpoints.cs`](../src/App/CanDoItAll.Web/RuntimeEndpoints.cs) |
+| `/api/settings/workspace` | Workspace business defaults with separate read/write capabilities. | [`WorkspaceSettingsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkspaceSettingsApi.cs) |
+| `/api/runtime` | Host capability and bounded operation-readiness snapshots; `api.runtime.read` or compatible broad `api` is required when API authorization is enabled. | [`RuntimeEndpoints.cs`](../src/App/CanDoItAll.Web/RuntimeEndpoints.cs) |
 
 Use OpenAPI for exact methods and schemas. Do not copy a complete generated endpoint inventory into maintained documentation.
 
@@ -150,6 +154,10 @@ redacted `500`. The workflow response boundary never uses `502`.
 | Method | Route | Use |
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Discover the route contract. |
+| `GET` | `/api/processes/definitions` | Search current global definition catalog projections. |
+| `GET` | `/api/processes/definitions/{definitionKey}` | Read the definition overview. |
+| `GET` | `/api/processes/definitions/{definitionKey}/roles` | Read role and staffing projections. |
+| `GET` | `/api/processes/definitions/{definitionKey}/steps` | Read step contracts and bindings. |
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
 | `POST` | `/api/processes/launch` | Accept a prepared launch and optionally queue its durable run. |
 | `GET` | `/api/processes/launch/{admissionId}` | Observe the original preparation, accepted run and delivery state without executing it. |

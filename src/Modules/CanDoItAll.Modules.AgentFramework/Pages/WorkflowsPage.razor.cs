@@ -57,6 +57,9 @@ public partial class WorkflowsPage : IDisposable {
     public WorkflowTemplatePackLoader TemplatePackLoader { get; set; } = default!;
 
     [Inject]
+    public WorkflowTemplateDraftService TemplateDrafts { get; set; } = default!;
+
+    [Inject]
     public IWorkflowRuntimeManager RuntimeManager { get; set; } = default!;
 
     [Inject]
@@ -914,9 +917,8 @@ public partial class WorkflowsPage : IDisposable {
 
         var owner = CaptureOwner();
         var generation = templateGeneration;
-        var pack = templatePack;
         var template = templatePreviewTemplate;
-        var draftName = ResolveTemplateDraftName(template.Name, definitions);
+        var committed = false;
         isBusy = true;
         templatePreviewErrorMessage = string.Empty;
 
@@ -925,28 +927,8 @@ public partial class WorkflowsPage : IDisposable {
             if (!componentLibraryLoaded || !Owns(owner) || generation != templateGeneration) {
                 return;
             }
-            var providerOption = ResolveTemplateProviderOption();
-            var component = await ComponentLibrary.SaveComponentAsync(CreateTemplateComponentSaveRequest(
-                pack,
-                template,
-                draftName,
-                providerOption));
-            var definition = CreateTemplateWorkflowDefinition(
-                pack,
-                template,
-                component,
-                draftName,
-                WorkflowLifecycleStatus.Draft);
-            var saved = await CatalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
-                Id: null,
-                ExpectedVersionId: null,
-                Name: definition.Name,
-                Description: definition.Description,
-                Status: WorkflowLifecycleStatus.Draft,
-                Graph: definition.Graph,
-                RuntimePolicy: definition.RuntimePolicy) {
-                InputParameters = definition.InputParameters
-            });
+            var saved = await TemplateDrafts.CreateAsync(template.Key);
+            committed = true;
 
             if (!Owns(owner) || generation != templateGeneration) {
                 return;
@@ -963,7 +945,7 @@ public partial class WorkflowsPage : IDisposable {
             }
 
             templatePreviewErrorMessage = FormatWorkflowException(exception);
-            NotificationService.Error("Template add failed", templatePreviewErrorMessage);
+            NotificationService.Error(committed ? "Draft saved; refresh failed" : "Template add failed", templatePreviewErrorMessage);
         } finally {
             if (Owns(owner)) {
                 isBusy = false;
@@ -1986,69 +1968,8 @@ public partial class WorkflowsPage : IDisposable {
             UpdatedAtUtc: now);
     }
 
-    private static LlmCallComponentSaveRequest CreateTemplateComponentSaveRequest(
-        WorkflowTemplatePack templatePack,
-        WorkflowTemplateDefinition template,
-        string draftName,
-        WorkflowProviderOption? providerOption)
-        => new(
-            Id: null,
-            Name: $"Draft LLM: {draftName}",
-            ProviderProfileId: providerOption?.ProviderProfileId,
-            Model: ResolveTemplateModel(providerOption),
-            Modality: WorkflowModality.Text,
-            ModelSettings: templatePack.CreateModelSettings(),
-            Instructions: templatePack.CreateComponentInstructions(template),
-            InputShape: templatePack.JsonShape,
-            ResultShape: templatePack.JsonShape,
-            Permissions: CreateTemplateComponentPermissions());
-
-    private WorkflowProviderOption? ResolveTemplateProviderOption()
-        => providerOptions.FirstOrDefault(provider =>
-               provider.IsEnabled &&
-               provider.SupportsStructuredOutput &&
-               provider.ModelOptions.Contains(ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparer.OrdinalIgnoreCase)) ??
-           providerOptions.FirstOrDefault(provider => provider.IsEnabled && provider.SupportsStructuredOutput) ??
-           ResolveDefaultProviderOption();
-
-    private static string ResolveTemplateModel(WorkflowProviderOption? providerOption) {
-        if (providerOption is null) {
-            return ManagedSeedProviderFallbacks.OpenAiDefaultModel;
-        }
-
-        return providerOption.ModelOptions.FirstOrDefault(model =>
-                   string.Equals(model, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.OrdinalIgnoreCase)) ??
-               ResolveDefaultModel(providerOption);
-    }
-
     private static AgentPermissionsPolicy CreateTemplateComponentPermissions()
-        => AgentPermissionsPolicy.Default with {
-            CanUseTools = false,
-            CanAskOtherAgents = false,
-            CanEscalateToHuman = false,
-            RequiresApprovalForExternalCalls = false
-        };
-
-    private static string ResolveTemplateDraftName(
-        string baseName,
-        IReadOnlyList<WorkflowCatalogItem> existingDefinitions) {
-        var normalizedBaseName = NormalizeTemplateDraftBaseName(baseName);
-        var existingNames = existingDefinitions
-            .Select(definition => definition.Name)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!existingNames.Contains(normalizedBaseName)) {
-            return normalizedBaseName;
-        }
-
-        for (var index = 1; index <= 999; index++) {
-            var candidate = $"{index:00} {normalizedBaseName}";
-            if (!existingNames.Contains(candidate)) {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException($"No available draft name remains for template '{normalizedBaseName}'.");
-    }
+        => WorkflowTemplateDraftService.ComponentPermissions;
 
     private static string NormalizeTemplateDraftBaseName(string name) {
         var trimmed = name.Trim();

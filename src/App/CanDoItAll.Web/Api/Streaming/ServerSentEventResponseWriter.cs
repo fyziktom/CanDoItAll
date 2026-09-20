@@ -262,6 +262,7 @@ public static class ServerSentEventResponseWriter
         ArgumentNullException.ThrowIfNull(data);
         ValidateEventName(eventName);
 
+        await ApiStreamAuthorization.EnsureActiveAsync(response.HttpContext, cancellationToken);
         await response.WriteAsync(
             string.Create(
                 CultureInfo.InvariantCulture,
@@ -297,6 +298,7 @@ public static class ServerSentEventResponseWriter
         T data,
         CancellationToken cancellationToken)
     {
+        await ApiStreamAuthorization.EnsureActiveAsync(response.HttpContext, cancellationToken);
         await response.WriteAsync(
             $"event: {eventName}\ndata: ",
             cancellationToken);
@@ -315,6 +317,7 @@ public static class ServerSentEventResponseWriter
     {
         ArgumentNullException.ThrowIfNull(response);
 
+        await ApiStreamAuthorization.EnsureActiveAsync(response.HttpContext, cancellationToken);
         await response.WriteAsync(
             string.Create(
                 CultureInfo.InvariantCulture,

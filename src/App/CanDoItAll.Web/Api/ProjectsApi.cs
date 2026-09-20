@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Web.Api;
@@ -6,7 +7,7 @@ internal static class ProjectsApi
 {
     public static RouteGroupBuilder MapProjectsApi(this RouteGroupBuilder group)
     {
-        var projects = group.MapGroup("/projects")
+        var projects = group.MapGroup("/projects").WithApiSection(ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjects)
             .WithTags("Projects");
 
         projects.MapGet("/", ListProjectsAsync)
@@ -85,7 +86,7 @@ internal static class ProjectsApi
     /// parties that take part in the project as a whole (not only in one of its tasks) together with the resulting
     /// primary customer, delivery unit and owner names.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">All projects; an empty array when there are none.</response>
     internal static async Task<IResult> ListProjectsAsync(
@@ -100,7 +101,7 @@ internal static class ProjectsApi
     /// A lightweight alternative to <c>GET /api/projects</c> for pickers: one item per project with only its identifier
     /// and name, ordered by name. It lists every project and is not filtered by the caller.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">One item per project; an empty array when there are none.</response>
     internal static async Task<IResult> ListProjectAccessItemsAsync(
@@ -117,7 +118,7 @@ internal static class ProjectsApi
     /// cycle. Use <c>GET /api/projects/{projectId}/hierarchy</c> for the direct parents and children of one project
     /// with their summaries.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">All hierarchy links; an empty array when no project has a parent.</response>
     internal static async Task<IResult> ListHierarchyLinksAsync(
@@ -140,7 +141,7 @@ internal static class ProjectsApi
     /// <c>options</c> always contains an entry for each of the categories Language, Database, Ui, ExternalApi, Storage,
     /// Deployment and Testing; an entry without a stored value has a null <c>id</c> and an empty name.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="projectId">Identifier of the project, as returned by <c>GET /api/projects</c>.</param>
     /// <response code="200">The project's editable fields, or a blank template with a null <c>id</c>.</response>
@@ -168,7 +169,7 @@ internal static class ProjectsApi
     /// The project is saved first; the search index and the activity feed are updated afterwards, and failures of those
     /// updates are logged without changing the response.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="request">
     /// The project's editable fields, phases and options; omit <c>id</c> to create a project.
@@ -216,7 +217,7 @@ internal static class ProjectsApi
     /// Deleting an identifier that has no project still runs the participant cleanups for it and returns the same
     /// outcomes.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="projectId">Identifier of the project to delete, as returned by <c>GET /api/projects</c>.</param>
     /// <response code="200">
@@ -261,7 +262,7 @@ internal static class ProjectsApi
     /// using its <c>projectId</c>, <c>participantId.value</c> and <c>recoveryId</c>. When <c>canRetryNow</c> is false,
     /// another attempt is running and holds the cleanup until <c>retryAvailableAtUtc</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">The unfinished cleanups; an empty array when nothing is pending.</response>
     internal static async Task<IResult> ListPendingDeletionCleanupsAsync(
@@ -278,7 +279,7 @@ internal static class ProjectsApi
     /// recovery identifier. <c>warnings</c> lists managed media that was kept, for example by an immutable storage
     /// provider, with remediation text. Reading the notices does not remove them.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <response code="200">The completion notices; an empty array when there are none.</response>
     internal static async Task<IResult> ListDeletionCompletionNoticesAsync(
@@ -296,7 +297,7 @@ internal static class ProjectsApi
     /// exact identifiers; deleting the project again does not finish an earlier cleanup. When the cleanup has already
     /// finished, the response is 200 with the warnings recorded for it, so repeating a successful retry is safe.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="projectId">Identifier of the deleted project.</param>
     /// <param name="participantId">
@@ -370,7 +371,7 @@ internal static class ProjectsApi
     /// each list most recently updated first. A project can have several parents. When no project has the identifier,
     /// both lists are empty and the response is still 200.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="projectId">Identifier of the project, as returned by <c>GET /api/projects</c>.</param>
     /// <response code="200">The project's direct parents and children; empty lists when it has none.</response>
@@ -389,7 +390,7 @@ internal static class ProjectsApi
     /// one parent to another. Attaching a link that already exists succeeds without a change. A link that would make a
     /// project its own ancestor is rejected.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="parentProjectId">Identifier of the project that becomes the parent.</param>
     /// <param name="childProjectId">Identifier of the project that becomes the subproject.</param>
@@ -415,7 +416,7 @@ internal static class ProjectsApi
     /// Deletes only the parent-child link; both projects and the subproject's other parent links are kept. Detaching a
     /// link that does not exist fails.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="parentProjectId">Identifier of the parent project.</param>
     /// <param name="childProjectId">Identifier of the subproject to detach.</param>
@@ -441,7 +442,7 @@ internal static class ProjectsApi
     /// When the subproject is already linked to the new parent, only the old link is removed. The subproject's other
     /// parent links are kept. A move that would make the subproject an ancestor of its new parent is rejected.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="childProjectId">Identifier of the subproject to move.</param>
     /// <param name="request">The current and the new parent project.</param>

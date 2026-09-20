@@ -12,13 +12,13 @@ internal static class AgentProviderEventsApi
 {
     public static RouteGroupBuilder MapAgentProviderEventsApi(this RouteGroupBuilder group)
     {
-        group.MapGroup("/agents")
+        group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents")
             .DisableAntiforgery()
             .MapPost(
                 "/providers/{providerId:guid}/chat-completions/stream",
                 StreamChatCompletionAsync)
-            .WithName("StreamAgentProviderChatCompletion")
+            .WithName("StreamAgentProviderChatCompletion").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<ProviderChatCompletionApiRequest>("application/json")
             .Produces<string>(
                 StatusCodes.Status200OK,
@@ -62,7 +62,7 @@ internal static class AgentProviderEventsApi
     /// connection cancels the provider call. The call can be recorded in provider request history under the calling
     /// identity.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host.
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
     /// <param name="providerId">
     /// Identifier of the provider profile to call (not the empty GUID), as listed by <c>GET /api/agents/providers</c>.

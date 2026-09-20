@@ -8,6 +8,23 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ApiTokenAdministrationTests {
     [Fact]
+    public async Task User_editor_saves_a_real_account_with_no_implicit_business_grants() {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.AddSingleton<IApiTokenAdministrationAccess>(new TestTokenAdministrationAccess(true)));
+        var cut = harness.Context.Render<ApiUserAdministrationPanel>();
+        cut.WaitForElement("[data-testid='api-user-create']").Click();
+        cut.WaitForElement("[data-testid='api-user-name']").Change("component-user");
+        cut.Find("[data-testid='api-user-display-name']").Change("Component user");
+        cut.Find("[data-testid='api-user-password']").Change(Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)));
+        cut.Find("[data-testid='api-user-save']").Click();
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='api-user-dialog']")));
+        var user = Assert.Single(await harness.Context.Services.GetRequiredService<IApiUserStore>().ReadAsync());
+        Assert.Equal("component-user", user.UserName);
+        Assert.Empty(user.AllowedScopes);
+        Assert.True(ApiPasswordService.IsSupportedHash(user.PasswordHash));
+    }
+
+    [Fact]
     public void TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply() {
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -18,7 +35,7 @@ public sealed class ApiTokenAdministrationTests {
             .Add(component => component.Confirmed, value => confirmed = value)
             .Add(component => component.OnClose, () => closed = true));
 
-        Assert.Equal(ApiScopeCatalog.All.Count, cut.FindAll("[data-testid='api-scope-option']").Count);
+        Assert.Equal(ApiScopeCatalog.All.Count(scope => scope.MachineSelectable), cut.FindAll("[data-testid='api-scope-option']").Count);
         cut.FindAll("button").Single(button => button.TextContent == "Clear").Click();
         Assert.True(cut.Find("[data-testid='api-scopes-confirm']").HasAttribute("disabled"));
         cut.Find($"input[value='{ApiAccessScopeNames.ReadSharedProviderCatalog}']").Change(true);
@@ -115,7 +132,7 @@ public sealed class ApiTokenAdministrationTests {
         public Task<ApiTokenRecord?> FindAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(token);
         public Task<ApiTokenPage> SearchAsync(ApiTokenQuery query, CancellationToken cancellationToken = default) {
             SearchCount++;
-            return Task.FromResult(new ApiTokenPage(token is null ? [] : [token], token is null ? 0 : 1));
+            return Task.FromResult(new ApiTokenPage(token is null ? [] : [ApiTokenSummary.FromRecord(token)], token is null ? 0 : 1));
         }
         public Task RevokeAsync(Guid id, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken = default) {
             RevokeCount++;

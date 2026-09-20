@@ -52,7 +52,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
     }
 
     [Fact]
-    public async Task Token_issuance_requires_explicit_privileged_scope()
+    public async Task Token_issuance_is_absent_with_management_disabled_even_for_privileged_machine_tokens()
     {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: true,
@@ -77,7 +77,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
             "/api/access/tokens",
             request);
 
-        Assert.Equal(HttpStatusCode.Forbidden, forbiddenResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, forbiddenResponse.StatusCode);
 
         SetBearerToken(
             host,
@@ -96,14 +96,11 @@ public sealed class ApiAccessAuthorizationIntegrationTests
             "/api/access/tokens",
             request);
 
-        Assert.Equal(HttpStatusCode.OK, issuedResponse.StatusCode);
-        var issuedToken = await issuedResponse.Content.ReadFromJsonAsync<ApiTokenIssueResult>();
-        Assert.NotNull(issuedToken);
-        Assert.Equal(request.Subject, issuedToken.Subject);
+        Assert.Equal(HttpStatusCode.NotFound, issuedResponse.StatusCode);
     }
 
     [Fact]
-    public async Task Authorization_disabled_token_endpoint_is_not_protected_by_the_scope_policy()
+    public async Task Authorization_disabled_removes_http_token_issuance()
     {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
@@ -113,7 +110,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
             "/api/access/tokens",
             new ApiTokenIssueRequest());
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

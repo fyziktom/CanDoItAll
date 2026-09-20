@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Web.Api.Streaming;
@@ -115,7 +116,7 @@ internal static class WorkflowRunEventsApi
 
     public static RouteGroupBuilder MapWorkflowRunEventsApi(this RouteGroupBuilder group)
     {
-        var workflows = group.MapGroup("/workflows")
+        var workflows = group.MapGroup("/workflows").WithApiSection(ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows)
             .WithTags("Workflows")
             .DisableAntiforgery();
 
@@ -174,7 +175,7 @@ internal static class WorkflowRunEventsApi
     /// restart starts the positions over, and a change of the active database profile closes open streams and
     /// discards the retained notifications. The durable record is <c>GET /api/workflows/runs/{runId}/events</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="runId">
@@ -245,7 +246,7 @@ internal static class WorkflowRunEventsApi
     /// database profile closes open streams and discards the retained notifications. The durable record is
     /// <c>GET /api/workflows/runs/{runId}/events</c>.
     ///
-    /// Authority: when API authorization is enabled, any valid bearer token issued by this host; with authorization
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <response code="200">

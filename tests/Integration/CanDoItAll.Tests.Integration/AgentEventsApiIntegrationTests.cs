@@ -198,7 +198,10 @@ public sealed class AgentEventsApiIntegrationTests
             DispatchProxy.Create<IProviderRuntimeAdministrationService, ProviderAdministrationProxy>();
         using var providerAdministrationProxy =
             (ProviderAdministrationProxy)(object)providerAdministration;
-        var context = new DefaultHttpContext();
+        using var requestServices = new ServiceCollection()
+            .AddSingleton(Options.Create(new ApiAccessOptions { Authorization = new() { Enabled = false } }))
+            .BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = requestServices };
         await using var body = new ThrowOnRunningFrameStream();
         context.Response.Body = body;
 
@@ -223,9 +226,12 @@ public sealed class AgentEventsApiIntegrationTests
     [Fact]
     public async Task Provider_heartbeat_wait_returns_success_when_completion_races_the_tick()
     {
+        using var requestServices = new ServiceCollection()
+            .AddSingleton(Options.Create(new ApiAccessOptions { Authorization = new() { Enabled = false } }))
+            .BuildServiceProvider();
         for (var attempt = 0; attempt < 25; attempt++)
         {
-            var context = new DefaultHttpContext();
+            var context = new DefaultHttpContext { RequestServices = requestServices };
             await using var body = new MemoryStream();
             context.Response.Body = body;
             var completion = new TaskCompletionSource<string>(
@@ -238,7 +244,7 @@ public sealed class AgentEventsApiIntegrationTests
             await Task.Delay(TimeSpan.FromMilliseconds(1));
             completion.TrySetResult("completed");
 
-            Assert.Equal("completed", await wait);
+            Assert.Equal("completed", await wait.WaitAsync(TimeSpan.FromSeconds(5)));
         }
     }
 

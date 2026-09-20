@@ -1437,7 +1437,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.ProviderOptions, []));
 
         cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        await cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync(new MouseEventArgs());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
