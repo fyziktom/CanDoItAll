@@ -76,7 +76,10 @@ public sealed class MafToolAdmissionNativeLoopIntegrationTests {
             var unwrappedRequest = await UnwrappedResponsesApprovalRequestAsync(streaming);
             Assert.Equal(ReasoningItems(unwrappedRequest), ReasoningItems(request));
             var captured = (await fixture.NewStore().GetExecutionRunAsync(fixture.Session.ExecutionRunId))!.ToolAdmission!.Batches[0].Response;
-            Assert.Contains("provider_extension", captured.PayloadJson, StringComparison.Ordinal);
+            var restored = streaming
+                ? JsonSerializer.Serialize(MafToolProtocolCodec.Decode<ChatResponseUpdate[]>(captured), MafToolProtocolCodec.SerializationOptions)
+                : JsonSerializer.Serialize(MafToolProtocolCodec.Decode<ChatResponse>(captured), MafToolProtocolCodec.SerializationOptions);
+            Assert.Contains("provider_extension", restored, StringComparison.Ordinal);
         }
 
         var replayWire = new NativeWireHandler(wireProvider, complete: true, denyRequests: true);

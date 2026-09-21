@@ -165,7 +165,7 @@ public sealed record AgentToolJournalRecord(
     public const int BackgroundSchemaVersion = 2;
     public const int ProviderDispatchSchemaVersion = 3;
     public const int TypedContextSchemaVersion = 4;
-    public const int MaximumBatches = 64;
+    public const int MaximumBatches = 512;
     public const int MaximumCallsPerBatch = 64;
     public const int MaximumSegments = 32;
     public const int MaximumUtf8Bytes = 24 * 1024 * 1024;

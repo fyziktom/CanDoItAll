@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-20T21:03:58.593248+00:00",
+  "generated_utc": "2026-09-21T11:49:46.341253+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14937,
+  "allowance_count": 14939,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -50290,6 +50290,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/Drivers/Browser/BrowserRuntimeLifecycleCompletionGateContribution.cs",
       "category": "case-policy",
+      "source_fingerprint": "3cbcec8abfa1d7c4b8d7368c1e6ef8c53b7db578e52fd17af47ee8dfa2298b22",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/Drivers/Browser/BrowserRuntimeLifecycleCompletionGateContribution.cs",
+      "category": "case-policy",
       "source_fingerprint": "445c47820bd7ff9bfe146bc4cd34aaeb094d60c6c3ad03f3c359dd52bc0d6f1d",
       "count": 1
     },
@@ -50297,6 +50303,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/Drivers/Browser/BrowserRuntimeLifecycleCompletionGateContribution.cs",
       "category": "case-policy",
       "source_fingerprint": "83ce218870062ff9f76e2bf3fd98204a57583382f145661356fb2fcdf509cc3f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/Drivers/Browser/BrowserRuntimeLifecycleCompletionGateContribution.cs",
+      "category": "case-policy",
+      "source_fingerprint": "973c250dc30f0c9553eb9603088561dd1a5af7b8a32e63caf6c7d8e2afda16d7",
       "count": 1
     },
     {

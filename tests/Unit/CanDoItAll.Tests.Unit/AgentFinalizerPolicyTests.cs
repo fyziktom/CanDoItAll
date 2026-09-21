@@ -834,6 +834,45 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void Effective_finalizer_invocations_do_not_complete_a_durable_proposal_before_invocation() {
+        var policy = CreatePolicy();
+        var proposal = new AgentFinalizerInvocation(policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Proposed outcome."), Sequence: 1);
+
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required,
+            [], [], [proposal], [], requireCapturedInvocation: true);
+
+        Assert.Empty(effective);
+    }
+
+    [Fact]
+    public void Effective_finalizer_invocations_accept_the_executed_durable_finalizer() {
+        var policy = CreatePolicy();
+        var captured = new AgentFinalizerInvocation(policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Executed outcome."), Sequence: 1);
+
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required,
+            [captured], [], [captured], [], requireCapturedInvocation: true);
+
+        Assert.Equal(captured, Assert.Single(effective));
+    }
+
+    [Fact]
+    public void Effective_finalizer_invocations_preserve_nonjournal_stream_capture() {
+        var policy = CreatePolicy();
+        var streamed = new AgentFinalizerInvocation(policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Streamed outcome."), Sequence: 1);
+
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required,
+            [], [], [streamed], []);
+
+        Assert.Equal(streamed, Assert.Single(effective));
+    }
+
+    [Fact]
     public void Effective_finalizer_invocations_prefer_valid_json_repair_over_invalid_captured_attempt()
     {
         var policy = CreatePolicy();

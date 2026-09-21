@@ -12,6 +12,9 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProcessCompletionGateContribution
 {
+    private const string RuntimeProviderReceiptFamily = "runtime-provider";
+    private const string AgentToolTraceReceiptFamily = "agent-tool-trace";
+
     public string ContributionKey => "browser.runtime-lifecycle";
 
     public int Order => 150;
@@ -129,6 +132,8 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
         string toolName)
         => receipts
             .Where(receipt => string.Equals(receipt.ToolName, toolName, StringComparison.OrdinalIgnoreCase) &&
+                              !string.Equals(receipt.ToolFamily, RuntimeProviderReceiptFamily, StringComparison.OrdinalIgnoreCase) &&
+                              !string.Equals(receipt.ToolFamily, AgentToolTraceReceiptFamily, StringComparison.OrdinalIgnoreCase) &&
                               IsSuccessfulReceipt(receipt.ExitSummary))
             .OrderByDescending(receipt => receipt.CompletedAtUtc)
             .FirstOrDefault();

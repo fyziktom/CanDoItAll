@@ -1,5 +1,8 @@
+using System.Buffers;
 using System.ClientModel.Primitives;
 using System.Reflection;
+using System.IO.Compression;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
@@ -14,6 +17,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal static class MafToolProtocolCodec {
     internal const string Format = "maf-tool-protocol";
     internal const int Version = 1;
+    internal const int CompressedResponseVersion = 2;
     internal static JsonSerializerOptions SerializationOptions => Options;
     private static readonly ModelReaderWriterOptions ModelOptions = new("J");
     private static readonly IReadOnlyDictionary<string, Type> OpenAiTypes = ModelTypes(typeof(OpenAIClient).Assembly,
@@ -30,7 +34,10 @@ internal static class MafToolProtocolCodec {
         try {
             var payload = JsonSerializer.SerializeToElement(value, Options);
             var json = JsonSerializer.Serialize(new SavedProtocol(PackageFingerprint, typeof(T).FullName!, payload));
-            var envelope = AgentToolProtocolEnvelope.Create(Format, Version, json);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(Encoding.UTF8.GetByteCount(json), AgentToolProtocolEnvelope.MaximumUtf8Bytes);
+            var envelope = value is ChatResponse or ChatResponseUpdate or ChatResponseUpdate[]
+                ? AgentToolProtocolEnvelope.Create(Format, CompressedResponseVersion, CompressResponse(json))
+                : AgentToolProtocolEnvelope.Create(Format, Version, json);
             var restored = Decode<T>(envelope);
             var original = Canonicalize(payload);
             var roundTrip = Canonicalize(JsonSerializer.SerializeToElement(restored, Options));
@@ -46,17 +53,49 @@ internal static class MafToolProtocolCodec {
     }
 
     internal static T Decode<T>(AgentToolProtocolEnvelope envelope) {
-        if (envelope.Format != Format || envelope.Version != Version) {
+        if (envelope.Format != Format || envelope.Version is not (Version or CompressedResponseVersion)) {
             throw Unsupported("The saved protocol format is unsupported; explicit recovery is required.");
         }
 
-        var saved = JsonSerializer.Deserialize<SavedProtocol>(envelope.PayloadJson)
+        var json = envelope.Version == CompressedResponseVersion ? DecompressResponse(envelope.PayloadJson) : envelope.PayloadJson;
+        var saved = JsonSerializer.Deserialize<SavedProtocol>(json)
             ?? throw Unsupported("The saved protocol envelope is empty.");
         if (saved.Packages != PackageFingerprint || saved.Shape != typeof(T).FullName) {
             throw Unsupported("The saved protocol requires a different installed SDK or shape; it cannot be replayed implicitly.");
         }
 
         return saved.Value.Deserialize<T>(Options) ?? throw Unsupported("The saved protocol value is empty.");
+    }
+
+    private static string CompressResponse(string json) {
+        using var output = new MemoryStream();
+        using (var compressor = new BrotliStream(output, CompressionLevel.Fastest, leaveOpen: true)) {
+            compressor.Write(Encoding.UTF8.GetBytes(json));
+        }
+        return JsonSerializer.Serialize(new CompressedResponse(output.ToArray()));
+    }
+
+    private static string DecompressResponse(string json) {
+        try {
+            var saved = JsonSerializer.Deserialize<CompressedResponse>(json);
+            if (saved?.Brotli is not { Length: > 0 }) {
+                throw Unsupported("The compressed provider response is empty.");
+            }
+            var buffer = ArrayPool<byte>.Shared.Rent(AgentToolProtocolEnvelope.MaximumUtf8Bytes);
+            try {
+                using var decoder = new BrotliDecoder();
+                var status = decoder.Decompress(saved.Brotli, buffer.AsSpan(0, AgentToolProtocolEnvelope.MaximumUtf8Bytes),
+                    out var consumed, out var written);
+                if (status != OperationStatus.Done || consumed != saved.Brotli.Length) {
+                    throw Unsupported("The compressed provider response is invalid or exceeds the supported admission bound.");
+                }
+                return Encoding.UTF8.GetString(buffer, 0, written);
+            } finally {
+                ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+            }
+        } catch (Exception exception) when (exception is InvalidDataException or JsonException) {
+            throw Unsupported("The compressed provider response is invalid; explicit recovery is required.");
+        }
     }
 
     internal static AgentToolSemanticDigest Digest<T>(T value)
@@ -166,5 +205,6 @@ internal static class MafToolProtocolCodec {
 
     private enum NativeProtocolKind { OpenAi, Ollama }
     private sealed record SavedRawModel(NativeProtocolKind Kind, string Model, string Json);
+    private sealed record CompressedResponse(byte[] Brotli);
     private sealed record SavedProtocol(string Packages, string Shape, JsonElement Value);
 }

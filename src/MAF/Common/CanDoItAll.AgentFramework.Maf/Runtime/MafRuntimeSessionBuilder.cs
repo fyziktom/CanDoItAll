@@ -466,7 +466,11 @@ internal static class MafRuntimeSessionBuilder
         return new ChatClientAgentRunOptions(chatOptions)
         {
             AllowBackgroundResponses = agent.EnableBackgroundResponses && SupportsBackgroundResponses(provider),
-            ContinuationToken = continuationToken
+            ContinuationToken = continuationToken,
+            ChatClientFactory = runtimeOptions.FinalizerMode == AgentFinalizerMode.Required &&
+                runtimeOptions.StructuredOutput?.OutputType == typeof(ProcessStepOutcomeResult)
+                    ? MafChatClientAgentOptionsFactory.ConfigureProcessToolIterations
+                    : null
         };
     }
 

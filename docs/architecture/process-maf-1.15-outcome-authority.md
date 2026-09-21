@@ -49,6 +49,51 @@ guard correctly rejected that response, but no provider-level bounded retry
 preceded the failure. Replaying the process step would be too late and could
 repeat product side effects.
 
+## Governed process tool iteration limit
+
+Governed process steps with a required `ProcessStepOutcomeResult` finalizer use an
+explicit limit of 256 framework tool iterations per invocation. Ordinary agents retain
+the framework default. The MAF adapter configures the existing function invocation
+client through the per-run options; framework middleware, sequential invocation,
+approval binding, tool governance and process step timeouts remain in force.
+
+The framework default of 40 cut off an application-building step before its tests,
+startup, browser proof and primary artifact were complete: its last provider request
+contained no tools. The ensuing finalizer repair could only report incomplete work.
+Missing artifact text was a consequence of that cutoff, not a missing workspace grant.
+A finite iteration limit remains intentional; reaching it is not evidence that an agent
+lacks permission. `MafProcessToolIterationTests` covers work past 40 iterations, the
+finite bound, ordinary-agent behavior and approval preservation in the real MAF loop.
+
+For executions with a durable tool journal, streamed finalizer arguments remain a
+proposal until the actual finalizer invocation is captured. They cannot synthesize a
+successful tool receipt or short-circuit execution. Previously an approved but unexecuted
+finalizer could leave the completed run's journal unresolved and block later rework.
+Legacy executions without that journal retain their streamed-output compatibility path.
+
+The live verification also exposed a separate journal capacity mismatch: 53 responses
+occupied about 21 MB before outer JSON escaping, exhausting the 24 MB journal limit.
+The SDK response carries repeated native provider metadata and tool schemas. Response
+checkpoints now use a versioned, lossless Brotli envelope owned by the existing MAF
+protocol codec. All native items survive replay; request digests and ordinary tool-result
+checkpoints keep their existing representation. Version 1 remains readable. The 8 MB
+uncompressed response bound and 24 MB journal bound remain enforced, including during
+decompression. Raising the byte limit or dropping native protocol data was rejected.
+The batch ceiling is 512 to accommodate 256 work iterations plus bounded repair and
+continuation turns. Codec round-trip, corrupt/oversized payload, native SDK replay and
+long-journal persistence tests cover these contracts; no project boundary changes.
+
+
+Runtime lifecycle correlation uses the current execution's command receipts for the
+latest successful start and stop. Generic `runtime-provider` and `agent-tool-trace`
+receipts describe invocation arguments, not the host's returned lifecycle identity;
+they finish later and must not displace the command receipts. Correlation still
+requires the same startup receipt and a matching browser authority. Trace-only proof,
+a newer mismatched command lifecycle, stale execution evidence and failed cleanup
+remain rejected. `BrowserRuntimeLifecycleCompletionGateContributionTests` reproduces
+the duplicate-receipt defect and covers these selection boundaries.
+
+
 ## Responsibility inventory
 
 | Responsibility | Owner |

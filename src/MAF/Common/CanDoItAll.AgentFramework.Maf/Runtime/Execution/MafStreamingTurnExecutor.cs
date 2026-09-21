@@ -89,10 +89,12 @@ internal sealed class MafStreamingTurnExecutor
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var synthesizedFinalizerInvocations = new List<AgentFinalizerInvocation>();
         var streamedFinalizerRecorder = new MafFinalizerDriver.StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
+        var requiresDurableFinalizerInvocation = runtimeOptions.RequireDurableToolProtocol ||
+            runtimeOptions.AdmittedToolSession is not null;
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotEffectiveToolInvocationTraces = () =>
             MafFinalizerDriver.CreateEffectiveToolInvocationTraces(
                 snapshotToolInvocationTraces(),
-                streamedFinalizerRecorder.SnapshotToolInvocationTraces());
+                requiresDurableFinalizerInvocation ? [] : streamedFinalizerRecorder.SnapshotToolInvocationTraces());
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotEffectiveFinalizerInvocations = () =>
             MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
                 structuredOutput,
@@ -100,7 +102,8 @@ internal sealed class MafStreamingTurnExecutor
                 snapshotFinalizerInvocations(),
                 snapshotToolInvocationTraces(),
                 streamedFinalizerRecorder.SnapshotFinalizerInvocations(),
-                synthesizedFinalizerInvocations);
+                synthesizedFinalizerInvocations,
+                requireCapturedInvocation: requiresDurableFinalizerInvocation);
         var pollCount = 0;
         var resolvedModel = model;
 
