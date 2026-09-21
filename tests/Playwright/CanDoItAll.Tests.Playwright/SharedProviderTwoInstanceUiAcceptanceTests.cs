@@ -749,23 +749,14 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         Assert.NotNull(response);
         Assert.True(response.Ok, $"Navigation to '{url}' returned HTTP {response.Status}.");
         await DismissStartupModalIfPresentAsync(page);
+        await page.WaitForFunctionAsync("""
+            () => document.querySelector('[data-testid="app-shell-sidebar"]')
+                ?.getAttributeNames().some(name => name.startsWith('_bl_')) === true
+            """, null, new() { Timeout = 60_000 });
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page)
-    {
-        var dialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await dialog.WaitForAsync(new LocatorWaitForOptions { Timeout = 1_500 });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
-    }
+    private static Task DismissStartupModalIfPresentAsync(IPage page)
+        => PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
 
     private static ILocator FieldByLabel(IPage page, string label)
         => page.Locator("label.cda-field-label")

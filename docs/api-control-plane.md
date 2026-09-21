@@ -23,6 +23,14 @@ The OpenAPI documents and Swagger UI are available without a token when enabled,
 when API authorization is enabled. `Api:SwaggerUiEnabled=false` disables the interactive
 page; `Api:OpenApiEnabled=false` disables both the documents and the page.
 
+When user authentication is enabled, the Swagger route redirects HTTP requests to the
+configured HTTPS port, even when host-wide HTTPS redirection is disabled. In a container,
+set `ASPNETCORE_HTTPS_PORT` to the published HTTPS port, which may differ from Kestrel's
+internal listening port. The HTTPS listener or trusted TLS proxy must already be configured;
+the redirect setting does not create one. Without a resolvable HTTPS port, ASP.NET Core logs
+a warning and leaves documentation reachable over HTTP. Direct API requests still follow
+HTTPS enforcement and the explicit direct-loopback exception; they are not redirected.
+
 To call protected operations from Swagger, open `/swagger` on the host's HTTPS address,
 select **Authorize**, and paste a JWT into **Bearer** without the `Bearer ` prefix. Swagger
 adds the authorization header to protected operations when you use **Try it out**.

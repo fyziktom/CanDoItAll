@@ -116,6 +116,12 @@ internal static class SharedProviderCatalogApi
             return;
         }
 
+        httpContext.Response.Headers.Vary = SharedProviderHeaders.CatalogFeatures;
+        if (httpContext.Request.Headers[SharedProviderHeaders.CatalogFeatures] == SharedProviderProtocol.ImagePricingFeature) {
+            httpContext.Response.Headers[SharedProviderHeaders.CatalogFeatures] = SharedProviderProtocol.ImagePricingFeature;
+        } else {
+            snapshot = snapshot.WithoutImageInputPrices();
+        }
         SharedProviderApiResponseWriter.ApplyCatalogHeaders(httpContext, snapshot.EntityTag);
         if (Matches(validators, snapshot.EntityTag))
         {

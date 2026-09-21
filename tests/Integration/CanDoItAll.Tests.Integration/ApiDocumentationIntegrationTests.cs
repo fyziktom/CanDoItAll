@@ -1,9 +1,43 @@
+using System.Net;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
 public sealed class ApiDocumentationIntegrationTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Swagger_uses_the_public_https_port_when_user_authentication_is_enabled(bool userAuthenticationEnabled) {
+        const int publicHttpsPort = 7443;
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: true,
+            services => services.AddHttpsRedirection(options => options.HttpsPort = publicHttpsPort),
+            useInMemoryDatabase: true,
+            apiConfiguration: new Dictionary<string, string?> {
+                ["Api:UserAuthentication:Enabled"] = userAuthenticationEnabled.ToString(),
+                ["Api:BootstrapAdmin:PasswordHash"] = new ApiPasswordService().Hash(Guid.NewGuid().ToString("N"))
+            });
+        using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) {
+            BaseAddress = host.Client.BaseAddress
+        };
+
+        foreach (var path in new[] { "/swagger/index.html?flow=login", "/swagger/v1/swagger.json" }) {
+            using var response = await client.GetAsync(path, CancellationToken.None);
+            Assert.Equal(userAuthenticationEnabled ? HttpStatusCode.TemporaryRedirect : HttpStatusCode.OK, response.StatusCode);
+            if (userAuthenticationEnabled) {
+                Assert.Equal(new UriBuilder(new Uri(client.BaseAddress!, path)) {
+                    Scheme = Uri.UriSchemeHttps,
+                    Port = publicHttpsPort
+                }.Uri, response.Headers.Location);
+            }
+        }
+        using var apiResponse = await client.GetAsync("/api/access/status", CancellationToken.None);
+        Assert.Equal(userAuthenticationEnabled ? HttpStatusCode.BadRequest : HttpStatusCode.OK, apiResponse.StatusCode);
+        Assert.Null(apiResponse.Headers.Location);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -388,7 +388,9 @@ public sealed class ProviderDefaultsBootstrapService {
             transport,
             purpose,
             defaultModel,
-            []);
+            providerKind == CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi && purpose == ProviderProfilePurpose.ImageGeneration
+                ? OpenAiModelIds.ImageModels.Where(model => model != OpenAiModelIds.GptImage1Mini)
+                : []);
     }
 
     private sealed record ManagedCatalogProviderSeed(

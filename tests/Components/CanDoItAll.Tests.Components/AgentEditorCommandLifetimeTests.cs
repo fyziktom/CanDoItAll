@@ -21,7 +21,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agent = (await workspace.ListAgentsAsync(false)).First();
         var pending = new TaskCompletionSource<Guid>();
-        probe.Save = _ => pending.Task;
+        var saveStarted = ObserveSave(probe, _ => pending.Task);
         var completions = new List<AgentDetailsDialogResult>();
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.AgentId, agent.Id)
@@ -29,6 +29,7 @@ public sealed class AgentEditorCommandLifetimeTests {
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this, completions.Add)));
         cut.WaitForElement("[data-testid='agents-catalog-name']");
         var submitted = cut.Find("form").SubmitAsync();
+        await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
         cut.FindComponent<StickyActionFooter>().FindAll("button").Single(button => button.TextContent.Trim() == "Clear").Click();
         cut.WaitForAssertion(() => Assert.Null(((AgentEditorModel)cut.FindComponent<EditForm>().Instance.EditContext!.Model).Id));
         var resetContext = cut.FindComponent<EditForm>().Instance.EditContext;
@@ -50,7 +51,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agent = (await workspace.ListAgentsAsync(false)).First();
         var pending = new TaskCompletionSource<Guid>();
-        probe.Save = _ => pending.Task;
+        var saveStarted = ObserveSave(probe, _ => pending.Task);
         var completions = new List<AgentDetailsDialogResult>();
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.AgentId, agent.Id)
@@ -58,6 +59,7 @@ public sealed class AgentEditorCommandLifetimeTests {
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this, completions.Add)));
         cut.WaitForElement("[data-testid='agents-catalog-name']");
         var submitted = cut.Find("form").SubmitAsync();
+        await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
         await cut.InvokeAsync(() => {
             cut.Instance.Dispose();
             Complete(pending, agent.Id, fail);
@@ -75,19 +77,16 @@ public sealed class AgentEditorCommandLifetimeTests {
         workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agent = (await workspace.ListAgentsAsync(false)).First();
         var pending = new TaskCompletionSource<Guid>();
-        AgentEditorModel? request = null;
-        probe.Save = model => {
-            request = model;
-            return pending.Task;
-        };
+        var saveStarted = ObserveSave(probe, _ => pending.Task);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.AgentId, agent.Id)
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
         cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Submitted name");
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         var submitted = cut.Find("form").SubmitAsync();
+        var request = await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
         cut.Find("[data-testid='agents-catalog-name']").Change("Later edit");
-        var submittedNameAfterEdit = request!.Name;
+        var submittedNameAfterEdit = request.Name;
         await cut.InvokeAsync(() => pending.SetResult(agent.Id));
         await submitted;
         Assert.Equal("Submitted name", submittedNameAfterEdit);
@@ -104,12 +103,13 @@ public sealed class AgentEditorCommandLifetimeTests {
         var cut = host.FindComponent<AgentDetailsDialog>();
         cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Echo submitted");
         var pending = new TaskCompletionSource();
-        probe.Save = async request => {
+        var saveStarted = ObserveSave(probe, async request => {
             await pending.Task;
             return await probe.Target.SaveAgentAsync(request);
-        };
+        });
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         var submitted = cut.Find("form").SubmitAsync();
+        await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
         cut.Find("[data-testid='agents-catalog-name']").Change("Echo later edit");
         await cut.InvokeAsync(() => pending.SetResult());
         await submitted;
@@ -127,11 +127,12 @@ public sealed class AgentEditorCommandLifetimeTests {
         var probe = AgentEditorLoadCharacterizationTests.CreateProbe(out var workspace);
         await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
         var pending = new TaskCompletionSource<Guid>();
-        probe.Save = _ => pending.Task;
+        var saveStarted = ObserveSave(probe, _ => pending.Task);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
         cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Cancelled editor");
         var submitted = cut.Find("form").SubmitAsync();
+        await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
         await cut.FindComponent<StickyActionFooter>().FindAll("button")
             .Single(button => button.TextContent.Trim() == "Clear").ClickAsync();
         Assert.True(probe.SaveToken.IsCancellationRequested);
@@ -141,6 +142,16 @@ public sealed class AgentEditorCommandLifetimeTests {
         Assert.False(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
         Assert.DoesNotContain(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
             message => message.Summary is "Agent save failed" or "Agent save could not be confirmed");
+    }
+
+    private static Task<AgentEditorModel> ObserveSave(AgentEditorWorkspaceProbe probe,
+        Func<AgentEditorModel, Task<Guid>> save) {
+        var started = new TaskCompletionSource<AgentEditorModel>(TaskCreationOptions.RunContinuationsAsynchronously);
+        probe.Save = request => {
+            started.SetResult(request);
+            return save(request);
+        };
+        return started.Task;
     }
 
     private static void Complete(TaskCompletionSource<Guid> pending, Guid id, bool fail) {

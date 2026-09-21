@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -33,6 +34,12 @@ public sealed record ProviderModelTokenPrice(
     /// </summary>
     public decimal? CacheWritePerMillionTokensUsd { get; init; }
 
+    [Description("Price in USD per one million uncached image input tokens; null means unavailable, not zero. Separate from text input rates.")]
+    public decimal? ImageInputPerMillionTokensUsd { get; init; }
+
+    [Description("Price in USD per one million cached image input tokens; null means unavailable, not zero. Separate from text input rates.")]
+    public decimal? CachedImageInputPerMillionTokensUsd { get; init; }
+
     /// <summary>
     /// Input size in tokens above which the long-context rates apply, or null when the model has none. When any
     /// long-context value is set, this must be positive and the long-context input, cached input and output rates
@@ -56,7 +63,9 @@ public sealed record ProviderModelTokenPrice(
     public bool HasConfiguredStandardPrice =>
         InputPerMillionTokensUsd > 0m ||
         CachedInputPerMillionTokensUsd > 0m ||
-        OutputPerMillionTokensUsd > 0m;
+        OutputPerMillionTokensUsd > 0m ||
+        ImageInputPerMillionTokensUsd > 0m ||
+        CachedImageInputPerMillionTokensUsd > 0m;
 }
 
 public sealed record ProviderDiscoveredModelPrice(
@@ -103,6 +112,12 @@ public sealed class ProviderModelTokenPriceEditorModel
 
     /// <summary>Rate for prompt-cache write tokens, or null when the model has no separate rate.</summary>
     public decimal? CacheWritePerMillionTokensUsd { get; set; }
+
+    [Description("Price in USD per one million uncached image input tokens; null means unavailable, not zero. Separate from text input rates.")]
+    public decimal? ImageInputPerMillionTokensUsd { get; set; }
+
+    [Description("Price in USD per one million cached image input tokens; null means unavailable, not zero. Separate from text input rates.")]
+    public decimal? CachedImageInputPerMillionTokensUsd { get; set; }
 
     /// <summary>
     /// Input size in tokens above which the long-context rates apply, or null when the model has none.
@@ -185,6 +200,26 @@ public static class ProviderPricingDefaults
 
     private static readonly IReadOnlyList<ProviderModelTokenPrice> OpenAiModelPrices =
     [
+        new(OpenAiModelIds.Gpt6Astra, 10.00m, 1.00m, 50.00m) {
+            CacheWritePerMillionTokensUsd = 12.50m,
+            LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt6LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = 20.00m,
+            LongContextCachedInputPerMillionTokensUsd = 2.00m,
+            LongContextCacheWritePerMillionTokensUsd = 25.00m,
+            LongContextOutputPerMillionTokensUsd = 75.00m
+        },
+        new(OpenAiModelIds.GptImage25Sunburst, 5.00m, 1.25m, 30.00m) {
+            ImageInputPerMillionTokensUsd = 8.00m,
+            CachedImageInputPerMillionTokensUsd = 2.00m
+        },
+        new(OpenAiModelIds.GptImage25Flare, 5.00m, 1.25m, 30.00m) {
+            ImageInputPerMillionTokensUsd = 8.00m,
+            CachedImageInputPerMillionTokensUsd = 2.00m
+        },
+        new(OpenAiModelIds.GptImage2, 5.00m, 1.25m, 30.00m) {
+            ImageInputPerMillionTokensUsd = 8.00m,
+            CachedImageInputPerMillionTokensUsd = 2.00m
+        },
         OpenAiGpt56SolPrice with { Model = OpenAiModelIds.Gpt56 },
         new(OpenAiModelIds.Gpt56Luna, 0.20m, 0.02m, 1.20m)
         {
@@ -388,6 +423,8 @@ public static class ProviderPricingDefaults
             {
                 TariffKind = model.TariffKind,
                 CacheWritePerMillionTokensUsd = model.CacheWritePerMillionTokensUsd,
+                ImageInputPerMillionTokensUsd = model.ImageInputPerMillionTokensUsd,
+                CachedImageInputPerMillionTokensUsd = model.CachedImageInputPerMillionTokensUsd,
                 LongContextThresholdTokens = model.LongContextThresholdTokens,
                 LongContextInputPerMillionTokensUsd = model.LongContextInputPerMillionTokensUsd,
                 LongContextCachedInputPerMillionTokensUsd = model.LongContextCachedInputPerMillionTokensUsd,
@@ -409,6 +446,8 @@ public static class ProviderPricingDefaults
                 OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd,
                 TariffKind = price.TariffKind,
                 CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd,
+                ImageInputPerMillionTokensUsd = price.ImageInputPerMillionTokensUsd,
+                CachedImageInputPerMillionTokensUsd = price.CachedImageInputPerMillionTokensUsd,
                 LongContextThresholdTokens = price.LongContextThresholdTokens,
                 LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd,
                 LongContextCachedInputPerMillionTokensUsd = price.LongContextCachedInputPerMillionTokensUsd,
@@ -470,6 +509,8 @@ public static class ProviderPricingDefaults
                 price.CachedInputPerMillionTokensUsd < 0m ||
                 price.OutputPerMillionTokensUsd < 0m ||
                 HasNegativeOptionalPrice(price.CacheWritePerMillionTokensUsd) ||
+                HasNegativeOptionalPrice(price.ImageInputPerMillionTokensUsd) ||
+                HasNegativeOptionalPrice(price.CachedImageInputPerMillionTokensUsd) ||
                 HasNegativeOptionalPrice(price.LongContextInputPerMillionTokensUsd) ||
                 HasNegativeOptionalPrice(price.LongContextCachedInputPerMillionTokensUsd) ||
                 HasNegativeOptionalPrice(price.LongContextCacheWritePerMillionTokensUsd) ||
@@ -546,6 +587,8 @@ public static class ProviderPricingDefaults
         return price with
         {
             CacheWritePerMillionTokensUsd = preferredMetadata?.CacheWritePerMillionTokensUsd ?? fallbackMetadata?.CacheWritePerMillionTokensUsd,
+            ImageInputPerMillionTokensUsd = preferredMetadata?.ImageInputPerMillionTokensUsd ?? fallbackMetadata?.ImageInputPerMillionTokensUsd,
+            CachedImageInputPerMillionTokensUsd = preferredMetadata?.CachedImageInputPerMillionTokensUsd ?? fallbackMetadata?.CachedImageInputPerMillionTokensUsd,
             LongContextThresholdTokens = preferredMetadata?.LongContextThresholdTokens ?? fallbackMetadata?.LongContextThresholdTokens,
             LongContextInputPerMillionTokensUsd = preferredMetadata?.LongContextInputPerMillionTokensUsd ?? fallbackMetadata?.LongContextInputPerMillionTokensUsd,
             LongContextCachedInputPerMillionTokensUsd = preferredMetadata?.LongContextCachedInputPerMillionTokensUsd ?? fallbackMetadata?.LongContextCachedInputPerMillionTokensUsd,
@@ -566,13 +609,13 @@ public static class ProviderPricingDefaults
         }
 
         var match = OpenAiModelPrices.FirstOrDefault(candidate =>
-            string.Equals(candidate.Model, model, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.Model, OpenAiModelIds.NormalizeKnownModelOrSnapshot(model), StringComparison.OrdinalIgnoreCase));
         if (match is null)
         {
             return false;
         }
 
-        price = match;
+        price = match with { Model = model };
         return true;
     }
 
@@ -727,7 +770,7 @@ public static class ProviderPricingMetadata
 
 public static class ProviderPricingSnapshot
 {
-    public const string Version = "provider-pricing-v2";
+    public const string Version = "provider-pricing-v3";
     public const int ProfileHashLength = 64;
 
     public static string CreateProfileHash(ProviderProfile provider)
@@ -745,6 +788,8 @@ public static class ProviderPricingSnapshot
                     price.CachedInputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
                     price.OutputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
                     FormatNullable(price.CacheWritePerMillionTokensUsd),
+                    FormatNullable(price.ImageInputPerMillionTokensUsd),
+                    FormatNullable(price.CachedImageInputPerMillionTokensUsd),
                     FormatNullable(price.LongContextThresholdTokens),
                     FormatNullable(price.LongContextInputPerMillionTokensUsd),
                     FormatNullable(price.LongContextCachedInputPerMillionTokensUsd),

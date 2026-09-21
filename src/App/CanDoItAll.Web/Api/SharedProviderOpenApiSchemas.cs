@@ -167,7 +167,7 @@ internal static class SharedProviderOpenApiSchemas {
         },
         ["size"] = Describe(Tokens("256x256", "512x512", "1024x1024", "1024x1536", "1536x1024", "auto"),
             "Image size in pixels, or auto. Omitted uses the resolved provider's default."),
-        ["quality"] = Describe(Tokens("standard", "hd", "low", "medium", "high", "auto"),
+        ["quality"] = Describe(Tokens("standard", "hd", "low", "medium", "high", "xhigh", "max", "auto"),
             "Image quality. Omitted uses the resolved provider's default."),
         ["response_format"] = Describe(Tokens("b64_json"),
             "Result encoding; only b64_json. Images are always returned as base64 data, never as URLs."),

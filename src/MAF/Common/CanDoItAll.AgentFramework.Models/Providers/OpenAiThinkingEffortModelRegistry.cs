@@ -62,6 +62,12 @@ internal static class OpenAiThinkingEffortModelRegistry
         AgentReasoningEffortLevel.ExtraHigh
     ];
 
+    private static readonly IReadOnlyList<AgentReasoningEffortLevel> LowThroughMax =
+    [
+        .. LowThroughExtraHigh,
+        AgentReasoningEffortLevel.Max
+    ];
+
     private static readonly IReadOnlyList<AgentReasoningEffortLevel> MediumThroughExtraHigh =
     [
         AgentReasoningEffortLevel.Medium,
@@ -76,6 +82,7 @@ internal static class OpenAiThinkingEffortModelRegistry
 
     private static readonly OpenAiThinkingEffortModelDefinition[] Definitions =
     [
+        Supported(OpenAiModelIds.Gpt6Astra, LowThroughMax),
         Supported(OpenAiModelIds.Gpt56Sol, NoneThroughMax, ResponsesOnly),
         Supported(OpenAiModelIds.Gpt56Terra, NoneThroughMax, ResponsesOnly),
         Supported(OpenAiModelIds.Gpt56Luna, NoneThroughMax, ResponsesOnly),
@@ -137,7 +144,7 @@ internal static class OpenAiThinkingEffortModelRegistry
             BothTransports);
     }
 
-    private static bool MatchesModelOrSnapshot(string model, string definedModel)
+    internal static bool MatchesModelOrSnapshot(string model, string definedModel)
     {
         if (string.Equals(model, definedModel, StringComparison.OrdinalIgnoreCase))
         {

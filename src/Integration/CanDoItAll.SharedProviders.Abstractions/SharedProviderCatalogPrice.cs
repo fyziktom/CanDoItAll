@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -28,6 +29,16 @@ public sealed record SharedProviderCatalogPrice(
     /// </summary>
     [JsonPropertyName("cacheWritePerMillionTokensUsd")]
     public decimal? CacheWritePerMillionTokensUsd { get; init; }
+
+    [JsonPropertyName("imageInputPerMillionTokensUsd")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Description("Price in USD per one million uncached image input tokens; omitted when unavailable, not a zero price. Separate from text input rates.")]
+    public decimal? ImageInputPerMillionTokensUsd { get; init; }
+
+    [JsonPropertyName("cachedImageInputPerMillionTokensUsd")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Description("Price in USD per one million cached image input tokens; omitted when unavailable, not a zero price. Separate from text input rates.")]
+    public decimal? CachedImageInputPerMillionTokensUsd { get; init; }
 
     /// <summary>
     /// Input size in tokens above which an invocation is priced with the long-context rates instead of the normal
@@ -68,6 +79,7 @@ public sealed record SharedProviderCatalogPrice(
     internal void Validate() {
         if (InputPerMillionTokensUsd < 0 || CachedInputPerMillionTokensUsd < 0 ||
             OutputPerMillionTokensUsd < 0 || CacheWritePerMillionTokensUsd < 0 ||
+            ImageInputPerMillionTokensUsd < 0 || CachedImageInputPerMillionTokensUsd < 0 ||
             LongContextInputPerMillionTokensUsd < 0 || LongContextCachedInputPerMillionTokensUsd < 0 ||
             LongContextCacheWritePerMillionTokensUsd < 0 || LongContextOutputPerMillionTokensUsd < 0) {
             throw new JsonException("Shared-provider model prices cannot be negative.");
@@ -75,6 +87,7 @@ public sealed record SharedProviderCatalogPrice(
 
         if (IsExplicitlyFree && (InputPerMillionTokensUsd != 0 || CachedInputPerMillionTokensUsd != 0
             || OutputPerMillionTokensUsd != 0 || CacheWritePerMillionTokensUsd is > 0
+            || ImageInputPerMillionTokensUsd is > 0 || CachedImageInputPerMillionTokensUsd is > 0
             || LongContextInputPerMillionTokensUsd is > 0 || LongContextCachedInputPerMillionTokensUsd is > 0
             || LongContextCacheWritePerMillionTokensUsd is > 0 || LongContextOutputPerMillionTokensUsd is > 0)) {
             throw new JsonException("An explicitly free shared tariff must contain only zero rates.");

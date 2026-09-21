@@ -52,6 +52,50 @@ public sealed class SharedProviderCatalogApiIntegrationTests(
     }
 
     [Fact]
+    public async Task Image_pricing_is_negotiated_without_changing_legacy_catalogs_and_etags() {
+        var original = SharedProviderApiTestData.Catalog;
+        var publication = original.Providers[0] with {
+            Models = [original.Providers[0].Models[0] with {
+                Price = new SharedProviderCatalogPrice(5m, 1.25m, 30m) {
+                    ImageInputPerMillionTokensUsd = 8m,
+                    CachedImageInputPerMillionTokensUsd = 2m
+                }
+            }]
+        };
+        publication = publication with { Revision = SharedProviderCanonicalRevision.ComputePublication(publication) };
+        var catalog = original with { Providers = [publication] };
+        catalog = catalog with { CatalogRevision = SharedProviderCanonicalRevision.ComputeCatalog(catalog) };
+        var snapshot = new SharedProviderCatalogSnapshot(catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision));
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, configureServices: services => {
+            services.RemoveAll<ISharedProviderCatalogQueryService>();
+            services.AddScoped<ISharedProviderCatalogQueryService>(provider =>
+                new StubSharedProviderCatalogQueryService(snapshot, provider.GetRequiredService<IHttpContextAccessor>()));
+        }, useInMemoryDatabase: true);
+        using var legacy = await host.Client.GetAsync(SharedProviderRoutes.Catalog);
+        var legacyJson = await legacy.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, legacy.StatusCode);
+        Assert.DoesNotContain("imageInputPerMillionTokensUsd", legacyJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("cachedImageInputPerMillionTokensUsd", legacyJson, StringComparison.Ordinal);
+        Assert.Equal("1.1", SharedProviderProtocolJson.DeserializeCatalog(legacyJson).SchemaVersion.Value);
+        Assert.Contains(SharedProviderHeaders.CatalogFeatures, legacy.Headers.Vary);
+        using var request = new HttpRequestMessage(HttpMethod.Get, SharedProviderRoutes.Catalog);
+        request.Headers.Add(SharedProviderHeaders.CatalogFeatures, SharedProviderProtocol.ImagePricingFeature);
+        request.Headers.IfNoneMatch.Add(legacy.Headers.ETag!);
+        using var extended = await host.Client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, extended.StatusCode);
+        Assert.NotEqual(legacy.Headers.ETag, extended.Headers.ETag);
+        Assert.Equal(SharedProviderProtocol.ImagePricingFeature, Assert.Single(extended.Headers.GetValues(SharedProviderHeaders.CatalogFeatures)));
+        var imported = SharedProviderProtocolJson.DeserializeCatalog(await extended.Content.ReadAsStringAsync());
+        Assert.Equal(publication.Models[0].Price, imported.Providers[0].Models[0].Price);
+        using var conditional = new HttpRequestMessage(HttpMethod.Get, SharedProviderRoutes.Catalog);
+        conditional.Headers.Add(SharedProviderHeaders.CatalogFeatures, SharedProviderProtocol.ImagePricingFeature);
+        conditional.Headers.IfNoneMatch.Add(extended.Headers.ETag!);
+        using var unchanged = await host.Client.SendAsync(conditional);
+        Assert.Equal(HttpStatusCode.NotModified, unchanged.StatusCode);
+        Assert.Equal(extended.Headers.ETag, unchanged.Headers.ETag);
+    }
+
+    [Fact]
     public async Task OpenAiModels_ReturnsOnlyPublicRoutingModels()
     {
         var relaySupportCatalog = fixture.Host.App.Services

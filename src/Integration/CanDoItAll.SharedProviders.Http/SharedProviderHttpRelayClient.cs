@@ -438,7 +438,7 @@ internal static class SharedProviderRelayResponsePolicy
         foreach (var item in data.EnumerateArray())
         {
             if (item.ValueKind != JsonValueKind.Object ||
-                item.EnumerateObject().Any(property => property.Name is not ("b64_json" or "revised_prompt")) ||
+                item.EnumerateObject().Any(property => !IsValidImageItemProperty(property)) ||
                 !item.TryGetProperty("b64_json", out var base64) ||
                 base64.ValueKind != JsonValueKind.String ||
                 !base64.TryGetBytesFromBase64(out var bytes) ||
@@ -507,13 +507,21 @@ internal static class SharedProviderRelayResponsePolicy
         return output.ToArray();
     }
 
+    private static bool IsValidImageItemProperty(JsonProperty property) => property.Name switch {
+        "b64_json" or "revised_prompt" => true,
+        "generation_id" => property.Value.ValueKind == JsonValueKind.String &&
+            property.Value.GetString() is { Length: > 0 and <= 128 } identifier &&
+            identifier.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_'),
+        _ => false
+    };
+
     private static bool IsValidImageMetadata(JsonProperty property) => property.Name switch {
         "created" or "data" => true,
         "usage" => IsValidImageUsage(property.Value),
         _ => property.Value.ValueKind == JsonValueKind.String && property.Name switch {
             "background" => property.Value.GetString() is "transparent" or "opaque",
             "output_format" => property.Value.GetString() is "png" or "jpeg" or "webp",
-            "quality" => property.Value.GetString() is "low" or "medium" or "high",
+            "quality" => property.Value.GetString() is "low" or "medium" or "high" or "xhigh" or "max",
             "size" => property.Value.GetString() is "1024x1024" or "1024x1536" or "1536x1024",
             _ => false
         }

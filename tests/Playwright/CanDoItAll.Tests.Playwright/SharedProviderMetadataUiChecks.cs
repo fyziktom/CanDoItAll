@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Playwright;
 
 internal static class SharedProviderMetadataUiChecks {
     private static readonly string[] PriceFields = [
-        "input", "cached", "cache-write", "output", "long-threshold",
+        "input", "cached", "cache-write", "output", "image-input", "cached-image-input", "long-threshold",
         "long-input", "long-cached", "long-cache-write", "long-output"
     ];
 
@@ -91,8 +91,7 @@ internal static class SharedProviderMetadataUiChecks {
         var dialog = page.GetByTestId("agents-details-dialog").Last;
         await dialog.GetByRole(AriaRole.Tab, new() { Name = "Runtime", Exact = true }).ClickAsync();
         var selector = dialog.GetByTestId("agents-catalog-model-choice");
-        Assert.Contains(selectedModel, await selector.Locator("option").AllTextContentsAsync());
-        await selector.SelectOptionAsync(new SelectOptionValue { Label = selectedModel });
+        await selector.SelectOptionAsync(new SelectOptionValue { Label = selectedModel == defaultModel ? $"Provider default ({defaultModel})" : selectedModel });
         await Assertions.Expect(selector.Locator("option")).ToHaveCountAsync(models.Count);
         var expected = models.Where(model => model != defaultModel).Append($"Provider default ({defaultModel})");
         Assert.Equal(expected.Order(), (await selector.Locator("option").AllTextContentsAsync()).Order());
@@ -101,7 +100,7 @@ internal static class SharedProviderMetadataUiChecks {
         await selector.ClickAsync();
         await ScreenshotAsync(page, evidenceDirectory, $"metadata-agent-models-{label}-open.png");
         await selector.PressAsync("Escape");
-        await selector.SelectOptionAsync(new SelectOptionValue { Label = selectedModel });
+        await selector.SelectOptionAsync(new SelectOptionValue { Label = selectedModel == defaultModel ? $"Provider default ({defaultModel})" : selectedModel });
         await dialog.GetByTestId("agents-catalog-save").ClickAsync();
         await page.GetByText("Agent saved", new() { Exact = true }).WaitForAsync();
     }
@@ -214,7 +213,7 @@ internal static class SharedProviderMetadataUiChecks {
 
     private static async Task SetPriceAsync(IPage page, int row, string model, decimal inputRate) {
         await page.GetByTestId($"provider-pricing-model-{row}").FillAsync(model);
-        decimal?[] values = [inputRate, 0m, 0.35m, 4.56m, 12345, inputRate * 2, 0m, 0.70m, 9.12m];
+        decimal?[] values = [inputRate, 0m, 0.35m, 4.56m, null, null, 12345, inputRate * 2, 0m, 0.70m, 9.12m];
         for (var index = 0; index < PriceFields.Length; index++) {
             await page.GetByTestId($"provider-pricing-{PriceFields[index]}-{row}")
                 .FillAsync(values[index]?.ToString(CultureInfo.InvariantCulture) ?? string.Empty);

@@ -48,19 +48,25 @@ public sealed class WorkflowsPageTests
                 Failure = lane == 0 ? new InvalidOperationException(poison) : null
             });
         });
+        var definition = lane == 0 ? CreateProjectStructurePreviewDefinition() : CreatePreviewProgressDefinition();
         var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
-            .Add(component => component.Definition, lane == 0 ? CreateProjectStructurePreviewDefinition() : CreatePreviewProgressDefinition())
+            .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
+        cut.WaitForAssertion(() => Assert.Equal(definition.Name,
+            cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value")));
         await cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync();
         if (lane == 0) {
-            Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-input-dialog']"));
-            Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-project-id']"));
+            cut.WaitForAssertion(() => {
+                Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-input-dialog']"));
+                Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-project-id']"));
+                Assert.Contains("Project list unavailable. Retry when project selection is available.", cut.Markup, StringComparison.Ordinal);
+            });
         } else {
-            Assert.NotNull(runner.LastRequest);
+            cut.WaitForAssertion(() => Assert.NotNull(runner.LastRequest));
             await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
-            Assert.Contains(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
-                message => message.Summary == "Workflow preview failed");
+            cut.WaitForAssertion(() => Assert.Contains(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+                message => message.Summary == "Workflow preview failed"));
         }
         Assert.DoesNotContain("CANVAS_PRIVATE_SENTINEL", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain(harness.Context.Services.GetRequiredService<NotificationService>().Messages,

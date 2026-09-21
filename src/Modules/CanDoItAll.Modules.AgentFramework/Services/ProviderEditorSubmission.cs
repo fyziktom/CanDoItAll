@@ -75,7 +75,7 @@ public sealed class ProviderEditorSubmission {
         Notes = source.Notes,
         IsPrivateProvider = source.IsPrivateProvider,
         SuggestedModels = source.SuggestedModels.ToList(),
-        ModelPrices = source.ModelPrices.Select(price => new ProviderModelTokenPriceEditorModel { Model = price.Model, InputPerMillionTokensUsd = price.InputPerMillionTokensUsd, CachedInputPerMillionTokensUsd = price.CachedInputPerMillionTokensUsd, OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd, TariffKind = price.TariffKind, CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd, LongContextThresholdTokens = price.LongContextThresholdTokens, LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd, LongContextCachedInputPerMillionTokensUsd = price.LongContextCachedInputPerMillionTokensUsd, LongContextCacheWritePerMillionTokensUsd = price.LongContextCacheWritePerMillionTokensUsd, LongContextOutputPerMillionTokensUsd = price.LongContextOutputPerMillionTokensUsd }).ToList(),
+        ModelPrices = ProviderPricingDefaults.ToEditorModels(ProviderPricingDefaults.FromEditorModels(source.ModelPrices)),
         Tags = source.Tags.ToList(),
         ModelThinkingEffortCapabilities = source.ModelThinkingEffortCapabilities?.Select(capability => capability with { AllowedEfforts = capability.AllowedEfforts.ToArray() }).ToList()
     };

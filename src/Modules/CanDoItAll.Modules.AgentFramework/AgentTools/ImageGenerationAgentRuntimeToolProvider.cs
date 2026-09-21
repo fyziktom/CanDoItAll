@@ -667,7 +667,9 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             "auto",
             "low",
             "medium",
-            "high"
+            "high",
+            "xhigh",
+            "max"
         };
 
         private static readonly IReadOnlySet<string> ValidImageOutputFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

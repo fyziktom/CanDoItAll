@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-20T12:54:14.676161+00:00",
+  "generated_utc": "2026-09-20T21:03:58.593248+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -31114,6 +31114,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
       "category": "case-policy",
+      "source_fingerprint": "668a02314402b1a1c54ee25ea4c7ae00b24eb86a956315e5128df206aef6c688",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
+      "category": "case-policy",
       "source_fingerprint": "6a10bbce4bc92acf1ed36c85d5f1fdc0713f0e2d95f9c6ca925939c7c00be6d2",
       "count": 1
     },
@@ -31139,12 +31145,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
       "category": "case-policy",
       "source_fingerprint": "decd607b8648c191fc20a72151fcca6e61ddaaa1b6fc6eac9e613e1e19eea359",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e139a87c068a25a94b938899f0403aa69a070341eb4982c650ffa3591fa27211",
       "count": 1
     },
     {

@@ -17,6 +17,10 @@ public static class ApiEndpointRouteBuilderExtensions
         app.MapOpenApi("/swagger/{documentName}/swagger.json").AllowAnonymous();
 
         if (options.SwaggerUiEnabled) {
+            if (options.UserAuthentication.Enabled) {
+                app.UseWhen(context => context.Request.Path.StartsWithSegments("/swagger"), branch =>
+                    branch.UseHttpsRedirection());
+            }
             app.UseSwaggerUI(swagger => {
                 swagger.RoutePrefix = "swagger";
                 swagger.DocumentTitle = "CanDoItAll API";

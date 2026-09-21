@@ -365,7 +365,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
 
         if (root.TryGetProperty("quality", out var quality) &&
             (quality.ValueKind != JsonValueKind.String ||
-                quality.GetString() is not ("standard" or "hd" or "low" or "medium" or "high" or "auto")))
+                quality.GetString() is not ("standard" or "hd" or "low" or "medium" or "high" or "xhigh" or "max" or "auto")))
         {
             return Validation("The requested image quality is unsupported.", "quality");
         }

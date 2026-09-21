@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
+[Collection(nameof(LocalWorkspaceProcessHostTestCollection))]
 public sealed class WorkspaceCommandExecutionServiceTests
 {
     [Fact]
