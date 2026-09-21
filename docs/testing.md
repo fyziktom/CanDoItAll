@@ -206,10 +206,15 @@ dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Relea
 
 `/m:1` avoids `bin` and `obj` contention when local MCP or watch processes are active. A developer with an isolated workspace may increase parallelism, but the result must still come from the same configuration and filter.
 
-Those commands use sibling source projects. CI checks out Components and FileTools at the
-pinned commits declared in its workflow, and Docker receives the same repositories as
-named build contexts. Keep source roots and commits identical for the whole gate; do not
-substitute an unpublished package graph for any command.
+Those commands use sibling source projects. CI resolves the Components branch matching the
+application branch (`development` or `main`); pull requests use their target branch, while
+pushes and manual runs use the selected branch. A missing matching branch fails checkout.
+The dependency job resolves that branch once to a commit, and every platform and container
+job checks out that exact commit. FileTools retains its explicit workflow commit pin.
+Docker receives the same repositories as named build contexts. Keep source roots and
+commits identical for the whole gate; do not substitute an unpublished package graph for
+any command. A PR from `development` to `main` therefore validates against Components
+`main`; required Components changes must reach that branch before the application merges.
 
 The gate is long. Measure it when you run it and compare the number with the `timeout-minutes` of
 the stable job in the CI workflow before assuming the two agree: this workstation has recorded runs
@@ -232,8 +237,27 @@ Integration run from the Components-to-Integration ratio of Linux (5.6) and of t
 (4.1, already exceeded) puts it between 131 and 181 minutes, so the whole Windows job, with the
 Memory and Unit assemblies and the portability gates that follow the test step, needs about 205 to
 265 minutes; its budget is 300. Linux and macOS keep 180. The portability gates after the test step
-did not run in that measurement on any platform. Replace the projection with measured durations as
-soon as a Windows run completes, and change a budget only with a new measurement.
+did not run in that measurement on any platform.
+
+The later [run 35577411480](https://github.com/fyziktom/CanDoItAll/actions/runs/35577411480)
+(2026-09-21, application `8744d2dd1`) completed Windows in 245.5 minutes: 27.1 minutes
+for Components, 188.9 for Integration, then all remaining stable and portability gates.
+This replaces the Windows projection and supports the existing 300-minute budget.
+Linux passed Components and all 3,120 integration cases, then failed one tuning-request
+unit test at its five-second polling deadline. That test now observes status events with
+a bounded wait, reports failed terminal states, and avoids asserting a transient queued
+snapshot after background execution has already been scheduled.
+
+macOS did start and build. Its Components tests passed, but the integration assembly
+reported database and HTTP timeouts and was still running when the 180-minute job budget
+expired. The old job-level `FILE_COPY` setting forced checkpoints for every new database.
+The broad stable gate now uses `WAL_LOG` on all platforms; the focused PostgreSQL migration
+and restart step retains the matrix strategy, including `FILE_COPY` on macOS. This keeps
+both strategies covered without adding that checkpoint cost to thousands of tests.
+[PostgreSQL's CREATE DATABASE documentation](https://www.postgresql.org/docs/16/sql-createdatabase.html)
+describes this tradeoff. The logs do not prove that checkpoint pressure caused every
+macOS timeout; a new macOS run is required to confirm the resulting duration and failures.
+The macOS budget and test exclusions remain unchanged.
 
 The filter intentionally excludes:
 

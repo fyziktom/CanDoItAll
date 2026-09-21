@@ -22,11 +22,36 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_COMPONENTS_COMMIT: ff5289746573a6dd6456754a7764844627ddd49f
   CANDOITALL_FILETOOLS_COMMIT: 498b36825bd5a5222429972af120b04becf4b3f6
 
 jobs:
+  dependencies:
+    name: resolve-source-dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      components-commit: ${{ steps.components.outputs.commit }}
+    steps:
+      - name: Check out matching Components branch
+        uses: actions/checkout@v4
+        with:
+          repository: fyziktom/CanDoItAll.Components
+          ref: ${{ github.base_ref || github.ref_name }}
+          path: CanDoItAll.Components
+
+      - name: Record Components commit for every build job
+        id: components
+        shell: pwsh
+        run: |
+          $commit = git -C CanDoItAll.Components rev-parse --verify HEAD
+          if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
+            throw 'Cannot resolve the checked-out Components commit.'
+          }
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "commit=$commit"
+          Write-Host "Components commit: $commit"
+
   stable:
+    needs: dependencies
     name: stable-${{ matrix.name }}
     strategy:
       fail-fast: false
@@ -54,7 +79,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ matrix.timeout-minutes }}
     env:
-      CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: ${{ matrix.postgres-create-strategy }}
+      CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG
     defaults:
       run:
         working-directory: CanDoItAll
@@ -69,7 +94,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: fyziktom/CanDoItAll.Components
-          ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}
+          ref: ${{ needs.dependencies.outputs.components-commit }}
           path: CanDoItAll.Components
 
       - name: Check out FileTools source
@@ -171,6 +196,7 @@ jobs:
       - name: Run PostgreSQL-backed core migration and restart gate
         shell: pwsh
         env:
+          CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: ${{ matrix.postgres-create-strategy }}
           CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: >-
           dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
@@ -269,6 +295,7 @@ jobs:
           retention-days: 14
 
   containers:
+    needs: dependencies
     name: containers
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -286,7 +313,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: fyziktom/CanDoItAll.Components
-          ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}
+          ref: ${{ needs.dependencies.outputs.components-commit }}
           path: CanDoItAll.Components
 
       - name: Check out FileTools source

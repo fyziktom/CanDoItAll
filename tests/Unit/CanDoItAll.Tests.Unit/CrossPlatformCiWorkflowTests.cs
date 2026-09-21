@@ -10,7 +10,7 @@ public sealed class CrossPlatformCiWorkflowTests
 
     [Fact]
     [Trait("Category", "UnixPortabilityCore")]
-    public void Active_workflow_satisfies_the_sibling_pin_platform_and_gate_policy()
+    public void Active_workflow_satisfies_the_sibling_source_platform_and_gate_policy()
     {
         string workflow = ReadActiveWorkflow();
 
@@ -24,7 +24,7 @@ public sealed class CrossPlatformCiWorkflowTests
     public void Moving_a_pin_to_another_immutable_commit_needs_no_second_edit()
     {
         string workflow = ReadActiveWorkflow();
-        string moved = ReplacePin(workflow, "CANDOITALL_COMPONENTS_COMMIT", "0123456789abcdef0123456789abcdef01234567");
+        string moved = ReplacePin(workflow, "CANDOITALL_FILETOOLS_COMMIT", "0123456789abcdef0123456789abcdef01234567");
 
         Assert.NotEqual(workflow, moved);
         Assert.Empty(CiWorkflowPolicy.Validate(moved));
@@ -34,6 +34,9 @@ public sealed class CrossPlatformCiWorkflowTests
     [Trait("Category", "UnixPortabilityCore")]
     [InlineData("branch-pin")]
     [InlineData("literal-checkout-ref")]
+    [InlineData("pr-source-branch")]
+    [InlineData("missing-resolver-dependency")]
+    [InlineData("broad-file-copy")]
     [InlineData("missing-source-asset-check")]
     [InlineData("baseline-auto-acceptance")]
     [InlineData("package-substitution")]
@@ -46,8 +49,11 @@ public sealed class CrossPlatformCiWorkflowTests
             "branch-pin" => ReplacePin(workflow, "CANDOITALL_FILETOOLS_COMMIT", "development"),
             "literal-checkout-ref" => ReplaceFirst(
                 workflow,
-                "ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}",
+                "ref: ${{ needs.dependencies.outputs.components-commit }}",
                 "ref: development"),
+            "pr-source-branch" => ReplaceFirst(workflow, "github.base_ref || github.ref_name", "github.head_ref || github.ref_name"),
+            "missing-resolver-dependency" => ReplaceFirst(workflow, "    needs: dependencies\n", string.Empty),
+            "broad-file-copy" => ReplaceFirst(workflow, "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG", "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: FILE_COPY"),
             "missing-source-asset-check" => RemoveFirstStep(workflow, SourceAssetStepName),
             "baseline-auto-acceptance" => ReplaceFirst(
                 workflow,
@@ -207,18 +213,13 @@ public sealed class CrossPlatformCiWorkflowTests
         return next < 0 ? workflow[..start] : workflow[..start] + workflow[(next + 1)..];
     }
 
-    /// <summary>
-    /// Invariants of the CI workflow: sibling sources are pinned to immutable commits that every checkout consumes,
-    /// committed source assets are verified before any build, all supported platforms and PostgreSQL create
-    /// strategies run, required gates are wired and no package substitution or baseline auto-acceptance exists.
-    /// </summary>
     private static class CiWorkflowPolicy
     {
-        private static readonly (string Repository, string PinKey)[] Siblings =
-        [
-            ("fyziktom/CanDoItAll.Components", "CANDOITALL_COMPONENTS_COMMIT"),
-            ("fyziktom/CanDoItAll.FileTools", "CANDOITALL_FILETOOLS_COMMIT")
-        ];
+        private const string ComponentsRepository = "fyziktom/CanDoItAll.Components";
+        private const string FileToolsPinKey = "CANDOITALL_FILETOOLS_COMMIT";
+        private const string ComponentsBranchRef = "${{ github.base_ref || github.ref_name }}";
+        private const string ComponentsCommitRef = "${{ needs.dependencies.outputs.components-commit }}";
+        private static readonly string[] Siblings = [ComponentsRepository, "fyziktom/CanDoItAll.FileTools"];
 
         private static readonly string[] StableGateExclusions =
         [
@@ -228,6 +229,11 @@ public sealed class CrossPlatformCiWorkflowTests
 
         private static readonly string[] RequiredCommands =
         [
+            "  stable:\n    needs: dependencies",
+            "  containers:\n    needs: dependencies",
+            "components-commit: ${{ steps.components.outputs.commit }}",
+            "git -C CanDoItAll.Components rev-parse --verify HEAD",
+            "Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value \"commit=$commit\"",
             "dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx",
             "(Category=UnixPortabilityCore)&(Category!=UnixRuntimePortability)&(RequiresHostDocker!=true)",
             "(Category=UnixPortabilityCore)&(RequiresHostDocker=true)",
@@ -260,17 +266,9 @@ public sealed class CrossPlatformCiWorkflowTests
             string workflow = workflowText.Replace("\r\n", "\n", StringComparison.Ordinal);
             var violations = new List<string>();
 
-            foreach (var (_, pinKey) in Siblings)
-            {
-                Match pin = Regex.Match(workflow, $"(?m)^  {Regex.Escape(pinKey)}:[ \\t]*(\\S+)[ \\t]*$");
-                if (!pin.Success)
-                {
-                    violations.Add($"{pinKey} is not declared in the workflow environment.");
-                }
-                else if (!Regex.IsMatch(pin.Groups[1].Value, "^[0-9a-f]{40}$"))
-                {
-                    violations.Add($"{pinKey} is not an immutable 40-character commit: {pin.Groups[1].Value}");
-                }
+            Match pin = Regex.Match(workflow, $"(?m)^  {FileToolsPinKey}:[ \\t]*(\\S+)[ \\t]*$");
+            if (!pin.Success || !Regex.IsMatch(pin.Groups[1].Value, "^[0-9a-f]{40}$")) {
+                violations.Add($"{FileToolsPinKey} must declare an immutable 40-character commit.");
             }
 
             foreach (var (jobName, steps) in Jobs(workflow))
@@ -305,7 +303,7 @@ public sealed class CrossPlatformCiWorkflowTests
             for (int index = 0; index < steps.Count; index++)
             {
                 string step = steps[index];
-                foreach (var (repository, pinKey) in Siblings)
+                foreach (var repository in Siblings)
                 {
                     if (!step.Contains($"repository: {repository}", StringComparison.Ordinal))
                     {
@@ -313,9 +311,11 @@ public sealed class CrossPlatformCiWorkflowTests
                     }
 
                     string checkoutPath = repository[(repository.IndexOf('/') + 1)..];
-                    if (!step.Contains($"ref: ${{{{ env.{pinKey} }}}}", StringComparison.Ordinal))
-                    {
-                        violations.Add($"Job {jobName} checks out {repository} without consuming {pinKey}.");
+                    string expectedRef = repository == ComponentsRepository
+                        ? jobName == "dependencies" ? ComponentsBranchRef : ComponentsCommitRef
+                        : $"${{{{ env.{FileToolsPinKey} }}}}";
+                    if (!step.Contains($"ref: {expectedRef}", StringComparison.Ordinal)) {
+                        violations.Add($"Job {jobName} checks out {repository} without consuming {expectedRef}.");
                     }
 
                     if (!step.Contains($"path: {checkoutPath}", StringComparison.Ordinal))
@@ -323,7 +323,7 @@ public sealed class CrossPlatformCiWorkflowTests
                         violations.Add($"Job {jobName} checks out {repository} outside the sibling path {checkoutPath}.");
                     }
 
-                    if (pinKey == "CANDOITALL_COMPONENTS_COMMIT" && componentsCheckout < 0)
+                    if (repository == ComponentsRepository && componentsCheckout < 0)
                     {
                         componentsCheckout = index;
                     }
@@ -349,8 +349,8 @@ public sealed class CrossPlatformCiWorkflowTests
                 }
             }
 
-            if (componentsCheckout >= 0 &&
-                (assetCheck < 0 || assetCheck < componentsCheckout || (firstBuild >= 0 && assetCheck > firstBuild)))
+            if (componentsCheckout >= 0 && firstBuild >= 0 &&
+                (assetCheck < 0 || assetCheck < componentsCheckout || assetCheck > firstBuild))
             {
                 violations.Add($"Job {jobName} does not verify committed Components source assets before building.");
             }
@@ -383,7 +383,12 @@ public sealed class CrossPlatformCiWorkflowTests
                 violations.Add("Every matrix platform must choose a supported PostgreSQL create strategy, and both strategies must run.");
             }
 
-            if (!workflow.Contains(
+            if (!workflow.Contains("      CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG", StringComparison.Ordinal)) {
+                violations.Add("The broad stable gate must use WAL_LOG rather than forcing checkpoints for every database.");
+            }
+            var postgresGate = Jobs(workflow).Single(job => job.Name == "stable").Steps
+                .Single(step => step.StartsWith("name: Run PostgreSQL-backed core migration and restart gate", StringComparison.Ordinal));
+            if (!postgresGate.Contains(
                     "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: ${{ matrix.postgres-create-strategy }}",
                     StringComparison.Ordinal))
             {
