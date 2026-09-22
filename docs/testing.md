@@ -105,6 +105,12 @@ assert the pending state, complete the query, then await the click before the ne
 action. Use `WaitForAssertion` for the resulting rendered state. See bUnit's
 [event-handler completion guidance](https://bunit.dev/docs/interaction/trigger-event-handlers.html).
 
+For editors loaded asynchronously after a selection, wait for the editor form or tabs
+before using them. A catalog tree and the selected record's heading can render while
+the editor is still loading. Await the selection's `ClickAsync()` task, then verify
+editor readiness; a heading-only assertion does not establish that readiness. The
+provider profile seam tests exercise both initial loading and a delayed selection.
+
 ### Prompt Gallery UI slice
 
 For changes under `src/UI/CanDoItAll.Prompts.UI`, `src/Modules/CanDoItAll.Modules.Prompts.Contracts`,

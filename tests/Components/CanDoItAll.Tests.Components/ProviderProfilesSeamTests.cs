@@ -13,6 +13,37 @@ public sealed class ProviderProfilesSeamTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Editor_heading_precedes_tabs_until_the_initial_or_selected_read_completes(bool initialLoad) {
+        var reads = new Reads();
+        var pending = new TaskCompletionSource<ProviderProfileEditorModel>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (initialLoad) {
+            reads.Editor = (_, _) => pending.Task;
+        }
+        await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IProviderProfilesReads>(reads));
+        var cut = harness.Context.Render<AgentProviderProfilesPanel>();
+        var selection = Task.CompletedTask;
+        if (!initialLoad) {
+            cut.WaitForElement("[data-testid='providers-name-input']");
+            reads.Editor = (_, _) => pending.Task;
+            selection = cut.InvokeAsync(() => Node(cut, "Second").ClickAsync());
+        }
+        var selected = initialLoad ? reads.First : reads.Second;
+        cut.WaitForElement("[data-testid='providers-editor-loading']");
+        Assert.Equal(selected.Name, cut.Find("h2.cda-title-xl").TextContent);
+        Assert.Empty(cut.FindAll("[data-testid='provider-editor-tabs']"));
+
+        await cut.InvokeAsync(() => pending.SetResult(reads.Draft(selected.Id)));
+        await selection;
+        cut.WaitForElement("[data-testid='provider-editor-tabs']");
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']")
+            .Single(button => button.TextContent.Contains("Prices", StringComparison.Ordinal)).ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(selected.Id,
+            Assert.IsType<ProviderProfileEditorModel>(cut.FindComponent<ProviderModelPricingEditor>().Instance.Model).Id));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Core_read_failure_hides_form_and_retry_keeps_the_selected_target(bool catalogFails) {
         var reads = new Reads();
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IProviderProfilesReads>(reads));
@@ -159,9 +190,9 @@ public sealed class ProviderProfilesSeamTests {
         cut.Find("[data-testid='providers-name-input']").Change("Unsaved across sections");
         Assert.Equal(new[] { "Connection", "Prices", "Runtime", "Thinking", "Sharing", "History" },
             cut.FindAll("button[role='tab']").Select(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == label).Click());
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == label).ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal("true", cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == label).GetAttribute("aria-selected")));
-        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == "Connection").Click());
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == "Connection").ClickAsync());
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
         Assert.Equal("Unsaved across sections", ((ProviderProfileEditorModel)context.Model).Name);
     }
