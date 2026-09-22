@@ -69,6 +69,17 @@ public sealed class MafProcessToolIterationTests {
         Assert.Single(response.Messages.SelectMany(message => message.Contents).OfType<ToolApprovalRequestContent>());
     }
 
+    [Theory]
+    [InlineData(true, AgentFinalizerMode.Required, true)]
+    [InlineData(false, AgentFinalizerMode.Required, false)]
+    [InlineData(true, AgentFinalizerMode.Disabled, false)]
+    public void Tool_iteration_policy_uses_execution_intent_instead_of_output_schema(
+        bool governed, AgentFinalizerMode finalizerMode, bool hasIterationPolicy) {
+        var options = CreateRunOptions(governed, finalizerMode);
+
+        Assert.Equal(hasIterationPolicy, options.ChatClientFactory is not null);
+    }
+
     private static async Task<AgentResponse> RunAsync(ChatClientAgent agent, ChatClientAgentRunOptions options, bool streaming) {
         var session = await agent.CreateSessionAsync();
         ChatMessage[] messages = [new(ChatRole.User, "Complete the work using the supplied tool.")];
@@ -77,7 +88,7 @@ public sealed class MafProcessToolIterationTests {
             : await agent.RunAsync(messages, session, options);
     }
 
-    private static ChatClientAgentRunOptions CreateRunOptions(bool governed) {
+    private static ChatClientAgentRunOptions CreateRunOptions(bool governed, AgentFinalizerMode? finalizerMode = null) {
         var providerId = Guid.NewGuid();
         var definition = new AgentDefinition(
             Id: Guid.NewGuid(), Name: "Iteration test", RoleTitle: "Tester", Summary: "Tool iteration test",
@@ -92,9 +103,10 @@ public sealed class MafProcessToolIterationTests {
             "https://api.openai.com/v1", string.Empty, "gpt-4.1", ProviderTransportKind.ChatCompletions,
             true, true, true, false, true, "{}", string.Empty, "Not checked", null, []);
         var execution = new AgentRuntimeExecutionOptions(
-            StructuredOutput: governed ? AgentStructuredOutputContracts.ProcessStepOutcomeResult : null,
-            FinalizerMode: governed ? AgentFinalizerMode.Required : AgentFinalizerMode.Disabled,
-            RequireStructuredOutputValidation: true, MaxStructuredOutputRepairAttempts: 1);
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: finalizerMode ?? (governed ? AgentFinalizerMode.Required : AgentFinalizerMode.Disabled),
+            RequireStructuredOutputValidation: true, MaxStructuredOutputRepairAttempts: 1,
+            ContextIntent: AgentRuntimeContextIntent.Empty with { IsGovernedProcessStep = governed });
         return MafRuntimeSessionBuilder.CreateRunOptions(definition, provider, definition.Model,
             hasApprovalTools: false, continuationToken: null, forceOmitTemperature: false, execution);
     }

@@ -16,6 +16,11 @@ are not a prerequisite for this solution. The default build graph requires sibli
 README. DotNetWatch integration tests additionally require the sibling `CanDoItAll.Mcp`
 repository.
 
+When running the Linux stable gate in Docker, start the SDK container with `--init`.
+Process-host tests deliberately orphan descendants; the container needs an init process
+to reap them. A `sleep` entry point alone leaves zombies in the owned process group and
+correctly causes process-cleanup assertions to fail.
+
 ## Test Entry Points
 
 | Entry point | Scope |
@@ -31,6 +36,21 @@ The stable aggregate excludes the Playwright project. Its command filter also ex
 special traits because those tests remain in their owning assemblies for focused and
 environment-specific execution. Test-support projects are transitive dependencies of
 their owning test projects and are not standalone gates.
+
+PostgreSQL fixture administration uses a separate 60-second command timeout for database
+creation and cleanup. Ordinary test connections retain their 15-second SQL timeout.
+`DROP DATABASE` can wait for a server checkpoint: a measured local cleanup spent 19.5
+seconds flushing files and exceeded the former shared 15-second deadline after all test
+assertions had passed. Keep the bounded maintenance budget separate from application
+query and HTTP deadlines; do not suppress cleanup failures.
+
+The shared test bootstrap disables HTTP handler-expiry timers for its short-lived hosts.
+A timer in `DefaultHttpClientFactory` can retain a disposed fixture's root service
+provider when a singleton storage driver still references its typed client. Repeating
+fixtures then retains their entire service graphs. The lifetime regression test resolves
+the real storage drivers and requires the disposed provider to be collectible. This
+fixture setting keeps HTTP handlers and request timeouts in place and leaves production
+HTTP-client configuration unchanged.
 
 ## Local And Bundle Loop
 
@@ -71,6 +91,11 @@ calling `DisposeComponentsAsync()` outside a busy renderer dispatcher can clear 
 list before the queued disposal reads it, leaving old components and their scoped
 registrations alive. The helper dispatches the entire operation; its regression test
 holds the renderer busy to verify that disposal still releases the rendered components.
+
+When a component can render in the background, find the DOM element and dispatch its
+event together inside `cut.InvokeAsync`. A render between `Find` and `Click` can replace
+the event handler and make bUnit report `UnknownEventHandlerIdException`. Re-querying the
+element outside the dispatcher does not close that race.
 
 ### Prompt Gallery UI slice
 
@@ -236,8 +261,8 @@ Windows was cancelled by the former 180-minute budget without a failing test. Pr
 Integration run from the Components-to-Integration ratio of Linux (5.6) and of this workstation
 (4.1, already exceeded) puts it between 131 and 181 minutes, so the whole Windows job, with the
 Memory and Unit assemblies and the portability gates that follow the test step, needs about 205 to
-265 minutes; its budget is 300. Linux and macOS keep 180. The portability gates after the test step
-did not run in that measurement on any platform.
+265 minutes; its budget is 300. That first measurement left Linux and macOS at 180. The
+portability gates after the test step did not run in that measurement on any platform.
 
 The later [run 35577411480](https://github.com/fyziktom/CanDoItAll/actions/runs/35577411480)
 (2026-09-21, application `8744d2dd1`) completed Windows in 245.5 minutes: 27.1 minutes
@@ -257,7 +282,17 @@ both strategies covered without adding that checkpoint cost to thousands of test
 [PostgreSQL's CREATE DATABASE documentation](https://www.postgresql.org/docs/16/sql-createdatabase.html)
 describes this tradeoff. The logs do not prove that checkpoint pressure caused every
 macOS timeout; a new macOS run is required to confirm the resulting duration and failures.
-The macOS budget and test exclusions remain unchanged.
+That repair left the macOS budget and test exclusions unchanged.
+
+The next [run 35603506190](https://github.com/fyziktom/CanDoItAll/actions/runs/35603506190)
+again started and built macOS, then cancelled it at 180 minutes while Integration was
+still running. After repairing fixture lifetimes, the 2026-09-22 local Linux Docker run
+passed all 14,586 stable cases with zero failures or skips in 222.0 minutes: 27.8 minutes
+for Components and 192.3 for Integration, on four CPUs with an 8 GiB limit. This excludes
+restore/build and the separate portability gates. No memory-limit or OOM events occurred.
+Linux and macOS now use the same bounded 300-minute job budget as Windows. Application
+SQL and HTTP deadlines and test exclusions are unchanged. macOS still needs a remote
+rerun to verify its failures and duration.
 
 The filter intentionally excludes:
 

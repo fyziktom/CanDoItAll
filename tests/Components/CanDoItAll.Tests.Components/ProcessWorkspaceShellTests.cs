@@ -3170,7 +3170,7 @@ public sealed partial class ProcessWorkspaceShellTests
         string panelTestId)
     {
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{tabTestId}']")));
-        cut.Find($"[data-testid='{tabTestId}']").Click();
+        cut.InvokeAsync(() => cut.Find($"[data-testid='{tabTestId}']").Click()).GetAwaiter().GetResult();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{panelTestId}']")));
     }
 

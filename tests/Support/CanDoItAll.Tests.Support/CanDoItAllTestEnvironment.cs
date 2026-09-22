@@ -134,6 +134,7 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
 
 public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 {
+    private const int DatabaseMaintenanceCommandTimeoutSeconds = 60;
     private const string CreateStrategyEnvironmentVariable = "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY";
     private const string WalLogCreateStrategyValue = "WAL_LOG";
     private const string FileCopyCreateStrategyValue = "FILE_COPY";
@@ -252,7 +253,7 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
         builder.IncludeErrorDetail = true;
         builder.Timeout = 5;
-        builder.CommandTimeout = 15;
+        builder.CommandTimeout = DatabaseMaintenanceCommandTimeoutSeconds;
         return builder.ConnectionString;
     }
 
