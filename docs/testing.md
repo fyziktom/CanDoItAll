@@ -97,6 +97,14 @@ event together inside `cut.InvokeAsync`. A render between `Find` and `Click` can
 the event handler and make bUnit report `UnknownEventHandlerIdException`. Re-querying the
 element outside the dispatcher does not close that race.
 
+In bUnit 2.7.2, synchronous `Click()` discards the event-dispatch task. Use
+`await ClickAsync()` before asserting callback effects, including the absence of a
+second intent; a busy dispatcher can otherwise leave the click queued during the
+assertion. For an event that awaits a scripted query, capture the `ClickAsync()` task,
+assert the pending state, complete the query, then await the click before the next
+action. Use `WaitForAssertion` for the resulting rendered state. See bUnit's
+[event-handler completion guidance](https://bunit.dev/docs/interaction/trigger-event-handlers.html).
+
 ### Prompt Gallery UI slice
 
 For changes under `src/UI/CanDoItAll.Prompts.UI`, `src/Modules/CanDoItAll.Modules.Prompts.Contracts`,
