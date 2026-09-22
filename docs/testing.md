@@ -225,6 +225,30 @@ Send, and `live` only when a model was actually reached, and `modelRequests.used
 requests the provider journal counted. A report that claims live proof cites that manifest, the
 provider and model it names, and the persisted run and owner state it recorded.
 
+## Timing And Scale Checks
+
+Stable CI runs on shared runners. Wall-clock ceilings are coarse regression guards,
+not product latency targets. Prefer observable completion, cancellation, row counts,
+query plans and operation ordering over short sleeps or minimum elapsed-time assertions.
+Keep functional deadlines (such as process termination before a child exits naturally)
+separate from performance measurements.
+
+Provider-history search retains its million-row dataset, indexed plans with a root
+`Limit`, page sizes and response-size bounds. Its cold-query ceiling is 10 seconds and
+its warm p95 ceiling is 5 seconds on every platform. Measurements and budgets are logged
+before latency assertions. A macOS CI run on 2026-09-22 measured a warm p95 of 565.7 ms
+against the former 500 ms limit even though all three measured PostgreSQL plans used
+indexes and executed in 0.11–0.15 ms. These ceilings tolerate runner scheduling and
+connection delays; they do not replace query-plan and bounded-work assertions.
+
+The former one-row provider-history plan test was superseded by that scale test. The
+serial capture prelude's 25 ms p95 assertions were also removed: earlier readiness runs
+already recorded 28–29 ms failures unrelated to the candidate change. The runtime test
+still verifies 24 concurrent captures, 20 searches and deletion of 5,000 expired rows in
+batches of at most 1,000, with positive progress and a two-minute cancellation guard.
+Use the opt-in `SharedProviderPremergePerformanceTests` for allocation and timing
+measurements; retain its bounded-cleanup and revocation checks.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

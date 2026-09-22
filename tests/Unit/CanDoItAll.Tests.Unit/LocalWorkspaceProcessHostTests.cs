@@ -375,18 +375,13 @@ public sealed class LocalWorkspaceProcessHostTests
 
         try
         {
-            var stopwatch = Stopwatch.StartNew();
             executionTask = host.ExecuteAsync(request);
             var result = await executionTask.WaitAsync(TimeSpan.FromSeconds(12));
-            stopwatch.Stop();
 
             Assert.True(result.Started);
             Assert.False(result.TimedOut);
             Assert.Equal(0, result.ExitCode);
             Assert.Contains("parent-done", result.Stdout, StringComparison.Ordinal);
-            Assert.True(
-                stopwatch.Elapsed < TimeSpan.FromSeconds(12),
-                $"Expected the host to return before the child released the inherited pipe. Elapsed: {stopwatch.Elapsed}.");
             Assert.False(result.ResidualProcessPossible);
             AssertChildExited(childPidFilePath);
         }
