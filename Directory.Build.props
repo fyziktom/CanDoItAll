@@ -9,7 +9,8 @@
     <CanDoItAllComponentsPackageVersion>0.3.0</CanDoItAllComponentsPackageVersion>
     <CanDoItAllFileToolsPackageVersion>0.3.0</CanDoItAllFileToolsPackageVersion>
     <MicrosoftAspNetCoreComponentsVersion>10.0.10</MicrosoftAspNetCoreComponentsVersion>
-    <MicrosoftExtensionsPackageVersion>10.0.10</MicrosoftExtensionsPackageVersion>
+    <MicrosoftExtensionsPackageVersion>10.0.11</MicrosoftExtensionsPackageVersion>
+    <MicrosoftExtensionsAIPackageVersion>10.9.0</MicrosoftExtensionsAIPackageVersion>
     <DefaultItemExcludes>
       $(DefaultItemExcludes);
       .mcp-state/**;

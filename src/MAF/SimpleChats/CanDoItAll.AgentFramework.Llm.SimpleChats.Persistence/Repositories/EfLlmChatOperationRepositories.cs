@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 
-public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmChatOperationRepository
+public sealed class EfLlmChatOperationRepository(SimpleChatsDbContext dbContext) : ILlmChatOperationRepository
 {
     public async Task<LlmChatOperation?> TryGetAsync(
         LlmChatOperationId id,
@@ -154,7 +154,7 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
     }
 }
 
-public sealed class EfLlmChatTurnStateRepository(AppDbContext dbContext) : ILlmChatTurnStateRepository
+public sealed class EfLlmChatTurnStateRepository(SimpleChatsDbContext dbContext) : ILlmChatTurnStateRepository
 {
     public async Task<LlmChatConversationTurnState> LockAsync(
         LlmChatConversationId conversationId,

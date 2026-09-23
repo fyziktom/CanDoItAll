@@ -1,32 +1,27 @@
-﻿using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Api;
 
 public static class ApiEndpointRouteBuilderExtensions
 {
-    public static WebApplication MapCanDoItAllApiDocumentation(this WebApplication app)
-    {
+    public static WebApplication MapCanDoItAllApiDocumentation(this WebApplication app) {
         ArgumentNullException.ThrowIfNull(app);
 
         var options = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
-        if (!options.OpenApiEnabled)
-        {
+        if (!options.OpenApiEnabled) {
             return app;
         }
 
-        var openApiEndpoint = app.MapOpenApi();
-        var swaggerJsonEndpoint = app.MapOpenApi("/swagger/{documentName}/swagger.json");
-        if (options.Authorization.Enabled)
-        {
-            openApiEndpoint.RequireAuthorization();
-            swaggerJsonEndpoint.RequireAuthorization();
-        }
+        app.MapOpenApi().AllowAnonymous();
+        app.MapOpenApi("/swagger/{documentName}/swagger.json").AllowAnonymous();
 
-        if (options.SwaggerUiEnabled)
-        {
-            app.UseSwaggerUI(swagger =>
-            {
+        if (options.SwaggerUiEnabled) {
+            if (options.UserAuthentication.Enabled) {
+                app.UseWhen(context => context.Request.Path.StartsWithSegments("/swagger"), branch =>
+                    branch.UseHttpsRedirection());
+            }
+            app.UseSwaggerUI(swagger => {
                 swagger.RoutePrefix = "swagger";
                 swagger.DocumentTitle = "CanDoItAll API";
                 swagger.SwaggerEndpoint("/swagger/v1/swagger.json", "CanDoItAll API v1");
@@ -44,6 +39,7 @@ public static class ApiEndpointRouteBuilderExtensions
             return endpoints;
         }
 
+        endpoints.MapStoragePlacementRecoveryApi();
         var group = endpoints.MapGroup("/api")
             .WithTags("API")
             .DisableAntiforgery();
@@ -52,29 +48,13 @@ public static class ApiEndpointRouteBuilderExtensions
             group.RequireAuthorization();
         }
 
-        group.MapGet("/access/status", (IApiTokenService tokenService) =>
-                Results.Ok(tokenService.GetStatus()))
+        group.MapGet("/access/status", GetAccessStatus)
             .AllowAnonymous()
-            .WithName("GetApiAccessStatus");
+            .WithName("GetApiAccessStatus")
+            .Produces<ApiAccessStatus>();
 
-        var issueTokenEndpoint = group.MapPost("/access/tokens", (
-                ApiTokenIssueRequest request,
-                IApiTokenService tokenService) =>
-            {
-                try
-                {
-                    return Results.Ok(tokenService.IssueToken(request));
-                }
-                catch (InvalidOperationException exception)
-                {
-                    return ApiEndpointResults.BadRequest(exception.Message, "api.token-invalid");
-                }
-            })
-            .WithName("IssueApiToken");
-        if (options.Authorization.Enabled)
-        {
-            issueTokenEndpoint.RequireAuthorization(ApiAuthorizationPolicies.IssueTokens);
-        }
+        group.MapAccess(options);
+        group.MapWorkspaceSettings();
 
         group.MapProjectsApi();
         group.MapAgentsApi();
@@ -126,4 +106,20 @@ public static class ApiEndpointRouteBuilderExtensions
 
         return builder;
     }
+
+    /// <summary>
+    /// Read how the HTTP API of this host is configured: enabled surfaces, authorization and token lifetimes.
+    /// </summary>
+    /// <remarks>
+    /// Use this read to discover whether a bearer token is needed before calling other operations, and which issuer,
+    /// audience and lifetimes a token issued by <c>POST /api/access/tokens</c> gets. The response contains no signing
+    /// key and no token.
+    ///
+    /// Authority: anonymous. The route never requires a bearer token, even when API authorization is enabled. It
+    /// exists only while <c>Api:Enabled</c> is true, so <c>apiEnabled</c> is always true in a response.
+    /// </remarks>
+    /// <response code="200">The current API access configuration.</response>
+    internal static IResult GetAccessStatus(IApiTokenService tokenService) =>
+        Results.Ok(tokenService.GetStatus());
+
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public sealed class HistoryReadStore(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<ProviderHistoryDbContext> factory,
     HistoryCoverageReader coverage,
     HistoryDetailStore details,
     TimeProvider clock) : IHistoryReadStore {

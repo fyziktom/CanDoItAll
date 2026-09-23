@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using CanDoItAll.Components.Gantt;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
@@ -64,6 +65,9 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
             ProjectWorkItemEffortUnit.Hours,
             240m,
             "USD");
+        var displayed = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest());
+        var admission = Assert.IsType<ProjectWriteAdmission>(displayed.ExpectedProjectAdmission);
         var created = await PostAndReadAsync<ProjectStructureTaskCreateResult>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/tasks",
@@ -72,7 +76,7 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
                 DateTimeOffset.Parse("2026-07-23T12:00:00Z"),
                 DateTimeOffset.Parse("2026-07-23T18:00:00Z"),
                 Resource: null,
-                Estimate: expectedEstimate));
+                Estimate: expectedEstimate) { ExpectedProjectAdmission = admission });
 
         Assert.Null(created.AttachedResource);
         Assert.Equal(
@@ -138,13 +142,16 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
                 project.Id.ToString(),
                 "Validate typed task process attachment",
                 15));
+        var displayed = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest());
+        var admission = Assert.IsType<ProjectWriteAdmission>(displayed.ExpectedProjectAdmission);
         var created = await PostAndReadAsync<ProjectStructureTaskCreateResult>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/tasks",
             new ProjectStructureTaskCreateRequest(
                 "Main App",
                 DateTimeOffset.Parse("2026-07-25T12:00:00Z"),
-                DateTimeOffset.Parse("2026-07-25T20:00:00Z")));
+                DateTimeOffset.Parse("2026-07-25T20:00:00Z")) { ExpectedProjectAdmission = admission });
 
         var genericResponse = await host.Client.PostAsJsonAsync(
             $"/api/project-structure/projects/{project.Id:D}/nodes/{created.TaskNodeId}/process-definition",
@@ -165,7 +172,7 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
                 new ProjectStructureTaskResourceSelection(
                     ProjectStructureTaskResourceKind.Process,
                     SoftwareDeliveryDefinitionId),
-                ProjectTaskExecutionSnapshot.NotStarted));
+                ProjectTaskExecutionSnapshot.NotStarted) { ExpectedProjectAdmission = admission });
 
         Assert.Equal(ProjectStructureTaskResourceKind.Process, attached.Resource.Kind);
         Assert.Equal(SoftwareDeliveryDefinitionId, attached.Resource.ResourceId);
@@ -207,6 +214,84 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
             string.Equals(link.SourceId, created.TaskNodeId, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, runNodeId, StringComparison.Ordinal) &&
             link.Kind == ProjectObjectLinkKind.Uses);
+    }
+
+    [Fact]
+    public async Task Typed_task_update_binds_plain_task_ids_rejects_a_missing_task_and_reschedules()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
+            "project-structure-task-update-http-boundary",
+            environment => environment.CreatePostgreSqlProfile("task-update-http-boundary"));
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure/projects",
+            new ProjectStructureProjectSaveRequest(
+                "Typed task update boundary",
+                "HTTP task update integration coverage.",
+                "Update typed tasks through plain task identifiers.",
+                "Validation",
+                ProjectStatus.Active));
+        var displayed = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest());
+        var admission = Assert.IsType<ProjectWriteAdmission>(displayed.ExpectedProjectAdmission);
+        var start = DateTimeOffset.Parse("2026-07-23T09:00:00Z");
+        var created = await PostAndReadAsync<ProjectStructureTaskCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/tasks",
+            new ProjectStructureTaskCreateRequest("Rescheduled task", start, start.AddHours(8)) { ExpectedProjectAdmission = admission });
+        var structure = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest(IncludeMetadata: true));
+        var task = Assert.Single(structure.Nodes, node => node.Id == created.TaskNodeId);
+        var proposedStart = DateTimeOffset.Parse("2026-07-27T09:00:00Z");
+        var proposedEnd = DateTimeOffset.Parse("2026-07-28T17:00:00Z");
+
+        const string missingTaskId = "custom:task-that-does-not-exist";
+        using var missing = await host.Client.PutAsJsonAsync(
+            $"/api/project-structure/projects/{project.Id:D}/tasks/{missingTaskId}",
+            CreateReschedule(task, missingTaskId, proposedStart, proposedEnd, structure.ExpectedProjectAdmission),
+            ProjectStructureHttpContractTestJson.SerializerOptions);
+
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        Assert.Equal("WorkItemNotFound", (await ReadAsync<ApiErrorResponse>(missing)).Error.ErrorCode);
+
+        using var moved = await host.Client.PutAsJsonAsync(
+            $"/api/project-structure/projects/{project.Id:D}/tasks/{task.Id}",
+            CreateReschedule(task, task.Id, proposedStart, proposedEnd, structure.ExpectedProjectAdmission),
+            ProjectStructureHttpContractTestJson.SerializerOptions);
+
+        Assert.True(moved.IsSuccessStatusCode, await moved.Content.ReadAsStringAsync());
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest());
+        var rescheduled = Assert.Single(readback.Nodes, node => node.Id == task.Id);
+        Assert.Equal(proposedStart, rescheduled.StartUtc);
+        Assert.Equal(proposedEnd, rescheduled.EndUtc);
+    }
+
+    private static ProjectStructureTaskUpdateAgentInput CreateReschedule(
+        ProjectStructureNodeSummary task,
+        string taskId,
+        DateTimeOffset proposedStart,
+        DateTimeOffset proposedEnd,
+        ProjectWriteAdmission? admission)
+    {
+        var state = ProjectStructureTaskEditStatePolicy.Read(ProjectObjectMetadataSerializer.Parse(task.MetadataJson));
+        return new ProjectStructureTaskUpdateAgentInput(
+            taskId,
+            task.Title,
+            task.Title,
+            task.ProgressPercent,
+            Math.Clamp(task.ProgressPercent, 0, 100),
+            state.Estimate,
+            state.Estimate,
+            new ProjectStructureTaskScheduleAgentChange(
+                GanttScheduleGesture.SetInterval,
+                [new ProjectStructureTaskDateAgentChange(taskId, task.StartUtc!.Value, task.EndUtc!.Value, proposedStart, proposedEnd)]),
+            AssigneeChanged: false,
+            ProposedAssignee: null,
+            state.Execution,
+            state.Execution,
+            state.CostBasis,
+            state.DirectAssignmentRevision) { ExpectedProjectAdmission = admission };
     }
 
     private static async Task<T> PostAndReadAsync<T>(

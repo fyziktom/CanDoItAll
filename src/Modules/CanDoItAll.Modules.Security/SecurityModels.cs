@@ -128,12 +128,13 @@ public sealed class DataProtectionSecretProtector(IDataProtectionProvider dataPr
 }
 
 public sealed class SecretService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SecurityDbContext> dbContextFactory,
     ISecretVault vault,
     ISecretProtector protector,
     IClock clock,
     IActivityStream activityStream,
-    IEnumerable<ISecretDeletionReferencePolicy> deletionReferencePolicies)
+    IEnumerable<ISecretDeletionReferencePolicy> deletionReferencePolicies,
+    CoordinatedDatabaseTransaction transactions)
 {
     private readonly IReadOnlyList<ISecretDeletionReferencePolicy>
         referencePolicies = deletionReferencePolicies?.ToArray()
@@ -342,6 +343,7 @@ public sealed class SecretService(
             dbContext,
             SecretMutationScopeKeys.ForSecretRecord(id),
             cancellationToken);
+        using var coordination = transactions.Enter(dbContext);
         var entity = await dbContext.Set<SecretRecord>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (entity is null)
         {
@@ -352,7 +354,6 @@ public sealed class SecretService(
         foreach (var policy in referencePolicies)
         {
             var reference = await policy.FindReferenceAsync(
-                dbContext,
                 entity.Id,
                 cancellationToken);
             if (reference is not null)
@@ -375,6 +376,7 @@ public sealed class SecretService(
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
         await mutationScope.CommitAsync(cancellationToken);
+        coordination.Dispose();
         if (!string.IsNullOrWhiteSpace(vaultKey))
         {
             await vault.DeleteAsync(vaultKey, cancellationToken);

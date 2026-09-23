@@ -1,0 +1,45 @@
+<PageTitle>Governance sandbox</PageTitle>
+
+<header class="catalog-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <h1 class="cda-title-xl">Governance sandbox</h1>
+        <p>Real Governance rendering. Interactions update controlled sample state and the intent log.</p>
+        <label for="governance-scenario" class="cda-field-label">Scenario</label>
+        <select id="governance-scenario" class="cda-input" value="@ScenarioToken"
+                @onchange="ChangeScenario" data-testid="sandbox-governance-scenario">
+            @foreach (var definition in GovernanceSandboxFixture.Scenarios) {
+                <option value="@definition.Token">@definition.Label</option>
+            }
+        </select>
+        <output aria-live="polite" data-testid="sandbox-intent">@fixture.IntentLog</output>
+    </Stack>
+</header>
+
+<main class="@(LayoutQuery == "matched" ? "catalog-sandbox__frame catalog-sandbox__frame--matched" : "catalog-sandbox__frame")"
+      data-testid="sandbox-governance-specimen" data-scenario="@ScenarioToken">
+    <AgentGovernanceSurface Presentation="fixture.Presentation" State="fixture.State" OnIntent="fixture.Apply" />
+</main>
+<Tooltip />
+
+@code {
+    [Parameter]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    public string? LayoutQuery { get; set; }
+
+    private readonly GovernanceSandboxFixture fixture = new();
+    private string? appliedQuery;
+    private bool initialized;
+    private string ScenarioToken => GovernanceSandboxFixture.Scenarios.Single(item => item.Scenario == fixture.Scenario).Token;
+
+    protected override void OnParametersSet() {
+        if (!initialized || appliedQuery != ScenarioQuery) {
+            initialized = true;
+            appliedQuery = ScenarioQuery;
+            fixture.SetScenario(GovernanceSandboxFixture.Parse(ScenarioQuery));
+        }
+    }
+
+    private void ChangeScenario(ChangeEventArgs args) => fixture.SetScenario(GovernanceSandboxFixture.Parse(args.Value?.ToString()));
+}

@@ -3,6 +3,13 @@ using CanDoItAll.Modules.Security;
 
 namespace CanDoItAll.Composition;
 
+/// <summary>
+/// Runtime host profile, as a string token: <c>Auto</c> (configuration value only: resolve the profile from the
+/// operating system and the secret-vault usage profile), <c>WindowsInteractive</c>, <c>WindowsHeadless</c>,
+/// <c>LinuxInteractive</c>, <c>LinuxHeadless</c>, <c>MacOsInteractive</c>, <c>MacOsHeadless</c> or <c>Test</c>
+/// (development test hosts only). Interactive profiles run with a desktop session; headless profiles run as a
+/// service or in a container.
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RuntimeHostProfileKind
 {
@@ -16,6 +23,10 @@ public enum RuntimeHostProfileKind
     Test
 }
 
+/// <summary>
+/// Operating system of a runtime host or publish target, as a string token: <c>Windows</c>, <c>Linux</c> or
+/// <c>MacOs</c>.
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RuntimeHostOperatingSystem
 {

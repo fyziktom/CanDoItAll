@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Web;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,7 +52,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
     }
 
     [Fact]
-    public async Task Token_issuance_requires_explicit_privileged_scope()
+    public async Task Token_issuance_is_absent_with_management_disabled_even_for_privileged_machine_tokens()
     {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: true,
@@ -76,7 +77,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
             "/api/access/tokens",
             request);
 
-        Assert.Equal(HttpStatusCode.Forbidden, forbiddenResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, forbiddenResponse.StatusCode);
 
         SetBearerToken(
             host,
@@ -95,14 +96,11 @@ public sealed class ApiAccessAuthorizationIntegrationTests
             "/api/access/tokens",
             request);
 
-        Assert.Equal(HttpStatusCode.OK, issuedResponse.StatusCode);
-        var issuedToken = await issuedResponse.Content.ReadFromJsonAsync<ApiTokenIssueResult>();
-        Assert.NotNull(issuedToken);
-        Assert.Equal(request.Subject, issuedToken.Subject);
+        Assert.Equal(HttpStatusCode.NotFound, issuedResponse.StatusCode);
     }
 
     [Fact]
-    public async Task Authorization_disabled_token_endpoint_is_not_protected_by_the_scope_policy()
+    public async Task Authorization_disabled_removes_http_token_issuance()
     {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
@@ -112,7 +110,7 @@ public sealed class ApiAccessAuthorizationIntegrationTests
             "/api/access/tokens",
             new ApiTokenIssueRequest());
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -250,6 +248,81 @@ public sealed class ApiAccessAuthorizationIntegrationTests
         host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", $"{unsigned}.invalid");
         using var invalid = await host.Client.GetAsync("/api/llm-chats");
         Assert.Equal(HttpStatusCode.Unauthorized, invalid.StatusCode);
+    }
+
+    [Fact]
+    public async Task Project_structure_analytics_returns_recorded_bodies_only_to_the_caller_that_made_the_call() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
+        Guid projectId;
+        await using (var scope = host.App.Services.CreateAsyncScope()) {
+            var savedProject = await scope.ServiceProvider.GetRequiredService<ProjectsService>()
+                .SaveAsync(new ProjectEditorModel {
+                    Name = "Analytics redaction project",
+                    Objective = "Keep one caller's recorded calls from another caller.",
+                    CurrentPhase = "Validation"
+                });
+            Assert.True(savedProject.IsSuccess);
+            projectId = savedProject.Value;
+        }
+
+        var tokens = host.App.Services.GetRequiredService<IApiTokenService>();
+        var owner = tokens.IssueToken(new ApiTokenIssueRequest {
+            Subject = "analytics-owner", Scopes = [ApiAccessScopeNames.WriteProjectStructure]
+        });
+        var reader = tokens.IssueToken(new ApiTokenIssueRequest {
+            Subject = "analytics-reader", Scopes = [ApiAccessScopeNames.WriteProjectStructure]
+        });
+        const string reason = "Analytics redaction sentinel reason";
+        SetBearerToken(host, owner);
+        using var leaseResponse = await host.Client.PostAsJsonAsync(
+            "/api/project-structure/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString("D"), reason));
+        Assert.Equal(HttpStatusCode.OK, leaseResponse.StatusCode);
+        var lease = (await leaseResponse.Content.ReadFromJsonAsync<ProjectStructureLeaseSnapshot>())!;
+
+        SetBearerToken(host, reader);
+        using var readerResponse = await host.Client.PostAsJsonAsync(
+            "/api/project-structure/analytics/query",
+            new ProjectStructureAnalyticsQueryRequest(OperationName: "leases.acquire"));
+        var readerBody = await readerResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, readerResponse.StatusCode);
+        Assert.DoesNotContain(lease.LeaseToken, readerBody, StringComparison.Ordinal);
+        Assert.DoesNotContain(reason, readerBody, StringComparison.Ordinal);
+        var foreign = Assert.Single(
+            (await readerResponse.Content.ReadFromJsonAsync<ProjectStructureAnalyticsResponse>())!.Entries);
+        Assert.Equal("analytics-owner", foreign.AgentId);
+        Assert.True(foreign.Succeeded);
+        Assert.Equal("{}", foreign.RequestSummaryJson);
+        Assert.Equal("{}", foreign.ResponseSummaryJson);
+
+        SetBearerToken(host, owner);
+        using var ownerResponse = await host.Client.PostAsJsonAsync(
+            "/api/project-structure/analytics/query",
+            new ProjectStructureAnalyticsQueryRequest(OperationName: "leases.acquire"));
+        var own = Assert.Single((await ownerResponse.Content.ReadFromJsonAsync<ProjectStructureAnalyticsResponse>())!.Entries);
+        Assert.Contains(reason, own.RequestSummaryJson, StringComparison.Ordinal);
+        Assert.Contains(lease.LeaseToken, own.ResponseSummaryJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Runtime_snapshots_require_a_bearer_token_when_api_authorization_is_enabled() {
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: true,
+            useInMemoryDatabase: true,
+            configureApplication: application => application.MapRuntimeEndpoints());
+
+        using var anonymousOperations = await host.Client.GetAsync("/api/runtime/operations");
+        using var anonymousCapabilities = await host.Client.GetAsync("/api/runtime/capabilities");
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousOperations.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousCapabilities.StatusCode);
+
+        SetBearerToken(host, host.App.Services.GetRequiredService<IApiTokenService>().IssueToken(new ApiTokenIssueRequest {
+            Subject = "runtime-snapshot-reader", Scopes = [ApiAccessScopeNames.Api]
+        }));
+        using var operations = await host.Client.GetAsync("/api/runtime/operations");
+        using var capabilities = await host.Client.GetAsync("/api/runtime/capabilities");
+        Assert.Equal(HttpStatusCode.OK, operations.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, capabilities.StatusCode);
     }
 
     private static void SetBearerToken(

@@ -16,6 +16,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 {
     private const int ProviderOrder = 950;
     private const string UnsupportedImageOptionErrorCode = "ImageOptionUnsupported";
+    internal const string GeneratedImageEffectSourceKind = "workspace-image";
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly ProviderProfileService ProviderFeatureService = new();
@@ -24,13 +25,15 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
     private readonly IWorkspacePathResolutionService workspacePaths;
     private readonly ILogger<ImageGenerationAgentRuntimeToolProvider>? logger;
     private readonly ImageGenerationToolBuilder toolBuilder;
+    private readonly ImageGenerationResultDisclosureService? resultDisclosure;
 
     public ImageGenerationAgentRuntimeToolProvider(
         IProviderRuntimeProfileSource providerSource,
         IWorkspacePathResolutionService workspacePaths,
         IAgentImageGenerationService imageGenerationService,
         IServiceProvider services,
-        ILogger<ImageGenerationAgentRuntimeToolProvider>? logger = null)
+        ILogger<ImageGenerationAgentRuntimeToolProvider>? logger = null,
+        ImageGenerationResultDisclosureService? resultDisclosure = null)
     {
         ArgumentNullException.ThrowIfNull(providerSource);
         ArgumentNullException.ThrowIfNull(workspacePaths);
@@ -40,6 +43,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         this.imageGenerationService = imageGenerationService;
         this.workspacePaths = workspacePaths;
         this.logger = logger;
+        this.resultDisclosure = resultDisclosure;
 
         toolBuilder = new ImageGenerationToolBuilder(
             this,
@@ -67,8 +71,28 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        return ValueTask.FromResult(toolBuilder.CreateTools(context.Agent, context.Provider));
+        var tools = toolBuilder.CreateTools(
+            context.Agent,
+            context.Provider,
+            AgentRuntimeWorkspacePaths.ForRun(workspacePaths, context));
+        return ValueTask.FromResult(tools.Count > 0 && ImageGenerationResultDisclosureService.UsesJournal(context)
+            ? RequireResultDisclosure().Wrap(context, tools) : tools);
     }
+
+    public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(AgentRuntimeToolProviderContext context) {
+        ArgumentNullException.ThrowIfNull(context);
+        if (!context.Agent.Permissions.CanUseTools || !AgentImageGenerationAccessMetadata.Read(context.Agent.ConfigurationJson).CanGenerateImages) {
+            return [];
+        }
+        return [new(Descriptor.ProviderKey, ImageGenerationToolPolicy.ImageGenerationCreate,
+            AgentRuntimeToolOperationKind.Mutation, true, Descriptor.DomainTags) {
+            AuthorizeResultDisclosureAsync = (disclosure, token) => RequireResultDisclosure().AuthorizeAsync(context, disclosure, token)
+        }];
+    }
+
+    private ImageGenerationResultDisclosureService RequireResultDisclosure()
+        => resultDisclosure ?? throw new AgentToolAdmissionException("image-generation.result-authority-unavailable",
+            "Image generation requires its registered owner result-authority service for durable tool admission.");
 
     private sealed class ImageGenerationToolBuilder(
         ImageGenerationAgentRuntimeToolProvider owner,
@@ -80,7 +104,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             providerSource;
         private readonly ProjectStructureAgentService? projectStructureAgentService = projectStructureAgentService;
 
-        public IReadOnlyList<AITool> CreateTools(AgentDefinition agent, ProviderProfile runtimeProvider)
+        public IReadOnlyList<AITool> CreateTools(
+            AgentDefinition agent,
+            ProviderProfile runtimeProvider,
+            IWorkspacePathResolutionService workspacePaths)
         {
             var access = AgentImageGenerationAccessMetadata.Read(agent.ConfigurationJson);
             if (!access.CanGenerateImages)
@@ -96,8 +123,8 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             return
             [
                 AIFunctionFactory.Create(
-                    (ImageGenerationCreateInput request, CancellationToken cancellationToken = default) => ImageGenerationCreateAsync(agent, runtimeProvider, access, request, cancellationToken),
-                    AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
+                    (ImageGenerationCreateInput request, CancellationToken cancellationToken = default) => ImageGenerationCreateAsync(agent, runtimeProvider, access, workspacePaths, request, cancellationToken),
+                    ImageGenerationToolPolicy.ImageGenerationCreate,
                     "Generates one image through the agent's allowed image-generation provider and writes the generated binary to a managed workspace path. To prepare a canonical project-asset attachment, supply projectAssetTarget with the exact projectId and parentNodeKey. The result then contains a strongly typed projectAssetCreateDraft for a separate project_structure_asset_create call. Image generation never mutates project structure itself, and the asset tool must be independently attached and authorized.")
             ];
         }
@@ -106,6 +133,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             AgentDefinition agent,
             ProviderProfile runtimeProvider,
             AgentImageGenerationAccessSettings access,
+            IWorkspacePathResolutionService workspacePaths,
             ImageGenerationCreateInput request,
             CancellationToken cancellationToken)
         {
@@ -115,6 +143,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                         agent,
                         runtimeProvider,
                         access,
+                        workspacePaths,
                         request,
                         cancellationToken)
                     .ConfigureAwait(false);
@@ -144,13 +173,17 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             AgentDefinition agent,
             ProviderProfile runtimeProvider,
             AgentImageGenerationAccessSettings access,
+            IWorkspacePathResolutionService workspacePaths,
             ImageGenerationCreateInput request,
             CancellationToken cancellationToken)
         {
             var normalizedAccess = AgentImageGenerationAccessMetadata.Normalize(access);
             if (!normalizedAccess.CanGenerateImages)
             {
-                throw new InvalidOperationException("This agent is not allowed to generate images.");
+                throw new ImageGenerationToolException(
+                    "ImageGenerationDenied",
+                    "This agent is not allowed to generate images. Ask the operator to enable image generation for this agent.",
+                    canRetryWithCorrectedInput: false);
             }
 
             ValidateRequest(request);
@@ -161,8 +194,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             var size = NormalizeOption(request.Size, providerConfiguration.DefaultSize, "1024x1024", ValidImageSizes, "image size");
             var quality = NormalizeOption(request.Quality, providerConfiguration.DefaultQuality, "low", ValidImageQualities, "image quality");
             var outputFormat = NormalizeOption(request.OutputFormat, providerConfiguration.DefaultOutputFormat, "png", ValidImageOutputFormats, "image output format");
-            var outputPath = owner.ResolveImageGenerationOutputPath(request.OutputWorkspacePath, outputFormat);
-            var sourceImages = await ResolveSourceImagesAsync(agent, request, cancellationToken);
+            var outputPath = ResolveImageGenerationOutputPath(workspacePaths, request.OutputWorkspacePath, outputFormat);
+            var sourceImages = await ResolveSourceImagesAsync(agent, request, workspacePaths, cancellationToken);
+            // An unexpected provider failure stays opaque: its detail may name private endpoints, so it is neither
+            // mapped nor shown to the model.
             var generated = await owner.imageGenerationService.GenerateAsync(
                 new AgentImageGenerationRequest(
                     provider,
@@ -174,14 +209,44 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                     sourceImages),
                 cancellationToken);
             var generatedImage = generated.Images.FirstOrDefault()
-                ?? throw new InvalidOperationException("Image generation completed without image data.");
+                ?? throw new ImageGenerationToolException(
+                    "ImageProviderReturnedNoImage",
+                    $"Image provider '{provider.Name}' completed without image data, so no file was written. Retry, or adjust the prompt or options.",
+                    canRetryWithCorrectedInput: true);
             var imageBytes = generatedImage.Bytes;
             var contentType = string.IsNullOrWhiteSpace(generatedImage.ContentType)
                 ? ResolveOutputContentType(outputFormat)
                 : generatedImage.ContentType.Trim();
 
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath.FullPath)!);
-            await File.WriteAllBytesAsync(outputPath.FullPath, imageBytes, cancellationToken);
+            FileStream output;
+            try
+            {
+                output = new FileStream(
+                    outputPath.FullPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.Read,
+                    bufferSize: 81_920,
+                    useAsync: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Opening the output failed, so the existing file was neither truncated nor replaced.
+                throw new ImageGenerationToolException(
+                    "OutputFileUnavailable",
+                    $"Output file '{outputPath.RelativePath}' could not be opened for writing. It may be open in another application; close it or choose another outputWorkspacePath, then retry.",
+                    canRetryWithCorrectedInput: true,
+                    exception);
+            }
+
+            await using (output)
+            {
+                await output.WriteAsync(imageBytes, cancellationToken);
+            }
+
+            // The generated image is durable once its file is written, so the run can account for this mutation.
+            AgentToolInvocationEffectScope.RecordCommitted(GeneratedImageEffectSourceKind, outputPath.RelativePath);
             var projectAssetCreateDraft = BuildProjectAssetCreateDraft(
                 projectAssetTarget,
                 outputPath,
@@ -218,23 +283,42 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             var provider = providerId.HasValue
                 ? providers.FirstOrDefault(item => item.Id == providerId.Value)
                 : ImageGenerationProviderSelectionPolicy.ResolveDefault(providers, runtimeProvider);
+            // Only a provider the request named can be corrected by the model; the agent's configured provider is
+            // the operator's to repair.
+            var canChooseAnotherProvider = requestedProviderId.HasValue;
+            const string chooseAnotherProvider =
+                " Omit providerProfileId to use this agent's image provider, or choose an enabled image-generation provider profile, then retry.";
 
             if (provider is null)
             {
-                var reason = providerId.HasValue
-                    ? $"Image-generation provider '{providerId.Value:D}' was not found."
-                    : "No enabled image-generation provider profile is configured.";
-                throw new InvalidOperationException(reason);
+                throw providerId.HasValue
+                    ? new ImageGenerationToolException(
+                        "ImageProviderNotFound",
+                        $"Image-generation provider profile '{providerId.Value:D}' was not found." +
+                        (canChooseAnotherProvider ? chooseAnotherProvider : " Ask the operator to repair this agent's image provider."),
+                        canChooseAnotherProvider)
+                    : new ImageGenerationToolException(
+                        "ImageProviderUnavailable",
+                        "No enabled image-generation provider profile is configured. Ask the operator to configure one.",
+                        canRetryWithCorrectedInput: false);
             }
 
             if (!provider.IsEnabled)
             {
-                throw new InvalidOperationException($"Image-generation provider '{provider.Name}' is disabled.");
+                throw new ImageGenerationToolException(
+                    "ImageProviderDisabled",
+                    $"Image-generation provider '{provider.Name}' is disabled." +
+                    (canChooseAnotherProvider ? chooseAnotherProvider : " Ask the operator to enable it."),
+                    canChooseAnotherProvider);
             }
 
             if (provider.Purpose != ProviderProfilePurpose.ImageGeneration)
             {
-                throw new InvalidOperationException($"Provider '{provider.Name}' is not an image-generation provider profile.");
+                throw new ImageGenerationToolException(
+                    "ImageProviderNotImageGeneration",
+                    $"Provider '{provider.Name}' is not an image-generation provider profile." +
+                    (canChooseAnotherProvider ? chooseAnotherProvider : " Ask the operator to repair this agent's image provider."),
+                    canChooseAnotherProvider);
             }
 
             return provider;
@@ -243,6 +327,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         private async Task<IReadOnlyList<AgentImageGenerationSource>> ResolveSourceImagesAsync(
             AgentDefinition agent,
             ImageGenerationCreateInput request,
+            IWorkspacePathResolutionService workspacePaths,
             CancellationToken cancellationToken)
         {
             var sourceImages = new List<AgentImageGenerationSource>();
@@ -253,8 +338,21 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                     continue;
                 }
 
-                var resolution = owner.ResolveWorkspaceImagePath(sourcePath);
-                var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
+                var resolution = ResolveWorkspaceImagePath(workspacePaths, sourcePath);
+                byte[] bytes;
+                try
+                {
+                    bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    throw new ImageGenerationToolException(
+                        "SourceImageUnreadable",
+                        $"Source image '{resolution.RelativePath}' could not be read. It may be open in another application; close it or choose another image, then retry.",
+                        canRetryWithCorrectedInput: true,
+                        exception);
+                }
+
                 var fileName = Path.GetFileName(resolution.FullPath);
                 sourceImages.Add(new AgentImageGenerationSource(
                     fileName,
@@ -268,7 +366,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 EnsureProjectAssetReadAllowed(agent, sourceAsset.ProjectId);
                 if (projectStructureAgentService is null)
                 {
-                    throw new InvalidOperationException("Project asset sources require project-structure services.");
+                    throw new ImageGenerationToolException(
+                        "ProjectAssetSourcesUnavailable",
+                        "Project asset sources are not available in this host. Remove sourceProjectAssets or use workspace source images, then retry.",
+                        canRetryWithCorrectedInput: true);
                 }
 
                 var content = await projectStructureAgentService.GetAssetContentAsync(
@@ -277,7 +378,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                     cancellationToken);
                 if (!content.Asset.MediaContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new InvalidOperationException($"Project asset '{sourceAsset.NodeId}' is not an image asset.");
+                    throw new ImageGenerationToolException(
+                        "ProjectAssetSourceNotImage",
+                        $"Project asset '{sourceAsset.NodeId}' is not an image asset. Choose a PNG, JPEG, or WEBP image asset and retry.",
+                        canRetryWithCorrectedInput: true);
                 }
 
                 byte[] bytes;
@@ -287,7 +391,11 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 }
                 catch (FormatException exception)
                 {
-                    throw new InvalidOperationException($"Project asset '{sourceAsset.NodeId}' did not contain valid base64 image content.", exception);
+                    throw new ImageGenerationToolException(
+                        "ProjectAssetSourceUnreadable",
+                        $"Project asset '{sourceAsset.NodeId}' did not contain valid image content. Choose another image asset and retry.",
+                        canRetryWithCorrectedInput: true,
+                        exception);
                 }
 
                 sourceImages.Add(new AgentImageGenerationSource(
@@ -306,7 +414,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson));
             if (!access.CanRead)
             {
-                throw new InvalidOperationException("This agent is not allowed to read project-structure assets.");
+                throw new ImageGenerationToolException(
+                    "ProjectAssetReadDenied",
+                    "This agent is not allowed to read project-structure assets. Remove sourceProjectAssets or use workspace source images, then retry.",
+                    canRetryWithCorrectedInput: true);
             }
 
             if (access.AllowAllProjects ||
@@ -315,7 +426,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 return;
             }
 
-            throw new InvalidOperationException($"Project '{projectId:D}' is outside the agent's allowed project-structure scope.");
+            throw new ImageGenerationToolException(
+                "ProjectAssetReadDenied",
+                $"Project '{projectId:D}' is outside this agent's allowed project-structure scope. Use a source asset from an allowed project, then retry.",
+                canRetryWithCorrectedInput: true);
         }
 
         private static string ResolveImageModel(
@@ -328,20 +442,35 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 : requestedModel.Trim();
             if (string.IsNullOrWhiteSpace(model))
             {
-                throw new InvalidOperationException($"Image-generation provider '{provider.Name}' does not define a default model.");
+                throw new ImageGenerationToolException(
+                    "ImageModelRequired",
+                    $"Image-generation provider '{provider.Name}' does not define a default model. Specify a model published by this provider and retry.",
+                    canRetryWithCorrectedInput: true);
             }
 
-            if (provider.IsSourceManaged && provider.ModelSelectionConstraint?.Allows(model) != true) {
-                var matches = provider.ModelCatalog
-                    .Where(item => string.Equals(item.DisplayName, model, StringComparison.Ordinal))
-                    .Take(2)
-                    .ToArray();
-                if (matches.Length != 1) {
-                    throw new ProviderModelSelectionException(provider.Id, model);
+            try
+            {
+                if (provider.IsSourceManaged && provider.ModelSelectionConstraint?.Allows(model) != true) {
+                    var matches = provider.ModelCatalog
+                        .Where(item => string.Equals(item.DisplayName, model, StringComparison.Ordinal))
+                        .Take(2)
+                        .ToArray();
+                    if (matches.Length != 1) {
+                        throw new ProviderModelSelectionException(provider.Id, model);
+                    }
+                    model = matches[0].Id;
                 }
-                model = matches[0].Id;
+                ProviderModelSelectionPolicy.EnsureAllowed(provider, model);
             }
-            ProviderModelSelectionPolicy.EnsureAllowed(provider, model);
+            catch (ProviderModelSelectionException exception)
+            {
+                throw new ImageGenerationToolException(
+                    "ImageModelUnavailable",
+                    $"{ProviderModelSelectionException.PublicMessage} Omit model to use the provider default, or choose a model published by this provider, then retry.",
+                    canRetryWithCorrectedInput: true,
+                    exception);
+            }
+
             return model;
         }
 
@@ -390,12 +519,18 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
             if (string.IsNullOrWhiteSpace(request.Prompt))
             {
-                throw new InvalidOperationException("Image generation requires a prompt.");
+                throw new ImageGenerationToolException(
+                    "ImagePromptRequired",
+                    "Image generation requires a non-empty prompt. Describe the image and retry.",
+                    canRetryWithCorrectedInput: true);
             }
 
             if (string.IsNullOrWhiteSpace(request.OutputWorkspacePath))
             {
-                throw new InvalidOperationException("Image generation requires an output workspace path.");
+                throw new ImageGenerationToolException(
+                    "ImageOutputPathRequired",
+                    "Image generation requires an outputWorkspacePath for the generated file. Provide a workspace file path and retry.",
+                    canRetryWithCorrectedInput: true);
             }
         }
 
@@ -532,7 +667,9 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             "auto",
             "low",
             "medium",
-            "high"
+            "high",
+            "xhigh",
+            "max"
         };
 
         private static readonly IReadOnlySet<string> ValidImageOutputFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -562,11 +699,14 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         }
     }
 
+    // Every image-generation rejection is raised while validating the request, its provider or its paths, or when the
+    // provider returned no image, always before the output file is written, so it is a proven no-effect failure the
+    // model may correct or retry.
     private sealed class ImageGenerationToolException(
         string errorCode,
         string message,
         bool canRetryWithCorrectedInput,
-        Exception? innerException = null) : InvalidOperationException(message, innerException), IAgentToolFailure
+        Exception? innerException = null) : InvalidOperationException(message, innerException), IAgentToolFailureEffectEvidence
     {
         public string ErrorCode { get; } = errorCode;
 
@@ -575,9 +715,13 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         public bool IsSafeToExpose => true;
 
         public bool CanRetryWithCorrectedInput { get; } = canRetryWithCorrectedInput;
+
+        public AgentToolEffectState EffectState => AgentToolEffectState.NotCommitted;
     }
 
-    private WorkspaceImagePathResolution ResolveWorkspaceImagePath(string path)
+    private static WorkspaceImagePathResolution ResolveWorkspaceImagePath(
+        IWorkspacePathResolutionService workspacePaths,
+        string path)
     {
         WorkspaceResolvedPath resolution;
         try
@@ -611,7 +755,8 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             NormalizeWorkspaceRelativePath(resolution.RelativePath));
     }
 
-    private ImageGenerationOutputPath ResolveImageGenerationOutputPath(
+    private static ImageGenerationOutputPath ResolveImageGenerationOutputPath(
+        IWorkspacePathResolutionService workspacePaths,
         string outputWorkspacePath,
         string outputFormat)
     {
@@ -665,7 +810,8 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 "ImageSourceFileRequired",
                 "The source image path identifies a directory, but an image file is required. Choose an existing PNG, JPEG, or WEBP workspace image and retry."),
             WorkspacePathResolutionFailureKind.OutsideWorkspace or
-            WorkspacePathResolutionFailureKind.ForeignManagedScope => (
+            WorkspacePathResolutionFailureKind.ForeignManagedScope or
+            WorkspacePathResolutionFailureKind.ForeignHostPath => (
                 "ImageSourcePathOutsideWorkspace",
                 "Source images must be inside the active workspace scope. Choose an existing workspace image and retry."),
             WorkspacePathResolutionFailureKind.InvalidPath or
@@ -696,7 +842,8 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 "ImageOutputFileRequired",
                 "The image output path identifies a directory, but a file path is required. Choose a workspace file path and retry."),
             WorkspacePathResolutionFailureKind.OutsideWorkspace or
-            WorkspacePathResolutionFailureKind.ForeignManagedScope => (
+            WorkspacePathResolutionFailureKind.ForeignManagedScope or
+            WorkspacePathResolutionFailureKind.ForeignHostPath => (
                 "ImageOutputPathOutsideWorkspace",
                 "The image output path must be inside the active workspace scope. Choose a workspace file path and retry."),
             WorkspacePathResolutionFailureKind.InvalidPath or

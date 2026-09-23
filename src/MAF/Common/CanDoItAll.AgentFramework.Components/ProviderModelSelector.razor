@@ -100,7 +100,7 @@
         => NormalizeProviderDefaultModel(value, provider?.DefaultModel);
 
     public static string NormalizeProviderDefaultModel(string? value, string? providerDefaultModel)
-        => ConversationProviderModelSelector.NormalizeProviderDefaultModel(value);
+        => ProviderModelValuePolicy.Normalize(value);
 
     private string ResolveProviderName(string fallback)
         => string.IsNullOrWhiteSpace(ProviderName) ? fallback : ProviderName.Trim();

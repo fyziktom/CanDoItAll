@@ -3,15 +3,12 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
 
-[Collection(PlaywrightCollection.Name)]
-public sealed class ProcessShellSmokeTests
-{
-    private readonly PlaywrightAppFixture fixture;
+public sealed class ProcessShellSmokeTests : IAsyncLifetime {
+    private readonly PlaywrightAppFixture fixture = new();
 
-    public ProcessShellSmokeTests(PlaywrightAppFixture fixture)
-    {
-        this.fixture = fixture;
-    }
+    public Task InitializeAsync() => fixture.InitializeAsync();
+
+    public Task DisposeAsync() => fixture.DisposeAsync();
 
     [Fact]
     public async Task Process_canvas_stays_maximized_through_selection_and_recomposition()
@@ -31,7 +28,7 @@ public sealed class ProcessShellSmokeTests
         var response = await page.GotoAsync($"{fixture.BaseUrl}/processes");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /processes to return 2xx, got {(int)response.Status}.");
-        await DismissStartupModalIfPresentAsync(page, timeoutMs: 15_000);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("processes-shell").WaitForAsync();
         await page.GetByTestId("processes-definition-search").FillAsync("software-delivery");
         await page.GetByTestId("processes-definition-search-submit").ClickAsync();
@@ -117,7 +114,7 @@ public sealed class ProcessShellSmokeTests
         var globalResponse = await page.GotoAsync($"{fixture.BaseUrl}/processes");
         Assert.NotNull(globalResponse);
         Assert.True(globalResponse!.Ok, $"Expected /processes to return 2xx, got {(int)globalResponse.Status}.");
-        await DismissStartupModalIfPresentAsync(page);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("processes-shell").WaitForAsync();
         await page.GetByTestId("processes-command-strip").WaitForAsync();
         await page.GetByTestId("processes-tab-definitions").WaitForAsync();
@@ -139,6 +136,8 @@ public sealed class ProcessShellSmokeTests
         await page.GetByTestId("processes-definition-canvas").WaitForAsync();
         await page.Locator(".cw-workbench").WaitForAsync();
         await page.Locator(".cw-workbench__canvas--nodes").WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("processes-canvas-node-step-decision-intake"))
+            .ToHaveTextAsync("Capture architecture decision demand");
         await page.GetByTestId("processes-canvas-node-step-decision-intake")
             .EvaluateAsync("element => element.click()");
         await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Capture architecture decision demand");
@@ -219,11 +218,14 @@ public sealed class ProcessShellSmokeTests
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         var projectId = await CreateProjectAsync(page, "Playwright Process Shell", "Discovery");
-        var runId = Guid.Parse("55555555-5555-5555-5555-555555555555");
-        var projectResponse = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes?runId={runId:D}");
+        var projectResponse = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes");
         Assert.NotNull(projectResponse);
         Assert.True(projectResponse!.Ok, $"Expected project-scoped processes route to return 2xx, got {(int)projectResponse.Status}.");
+        await Assertions.Expect(page.GetByRole(AriaRole.Tablist, new() { Name = "Open workspace tabs", Exact = true })
+            .GetByRole(AriaRole.Tab, new() { Name = "Playwright Process Shell · Processes", Exact = true }))
+            .ToHaveAttributeAsync("aria-selected", "true");
         await page.GetByTestId("processes-shell").WaitForAsync();
+        await page.GetByTestId("processes-detail-tab-runs").ClickAsync();
         await page.GetByTestId("processes-detail-panel-runs").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -231,6 +233,13 @@ public sealed class ProcessShellSmokeTests
             FullPage = true
         });
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+        var runId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var deniedResponse = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes?runId={runId:D}");
+        Assert.NotNull(deniedResponse);
+        Assert.True(deniedResponse.Ok);
+        await Assertions.Expect(page.GetByTestId("processes-shell-error"))
+            .ToContainTextAsync("The selected Process run does not belong to this exact project lifetime.");
+        await Assertions.Expect(page.GetByTestId("processes-shell")).ToHaveCountAsync(0);
         await WriteBrowserValidationSummaryAsync(artifactDirectory, consoleMessages, failedRequests, ignoredFailedRequests, pageErrors);
         Assert.Empty(pageErrors);
         Assert.Empty(failedRequests);
@@ -239,7 +248,7 @@ public sealed class ProcessShellSmokeTests
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
     {
         await page.GotoAsync($"{fixture.BaseUrl}/projects");
-        await DismissStartupModalIfPresentAsync(page, timeoutMs: 15_000);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("projects-new-button").WaitForAsync();
         await page.GetByTestId("projects-new-button").ClickAsync();
 
@@ -262,31 +271,6 @@ public sealed class ProcessShellSmokeTests
         var match = Regex.Match(page.Url, @"/projects/(?<projectId>[0-9a-fA-F-]+)/structure$", RegexOptions.IgnoreCase);
         Assert.True(match.Success, $"Could not parse project id from {page.Url}.");
         return Guid.Parse(match.Groups["projectId"].Value);
-    }
-
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        if (!await WaitForLocatorAsync(startupDialog, timeoutMs))
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
-    }
-
-    private static async Task<bool> WaitForLocatorAsync(ILocator locator, float timeoutMs)
-    {
-        try
-        {
-            await locator.WaitForAsync(new() { Timeout = timeoutMs });
-            return true;
-        }
-        catch (TimeoutException)
-        {
-            return false;
-        }
     }
 
     private static async Task ExpectTextContainsAsync(ILocator locator, string expectedText)

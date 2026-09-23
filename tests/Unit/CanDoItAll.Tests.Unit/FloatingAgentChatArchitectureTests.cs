@@ -83,6 +83,45 @@ public sealed class AgentChatContextRegistryTests
     }
 
     [Fact]
+    public void Leases_report_inactive_after_supersession_or_disposal()
+    {
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var navigation = AgentChatNavigationIdentity.CreateForLocation(
+            "https://localhost/",
+            "https://localhost/projects/structure");
+        var scopeLease = registry.ActivateScope(CreateScope("Project structure"));
+        Assert.True(scopeLease.IsActive);
+
+        var publicationLease = registry.PublishModuleContext(
+            CreatePublication(AgentChatContextScopeId.Create(), "Delivery"));
+
+        Assert.False(scopeLease.IsActive);
+        Assert.True(publicationLease.IsActive);
+        Assert.Throws<InvalidOperationException>(() => scopeLease.SynchronizeNavigation(navigation));
+
+        scopeLease.Dispose();
+        Assert.False(scopeLease.IsActive);
+        Assert.True(publicationLease.IsActive);
+        Assert.Equal(
+            publicationLease.ScopeId,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id);
+
+        var replacement = registry.PublishModuleContext(
+            CreatePublication(AgentChatContextScopeId.Create(), "Replacement"));
+        Assert.False(publicationLease.IsActive);
+        Assert.Throws<InvalidOperationException>(() => publicationLease.SynchronizeNavigation(navigation));
+        publicationLease.Dispose();
+        Assert.True(replacement.IsActive);
+        Assert.Equal(
+            replacement.ScopeId,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id);
+
+        replacement.Dispose();
+        Assert.False(replacement.IsActive);
+        Assert.Null(registry.Capture());
+    }
+
+    [Fact]
     public void Fragment_leases_update_remove_and_order_fragments_deterministically()
     {
         var registry = new AgentChatContextRegistry(TimeProvider.System);

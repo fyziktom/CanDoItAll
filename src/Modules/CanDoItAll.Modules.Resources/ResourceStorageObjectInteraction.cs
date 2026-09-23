@@ -1,12 +1,11 @@
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
-using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Resources;
 
 internal sealed class ResourceStorageObjectInteractionService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ResourcesDbContext> dbContextFactory,
     IResourceFileSourceCatalog sourceCatalog,
     IFileToolsKnownFileActivator knownFileActivator,
     IFileToolsKnownFileSessionFactory knownFileSessions,
@@ -21,7 +20,7 @@ internal sealed class ResourceStorageObjectInteractionService(
             throw new ArgumentException("A resource identifier is required.", nameof(resourceId));
         }
 
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using ResourcesDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         ProjectResource resource = await dbContext.Set<ProjectResource>()
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == resourceId, cancellationToken)

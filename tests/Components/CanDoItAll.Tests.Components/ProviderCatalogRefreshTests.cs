@@ -16,8 +16,8 @@ public sealed class ProviderCatalogRefreshTests {
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => services.AddSingleton<IHttpClientFactory>(http));
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
-        cut.WaitForElement("[data-testid='providers-tree-provider']");
-        cut.WaitForElement("[data-testid='providers-new']").Click();
+        cut.WaitForElement("[data-testid='provider-editor-tabs']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='providers-new']").ClickAsync());
         cut.Find("[data-testid='providers-name-input']").Change("Real inventory test");
         cut.Find("[data-testid='providers-model-input']").Change("gpt-5.4-mini");
         cut.Find("[data-testid='providers-kind-select']").Change(ProviderKind.Ollama.ToString());
@@ -67,9 +67,9 @@ public sealed class ProviderCatalogRefreshTests {
             ModelPrices = [new() { Model = "gemma3:4b", InputPerMillionTokensUsd = 0.1m }]
         });
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
-        cut.WaitForElement("[data-testid='providers-tree-provider']");
-        cut.FindAll("[data-testid='providers-tree-provider']")
-            .First(node => node.TextContent.Contains("AAA existing inventory")).Click();
+        cut.WaitForElement("[data-testid='provider-editor-tabs']");
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='providers-tree-provider']")
+            .First(node => node.TextContent.Contains("AAA existing inventory", StringComparison.Ordinal)).ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal("AAA existing inventory", Input(cut, "providers-name-input")));
         await OpenTabAsync(cut, "Prices");
         await cut.WaitForElement("[data-testid='provider-pricing-refresh-button']").ClickAsync(new());
@@ -81,8 +81,9 @@ public sealed class ProviderCatalogRefreshTests {
     }
 
     private static Task OpenTabAsync(IRenderedComponent<AgentProviderProfilesPanel> cut, string name) {
+        cut.WaitForElement("[data-testid='provider-editor-tabs']");
         return cut.InvokeAsync(() => cut.FindAll("button[role='tab']")
-            .Single(button => button.TextContent.Contains(name, StringComparison.Ordinal)).Click());
+            .Single(button => button.TextContent.Contains(name, StringComparison.Ordinal)).ClickAsync());
     }
 
     private static string Input(IRenderedComponent<AgentProviderProfilesPanel> cut, string testId) =>

@@ -1,11 +1,16 @@
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.CrmHr;
+
 namespace CanDoItAll.Modules.AgentFramework;
 
-internal sealed class AgentDirectoryProjectionSynchronizationException(
+public sealed class AgentDirectoryProjectionSynchronizationException(
     Guid agentId,
-    Exception innerException)
-    : Exception(
-        $"Agent '{agentId:D}' was saved, but its CRM/HR directory projection could not be synchronized.",
-        innerException)
-{
-    public Guid AgentId { get; } = agentId;
+    Exception innerException,
+    AgentPackageImportReceipt? importReceipt = null,
+    AgentExternalProvisioningReceipt? provisioningReceipt = null,
+    Guid? partyId = null)
+    : AiTechnicalAgentCommittedSaveException(agentId, partyId, innerException) {
+    public Guid AgentId => TechnicalAgentId;
+    public AgentPackageImportReceipt? ImportReceipt { get; } = importReceipt;
+    public AgentExternalProvisioningReceipt? ProvisioningReceipt { get; } = provisioningReceipt;
 }

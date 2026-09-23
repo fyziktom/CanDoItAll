@@ -1,0 +1,9 @@
+# Write the process note node
+
+Create exactly one durable project-structure node that carries the result of this run back into the project. Resolve the parent from `TargetProcessRunNodeId`, `ParentProcessRunNodeId` or `ProcessRunNodeId` in that order; when none of them is present in the launch variables, use `ProjectNodeId` (the selected node) as the parent. Create the node with `project_structure_node_create` as `ProjectBlock` with subtype `operations`, title `Process note: <selected node title>`, subtitle `Process run <current-process-run-id>`, and notes that repeat the selected node summary from the upstream brief plus the exact date and time of this step. On retry, reuse an existing node with the same parent, object type, subtype and title instead of creating a duplicate. After the write, call `project_structure_read` and confirm that the created or reused node is present under the resolved parent; then write the required receipt artifact at `artifacts/process-runs/<current-process-run-id>/steps/write-note-node.md` with the project id, the parent node id, the created node id, the node title, the write and read receipt ids and the status. Do not return `Completed` with only an intended payload, a placeholder node id or "pending writeback" text: the `project_structure_node_create` and `project_structure_read` receipts are the acceptance proof of this step. If the node cannot be created, return `Blocked` with the exact tool failure instead of a placeholder. Use project-structure write tools only through this externally controlled step; do not mutate product files.
+
+## Contract
+- Inputs: The selected-node brief from the previous step and the process-run node context.
+- Outputs: One `ProjectBlock` (`operations`) note node under the resolved parent and its receipt artifact.
+- Evidence: Created node id, parent node id, write and read receipt ids written to `steps/write-note-node.md`.
+- Operation target scope: `ExternalActionControlled`

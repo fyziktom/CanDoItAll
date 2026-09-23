@@ -22,6 +22,22 @@ internal static class WorkflowApiSafeProjection
             run.UpdatedAtUtc,
             run.TerminalAtUtc);
 
+    // The cancellation and analytics operations return stored run records of any caller, so they withhold the launch
+    // origin: it names the launching caller (token subject, display name and credential) and the authority captured
+    // for the launch.
+    public static WorkflowRunSnapshot WithoutLaunchOrigin(WorkflowRunSnapshot run)
+        => run.Origin is null ? run : run with { Origin = null };
+
+    public static WorkflowRunCancellationResult WithoutLaunchOrigin(WorkflowRunCancellationResult result)
+        => result.Run is null ? result : result with { Run = WithoutLaunchOrigin(result.Run) };
+
+    public static WorkflowAnalyticsSnapshot WithoutLaunchOrigins(WorkflowAnalyticsSnapshot snapshot)
+        => snapshot with
+        {
+            Runs = snapshot.Runs.Select(row => row with { Run = WithoutLaunchOrigin(row.Run) }).ToArray(),
+            RecentRuns = snapshot.RecentRuns.Select(WithoutLaunchOrigin).ToArray()
+        };
+
     public static WorkflowEventApiResponse Map(WorkflowEventRecord workflowEvent)
         => new(
             workflowEvent.Id,

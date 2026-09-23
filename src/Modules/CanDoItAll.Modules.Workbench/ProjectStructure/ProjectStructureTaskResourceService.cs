@@ -114,7 +114,7 @@ public sealed class ProjectStructureTaskResourceService(
                     taskNodeId,
                     selection,
                     AssignmentSource,
-                    cancellationToken);
+                    cancellationToken, agent);
                 return new ProjectStructureTaskResourceAttachment(
                     selection.Kind,
                     CreatedNodeId: null,

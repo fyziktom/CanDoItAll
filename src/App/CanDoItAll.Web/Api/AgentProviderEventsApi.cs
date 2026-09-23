@@ -12,13 +12,13 @@ internal static class AgentProviderEventsApi
 {
     public static RouteGroupBuilder MapAgentProviderEventsApi(this RouteGroupBuilder group)
     {
-        group.MapGroup("/agents")
+        group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents")
             .DisableAntiforgery()
             .MapPost(
                 "/providers/{providerId:guid}/chat-completions/stream",
                 StreamChatCompletionAsync)
-            .WithName("StreamAgentProviderChatCompletion")
+            .WithName("StreamAgentProviderChatCompletion").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<ProviderChatCompletionApiRequest>("application/json")
             .Produces<string>(
                 StatusCodes.Status200OK,
@@ -32,6 +32,61 @@ internal static class AgentProviderEventsApi
         return group;
     }
 
+    /// <summary>
+    /// Send one chat completion request to a provider profile and stream its status and answer as server-sent events.
+    /// </summary>
+    /// <remarks>
+    /// Calls the provider profile directly, outside any agent, chat session or execution run, and reports the call as
+    /// a <c>text/event-stream</c>. It is the streaming form of <c>POST /api/agents/providers/{providerId}/test-chat</c>
+    /// and is meant for checking a provider profile: the answer arrives once, in the last event, not token by token.
+    ///
+    /// The request is validated and the provider profile is looked up before the stream starts; those rejections are
+    /// returned as JSON with the error statuses below. After HTTP 200 the outcome arrives as an event.
+    ///
+    /// Events; each has an <c>id:</c> and one JSON <c>data:</c> line with camel-case members:
+    ///
+    /// - <c>provider.chat.accepted</c> (<c>id: 1</c>): <c>operationId</c>, a new identifier of this stream only, and
+    /// <c>providerId</c>.
+    /// - <c>provider.chat.running</c> (<c>id: 2</c>): the same members; the provider call has started.
+    /// - <c>provider.chat.completed</c> (<c>id: 3</c>): <c>operationId</c>, <c>providerId</c> and <c>result</c> with
+    /// <c>model</c> (the model that answered, as reported), <c>responseText</c>, <c>inputTokens</c> and
+    /// <c>outputTokens</c>.
+    /// - <c>provider.chat.failed</c> (<c>id: 3</c>): <c>operationId</c>, <c>providerId</c>, <c>code</c>
+    /// (<c>providers.chat-completion-failed</c>) and <c>message</c>. No failure detail is disclosed: a disabled
+    /// provider profile, a provider error and an empty answer all report this event.
+    ///
+    /// While the provider call runs, a comment line <c>: heartbeat</c> followed by a UTC timestamp is sent every
+    /// heartbeat interval (15 seconds by default). The server closes the response after
+    /// <c>provider.chat.completed</c> or <c>provider.chat.failed</c>. The stream cannot be resumed: the
+    /// <c>Last-Event-ID</c> header is ignored and no other operation accepts its <c>operationId</c>. Closing the
+    /// connection cancels the provider call. The call can be recorded in provider request history under the calling
+    /// identity.
+    ///
+    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
+    /// </remarks>
+    /// <param name="providerId">
+    /// Identifier of the provider profile to call (not the empty GUID), as listed by <c>GET /api/agents/providers</c>.
+    /// </param>
+    /// <param name="request">The model to call, an optional system prompt, earlier messages and the new prompt.</param>
+    /// <response code="200">
+    /// The <c>text/event-stream</c> described above. Unless the client disconnects it ends with
+    /// <c>provider.chat.completed</c> or <c>provider.chat.failed</c>.
+    /// </response>
+    /// <response code="400">
+    /// Rejected before the stream started (<c>providers.request-invalid</c>): the empty GUID as provider identifier, a
+    /// blank <c>model</c> or <c>prompt</c>, or <c>messages</c> missing or null. A body the framework cannot bind is
+    /// rejected with HTTP 400 before the operation runs and has no error envelope.
+    /// </response>
+    /// <response code="401">
+    /// API authorization is enabled and the request has no valid bearer token (<c>api.authorization-required</c>).
+    /// </response>
+    /// <response code="403">
+    /// An authorization policy rejected the authenticated caller (<c>api.authorization-forbidden</c>). This operation
+    /// itself requires only a valid bearer token.
+    /// </response>
+    /// <response code="404">
+    /// No provider profile with this identifier exists (<c>providers.not-found</c>). Nothing was sent to a provider.
+    /// </response>
     internal static async Task<IResult> StreamChatCompletionAsync(
         Guid providerId,
         ProviderChatCompletionApiRequest request,
@@ -255,6 +310,19 @@ internal static class AgentProviderEventsApi
     }
 }
 
+/// <summary>
+/// One chat completion request sent directly to a provider profile, outside any agent: the model to call, an
+/// optional system prompt, earlier conversation messages and the new prompt. Send every member.
+/// </summary>
+/// <param name="Model">Identifier of the model to call through the provider profile; must not be blank.</param>
+/// <param name="SystemPrompt">
+/// System prompt for the call. A blank value uses a built-in instruction for provider checks.
+/// </param>
+/// <param name="Messages">
+/// Earlier conversation messages sent to the provider before the prompt. Send an empty array for a single question;
+/// a missing or null member is rejected with <c>providers.request-invalid</c>.
+/// </param>
+/// <param name="Prompt">The new user prompt; must not be blank.</param>
 public sealed record ProviderChatCompletionApiRequest(
     string Model,
     string SystemPrompt,
@@ -267,19 +335,43 @@ public sealed record ProviderChatCompletionApiRequest(
     }
 }
 
+/// <summary>
+/// Data of the <c>provider.chat.accepted</c> server-sent event: the provider chat completion was accepted.
+/// </summary>
+/// <param name="OperationId">Identifier generated for this stream; no other operation accepts it.</param>
+/// <param name="ProviderId">Identifier of the called provider profile, from the route.</param>
 public sealed record ProviderChatCompletionAccepted(
     Guid OperationId,
     Guid ProviderId);
 
+/// <summary>
+/// Data of the <c>provider.chat.running</c> server-sent event: the provider call has started.
+/// </summary>
+/// <param name="OperationId">Identifier generated for this stream.</param>
+/// <param name="ProviderId">Identifier of the called provider profile.</param>
 public sealed record ProviderChatCompletionRunning(
     Guid OperationId,
     Guid ProviderId);
 
+/// <summary>
+/// Data of the <c>provider.chat.completed</c> server-sent event: the provider answered.
+/// </summary>
+/// <param name="OperationId">Identifier generated for this stream.</param>
+/// <param name="ProviderId">Identifier of the called provider profile.</param>
+/// <param name="Result">The answer: model, response text and reported token counts.</param>
 public sealed record ProviderChatCompletionCompleted(
     Guid OperationId,
     Guid ProviderId,
     ProviderTestChatResult Result);
 
+/// <summary>
+/// Data of the <c>provider.chat.failed</c> server-sent event: the provider call failed or could not start. The
+/// failure detail is logged on the server only.
+/// </summary>
+/// <param name="OperationId">Identifier generated for this stream.</param>
+/// <param name="ProviderId">Identifier of the called provider profile.</param>
+/// <param name="Code">Always <c>providers.chat-completion-failed</c>.</param>
+/// <param name="Message">Generic human-readable failure text; its wording can change.</param>
 public sealed record ProviderChatCompletionFailed(
     Guid OperationId,
     Guid ProviderId,

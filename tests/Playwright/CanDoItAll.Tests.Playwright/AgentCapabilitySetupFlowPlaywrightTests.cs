@@ -19,7 +19,7 @@ public sealed class AgentCapabilitySetupFlowPlaywrightTests
     [Fact]
     public async Task Capabilities_tab_supports_tool_setup_test_and_access_preview_on_large_screen()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\codex\bundles\skill-tool-mcp-isolation-template-migration\proof\regression";
+        var evidenceDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(evidenceDirectory);
 
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
@@ -64,11 +64,15 @@ public sealed class AgentCapabilitySetupFlowPlaywrightTests
         await setupDiagnostics.EvaluateAsync("element => element.scrollIntoView({ block: 'center', inline: 'nearest' })");
         await ExpectTextContainsAsync(setupDiagnostics, "JsonParse");
 
-        await page.ScreenshotAsync(new PageScreenshotOptions
+        if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+
+            await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(evidenceDirectory, "agent-capability-setup-flow-large.png"),
             FullPage = true
         });
+
+        }
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -165,27 +169,10 @@ public sealed class AgentCapabilitySetupFlowPlaywrightTests
         throw new TimeoutException($"Timed out waiting for text '{expectedValue}'.");
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
-    }
+    // The startup database prompt is raised by the layout after its asynchronous profile load, which can complete after the
+    // routed page has already rendered; a fixed short poll therefore races it. Use the fixture's startup contract instead.
+    private static Task DismissStartupModalIfPresentAsync(IPage page)
+        => PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
 
     private sealed record SeededCapabilityAgent(
         Guid AgentId,

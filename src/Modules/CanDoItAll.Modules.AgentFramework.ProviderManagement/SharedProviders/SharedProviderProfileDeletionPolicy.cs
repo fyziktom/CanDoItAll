@@ -44,7 +44,7 @@ public sealed class SharedProviderProfileDeletionBlockedException : InvalidOpera
                 "At least one known shared-provider reference is required.")
         };
 
-        return $"Provider profile '{providerProfileId:D}' cannot be deleted because it is referenced by {referenceDescription}. Retire or remove the reference first.";
+        return $"Provider profile '{providerProfileId:D}' cannot be deleted because it is referenced by {referenceDescription}. {SharedProviderDeletionMessages.For(referenceKinds)}";
     }
 }
 
@@ -52,7 +52,7 @@ public sealed class SharedProviderProfileDeletionGuard :
     IProviderProfileDeletionGuard
 {
     public async Task EnsureCanDeleteAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid providerProfileId,
         CancellationToken cancellationToken)
     {
@@ -90,4 +90,20 @@ public sealed class SharedProviderProfileDeletionGuard :
                 referenceKinds);
         }
     }
+}
+
+
+public static class SharedProviderDeletionMessages {
+    public static string For(SharedProviderProfileReferenceKinds kinds) => kinds switch {
+        SharedProviderProfileReferenceKinds.Publication =>
+            "The permanent publication identity prevents deletion. Unpublish only stops sharing.",
+        SharedProviderProfileReferenceKinds.Import =>
+            "Retire the imported provider instead of deleting it. Its audit identity remains.",
+        SharedProviderProfileReferenceKinds.Publication | SharedProviderProfileReferenceKinds.Import =>
+            "The permanent publication identity prevents deletion; Unpublish only stops sharing. Retire the import; its audit identity remains.",
+        _ => "Permanent provider references prevent deletion."
+    };
+
+    public const string SourceWithImports =
+        "Retire or migrate the source's imports before deleting the source. Retained audit references continue to prevent deletion.";
 }

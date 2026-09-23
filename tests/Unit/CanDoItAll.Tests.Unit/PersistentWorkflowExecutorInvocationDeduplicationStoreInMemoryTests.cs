@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class PersistentWorkflowExecutorInvocationDeduplicationStoreInMemoryTests
 {
     private static readonly DateTimeOffset TestTime =
@@ -198,10 +197,8 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStoreInMemo
 
     private static PersistentWorkflowExecutorInvocationDeduplicationStore CreateStore()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([
-            typeof(AgentFrameworkModuleAssemblyMarker).Assembly
-        ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-executor-dedup-{Guid.NewGuid():N}")
             .Options;
         return new PersistentWorkflowExecutorInvocationDeduplicationStore(
@@ -259,12 +256,12 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStoreInMemo
     private static string Hash(string value)
         => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
-    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) :
-        IDbContextFactory<AppDbContext>
+    private sealed class TestDbContextFactory(DbContextOptions<WorkflowDbContext> options) :
+        IDbContextFactory<WorkflowDbContext>
     {
-        public AppDbContext CreateDbContext() => new(options);
+        public WorkflowDbContext CreateDbContext() => new(options);
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        public Task<WorkflowDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());

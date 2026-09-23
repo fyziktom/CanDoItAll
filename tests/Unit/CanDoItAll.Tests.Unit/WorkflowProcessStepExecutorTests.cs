@@ -12,8 +12,10 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class WorkflowProcessStepExecutorTests
+public sealed partial class WorkflowProcessStepExecutorTests
 {
+    private static readonly Guid ClaimToken = Guid.NewGuid();
+    private static readonly Guid ProfileId = Guid.NewGuid();
     private static readonly DateTimeOffset Now = new(2026, 7, 12, 20, 30, 0, TimeSpan.Zero);
 
     [Fact]
@@ -37,12 +39,12 @@ public sealed class WorkflowProcessStepExecutorTests
         {
             Run = launchedRun
         };
-        var executor = CreateExecutor(launch, runtime);
+        var executor = CreateExecutor(launch, runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
         var intent = Assert.Single(launch.Intents);
@@ -53,9 +55,9 @@ public sealed class WorkflowProcessStepExecutorTests
         Assert.Equal(WorkflowLaunchCompletionPolicy.WaitForStopped, intent.CompletionPolicy);
         Assert.Null(intent.RequestedBackend);
         Assert.False(intent.PreviewSimulationPlan.HasSteps);
-        var origin = Assert.IsType<WorkflowLaunchOrigin.ProcessAssignment>(intent.Origin);
-        Assert.Equal(new WorkflowProcessRunId(assignment.RunId.Value), origin.ProcessRun);
-        Assert.Equal(new WorkflowProcessAssignmentId(assignment.StepInstanceId.Value), origin.Assignment);
+        var origin = Assert.IsType<WorkflowLaunchOrigin.ProcessDispatchAssignment>(intent.Origin);
+        Assert.Equal(new WorkflowProcessRunId(assignment.RunId.Value), origin.Dispatch.ProcessRun);
+        Assert.Equal(new WorkflowProcessAssignmentId(assignment.StepInstanceId.Value), origin.Dispatch.Assignment);
         Assert.Equal(assignment.RunId.Value.ToString("D"), origin.CorrelationId.Value);
         var idempotency = Assert.IsType<WorkflowLaunchIdempotency.CallerSupplied>(intent.Idempotency);
         Assert.Equal(
@@ -88,16 +90,17 @@ public sealed class WorkflowProcessStepExecutorTests
             Events = [CreateOutputEvent(child.RunId, CreateCompletedOutput())]
         };
         var launch = new RecordingWorkflowLaunchService();
-        var executor = CreateExecutor(launch, runtime);
+        var executor = CreateExecutor(launch, runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
         Assert.Empty(launch.Intents);
-        Assert.Equal(new WorkflowId(binding.WorkflowId.Value), runtime.ListedWorkflowId);
+        Assert.Equal((new WorkflowProcessRunId(assignment.RunId.Value), new WorkflowProcessAssignmentId(assignment.StepInstanceId.Value)), runtime.RequestedAssignment);
+        Assert.Null(runtime.ListedWorkflowId);
     }
 
     [Theory]
@@ -116,13 +119,13 @@ public sealed class WorkflowProcessStepExecutorTests
             CreateProcessOrigin(assignment));
         var runtime = new RecordingWorkflowRuntimeManager { Runs = [child] };
         var launch = new RecordingWorkflowLaunchService();
-        var executor = CreateExecutor(launch, runtime);
+        var executor = CreateExecutor(launch, runtime, assignment);
 
         var exception = await Assert.ThrowsAsync<ProcessRuntimeDispatchDeferredException>(() =>
             executor.ExecuteAsync(
                 assignment,
                 ProcessStepExecutionContract.Empty,
-                CancellationToken.None).AsTask());
+                CancellationToken.None, dispatchClaimIdentity: new(ClaimToken)).AsTask());
 
         Assert.Contains(child.RunId.Value.ToString("D"), exception.Message, StringComparison.Ordinal);
         Assert.Empty(launch.Intents);
@@ -144,12 +147,12 @@ public sealed class WorkflowProcessStepExecutorTests
             CreateProcessOrigin(assignment));
         var runtime = new RecordingWorkflowRuntimeManager { Runs = [child] };
         var launch = new RecordingWorkflowLaunchService();
-        var executor = CreateExecutor(launch, runtime);
+        var executor = CreateExecutor(launch, runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         Assert.Equal(expectedOutcome, result.Outcome);
         Assert.Empty(launch.Intents);
@@ -170,12 +173,12 @@ public sealed class WorkflowProcessStepExecutorTests
             Summary = protectedBackendSummary
         };
         var runtime = new RecordingWorkflowRuntimeManager { Runs = [child] };
-        var executor = CreateExecutor(new RecordingWorkflowLaunchService(), runtime);
+        var executor = CreateExecutor(new RecordingWorkflowLaunchService(), runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         var publicResult = JsonSerializer.Serialize(result);
         Assert.Equal(StrategyOutcome.Failed, result.Outcome);
@@ -223,12 +226,12 @@ public sealed class WorkflowProcessStepExecutorTests
             Runs = [child],
             Events = [CreateOutputEvent(child.RunId, invalidOutput)]
         };
-        var executor = CreateExecutor(new RecordingWorkflowLaunchService(), runtime);
+        var executor = CreateExecutor(new RecordingWorkflowLaunchService(), runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         var publicResult = JsonSerializer.Serialize(result);
         Assert.Equal(StrategyOutcome.Failed, result.Outcome);
@@ -261,12 +264,12 @@ public sealed class WorkflowProcessStepExecutorTests
             Events = [CreateOutputEvent(launched.RunId, CreateCompletedOutput())]
         };
         var launch = new RecordingWorkflowLaunchService { Run = launched };
-        var executor = CreateExecutor(launch, runtime);
+        var executor = CreateExecutor(launch, runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
         Assert.Single(launch.Intents);
@@ -292,12 +295,12 @@ public sealed class WorkflowProcessStepExecutorTests
         {
             Events = [CreateOutputEvent(mismatchedRun.RunId, CreateCompletedOutput())]
         };
-        var executor = CreateExecutor(launch, runtime);
+        var executor = CreateExecutor(launch, runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         Assert.Equal(StrategyOutcome.Failed, result.Outcome);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -313,12 +316,12 @@ public sealed class WorkflowProcessStepExecutorTests
             ProducedArtifactSlotIds = [ArtifactSlotId.New()]
         };
         var launch = new RecordingWorkflowLaunchService();
-        var executor = CreateExecutor(launch, new RecordingWorkflowRuntimeManager());
+        var executor = CreateExecutor(launch, new RecordingWorkflowRuntimeManager(), assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         Assert.Equal(StrategyOutcome.Failed, result.Outcome);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -358,12 +361,12 @@ public sealed class WorkflowProcessStepExecutorTests
             ]
         };
         var launch = new RecordingWorkflowLaunchService();
-        var executor = CreateExecutor(launch, runtime);
+        var executor = CreateExecutor(launch, runtime, assignment);
 
         var result = await executor.ExecuteAsync(
             assignment,
             ProcessStepExecutionContract.Empty,
-            CancellationToken.None);
+            CancellationToken.None, dispatchClaimIdentity: new(ClaimToken));
 
         Assert.Equal(StrategyOutcome.Failed, result.Outcome);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -373,7 +376,8 @@ public sealed class WorkflowProcessStepExecutorTests
 
     private static WorkflowProcessStepExecutor CreateExecutor(
         IWorkflowLaunchService launchService,
-        IWorkflowRuntimeManager runtimeManager)
+        IWorkflowRuntimeManager runtimeManager,
+        ProcessRuntimeStepAssignment assignment)
     {
         var workspaceFiles = TestWorkspaceServices.CreateFileService(Path.Combine(
             Path.GetTempPath(),
@@ -386,7 +390,30 @@ public sealed class WorkflowProcessStepExecutorTests
             new ProcessCompletionGateEvaluator([_ => null]),
             receiptPolicies,
             issueFactory);
-        return new WorkflowProcessStepExecutor(launchService, runtimeManager, resultConverter);
+        return new WorkflowProcessStepExecutor(launchService, runtimeManager, resultConverter, new MappedSource(assignment),
+            (IWorkflowProcessAssignmentRunQuery)runtimeManager);
+    }
+
+    private sealed class MappedSource(ProcessRuntimeStepAssignment assignment) : IWorkflowMappedProcessSourceAuthority {
+        public Task<WorkflowLaunchOrigin.ProcessDispatchAssignment> CaptureAsync(WorkflowProcessRunId runId,
+            WorkflowProcessAssignmentId assignmentId, Guid claimToken, string contractHash, CancellationToken cancellationToken = default) {
+            Assert.NotEqual(Guid.Empty, claimToken);
+            Assert.Equal(assignment.RunId.Value, runId.Value);
+            Assert.Equal(assignment.StepInstanceId.Value, assignmentId.Value);
+            var binding = assignment.WorkflowBinding!;
+            var input = new WorkflowProcessAssignmentInputEnvelope(WorkflowProcessAssignmentInputEnvelope.CurrentSchemaVersion,
+                new(runId.Value), new(assignmentId.Value), assignment.StepKey, assignment.RoleKey, assignment.Prompt, contractHash, assignment.LaunchVariables);
+            return Task.FromResult(new WorkflowLaunchOrigin.ProcessDispatchAssignment(new(ProfileId, runId, runId, assignmentId, claimToken,
+                assignment.ReadinessHash, contractHash, new(binding.WorkflowId.Value),
+                binding.WorkflowVersionId is { } version ? new WorkflowVersionId(version.Value) : null,
+                WorkflowMappedProcessInputFingerprint.Compute(JsonSerializer.Serialize(input, AgentOutputJson.SerializerOptions))), new(runId.Value)) {
+                AuthorizationScope = WorkspaceScopeDescriptor.Process(runId.Value.ToString("D")),
+                AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+            });
+        }
+
+        public Task<IWorkflowStructureSourceAuthorityLease> AcquireForMutationAsync(WorkflowLaunchOrigin.ProcessDispatchAssignment origin,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException("Unit producer fixture does not replace actual owner transaction proof.");
     }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(ProcessWorkflowExecutorBinding workflowBinding)
@@ -544,13 +571,24 @@ public sealed class WorkflowProcessStepExecutorTests
         }
     }
 
-    private sealed class RecordingWorkflowRuntimeManager : IWorkflowRuntimeManager
+    private sealed class RecordingWorkflowRuntimeManager : IWorkflowRuntimeManager, IWorkflowProcessAssignmentRunQuery
     {
-        public IReadOnlyList<WorkflowRunSnapshot> Runs { get; init; } = [];
+        public IReadOnlyList<WorkflowRunSnapshot> Runs { get; set; } = [];
 
-        public IReadOnlyList<WorkflowEventRecord> Events { get; init; } = [];
+        public IReadOnlyList<WorkflowEventRecord> Events { get; set; } = [];
 
         public WorkflowId? ListedWorkflowId { get; private set; }
+        public (WorkflowProcessRunId, WorkflowProcessAssignmentId)? RequestedAssignment { get; private set; }
+
+        public Task<IReadOnlyList<WorkflowRunSnapshot>> FindAsync(WorkflowProcessRunId runId, WorkflowProcessAssignmentId assignmentId,
+            CancellationToken cancellationToken = default) {
+            RequestedAssignment = (runId, assignmentId);
+            return Task.FromResult<IReadOnlyList<WorkflowRunSnapshot>>(Runs.Where(run => run.Origin switch {
+                WorkflowLaunchOrigin.ProcessAssignment old => old.ProcessRun == runId && old.Assignment == assignmentId,
+                WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => mapped.Dispatch.ProcessRun == runId && mapped.Dispatch.Assignment == assignmentId,
+                _ => false
+            }).Take(2).ToArray());
+        }
 
         public Task<IReadOnlyList<WorkflowRunSnapshot>> ListRunsAsync(
             WorkflowId? workflowId = null,

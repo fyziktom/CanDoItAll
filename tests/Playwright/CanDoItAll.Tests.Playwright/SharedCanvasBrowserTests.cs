@@ -177,6 +177,13 @@ public sealed partial class AppSmokeTests
 
         await CreateProjectAsync(page, "Playwright Recreate Note Editor", "Validation");
         await page.Locator(".cw-canvas-host").WaitForAsync();
+        // The host element is rendered before the canvas runtime's create call attaches its state to it, so waiting for the
+        // element alone races the runtime. Wait for the attached state that the recreate below reads.
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const state = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState;
+                return !!(state?.dotNetRef && state?.surface && window.CanDoItAll?.canvasWorkbench?.create);
+            }");
 
         var recreated = await page.EvaluateAsync<bool>(
             @"() => {

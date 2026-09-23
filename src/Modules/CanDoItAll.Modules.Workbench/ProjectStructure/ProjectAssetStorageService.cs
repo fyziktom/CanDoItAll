@@ -6,7 +6,8 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectAssetStorageService(
     IStoragePlacementService storagePlacementService,
     ProjectAssetCreationService assetCreationService,
-    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy)
+    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
+    StorageStablePlacementService? stablePlacementService = null)
 {
     internal async Task<SavedMediaDescriptor?> SaveAsync(
         Guid projectId,
@@ -79,16 +80,72 @@ public sealed class ProjectAssetStorageService(
             mermaidDiagramKind);
     }
 
+    internal async Task<(SavedMediaDescriptor Media, Exception? ObservationException)> SaveStableAsync(
+        StoragePlacementIntentId intentId, Guid projectId, ProjectObjectType objectType, string objectSubtype,
+        ProjectObjectMediaPayload media, CancellationToken cancellationToken) {
+        var service = RequireStablePlacements();
+        var prepared = PrepareStableMedia(intentId, projectId, objectType, objectSubtype, media, cancellationToken);
+        var outcome = await service.PlaceAsync(intentId, prepared.Request, cancellationToken);
+        if (outcome.State != StorageStablePlacementState.Completed || outcome.Receipt is null) {
+            throw new StorageStablePlacementPendingException(outcome);
+        }
+        return (MapStableMedia(objectType, prepared, outcome.Receipt), outcome.ObservationException);
+    }
+
+    internal async Task<(SavedMediaDescriptor Media, StorageStablePlacementReceipt Receipt)> ReadCompletedStableAsync(
+        StoragePlacementIntentId intentId, Guid projectId, ProjectObjectType objectType, string objectSubtype,
+        ProjectObjectMediaPayload media, CancellationToken cancellationToken) {
+        var service = RequireStablePlacements();
+        var prepared = PrepareStableMedia(intentId, projectId, objectType, objectSubtype, media, cancellationToken);
+        var receipt = await service.ReadCompletedForNativeContinuationAsync(intentId, prepared.Request, cancellationToken);
+        return (MapStableMedia(objectType, prepared, receipt), receipt);
+    }
+
+    internal Task RequireCompletedStableForMutationAsync(StorageStablePlacementReceipt receipt, CancellationToken cancellationToken)
+        => RequireStablePlacements().RequireCompletedForNativeMutationAsync(receipt, cancellationToken);
+
+    private StorageStablePlacementService RequireStablePlacements() => stablePlacementService
+        ?? throw new InvalidOperationException("Stable managed asset placement requires the registered Storage owner service.");
+
+    private PreparedStableMedia PrepareStableMedia(StoragePlacementIntentId intentId, Guid projectId, ProjectObjectType objectType,
+        string objectSubtype, ProjectObjectMediaPayload media, CancellationToken cancellationToken) {
+        var content = NormalizeTypedTextContent(objectType, objectSubtype, Decode(media), cancellationToken);
+        var diagramKind = ResolveMermaidDiagramKind(objectType, objectSubtype, content.Content, cancellationToken);
+        var extension = Path.GetExtension(content.FileName);
+        var safeExtension = string.IsNullOrWhiteSpace(extension) ? objectType == ProjectObjectType.ImageAsset ? ".png" : ".bin" : extension;
+        var safeFileName = $"{SanitizeSlug(Path.GetFileNameWithoutExtension(content.FileName))}-{intentId.Value:N}{safeExtension}";
+        var category = objectType switch {
+            ProjectObjectType.ImageAsset => "images",
+            ProjectObjectType.VideoAsset => "videos",
+            _ => "files"
+        };
+        var relativePath = $"managed-files/project-media/{category}/{projectId:N}/{safeFileName}";
+        var contentKind = StorageContentClassifier.Resolve(content.ContentType, content.FileName);
+        return new(new(content.FileName, content.ContentType, content.Content.ToArray(), StorageUsagePurpose.ProjectAsset,
+            contentKind, projectId, RelativePathHint: relativePath,
+            PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)), relativePath, diagramKind);
+    }
+
+    private SavedMediaDescriptor MapStableMedia(ProjectObjectType objectType, PreparedStableMedia prepared,
+        StorageStablePlacementReceipt receipt) {
+        var reference = ProjectManagedStorageProvenancePolicy.StampStable(receipt.WriteResult.Reference, prepared.RelativePath,
+            receipt.Storage, physicalIdentityPolicy, receipt.IntentId);
+        return new(receipt.RelativePath, receipt.Route, reference.ContentType, prepared.Request.FileName, objectType.ToString(),
+            StorageJson.SerializeReference(reference), prepared.DiagramKind);
+    }
+
+    private sealed record PreparedStableMedia(StoragePlacementRequest Request, string RelativePath, MermaidDiagramKind DiagramKind);
+
     private static ProjectAssetContent Decode(ProjectObjectMediaPayload media)
     {
         if (string.IsNullOrWhiteSpace(media.FileName))
         {
-            throw new InvalidDataException("Uploaded project assets require a file name.");
+            throw new ProjectAssetContentValidationException("Uploaded project assets require a file name.");
         }
 
         if (string.IsNullOrWhiteSpace(media.Base64Data))
         {
-            throw new InvalidDataException("Uploaded project assets require file content.");
+            throw new ProjectAssetContentValidationException("Uploaded project assets require file content.");
         }
 
         if (media.Base64Data.Length > ProjectStructureAssetUploadLimits.MaximumBase64Characters)
@@ -103,7 +160,7 @@ public sealed class ProjectAssetStorageService(
         }
         catch (FormatException exception)
         {
-            throw new InvalidDataException(
+            throw new ProjectAssetContentValidationException(
                 "Uploaded project asset content is not valid base64.",
                 exception);
         }
@@ -149,7 +206,7 @@ public sealed class ProjectAssetStorageService(
         }
         catch (ProjectAssetCreationException exception)
         {
-            throw new InvalidDataException(exception.Message, exception);
+            throw new ProjectAssetContentValidationException(exception.Message, exception);
         }
     }
 
@@ -173,11 +230,11 @@ public sealed class ProjectAssetStorageService(
         }
         catch (ProjectAssetCreationException exception)
         {
-            throw new InvalidDataException("Mermaid asset content is invalid.", exception);
+            throw new ProjectAssetContentValidationException("Mermaid asset content is invalid.", exception);
         }
     }
 
-    private static InvalidDataException AssetTooLarge()
+    private static ProjectAssetContentValidationException AssetTooLarge()
         => new(
             $"Uploaded project assets are limited to " +
             $"{ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");

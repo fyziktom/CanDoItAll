@@ -167,7 +167,7 @@ public sealed class HrAgentProcessReviewServiceTests
             CancellationToken.None);
         Assert.Equal(1, Assert.Single(managerHistory.ProcessRuns).AttemptCount);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RequestManagerReviewAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => service.RequestManagerReviewAsync(
             HrAgentIdentity.AgentId,
             new HrAgentManagerReviewRequestInput(
                 processRunId,
@@ -175,7 +175,7 @@ public sealed class HrAgentProcessReviewServiceTests
                 manager.Id,
                 "Review a nonparticipant."),
             CancellationToken.None));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RequestManagerReviewAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => service.RequestManagerReviewAsync(
             HrAgentIdentity.AgentId,
             new HrAgentManagerReviewRequestInput(
                 processRunId,

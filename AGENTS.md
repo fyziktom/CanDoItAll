@@ -21,3 +21,15 @@ Review all added/stale findings, repair genuine portability defects, and regener
 scan after source edits. Refresh intentional, reviewed baseline deltas in the same
 change, inspect the diff, and require final enforcement without `--write-baseline`.
 Report that result alongside the focused tests; do not claim completion while it fails.
+
+## UI and module boundaries
+
+[UI component seams](docs/architecture/ui-component-seams.md) is the canonical guidance for
+separating a feature's rendering from the host that owns its state, its reads and its
+writes: placement, the seam contracts, state and effect ownership, mutation outcomes,
+reconciliation after a commit, the scenario host and the proof layers. Read it before
+extracting a renderer, adding a workspace surface or changing an editor's lifetime.
+
+The module-decoupling and CRM / HR extraction records under
+[docs/architecture](docs/architecture) describe what each completed slice did and what it
+left with its original owner.

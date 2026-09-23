@@ -1,17 +1,16 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
-using CanDoItAll.Infrastructure.Persistence;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-public sealed class WorkflowHistoryProjection(HistoryOutboxWriter outbox) {
-    public async Task StageAsync(AppDbContext ownerContext, IEnumerable<WorkflowUsageObservation> observations,
+public sealed class WorkflowHistoryProjection(HistoryPartitionStore partitions, HistoryOutboxWriter outbox) {
+    public async Task StageAsync(IEnumerable<WorkflowUsageObservation> observations,
         CancellationToken cancellationToken) {
-        var partition = await HistoryPartitionStore.GetForWriteAsync(ownerContext, cancellationToken);
+        var partition = await partitions.GetForWriteAsync(cancellationToken);
         foreach (var observation in observations) {
             if (Create(observation, partition) is { } mutation) {
-                outbox.Stage(ownerContext, mutation);
+                await outbox.StageAsync(mutation, cancellationToken);
             }
         }
     }
@@ -42,7 +41,7 @@ public sealed class WorkflowHistoryProjection(HistoryOutboxWriter outbox) {
                 observation.ProviderName, observation.ProviderKind?.ToString() ?? "Unknown",
                 string.IsNullOrWhiteSpace(observation.Model) ? null : new ProviderModelIdentity(observation.Model),
                 string.IsNullOrWhiteSpace(observation.Model) ? null : new ProviderModelIdentity(observation.Model)),
-            HistoryOperation.CompleteChat, observation.Origin is WorkflowLaunchOrigin.ProcessAssignment
+            HistoryOperation.CompleteChat, observation.Origin is WorkflowLaunchOrigin.ProcessAssignment or WorkflowLaunchOrigin.ProcessToolInvocation or WorkflowLaunchOrigin.ProcessDispatchAssignment
                 ? HistoryWorkload.Process : HistoryWorkload.Workflow,
             HistoryOutcome.Unknown,
             new(HistoryAuthenticationKind.Unknown),

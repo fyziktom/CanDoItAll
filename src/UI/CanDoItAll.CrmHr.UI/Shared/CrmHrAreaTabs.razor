@@ -1,0 +1,43 @@
+@namespace CanDoItAll.CrmHr.UI.Shared
+
+<Cluster Gap="LayoutGap.XSmall" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+    <SecondaryTabs Items="Tabs"
+                   SelectedKey="@ActiveRoute.Key"
+                   SelectedKeyChanged="HandleSelectedKeyChanged"
+                   ShowActiveDescription="false" />
+    <TooltipTarget Text="@ActiveRoute.Description"
+                   Position="TooltipPosition.Bottom"
+                   TestId="crmhr-navigation-tooltip">
+        <Button ButtonStyle="ButtonStyle.Light"
+                Variant="Variant.Text"
+                Size="ButtonSize.Small"
+                Class="cda-button--quick"
+                Icon="info"
+                aria-label="@($"{ActiveRoute.TabLabel} tab information")" />
+    </TooltipTarget>
+</Cluster>
+
+@code {
+    private static readonly IReadOnlyList<SecondaryTabItem> Tabs = CrmHrRouteCatalog.Items
+        .Select(item => new SecondaryTabItem(item.Key, item.TabLabel, Description: item.Description))
+        .ToArray();
+
+    [Parameter, EditorRequired]
+    public CrmHrWorkspaceArea SelectedArea { get; set; }
+
+    // The chosen area's route definition. Navigation is the host's effect.
+    [Parameter]
+    public EventCallback<CrmHrRouteDefinition> AreaSelected { get; set; }
+
+    private CrmHrRouteDefinition ActiveRoute => CrmHrRouteCatalog.Get(SelectedArea);
+
+    private Task HandleSelectedKeyChanged(string key)
+    {
+        if (!CrmHrRouteCatalog.TryGetByKey(key, out var definition))
+        {
+            throw new InvalidOperationException($"Unknown CRM / HR secondary tab key '{key}'.");
+        }
+
+        return AreaSelected.InvokeAsync(definition);
+    }
+}

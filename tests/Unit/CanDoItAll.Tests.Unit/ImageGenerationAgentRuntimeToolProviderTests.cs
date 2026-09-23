@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class ImageGenerationAgentRuntimeToolProviderTests
+public sealed partial class ImageGenerationAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -39,6 +39,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
         Assert.Equal("ImageOptionUnsupported", failure.ErrorCode);
         Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, failure.EffectState);
         Assert.Contains(label, failure.Message, StringComparison.Ordinal);
         Assert.Contains("Allowed values:", failure.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(size ?? quality ?? format!, failure.Message, StringComparison.Ordinal);
@@ -119,10 +120,22 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         }));
         var tool = Assert.Single(await toolProvider.CreateToolsAsync(CreateContext(agent, provider), CancellationToken.None));
 
-        await Assert.ThrowsAsync<ProviderModelSelectionException>(() => InvokeImageGenerationToolAsync(tool,
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() => InvokeImageGenerationToolAsync(tool,
             new ImageGenerationCreateInput("A lighthouse", "images/lighthouse.png", Model: ambiguous ? "gpt-image-1" : "unpublished-image")));
 
+        Assert.IsType<ProviderModelSelectionException>(exception.InnerException);
+        Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
+        Assert.Equal("ImageModelUnavailable", failure.ErrorCode);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, failure.EffectState);
+        Assert.DoesNotContain(ambiguous ? "gpt-image-1" : "unpublished-image", failure.Message, StringComparison.Ordinal);
         Assert.Empty(imageService.Requests);
+
+        var corrected = await InvokeImageGenerationToolAsync(tool,
+            new ImageGenerationCreateInput("A lighthouse", "images/lighthouse.png"));
+
+        Assert.True(corrected.Success);
+        Assert.Single(imageService.Requests);
     }
 
     private static ProviderProfile CreateSharedImageProvider() => CreateProvider(ProviderProfilePurpose.ImageGeneration) with {
@@ -163,7 +176,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var tool = Assert.Single(tools);
         Assert.Equal(950, toolProvider.Order);
         Assert.Equal("image-generation.runtime-tools", toolProvider.Descriptor?.ProviderKey);
-        Assert.Equal(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, tool.Name);
+        Assert.Equal(ImageGenerationToolPolicy.ImageGenerationCreate, tool.Name);
     }
 
     [Fact]
@@ -216,6 +229,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
             CreateContext(agent, runtimeProvider),
             CancellationToken.None);
 
+        using var effects = AgentToolInvocationEffectScope.Begin();
         var result = await InvokeImageGenerationToolAsync(
             Assert.Single(tools),
             new ImageGenerationCreateInput(
@@ -229,6 +243,9 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         Assert.Equal(runtimeProvider.Id, Assert.Single(imageService.Requests).Provider.Id);
         Assert.Contains("project_structure_asset_create", result.ProjectAssetStorageInstruction, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(workspaceRoot, "generated", "runtime-default.png")));
+        // A written image is a committed mutation, so the run's completion check can account for it.
+        Assert.Equal(new AgentToolCommittedEffect(ImageGenerationAgentRuntimeToolProvider.GeneratedImageEffectSourceKind,
+            result.OutputWorkspacePath), effects.CommittedEffect);
     }
 
     [Fact]
@@ -306,6 +323,51 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
 
         Assert.Equal(cloudProvider.Id, result.ProviderProfileId);
         Assert.Equal(cloudProvider.Id, Assert.Single(imageService.Requests).Provider.Id);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Image_generation_reports_an_unusable_output_or_empty_provider_answer_without_writing(bool outputHeldOpen)
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var imageService = new FakeAgentImageGenerationService { ReturnsNoImage = !outputHeldOpen };
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var workspaceRoot = CreateTempWorkspaceRoot();
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspaceRoot),
+            imageService,
+            services);
+        var agent = CreateAgent(
+            imageProvider.Id,
+            AgentImageGenerationAccessMetadata.Write(
+                "{}",
+                new AgentImageGenerationAccessSettings
+                {
+                    CanGenerateImages = true,
+                    PreferredProviderProfileId = imageProvider.Id
+                }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(CreateContext(agent, imageProvider), CancellationToken.None));
+        var outputPath = Path.Combine(workspaceRoot, "generated", "held.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        byte[] original = [9, 9, 9];
+        await File.WriteAllBytesAsync(outputPath, original);
+
+        InvalidOperationException failure;
+        using (outputHeldOpen ? new FileStream(outputPath, FileMode.Open, FileAccess.Read, FileShare.None) : null)
+        {
+            failure = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => InvokeImageGenerationToolAsync(
+                tool,
+                new ImageGenerationCreateInput("A clean garden layout.", "generated/held", OutputFormat: "png")));
+        }
+
+        var evidence = Assert.IsAssignableFrom<IAgentToolFailureEffectEvidence>(failure);
+        Assert.Equal(outputHeldOpen ? "OutputFileUnavailable" : "ImageProviderReturnedNoImage", evidence.ErrorCode);
+        Assert.Equal(AgentToolEffectState.NotCommitted, evidence.EffectState);
+        Assert.True(evidence.IsSafeToExpose);
+        Assert.True(evidence.CanRetryWithCorrectedInput);
+        Assert.Equal(original, await File.ReadAllBytesAsync(outputPath));
     }
 
     [Fact]
@@ -404,6 +466,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var mappedFailure));
         Assert.Equal(failure.SafeMessage, mappedFailure.Message);
         Assert.True(mappedFailure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, mappedFailure.EffectState);
         Assert.Empty(imageService.Requests);
     }
 
@@ -505,6 +568,110 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         Assert.False(MafAgentToolFailureMapper.TryMap(exception!, out _));
     }
 
+    [Theory]
+    [InlineData(" ", "generated/incomplete", "ImagePromptRequired")]
+    [InlineData("A generic concept render.", " ", "ImageOutputPathRequired")]
+    public async Task Image_generation_tool_rejects_an_incomplete_request_as_a_correctable_no_effect_failure(
+        string prompt,
+        string outputPath,
+        string expectedErrorCode)
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var imageService = new FakeAgentImageGenerationService();
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path),
+            imageService,
+            services);
+        var agent = CreateAgent(imageProvider.Id, AgentImageGenerationAccessMetadata.Write("{}", new() {
+            CanGenerateImages = true, PreferredProviderProfileId = imageProvider.Id
+        }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(CreateContext(agent, imageProvider), CancellationToken.None));
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() =>
+            InvokeImageGenerationToolAsync(tool, new ImageGenerationCreateInput(prompt, outputPath, OutputFormat: "png")));
+
+        Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
+        Assert.Equal(expectedErrorCode, failure.ErrorCode);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, failure.EffectState);
+        Assert.Empty(imageService.Requests);
+    }
+
+    [Fact]
+    public async Task Image_generation_tool_lets_the_model_correct_an_unknown_requested_provider()
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var imageService = new FakeAgentImageGenerationService();
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path),
+            imageService,
+            services);
+        var agent = CreateAgent(imageProvider.Id, AgentImageGenerationAccessMetadata.Write("{}", new() {
+            CanGenerateImages = true, PreferredProviderProfileId = imageProvider.Id
+        }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(CreateContext(agent, imageProvider), CancellationToken.None));
+        var request = new ImageGenerationCreateInput(
+            "A generic concept render.",
+            "generated/provider-retry",
+            ProviderProfileId: Guid.NewGuid(),
+            OutputFormat: "png");
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() => InvokeImageGenerationToolAsync(tool, request));
+
+        Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
+        Assert.Equal("ImageProviderNotFound", failure.ErrorCode);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, failure.EffectState);
+        Assert.Empty(imageService.Requests);
+
+        var result = await InvokeImageGenerationToolAsync(tool, request with { ProviderProfileId = null });
+
+        Assert.True(result.Success);
+        Assert.Equal(imageProvider.Id, result.ProviderProfileId);
+    }
+
+    [Fact]
+    public async Task Image_generation_tool_reads_and_writes_managed_paths_in_the_run_active_scope()
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var hostScope = WorkspaceScopeDescriptor.Organization("host-organization");
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var sketch = TestWorkspaceServices
+            .CreateFileService(workspace.Path, projectScope)
+            .WriteTextFile("artifacts/sketches/sketch.png", "sketch");
+        var imageService = new FakeAgentImageGenerationService();
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path, hostScope),
+            imageService,
+            services);
+        var agent = CreateAgent(imageProvider.Id, AgentImageGenerationAccessMetadata.Write("{}", new() {
+            CanGenerateImages = true, PreferredProviderProfileId = imageProvider.Id
+        }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(
+            CreateContext(agent, imageProvider, projectScope),
+            CancellationToken.None));
+
+        var result = await InvokeImageGenerationToolAsync(tool, new ImageGenerationCreateInput(
+            "A refined concept render.",
+            "artifacts/generated/concept",
+            OutputFormat: "png",
+            SourceWorkspacePaths: ["artifacts/sketches/sketch.png"]));
+
+        Assert.True(sketch.Succeeded);
+        Assert.Equal(projectScope.CombineArtifactPath("generated", "concept.png"), result.OutputWorkspacePath);
+        Assert.True(File.Exists(Path.Combine(workspace.Path, result.OutputWorkspacePath)));
+        Assert.Equal($"workspace:{sketch.Path}", Assert.Single(Assert.Single(imageService.Requests).Sources).Summary);
+    }
+
     private static (string OutputPath, IReadOnlyList<string>? SourcePaths) PreparePathFailureScenario(
         string workspaceRoot,
         string sensitiveMarker,
@@ -553,7 +720,8 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
 
     private static AgentRuntimeToolProviderContext CreateContext(
         AgentDefinition agent,
-        ProviderProfile provider)
+        ProviderProfile provider,
+        WorkspaceScopeDescriptor? activeWorkspaceScope = null)
     {
         return new AgentRuntimeToolProviderContext(
             agent,
@@ -562,7 +730,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
             SuppressApprovalRequirements: false,
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             RuntimeSessionKey: "unit-image-generation",
-            AgentRuntimeContextIntent.Empty,
+            AgentRuntimeContextIntent.Empty with { WorkspaceScope = activeWorkspaceScope },
             Tags: new Dictionary<string, string>());
     }
 
@@ -728,6 +896,8 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
 
         public Exception? Failure { get; init; }
 
+        public bool ReturnsNoImage { get; init; }
+
         public Task<AgentImageGenerationResult> GenerateAsync(
             AgentImageGenerationRequest request,
             CancellationToken cancellationToken = default)
@@ -742,7 +912,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
             return Task.FromResult(new AgentImageGenerationResult(
                 request.Model,
                 request.Format,
-                [new AgentGeneratedImage("image/png", [1, 2, 3], "revised")]));
+                ReturnsNoImage ? [] : [new AgentGeneratedImage("image/png", [1, 2, 3], "revised")]));
         }
     }
 

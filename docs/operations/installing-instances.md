@@ -55,7 +55,9 @@ curl --fail http://127.0.0.1:5032/api/runtime/operations
 ```
 
 The operations endpoint reports typed platform, host-profile, capability, path-readiness,
-and deployment-support state without returning secret values or full physical roots.
+and deployment-support state without returning secret values or full physical roots. With
+API authorization enabled it requires a bearer token issued by the host (add
+`-H "Authorization: Bearer $CANDOITALL_API_TOKEN"`); `/health` stays anonymous.
 
 ## Default User-Owned Runtime Roots
 

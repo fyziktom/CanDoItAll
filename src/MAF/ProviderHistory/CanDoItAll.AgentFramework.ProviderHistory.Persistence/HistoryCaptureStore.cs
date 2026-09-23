@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public sealed class HistoryCaptureStore(
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<ProviderHistoryDbContext> factory,
     IDatabaseRuntimeState runtime,
     IDatabaseRuntimeWriteFence writeFence,
     HistoryDetailStore details,

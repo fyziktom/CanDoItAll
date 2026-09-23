@@ -72,6 +72,10 @@ Workflows compile stored definitions into executor invocations. Executors contri
 typed outputs and progress events. Processes may orchestrate workflows or agent-backed
 steps through explicit drivers; neither runtime mutates the other's state directly.
 
+[Workflow provider input authority](workflow-provider-disclosure-boundary.md) retains
+owner evidence for protected reads and rechecks the original source before an LLM call,
+including native wait/resume. Public progress events do not supply this authority.
+
 ## External Boundaries
 
 HTTP, MCP, OAuth, file-system, Git, provider, and plugin communication belongs in an

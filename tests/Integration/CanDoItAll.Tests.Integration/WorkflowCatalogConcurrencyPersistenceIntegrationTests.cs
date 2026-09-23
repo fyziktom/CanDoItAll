@@ -151,7 +151,9 @@ public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
         IReadOnlyList<long> expectedRevisions)
     {
         var winner = Assert.Single(outcomes, outcome => outcome.Definition is not null).Definition!;
-        var conflict = Assert.IsType<InvalidOperationException>(
+        // The losing writer gets the typed concurrency rejection that callers such as the workflow curator tools
+        // branch on; its transaction saved nothing.
+        var conflict = Assert.IsType<WorkflowDefinitionConcurrencyException>(
             Assert.Single(outcomes, outcome => outcome.Exception is not null).Exception);
         Assert.Contains("updated by another request", conflict.Message, StringComparison.OrdinalIgnoreCase);
 
@@ -175,10 +177,11 @@ public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
         WorkflowUsagePostgresDbContextFactory factory,
         PromptsService gallery,
         IWorkflowDefinitionValidator validator)
-        => new(factory, validator, gallery, gallery);
+        => new(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory), validator, gallery, gallery);
 
-    private static PromptsService CreateGallery(WorkflowUsagePostgresDbContextFactory factory)
-        => new(
+    private static PromptsService CreateGallery(WorkflowUsagePostgresDbContextFactory canonicalFactory) {
+        var factory = PromptsPersistenceTestFactory.FromCanonical(canonicalFactory);
+        return new(
             factory,
             new SystemClock(),
             new NullActivityStream(),
@@ -186,6 +189,7 @@ public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
             new PromptGalleryProjectionCoordinator(factory, new DisabledPromptGalleryProjectionDriver()),
             new PromptGalleryCompatibilityEvaluator(),
             NullLogger<PromptsService>.Instance);
+    }
 
     private static WorkflowDefinitionSaveRequest CreateSaveRequest(
         WorkflowId? workflowId = null,

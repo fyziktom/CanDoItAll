@@ -39,8 +39,7 @@ public sealed class ProviderAdministrationLayoutTests {
         var cut = harness.Context.Render<AgentsHomePage>();
         cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='agents-hr-agent-open-header']").HasAttribute("disabled")), TimeSpan.FromSeconds(10));
         if (tab == AgentWorkspaceTabs.Providers) {
-            cut.WaitForElement("[data-testid='providers-tree-provider']");
-            OpenProviderTab(cut, "History");
+            await OpenProviderTabAsync(cut, "History");
         }
         cut.WaitForElement("[data-testid='history-search-form']");
         Assert.Empty(history.Queries);
@@ -48,7 +47,8 @@ public sealed class ProviderAdministrationLayoutTests {
         Assert.Empty(history.ContentReads);
         Assert.Equal(0, usage.Reads);
         Assert.Equal(0, overviewReads);
-        cut.FindAll("[data-testid='agents-shell-tabs'] button").Single(button => button.TextContent.Trim() == "Overview").Click();
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='agents-shell-tabs'] button")
+            .Single(button => button.TextContent.Trim() == "Overview").ClickAsync());
         cut.WaitForElement("[data-testid='agents-overview-dashboard']");
         cut.WaitForDashboardLoaded();
         cut.WaitForAssertion(() => {
@@ -63,31 +63,34 @@ public sealed class ProviderAdministrationLayoutTests {
         var history = new ProviderHistoryUiFixture();
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IProviderRequestHistory>(history));
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
-        cut.WaitForElement("[data-testid='providers-tree-provider']");
+        cut.WaitForElement("[data-testid='providers-name-input']");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         var model = Assert.IsType<ProviderProfileEditorModel>(context.Model);
         var originalName = model.Name;
         cut.Find("[data-testid='providers-name-input']").Change("Unsaved provider edit");
-        OpenProviderTab(cut, "History");
+        await OpenProviderTabAsync(cut, "History");
         var form = cut.WaitForElement("[data-testid='history-search-form']");
         Assert.Single(cut.FindAll("form"));
         Assert.Empty(cut.FindAll("[data-testid='providers-save']"));
-        form.Submit();
+        await form.SubmitAsync();
         Assert.Single(history.Queries);
         var service = harness.Context.Services.GetRequiredService<IProviderRuntimeAdministrationService>();
         Assert.Equal(originalName, (await service.GetProviderEditorAsync(model.Id!.Value)).Name);
-        OpenProviderTab(cut, "Connection");
+        await OpenProviderTabAsync(cut, "Connection");
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
         Assert.Equal("Unsaved provider edit", model.Name);
-        cut.Find("[data-testid='providers-new']").Click();
-        OpenProviderTab(cut, "History");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='providers-new']").ClickAsync());
+        await OpenProviderTabAsync(cut, "History");
         Assert.Contains("Save this provider first", cut.Markup);
         Assert.Empty(cut.FindAll("[data-testid='history-search-form']"));
         Assert.Single(history.Queries);
     }
 
-    private static void OpenProviderTab<T>(IRenderedComponent<T> cut, string name) where T : IComponent =>
-        cut.FindAll("button[role='tab']").Single(button => button.TextContent.Contains(name, StringComparison.Ordinal)).Click();
+    private static Task OpenProviderTabAsync<T>(IRenderedComponent<T> cut, string name) where T : IComponent {
+        cut.WaitForElement("[data-testid='provider-editor-tabs']");
+        return cut.InvokeAsync(() => cut.FindAll("[data-testid='provider-editor-tabs'] button[role='tab']")
+            .Single(button => button.TextContent.Contains(name, StringComparison.Ordinal)).ClickAsync());
+    }
 
     public class RecordingWorkspaceProxy : DispatchProxy {
         public IAgentFrameworkWorkspaceService Target { get; set; } = default!;
@@ -126,10 +129,10 @@ public sealed class ProviderAdministrationLayoutTests {
         Assert.Empty(cut.FindAll("[data-testid='shared-provider-connections-dialog']"));
         Assert.Equal(0, service.ListSourcesCallCount);
 
-        cut.Find("[data-testid='providers-connections']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='providers-connections']").ClickAsync());
         cut.WaitForElement("[data-testid='shared-provider-connections-dialog']");
         Assert.Equal(1, service.ListSourcesCallCount);
-        cut.Find("[data-testid='shared-provider-source-add']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shared-provider-source-add']").ClickAsync());
         cut.WaitForElement("[data-testid='shared-provider-source-dialog']");
     }
 
@@ -153,7 +156,7 @@ public sealed class ProviderAdministrationLayoutTests {
 
         cut.WaitForElement("[data-testid='providers-search']").Input("no-such-provider");
         cut.WaitForAssertion(() => Assert.StartsWith("0 /", cut.Find("[data-testid='providers-filter-count']").TextContent));
-        cut.Find("[data-testid='providers-search-reset']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='providers-search-reset']").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(string.Empty, cut.Find("[data-testid='providers-search']").GetAttribute("value") ?? string.Empty));
     }
 }

@@ -3,9 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Collaboration;
 
-internal sealed class CollaborationProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+internal sealed class CollaborationProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.Collaboration;
 
@@ -14,10 +13,13 @@ internal sealed class CollaborationProjectTransferTargetStateParticipant
         typeof(CollaborationThreadRecord)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken)
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<CollaborationDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
+
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        CollaborationDbContext dbContext, CancellationToken cancellationToken)
         => await dbContext.Set<CollaborationThreadRecord>()
             .AsNoTracking()
             .AnyAsync(item => item.ProjectId.HasValue, cancellationToken)

@@ -50,22 +50,22 @@ internal static class SharedProviderInferenceApi
             endpoints,
             SharedProviderRoutes.Responses,
             SharedProviderRelayOperation.Responses,
+            CreateResponseAsync,
             "CreateSharedProviderOpenAiResponse",
-            "Create a shared-provider response",
             supportsStreaming: true);
         MapEndpoint(
             endpoints,
             SharedProviderRoutes.ChatCompletions,
             SharedProviderRelayOperation.ChatCompletions,
+            CreateChatCompletionAsync,
             "CreateSharedProviderOpenAiChatCompletion",
-            "Create a shared-provider chat completion",
             supportsStreaming: true);
         MapEndpoint(
             endpoints,
             SharedProviderRoutes.ImageGenerations,
             SharedProviderRelayOperation.ImageGenerations,
+            CreateImageGenerationAsync,
             "CreateSharedProviderOpenAiImageGeneration",
-            "Create shared-provider images",
             supportsStreaming: false);
 
         return endpoints;
@@ -75,28 +75,16 @@ internal static class SharedProviderInferenceApi
         IEndpointRouteBuilder endpoints,
         string route,
         SharedProviderRelayOperation operation,
+        Delegate handler,
         string endpointName,
-        string summary,
         bool supportsStreaming)
     {
         var endpoint = endpoints.MapPost(
             route,
-            (
-                HttpContext httpContext,
-                ISharedProviderRelayApplicationService relayService,
-                IAccessContextReferenceAccessor accessContextAccessor,
-                ILogger<LogCategory> logger) => InvokeAsync(
-                    httpContext,
-                    relayService,
-                    accessContextAccessor,
-                    operation,
-                    logger));
+            handler);
         endpoint
             .WithName(endpointName)
             .WithTags("Shared Providers")
-            .WithSummary(summary)
-            .WithDescription(
-                "Accepts a bounded OpenAI-compatible JSON request and relays only to its exact published routing model.")
             .WithMetadata(SharedProviderInferenceOpenApiContract.For(operation))
             .Accepts<JsonElement>(MediaTypeNames.Application.Json)
             .Produces(
@@ -126,6 +114,248 @@ internal static class SharedProviderInferenceApi
             ApiAuthorizationPolicies.InvokeSharedProviders);
     }
 
+    /// <summary>
+    /// Create a model response through a shared provider, using the OpenAI Responses request format.
+    /// </summary>
+    /// <remarks>
+    /// Relays a stateless OpenAI Responses request to the shared model named by <c>model</c>, a routing identifier from
+    /// <c>GET /api/shared-providers/v1/catalog</c> or <c>GET /api/shared-providers/openai/v1/models</c>; it never falls
+    /// back to another model or provider. The request must fit the strict subset in the request schema: unknown or
+    /// duplicate members, remote URLs, files, hosted tools, stored responses, background mode and
+    /// <c>previous_response_id</c> are rejected. <c>store</c> is treated as false when omitted and may only be false;
+    /// <c>background</c> may only be false. Every feature the request uses (streaming, function tools, structured
+    /// output, image input, a reasoning effort) must be supported by the model.
+    ///
+    /// Without <c>stream</c>, or with false, the body is the provider's completed response object as JSON, with
+    /// <c>model</c> replaced by the routing identifier; a response that is not completed or carries an error is
+    /// reported as HTTP 502 instead. With <c>stream</c> true, the body is <c>text/event-stream</c>: the provider's
+    /// server-sent events, relayed with <c>model</c> replaced. Once the stream has started the status stays 200 even if
+    /// the provider fails: the host then aborts the connection without a terminal event. Treat a stream that ends
+    /// without its terminal event as failed and never use its partial output as a complete answer.
+    ///
+    /// Each call is a new, separately recorded invocation (caller, publication, model, usage and the prices in effect)
+    /// and can be charged; there is no idempotency key. After HTTP 502, 503 or 504, and after an aborted stream, the
+    /// provider may still have processed the request. Responses carry
+    /// <c>Cache-Control: private, no-store, no-cache</c>, <c>X-Content-Type-Options: nosniff</c> and
+    /// <c>CanDoItAll-Request-Id</c>, which identifies the invocation for support. Failures use the OpenAI error
+    /// envelope; branch on <c>error.code</c>.
+    ///
+    /// Authority: when API authorization is enabled, a bearer token with the <c>api</c> or
+    /// <c>api.shared-providers.invoke</c> scope. The token's subject is recorded as the caller.
+    /// </remarks>
+    /// <response code="200">
+    /// The provider's result: the completed response object as JSON, or with <c>stream</c> true the relayed
+    /// server-sent events.
+    /// </response>
+    /// <response code="400">
+    /// Rejected before dispatch: the content type is not JSON (<c>shared_provider_content_type_invalid</c>), the body
+    /// is empty, unreadable or too large (<c>shared_provider_request_invalid</c>,
+    /// <c>shared_provider_request_too_large</c>), a member is unsupported or out of range, or the model lacks a feature
+    /// the request uses (<c>shared_provider_request_invalid</c> with <c>param</c> naming the member,
+    /// <c>shared_provider_capability_not_supported</c>, <c>shared_provider_thinking_effort_not_supported</c>), or an
+    /// access-context header is invalid (<c>shared_provider_access_context_invalid</c>).
+    /// </response>
+    /// <response code="401">
+    /// No valid bearer token (<c>shared_provider_unauthorized</c>), or the token's subject cannot identify the caller
+    /// (<c>shared_provider_subject_invalid</c>).
+    /// </response>
+    /// <response code="403">The token lacks the invoke scope (<c>shared_provider_insufficient_scope</c>).</response>
+    /// <response code="404">
+    /// <c>model</c> is not a routing identifier of a currently shared model (<c>shared_provider_model_not_found</c>).
+    /// </response>
+    /// <response code="409">
+    /// The model does not support the Responses operation (<c>shared_provider_operation_mismatch</c>) or has no
+    /// available relay adapter (<c>shared_provider_adapter_not_available</c>); check its capabilities in the catalog.
+    /// </response>
+    /// <response code="429">
+    /// The upstream provider rate limited the request (<c>shared_provider_upstream_rate_limited</c>). When
+    /// <c>Retry-After</c> is present, wait that many seconds before sending a new request.
+    /// </response>
+    /// <response code="502">
+    /// The upstream provider failed or returned an invalid, incomplete or failed response, for example
+    /// <c>shared_provider_upstream_failure</c>, <c>shared_provider_upstream_failed</c> or
+    /// <c>shared_provider_upstream_response_invalid</c>. The provider may have processed the request.
+    /// </response>
+    /// <response code="503">
+    /// The relay, the provider target, the invocation record or the upstream provider is unavailable, for example
+    /// <c>shared_provider_relay_unavailable</c>, <c>shared_provider_target_unavailable</c>,
+    /// <c>shared_provider_audit_unavailable</c> or <c>shared_provider_upstream_unavailable</c>, or the publisher's
+    /// default reasoning effort is invalid (<c>shared_provider_thinking_default_invalid</c>).
+    /// </response>
+    /// <response code="504">
+    /// The relay or the upstream provider timed out (<c>shared_provider_relay_timeout</c>,
+    /// <c>shared_provider_upstream_timeout</c>). The provider may have processed the request.
+    /// </response>
+    internal static Task CreateResponseAsync(
+        HttpContext httpContext,
+        ISharedProviderRelayApplicationService relayService,
+        IAccessContextReferenceAccessor accessContextAccessor,
+        ILogger<LogCategory> logger) => InvokeAsync(
+            httpContext,
+            relayService,
+            accessContextAccessor,
+            SharedProviderRelayOperation.Responses,
+            logger);
+
+    /// <summary>
+    /// Create a chat completion through a shared provider, using the OpenAI Chat Completions request format.
+    /// </summary>
+    /// <remarks>
+    /// Relays an OpenAI Chat Completions request to the shared model named by <c>model</c>, a routing identifier from
+    /// <c>GET /api/shared-providers/v1/catalog</c> or <c>GET /api/shared-providers/openai/v1/models</c>; it never falls
+    /// back to another model or provider. The request must fit the strict subset in the request schema: unknown or
+    /// duplicate members, remote image URLs and hosted tools are rejected. Every assistant tool call must be answered
+    /// by a <c>tool</c> message with its <c>tool_call_id</c> before the next other message; <c>stream_options</c> is
+    /// accepted only with <c>stream</c> true; at most one of <c>max_tokens</c> and <c>max_completion_tokens</c>. Every
+    /// feature the request uses (streaming, function tools, structured output, image input, a reasoning effort) must be
+    /// supported by the model.
+    ///
+    /// Without <c>stream</c>, or with false, the body is the provider's chat completion object as JSON, with
+    /// <c>model</c> replaced by the routing identifier; a response that carries an error is reported as HTTP 502
+    /// instead. With <c>stream</c> true, the body is <c>text/event-stream</c>: the provider's server-sent events,
+    /// relayed with <c>model</c> replaced, ending with <c>data: [DONE]</c> when the provider sends it. Once the stream
+    /// has started the status stays 200 even if the provider fails: the host then aborts the connection without a
+    /// terminal event. Treat a stream that ends without its terminal event as failed and never use its partial output
+    /// as a complete answer.
+    ///
+    /// Each call is a new, separately recorded invocation (caller, publication, model, usage and the prices in effect)
+    /// and can be charged; there is no idempotency key. After HTTP 502, 503 or 504, and after an aborted stream, the
+    /// provider may still have processed the request. Responses carry
+    /// <c>Cache-Control: private, no-store, no-cache</c>, <c>X-Content-Type-Options: nosniff</c> and
+    /// <c>CanDoItAll-Request-Id</c>, which identifies the invocation for support. Failures use the OpenAI error
+    /// envelope; branch on <c>error.code</c>.
+    ///
+    /// Authority: when API authorization is enabled, a bearer token with the <c>api</c> or
+    /// <c>api.shared-providers.invoke</c> scope. The token's subject is recorded as the caller.
+    /// </remarks>
+    /// <response code="200">
+    /// The provider's result: the chat completion object as JSON, or with <c>stream</c> true the relayed server-sent
+    /// events.
+    /// </response>
+    /// <response code="400">
+    /// Rejected before dispatch: the content type is not JSON (<c>shared_provider_content_type_invalid</c>), the body
+    /// is empty, unreadable or too large (<c>shared_provider_request_invalid</c>,
+    /// <c>shared_provider_request_too_large</c>), a member is unsupported or out of range, the tool-call sequence is
+    /// broken, or the model lacks a feature the request uses (<c>shared_provider_request_invalid</c> with
+    /// <c>param</c> naming the member, <c>shared_provider_capability_not_supported</c>,
+    /// <c>shared_provider_thinking_effort_not_supported</c>), or an access-context header is invalid
+    /// (<c>shared_provider_access_context_invalid</c>).
+    /// </response>
+    /// <response code="401">
+    /// No valid bearer token (<c>shared_provider_unauthorized</c>), or the token's subject cannot identify the caller
+    /// (<c>shared_provider_subject_invalid</c>).
+    /// </response>
+    /// <response code="403">The token lacks the invoke scope (<c>shared_provider_insufficient_scope</c>).</response>
+    /// <response code="404">
+    /// <c>model</c> is not a routing identifier of a currently shared model (<c>shared_provider_model_not_found</c>).
+    /// </response>
+    /// <response code="409">
+    /// The model does not support the chat completions operation (<c>shared_provider_operation_mismatch</c>) or has
+    /// no available relay adapter (<c>shared_provider_adapter_not_available</c>); check its capabilities in the
+    /// catalog.
+    /// </response>
+    /// <response code="429">
+    /// The upstream provider rate limited the request (<c>shared_provider_upstream_rate_limited</c>). When
+    /// <c>Retry-After</c> is present, wait that many seconds before sending a new request.
+    /// </response>
+    /// <response code="502">
+    /// The upstream provider failed or returned an invalid or failed response, for example
+    /// <c>shared_provider_upstream_failure</c>, <c>shared_provider_upstream_failed</c> or
+    /// <c>shared_provider_upstream_response_invalid</c>. The provider may have processed the request.
+    /// </response>
+    /// <response code="503">
+    /// The relay, the provider target, the invocation record or the upstream provider is unavailable, for example
+    /// <c>shared_provider_relay_unavailable</c>, <c>shared_provider_target_unavailable</c>,
+    /// <c>shared_provider_audit_unavailable</c> or <c>shared_provider_upstream_unavailable</c>, or the publisher's
+    /// default reasoning effort is invalid (<c>shared_provider_thinking_default_invalid</c>).
+    /// </response>
+    /// <response code="504">
+    /// The relay or the upstream provider timed out (<c>shared_provider_relay_timeout</c>,
+    /// <c>shared_provider_upstream_timeout</c>). The provider may have processed the request.
+    /// </response>
+    internal static Task CreateChatCompletionAsync(
+        HttpContext httpContext,
+        ISharedProviderRelayApplicationService relayService,
+        IAccessContextReferenceAccessor accessContextAccessor,
+        ILogger<LogCategory> logger) => InvokeAsync(
+            httpContext,
+            relayService,
+            accessContextAccessor,
+            SharedProviderRelayOperation.ChatCompletions,
+            logger);
+
+    /// <summary>
+    /// Generate images through a shared image-generation provider, using the OpenAI Images request format.
+    /// </summary>
+    /// <remarks>
+    /// Relays an OpenAI image generation request to the shared model named by <c>model</c>, a routing identifier of an
+    /// <c>image-generation</c> publication from <c>GET /api/shared-providers/v1/catalog</c>; it never falls back to
+    /// another model or provider. The request must fit the strict subset in the request schema; unknown or duplicate
+    /// members are rejected. Images are returned only as base64 data (<c>response_format</c> may only be
+    /// <c>b64_json</c>), never as URLs, and this operation cannot stream.
+    ///
+    /// The JSON body has a <c>data</c> array with one object per image, holding <c>b64_json</c> and, when the provider
+    /// returns it, <c>revised_prompt</c>, plus <c>created</c> when the provider reports a creation time. It holds 1 to
+    /// 16 images, each at most 8 MiB decoded and 32 MiB in total; a larger or malformed result is reported as HTTP 502.
+    ///
+    /// Each call is a new, separately recorded invocation (caller, publication, model and the prices in effect) and can
+    /// be charged; there is no idempotency key. After HTTP 502, 503 or 504 the provider may still have generated the
+    /// images. Responses carry <c>Cache-Control: private, no-store, no-cache</c>, <c>X-Content-Type-Options:
+    /// nosniff</c> and <c>CanDoItAll-Request-Id</c>, which identifies the invocation for support. Failures use the
+    /// OpenAI error envelope; branch on <c>error.code</c>.
+    ///
+    /// Authority: when API authorization is enabled, a bearer token with the <c>api</c> or
+    /// <c>api.shared-providers.invoke</c> scope. The token's subject is recorded as the caller.
+    /// </remarks>
+    /// <response code="200">The generated images as base64 data.</response>
+    /// <response code="400">
+    /// Rejected before dispatch: the content type is not JSON (<c>shared_provider_content_type_invalid</c>), the body
+    /// is empty, unreadable or too large (<c>shared_provider_request_invalid</c>,
+    /// <c>shared_provider_request_too_large</c>), a member is unsupported or out of range, for example <c>n</c> above
+    /// the provider's limit (<c>shared_provider_request_invalid</c> with <c>param</c> naming the member,
+    /// <c>shared_provider_capability_not_supported</c>), or an access-context header is invalid
+    /// (<c>shared_provider_access_context_invalid</c>).
+    /// </response>
+    /// <response code="401">
+    /// No valid bearer token (<c>shared_provider_unauthorized</c>), or the token's subject cannot identify the caller
+    /// (<c>shared_provider_subject_invalid</c>).
+    /// </response>
+    /// <response code="403">The token lacks the invoke scope (<c>shared_provider_insufficient_scope</c>).</response>
+    /// <response code="404">
+    /// <c>model</c> is not a routing identifier of a currently shared model (<c>shared_provider_model_not_found</c>).
+    /// </response>
+    /// <response code="409">
+    /// The model does not support image generation (<c>shared_provider_operation_mismatch</c>) or has no available
+    /// relay adapter (<c>shared_provider_adapter_not_available</c>); check its capabilities in the catalog.
+    /// </response>
+    /// <response code="429">
+    /// The upstream provider rate limited the request (<c>shared_provider_upstream_rate_limited</c>). When
+    /// <c>Retry-After</c> is present, wait that many seconds before sending a new request.
+    /// </response>
+    /// <response code="502">
+    /// The upstream provider failed or returned invalid image data, for example <c>shared_provider_upstream_failed</c>,
+    /// <c>shared_provider_upstream_response_invalid</c>, <c>shared_provider_image_upstream_failure</c> or
+    /// <c>shared_provider_image_result_invalid</c>. The provider may have generated the images.
+    /// </response>
+    /// <response code="503">
+    /// The relay, the provider target, the invocation record or the upstream provider is unavailable, for example
+    /// <c>shared_provider_relay_unavailable</c>, <c>shared_provider_target_unavailable</c>,
+    /// <c>shared_provider_audit_unavailable</c> or <c>shared_provider_upstream_unavailable</c>.
+    /// </response>
+    /// <response code="504">
+    /// The relay or the upstream provider timed out (<c>shared_provider_relay_timeout</c>,
+    /// <c>shared_provider_upstream_timeout</c>). The provider may have generated the images.
+    /// </response>
+    internal static Task CreateImageGenerationAsync(
+        HttpContext httpContext,
+        ISharedProviderRelayApplicationService relayService,
+        IAccessContextReferenceAccessor accessContextAccessor,
+        ILogger<LogCategory> logger) => InvokeAsync(
+            httpContext,
+            relayService,
+            accessContextAccessor,
+            SharedProviderRelayOperation.ImageGenerations,
+            logger);
     private static async Task InvokeAsync(
         HttpContext httpContext,
         ISharedProviderRelayApplicationService relayService,
@@ -264,13 +494,12 @@ internal static class SharedProviderInferenceApi
         {
             await httpContext.Response.StartAsync(httpContext.RequestAborted);
             await httpContext.Response.Body.FlushAsync(httpContext.RequestAborted);
-            await foreach (var frame in stream
-                               .ReadFramesAsync(httpContext.RequestAborted)
-                               .WithCancellation(httpContext.RequestAborted))
+            await using var frames = stream.ReadFramesAsync(httpContext.RequestAborted).GetAsyncEnumerator(httpContext.RequestAborted);
+            while (await ApiStreamAuthorization.WaitAsync(httpContext, frames.MoveNextAsync().AsTask()))
             {
                 await SharedProviderOpenAiServerSentEventWriter.WriteFrameAsync(
                     httpContext.Response,
-                    frame,
+                    frames.Current,
                     httpContext.RequestAborted);
             }
 
@@ -476,7 +705,7 @@ internal static class SharedProviderInferenceApi
         public static RequestBodyReadResult Failed(SharedProviderFailure failure) => new(null, failure);
     }
 
-    private sealed class LogCategory
+    internal sealed class LogCategory
     {
     }
 }

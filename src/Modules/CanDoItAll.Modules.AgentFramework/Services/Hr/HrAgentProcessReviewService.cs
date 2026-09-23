@@ -24,22 +24,22 @@ public sealed class HrAgentProcessReviewService(
         ArgumentNullException.ThrowIfNull(input);
         if (input.AgentId == Guid.Empty)
         {
-            throw new ArgumentException("Agent id cannot be empty.", nameof(input));
+            throw Rejected("Agent id cannot be empty.");
         }
 
         if (input.Take is < 1 or > MaximumHistoryTake)
         {
-            throw new ArgumentOutOfRangeException(nameof(input), $"Take must be between 1 and {MaximumHistoryTake}.");
+            throw Rejected($"Take must be between 1 and {MaximumHistoryTake}.");
         }
 
         if (input.FromUtc.HasValue && input.ToUtc.HasValue && input.FromUtc > input.ToUtc)
         {
-            throw new InvalidOperationException("FromUtc cannot be later than ToUtc.");
+            throw Rejected("FromUtc cannot be later than ToUtc.");
         }
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: true, cancellationToken);
         var agent = agents.FirstOrDefault(item => item.Id == input.AgentId)
-            ?? throw new InvalidOperationException($"Agent '{input.AgentId:D}' was not found.");
+            ?? throw Rejected($"Agent '{input.AgentId:D}' was not found.");
         var state = await executionStore.LoadExecutionAsync(cancellationToken);
         var targetRuns = state.ExecutionRuns
             .Where(run => run.AgentId == input.AgentId)
@@ -75,19 +75,19 @@ public sealed class HrAgentProcessReviewService(
             input.TargetAgentId == Guid.Empty ||
             input.ManagerAgentId == Guid.Empty)
         {
-            throw new InvalidOperationException("Process run, target agent, and manager agent IDs are required.");
+            throw Rejected("Process run, target agent, and manager agent IDs are required.");
         }
 
         if (input.TargetAgentId == input.ManagerAgentId ||
             input.ManagerAgentId == actorAgentId ||
             input.TargetAgentId == actorAgentId)
         {
-            throw new InvalidOperationException("The HR agent, target agent, and manager agent must be distinct participants.");
+            throw Rejected("The HR agent, target agent, and manager agent must be distinct participants.");
         }
 
         if (string.IsNullOrWhiteSpace(input.Question) || input.Question.Trim().Length > MaximumQuestionLength)
         {
-            throw new InvalidOperationException($"Question is required and cannot exceed {MaximumQuestionLength} characters.");
+            throw Rejected($"Question is required and cannot exceed {MaximumQuestionLength} characters.");
         }
 
         var state = await executionStore.LoadExecutionAsync(cancellationToken);
@@ -97,26 +97,26 @@ public sealed class HrAgentProcessReviewService(
             .ToArray();
         if (processRuns.Length == 0)
         {
-            throw new InvalidOperationException($"Process run '{input.ProcessRunId:D}' has no agent execution lineage.");
+            throw Rejected($"Process run '{input.ProcessRunId:D}' has no agent execution lineage.");
         }
 
         if (processRuns.All(run => run.AgentId != input.TargetAgentId))
         {
-            throw new InvalidOperationException($"Target agent '{input.TargetAgentId:D}' did not participate in process run '{input.ProcessRunId:D}'.");
+            throw Rejected($"Target agent '{input.TargetAgentId:D}' did not participate in process run '{input.ProcessRunId:D}'.");
         }
 
         if (processRuns.All(run => run.AgentId != input.ManagerAgentId))
         {
-            throw new InvalidOperationException($"Selected manager agent '{input.ManagerAgentId:D}' did not participate in process run '{input.ProcessRunId:D}'.");
+            throw Rejected($"Selected manager agent '{input.ManagerAgentId:D}' did not participate in process run '{input.ProcessRunId:D}'.");
         }
 
         var target = agents.FirstOrDefault(agent => agent.Id == input.TargetAgentId)
-            ?? throw new InvalidOperationException($"Target agent '{input.TargetAgentId:D}' was not found.");
+            ?? throw Rejected($"Target agent '{input.TargetAgentId:D}' was not found.");
         var manager = agents.FirstOrDefault(agent => agent.Id == input.ManagerAgentId)
-            ?? throw new InvalidOperationException($"Manager agent '{input.ManagerAgentId:D}' was not found.");
+            ?? throw Rejected($"Manager agent '{input.ManagerAgentId:D}' was not found.");
         if (!IsEligibleReviewManager(manager, target.Id))
         {
-            throw new InvalidOperationException(
+            throw Rejected(
                 "The selected manager must be a non-template Active participant with a configured provider and permission to observe other agents.");
         }
 
@@ -211,6 +211,11 @@ public sealed class HrAgentProcessReviewService(
             result.ResponseText,
             "This is a requested review from an explicitly selected participating observer; the system does not claim a persisted canonical run-manager binding.");
     }
+
+    // History reads and manager-review requests are checked before any review run starts, so a rejected request has
+    // changed nothing and the HR agent can correct it and retry.
+    private static AgentToolInputValidationException Rejected(string message)
+        => AgentToolInputValidationException.Create(message);
 
     private async Task TryProtectManagerReviewEvidenceAsync(
         Guid? executionRunId,

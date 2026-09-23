@@ -3,15 +3,12 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Playwright.Visual;
 
-[Collection(PlaywrightCollection.Name)]
-public sealed class DashboardOperationalSnapshotPlaywrightTests
-{
-    private readonly PlaywrightAppFixture fixture;
+public sealed class DashboardOperationalSnapshotPlaywrightTests : IAsyncLifetime {
+    private readonly PlaywrightAppFixture fixture = new();
 
-    public DashboardOperationalSnapshotPlaywrightTests(PlaywrightAppFixture fixture)
-    {
-        this.fixture = fixture;
-    }
+    public Task InitializeAsync() => fixture.InitializeAsync();
+
+    public Task DisposeAsync() => fixture.DisposeAsync();
 
     [Fact]
     public async Task Empty_snapshot_and_failed_refresh_remain_honest_in_the_real_app()

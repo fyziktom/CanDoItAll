@@ -958,6 +958,8 @@ internal sealed class WorkspaceFileMutationService
         string pathKind,
         DateTimeOffset startedAtUtc)
     {
+        // Every mutation returns this failure only for a rejection decided before it staged or committed any content.
+        AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
         return new WorkspaceFileMutationResult(
             Succeeded: false,
             Message: message,

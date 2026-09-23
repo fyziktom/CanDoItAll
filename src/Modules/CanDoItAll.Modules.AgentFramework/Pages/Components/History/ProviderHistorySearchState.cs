@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using Microsoft.Extensions.Logging;
 
@@ -9,6 +11,8 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
     private CancellationTokenSource? active;
     private string? currentCursor;
     private bool disposed;
+
+    public event Action? Changed;
 
     public ProviderRequestHistoryQuery? AppliedQuery { get; private set; }
     public HistoryPage? Page { get; private set; }
@@ -24,7 +28,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
 
     public Task SearchAsync(ProviderRequestHistoryQuery query) {
         ObjectDisposedException.ThrowIf(disposed, this);
-        Reset();
+        ResetCore();
         AppliedQuery = query with { Cursor = null };
         return ReadAsync(AppliedQuery);
     }
@@ -58,14 +62,29 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
     }
 
     public void Cancel() {
-        active?.Cancel();
+        if (disposed || active is null) {
+            return;
+        }
+        StopRequest();
+        WasCanceled = true;
+        Changed?.Invoke();
+    }
+
+    private void StopRequest() {
+        var owner = active;
         active = null;
         IsLoading = false;
-        WasCanceled = true;
+        owner?.Cancel();
     }
 
     public void Reset() {
-        Cancel();
+        ObjectDisposedException.ThrowIf(disposed, this);
+        ResetCore();
+        Changed?.Invoke();
+    }
+
+    private void ResetCore() {
+        StopRequest();
         AppliedQuery = null;
         Page = null;
         Error = null;
@@ -79,7 +98,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
 
     private async Task ReadAsync(ProviderRequestHistoryQuery query, Action? accepted = null) {
         ObjectDisposedException.ThrowIf(disposed, this);
-        Cancel();
+        StopRequest();
         using var cancellation = new CancellationTokenSource();
         active = cancellation;
         IsLoading = true;
@@ -87,21 +106,20 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
         Page = null;
         Error = null;
         Failure = null;
+        Changed?.Invoke();
         try {
             var page = await history.SearchAsync(query, cancellation.Token);
             if (!ReferenceEquals(active, cancellation) || cancellation.IsCancellationRequested) {
                 return;
             }
             accepted?.Invoke();
-            Page = page;
-        } catch (OperationCanceledException) {
-            if (ReferenceEquals(active, cancellation)) {
-                WasCanceled = true;
-            }
+            Page = page with { Entries = page.Entries.ToImmutableArray() };
+        } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
         } catch (ProviderHistoryException exception) {
             if (ReferenceEquals(active, cancellation)) {
                 Failure = exception.Failure;
-                Error = exception.Message;
+                Error = HistoryPublicErrors.Message(exception.Failure);
+                logger.LogWarning("History search rejected with {Failure}.", exception.Failure);
             }
         } catch (Exception exception) {
             if (ReferenceEquals(active, cancellation)) {
@@ -113,12 +131,23 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
             if (ReferenceEquals(active, cancellation)) {
                 active = null;
                 IsLoading = false;
+                Changed?.Invoke();
             }
         }
     }
 
+    public HistoryResultsPresentation Presentation(bool draftChanged) => new(
+        IsLoading ? HistorySearchPhase.Loading : Error is not null ? HistorySearchPhase.Failed
+            : WasCanceled ? HistorySearchPhase.Canceled : Page is not null ? HistorySearchPhase.Ready : HistorySearchPhase.NotRequested,
+        AppliedQuery, draftChanged, Failure, Page?.Entries.ToImmutableArray() ?? [], Page?.Coverage, Page?.QueriedAtUtc,
+        PageNumber, CanPrevious, CanNext, HasEarlierPages);
+
     public void Dispose() {
-        Cancel();
+        if (disposed) {
+            return;
+        }
         disposed = true;
+        Changed = null;
+        StopRequest();
     }
 }

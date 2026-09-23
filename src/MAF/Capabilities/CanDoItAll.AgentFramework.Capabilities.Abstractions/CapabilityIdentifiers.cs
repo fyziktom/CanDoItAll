@@ -1,5 +1,10 @@
 namespace CanDoItAll.AgentFramework.Capabilities.Abstractions;
 
+/// <summary>
+/// Capability key in lower kebab case, for example <c>release-notes</c>. It is serialized as an object whose
+/// <c>value</c> member holds the key.
+/// </summary>
+/// <param name="Value">The key: groups of lower-case ASCII letters and digits separated by single hyphens.</param>
 public readonly record struct CapabilityKey(string Value)
 {
     public static bool TryCreate(string? value, out CapabilityKey key)
@@ -14,6 +19,10 @@ public readonly record struct CapabilityKey(string Value)
         => Value;
 }
 
+/// <summary>
+/// Skill name in lower kebab case, serialized as an object whose <c>value</c> member holds the name.
+/// </summary>
+/// <param name="Value">The name: groups of lower-case ASCII letters and digits separated by single hyphens.</param>
 public readonly record struct SkillName(string Value)
 {
     public static bool TryCreate(string? value, out SkillName name)
@@ -42,6 +51,13 @@ public readonly record struct SkillName(string Value)
         => Value;
 }
 
+/// <summary>
+/// Name of a runtime tool as offered to the model, in lower snake case, for example <c>read_file</c>. It is
+/// serialized as an object whose <c>value</c> member holds the name.
+/// </summary>
+/// <param name="Value">
+/// The name: a lower-case ASCII letter followed by at most 127 lower-case letters, digits or underscores.
+/// </param>
 public readonly record struct RuntimeToolName(string Value)
 {
     public static bool TryCreate(string? value, out RuntimeToolName name)
@@ -66,6 +82,11 @@ public readonly record struct RuntimeToolName(string Value)
         => Value;
 }
 
+/// <summary>
+/// Key of an MCP server capability in lower kebab case, serialized as an object whose <c>value</c> member holds the
+/// key.
+/// </summary>
+/// <param name="Value">The key: groups of lower-case ASCII letters and digits separated by single hyphens.</param>
 public readonly record struct McpServerKey(string Value)
 {
     public static bool TryCreate(string? value, out McpServerKey key)
@@ -89,6 +110,10 @@ public readonly record struct McpServerKey(string Value)
         => Value;
 }
 
+/// <summary>
+/// Name of a tool exposed by an MCP server, serialized as an object whose <c>value</c> member holds the name.
+/// </summary>
+/// <param name="Value">The name: 1 to 128 ASCII letters, digits, periods, underscores or hyphens.</param>
 public readonly record struct McpToolName(string Value)
 {
     public static bool TryCreate(string? value, out McpToolName name)
@@ -113,6 +138,13 @@ public readonly record struct McpToolName(string Value)
         => Value;
 }
 
+/// <summary>
+/// Key of the implementation behind a capability, for example <c>tool.release-notes</c>, serialized as an object
+/// whose <c>value</c> member holds the key.
+/// </summary>
+/// <param name="Value">
+/// The key: groups of lower-case ASCII letters and digits separated by single periods, underscores or hyphens.
+/// </param>
 public readonly record struct ImplementationKey(string Value)
 {
     public static bool TryCreate(string? value, out ImplementationKey key)
@@ -137,6 +169,10 @@ public readonly record struct ImplementationKey(string Value)
         => Value;
 }
 
+/// <summary>
+/// Capability tag in lower kebab case, serialized as an object whose <c>value</c> member holds the tag.
+/// </summary>
+/// <param name="Value">The tag: groups of lower-case ASCII letters and digits separated by single hyphens.</param>
 public readonly record struct CapabilityTag(string Value)
 {
     public static bool TryCreate(string? value, out CapabilityTag tag)
@@ -160,6 +196,11 @@ public readonly record struct CapabilityTag(string Value)
         => Value;
 }
 
+/// <summary>
+/// Name of a process operation contract in PascalCase, serialized as an object whose <c>value</c> member holds the
+/// name.
+/// </summary>
+/// <param name="Value">The name: an upper-case ASCII letter followed by at most 127 ASCII letters or digits.</param>
 public readonly record struct ProcessOperationKey(string Value)
 {
     public static bool TryCreate(string? value, out ProcessOperationKey key)
@@ -184,6 +225,13 @@ public readonly record struct ProcessOperationKey(string Value)
         => Value;
 }
 
+/// <summary>
+/// Identifier of a capability access rule in lower kebab case, serialized as an object whose <c>value</c> member holds
+/// the identifier.
+/// </summary>
+/// <param name="Value">
+/// The identifier: groups of lower-case ASCII letters and digits separated by single hyphens.
+/// </param>
 public readonly record struct CapabilityRuleId(string Value)
 {
     public static bool TryCreate(string? value, out CapabilityRuleId id)
@@ -207,6 +255,11 @@ public readonly record struct CapabilityRuleId(string Value)
         => Value;
 }
 
+/// <summary>
+/// Stable identifier of a capability definition, serialized as an object whose <c>value</c> member holds the
+/// identifier.
+/// </summary>
+/// <param name="Value">The identifier: 1 to 128 ASCII letters, digits, underscores, periods, colons or hyphens.</param>
 public readonly record struct CapabilityStableId(string Value)
 {
     public static bool TryCreate(string? value, out CapabilityStableId id)
@@ -231,6 +284,11 @@ public readonly record struct CapabilityStableId(string Value)
         => Value;
 }
 
+/// <summary>
+/// Path of the template or definition a capability or diagnostic comes from, with forward slashes; serialized as an
+/// object whose <c>value</c> member holds the path.
+/// </summary>
+/// <param name="Value">The path, trimmed and with forward slashes.</param>
 public readonly record struct TemplatePath(string Value)
 {
     public static TemplatePath Create(string value)

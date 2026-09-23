@@ -1,6 +1,7 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -77,14 +78,26 @@ public sealed class ProjectStructureFileActionCoordinatorTests
             projectScopes,
             new ProjectStructureFileScopeResolver(
                 new ThrowingDbContextFactory(),
-                new ProjectStructureAssemblyService([], new SystemClock()),
-                new ThrowingStorageCatalog()),
+                new ProjectStructureAssemblyService(new ThrowingDbContextFactory(), [], new SystemClock(),
+                    CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+                        new() { ProviderKind = DatabaseProviderKind.InMemory },
+                        DatabaseProfileResolutionSource.ExplicitOverride,
+                        nameof(ProjectStructureFileActionCoordinatorTests)))),
+                new ThrowingStorageCatalog(), new ThrowingProcessFiles()),
             browseSessions,
             new ThrowingBrowseItemActivator(),
             new ThrowingBrowseItemActionService(),
             new ThrowingKnownFileSessionFactory(),
             new NoopKnownFileSessionReleaser(),
             NullLogger<ProjectStructureFileActionCoordinator>.Instance);
+
+    private sealed class ThrowingProcessFiles : IProcessRunFileScopeProvider {
+        public ValueTask<ProcessRunFileScopeSet> ResolveAsync(Guid runId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public ValueTask<FileToolsStorageBinding> ResolveRootAsync(Guid runId, string directoryPath, Guid projectId,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    }
 
     private sealed class ThrowingBrowseItemActionService : IFileToolsBrowseItemActionService
     {
@@ -196,17 +209,17 @@ public sealed class ProjectStructureFileActionCoordinatorTests
 
     private sealed class ThrowingStorageCatalog : IStorageCatalogService
     {
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+        private Task<IReadOnlyList<StorageCatalogRecord>> ReadRecordsAsync(CancellationToken cancellationToken = default)
             => UnexpectedAsync<IReadOnlyList<StorageCatalogRecord>>();
 
-        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord?> ReadRecordAsync(Guid id, CancellationToken cancellationToken = default)
             => UnexpectedAsync<StorageCatalogRecord?>();
 
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(
+        private Task<StorageCatalogRecord> ReadBootstrapRecordAsync(
             CancellationToken cancellationToken = default)
             => UnexpectedAsync<StorageCatalogRecord>();
 
-        public Task<StorageCatalogRecord> SaveAsync(
+        private Task<StorageCatalogRecord> SaveRecordAsync(
             StorageCatalogRecord record,
             CancellationToken cancellationToken = default)
             => UnexpectedAsync<StorageCatalogRecord>();
@@ -214,26 +227,55 @@ public sealed class ProjectStructureFileActionCoordinatorTests
         public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromException(new InvalidOperationException("Unexpected storage scope resolution."));
 
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(
+        internal Task<IReadOnlyList<StorageRoutingRule>> ReadRoutingRecordsAsync(
             CancellationToken cancellationToken = default)
             => UnexpectedAsync<IReadOnlyList<StorageRoutingRule>>();
 
-        public Task<StorageRoutingRule> SaveRuleAsync(
+        private Task<StorageRoutingRule> SaveRoutingRecordAsync(
             StorageRoutingRule rule,
             CancellationToken cancellationToken = default)
             => UnexpectedAsync<StorageRoutingRule>();
 
         private static Task<T> UnexpectedAsync<T>()
             => Task.FromException<T>(new InvalidOperationException("Unexpected storage scope resolution."));
+        public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+        public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+        public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+            var row = await ReadRecordAsync(id, cancellationToken);
+            return row is null ? null : new(row.ToSnapshot(), StorageJson.ParseProviderConfiguration(row.ConfigJson));
+        }
+
+        public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+            (await ReadBootstrapRecordAsync(cancellationToken)).ToDriverInput();
+
+        public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRoutingRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRoutingRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
     }
 
-    private sealed class ThrowingDbContextFactory : IDbContextFactory<AppDbContext>
+    private sealed class ThrowingDbContextFactory : IDbContextFactory<WorkbenchDbContext>
     {
-        public AppDbContext CreateDbContext()
+        public WorkbenchDbContext CreateDbContext()
             => throw new InvalidOperationException("Unexpected node scope resolution.");
 
-        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-            => Task.FromException<AppDbContext>(new InvalidOperationException("Unexpected node scope resolution."));
+        public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromException<WorkbenchDbContext>(new InvalidOperationException("Unexpected node scope resolution."));
     }
 
     private static class ProjectStructureTestNodes

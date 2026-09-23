@@ -16,16 +16,6 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanoni
     private readonly PostgresTestDatabaseLease lease;
     private HistoryPersistenceTestDatabase(PostgresTestDatabaseLease lease) {
         this.lease = lease;
-        Factory = new(lease.CreateAppDbContextOptions());
-        Text = new(new EphemeralDataProtectionProvider(), Secrets);
-        Details = new(Text, Clock, NullLogger<HistoryDetailStore>.Instance);
-        HostLease = new(Factory, Clock);
-        Capture = new(Factory, Runtime, Runtime, Details, HostLease);
-        Projection = new(Factory);
-        Outbox = new(Clock);
-        Processor = new(Factory, Clock, NullLogger<HistoryOutboxProcessor>.Instance);
-        Policy = new(Factory, Access, Clock,
-            new(Access, Reads, Clock, NullLogger<HistoryAuthorizedOperation>.Instance), Runtime, Runtime);
         Profile = new(
             new() {
                 DisplayName = "Provider history test database",
@@ -35,9 +25,29 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanoni
             },
             DatabaseProfileResolutionSource.ExplicitOverride,
             lease.ConnectionString);
+        Factory = new(lease.CreateAppDbContextOptions());
+        var options = new DbContextOptionsBuilder<ProviderHistoryDbContext>();
+        AppDbContextOptionsConfigurator.Configure(options, Profile);
+        HistoryOptions = options.Options;
+        HistoryFactory = new(HistoryOptions);
+        Transactions = new(this);
+        Partitions = new(HistoryFactory, HistoryOptions, Transactions);
+        Text = new(new EphemeralDataProtectionProvider(), Secrets);
+        Details = new(HistoryFactory, Text, Clock, NullLogger<HistoryDetailStore>.Instance);
+        HostLease = new(HistoryFactory, Clock);
+        Capture = new(HistoryFactory, Runtime, Runtime, Details, HostLease);
+        Projection = new(HistoryFactory, HistoryOptions, Transactions);
+        Outbox = new(HistoryOptions, Transactions, Clock);
+        Processor = new(HistoryFactory, Clock, NullLogger<HistoryOutboxProcessor>.Instance);
+        Policy = new(HistoryFactory, Access, Clock,
+            new(Access, Reads, Clock, NullLogger<HistoryAuthorizedOperation>.Instance), Runtime, Runtime);
     }
 
     internal TestFactory Factory { get; }
+    internal DbContextOptions<ProviderHistoryDbContext> HistoryOptions { get; }
+    internal HistoryTestFactory HistoryFactory { get; }
+    internal CoordinatedDatabaseTransaction Transactions { get; }
+    internal HistoryPartitionStore Partitions { get; }
     internal TestClock Clock { get; } = new();
     internal TestSecrets Secrets { get; } = new();
     internal TestRuntime Runtime { get; } = new();
@@ -66,7 +76,7 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanoni
             } else {
                 await db.Database.EnsureCreatedAsync();
             }
-            result.Partition = await new HistoryPartitionStore(result.Factory).GetAsync(default);
+            result.Partition = await result.Partitions.GetAsync(default);
             result.Access.Context = new(result.Partition, new(0, 0),
                 new(HistoryAuthenticationKind.TrustedLocalOperator), null);
             return result;
@@ -100,6 +110,21 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanoni
 
         public AppDbContext CreateDbContext() => new(options);
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
+    }
+
+    internal sealed class HistoryTestFactory(DbContextOptions<ProviderHistoryDbContext> options)
+        : IDbContextFactory<ProviderHistoryDbContext> {
+        internal DbContextOptions<ProviderHistoryDbContext> Options => options;
+
+        public HistoryTestFactory WithInterceptor(Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor interceptor) =>
+            new(new DbContextOptionsBuilder<ProviderHistoryDbContext>(options).AddInterceptors(interceptor).Options);
+
+        public ProviderHistoryDbContext CreateDbContext() => new(options);
+
+        public Task<ProviderHistoryDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateDbContext());
+        }
     }
 
     internal sealed class TestClock : TimeProvider {

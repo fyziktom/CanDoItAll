@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -62,7 +63,7 @@ public sealed class MafWorkflowExecutorInvocationIdentityTests
         using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         await using var run = await InProcessExecution.RunStreamingAsync(
             workflow,
-            new WorkflowNodeInput("{\"immutable\":true}"),
+            new WorkflowNodeInput("{\"immutable\":true}") { ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId) },
             cancellationToken: cancellationSource.Token);
         ExternalRequest? externalRequest = null;
         await foreach (var workflowEvent in run.WatchStreamAsync(
@@ -91,6 +92,8 @@ public sealed class MafWorkflowExecutorInvocationIdentityTests
         }
 
         var captured = Assert.Single(capturingInvoker.Contexts);
+        Assert.Equal(WorkflowExecutionOccurrence.Start(runId).Advance(definition.VersionId, new("start"))
+            .Advance(definition.VersionId, new("effect")), captured.ExecutionOccurrence);
         Assert.Equal(requestId, captured.CausationRequestId);
         Assert.Equal(requestVersion, captured.CausationRequestVersion);
         Assert.Equal(operationId, captured.CausationOperationId);
@@ -99,6 +102,85 @@ public sealed class MafWorkflowExecutorInvocationIdentityTests
         Assert.Equal(runId, captured.ApprovalAuthorization.RunId);
         Assert.Equal(authorization, captured.ExternalResponseAuthorization);
         Assert.Equal(authorization, captured.ApprovalAuthorization.ExternalResponseAuthorization);
+    }
+
+    [Fact]
+    public async Task FanOutJoinRetainsEachPredecessorOccurrenceAcrossRecompile() {
+        var executor = new DescriptorExecutor(approvalRequired: false);
+        var start = CreateNode("start", WorkflowNodeKind.Start);
+        var left = CreateNode("left", WorkflowNodeKind.End);
+        var right = CreateNode("right", WorkflowNodeKind.End);
+        var join = CreateNode("join", WorkflowNodeKind.Executor) with {
+            Settings = CreateNode("join", WorkflowNodeKind.Executor).Settings with { ExecutorId = executor.Descriptor.Id, ExecutorSettingsJson = "{}" }
+        };
+        var end = CreateNode("end", WorkflowNodeKind.End);
+        var definition = CreateDefinition(executor.Descriptor) with { Graph = new(start.Id, [start, left, right, join, end], [
+            CreateEdge("start-left", start.Id, left.Id) with { Kind = WorkflowEdgeKind.FanOut },
+            CreateEdge("start-right", start.Id, right.Id) with { Kind = WorkflowEdgeKind.FanOut },
+            CreateEdge("left-join", left.Id, join.Id) with { Kind = WorkflowEdgeKind.FanIn },
+            CreateEdge("right-join", right.Id, join.Id) with { Kind = WorkflowEdgeKind.FanIn },
+            CreateEdge("join-end", join.Id, end.Id)
+        ]) };
+        var runId = WorkflowRunId.New();
+        var input = new WorkflowNodeInput("{}") { ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId) };
+        var first = await ExecuteOccurrencesAsync(definition, executor, input, generation: 1);
+        var persisted = JsonSerializer.Deserialize<WorkflowNodeInput>(JsonSerializer.Serialize(input))!;
+        var retry = await ExecuteOccurrencesAsync(definition, executor, persisted, generation: 7);
+
+        var common = WorkflowExecutionOccurrence.Start(runId).Advance(definition.VersionId, start.Id);
+        var expected = new[] { common.Advance(definition.VersionId, left.Id).Advance(definition.VersionId, join.Id).Path,
+            common.Advance(definition.VersionId, right.Id).Advance(definition.VersionId, join.Id).Path }.Order().ToArray();
+        Assert.Equal(expected, first.Select(context => context.ExecutionOccurrence!.Path).Order());
+        Assert.Equal(expected, retry.Select(context => context.ExecutionOccurrence!.Path).Order());
+        Assert.All(retry, context => Assert.Equal(7, context.InvocationGeneration.Value));
+    }
+
+    [Fact]
+    public async Task LoopVisitsHaveDistinctOccurrencesButRetryAndGenerationDoNotChangeTheirIdentities() {
+        var executor = new DescriptorExecutor(approvalRequired: false);
+        var definition = CreateDefinition(executor.Descriptor);
+        var start = definition.Graph.Nodes.Single(node => node.Id.Value == "start");
+        var effect = definition.Graph.Nodes.Single(node => node.Id.Value == "effect");
+        var end = definition.Graph.Nodes.Single(node => node.Id.Value == "end");
+        definition = definition with { Graph = new(start.Id, [start, effect, end], [
+            CreateEdge("start-effect", start.Id, effect.Id),
+            CreateEdge("loop", effect.Id, effect.Id) with { Kind = WorkflowEdgeKind.Conditional,
+                Routing = WorkflowEdgeRouting.Predicate("$.iteration", WorkflowRouteOperator.LessThan, "2", WorkflowRouteValueKind.Number) },
+            CreateEdge("finish", effect.Id, end.Id) with { Kind = WorkflowEdgeKind.Conditional,
+                Routing = WorkflowEdgeRouting.Predicate("$.iteration", WorkflowRouteOperator.GreaterThanOrEqual, "2", WorkflowRouteValueKind.Number) }
+        ]) };
+        var runId = WorkflowRunId.New();
+        var input = new WorkflowNodeInput("{\"iteration\":0}") { ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId) };
+        static string Advance(WorkflowNode _, WorkflowNodeInput value) {
+            using var document = JsonDocument.Parse(value.PayloadJson);
+            return JsonSerializer.Serialize(new { iteration = document.RootElement.GetProperty("iteration").GetInt32() + 1 });
+        }
+        var first = await ExecuteOccurrencesAsync(definition, executor, input, 1, Advance);
+        var retry = await ExecuteOccurrencesAsync(definition, executor,
+            JsonSerializer.Deserialize<WorkflowNodeInput>(JsonSerializer.Serialize(input))!, 9, Advance);
+        var expectedFirst = WorkflowExecutionOccurrence.Start(runId).Advance(definition.VersionId, start.Id).Advance(definition.VersionId, effect.Id);
+        Assert.Equal(new[] { expectedFirst, expectedFirst.Advance(definition.VersionId, effect.Id) }, first.Select(context => context.ExecutionOccurrence));
+        Assert.Equal(first.Select(context => context.ExecutionOccurrence), retry.Select(context => context.ExecutionOccurrence));
+        Assert.Equal(2, first.Select(context => context.ExecutionOccurrence).Distinct().Count());
+    }
+
+    private static async Task<IReadOnlyList<WorkflowExecutorInvocationContext>> ExecuteOccurrencesAsync(
+        WorkflowDefinition definition, DescriptorExecutor executor, WorkflowNodeInput input, int generation,
+        Func<WorkflowNode, WorkflowNodeInput, string>? transform = null) {
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new CapturingInvoker(transform);
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker, executorCatalog: catalog);
+        var compiled = compiler.Compile(definition, [], WorkflowPreviewSimulationPlan.Empty,
+            new() { InvocationGeneration = new(generation) });
+        Assert.True(compiled.Compilation.Succeeded, compiled.Compilation.ErrorMessage);
+        using var scope = WorkflowExecutorExecutionAuditScope.Push(input.ExecutionOccurrence!.RunId);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        await using var run = await InProcessExecution.RunStreamingAsync(Assert.IsType<Workflow>(compiled.Workflow), input,
+            cancellationToken: cancellation.Token);
+        await foreach (var _ in run.WatchStreamAsync(blockOnPendingRequest: false, cancellation.Token)) {
+        }
+
+        return invoker.Contexts;
     }
 
     private static WorkflowDefinition CreateDefinition(WorkflowExecutorDescriptor descriptor)
@@ -166,7 +248,7 @@ public sealed class MafWorkflowExecutorInvocationIdentityTests
             WorkflowEdgeKind.Direct,
             ConditionExpression: string.Empty);
 
-    private sealed class DescriptorExecutor : IWorkflowExecutor
+    private sealed class DescriptorExecutor(bool approvalRequired = true) : IWorkflowExecutor
     {
         public WorkflowExecutorDescriptor Descriptor { get; } =
             BuiltInWorkflowExecutorDescriptors.JsonTransform with
@@ -175,7 +257,7 @@ public sealed class MafWorkflowExecutorInvocationIdentityTests
                 Name = "Identity propagation",
                 PermissionPolicy = new WorkflowExecutorPermissionPolicy(
                     WorkflowExecutorCapabilityFlags.WritesExternalData,
-                    WorkflowExecutorApprovalRequirement.AlwaysRequired)
+                    approvalRequired ? WorkflowExecutorApprovalRequirement.AlwaysRequired : WorkflowExecutorApprovalRequirement.NotRequired)
             };
 
         public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -185,7 +267,7 @@ public sealed class MafWorkflowExecutorInvocationIdentityTests
             => throw new NotSupportedException();
     }
 
-    private sealed class CapturingInvoker : IWorkflowExecutorInvoker
+    private sealed class CapturingInvoker(Func<WorkflowNode, WorkflowNodeInput, string>? transform = null) : IWorkflowExecutorInvoker
     {
         public List<WorkflowExecutorInvocationContext> Contexts { get; } = [];
 
@@ -208,10 +290,12 @@ public sealed class MafWorkflowExecutorInvocationIdentityTests
             WorkflowExecutorInvocationContext invocationContext,
             CancellationToken cancellationToken = default)
         {
-            Contexts.Add(invocationContext);
+            lock (Contexts) {
+                Contexts.Add(invocationContext);
+            }
             return ValueTask.FromResult(new WorkflowNodeExecutionResult(
                 node.Id,
-                input.PayloadJson,
+                transform?.Invoke(node, input) ?? input.PayloadJson,
                 node.Settings.ResultShape ?? WorkflowValueShape.Text));
         }
     }

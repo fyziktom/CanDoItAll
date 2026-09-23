@@ -14,7 +14,7 @@ using Npgsql;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowCatalogService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkflowDbContext> dbContextFactory,
     IWorkflowDefinitionValidator validator,
     IPromptGalleryService promptGallery,
     IPromptGalleryImportService promptGalleryImporter,
@@ -1161,7 +1161,7 @@ public sealed class PersistentWorkflowCatalogService(
     }
 
     private async Task<WorkflowGraph> SnapshotGraphAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowGraph graph,
         CancellationToken cancellationToken)
     {
@@ -1296,19 +1296,16 @@ public sealed class PersistentWorkflowCatalogService(
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new WorkflowDefinitionValidationException(
             $"{messagePrefix}: {string.Join(" ", validation.Issues.Select(issue => issue.Message))}");
     }
 
     private static InvalidOperationException CreateDefinitionConcurrencyException(
         WorkflowId workflowId,
         Exception? innerException = null)
-    {
-        var message = $"Workflow definition '{workflowId}' was updated by another request.";
-        return innerException is null
-            ? new InvalidOperationException(message)
-            : new InvalidOperationException(message, innerException);
-    }
+        => new WorkflowDefinitionConcurrencyException(
+            $"Workflow definition '{workflowId}' was updated by another request.",
+            innerException);
 
     private static InvalidOperationException CreateExternalIdentityConflictException(
         string externalNamespace,
@@ -1416,7 +1413,7 @@ public sealed class PersistentWorkflowCatalogService(
             DateTimeOffset.UtcNow);
     }
 
-    private static IQueryable<WorkflowDefinitionRecord> LatestDefinitionQuery(AppDbContext dbContext)
+    private static IQueryable<WorkflowDefinitionRecord> LatestDefinitionQuery(WorkflowDbContext dbContext)
         => from head in dbContext.Set<WorkflowDefinitionHeadRecord>().AsNoTracking()
            join record in dbContext.Set<WorkflowDefinitionRecord>().AsNoTracking()
                on new { head.WorkflowId, head.VersionId }
@@ -1463,7 +1460,12 @@ public sealed class PersistentWorkflowCatalogService(
         string DefinitionJson);
 }
 
-public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> dbContextFactory) :
+public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<WorkflowDbContext> dbContextFactory,
+    IWorkflowScheduledSourceAuthorityPolicy? scheduledSourceAuthority = null,
+    CoordinatedDatabaseTransaction? coordinatedTransactions = null,
+    IWorkflowStructureSourceAuthorityPolicy? structureSourceAuthority = null,
+    WorkflowProcessToolAdmission? processToolAdmission = null,
+    IWorkflowMappedProcessSourceAuthority? mappedProcessSource = null) :
     IWorkflowRunStore,
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore,
@@ -1492,8 +1494,13 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var source = await AcquireStructureSourceAsync(dbContext, run, cancellationToken);
         if (WorkflowPersistenceProvider.IsInMemory(dbContext))
         {
+            using var participation = source is not null ? coordinatedTransactions!.Enter(dbContext) : null;
+            if (source is not null) {
+                await source.RequireForMutationAsync(cancellationToken);
+            }
             await CreateRunWithStartedEventInMemoryAsync(
                 dbContext,
                 run,
@@ -1506,18 +1513,113 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
+        using var coordination = source is not null ? coordinatedTransactions!.Enter(dbContext) : null;
+        if (source is not null) {
+            await source.RequireForMutationAsync(cancellationToken);
+        }
+        if (run.Origin is WorkflowLaunchOrigin.ProcessDispatchAssignment mapped) {
+            await PersistentWorkflowProcessAssignmentRunQuery.RequireVacantAsync(dbContext, mapped, cancellationToken);
+        }
+        if (await dbContext.Set<WorkflowRunRecordEntity>().AnyAsync(row => row.RunId == run.RunId.Value, cancellationToken)) {
+            throw new WorkflowRunAlreadyExistsException(run.RunId);
+        }
         dbContext.Set<WorkflowRunRecordEntity>().Add(WorkflowRunRecordEntity.FromSnapshot(run));
-        dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(startedEvent));
+        StageStartedEvent(dbContext, run, startedEvent);
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            if (source is not null) {
+                await source.RequireForMutationAsync(cancellationToken);
+            }
             await transaction.CommitAsync(cancellationToken);
+            coordination?.Dispose();
         }
-        catch (DbUpdateException exception) when (IsWorkflowRunPrimaryKeyViolation(exception))
-        {
+        catch (DbUpdateException exception) when (IsWorkflowRunPrimaryKeyViolation(exception) ||
+                startedEvent.DisclosureDeclaration is not null && IsWorkflowEventPrimaryKeyViolation(exception)) {
             await transaction.RollbackAsync(CancellationToken.None);
+            if (!IsWorkflowRunPrimaryKeyViolation(exception)) {
+                await using var verify = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                if (!await verify.Set<WorkflowRunRecordEntity>().AnyAsync(row => row.RunId == run.RunId.Value, cancellationToken)) {
+                    throw;
+                }
+            }
             throw new WorkflowRunAlreadyExistsException(run.RunId);
         }
+    }
+
+    private async Task<IWorkflowStructureSourceAuthorityLease?> AcquireStructureSourceAsync(WorkflowDbContext database,
+        WorkflowRunSnapshot run, CancellationToken cancellationToken) {
+        if (run.Origin is WorkflowLaunchOrigin.ProcessAssignment) {
+            throw new InvalidOperationException("Legacy mapped Process origin remains observable but cannot admit a new Workflow without its actual dispatch claim.");
+        }
+        if (run.Origin is WorkflowLaunchOrigin.ProcessDispatchAssignment mapped) {
+            if (await database.Set<WorkflowRunRecordEntity>().AsNoTracking().AnyAsync(row => row.RunId == run.RunId.Value, cancellationToken)) {
+                throw new WorkflowRunAlreadyExistsException(run.RunId);
+            }
+            if (coordinatedTransactions is null || mappedProcessSource is null || run.WorkflowId != mapped.Dispatch.WorkflowId ||
+                    mapped.Dispatch.RequestedVersionId is { } version && run.VersionId != version) {
+                throw new InvalidOperationException("Mapped Workflow admission requires its exact selected executor, Process source policy and actual transaction coordinator.");
+            }
+            return await mappedProcessSource.AcquireForMutationAsync(mapped, cancellationToken);
+        }
+        if (run.Origin is WorkflowLaunchOrigin.ProcessToolInvocation tool) {
+            if (await database.Set<WorkflowRunRecordEntity>().AsNoTracking().AnyAsync(row => row.RunId == run.RunId.Value, cancellationToken)) {
+                throw new WorkflowRunAlreadyExistsException(run.RunId);
+            }
+            if (tool.Invocation.PreparedRunId != run.RunId || tool.Invocation.ToolName != WorkflowToolPolicy.WorkflowsRunStart ||
+                    coordinatedTransactions is null || processToolAdmission is null) {
+                throw new InvalidOperationException("Process tool Workflow admission requires its exact proposal, source policy and actual transaction coordinator.");
+            }
+            return await processToolAdmission.AcquireForMutationAsync(run, cancellationToken);
+        }
+        if (run.Origin?.StructureAuthority is not { ProjectScope: not null } authority) {
+            var scheduled = await AcquireScheduledSourceAsync(database, run, cancellationToken);
+            return scheduled is null ? null : new LegacyScheduledSource(scheduled);
+        }
+        if (await database.Set<WorkflowRunRecordEntity>().AsNoTracking().AnyAsync(row => row.RunId == run.RunId.Value, cancellationToken)) {
+            throw new WorkflowRunAlreadyExistsException(run.RunId);
+        }
+        if (run.Origin is WorkflowLaunchOrigin.AgentRuntimeInvocation && authority.ProjectScope.WorkflowStartCapabilityId is null) {
+            throw new InvalidOperationException("The Workflow tool admission has no original launch capability binding.");
+        }
+        if (run.Origin is WorkflowLaunchOrigin.AgentRuntimeInvocation && authority.AgentGovernance is { } governance &&
+                governance.AllowedOperations.Count > 0 && !governance.AllowedOperations.Contains(WorkflowToolPolicy.WorkflowsRunStart)) {
+            throw new InvalidOperationException("The original Agent execution ceiling does not allow the Workflow launch tool.");
+        }
+        if (run.Origin is WorkflowLaunchOrigin.SchedulerPlanRun scheduledOrigin &&
+                (authority.SchedulerAuthority is not { } schedule || schedule.PlanId != scheduledOrigin.PlanId ||
+                    schedule.FireAdmissionId != scheduledOrigin.PlanRunId || scheduledOrigin.PreparedRunId != run.RunId)) {
+            throw new WorkflowScheduledSourceAuthorityException("The Workflow source does not match its exact saved Scheduler fire.");
+        }
+        if (coordinatedTransactions is null || structureSourceAuthority is null) {
+            throw new InvalidOperationException("Scoped Workflow admission requires its source policy and actual transaction coordinator.");
+        }
+        return await structureSourceAuthority.AcquireAsync(authority, WorkflowStructureAuthorityUse.Admission,
+            cancellationToken: cancellationToken);
+    }
+
+    private sealed class LegacyScheduledSource(IWorkflowScheduledSourceAuthorityLease inner) : IWorkflowStructureSourceAuthorityLease {
+        public Task RequireForMutationAsync(CancellationToken cancellationToken = default) => inner.RequireForMutationAsync(cancellationToken);
+        public ValueTask DisposeAsync() => inner.DisposeAsync();
+    }
+
+    private async Task<IWorkflowScheduledSourceAuthorityLease?> AcquireScheduledSourceAsync(WorkflowDbContext database,
+        WorkflowRunSnapshot run, CancellationToken cancellationToken) {
+        if (run.Origin is not WorkflowLaunchOrigin.SchedulerPlanRun scheduled) {
+            return null;
+        }
+        if (await database.Set<WorkflowRunRecordEntity>().AsNoTracking().AnyAsync(row => row.RunId == run.RunId.Value, cancellationToken)) {
+            throw new WorkflowRunAlreadyExistsException(run.RunId);
+        }
+        if (scheduled.StructureAuthority is not { SchedulerAuthority: { } binding } authority ||
+                binding.PlanId != scheduled.PlanId || binding.FireAdmissionId != scheduled.PlanRunId ||
+                scheduled.PreparedRunId != run.RunId) {
+            throw new WorkflowScheduledSourceAuthorityException("The scheduled Workflow requires its exact saved fire and source authority before a new admission; reconcile legacy source evidence first.");
+        }
+        if (scheduledSourceAuthority is null || coordinatedTransactions is null) {
+            throw new InvalidOperationException("Scheduled Workflow admission requires configured source authority and transaction coordination.");
+        }
+        return await scheduledSourceAuthority.AcquireAsync(authority, cancellationToken);
     }
 
     public async Task<WorkflowRunTransitionResult> TryTransitionRunAsync(
@@ -1556,10 +1658,18 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
+        var currentQuery = dbContext.Database.IsNpgsql() ? dbContext.Set<WorkflowRunRecordEntity>().FromSqlInterpolated(
+            $"SELECT * FROM \"AgentFramework_WorkflowRuns\" WHERE \"RunId\" = {runId.Value} FOR UPDATE")
+            : dbContext.Set<WorkflowRunRecordEntity>();
+        var current = await currentQuery.AsNoTracking().SingleOrDefaultAsync(row => row.RunId == runId.Value, cancellationToken);
+        if (current is not null) {
+            RequireFrozenAuthority(current, updatedRun);
+        }
         var originJson = WorkflowRunRecordEntity.SerializeOrigin(updatedRun.Origin);
         var originKind = updatedRun.Origin?.Kind;
         var originProjectId = WorkflowRunRecordEntity.ResolveOriginProjectId(updatedRun.Origin);
         var originProcessRunId = WorkflowRunRecordEntity.ResolveOriginProcessRunId(updatedRun.Origin);
+        var originProcessAssignmentId = WorkflowRunRecordEntity.ResolveOriginProcessAssignmentId(updatedRun.Origin);
         var reportingActivityAtUtc = WorkflowRunRecordEntity.ResolveReportingActivityAtUtc(updatedRun);
         var affected = await dbContext.Set<WorkflowRunRecordEntity>()
             .Where(record => record.RunId == runId.Value && states.Contains(record.State))
@@ -1577,7 +1687,8 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
                 .SetProperty(record => record.OriginJson, originJson)
                 .SetProperty(record => record.OriginKind, originKind)
                 .SetProperty(record => record.OriginProjectId, originProjectId)
-                .SetProperty(record => record.OriginProcessRunId, originProcessRunId),
+                .SetProperty(record => record.OriginProcessRunId, originProcessRunId)
+                .SetProperty(record => record.OriginProcessAssignmentId, originProcessAssignmentId),
                 cancellationToken);
         if (affected == 0)
         {
@@ -1645,7 +1756,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     }
 
     private static async Task CreateRunWithStartedEventInMemoryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowRunSnapshot run,
         WorkflowEventRecord startedEvent,
         CancellationToken cancellationToken)
@@ -1659,13 +1770,16 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             throw new WorkflowRunAlreadyExistsException(run.RunId);
         }
 
+        if (run.Origin is WorkflowLaunchOrigin.ProcessDispatchAssignment mapped) {
+            await PersistentWorkflowProcessAssignmentRunQuery.RequireVacantAsync(dbContext, mapped, cancellationToken);
+        }
         dbContext.Set<WorkflowRunRecordEntity>().Add(WorkflowRunRecordEntity.FromSnapshot(run));
-        dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(startedEvent));
+        StageStartedEvent(dbContext, run, startedEvent);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task<WorkflowRunTransitionResult> TryTransitionRunInMemoryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowRunId runId,
         IReadOnlyCollection<WorkflowRunState> expectedStates,
         WorkflowRunSnapshot updatedRun,
@@ -1693,7 +1807,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     }
 
     private static async Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseInMemoryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalRequestId requestId,
         string responseJson,
         DateTimeOffset respondedAtUtc,
@@ -1730,6 +1844,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         WorkflowRunRecordEntity record,
         WorkflowRunSnapshot snapshot)
     {
+        RequireFrozenAuthority(record, snapshot);
         record.WorkflowId = snapshot.WorkflowId.Value;
         record.VersionId = snapshot.VersionId.Value;
         record.State = snapshot.State;
@@ -1743,33 +1858,63 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         record.SetOriginProjection(snapshot.Origin);
     }
 
-    public async Task SaveRunAsync(
-        WorkflowRunSnapshot run,
-        CancellationToken cancellationToken = default)
-    {
+    public async Task SaveRunAsync(WorkflowRunSnapshot run, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(run);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var record = await dbContext.Set<WorkflowRunRecordEntity>()
+        var original = await dbContext.Set<WorkflowRunRecordEntity>().AsNoTracking()
             .SingleOrDefaultAsync(item => item.RunId == run.RunId.Value, cancellationToken);
-        if (record is null)
-        {
-            dbContext.Set<WorkflowRunRecordEntity>().Add(WorkflowRunRecordEntity.FromSnapshot(run));
+        if (original is not null) {
+            RequireFrozenAuthority(original, run);
         }
-        else
-        {
-            record.WorkflowId = run.WorkflowId.Value;
-            record.VersionId = run.VersionId.Value;
-            record.State = run.State;
-            record.Backend = run.Backend;
-            record.BackendRunId = run.BackendRunId;
-            record.Summary = run.Summary;
-            record.CreatedAtUtc = run.CreatedAtUtc;
-            record.UpdatedAtUtc = run.UpdatedAtUtc;
-            record.TerminalAtUtc = run.TerminalAtUtc;
-            record.OriginJson = WorkflowRunRecordEntity.SerializeOrigin(run.Origin);
-            record.SetOriginProjection(run.Origin);
+        if (original is null && run.Origin is WorkflowLaunchOrigin.ProcessDispatchAssignment) {
+            throw new InvalidOperationException("Mapped Workflow admission must atomically persist its run and Started event.");
         }
-
+        await using var source = original is null ? await AcquireStructureSourceAsync(dbContext, run, cancellationToken) : null;
+        var guarded = source is not null || run.Origin?.StructureAuthority?.ProjectScope is not null ||
+            original?.ToSnapshot().Origin?.StructureAuthority?.ProjectScope is not null ||
+            run.Origin is WorkflowLaunchOrigin.ProcessAssignment or WorkflowLaunchOrigin.ProcessToolInvocation or WorkflowLaunchOrigin.ProcessDispatchAssignment ||
+            original?.ToSnapshot().Origin is WorkflowLaunchOrigin.ProcessAssignment or WorkflowLaunchOrigin.ProcessToolInvocation or WorkflowLaunchOrigin.ProcessDispatchAssignment;
+        var inMemory = WorkflowPersistenceProvider.IsInMemory(dbContext);
+        using var memoryMutation = guarded && inMemory ? await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(dbContext, cancellationToken) : null;
+        await using var transaction = guarded && !inMemory
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken) : null;
+        using var coordination = source is not null ? coordinatedTransactions!.Enter(dbContext) : null;
+        if (source is not null) {
+            await source.RequireForMutationAsync(cancellationToken);
+        }
+        var query = guarded && dbContext.Database.IsNpgsql() ? dbContext.Set<WorkflowRunRecordEntity>().FromSqlInterpolated(
+            $"SELECT * FROM \"AgentFramework_WorkflowRuns\" WHERE \"RunId\" = {run.RunId.Value} FOR UPDATE")
+            : dbContext.Set<WorkflowRunRecordEntity>();
+        var record = await query.SingleOrDefaultAsync(item => item.RunId == run.RunId.Value, cancellationToken);
+        if (record is null) {
+            if (original is not null && guarded) {
+                throw new InvalidOperationException("The original Workflow receipt disappeared during its update; it cannot be recreated as a new admission.");
+            }
+            dbContext.Add(WorkflowRunRecordEntity.FromSnapshot(run));
+        } else {
+            ApplySnapshot(record, run);
+        }
         await dbContext.SaveChangesAsync(cancellationToken);
+        if (source is not null && !inMemory) {
+            await source.RequireForMutationAsync(cancellationToken);
+        }
+        if (transaction is not null) {
+            await transaction.CommitAsync(cancellationToken);
+        }
+        coordination?.Dispose();
+    }
+
+    internal static void RequireFrozenAuthority(WorkflowRunRecordEntity record, WorkflowRunSnapshot updated) {
+        var original = record.ToSnapshot();
+        if (original.Origin?.StructureAuthority?.ProjectScope is null && updated.Origin?.StructureAuthority?.ProjectScope is null &&
+                original.Origin is not (WorkflowLaunchOrigin.ProcessAssignment or WorkflowLaunchOrigin.ProcessToolInvocation or WorkflowLaunchOrigin.ProcessDispatchAssignment) &&
+                updated.Origin is not (WorkflowLaunchOrigin.ProcessAssignment or WorkflowLaunchOrigin.ProcessToolInvocation or WorkflowLaunchOrigin.ProcessDispatchAssignment)) {
+            return;
+        }
+        if (original.WorkflowId != updated.WorkflowId || original.VersionId != updated.VersionId ||
+                WorkflowRunRecordEntity.SerializeOrigin(original.Origin) != WorkflowRunRecordEntity.SerializeOrigin(updated.Origin)) {
+            throw new InvalidOperationException("A Workflow run's admitted source, project lifetimes and definition identity are immutable; legacy authority requires explicit reconciliation.");
+        }
     }
 
     public async Task<WorkflowRunSnapshot?> GetRunAsync(
@@ -2161,29 +2306,8 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             .OrderByDescending(run => run.UpdatedAtUtc)
             .ThenByDescending(run => run.RunId);
 
-    public async Task SaveEventAsync(
-        WorkflowEventRecord workflowEvent,
-        CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var record = await dbContext.Set<WorkflowEventRecordEntity>()
-            .SingleOrDefaultAsync(item => item.Id == workflowEvent.Id, cancellationToken);
-        if (record is null)
-        {
-            dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(workflowEvent));
-        }
-        else
-        {
-            record.RunId = workflowEvent.RunId.Value;
-            record.Kind = workflowEvent.Kind;
-            record.NodeId = workflowEvent.NodeId?.Value;
-            record.Message = workflowEvent.Message;
-            record.PayloadJson = workflowEvent.PayloadJson;
-            record.CreatedAtUtc = workflowEvent.CreatedAtUtc;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
+    public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default) =>
+        SaveEventWithDisclosureAsync(workflowEvent, cancellationToken);
 
     private static void ValidateOverviewTake(int value, int maximum, string parameterName)
     {
@@ -2203,7 +2327,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var query = dbContext.Set<WorkflowEventRecordEntity>()
             .AsNoTracking()
-            .Where(item => item.RunId == runId.Value);
+            .Where(item => item.RunId == runId.Value && item.Kind != WorkflowEventKind.ProviderReadEvidence);
         var records = await query
             .OrderBy(item => item.CreatedAtUtc)
             .ToListAsync(cancellationToken);
@@ -2224,7 +2348,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         var pageSize = NormalizePageSize(request.PageSize);
         var query = dbContext.Set<WorkflowEventRecordEntity>()
             .AsNoTracking()
-            .Where(item => item.RunId == request.RunId.Value);
+            .Where(item => item.RunId == request.RunId.Value && item.Kind != WorkflowEventKind.ProviderReadEvidence);
         var totalCount = await query.CountAsync(cancellationToken);
         var orderedQuery = query.OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id);
         var records = await orderedQuery
@@ -2456,7 +2580,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     }
 
     private static async Task<WorkflowExternalRequestRecord> HydrateExternalRequestAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExternalRequestRecordEntity request,
         CancellationToken cancellationToken)
     {
@@ -2846,6 +2970,8 @@ public sealed class WorkflowRunRecordEntity
 
     public Guid? OriginProcessRunId { get; set; }
 
+    public Guid? OriginProcessAssignmentId { get; set; }
+
     public static WorkflowRunRecordEntity FromSnapshot(WorkflowRunSnapshot run)
     {
         var record = new WorkflowRunRecordEntity
@@ -2895,6 +3021,7 @@ public sealed class WorkflowRunRecordEntity
         OriginKind = origin?.Kind;
         OriginProjectId = ResolveOriginProjectId(origin);
         OriginProcessRunId = ResolveOriginProcessRunId(origin);
+        OriginProcessAssignmentId = ResolveOriginProcessAssignmentId(origin);
     }
 
     public static Guid? ResolveOriginProjectId(WorkflowLaunchOrigin? origin)
@@ -2902,10 +3029,20 @@ public sealed class WorkflowRunRecordEntity
             ? projectOrigin.ProjectId
             : null;
 
+    public static Guid? ResolveOriginProcessAssignmentId(WorkflowLaunchOrigin? origin)
+        => origin switch {
+            WorkflowLaunchOrigin.ProcessAssignment process => process.AssignmentId,
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => mapped.Dispatch.Assignment.Value,
+            _ => null
+        };
+
     public static Guid? ResolveOriginProcessRunId(WorkflowLaunchOrigin? origin)
-        => origin is WorkflowLaunchOrigin.ProcessAssignment processOrigin
-            ? processOrigin.ProcessRunId
-            : null;
+        => origin switch {
+            WorkflowLaunchOrigin.ProcessAssignment process => process.ProcessRunId,
+            WorkflowLaunchOrigin.ProcessToolInvocation tool => tool.Invocation.ProcessRun.Value,
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => mapped.Dispatch.ProcessRun.Value,
+            _ => null
+        };
 }
 
 public sealed class WorkflowEventRecordEntity
@@ -2924,16 +3061,18 @@ public sealed class WorkflowEventRecordEntity
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 
-    public static WorkflowEventRecordEntity FromEvent(WorkflowEventRecord workflowEvent) => new()
-    {
-        Id = workflowEvent.Id,
-        RunId = workflowEvent.RunId.Value,
-        Kind = workflowEvent.Kind,
-        NodeId = workflowEvent.NodeId?.Value,
-        Message = workflowEvent.Message,
-        PayloadJson = workflowEvent.PayloadJson,
-        CreatedAtUtc = workflowEvent.CreatedAtUtc
-    };
+    public static WorkflowEventRecordEntity FromEvent(WorkflowEventRecord workflowEvent) {
+        WorkflowProviderDisclosureJournal.RequireOrdinaryEvent(workflowEvent);
+        return new() {
+            Id = workflowEvent.Id,
+            RunId = workflowEvent.RunId.Value,
+            Kind = workflowEvent.Kind,
+            NodeId = workflowEvent.NodeId?.Value,
+            Message = workflowEvent.Message,
+            PayloadJson = workflowEvent.PayloadJson,
+            CreatedAtUtc = workflowEvent.CreatedAtUtc
+        };
+    }
 
     public WorkflowEventRecord ToEvent() => new(
         Id,
@@ -3201,6 +3340,8 @@ internal sealed class WorkflowRunRecordEntityConfiguration : IEntityTypeConfigur
         builder.Property(item => item.State).HasConversion<int>();
         builder.Property(item => item.Backend).HasConversion<int>();
         builder.Property(item => item.OriginKind).HasConversion<int?>();
+        builder.HasIndex(item => new { item.OriginProcessRunId, item.OriginProcessAssignmentId })
+            .HasDatabaseName("IX_WorkflowRuns_ProcessAssignment");
         builder.Property(item => item.BackendRunId).HasMaxLength(300);
         builder.Property(item => item.Summary).HasColumnType("TEXT");
         builder.Property(item => item.OriginJson).HasColumnType("TEXT");
@@ -3286,3 +3427,10 @@ internal sealed class WorkflowArtifactRecordEntityConfiguration : IEntityTypeCon
         builder.HasIndex(item => new { item.RunId, item.CreatedAtUtc });
     }
 }
+
+/// <summary>A workflow definition the store rejected because it failed validation; nothing was saved.</summary>
+public sealed class WorkflowDefinitionValidationException(string message) : InvalidOperationException(message);
+
+/// <summary>A workflow definition save that lost to a concurrent update; its transaction saved nothing.</summary>
+public sealed class WorkflowDefinitionConcurrencyException(string message, Exception? innerException = null)
+    : InvalidOperationException(message, innerException);

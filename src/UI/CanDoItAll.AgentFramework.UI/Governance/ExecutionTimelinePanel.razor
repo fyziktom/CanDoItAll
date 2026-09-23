@@ -1,0 +1,26 @@
+@namespace CanDoItAll.AgentFramework.UI.Governance
+@using System.Collections.Immutable
+@using static CanDoItAll.AgentFramework.UI.Governance.GovernancePresentationMapping
+
+<SectionCard Title="Live execution timeline"
+             Description="The selected execution's most recent runtime phases.">
+    @if (Entries.Length == 0) {
+        <EmptyState Eyebrow="Timeline" Title="No execution entries yet"
+                    Description="A run will populate planning, runtime, and persistence phases here." />
+    } else {
+        <Stack GapScale="LayoutGap.Small">
+            @foreach (var entry in Entries) {
+                <SelectionListItem Title="@entry.Title" Eyebrow="@entry.Eyebrow" Meta="@entry.Timestamp" Summary="@entry.Summary">
+                    <Status>
+                        <StatusBadge Tone="@Tone(entry.Tone)" Text="@entry.Status" />
+                    </Status>
+                </SelectionListItem>
+            }
+        </Stack>
+    }
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ImmutableArray<GovernanceEntry> Entries { get; set; } = [];
+}

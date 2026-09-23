@@ -612,7 +612,12 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
             {
                 Subject = subject,
                 DisplayName = subject,
-                Scopes = [ApiAccessScopeNames.RespondWorkflows]
+                Scopes = [
+                    ApiAccessScopeNames.ReadWorkflows,
+                    ApiAccessScopeNames.WriteWorkflows,
+                    ApiAccessScopeNames.ExecuteWorkflows,
+                    ApiAccessScopeNames.RespondWorkflows
+                ]
             });
         host.Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(token.TokenType, token.Token);

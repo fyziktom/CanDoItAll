@@ -6,7 +6,19 @@
   "scripts": {
     "tailwind:build": "npm --prefix Tailwind run build",
     "tailwind:watch": "npm --prefix Tailwind run watch",
-    "watch": "dotnet watch --project ./src/App/CanDoItAll.Web"
+    "watch": "dotnet watch --project ./src/App/CanDoItAll.Web",
+    "catalog:css:build": "npm --prefix Tailwind run catalog:build",
+    "catalog:css:watch": "npm --prefix Tailwind run catalog:watch",
+    "catalog:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile \"Catalog sandbox\" --property:CatalogAssetMode=Parity",
+    "catalog:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile \"Catalog sandbox Fast\" --property:CatalogAssetMode=Fast",
+    "prompts:css:build": "npm --prefix Tailwind run prompts:build",
+    "prompts:css:watch": "npm --prefix Tailwind run prompts:watch",
+    "prompts:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.Prompts.UiSandbox --launch-profile \"Prompts sandbox\" --property:PromptsAssetMode=Parity",
+    "prompts:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.Prompts.UiSandbox --launch-profile \"Prompts sandbox Fast\" --property:PromptsAssetMode=Fast",
+    "crmhr:css:build": "npm --prefix Tailwind run crmhr:build",
+    "crmhr:css:watch": "npm --prefix Tailwind run crmhr:watch",
+    "crmhr:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox\" --property:CrmHrAssetMode=Parity",
+    "crmhr:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox Fast\" --property:CrmHrAssetMode=Fast"
   },
   "repository": {
     "type": "git",

@@ -1,10 +1,37 @@
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessDefinitionCanvasLayoutTests
 {
+    [Fact]
+    public async Task Canvas_sessions_and_initial_commands_remain_bound_to_the_original_project_lifetime() {
+        var service = new ProcessDefinitionCanvasEditorProjectionService(new SystemProcessProjectionClock());
+        var definition = new ProcessDefinitionCatalogItemKey(new ProcessTemplatePackLoader().Load().Definitions.First().Key);
+        var first = new ProcessProjectionProjectBinding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var second = new ProcessProjectionProjectBinding(first.DatabaseProfileId, first.ProjectId, Guid.NewGuid());
+        var scope = ProcessWorkspaceShellScope.ForProject(first.ProjectId);
+        var initial = await service.GetCanvasAsync(scope, definition, projectBinding: first);
+        var node = initial.Nodes.First();
+        var command = new ProcessDefinitionCanvasCommand(scope, definition, ProcessDefinitionCanvasCommandKind.MoveNodes,
+            initial.VersionToken, null, node.NodeKey, null, default, [new(node.NodeKey, node.X + 200, node.Y + 100)]);
+        var successor = await service.GetCanvasAsync(scope, definition, projectBinding: second);
+        Assert.NotEqual(initial.VersionToken, successor.VersionToken);
+        var staleInitial = await service.ExecuteCommandAsync(command, projectBinding: second);
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, staleInitial.Receipt.Status);
+        var moved = await service.ExecuteCommandAsync(command, projectBinding: first);
+        Assert.NotEqual(ProcessDefinitionCanvasCommandStatus.Rejected, moved.Receipt.Status);
+        var reloadedFirst = await service.GetCanvasAsync(scope, definition, projectBinding: first);
+        Assert.Equal(node.X + 200, reloadedFirst.Nodes.Single(item => item.NodeKey == node.NodeKey).X);
+        var reloadedSecond = await service.GetCanvasAsync(scope, definition, projectBinding: second);
+        Assert.Equal(node.X, reloadedSecond.Nodes.Single(item => item.NodeKey == node.NodeKey).X);
+        Assert.Equal(successor.VersionToken, reloadedSecond.VersionToken);
+        var staleEdit = await service.ExecuteCommandAsync(command with { ExpectedVersionToken = moved.Projection.VersionToken }, projectBinding: second);
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, staleEdit.Receipt.Status);
+    }
+
     private const double StepWidth = 240d;
     private const double StepHeight = 140d;
 

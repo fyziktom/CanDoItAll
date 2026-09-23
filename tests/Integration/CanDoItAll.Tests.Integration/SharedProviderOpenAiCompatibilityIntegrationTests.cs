@@ -535,6 +535,65 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
     }
 
     [Fact]
+    public async Task OllamaLocal_NormalizesBooleanJsonSchemaNodesForToolParameters()
+    {
+        await using var relay = DirectRelayFixture.Create(
+            baseUri: new Uri("http://127.0.0.1:11434"));
+        string payload = ChatJson(
+            relay.ModelId,
+            """
+            "tools":[{"type":"function","function":{"name":"inspect","parameters":{"type":"object","properties":{"anything":true,"never":false,"nested":{"type":"object","properties":{"value":true},"additionalProperties":false}},"additionalProperties":false}}}]
+            """);
+
+        var result = await relay.DispatchAsync(
+            "provider.ollama.local",
+            SharedProviderPurpose.Chat,
+            SharedProviderRelayOperation.ChatCompletions,
+            payload);
+
+        Assert.IsType<SharedProviderRelayDispatchResult.Buffered>(result);
+        using var upstream = JsonDocument.Parse(Assert.Single(relay.Handler.Requests).Body);
+        var parameters = upstream.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("function")
+            .GetProperty("parameters");
+        var properties = parameters.GetProperty("properties");
+        Assert.Empty(properties.GetProperty("anything").EnumerateObject());
+        Assert.Equal(JsonValueKind.Object, properties.GetProperty("never").GetProperty("not").ValueKind);
+        Assert.Empty(properties.GetProperty("nested").GetProperty("properties").GetProperty("value").EnumerateObject());
+        Assert.Equal(JsonValueKind.False, parameters.GetProperty("additionalProperties").ValueKind);
+        Assert.Equal(
+            JsonValueKind.False,
+            properties.GetProperty("nested").GetProperty("additionalProperties").ValueKind);
+    }
+
+    [Fact]
+    public async Task OpenAiRelay_PreservesBooleanJsonSchemaNodesForToolParameters()
+    {
+        await using var relay = DirectRelayFixture.Create();
+        string payload = ChatJson(
+            relay.ModelId,
+            """
+            "tools":[{"type":"function","function":{"name":"inspect","parameters":{"type":"object","properties":{"anything":true,"never":false}}}}]
+            """);
+
+        var result = await relay.DispatchAsync(
+            "provider.openai",
+            SharedProviderPurpose.Chat,
+            SharedProviderRelayOperation.ChatCompletions,
+            payload);
+
+        Assert.IsType<SharedProviderRelayDispatchResult.Buffered>(result);
+        using var upstream = JsonDocument.Parse(Assert.Single(relay.Handler.Requests).Body);
+        var properties = upstream.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("function")
+            .GetProperty("parameters")
+            .GetProperty("properties");
+        Assert.Equal(JsonValueKind.True, properties.GetProperty("anything").ValueKind);
+        Assert.Equal(JsonValueKind.False, properties.GetProperty("never").ValueKind);
+    }
+    [Fact]
     public async Task OllamaRemote_PreservesBasePathAndUsesOpenAiCompatibleChatRoute()
     {
         await using var relay = DirectRelayFixture.Create(
@@ -559,7 +618,9 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
              "data":[{"b64_json":"AQID"}],"usage":{"input_tokens":10,"output_tokens":20,"total_tokens":30,
              "input_tokens_details":{"text_tokens":10,"image_tokens":0}}}
             """;
-        await using var relay = DirectRelayFixture.Create(responseFactory: _ => JsonResponse(responseBody));
+        var upstreamBody = responseBody.Replace("\"b64_json\":\"AQID\"",
+            "\"b64_json\":\"AQID\",\"generation_id\":\"0efa0d3a-41c9-4873-888a-f245f13f9c6a\"", StringComparison.Ordinal);
+        await using var relay = DirectRelayFixture.Create(responseFactory: _ => JsonResponse(upstreamBody));
 
         var result = await relay.DispatchAsync("provider.openai", SharedProviderPurpose.ImageGeneration,
             SharedProviderRelayOperation.ImageGenerations, ImagesJson(relay.ModelId));

@@ -4,26 +4,71 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Web.Api;
 
+/// <summary>
+/// Acknowledgement returned by a command that has no other result. A success response always carries
+/// <c>{ "ok": true }</c>; failures use an error response instead.
+/// </summary>
+/// <param name="Ok">True: the command completed. A failed command never returns this object.</param>
 internal sealed record ApiAck(bool Ok);
 
+/// <summary>
+/// Error envelope of the general API families (for example agents, workflows, processes, projects and CRM/HR): an
+/// <c>errors</c> array with at least one item, plus correlation fields when an agent run or command failed. Project
+/// Structure, LLM Chat and shared-provider operations use their own error formats. The HTTP status alone does not
+/// prove that nothing was written; check the operation's documentation for its effect guarantees.
+/// </summary>
+/// <param name="Errors">The reasons the request was rejected or failed, in the order they were detected.</param>
 internal sealed record ApiErrorResponse(IReadOnlyList<ApiErrorItem> Errors)
 {
+    /// <summary>
+    /// Server trace identifier of the failed request, for support and log correlation. Present on agent run and
+    /// agent command failures; omitted otherwise. It is not an idempotency key and does not identify a committed
+    /// effect.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CorrelationId { get; init; }
 
+    /// <summary>
+    /// Identifier of the agent whose run or command failed. Omitted when the failure is not tied to an agent.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Guid? AgentId { get; init; }
 
+    /// <summary>
+    /// Identifier of the agent execution run that failed, usable with the agent run read operations. Omitted when no
+    /// execution run was created.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Guid? ExecutionRunId { get; init; }
 
+    /// <summary>
+    /// Identifier of the agent chat session in which the run failed. Omitted when the run was not part of a chat
+    /// session.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Guid? ChatSessionId { get; init; }
 
+    /// <summary>
+    /// Category of a model-provider failure when an agent run failed while calling its provider: requestCompatibility
+    /// is returned with HTTP 400, providerConfiguration with HTTP 422, and quotaOrBilling, rateLimit and providerError
+    /// with HTTP 503. Omitted for other failures.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AgentProviderFailureCategory? ProviderFailureCategory { get; init; }
 }
 
+/// <summary>
+/// One reason in an error envelope.
+/// </summary>
+/// <param name="Code">
+/// Stable machine-readable error code, for example <c>crmhr.party.not-found</c> or <c>agents.run-failed</c>. Branch on
+/// this value, not on the message.
+/// </param>
+/// <param name="Message">Human-readable explanation for operators and logs. Its wording can change.</param>
+/// <param name="Severity">
+/// Severity of the reason, as a JSON integer: 0 Info, 1 Warning (request validation problems), 2 Error (failed
+/// commands). Any item in an error envelope means the request did not succeed.
+/// </param>
 internal sealed record ApiErrorItem(string Code, string Message, ErrorSeverity Severity);
 
 internal static class ApiEndpointMetadata

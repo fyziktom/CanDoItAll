@@ -1,0 +1,28 @@
+@using CanDoItAll.AgentFramework.UI.Chat
+<PageTitle>Agent chat sandbox</PageTitle>
+<header class="catalog-sandbox__controls">
+    <h1 class="cda-title-xl">Agent chat sandbox</h1>
+    <label for="agent-chat-scenario">Scenario</label>
+    <select id="agent-chat-scenario" class="cda-input" value="@fixture.Scenario" @onchange="ChangeScenario">
+        @foreach (var scenario in Enum.GetValues<AgentChatScenario>()) {
+            <option value="@scenario">@scenario</option>
+        }
+    </select>
+    <output aria-live="polite" data-testid="sandbox-intent">@fixture.IntentLog</output>
+</header>
+<main class="catalog-sandbox__frame" data-testid="sandbox-agent-chat-specimen" data-scenario="@fixture.Scenario">
+    <AgentChatSurface Presentation="fixture.Presentation" Navigation="fixture.Navigation" Intent="fixture.Apply" NavigationIntent="fixture.Navigate" />
+</main>
+@code {
+    [Parameter] public string? ScenarioQuery { get; set; }
+    private readonly AgentChatSandboxFixture fixture = new();
+    private string? observed;
+    protected override void OnParametersSet() {
+        if (observed == ScenarioQuery) {
+            return;
+        }
+        observed = ScenarioQuery;
+        fixture.SetScenario(Enum.TryParse<AgentChatScenario>(ScenarioQuery, true, out var scenario) ? scenario : AgentChatScenario.Transcript);
+    }
+    private void ChangeScenario(ChangeEventArgs args) => fixture.SetScenario(Enum.Parse<AgentChatScenario>(args.Value!.ToString()!));
+}

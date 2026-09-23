@@ -1,4 +1,5 @@
 using CanDoItAll.Components.Gantt;
+using CanDoItAll.CrmHr.UI.Assignments;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 

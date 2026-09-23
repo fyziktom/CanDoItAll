@@ -5,6 +5,10 @@ using System.Text;
 
 namespace CanDoItAll.SharedProviders.Abstractions;
 
+/// <summary>
+/// Version of the shared-provider catalog protocol, as a string; currently always <c>1.1</c>. A catalog with any
+/// other version is not accepted.
+/// </summary>
 [JsonConverter(typeof(SharedProviderProtocolVersionJsonConverter))]
 public readonly record struct SharedProviderProtocolVersion
 {
@@ -43,6 +47,10 @@ public readonly record struct SharedProviderProtocolVersion
             : throw new InvalidOperationException("The shared-provider protocol version is invalid.");
 }
 
+/// <summary>
+/// What a shared-provider publication is for, as a string token: <c>chat</c> (text generation through the chat
+/// completions and responses operations) or <c>image-generation</c> (image generation).
+/// </summary>
 [JsonConverter(typeof(SharedProviderPurposeJsonConverter))]
 public enum SharedProviderPurpose
 {
@@ -53,6 +61,10 @@ public enum SharedProviderPurpose
     ImageGeneration
 }
 
+/// <summary>
+/// Protocol a shared-provider publication is invoked with, as a string token: <c>openai-compatible</c> (the
+/// OpenAI-compatible operations under <c>/api/shared-providers/openai/v1</c>).
+/// </summary>
 [JsonConverter(typeof(SharedProviderTransportJsonConverter))]
 public enum SharedProviderTransport
 {
@@ -60,6 +72,13 @@ public enum SharedProviderTransport
     OpenAiCompatible
 }
 
+/// <summary>
+/// Capability of a shared model, as a string token: <c>chat-completions</c> (the chat completions operation),
+/// <c>responses</c> (the responses operation), <c>streaming</c> (server-sent events with <c>stream</c> true),
+/// <c>function-tools</c>, <c>parallel-function-tools</c>, <c>structured-output</c> (JSON-object or JSON-schema
+/// responses), <c>vision-input</c> (image input in user messages), <c>image-generations</c> (the image generations
+/// operation) or <c>b64-json</c> (base64 image results).
+/// </summary>
 [JsonConverter(typeof(SharedProviderCapabilityJsonConverter))]
 public enum SharedProviderCapability
 {
@@ -91,6 +110,11 @@ public enum SharedProviderCapability
     Base64Json
 }
 
+/// <summary>
+/// Health of the provider behind a shared-provider publication, as a string token: <c>available</c> (its last health
+/// check passed), <c>unavailable</c> (its last health check failed) or <c>degraded</c> (no health check is recorded
+/// yet).
+/// </summary>
 [JsonConverter(typeof(SharedProviderHealthStateJsonConverter))]
 public enum SharedProviderHealthState
 {
@@ -104,11 +128,34 @@ public enum SharedProviderHealthState
     Unavailable
 }
 
+/// <summary>
+/// Protocol entry points of the publishing host in a shared-provider catalog.
+/// </summary>
+/// <param name="OpenAiCompatibleBasePath">
+/// Path of the OpenAI-compatible operations on the publishing host; always <c>/api/shared-providers/openai/v1</c>.
+/// </param>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderProtocolDescriptor(
     [property: JsonPropertyName("openAiCompatibleBasePath")]
     string OpenAiCompatibleBasePath);
 
+/// <summary>
+/// One model of a shared-provider publication: the routing identifier to invoke it with, its capabilities and its
+/// public price and reasoning support.
+/// </summary>
+/// <param name="Id">
+/// Opaque routing identifier of the model; send it as <c>model</c> in the inference operations.
+/// </param>
+/// <param name="DisplayName">
+/// Display name of the model, currently the model name of the publisher's upstream provider. Show it to people, but
+/// never send it as <c>model</c>; use <c>id</c>.
+/// </param>
+/// <param name="Capabilities">
+/// What the model supports, 1 to 32 distinct string tokens: <c>chat-completions</c>, <c>responses</c>,
+/// <c>streaming</c>, <c>function-tools</c>, <c>parallel-function-tools</c>, <c>structured-output</c>,
+/// <c>vision-input</c>, <c>image-generations</c> or <c>b64-json</c>. A request that needs a capability not listed is
+/// rejected.
+/// </param>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderCatalogModel(
     [property: JsonPropertyName("id")]
@@ -117,22 +164,65 @@ public sealed record SharedProviderCatalogModel(
     string DisplayName,
     [property: JsonPropertyName("capabilities")]
     IReadOnlyList<SharedProviderCapability> Capabilities) {
+    /// <summary>
+    /// Public token prices of the model; null when the publisher set no tariff, which means the cost is unknown, not
+    /// free.
+    /// </summary>
     [JsonPropertyName("price")]
     public SharedProviderCatalogPrice? Price { get; init; }
 
+    /// <summary>
+    /// Reasoning (thinking) support of the model and the effort levels a request may choose. Omitted when the
+    /// publisher reports none.
+    /// </summary>
     [JsonPropertyName("thinking")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SharedProviderThinkingCapability? Thinking { get; init; }
 
+    /// <summary>
+    /// True when consumers should offer the model in their model pickers. A model with false is still listed and can
+    /// be invoked.
+    /// </summary>
     [JsonPropertyName("isSuggested")]
     public bool IsSuggested { get; init; } = true;
 }
 
+/// <summary>
+/// Health of the provider behind a shared-provider publication.
+/// </summary>
+/// <param name="State">
+/// Health state, as a string token: <c>available</c> (last health check passed), <c>unavailable</c> (last health check
+/// failed) or <c>degraded</c> (no health check recorded yet).
+/// </param>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderCatalogHealth(
     [property: JsonPropertyName("state")]
     SharedProviderHealthState State);
 
+/// <summary>
+/// A provider that the publishing host shares: its identity and revision, purpose, models and health. Only published
+/// providers that are eligible for sharing appear in the catalog; internal profile identifiers, credentials, private
+/// endpoint addresses and diagnostics are never included.
+/// </summary>
+/// <param name="PublicationId">
+/// Identifier of the publication, as a GUID string; stable while the publication exists.
+/// </param>
+/// <param name="Revision">
+/// Revision of the publication's public representation, as <c>sha256:</c> and 64 lowercase hexadecimal characters; it
+/// changes whenever anything in this publication changes.
+/// </param>
+/// <param name="DisplayName">Display name of the shared provider, 1 to 256 characters.</param>
+/// <param name="Purpose">
+/// What the publication is for, as a string token: <c>chat</c> or <c>image-generation</c>.
+/// </param>
+/// <param name="Transport">
+/// Protocol to invoke it with, as a string token: always <c>openai-compatible</c>.
+/// </param>
+/// <param name="DefaultModelId">
+/// Routing identifier of the publication's default model; one of the <c>models</c>.
+/// </param>
+/// <param name="Models">The models of the publication, 1 to 128, sorted by <c>id</c>.</param>
+/// <param name="Health">Health of the provider behind the publication.</param>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderCatalogPublication(
     [property: JsonPropertyName("publicationId")]
@@ -151,11 +241,33 @@ public sealed record SharedProviderCatalogPublication(
     IReadOnlyList<SharedProviderCatalogModel> Models,
     [property: JsonPropertyName("health")]
     SharedProviderCatalogHealth Health) {
+    /// <summary>
+    /// True when the publisher treats the provider as privately operated (self-hosted): always for Ollama and ComfyUI
+    /// connectors, otherwise as the publisher configured it.
+    /// </summary>
     [JsonRequired]
     [JsonPropertyName("isPrivateProvider")]
     public bool IsPrivateProvider { get; init; }
 }
 
+/// <summary>
+/// Catalog of the providers a host shares, returned by <c>GET /api/shared-providers/v1/catalog</c>. It is versioned,
+/// sorted and content-addressed: <c>catalogRevision</c> identifies this exact content and equals the response's
+/// <c>ETag</c> without quotes. Unknown members are not allowed in a catalog.
+/// </summary>
+/// <param name="SchemaVersion">Version of the catalog protocol, as a string: always <c>1.1</c>.</param>
+/// <param name="SourceInstanceId">
+/// Identifier of the publishing host instance, as a GUID string. It stays the same for the host, so a consumer can
+/// detect that a source address now serves a different host.
+/// </param>
+/// <param name="CatalogRevision">
+/// Revision of the whole catalog, as <c>sha256:</c> and 64 lowercase hexadecimal characters; it changes whenever the
+/// public catalog changes.
+/// </param>
+/// <param name="Protocols">Protocol entry points of the publishing host.</param>
+/// <param name="Providers">
+/// The shared publications, sorted by publication identifier; empty when nothing is shared.
+/// </param>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderCatalogDocument(
     [property: JsonPropertyName("schemaVersion")]

@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public sealed class ProjectStructureProcessNodeService(
+public sealed partial class ProjectStructureProcessNodeService(
     IServiceScopeFactory serviceScopeFactory)
 {
     private const string ProjectIdVariableName = "ProjectId";
@@ -135,7 +135,7 @@ public sealed class ProjectStructureProcessNodeService(
 
     public async Task<IReadOnlyDictionary<string, string>> BuildProjectScopedLaunchVariablesAsync(
         ProjectStructureProcessLaunchVariableBuildRequest request,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -143,7 +143,7 @@ public sealed class ProjectStructureProcessNodeService(
 
         if (request.ProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectIdRequired",
                 "Project id is required to build project-scoped process launch variables.");
@@ -151,20 +151,21 @@ public sealed class ProjectStructureProcessNodeService(
 
         if (string.IsNullOrWhiteSpace(request.ProjectNodeId))
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectNodeIdRequired",
                 "Project node id is required to build project-scoped process launch variables.");
         }
 
         await using var scope = serviceScopeFactory.CreateAsyncScope();
-        var dependencies = ResolveScopedDependencies(scope.ServiceProvider);
+        var projectWorkbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var definitions = scope.ServiceProvider.GetRequiredService<ProcessDefinitionCatalogProjectionService>();
         var surface = await LoadSurfaceAsync(
-            dependencies.ProjectWorkbenchService,
+            projectWorkbench,
             request.ProjectId,
             cancellationToken).ConfigureAwait(false);
         var targetNode = surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, request.ProjectNodeId, StringComparison.Ordinal))
-            ?? throw new ProjectStructureAgentException(
+            ?? throw ProcessNodeRejection(
                 404,
                 "ProjectStructureNodeNotFound",
                 $"Node '{request.ProjectNodeId}' was not found in project '{request.ProjectId:D}'.");
@@ -177,7 +178,7 @@ public sealed class ProjectStructureProcessNodeService(
             request.DefinitionKey,
             processDefinitionId == Guid.Empty
                 ? string.Empty
-                : dependencies.ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
+                : definitions.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
         var agent = new ProjectStructureAgentContext(
             AgentId: "process-api",
             AgentName: string.IsNullOrWhiteSpace(request.RequestedBy) ? "Process API" : request.RequestedBy.Trim(),
@@ -223,7 +224,7 @@ public sealed class ProjectStructureProcessNodeService(
 
         if (projectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectIdRequired",
                 "Project id is required to start a process from project structure.");
@@ -231,10 +232,19 @@ public sealed class ProjectStructureProcessNodeService(
 
         if (string.IsNullOrWhiteSpace(nodeId))
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "NodeIdRequired",
                 "Node id is required to start a process from project structure.");
+        }
+
+        if (agent.ProcessLaunchInvocation is { } invocation) {
+            RequireInvocationInput(invocation, projectId, nodeId, request);
+            var retained = await FindRetainedLaunchRequestAsync(dependencies, invocation, request.Execute, cancellationToken);
+            if (retained is not null) {
+                var replay = await dependencies.ProcessLaunchApplicationService.LaunchAsync(retained, cancellationToken);
+                return await BuildAdmittedStartResultAsync(dependencies, projectId, nodeId, request, replay, cancellationToken);
+            }
         }
 
         var surface = await LoadSurfaceAsync(
@@ -258,13 +268,13 @@ public sealed class ProjectStructureProcessNodeService(
         {
             if (node is null)
             {
-                throw new ProjectStructureAgentException(
+                throw ProcessNodeRejection(
                     404,
                     "ProjectStructureNodeNotFound",
                     $"Node '{nodeId}' was not found in project '{projectId:D}'.");
             }
 
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProcessDefinitionRequired",
                 $"Node '{nodeId}' is not linked to a process definition.");
@@ -278,37 +288,40 @@ public sealed class ProjectStructureProcessNodeService(
             : null;
         if (targetNode is null)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProcessStartTargetRequired",
                 $"Process definition node '{processDefinitionNodeId ?? nodeId}' is not linked from a project-structure source node.");
         }
 
         var definitionKey = dependencies.ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId.Value));
-        var launch = await dependencies.ProcessLaunchApplicationService
-            .LaunchAsync(
-                new ProcessLaunchRequest(
-                    DefinitionKey: NormalizeOptional(definitionKey),
-                    new ProcessDefinitionId(processDefinitionId.Value),
-                    LiveRunProfileKey: null,
-                    ProjectId: projectId,
-                    ProjectNodeId: targetNode.Id,
-                    RequestedBy: string.IsNullOrWhiteSpace(request.RequestedBy)
-                        ? agent.AgentName
-                        : request.RequestedBy,
-                    Variables: CreateVariables(
-                        surface,
-                        processNode,
-                        processDefinitionNodeId ?? nodeId,
-                        processDefinitionId.Value,
-                        targetNode,
-                        agent,
-                        dependencies.LaunchVariablePreparationService,
-                        definitionKey),
-                    RunReadiness: request.RunHrMatch,
-                    Execute: request.Execute),
-                cancellationToken)
-            .ConfigureAwait(false);
+        var launchRequest = new ProcessLaunchRequest(
+            DefinitionKey: NormalizeOptional(definitionKey),
+            new ProcessDefinitionId(processDefinitionId.Value),
+            LiveRunProfileKey: null,
+            ProjectId: projectId,
+            ProjectNodeId: targetNode.Id,
+            RequestedBy: string.IsNullOrWhiteSpace(request.RequestedBy) ? agent.AgentName : request.RequestedBy,
+            Variables: CreateVariables(surface, processNode, processDefinitionNodeId ?? nodeId, processDefinitionId.Value,
+                targetNode, agent, dependencies.LaunchVariablePreparationService, definitionKey),
+            RunReadiness: request.RunHrMatch,
+            Execute: request.Execute);
+        if (agent.ProcessLaunchInvocation is { } admittedInvocation) {
+            launchRequest = await BindInvocationAsync(dependencies, launchRequest, targetNode, admittedInvocation, cancellationToken);
+        }
+        ProcessLaunchResult launch;
+        try {
+            launch = await dependencies.ProcessLaunchApplicationService.LaunchAsync(launchRequest, cancellationToken);
+        } catch (ProcessLaunchIntentConflictException) when (agent.ProcessLaunchInvocation is not null) {
+            var retained = await FindRetainedLaunchRequestAsync(dependencies, agent.ProcessLaunchInvocation, request.Execute, cancellationToken);
+            if (retained is null) {
+                throw;
+            }
+            launch = await dependencies.ProcessLaunchApplicationService.LaunchAsync(retained, cancellationToken);
+        }
+        if (agent.ProcessLaunchInvocation is not null) {
+            return await BuildAdmittedStartResultAsync(dependencies, projectId, nodeId, request, launch, cancellationToken);
+        }
 
         var warnings = launch.Warnings.ToList();
         if (launch.RunId is { } runId &&
@@ -374,7 +387,7 @@ public sealed class ProjectStructureProcessNodeService(
 
         if (projectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectIdRequired",
                 "Project id is required to launch a subprocess from project structure.");
@@ -423,7 +436,7 @@ public sealed class ProjectStructureProcessNodeService(
 
         if (string.IsNullOrWhiteSpace(projectNodeId))
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProcessSubprocessProjectNodeRequired",
                 $"Parent process step '{parentAssignment.StepKey}' does not carry a project node id. Supply ParentProjectNodeId.");
@@ -432,7 +445,7 @@ public sealed class ProjectStructureProcessNodeService(
         var projectNode = surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, projectNodeId, StringComparison.Ordinal));
         if (projectNode is null)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 404,
                 "ProjectStructureNodeNotFound",
                 $"Parent project node '{projectNodeId}' was not found in project '{projectId:D}'.");
@@ -497,7 +510,8 @@ public sealed class ProjectStructureProcessNodeService(
                     RunReadiness: request.RunHrMatch,
                     Execute: request.Execute)
                 {
-                    RootRunIdOverride = parentState.RootRunId
+                    RootRunIdOverride = parentState.RootRunId,
+                    ProjectAdmission = parentState.ProjectAdmission
                 },
                 cancellationToken)
             .ConfigureAwait(false);
@@ -1032,7 +1046,10 @@ public sealed class ProjectStructureProcessNodeService(
             serviceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStateStore>(),
             serviceProvider.GetRequiredService<IWorkspaceFileService>(),
-            serviceProvider.GetRequiredService<ProcessLaunchVariablePreparationService>());
+            serviceProvider.GetRequiredService<IProcessLaunchVariablePreparer>(),
+            serviceProvider.GetService<IProcessPreparedLaunchStore>(),
+            serviceProvider.GetService<ProjectProcessLaunchTargetQuery>(),
+            serviceProvider.GetService<ProjectProcessLaunchDeliveryService>());
     }
 
     private static IReadOnlyDictionary<string, string> CreateVariables(
@@ -1042,7 +1059,7 @@ public sealed class ProjectStructureProcessNodeService(
         Guid processDefinitionId,
         ProjectStructureNode targetNode,
         ProjectStructureAgentContext agent,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         string? definitionKey)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1103,7 +1120,7 @@ public sealed class ProjectStructureProcessNodeService(
         ProjectStructureProcessSubprocessLaunchInput request,
         ProjectStructureAgentContext agent,
         IWorkspaceFileService workspaceFiles,
-        ProcessLaunchVariablePreparationService launchVariablePreparationService)
+        IProcessLaunchVariablePreparer launchVariablePreparationService)
     {
         var variables = CopyInheritableSubprocessLaunchVariables(parentAssignment.LaunchVariables);
         if (request.Variables is not null)
@@ -1255,7 +1272,7 @@ public sealed class ProjectStructureProcessNodeService(
     }
 
     private static void ApplyLaunchVariablePreparation(
-        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
         ProjectStructureSurface surface,
         ProjectStructureNode targetNode,
         string? definitionKey,
@@ -1297,6 +1314,16 @@ public sealed class ProjectStructureProcessNodeService(
             : null);
     }
 
+    // A process start or subprocess launch is resolved and validated before the launch service admits any run, so each
+    // rejection is a no-effect failure the model can correct.
+    private static ProjectStructureAgentException ProcessNodeRejection(int statusCode, string errorCode, string message)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            statusCode,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
+
     private static Guid? ResolveLinkedProcessDefinitionId(
         ProjectStructureSurface surface,
         string sourceNodeId)
@@ -1319,7 +1346,7 @@ public sealed class ProjectStructureProcessNodeService(
         {
             0 => null,
             1 => linkedDefinitionIds[0],
-            _ => throw new ProjectStructureAgentException(
+            _ => throw ProcessNodeRejection(
                 400,
                 "ProcessDefinitionAmbiguous",
                 $"Node '{sourceNodeId}' is linked to multiple process definitions. Supply ProcessDefinitionId to choose one.")
@@ -1369,7 +1396,7 @@ public sealed class ProjectStructureProcessNodeService(
         if (!Guid.TryParse(value, out var parsed) ||
             parsed == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ParentProcessRunIdInvalid",
                 $"Parent process run id '{value}' is not a valid non-empty GUID.");
@@ -1383,7 +1410,7 @@ public sealed class ProjectStructureProcessNodeService(
         if (!Guid.TryParse(value, out var parsed) ||
             parsed == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ParentProcessStepIdInvalid",
                 $"Parent process step id '{value}' is not a valid non-empty GUID.");
@@ -1478,7 +1505,10 @@ public sealed class ProjectStructureProcessNodeService(
         IProcessRuntimeStepAssignmentStore AssignmentStore,
         IProcessRuntimeStateStore StateStore,
         IWorkspaceFileService WorkspaceFiles,
-        ProcessLaunchVariablePreparationService LaunchVariablePreparationService);
+        IProcessLaunchVariablePreparer LaunchVariablePreparationService,
+        IProcessPreparedLaunchStore? Preparations,
+        ProjectProcessLaunchTargetQuery? Targets,
+        ProjectProcessLaunchDeliveryService? Delivery);
 }
 
 public sealed record ProjectStructureProcessLaunchVariableBuildRequest(

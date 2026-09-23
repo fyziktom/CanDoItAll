@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
@@ -8,8 +7,6 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -74,7 +71,7 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         });
     }
 
-    private static BunitContext CreateContext(
+    internal static BunitContext CreateContext(
         IAgentImageGenerationService imageGenerationService,
         IReadOnlyList<ProviderProfile>? providers = null)
     {
@@ -93,24 +90,19 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton<IAvatarGenerationGateway>(
             new AgentAvatarGenerationGateway(workspaceService, generationService));
-        context.Services.AddSingleton(
-            (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
-        context.Services.AddSingleton(
-            (SecretService)RuntimeHelpers.GetUninitializedObject(typeof(SecretService)));
+        context.Services.AddAgentEditorReadFixture();
         return context;
     }
 
-    private static IRenderedComponent<TestAgentDetailsDialog> RenderIdentityTab(
+    private static IRenderedComponent<AgentDetailsDialog> RenderIdentityTab(
         BunitContext context,
         AgentEditorModel editor,
         IReadOnlyList<ProviderProfile> providers)
     {
-        return context.Render<TestAgentDetailsDialog>(parameters => parameters
-            .Add(component => component.TestEditor, editor)
-            .Add(component => component.TestProviders, providers));
+        return context.RenderEditor(editor, AgentEditorSection.Identity, providers: providers);
     }
 
-    private static ProviderProfile CreateImageProvider()
+    internal static ProviderProfile CreateImageProvider()
     {
         return new ProviderProfile(
             Id: Guid.NewGuid(),
@@ -131,34 +123,6 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
             LastCheckedAtUtc: null,
             SuggestedModels: ["gpt-image-1"],
             Purpose: ProviderProfilePurpose.ImageGeneration);
-    }
-
-    public sealed class TestAgentDetailsDialog : AgentDetailsDialog
-    {
-        [Parameter]
-        public AgentEditorModel TestEditor { get; set; } = new();
-
-        [Parameter]
-        public IReadOnlyList<ProviderProfile> TestProviders { get; set; } = [];
-
-        protected override Task OnInitializedAsync()
-        {
-            SetBaseField("editorModel", TestEditor);
-            SetBaseField("providers", TestProviders);
-            SetBaseField("areProvidersLoaded", true);
-            SetBaseField("selectedTabIndex", 0);
-            SetBaseField("isLoading", false);
-            return Task.CompletedTask;
-        }
-
-        private void SetBaseField(string fieldName, object value)
-        {
-            var field = typeof(AgentDetailsDialog).GetField(
-                fieldName,
-                BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(AgentDetailsDialog).FullName, fieldName);
-            field.SetValue(this, value);
-        }
     }
 
     public class WorkspaceServiceProxy : DispatchProxy
@@ -193,6 +157,6 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         }
     }
 
-    private const string ValidSquareJpegBase64 =
+    internal const string ValidSquareJpegBase64 =
         "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAgACADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDEooor9dPyQKKKKACiiigAooooA//Z";
 }

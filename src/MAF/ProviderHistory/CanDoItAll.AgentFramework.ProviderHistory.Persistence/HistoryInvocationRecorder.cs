@@ -6,7 +6,7 @@ namespace CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 
 public sealed class HistoryInvocationRecorder(
     IProviderHistoryPartition partitions,
-    IDbContextFactory<AppDbContext> factory,
+    IDbContextFactory<ProviderHistoryDbContext> factory,
     IDatabaseRuntimeState runtime,
     IProviderHistoryCapture capture,
     TimeProvider clock,

@@ -1,0 +1,432 @@
+@if (Presentation.Phase == PromptGalleryEditorPhase.Loading)
+{
+    <LoadingState Eyebrow="Prompt editor"
+                  Title="Loading prompt item"
+                  Description="Reading the canonical draft, compatibility metadata, and immutable versions." />
+}
+else if (Presentation.Phase == PromptGalleryEditorPhase.Failed)
+{
+    <EmptyState Eyebrow="Prompt unavailable"
+                Title="The prompt item could not be loaded"
+                Description="@(Presentation.FailureMessage ?? "The prompt item could not be loaded.")">
+        <Actions>
+            <Button Text="Retry" Icon="refresh" Click="RetryAsync" data-testid="prompt-gallery-editor-retry" />
+            <Button Text="Close" Icon="close" ButtonStyle="ButtonStyle.Light" Click="CancelAsync" data-testid="prompt-gallery-editor-close" />
+        </Actions>
+    </EmptyState>
+}
+else if (form is not null && editContext is not null)
+{
+    <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" OnInvalidSubmit="ShowValidationMessages">
+        <fieldset class="prompt-gallery-item-editor__fieldset" disabled="@Presentation.IsBusy" aria-busy="@(Presentation.IsBusy ? "true" : "false")">
+        <Stack GapScale="LayoutGap.XXLarge" data-testid="prompt-gallery-item-editor">
+            @if (Presentation.HasExternalChange)
+            {
+                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="prompt-gallery-editor-conflict">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock Value="@Presentation.ExternalChange" />
+                        <Cluster Gap="LayoutGap.Small">
+                            <Button Text="Reload latest and discard my draft"
+                                    Icon="refresh"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="RetryAsync"
+                                    data-testid="prompt-gallery-editor-reload" />
+                        </Cluster>
+                    </Stack>
+                </Alert>
+            }
+            @if (!string.IsNullOrWhiteSpace(Presentation.Warning))
+            {
+                <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="prompt-gallery-editor-warning">
+                    <TextBlock Value="@Presentation.Warning" />
+                </Alert>
+            }
+            @if (!string.IsNullOrWhiteSpace(validationMessage))
+            {
+                <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="prompt-gallery-editor-validation">
+                    <TextBlock Value="@validationMessage" />
+                </Alert>
+            }
+
+            <FormSection Title="Prompt identity"
+                         Description="Name and classify this reusable instruction without coupling it to a workflow or agent runtime.">
+                <Grid Gap="LayoutGap.Large" ColumnsXl="2">
+                    <FormField Text="Name">
+                        <InputText @bind-Value="form.Title"
+                                   class="cda-input"
+                                   data-testid="prompt-gallery-editor-title" />
+                    </FormField>
+                    <FormField Text="Kind">
+                        <InputSelect @bind-Value="form.Kind"
+                                     class="cda-input"
+                                     data-testid="prompt-gallery-editor-kind">
+                            @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
+                            {
+                                <option value="@option">@PromptGalleryText.FormatKind(option)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                </Grid>
+                <Grid Gap="LayoutGap.Large" ColumnsXl="2">
+                    <FormField Text="Summary">
+                        <InputText @bind-Value="form.Summary"
+                                   class="cda-input"
+                                   data-testid="prompt-gallery-editor-summary" />
+                    </FormField>
+                    <FormField Text="Phase or group">
+                        <InputText @bind-Value="form.Phase"
+                                   class="cda-input"
+                                   data-testid="prompt-gallery-editor-phase" />
+                    </FormField>
+                </Grid>
+                <FormField Text="Tags">
+                    <TagEditor Value="@form.Tags"
+                               ValueChanged="HandleTagsChanged"
+                               Placeholder="Add a tag"
+                               MaxTags="20"
+                               TestId="prompt-gallery-editor-tags"
+                               InputTestId="prompt-gallery-editor-tag-input" />
+                </FormField>
+            </FormSection>
+
+            <FormSection Title="Reusable content"
+                         Description="Keep the editable draft here. Finalization creates a separate immutable version.">
+                <FormField Text="Prompt or prompt-part content">
+                    <InputTextArea @bind-Value="form.Content"
+                                   class="cda-input cda-input--textarea cda-input--mono min-h-80"
+                                   data-testid="prompt-gallery-editor-content" />
+                </FormField>
+            </FormSection>
+
+            <FormSection Title="Supported consumers"
+                         Description="Leave every option clear to allow all consumers, or explicitly constrain where this item belongs.">
+                <Cluster Gap="LayoutGap.Large" Wrap="FlexWrap.Wrap">
+                    @foreach (var consumer in Enum.GetValues<PromptGalleryConsumer>())
+                    {
+                        <label class="prompt-gallery-item-editor__choice">
+                            <CheckBox TValue="bool"
+                                      Value="@form.SupportedConsumers.Contains(consumer)"
+                                      ValueChanged="@((bool value) => form.SetConsumer(consumer, value))"
+                                      aria-label="@($"Support {consumer}")" />
+                            <span>@PromptGalleryText.FormatConsumer(consumer)</span>
+                        </label>
+                    }
+                </Cluster>
+            </FormSection>
+
+            @if (Presentation.IsPersisted)
+            {
+                <FormSection Title="Compatibility warning preferences"
+                             Description="These item-level settings control whether a previously accepted selection warning is shown again. Execution errors cannot be suppressed.">
+                    <Grid Gap="LayoutGap.Large" ColumnsXl="2">
+                        @foreach (var consumer in WarningPreferenceConsumers)
+                        {
+                            <SurfaceCard Soft="true">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="@PromptGalleryText.FormatConsumer(consumer)" />
+                                    @foreach (var issueCode in WarningPreferenceIssueCodes)
+                                    {
+                                        var preference = new PromptWarningSuppression(consumer, issueCode);
+                                        <label class="prompt-gallery-item-editor__choice">
+                                            <CheckBox TValue="bool"
+                                                      Value="@Presentation.WarningSuppressions.Contains(preference)"
+                                                      ValueChanged="@((bool value) => SetWarningSuppressionAsync(preference, value))"
+                                                      aria-label="@($"Suppress {PromptGalleryText.FormatWarningIssue(issueCode)} for {PromptGalleryText.FormatConsumer(consumer)}")" />
+                                            <span>Do not repeat @PromptGalleryText.FormatWarningIssue(issueCode)</span>
+                                        </label>
+                                    }
+                                </Stack>
+                            </SurfaceCard>
+                        }
+                    </Grid>
+                </FormSection>
+            }
+
+            <FormSection Title="Supported provider models"
+                         Description="Add only combinations verified for this item. Mark one optional preferred pair to preload consumers; an empty list means the item is model-agnostic.">
+                <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
+                    <FormField Text="Provider">
+                        <InputText @bind-Value="providerToAdd"
+                                   class="cda-input"
+                                   placeholder="OpenAI, Ollama, ..."
+                                   data-testid="prompt-gallery-editor-provider-to-add" />
+                    </FormField>
+                    <FormField Text="Model">
+                        <InputText @bind-Value="modelToAdd"
+                                   class="cda-input"
+                                   placeholder="Model identifier"
+                                   data-testid="prompt-gallery-editor-model-to-add" />
+                    </FormField>
+                    <Cluster AlignItems="AlignItems.End">
+                        <Button Text="Add model"
+                                Icon="add"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="AddSupportedModel"
+                                data-testid="prompt-gallery-editor-add-model" />
+                    </Cluster>
+                </Grid>
+
+                @if (!string.IsNullOrWhiteSpace(modelValidationMessage))
+                {
+                    <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="prompt-gallery-editor-model-validation">
+                        <TextBlock Value="@modelValidationMessage" />
+                    </Alert>
+                }
+
+                @if (form.SupportedModels.Count == 0)
+                {
+                    <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                        <TextBlock Value="No model restriction. This item can be offered for any provider and model." />
+                    </Alert>
+                }
+                else
+                {
+                    <DataGrid TItem="PromptProviderModel" Data="@form.SupportedModels" AllowPaging="false">
+                        <Columns>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Preferred">
+                                <Template Context="supported">
+                                    <CheckBox TValue="bool"
+                                              Value="@supported.IsPreferred"
+                                              ValueChanged="@((bool value) => form.SetPreferredModel(supported, value))"
+                                              aria-label="@($"Prefer {supported.Provider} {supported.Model}")" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Provider">
+                                <Template Context="supported"><TextBlock Value="@supported.Provider" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Model">
+                                <Template Context="supported"><MonoText Text="@supported.Model" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Action">
+                                <Template Context="supported">
+                                    <Button Text="Remove"
+                                            Icon="delete"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => form.RemoveSupportedModel(supported))" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                }
+            </FormSection>
+
+            <FormSection Title="Recommended generation settings"
+                         Description="Optional recommendations preload compatible workflow and chat settings without becoming runtime policy.">
+                <Grid Gap="LayoutGap.Large" ColumnsXl="3">
+                    <FormField Text="Temperature">
+                        <InputNumber @bind-Value="form.Temperature"
+                                     class="cda-input"
+                                     min="0"
+                                     max="2"
+                                     step="0.1"
+                                     data-testid="prompt-gallery-editor-temperature" />
+                        <ValidationMessage For="@(() => form.Temperature)" />
+                    </FormField>
+                    <FormField Text="Top-p">
+                        <InputNumber @bind-Value="form.TopP"
+                                     class="cda-input"
+                                     min="0"
+                                     max="1"
+                                     step="0.05"
+                                     data-testid="prompt-gallery-editor-top-p" />
+                        <ValidationMessage For="@(() => form.TopP)" />
+                    </FormField>
+                    <FormField Text="Maximum output tokens">
+                        <InputNumber @bind-Value="form.MaxOutputTokens"
+                                     class="cda-input"
+                                     min="1"
+                                     data-testid="prompt-gallery-editor-max-output-tokens" />
+                        <ValidationMessage For="@(() => form.MaxOutputTokens)" />
+                    </FormField>
+                </Grid>
+            </FormSection>
+
+            @if (Presentation.Versions.Count > 0)
+            {
+                <FormSection Title="Immutable versions"
+                             Description="Existing versions remain addressable even while the draft changes.">
+                    <DataGrid TItem="PromptGalleryVersionInfo" Data="@Presentation.Versions" AllowPaging="false" data-testid="prompt-gallery-editor-versions">
+                        <Columns>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Version">
+                                <Template Context="version"><StatusBadge Tone="success" Text="@($"v{version.VersionNumber}")" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Reason">
+                                <Template Context="version"><TextBlock Value="@version.CreationReason" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Format">
+                                <Template Context="version"><StatusBadge Tone="neutral" Text="@version.OutputFormat" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Created">
+                                <Template Context="version"><TextBlock Value="@version.CreatedAtUtc.LocalDateTime.ToString("g")" /></Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                </FormSection>
+            }
+
+            <StickyActionFooter StatusLabel="@Presentation.StatusLabel">
+                <SecondaryActions>
+                    <Button Text="Cancel"
+                            Icon="close"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="CancelAsync"
+                            data-testid="prompt-gallery-editor-cancel" />
+                    @if (Presentation.IsPersisted)
+                    {
+                        <Button Text="@(Presentation.IsArchived ? "Restore" : "Archive")"
+                                Icon="@(Presentation.IsArchived ? "unarchive" : "archive")"
+                                ButtonStyle="ButtonStyle.Warning"
+                                Variant="Variant.Outlined"
+                                Disabled="@Presentation.IsBusy"
+                                Click="ToggleArchivedAsync"
+                                data-testid="prompt-gallery-editor-archive" />
+                    }
+                </SecondaryActions>
+                <PrimaryActions>
+                    <Button Text="Save draft"
+                            Icon="save"
+                            Type="submit"
+                            Disabled="@Presentation.IsBusy"
+                            IsBusy="@Presentation.IsBusy"
+                            data-testid="prompt-gallery-editor-save" />
+                    <Button Text="Create final version"
+                            Icon="verified"
+                            ButtonStyle="ButtonStyle.Success"
+                            Disabled="@Presentation.IsBusy"
+                            Click="CreateVersionAsync"
+                            data-testid="prompt-gallery-editor-finalize" />
+                </PrimaryActions>
+            </StickyActionFooter>
+        </Stack>
+        </fieldset>
+    </EditForm>
+}
+
+@code {
+    private const string RequiredValuesMessage = "Enter a name and reusable prompt content before saving.";
+
+    private static readonly PromptGalleryConsumer[] WarningPreferenceConsumers =
+    [
+        PromptGalleryConsumer.Chat,
+        PromptGalleryConsumer.Workflow
+    ];
+
+    private static readonly PromptCompatibilityIssueCode[] WarningPreferenceIssueCodes =
+    [
+        PromptCompatibilityIssueCode.ItemKindMismatch,
+        PromptCompatibilityIssueCode.ProviderModelNotSupported
+    ];
+
+    private PromptGalleryEditorForm? form;
+    private EditContext? editContext;
+    private PromptGalleryEditorSource? acceptedSource;
+    private string providerToAdd = string.Empty;
+    private string modelToAdd = string.Empty;
+    private string? validationMessage;
+    private string? modelValidationMessage;
+
+    [Parameter, EditorRequired]
+    public PromptGalleryEditorPresentation Presentation { get; set; } = PromptGalleryEditorPresentation.CreateNew(0);
+
+    [Parameter]
+    public EventCallback<PromptGalleryEditorIntent> Intent { get; set; }
+
+    // Exposed for hosts and tests that need to inspect the live draft without reflection.
+    public PromptGalleryEditorForm? CurrentForm => form;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(acceptedSource, Presentation.Source))
+        {
+            return;
+        }
+
+        // A new source reference means a new editing target; the same reference keeps the draft and its edit context.
+        acceptedSource = Presentation.Source;
+        form = acceptedSource is null ? null : PromptGalleryEditorForm.FromSource(acceptedSource);
+        editContext = form is null ? null : new EditContext(form);
+        providerToAdd = string.Empty;
+        modelToAdd = string.Empty;
+        validationMessage = null;
+        modelValidationMessage = null;
+    }
+
+    private Task SaveAsync()
+        => SubmitAsync(submission => new PromptGalleryEditorIntent.SaveDraft(Presentation.Generation, submission));
+
+    private Task CreateVersionAsync()
+        => SubmitAsync(submission => new PromptGalleryEditorIntent.CreateVersion(Presentation.Generation, submission));
+
+    // Both mutation entry points pass through the same edit context, so parsing errors block finalization as well.
+    private Task SubmitAsync(Func<PromptGalleryEditorSubmission, PromptGalleryEditorIntent> createIntent)
+    {
+        if (form is null || editContext is null || Presentation.IsBusy)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!editContext.Validate())
+        {
+            ShowValidationMessages();
+            return Task.CompletedTask;
+        }
+
+        if (!form.HasRequiredValues)
+        {
+            validationMessage = RequiredValuesMessage;
+            return Task.CompletedTask;
+        }
+
+        validationMessage = null;
+        return Intent.InvokeAsync(createIntent(form.ToSubmission()));
+    }
+
+    private void ShowValidationMessages()
+    {
+        var messages = editContext?.GetValidationMessages().ToArray() ?? [];
+        validationMessage = messages.Length == 0
+            ? RequiredValuesMessage
+            : "Correct the highlighted fields before saving: " + string.Join(" ", messages);
+    }
+
+    private Task CancelAsync()
+        => Intent.InvokeAsync(new PromptGalleryEditorIntent.Cancel());
+
+    private Task RetryAsync()
+        => Intent.InvokeAsync(new PromptGalleryEditorIntent.Retry(Presentation.Generation));
+
+    private Task ToggleArchivedAsync()
+        => Presentation.IsBusy
+            ? Task.CompletedTask
+            : Intent.InvokeAsync(new PromptGalleryEditorIntent.ToggleArchive(Presentation.Generation));
+
+    private Task SetWarningSuppressionAsync(PromptWarningSuppression preference, bool suppressed)
+        => Presentation.IsBusy
+            ? Task.CompletedTask
+            : Intent.InvokeAsync(new PromptGalleryEditorIntent.SetWarningSuppression(Presentation.Generation, preference, suppressed));
+
+    private void HandleTagsChanged(IReadOnlyList<string> value)
+    {
+        if (form is not null)
+        {
+            form.Tags = [.. value];
+        }
+    }
+
+    private void AddSupportedModel()
+    {
+        if (form is null)
+        {
+            return;
+        }
+
+        modelValidationMessage = form.TryAddSupportedModel(providerToAdd, modelToAdd);
+        if (modelValidationMessage is null)
+        {
+            providerToAdd = string.Empty;
+            modelToAdd = string.Empty;
+        }
+    }
+}

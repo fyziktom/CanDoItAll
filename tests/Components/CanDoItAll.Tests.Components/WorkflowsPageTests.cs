@@ -34,6 +34,42 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowsPageTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Canvas_preview_backend_failures_do_not_disclose_private_detail(int lane) {
+        const string poison = "CANVAS_PRIVATE_SENTINEL api_key=test-only-private-canvas /srv/private/canvas at Internal.Preview()";
+        var runner = new CapturingWorkflowTestRunner { Failure = lane == 1 ? new InvalidOperationException(poison) : null,
+            PublicFailure = lane == 2 ? poison : null };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IWorkflowTestRunner>(runner);
+            services.AddSingleton<IProjectStructureRuntimeGateway>(new PreviewProjectGateway(Guid.NewGuid()) {
+                Failure = lane == 0 ? new InvalidOperationException(poison) : null
+            });
+        });
+        var definition = lane == 0 ? CreateProjectStructurePreviewDefinition() : CreatePreviewProgressDefinition();
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, definition)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+        await RunWorkflowCanvasPreviewAsync(cut, definition);
+        if (lane == 0) {
+            cut.WaitForAssertion(() => {
+                Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-input-dialog']"));
+                Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-project-id']"));
+                Assert.Contains("Project list unavailable. Retry when project selection is available.", cut.Markup, StringComparison.Ordinal);
+            });
+        } else {
+            cut.WaitForAssertion(() => Assert.NotNull(runner.LastRequest));
+            await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
+            cut.WaitForAssertion(() => Assert.Contains(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+                message => message.Summary == "Workflow preview failed"));
+        }
+        Assert.DoesNotContain("CANVAS_PRIVATE_SENTINEL", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+            message => (message.Detail ?? "").Contains("CANVAS_PRIVATE_SENTINEL", StringComparison.Ordinal));
+    }
     [Fact]
     public async Task Workflows_page_opens_exact_workflow_curator_only_after_context_is_ready()
     {
@@ -1036,7 +1072,7 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain("workflow-canvas-validation-issue", cut.Markup);
         });
 
-        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
         cut.WaitForAssertion(() =>
         {
@@ -1209,8 +1245,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
 
-        cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").Click());
+        await RunWorkflowCanvasPreviewAsync(cut, definition);
 
         cut.WaitForElement("[data-testid='workflow-canvas-preview-input-dialog']");
         cut.WaitForAssertion(() =>
@@ -1223,7 +1258,7 @@ public sealed class WorkflowsPageTests
             cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node"));
         await cut.InvokeAsync(() =>
             cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true));
-        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-preview-input-run']").ClickAsync());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
@@ -1245,6 +1280,34 @@ public sealed class WorkflowsPageTests
         Assert.Equal(storeNode.Id, simulatedStep.NodeId);
         Assert.Equal(WorkflowExecutorIds.ProjectStructure, simulatedStep.SourceExecutorId);
         Assert.Contains("inputPayload", simulatedStep.OutputTemplateJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_previews_a_published_workflow_as_an_unsaved_draft()
+    {
+        var runner = new CapturingWorkflowTestRunner();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IWorkflowTestRunner>();
+            services.AddSingleton<IWorkflowTestRunner>(runner);
+        });
+        var published = CreatePreviewProgressDefinition() with { Status = WorkflowLifecycleStatus.Active };
+
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, published)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+        await RunWorkflowCanvasPreviewAsync(cut, published);
+
+        // The launch service admits only Draft definitions as draft previews, so an Active canvas must be sent as an
+        // unsaved draft of its current content rather than failing every preview with a generic error.
+        cut.WaitForAssertion(() => Assert.NotNull(runner.LastRequest));
+        var draft = Assert.IsType<WorkflowDefinition>(runner.LastRequest!.DraftDefinition);
+        Assert.Equal(WorkflowLifecycleStatus.Draft, draft.Status);
+        Assert.Equal(published.Id, draft.Id);
+        Assert.NotEqual(published.VersionId, draft.VersionId);
+        Assert.Null(runner.LastRequest.WorkflowId);
+        Assert.Null(runner.LastRequest.VersionId);
     }
 
     [Fact]
@@ -1375,8 +1438,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
 
-        cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        await RunWorkflowCanvasPreviewAsync(cut, definition);
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
@@ -1792,7 +1854,7 @@ public sealed class WorkflowsPageTests
             await runStore.SaveEventAsync(new WorkflowEventRecord(
                 Guid.Parse($"00000000-0000-0000-0000-{index + 1:x12}"),
                 newestRunId,
-                index % 2 == 0 ? WorkflowEventKind.ExecutorCompleted : WorkflowEventKind.SuperStep,
+                index == 0 ? WorkflowEventKind.Output : index % 2 == 0 ? WorkflowEventKind.ExecutorCompleted : WorkflowEventKind.SuperStep,
                 new WorkflowNodeId("history-node"),
                 message,
                 $"{{\"index\":{index},\"marker\":\"payload-{index}\"}}",
@@ -1959,11 +2021,7 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
         });
         Assert.Contains("Open workflows", cut.Markup, StringComparison.Ordinal);
-        var openWorkflows = typeof(AgentsHomePage).GetMethod(
-            "OpenWorkflows",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        Assert.NotNull(openWorkflows);
-        await cut.InvokeAsync(() => openWorkflows.Invoke(cut.Instance, null));
+        await cut.Find("[data-testid='agents-shell-open-workflows']").ClickAsync();
 
         Assert.EndsWith("/agents/workflows", navigation.Uri, StringComparison.Ordinal);
     }
@@ -2005,11 +2063,11 @@ public sealed class WorkflowsPageTests
         services.AddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
     }
 
-    private static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(
+    internal static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(
         CanDoItAllTestEnvironment environment,
         Action<IServiceCollection>? configureServices = null)
     {
-        var profile = environment.CreateInMemoryProfile("primary");
+        var profile = environment.CreateInMemoryProfile("primary", databaseName: Guid.NewGuid().ToString("N"));
         return ComponentTestHarness.CreateAsync(configureServices, new TestHarnessOptions
         {
             TestEnvironment = environment,
@@ -2140,7 +2198,7 @@ public sealed class WorkflowsPageTests
         var method = typeof(WorkflowsPage).GetMethod(
             "SelectRunAsync",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [runId, true, null, null]));
+        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [runId, true, null, null, null]));
     }
 
     private static WorkflowDefinition? ReadSelectedDefinition(WorkflowsPage page)
@@ -2213,6 +2271,15 @@ public sealed class WorkflowsPageTests
             $"{backendRunId} completed.",
             createdAtUtc,
             createdAtUtc);
+
+    private static Task RunWorkflowCanvasPreviewAsync(
+        IRenderedComponent<WorkflowCanvasEditor> cut,
+        WorkflowDefinition definition) {
+        cut.WaitForAssertion(() => Assert.Equal(
+            definition.Name,
+            cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value")));
+        return cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync());
+    }
 
     private static Task ClickWorkflowCanvasTabAsync(IRenderedComponent<IComponent> cut, string testId)
         => cut.InvokeAsync(() =>
@@ -2380,7 +2447,7 @@ public sealed class WorkflowsPageTests
                 ExposeAzureFunctionsMcpTool: false)));
     }
 
-    private static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
+    internal static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
     {
         var start = new WorkflowNodeId("start");
         var end = new WorkflowNodeId("end");
@@ -3425,6 +3492,8 @@ public sealed class WorkflowsPageTests
 
     private sealed class CapturingWorkflowTestRunner : IWorkflowTestRunner
     {
+        public Exception? Failure { get; init; }
+        public string? PublicFailure { get; init; }
         public WorkflowTestRunRequest? LastRequest { get; private set; }
 
         public Task<WorkflowTestRunResult> RunAsync(
@@ -3432,6 +3501,9 @@ public sealed class WorkflowsPageTests
             CancellationToken cancellationToken = default)
         {
             LastRequest = request;
+            if (Failure is not null) {
+                return Task.FromException<WorkflowTestRunResult>(Failure);
+            }
             var definition = request.DraftDefinition ?? CreateProjectStructurePreviewDefinition();
             var now = DateTimeOffset.UtcNow;
             var run = new WorkflowRunSnapshot(
@@ -3445,13 +3517,13 @@ public sealed class WorkflowsPageTests
                 now,
                 now);
             return Task.FromResult(new WorkflowTestRunResult(
-                Succeeded: true,
+                Succeeded: PublicFailure is null,
                 WorkflowValidationResult.Success,
                 run,
                 Events: [],
                 Artifacts: [],
                 PendingExternalRequests: [],
-                ErrorMessage: string.Empty));
+                ErrorMessage: PublicFailure ?? string.Empty));
         }
     }
 
@@ -3602,8 +3674,10 @@ public sealed class WorkflowsPageTests
 
     private sealed class PreviewProjectGateway(Guid projectId) : IProjectStructureRuntimeGateway
     {
+        public Exception? Failure { get; init; }
         public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>(
+            => Failure is not null ? Task.FromException<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>(Failure)
+                : Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>(
             [
                 new ProjectStructureRuntimeProjectSummary(
                     projectId,

@@ -8,8 +8,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowUsageObservationStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    WorkflowHistoryProjection history) :
+    IDbContextFactory<WorkflowDbContext> dbContextFactory,
+    WorkflowHistoryProjection history,
+    CoordinatedDatabaseTransaction transactions) :
     IWorkflowUsageObservationStore,
     IWorkflowUsageAnalyticsStore
 {
@@ -35,6 +36,7 @@ public sealed class PersistentWorkflowUsageObservationStore(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             await using var transaction = dbContext.Database.IsRelational()
                 ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+            using var coordination = transactions.Enter(dbContext);
             var ids = canonical.Keys.Select(id => id.Value).ToArray();
             var existing = await dbContext.Set<WorkflowUsageObservationRecordEntity>()
                 .AsNoTracking()
@@ -44,7 +46,7 @@ public sealed class PersistentWorkflowUsageObservationStore(
             {
                 var stored = storedRecord.ToObservation();
                 var candidate = canonical[new WorkflowUsageObservationId(storedRecord.Id)];
-                if (stored != candidate)
+                if (!stored.HasSameContent(candidate))
                 {
                     throw new WorkflowUsageObservationConflictException(candidate.Id);
                 }
@@ -61,7 +63,7 @@ public sealed class PersistentWorkflowUsageObservationStore(
                 canonical.Values.Select(WorkflowUsageObservationRecordEntity.FromObservation));
             try
             {
-                await history.StageAsync(dbContext, canonical.Values, cancellationToken);
+                await history.StageAsync(canonical.Values, cancellationToken);
                 await dbContext.SaveChangesAsync(cancellationToken);
                 if (transaction is not null) {
                     await transaction.CommitAsync(cancellationToken);
@@ -321,7 +323,7 @@ public sealed class PersistentWorkflowUsageObservationStore(
         {
             WorkflowUsageObservationValidator.ThrowIfNotPersistable(suppliedObservation);
             var observation = CanonicalizeForPersistence(suppliedObservation);
-            if (canonical.TryGetValue(observation.Id, out var stored) && stored != observation)
+            if (canonical.TryGetValue(observation.Id, out var stored) && !stored.HasSameContent(observation))
             {
                 throw new WorkflowUsageObservationConflictException(observation.Id);
             }
@@ -369,7 +371,8 @@ public sealed class PersistentWorkflowUsageObservationStore(
         {
             var processRunIds = query.OriginProcessRunIds.Select(runId => runId.Value).Distinct().ToArray();
             source = source.Where(record =>
-                record.OriginKind == WorkflowLaunchOriginKind.ProcessAssignment &&
+                (record.OriginKind == WorkflowLaunchOriginKind.ProcessAssignment || record.OriginKind == WorkflowLaunchOriginKind.ProcessToolInvocation ||
+                    record.OriginKind == WorkflowLaunchOriginKind.ProcessDispatchAssignment) &&
                 record.OriginProcessRunId.HasValue &&
                 processRunIds.Contains(record.OriginProcessRunId.Value));
         }
@@ -581,8 +584,18 @@ public sealed class WorkflowUsageObservationRecordEntity
         CompletedAtUtc = observation.CompletedAtUtc,
         RecordedAtUtc = observation.RecordedAtUtc,
         OriginKind = observation.Origin?.Kind,
-        OriginProcessRunId = (observation.Origin as WorkflowLaunchOrigin.ProcessAssignment)?.ProcessRun.Value,
-        OriginProcessAssignmentId = (observation.Origin as WorkflowLaunchOrigin.ProcessAssignment)?.Assignment.Value,
+        OriginProcessRunId = observation.Origin switch {
+            WorkflowLaunchOrigin.ProcessAssignment process => process.ProcessRun.Value,
+            WorkflowLaunchOrigin.ProcessToolInvocation tool => tool.Invocation.ProcessRun.Value,
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => mapped.Dispatch.ProcessRun.Value,
+            _ => null
+        },
+        OriginProcessAssignmentId = observation.Origin switch {
+            WorkflowLaunchOrigin.ProcessAssignment process => process.Assignment.Value,
+            WorkflowLaunchOrigin.ProcessToolInvocation tool => tool.Invocation.StepInstance.Value,
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => mapped.Dispatch.Assignment.Value,
+            _ => null
+        },
         OriginJson = observation.Origin is null
             ? string.Empty
             : JsonSerializer.Serialize(observation.Origin, JsonOptions)

@@ -10,7 +10,7 @@ using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 namespace CanDoItAll.Modules.CrmHr;
 
 public sealed partial class CrmHrSourceSnapshotProvider(
-    IDbContextFactory<AppDbContext> dbContextFactory) : ICrmHrSourceSnapshotProvider
+    IDbContextFactory<CrmHrDbContext> dbContextFactory) : ICrmHrSourceSnapshotProvider
 {
     public async Task<MemorySourceSnapshot> ReadSnapshotAsync(
         CrmHrSourceSnapshotRequest request,
@@ -191,7 +191,7 @@ public sealed partial class CrmHrSourceSnapshotProvider(
     }
 
     private static CrmHrSourcePage CreatePartySource(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? partyId,
         Guid scopeId)
     {
@@ -217,7 +217,7 @@ public sealed partial class CrmHrSourceSnapshotProvider(
     }
 
     private static async Task<IReadOnlyList<MemorySourceItem>> ReadPartyPageAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IQueryable<Party> query,
         int skip,
         int take,
@@ -277,7 +277,7 @@ public sealed partial class CrmHrSourceSnapshotProvider(
     }
 
     private static CrmHrSourcePage CreateInteractionSource(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? partyId,
         Guid scopeId)
     {
@@ -303,7 +303,7 @@ public sealed partial class CrmHrSourceSnapshotProvider(
     }
 
     private static async Task<IReadOnlyList<MemorySourceItem>> ReadInteractionPageAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IQueryable<InteractionRecord> query,
         int skip,
         int take,
@@ -406,7 +406,7 @@ public sealed partial class CrmHrSourceSnapshotProvider(
             : query;
 
     private static IQueryable<Opportunity> FilterOpportunities(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? partyId)
     {
         var query = dbContext.Set<Opportunity>().AsNoTracking();
@@ -422,7 +422,7 @@ public sealed partial class CrmHrSourceSnapshotProvider(
     }
 
     private static IQueryable<InteractionRecord> FilterInteractions(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? partyId)
     {
         var query = dbContext.Set<InteractionRecord>().AsNoTracking();

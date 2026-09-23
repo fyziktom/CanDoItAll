@@ -21,6 +21,8 @@ internal sealed class WorkflowBackendProgressEventObserver(
 
     public IReadOnlyList<WorkflowEventRecord> Events => events;
 
+    public WorkflowReadEvidenceDurability ReadEvidenceDurability => next?.ReadEvidenceDurability ?? WorkflowReadEvidenceDurability.Transient;
+
     public IReadOnlyList<WorkflowArtifactRecord> Artifacts => artifacts;
 
     public IReadOnlyList<WorkflowUsageObservation> UsageObservations => usageObservations.Values.ToArray();
@@ -61,7 +63,10 @@ internal sealed class WorkflowBackendProgressEventObserver(
                 inlineTruncated: payloadResult.InlineTruncated,
                 maxInlinePayloadCharacters: payloadResult.MaxInlinePayloadCharacters,
                 usage: progress.Usage),
-            progress.OccurredAtUtc));
+            progress.OccurredAtUtc) {
+                CompletionProof = progress.CompletionProof,
+                ProviderReadEvidence = progress.ProviderReadEvidence
+            });
         AddArtifact(payloadResult.Artifact);
 
         if (next is not null)

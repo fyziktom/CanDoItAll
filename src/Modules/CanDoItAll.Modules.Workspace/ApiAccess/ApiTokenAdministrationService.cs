@@ -41,7 +41,7 @@ public sealed class ApiTokenAdministrationService(
 
     private async ValueTask EnsureAccessAsync(CancellationToken cancellationToken) {
         if (!await access.CanManageAsync(cancellationToken)) {
-            throw new UnauthorizedAccessException("Token administration requires the trusted local UI or the api.tokens.issue scope.");
+            throw new UnauthorizedAccessException("Token administration requires the trusted local UI or a validated administrator session on the enabled HTTP surface.");
         }
     }
 }

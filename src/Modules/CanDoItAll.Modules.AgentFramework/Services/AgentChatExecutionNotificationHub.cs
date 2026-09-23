@@ -8,8 +8,11 @@ public sealed class AgentChatExecutionNotificationHub(
     ILogger<AgentChatExecutionNotificationHub> logger) : IAgentChatExecutionNotificationHub
 {
     private const int MaximumSubscriptions = 64;
+    private const int MaximumRememberedExecutions = 1_024;
     private readonly object gate = new();
     private readonly Dictionary<Guid, SubscriptionEntry> subscriptions = [];
+    private readonly HashSet<Guid> publishedExecutionRunIds = [];
+    private readonly Queue<Guid> publishedExecutionRunOrder = [];
 
     public IAgentChatExecutionNotificationSubscription Subscribe(
         AgentChatContextSource source,
@@ -40,6 +43,17 @@ public sealed class AgentChatExecutionNotificationHub(
         SubscriptionEntry[] matchingSubscriptions;
         lock (gate)
         {
+            if (!publishedExecutionRunIds.Add(notification.ExecutionRunId))
+            {
+                return;
+            }
+
+            publishedExecutionRunOrder.Enqueue(notification.ExecutionRunId);
+            while (publishedExecutionRunOrder.Count > MaximumRememberedExecutions)
+            {
+                publishedExecutionRunIds.Remove(publishedExecutionRunOrder.Dequeue());
+            }
+
             matchingSubscriptions = subscriptions.Values
                 .Where(item => item.Source == notification.Source)
                 .ToArray();

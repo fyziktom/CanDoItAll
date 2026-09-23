@@ -6,6 +6,16 @@
 @inject ILogger<AgentMemorySettingsPanel> Logger
 
 <section data-testid="agents-catalog-memory-access">
+<FormSection Title="CRM source access"
+             Description="Allow assigned tools and configured memory providers to use permitted CRM data. Planning reads also require the CRM Planning Search or CRM Planning Summary capability; this setting does not enable memory providers or HR administration.">
+    <label class="cda-inline-option">
+        <CheckBox TValue="bool"
+                  Value="@Value.AllowedSourceScopes.Contains(MemorySourceScope.Crm)"
+                  ValueChanged="HandleCrmSourceReadChanged"
+                  data-testid="agents-catalog-crm-source-read" />
+        Allow CRM source reads
+    </label>
+</FormSection>
 <FormSection Title="Memory providers"
              Description="Bind stable aliases to external memory providers and choose when the agent may query them.">
     <Grid Gap="LayoutGap.Large" ColumnsMd="3">
@@ -132,6 +142,12 @@
 
     [Parameter, EditorRequired]
     public AgentMemoryAccessSettings Value { get; set; } = new();
+
+    private void HandleCrmSourceReadChanged(bool enabled) {
+        Value.AllowedSourceScopes = enabled
+            ? Value.AllowedSourceScopes.Append(MemorySourceScope.Crm).Distinct().ToArray()
+            : Value.AllowedSourceScopes.Where(scope => scope != MemorySourceScope.Crm).ToArray();
+    }
 
     protected override async Task OnInitializedAsync()
     {

@@ -1,0 +1,121 @@
+@page "/crm-hr/workspaces/workforce"
+@inject NavigationManager Navigation
+@inject CrmHrSandboxPartyStore PartyStore
+
+<PageTitle>CRM / HR Workforce workspace UI sandbox</PageTitle>
+
+<header class="crmhr-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <h1 class="cda-title-xl">CRM / HR Workforce workspace UI sandbox</h1>
+        <p>The real Workforce workspace surface with a deterministic sandbox view and recorded intents. No query service, persistence, navigation or agent context is involved; creating a delivery unit updates the shared in-memory party store the catalog reads from.</p>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
+            <label for="crmhr-sandbox-scenario">Scenario</label>
+            <select id="crmhr-sandbox-scenario"
+                    class="cda-input"
+                    value="@CrmHrWorkforceWorkspaceSandboxContext.Token(context.Scenario)"
+                    @onchange="ChangeScenario"
+                    data-testid="crmhr-sandbox-scenario">
+                @foreach (var scenario in Enum.GetValues<CrmHrWorkforceWorkspaceSandboxScenario>())
+                {
+                    <option value="@CrmHrWorkforceWorkspaceSandboxContext.Token(scenario)">@scenario</option>
+                }
+            </select>
+            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
+            <a href="/crm-hr/workspaces/directory" data-testid="crmhr-sandbox-directory-link">Directory workspace sandbox</a>
+            <a href="/crm-hr/workspaces/crm" data-testid="crmhr-sandbox-crm-link">CRM workspace sandbox</a>
+            <a href="/crm-hr/workspaces/recruiting" data-testid="crmhr-sandbox-recruiting-link">Recruiting workspace sandbox</a>
+            <a href="/crm-hr/workspaces/agents" data-testid="crmhr-sandbox-agents-link">Agents workspace sandbox</a>
+            <a href="/crm-hr/workspaces/assignments" data-testid="crmhr-sandbox-assignments-link">Assignments workspace sandbox</a>
+        </Cluster>
+        <output aria-live="polite" data-testid="crmhr-sandbox-intent">@view.IntentLog</output>
+    </Stack>
+</header>
+
+<main class="@FrameClass" data-testid="crmhr-sandbox-frame" data-scenario="@CrmHrWorkforceWorkspaceSandboxContext.Token(context.Scenario)">
+    <CrmHrWorkforceWorkspaceSurface View="@view">
+        <SecondaryNavigation>
+            @* Host-only navigation: the real CRM / HR area tabs navigate; this sandbox only logs the destination. *@
+            <CrmHrAreaTabs SelectedArea="CrmHrWorkspaceArea.Workforce" AreaSelected="HandleAreaSelected" />
+        </SecondaryNavigation>
+        <ActivityTimeline>
+            <CrmHrActivitySurface Presentation="@activityFixture.Presentation(CrmHrActivitySandboxHost.Workforce)"
+                                  Copy="@CrmHrAccountActivitySandboxFixture.Copy(CrmHrActivitySandboxHost.Workforce)"
+                                  DataTestId="@CrmHrAccountActivitySandboxFixture.TestId(CrmHrActivitySandboxHost.Workforce)"
+                                  Intent="@(intent => activityFixture.HandleActivity(CrmHrActivitySandboxHost.Workforce, intent))" />
+        </ActivityTimeline>
+    </CrmHrWorkforceWorkspaceSurface>
+</main>
+
+<Tooltip />
+
+@code {
+    private readonly CrmHrAccountActivitySandboxFixture activityFixture = new();
+    private CrmHrWorkforceSandboxView view = null!;
+    private CrmHrWorkforceWorkspaceSandboxContext context = new();
+    private bool observed;
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "scenario")]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "layout")]
+    public string? LayoutQuery { get; set; }
+
+    private string FrameClass => context.Layout switch
+    {
+        CrmHrHomeSandboxLayout.Matched => "crmhr-sandbox__frame crmhr-sandbox__frame--matched",
+        CrmHrHomeSandboxLayout.Narrow => "crmhr-sandbox__frame crmhr-sandbox__frame--narrow",
+        _ => "crmhr-sandbox__frame"
+    };
+
+    private string LayoutLabel => context.Layout switch
+    {
+        CrmHrHomeSandboxLayout.Matched => "Layout: matched desktop (1600×1000)",
+        CrmHrHomeSandboxLayout.Narrow => "Layout: constrained 960px",
+        _ => "Layout: flexible"
+    };
+
+    protected override void OnInitialized()
+    {
+        view = new CrmHrWorkforceSandboxView(PartyStore) { RenderRequested = () => InvokeAsync(StateHasChanged) };
+        activityFixture.Apply(CrmHrAccountActivitySandboxScenario.Populated);
+    }
+
+    protected override void OnParametersSet()
+    {
+        var next = CrmHrWorkforceWorkspaceSandboxContext.Parse(ScenarioQuery, LayoutQuery);
+        if (observed && next == context)
+        {
+            return;
+        }
+
+        var scenarioChanged = !observed || next.Scenario != context.Scenario;
+        observed = true;
+        context = next;
+        if (scenarioChanged)
+        {
+            view.Apply(context.Scenario);
+        }
+    }
+
+    private void HandleAreaSelected(CrmHrRouteDefinition route) => view.LogNavigation(route.Route);
+
+    private void ChangeScenario(ChangeEventArgs args)
+        => Navigate(context with { Scenario = CrmHrWorkforceWorkspaceSandboxContext.ParseScenario(args.Value?.ToString()) });
+
+    private void CycleLayout()
+        => Navigate(context with
+        {
+            Layout = context.Layout switch
+            {
+                CrmHrHomeSandboxLayout.Matched => CrmHrHomeSandboxLayout.Narrow,
+                CrmHrHomeSandboxLayout.Narrow => CrmHrHomeSandboxLayout.Flexible,
+                _ => CrmHrHomeSandboxLayout.Matched
+            }
+        });
+
+    // Controls replace the current history entry so a reload restores the scenario and layout.
+    private void Navigate(CrmHrWorkforceWorkspaceSandboxContext next)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters("/crm-hr/workspaces/workforce", next.ToQuery()), replace: true);
+}

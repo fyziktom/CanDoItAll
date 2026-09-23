@@ -117,6 +117,44 @@ public sealed class ProviderPricingTests
         Assert.Equal(prices[0], Assert.Single(saved.ModelPrices, price => price.Model == "model-a"));
     }
 
+    [Theory]
+    [InlineData(OpenAiModelIds.GptImage25Sunburst)]
+    [InlineData(OpenAiModelIds.GptImage25Flare)]
+    [InlineData("gpt-image-2.5-flare-2026-09-08")]
+    public void Image_prices_survive_discovery_editor_catalog_and_import(string model) {
+        var discovered = ProviderPricingDefaults.MergeDiscoveredModelPrices(ProviderKind.OpenAi, model, [],
+            [new ProviderDiscoveredModelPrice(model, null, null, null)]);
+        var price = Assert.Single(discovered.ModelPrices);
+        Assert.Equal(model, price.Model);
+        Assert.Equal((5m, 1.25m, 30m), (price.InputPerMillionTokensUsd, price.CachedInputPerMillionTokensUsd, price.OutputPerMillionTokensUsd));
+        Assert.Equal((8m, 2m), (price.ImageInputPerMillionTokensUsd, price.CachedImageInputPerMillionTokensUsd));
+        var edited = Assert.Single(ProviderPricingDefaults.FromEditorModels(ProviderPricingDefaults.ToEditorModels([price])));
+        var catalog = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderPriceMapper.ToCatalog(edited);
+        var imported = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderPriceMapper.ToRuntime(model, catalog);
+        Assert.Equal(price, imported);
+        Assert.Equal(price, Assert.Single(ProviderPricingMetadata.Read(ProviderPricingMetadata.Write("{}", false, [imported])).ModelPrices));
+        Assert.False(ProviderPricingDefaults.TryValidateModelPrices([price with { ImageInputPerMillionTokensUsd = -1m }], out _));
+        Assert.False(ProviderPricingDefaults.TryValidateModelPrices([
+            new ProviderModelTokenPrice(model, 0m, 0m, 0m) { TariffKind = ProviderTariffKind.ExplicitFree, CachedImageInputPerMillionTokensUsd = 1m }
+        ], out _));
+        var provider = CreateProvider(model, [price]);
+        Assert.NotEqual(ProviderPricingSnapshot.CreateProfileHash(provider),
+            ProviderPricingSnapshot.CreateProfileHash(provider with { ModelPrices = [price with { ImageInputPerMillionTokensUsd = 9m }] }));
+    }
+
+    [Theory]
+    [InlineData(272000, 3.26105)]
+    [InlineData(272001, 6.522095)]
+    public void Astra_prices_use_documented_threshold_for_the_entire_request(int input, decimal expected) {
+        var price = Assert.Single(ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, OpenAiModelIds.Gpt6Astra),
+            candidate => candidate.Model == OpenAiModelIds.Gpt6Astra);
+        Assert.Equal((10m, 1m, 12.5m, 50m), (price.InputPerMillionTokensUsd, price.CachedInputPerMillionTokensUsd, price.CacheWritePerMillionTokensUsd, price.OutputPerMillionTokensUsd));
+        Assert.Equal((272000, 20m, 2m, 25m, 75m), (price.LongContextThresholdTokens, price.LongContextInputPerMillionTokensUsd,
+            price.LongContextCachedInputPerMillionTokensUsd, price.LongContextCacheWritePerMillionTokensUsd, price.LongContextOutputPerMillionTokensUsd));
+        Assert.True(ProviderPricingCalculator.TryCalculate(price, input, 1000, 220000, 1, out var cost));
+        Assert.Equal(expected, cost.TotalUsd);
+    }
+
     [Fact]
     public void OpenAi_defaults_include_current_pricing_rows()
     {

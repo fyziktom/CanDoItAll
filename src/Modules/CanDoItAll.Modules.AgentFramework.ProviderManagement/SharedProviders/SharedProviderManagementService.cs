@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -6,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class SharedProviderManagementService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<ProvidersDbContext> dbContextFactory,
+    SecretReferenceQuery secretReferences,
     SharedProviderPublicationStore publicationStore,
     SharedProviderPublicationApplicationService publicationApplicationService,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
@@ -53,19 +55,15 @@ public sealed class SharedProviderManagementService(
                 Import: null);
         }
 
-        var requiredSecretExists = profile.ApiKeySecretId.HasValue &&
-            await dbContext.Set<CanDoItAll.Modules.Security.SecretRecord>()
-                .AsNoTracking()
-                .AnyAsync(
-                    secret => secret.Id == profile.ApiKeySecretId.Value,
-                    cancellationToken);
+        var requiredSecretExists = profile.ApiKeySecretId is { } secretId &&
+            (await secretReferences.GetExistingIdsAsync([secretId], cancellationToken)).Contains(secretId);
         var eligibility = eligibilityPolicy.Evaluate(
             profile,
             providerManifestCatalog.ResolveManifest(
                 profile.ConnectorPluginKey,
                 profile.ProviderKind),
             requiredSecretExists);
-        var publication = await publicationStore.GetOrCreateAsync(
+        var publication = await publicationStore.FindAsync(
             providerProfileId,
             cancellationToken);
         return new SharedProviderProfileSharingSnapshot(
@@ -79,16 +77,17 @@ public sealed class SharedProviderManagementService(
     public async Task<SharedProviderProfileSharingSnapshot> SetPublicationAsync(
         Guid providerProfileId,
         SharedProviderPublicationAction action,
-        Guid expectedConcurrencyToken,
+        Guid? expectedConcurrencyToken,
         CancellationToken cancellationToken = default)
     {
-        await publicationApplicationService.ChangeAsync(
+        var result = await publicationApplicationService.ChangeAsync(
             new SharedProviderPublicationChangeRequest(
                 providerProfileId,
                 action,
                 expectedConcurrencyToken),
             cancellationToken);
-        return await GetProfileSharingAsync(providerProfileId, cancellationToken);
+        return await ReadCommittedSharingAsync(providerProfileId,
+            result.Change ?? new(SharedProviderChangeKind.Publication, [providerProfileId]), cancellationToken);
     }
 
     public async Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(
@@ -107,6 +106,13 @@ public sealed class SharedProviderManagementService(
             .ToArray());
     }
 
+    public async Task<SharedProviderSourceVerificationResult> VerifySourceAsync(
+        SharedProviderSourceMutationAttempt attempt, CancellationToken cancellationToken = default) {
+        var sources = await ListSourcesAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return SharedProviderSourceVerification.Evaluate(attempt, sources);
+    }
+
     public Task<SharedProviderSourceWriteResult> SaveSourceAsync(
         SharedProviderSourceEditorRequest request,
         CancellationToken cancellationToken = default)
@@ -117,8 +123,8 @@ public sealed class SharedProviderManagementService(
             request.BaseUri,
             request.ApiTokenSecretId,
             request.IsEnabled,
-            request.AllowInsecurePrivateNetwork);
-        if (!request.Id.HasValue)
+            request.AllowInsecurePrivateNetwork, request.Id);
+        if (!request.Id.HasValue || !request.ExpectedConcurrencyToken.HasValue)
         {
             return sourceService.CreateAsync(writeRequest, cancellationToken);
         }
@@ -176,7 +182,7 @@ public sealed class SharedProviderManagementService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var alias = NormalizeAlias(request.LocalAlias);
+        var alias = SharedProviderLocalAliasPolicy.Normalize(request.LocalAlias);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var (import, profile) = await LoadImportedMutationAsync(
             dbContext,
@@ -196,8 +202,12 @@ public sealed class SharedProviderManagementService(
             import,
             profile,
             cancellationToken);
-        await NotifyProviderSavedAsync(profile.Id);
-        return await GetProfileSharingAsync(profile.Id, cancellationToken);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.ImportedSettings, [profile.Id],
+                retiredProviderProfileIds: [],
+                remoteOwnedFieldsChanged: false, catalogMembershipMayHaveChanged: false),
+            commitObservers);
+        return await ReadCommittedSharingAsync(profile.Id, change, cancellationToken);
     }
 
     public async Task<SharedProviderProfileSharingSnapshot> RetireImportedProfileAsync(
@@ -223,12 +233,25 @@ public sealed class SharedProviderManagementService(
             import,
             profile,
             cancellationToken);
-        await NotifyProviderSavedAsync(profile.Id);
-        return await GetProfileSharingAsync(profile.Id, cancellationToken);
+        var change = await SharedProviderCommitEffects.NotifySavedAsync(
+            new(SharedProviderChangeKind.ImportRetirement, [profile.Id],
+                retiredProviderProfileIds: [profile.Id],
+                remoteOwnedFieldsChanged: false, catalogMembershipMayHaveChanged: true),
+            commitObservers);
+        return await ReadCommittedSharingAsync(profile.Id, change, cancellationToken);
+    }
+
+    private async Task<SharedProviderProfileSharingSnapshot> ReadCommittedSharingAsync(
+        Guid providerId, SharedProviderChange change, CancellationToken token) {
+        try {
+            return (await GetProfileSharingAsync(providerId, token)) with { Change = change };
+        } catch (Exception exception) {
+            throw new SharedProviderCommittedException(change, exception);
+        }
     }
 
     private static async Task<SharedProviderImportedProfileSnapshot?> LoadImportedProfileAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid providerProfileId,
         CancellationToken cancellationToken)
     {
@@ -245,7 +268,7 @@ public sealed class SharedProviderManagementService(
     }
 
     private static async Task<IReadOnlyList<SharedProviderImportedProfileSnapshot>> LoadImportedProfilesAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         CancellationToken cancellationToken)
     {
         var rows = await (
@@ -283,7 +306,7 @@ public sealed class SharedProviderManagementService(
     }
 
     private static async Task<(SharedProviderImport Import, ProviderProfile Profile)> LoadImportedMutationAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         Guid importId,
         Guid providerProfileId,
         CancellationToken cancellationToken)
@@ -337,7 +360,7 @@ public sealed class SharedProviderManagementService(
     }
 
     private static async Task SaveImportedMutationAsync(
-        AppDbContext dbContext,
+        ProvidersDbContext dbContext,
         SharedProviderImport import,
         ProviderProfile profile,
         CancellationToken cancellationToken)
@@ -355,27 +378,6 @@ public sealed class SharedProviderManagementService(
         }
     }
 
-    private async Task NotifyProviderSavedAsync(Guid providerProfileId)
-    {
-        foreach (var observer in commitObservers)
-        {
-            await observer.ProviderSavedAsync(providerProfileId, CancellationToken.None);
-        }
-    }
-
-    private static string NormalizeAlias(string alias)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(alias);
-        var normalized = alias.Trim();
-        if (normalized.Length > 200 || normalized.Any(char.IsControl))
-        {
-            throw new ArgumentException(
-                "The local provider alias must contain at most 200 visible characters.",
-                nameof(alias));
-        }
-
-        return normalized;
-    }
 
     private static void ValidateProviderProfileId(Guid providerProfileId)
     {

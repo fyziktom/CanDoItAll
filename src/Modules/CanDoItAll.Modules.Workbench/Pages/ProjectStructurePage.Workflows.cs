@@ -503,320 +503,310 @@ public partial class ProjectStructurePage
     private static IReadOnlyList<string> ResolvePendingDeleteNodeIds(ProjectStructureDeletePrompt prompt)
         => prompt.NodeIds.Count > 0 ? prompt.NodeIds : [prompt.NodeId];
 
-    private async Task OpenSummaryAsync(string? nodeId = null)
-    {
-        var targetNode = ResolveNode(nodeId);
-        if (targetNode is null || surface is null)
-        {
+    private async Task OpenSummaryAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return;
+        }
+        var targetNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (targetNode is null) {
             return;
         }
 
+        summaryActionContext = context;
         summaryDialog = new ProjectStructureSummaryDialogState(
-            targetNode.Id,
-            targetNode.Title,
-            ProjectStructureSummaryBuilder.Build(surface, targetNode));
+            targetNode.Id, targetNode.Title,
+            ProjectStructureSummaryBuilder.Build(summaryActionContext.Surface, targetNode));
         await InvokeAsync(StateHasChanged);
     }
 
-    private void CloseSummary()
-        => summaryDialog = null;
+    private void CloseSummary() {
+        summaryDialog = null;
+        summaryActionContext = null;
+    }
 
-    private async Task ChangeSummaryStatusAsync(string nodeId, ChangeEventArgs args)
-    {
+    private async Task ChangeSummaryStatusAsync(string nodeId, ChangeEventArgs args) {
         var status = args.Value?.ToString()?.Trim();
-        if (string.IsNullOrWhiteSpace(status) || summaryDialog is null)
-        {
+        var context = summaryActionContext;
+        if (string.IsNullOrWhiteSpace(status) || summaryDialog is null || context is null) {
             return;
         }
 
-        var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(ProjectId, [nodeId], status);
-        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-    }
-
-    private async Task ExportSummaryWorkbookAsync()
-    {
-        if (summaryDialog is null)
-        {
-            return;
-        }
-
-        var payload = ProjectStructureSummaryExporter.BuildWorkbook(summaryDialog.Summary);
-        var created = await ProjectWorkbenchService.CreateObjectAsync(
-            ProjectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.File,
-                $"{summaryDialog.RootTitle} progress workbook",
-                "Progress summary export",
-                "Generated from the structure progress summary modal.",
-                summaryDialog.RootNodeId,
-                null,
-                null,
-                null,
-                null,
-                "excel",
-                new ProjectObjectMediaPayload(
-                    $"{SanitizeExportName(summaryDialog.RootTitle)}-progress-summary.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(payload))));
-
-        workflowFeedback = $"{created.Title} was exported as an Excel attachment.";
-        workflowFeedbackTone = "mint";
-        await ReloadSurfaceAsync(created.Id);
-        await OpenSummaryAsync(summaryDialog.RootNodeId);
-    }
-
-    private async Task ExportSummaryGanttAsync()
-    {
-        if (summaryDialog is null)
-        {
-            return;
-        }
-
-        var mermaidText = ProjectStructureSummaryExporter.BuildMermaidGantt(
-            summaryDialog.Summary,
-            DateOnly.FromDateTime(DateTime.UtcNow));
-        ProjectObjectMediaPayload media = await AssetCreationService.CreateTextAsync(
-            ProjectFileSubtype.Mermaid,
-            $"{SanitizeExportName(summaryDialog.RootTitle)}-progress-summary.mmd",
-            mermaidText,
-            deferredCompletionCts.Token);
-        var metadata = new ProjectObjectMetadataEnvelope
-        {
-            File = new ProjectFileMetadata
-            {
-                FileSubtype = ProjectFileSubtype.Mermaid,
-                MermaidDiagramKind = MermaidDiagramKind.Gantt
+        var committed = false;
+        try {
+            var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(
+                context.Surface.ProjectId, [nodeId], status, expectedProjectAdmission: context.Admission);
+            if (updatedNodes.Count == 0) {
+                ReportActionResult(context, "The original summary node is no longer available.", "warn");
+                return;
             }
-        };
-
-        var created = await ProjectWorkbenchService.CreateObjectAsync(
-            ProjectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.File,
-                $"{summaryDialog.RootTitle} gantt",
-                "Progress summary export",
-                "Generated from the structure progress summary modal.",
-                summaryDialog.RootNodeId,
-                null,
-                null,
-                null,
-                null,
-                "mermaid",
-                media,
-                ProjectObjectMetadataSerializer.Serialize(metadata)),
-            deferredCompletionCts.Token);
-
-        workflowFeedback = $"{created.Title} was exported as a Mermaid Gantt node.";
-        workflowFeedbackTone = "mint";
-        await ReloadSurfaceAsync(created.Id);
-        await OpenSummaryAsync(summaryDialog.RootNodeId);
+            committed = true;
+            ReportActionResult(context, "The original summary status was updated.");
+            if (IsCurrentAction(context)) {
+                await ApplySurfaceNodeUpdatesAsync(updatedNodes);
+            }
+        } catch (Exception exception) {
+            ReportActionFailure(context, exception, committed ? "The original summary status was saved." : null);
+        }
     }
 
-    private async Task ExportMindmapImageAsync()
-    {
-        if (selectedNode is null || workbenchRef is null)
-        {
+    private async Task ExportSummaryWorkbookAsync() {
+        var dialog = summaryDialog;
+        var context = summaryActionContext;
+        if (dialog is null || context is null) {
             return;
         }
 
-        string? base64;
-        try
-        {
-            base64 = await workbenchRef.CaptureImageAsync();
-        }
-        catch (JSException)
-        {
-            workflowFeedback = "The canvas image could not be captured.";
-            workflowFeedbackTone = "warn";
-            return;
-        }
+        ProjectStructureNode? created = null;
+        try {
+            var payload = ProjectStructureSummaryExporter.BuildWorkbook(dialog.Summary);
+            created = await ProjectWorkbenchService.CreateObjectAsync(
+                context.Surface.ProjectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.File,
+                    $"{dialog.RootTitle} progress workbook",
+                    "Progress summary export",
+                    "Generated from the structure progress summary modal.",
+                    dialog.RootNodeId, null, null, null, null, "excel",
+                    new ProjectObjectMediaPayload(
+                        $"{SanitizeExportName(dialog.RootTitle)}-progress-summary.xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        Convert.ToBase64String(payload))) { ExpectedProjectAdmission = context.Admission });
 
-        if (string.IsNullOrWhiteSpace(base64))
-        {
-            workflowFeedback = "The canvas image could not be captured.";
-            workflowFeedbackTone = "warn";
-            return;
+            ReportActionResult(context, $"{created.Title} was exported as an Excel attachment.");
+            await RefreshSummaryActionAsync(context, created, dialog.RootNodeId);
+        } catch (Exception exception) {
+            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
         }
-
-        var created = await ProjectWorkbenchService.CreateObjectAsync(
-            ProjectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.ImageAsset,
-                $"{selectedNode.Title} mindmap image",
-                "Canvas export",
-                "Generated from the current structure canvas viewport.",
-                selectedNode.Id,
-                null,
-                null,
-                null,
-                null,
-                "png",
-                new ProjectObjectMediaPayload(
-                    $"{SanitizeExportName(selectedNode.Title)}-mindmap.png",
-                    "image/png",
-                    base64)));
-
-        workflowFeedback = $"{created.Title} was exported as an image node.";
-        workflowFeedbackTone = "mint";
-        await ReloadSurfaceAsync(created.Id);
     }
 
-    private async Task CreateTranscriptFromRecordingAsync(ProjectStructureNode? recordingNode = null)
-    {
+    private async Task ExportSummaryGanttAsync() {
+        var dialog = summaryDialog;
+        var context = summaryActionContext;
+        if (dialog is null || context is null) {
+            return;
+        }
+
+        ProjectStructureNode? created = null;
+        try {
+            var mermaidText = ProjectStructureSummaryExporter.BuildMermaidGantt(
+                dialog.Summary, DateOnly.FromDateTime(DateTime.UtcNow));
+            var media = await AssetCreationService.CreateTextAsync(
+                ProjectFileSubtype.Mermaid,
+                $"{SanitizeExportName(dialog.RootTitle)}-progress-summary.mmd",
+                mermaidText, deferredCompletionCts.Token);
+            var metadata = new ProjectObjectMetadataEnvelope {
+                File = new ProjectFileMetadata {
+                    FileSubtype = ProjectFileSubtype.Mermaid,
+                    MermaidDiagramKind = MermaidDiagramKind.Gantt
+                }
+            };
+            created = await ProjectWorkbenchService.CreateObjectAsync(
+                context.Surface.ProjectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.File,
+                    $"{dialog.RootTitle} gantt",
+                    "Progress summary export",
+                    "Generated from the structure progress summary modal.",
+                    dialog.RootNodeId, null, null, null, null, "mermaid", media,
+                    ProjectObjectMetadataSerializer.Serialize(metadata)) { ExpectedProjectAdmission = context.Admission },
+                deferredCompletionCts.Token);
+
+            ReportActionResult(context, $"{created.Title} was exported as a Mermaid Gantt node.");
+            await RefreshSummaryActionAsync(context, created, dialog.RootNodeId);
+        } catch (Exception exception) {
+            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
+        }
+    }
+
+    private async Task ExportMindmapImageAsync(ProjectStructureNode? sourceNode = null, ProjectStructureActionContext? capturedContext = null) {
+        var targetNode = sourceNode ?? selectedNode;
+        var canvas = workbenchRef;
+        if (targetNode is null || canvas is null) {
+            return;
+        }
+
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            ReportActionResult(context, "The original canvas is no longer displayed. No image capture was started.", "warn");
+            return;
+        }
+        ProjectStructureNode? created = null;
+        try {
+            var base64 = await canvas.CaptureImageAsync();
+            if (string.IsNullOrWhiteSpace(base64)) {
+                ReportActionResult(context, "The canvas image could not be captured.", "warn");
+                return;
+            }
+
+            created = await ProjectWorkbenchService.CreateObjectAsync(
+                context.Surface.ProjectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.ImageAsset,
+                    $"{targetNode.Title} mindmap image",
+                    "Canvas export",
+                    "Generated from the current structure canvas viewport.",
+                    targetNode.Id, null, null, null, null, "png",
+                    new ProjectObjectMediaPayload(
+                        $"{SanitizeExportName(targetNode.Title)}-mindmap.png", "image/png", base64)) {
+                    ExpectedProjectAdmission = context.Admission
+                });
+            ReportActionResult(context, $"{created.Title} was exported as an image node.");
+            await RefreshCreatedActionAsync(context, created);
+        } catch (JSException) when (created is null) {
+            ReportActionResult(context, "The canvas image could not be captured.", "warn");
+        } catch (Exception exception) {
+            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
+        }
+    }
+
+    private async Task CreateTranscriptFromRecordingAsync(ProjectStructureNode? recordingNode = null, ProjectStructureActionContext? capturedContext = null) {
         var targetNode = recordingNode ?? selectedNode;
-        if (targetNode is null || targetNode.ObjectType != ProjectObjectType.Recording)
-        {
+        if (targetNode is null || targetNode.ObjectType != ProjectObjectType.Recording) {
             return;
         }
 
-        var recordingArtifactId = TryParseCustomNodeArtifactId(targetNode.Id);
-        var metadata = new ProjectObjectMetadataEnvelope
-        {
-            Transcript = new ProjectTranscriptMetadata
-            {
-                TranscriptText = string.Empty
-            }
-        };
-        var nodeReferences = new ProjectNodeReferenceCollection
-        {
-            TranscriptRecordingNodeId = recordingArtifactId
-        };
-
-        var created = await ProjectWorkbenchService.CreateObjectAsync(
-            ProjectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Transcript,
-                $"{targetNode.Title} transcript",
-                "Generated from recording",
-                $"Transcript scaffold created from recording '{targetNode.Title}'.",
-                targetNode.Id,
-                targetNode.X + 280,
-                targetNode.Y + 120,
-                null,
-                null,
-                string.Empty,
-                null,
-                ProjectObjectMetadataSerializer.Serialize(metadata),
-                null,
-                nodeReferences));
-
-        await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, targetNode.Id, created.Id, ProjectObjectLinkKind.DerivedFrom);
-        await ReloadSurfaceAsync(created.Id);
+        var context = capturedContext ?? CaptureActionContext();
+        ProjectStructureNode? created = null;
+        try {
+            var metadata = new ProjectObjectMetadataEnvelope {
+                Transcript = new ProjectTranscriptMetadata { TranscriptText = string.Empty }
+            };
+            var nodeReferences = new ProjectNodeReferenceCollection {
+                TranscriptRecordingNodeId = TryParseCustomNodeArtifactId(targetNode.Id)
+            };
+            created = await ProjectWorkbenchService.CreateObjectAsync(
+                context.Surface.ProjectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.Transcript,
+                    $"{targetNode.Title} transcript",
+                    "Generated from recording",
+                    $"Transcript scaffold created from recording '{targetNode.Title}'.",
+                    targetNode.Id, targetNode.X + 280, targetNode.Y + 120, null, null,
+                    string.Empty, null, ProjectObjectMetadataSerializer.Serialize(metadata), null, nodeReferences) {
+                    ExpectedProjectAdmission = context.Admission
+                });
+            await ProjectWorkbenchService.LinkObjectsAsync(
+                context.Surface.ProjectId, targetNode.Id, created.Id, ProjectObjectLinkKind.DerivedFrom,
+                expectedProjectAdmission: context.Admission);
+            ReportActionResult(context, $"{created.Title} was created and linked to its recording.");
+            await RefreshCreatedActionAsync(context, created);
+        } catch (Exception exception) {
+            ReportActionFailure(context, exception, created is null ? null : $"Transcript {created.Title} ({created.Id}) was saved.");
+        }
     }
 
-    private async Task OpenTranscriptActionAsync(ProjectLlmActionKind actionKind, string? nodeId = null)
-    {
-        var transcriptNode = ResolveNode(nodeId);
-        if (transcriptNode is null || transcriptNode.ObjectType != ProjectObjectType.Transcript)
-        {
+    private async Task OpenTranscriptActionAsync(ProjectLlmActionKind actionKind, string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
+        var context = capturedContext ?? CaptureActionContext();
+        var transcriptNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (!IsCurrentAction(context) || transcriptNode is null || transcriptNode.ObjectType != ProjectObjectType.Transcript) {
             return;
         }
 
+        transcriptActionContext = context;
         var metadata = ProjectObjectMetadataSerializer.Parse(transcriptNode.MetadataJson);
         var providers = (await ProviderRuntimeProfileSource.ListProvidersAsync())
-            .Where(profile => profile.IsEnabled)
-            .ToList();
-        var selectedProviderId = transcriptNode.NodeReferences?.TranscriptProviderProfileId ?? providers.FirstOrDefault()?.Id;
+            .Where(profile => profile.IsEnabled).ToList();
+        if (!IsCurrentAction(context) || !ReferenceEquals(transcriptActionContext, context)) {
+            return;
+        }
 
         pendingTranscriptAction = new ProjectStructureTranscriptActionDialogState(
-            transcriptNode.Id,
-            transcriptNode.Title,
-            actionKind,
-            selectedProviderId,
-            metadata.Transcript?.LastProviderName ?? string.Empty,
-            providers,
-            string.Empty);
+            transcriptNode.Id, transcriptNode.Title, actionKind,
+            transcriptNode.NodeReferences?.TranscriptProviderProfileId ?? providers.FirstOrDefault()?.Id,
+            metadata.Transcript?.LastProviderName ?? string.Empty, providers, string.Empty);
     }
 
-    private void CancelTranscriptAction()
-        => pendingTranscriptAction = null;
+    private void CancelTranscriptAction() {
+        pendingTranscriptAction = null;
+        transcriptActionContext = null;
+    }
 
-    private async Task ExecuteTranscriptActionAsync()
-    {
-        if (pendingTranscriptAction is null)
-        {
+    private async Task ExecuteTranscriptActionAsync() {
+        var dialog = pendingTranscriptAction;
+        var context = transcriptActionContext;
+        if (dialog is null || context is null) {
             return;
         }
 
-        var transcriptNode = ResolveNode(pendingTranscriptAction.NodeId);
-        if (transcriptNode is null)
-        {
-            pendingTranscriptAction = null;
+        var transcriptNode = context.Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, dialog.NodeId, StringComparison.Ordinal));
+        if (transcriptNode is null) {
+            CancelTranscriptAction();
             return;
         }
 
-        if (!pendingTranscriptAction.SelectedProviderId.HasValue)
-        {
-            pendingTranscriptAction = pendingTranscriptAction with { Error = "Select a provider profile before sending the transcript action." };
-            return;
-        }
-
-        var provider = pendingTranscriptAction.Providers
-            .FirstOrDefault(item => item.Id == pendingTranscriptAction.SelectedProviderId.Value);
-        if (provider is null)
-        {
-            pendingTranscriptAction = pendingTranscriptAction with { Error = "The selected provider profile is no longer available." };
+        var provider = dialog.Providers.FirstOrDefault(item => item.Id == dialog.SelectedProviderId);
+        if (provider is null) {
+            pendingTranscriptAction = dialog with { Error = "Select an available provider profile before sending the transcript action." };
             return;
         }
 
         var metadata = ProjectObjectMetadataSerializer.Parse(transcriptNode.MetadataJson);
         var transcriptText = string.IsNullOrWhiteSpace(metadata.Transcript?.TranscriptText)
-            ? transcriptNode.Notes
-            : metadata.Transcript.TranscriptText;
-        if (string.IsNullOrWhiteSpace(transcriptText))
-        {
-            pendingTranscriptAction = pendingTranscriptAction with { Error = "Transcript text is required before running an LLM action." };
+            ? transcriptNode.Notes : metadata.Transcript.TranscriptText;
+        if (string.IsNullOrWhiteSpace(transcriptText)) {
+            pendingTranscriptAction = dialog with { Error = "Transcript text is required before running an LLM action." };
             return;
         }
 
-        var result = await ProviderPromptExecutionService.ExecuteAsync(
-            new ProviderPromptExecutionRequest(
-                provider.Id,
-                BuildTranscriptPrompt(pendingTranscriptAction.ActionKind, transcriptNode.Title, transcriptText),
-                OutputFormat: "Markdown"));
-        if (result.IsFailure || result.Value is null)
-        {
-            pendingTranscriptAction = pendingTranscriptAction with
-            {
-                Error = result.Errors.FirstOrDefault()?.Message ?? "The provider request failed."
-            };
-            return;
-        }
+        var providerCompleted = false;
+        var nativeCompleted = false;
+        try {
+            var result = await ProviderPromptExecutionService.ExecuteAsync(new ProviderPromptExecutionRequest(
+                provider.Id, BuildTranscriptPrompt(dialog.ActionKind, transcriptNode.Title, transcriptText), OutputFormat: "Markdown"));
+            if (result.IsFailure || result.Value is null) {
+                var error = result.Errors.FirstOrDefault()?.Message ?? "The provider request failed.";
+                if (IsCurrentAction(context) && ReferenceEquals(transcriptActionContext, context)) {
+                    pendingTranscriptAction = dialog with { Error = error };
+                } else {
+                    ReportActionResult(context, error, "warn");
+                }
+                return;
+            }
 
-        metadata.Transcript ??= new ProjectTranscriptMetadata();
-        metadata.Transcript.TranscriptText = transcriptText;
-        metadata.Transcript.LastActionKind = pendingTranscriptAction.ActionKind;
-        metadata.Transcript.LastProviderName = provider.Name;
-        metadata.Transcript.LastGeneratedAtUtc = DateTimeOffset.UtcNow;
-        var updatedReferences = transcriptNode.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
-        updatedReferences.TranscriptProviderProfileId = provider.Id;
+            providerCompleted = true;
+            metadata.Transcript ??= new ProjectTranscriptMetadata();
+            metadata.Transcript.TranscriptText = transcriptText;
+            metadata.Transcript.LastActionKind = dialog.ActionKind;
+            metadata.Transcript.LastProviderName = provider.Name;
+            metadata.Transcript.LastGeneratedAtUtc = DateTimeOffset.UtcNow;
+            var updatedReferences = transcriptNode.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
+            updatedReferences.TranscriptProviderProfileId = provider.Id;
+            switch (dialog.ActionKind) {
+                case ProjectLlmActionKind.Summarize:
+                    metadata.Transcript.SummaryText = result.Value.OutputText.Trim();
+                    break;
+                case ProjectLlmActionKind.FindMyTasks:
+                    metadata.Transcript.MyTasksText = result.Value.OutputText.Trim();
+                    break;
+                case ProjectLlmActionKind.FindOthersDeliveries:
+                    metadata.Transcript.OthersDeliveriesText = result.Value.OutputText.Trim();
+                    break;
+            }
 
-        switch (pendingTranscriptAction.ActionKind)
-        {
-            case ProjectLlmActionKind.Summarize:
-                metadata.Transcript.SummaryText = result.Value.OutputText.Trim();
-                break;
-            case ProjectLlmActionKind.FindMyTasks:
-                metadata.Transcript.MyTasksText = result.Value.OutputText.Trim();
-                break;
-            case ProjectLlmActionKind.FindOthersDeliveries:
-                metadata.Transcript.OthersDeliveriesText = result.Value.OutputText.Trim();
-                break;
-        }
-
-        var updatedTranscriptNode = await ProjectWorkbenchService.UpdateObjectMetadataAsync(
-            ProjectId,
-            transcriptNode.Id,
-            ProjectObjectMetadataSerializer.Serialize(metadata),
-            status: "Review",
-            nodeReferences: updatedReferences);
-
-        workflowFeedback = $"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} completed through {provider.Name}.";
-        workflowFeedbackTone = result.Value.ContainsWarnings ? "warn" : "mint";
-        pendingTranscriptAction = null;
-        if (updatedTranscriptNode is not null)
-        {
-            await ApplySurfaceNodeUpdatesAsync([updatedTranscriptNode]);
+            var updated = await ProjectWorkbenchService.UpdateObjectMetadataAsync(
+                context.Surface.ProjectId, transcriptNode.Id, ProjectObjectMetadataSerializer.Serialize(metadata),
+                status: "Review", nodeReferences: updatedReferences, expectedProjectAdmission: context.Admission);
+            nativeCompleted = updated is not null;
+            if (updated is null) {
+                throw new InvalidOperationException("The original transcript is no longer available for the completed provider result.");
+            }
+            ReportActionResult(context, $"{ResolveTranscriptActionLabel(dialog.ActionKind)} completed through {provider.Name}.",
+                result.Value.ContainsWarnings ? "warn" : "mint");
+            if (IsCurrentAction(context)) {
+                if (ReferenceEquals(transcriptActionContext, context)) {
+                    CancelTranscriptAction();
+                }
+                await ApplySurfaceNodeUpdatesAsync([updated]);
+            }
+        } catch (Exception exception) {
+            var completed = nativeCompleted ? "The transcript result was saved."
+                : providerCompleted ? "The provider request completed; saving its result to the original transcript could not be confirmed."
+                : null;
+            var failureMessage = ReportActionFailure(context, exception, completed);
+            if (IsCurrentAction(context) && ReferenceEquals(transcriptActionContext, context)) {
+                pendingTranscriptAction = dialog with { Error = failureMessage };
+            }
         }
     }
 

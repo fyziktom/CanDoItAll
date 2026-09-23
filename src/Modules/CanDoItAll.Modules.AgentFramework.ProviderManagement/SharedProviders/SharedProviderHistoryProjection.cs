@@ -1,28 +1,21 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedProviders.Abstractions;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-public sealed class SharedProviderHistoryProjection(HistoryOutboxWriter outbox) {
-    public async Task<DateTimeOffset> ResolveRetentionAsync(AppDbContext ownerContext, DateTimeOffset startedAtUtc,
-        DateTimeOffset? requestedDeadline, CancellationToken cancellationToken) {
-        if (requestedDeadline is { } deadline) {
-            return HistoryStorageTimestamp.Normalize(deadline);
-        }
-        var partition = await HistoryPartitionStore.GetForWriteAsync(ownerContext, cancellationToken);
-        var policy = ownerContext.Set<HistoryPolicyRow>().Local.SingleOrDefault(row => row.PartitionId == partition.StorageLineageId)
-            ?? await ownerContext.Set<HistoryPolicyRow>().AsNoTracking()
-                .SingleAsync(row => row.PartitionId == partition.StorageLineageId, cancellationToken);
-        return startedAtUtc.AddDays(policy.MetadataRetentionDays);
-    }
+public sealed class SharedProviderHistoryProjection(
+    HistoryPartitionStore partitions,
+    HistoryRetentionStore retention,
+    HistoryOutboxWriter outbox) {
+    public Task<DateTimeOffset> ResolveRetentionAsync(DateTimeOffset startedAtUtc,
+        DateTimeOffset? requestedDeadline, CancellationToken cancellationToken)
+        => retention.ResolveMetadataRetentionForWriteAsync(startedAtUtc, requestedDeadline, cancellationToken);
 
-    public async Task StageAsync(AppDbContext ownerContext, SharedProviderInvocationRecord record, CancellationToken cancellationToken) {
-        var partition = await HistoryPartitionStore.GetForWriteAsync(ownerContext, cancellationToken);
-        outbox.Stage(ownerContext, Create(record, partition));
+    public async Task StageAsync(SharedProviderInvocationRecord record, CancellationToken cancellationToken) {
+        var partition = await partitions.GetForWriteAsync(cancellationToken);
+        await outbox.StageAsync(Create(record, partition), cancellationToken);
     }
 
     public static HistorySourceMutation Create(SharedProviderInvocationRecord record, HistoryPartition partition) {

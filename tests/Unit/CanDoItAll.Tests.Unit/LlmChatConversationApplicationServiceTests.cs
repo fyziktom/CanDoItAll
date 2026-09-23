@@ -21,7 +21,8 @@ public sealed class LlmChatConversationApplicationServiceTests
             definitions,
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatProviderResolver(),
-            new FixedTimeProvider(Now));
+            new FixedTimeProvider(Now),
+            definitions);
         var createdDefinition = await LlmChatDefinitionServiceTests.CreateDefinitionAsync(definitionService);
         var activeDefinition = await definitionService.ChangeStatusAsync(new ChangeLlmChatDefinitionStatusCommand(
             createdDefinition.Definition.Id,
@@ -112,7 +113,8 @@ public sealed class LlmChatConversationApplicationServiceTests
             definitions,
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatProviderResolver(),
-            new FixedTimeProvider(Now));
+            new FixedTimeProvider(Now),
+            definitions);
         var definition = await LlmChatDefinitionServiceTests.CreateDefinitionAsync(definitionService);
         if (status != LlmChatDefinitionStatus.Draft)
         {
@@ -200,7 +202,8 @@ public sealed class LlmChatConversationApplicationServiceTests
             definitions,
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatProviderResolver(),
-            new FixedTimeProvider(Now));
+            new FixedTimeProvider(Now),
+            definitions);
         var definition = await LlmChatDefinitionServiceTests.CreateDefinitionAsync(definitionService);
         var active = await definitionService.ChangeStatusAsync(new ChangeLlmChatDefinitionStatusCommand(
             definition.Definition.Id,

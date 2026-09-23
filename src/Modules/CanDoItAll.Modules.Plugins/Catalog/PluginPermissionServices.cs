@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
@@ -8,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Plugins;
 
 public sealed class PluginGrantStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PluginsDbContext> dbContextFactory,
     IClock clock,
     ILogger<PluginGrantStore> logger)
 {
@@ -133,7 +132,7 @@ public sealed class PluginGrantStore(
 }
 
 public sealed class PluginConnectionStore(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PluginsDbContext> dbContextFactory,
     IClock clock)
 {
     public async Task<PluginConnectionItem?> FindAsync(

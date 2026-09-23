@@ -3,9 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal sealed class WorkbenchProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+internal sealed class WorkbenchProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.Workbench;
 
@@ -20,14 +19,21 @@ internal sealed class WorkbenchProjectTransferTargetStateParticipant
         typeof(ProjectStructureOperationAnalyticsRecord),
         typeof(ProjectStructureProjectionLayoutRecord),
         typeof(ProjectStructureLeaseRecord),
-        typeof(ProjectWorkbenchViewStateRecord)
+        typeof(ProjectWorkbenchViewStateRecord),
+        typeof(ProjectWorkflowContributionRecord),
+        typeof(ProjectWorkflowAdmissionRecord),
+        typeof(ProjectWorkAssignmentRecord),
+        typeof(ProjectWorkAssignmentHistoryRecord),
+        typeof(ProjectProcessAssetContributionRecord)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken)
-    {
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<WorkbenchDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
+
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        WorkbenchDbContext dbContext, CancellationToken cancellationToken) {
         var hasTransferResidue =
             await dbContext.Set<ProjectCrossModuleMutationRecord>().AsNoTracking().AnyAsync(cancellationToken) ||
             await dbContext.Set<ProjectNodeBindingRecord>().AsNoTracking().AnyAsync(cancellationToken) ||
@@ -38,8 +44,7 @@ internal sealed class WorkbenchProjectTransferTargetStateParticipant
             await dbContext.Set<ProjectStructureProjectionLayoutRecord>().AsNoTracking().AnyAsync(cancellationToken) ||
             await dbContext.Set<ProjectWorkbenchViewStateRecord>().AsNoTracking().AnyAsync(cancellationToken);
         var residues = new List<ProjectTransferTargetStateResidue>();
-        if (hasTransferResidue)
-        {
+        if (hasTransferResidue) {
             residues.Add(new("project workbench records"));
         }
 
@@ -50,8 +55,7 @@ internal sealed class WorkbenchProjectTransferTargetStateParticipant
                         item.ProjectId.HasValue ||
                         item.ScopeKind == ProjectStructureLeaseScopeKind.Project ||
                         item.ScopeKind == ProjectStructureLeaseScopeKind.ProjectNode,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("project structure operation analytics"));
         }
 
@@ -61,11 +65,25 @@ internal sealed class WorkbenchProjectTransferTargetStateParticipant
                     item =>
                         item.ScopeKind == ProjectStructureLeaseScopeKind.Project ||
                         item.ScopeKind == ProjectStructureLeaseScopeKind.ProjectNode,
-                    cancellationToken))
-        {
+                    cancellationToken)) {
             residues.Add(new("project structure leases"));
         }
 
+        if (await dbContext.Set<ProjectWorkflowContributionRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained workflow contribution receipts"));
+        }
+        if (await dbContext.Set<ProjectWorkflowAdmissionRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained workflow delivery admissions"));
+        }
+        if (await dbContext.Set<ProjectWorkAssignmentRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("work-item assignments"));
+        }
+        if (await dbContext.Set<ProjectWorkAssignmentHistoryRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained imported Work assignment history"));
+        }
+        if (await dbContext.Set<ProjectProcessAssetContributionRecord>().AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained Process asset contributions"));
+        }
         return residues;
     }
 }

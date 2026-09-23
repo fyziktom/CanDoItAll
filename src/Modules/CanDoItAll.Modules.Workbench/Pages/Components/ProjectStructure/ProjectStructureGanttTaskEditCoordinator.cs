@@ -188,7 +188,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             currentExecution,
             proposed.Execution ?? currentExecution,
             current.ExpectedCostBasis,
-            current.DirectAssignmentRevision);
+            current.DirectAssignmentRevision) { ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission, MutationOwner = context.MutationOwner };
         var mutationCommitted = false;
         ProjectStructureTaskEstimateRefreshResult? committedPricing = null;
         try

@@ -65,7 +65,9 @@ internal sealed record RuntimeCapabilityComposition(
     IReadOnlyList<RuntimeToolProviderRegistration> RuntimeToolProviders,
     McpCapabilityBuilder McpBuilder,
     ToolCapabilityBuilder ToolBuilder,
-    RuntimeCapabilityAccessPlan CapabilityAccessPlan);
+    RuntimeCapabilityAccessPlan CapabilityAccessPlan,
+    AgentWorkspaceToolAccessSettings WorkspaceToolAccess,
+    AgentWorkspaceToolAccessSettings ConfiguredWorkspaceToolAccess);
 
 internal sealed class SkillCapabilityConfiguration
 {

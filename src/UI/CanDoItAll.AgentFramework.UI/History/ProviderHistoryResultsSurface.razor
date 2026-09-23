@@ -1,0 +1,75 @@
+@namespace CanDoItAll.AgentFramework.UI.History
+@using CanDoItAll.AgentFramework.ProviderHistory
+<div class="history-results-surface" data-testid="history-results-surface">
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+    <Cluster Gap="LayoutGap.Small">
+        @if (Presentation.Phase == HistorySearchPhase.Loading) {
+            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Cancel()))" data-testid="history-cancel" />
+        }
+        <Button Text="Clear results" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Clear()))"
+                Disabled="@(Presentation.AppliedQuery is null)" data-testid="history-clear" />
+    </Cluster>
+    @if (Presentation.AppliedQuery is { } applied) {
+        <p data-testid="history-applied">Applied filters: @ProviderHistoryPresentation.Applied(applied)</p>
+        @if (Presentation.DraftChanged) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="history-draft-warning">Filters changed. Search again to apply them; paging uses the applied filters above.</Alert>
+        }
+    }
+    @if (Presentation.Phase == HistorySearchPhase.Loading) {
+        <LoadingState Title="Searching request history" Description="Reading one bounded page. You can cancel this request." />
+    } else if (Presentation.Phase == HistorySearchPhase.Failed) {
+        <Alert AlertStyle="AlertStyle.Danger" data-testid="history-error">@Presentation.Failure: @HistoryPublicErrors.Message(Presentation.Failure ?? HistoryFailure.Unavailable)</Alert>
+    } else if (Presentation.Phase == HistorySearchPhase.Canceled) {
+        <EmptyState Title="Search canceled" Description="No canceled response will be displayed. Search again when ready." />
+    } else if (Presentation.Phase == HistorySearchPhase.Ready && Presentation.Coverage is { } coverage) {
+        <Cluster Gap="LayoutGap.Small" data-testid="history-coverage">
+            <StatusBadge Text="@($"Index coverage: {coverage.State}")" />
+            <span>Queried @ProviderHistoryPresentation.Time(Presentation.QueriedAtUtc!.Value)</span>
+            @if (coverage.IndexedThroughUtc is { } through) {
+                <span>Indexed through @ProviderHistoryPresentation.Time(through)</span>
+            }
+        </Cluster>
+        @if (coverage.State != HistoryCoverageState.Current) {
+            <Alert AlertStyle="AlertStyle.Warning">Coverage is incomplete. Missing records do not mean there were no requests.</Alert>
+        }
+        <DataGrid TItem="HistoryEntry" Data="Presentation.Entries" AllowPaging="false" EmptyText="No matching requests in this interval."
+                  Caption="@($"Page {Presentation.PageNumber} · {Presentation.Entries.Length} rows. Results can change between requests.")" data-testid="history-results">
+            <Columns>
+                <DataGridColumn TItem="HistoryEntry" Title="Time / basis">
+                    <Template Context="entry">@ProviderHistoryPresentation.Time(entry.SortAtUtc)<br />@entry.TimeBasis · @entry.Granularity</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Provider / model">
+                    <Template Context="entry">@entry.Provider.Name<br />@ProviderHistoryPresentation.Model(entry)</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Workload / outcome">
+                    <Template Context="entry">@entry.Workload · @entry.Operation<br /><StatusBadge Text="@entry.Outcome.ToString()" /></Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Caller">
+                    <Template Context="entry">@ProviderHistoryPresentation.Caller(entry.Caller)</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Usage / price evidence">
+                    <Template Context="entry">@ProviderHistoryPresentation.Usage(entry.Usage)<br />@ProviderHistoryPresentation.Price(entry.Price)</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="HistoryEntry" Title="Evidence">
+                    <Template Context="entry">
+                        <Button Text="Details" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Details(entry.Id)))" data-testid="history-details" />
+                    </Template>
+                </DataGridColumn>
+            </Columns>
+        </DataGrid>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Previous" Disabled="@(!Presentation.CanPrevious)" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Previous()))" data-testid="history-previous" />
+            <Button Text="Next" Disabled="@(!Presentation.CanNext)" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Next()))" data-testid="history-next" />
+            @if (Presentation.HasEarlierPages) {
+                <span>Only the last 32 previous pages are retained. Search again to return to the beginning.</span>
+            }
+        </Cluster>
+    } else {
+        <EmptyState Title="History not requested" Description="Set the range and optional filters, then Search. Prompt and response content requires a separate action." />
+    }
+</Stack>
+</div>
+@code {
+    [Parameter, EditorRequired] public HistoryResultsPresentation Presentation { get; set; } = HistoryResultsPresentation.Initial;
+    [Parameter] public EventCallback<HistoryResultsIntent> OnIntent { get; set; }
+}

@@ -8,7 +8,11 @@ public sealed record ChatMessageRecord(
     ChatMessageRole Role,
     string Content,
     DateTimeOffset CreatedAtUtc,
-    int TokenEstimate);
+    int TokenEstimate)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentToolEvidenceOwnership? ToolEvidenceOwnership { get; init; }
+}
 
 public sealed record PendingToolApprovalRecord(
     string ApprovalId,
@@ -16,11 +20,15 @@ public sealed record PendingToolApprovalRecord(
     string ToolName,
     string ToolKind,
     string Details,
-    string ArgumentsJson);
+    string ArgumentsJson) {
+    public AgentToolApprovalBinding? ToolAdmission { get; init; }
+}
 
 public sealed record PendingToolApprovalDecision(
     string ApprovalId,
-    bool Approved);
+    bool Approved) {
+    public AgentToolApprovalBinding? ToolAdmission { get; init; }
+}
 
 public sealed record ChatSessionRuntimeCompatibilityRecord
 {
@@ -550,6 +558,12 @@ public sealed record ExecutionArtifactRecord(
     string Summary,
     DateTimeOffset CreatedAtUtc);
 
+/// <summary>
+/// Side effect a tool declares, as a JSON integer: 0 Unspecified, 1 NoMutation (reads only), 2 ManagedProcessArtifacts
+/// (writes managed workspace or process files), 3 ExternalArtifactDestination (acts outside the product, for example
+/// external actions or media generation), 4 ProductMutation (changes product data such as processes or project
+/// structure).
+/// </summary>
 public enum ToolExecutionSideEffectMode
 {
     Unspecified = 0,
@@ -578,6 +592,20 @@ public sealed record ToolExecutionReceiptRecord(
     public string RuntimeToolProviderName { get; init; } = string.Empty;
 
     public ToolExecutionSideEffectMode DeclaredSideEffectMode { get; init; }
+
+    public AgentToolInvocationOutcome InvocationOutcome { get; init; }
+
+    public AgentToolEffectState EffectState { get; init; }
+
+    public string FailureCode { get; init; } = string.Empty;
+
+    public string FailureMessage { get; init; } = string.Empty;
+
+    public bool CanRetryWithCorrectedInput { get; init; }
+
+    public string EffectSourceKind { get; init; } = string.Empty;
+
+    public string EffectSourceId { get; init; } = string.Empty;
 }
 
 public sealed record ExecutionWorkflowCheckpointRecord(
@@ -600,6 +628,44 @@ public sealed record ExecutionWorkflowCheckpointRecord(
     string TraceId,
     string SpanId);
 
+/// <summary>
+/// Origin labels of an agent execution run, sent as <c>context</c> when a run is started. The caller chooses them; they
+/// are stored with the run as sent, without length limits, and can be used as filters of
+/// <c>GET /api/agents/execution-runs</c>. Process automation sets them too: a run whose source kind is
+/// <c>process-step</c> or that carries a process run or process step identifier is handled as a governed process run,
+/// with different validation, approval and tool rules. The HTTP run-start operations therefore reject such a context
+/// with HTTP 400 (<c>agents.request-invalid</c>).
+/// </summary>
+/// <param name="SourceKind">
+/// Kind of source that started the run, for example <c>manual</c> or <c>chat-session</c>; blank becomes
+/// <c>manual</c>.
+/// </param>
+/// <param name="SourceId">
+/// Identifier of the source record; with source kind <c>chat-session</c> a blank value becomes the chat session
+/// identifier.
+/// </param>
+/// <param name="CorrelationId">Correlation identifier chosen by the caller; free text.</param>
+/// <param name="CausationId">Identifier of what caused the run; free text.</param>
+/// <param name="RequestedBy">Who requested the run; free text.</param>
+/// <param name="RequestedByKind">Kind of requester, for example <c>interactive</c>; free text.</param>
+/// <param name="MetadataJson">
+/// Additional metadata as the text of a JSON object, for example <c>{}</c>; text that is not a JSON object is replaced
+/// by <c>{}</c>. Keys whose names start with <c>agent</c> are reserved for the product and must not be sent; a request
+/// whose metadata contains <c>agentExternalTargetRootBindings</c> is rejected with HTTP 400, because external folders
+/// are granted only in the agent's workspace tool settings.
+/// </param>
+/// <param name="ProcessRunId">
+/// Identifier of the owning process run; set only by process automation. An HTTP run start that sends it is rejected.
+/// </param>
+/// <param name="ProcessStepId">
+/// Identifier of the owning process step; set only by process automation. An HTTP run start that sends it is rejected.
+/// </param>
+/// <param name="SchedulerRunId">Identifier of the scheduler run that started the run; free text.</param>
+/// <param name="MessageId">Identifier of the message that started the run; free text.</param>
+/// <param name="Policy">
+/// Optional structured-output policy stored in the run metadata. It applies only to runs with a built-in typed output
+/// contract, which runs started through the HTTP API do not have, so it has no effect on them.
+/// </param>
 public sealed record ExecutionInvocationContext(
     string SourceKind,
     string SourceId,
@@ -632,6 +698,23 @@ public sealed record ExecutionInvocationContext(
         Policy: null);
 }
 
+/// <summary>
+/// Structured-output policy of an agent execution run, stored in the run metadata. It applies only to runs with a
+/// built-in typed output contract started by process automation; runs started through the HTTP API have no such
+/// contract, so the policy has no effect on them.
+/// </summary>
+/// <param name="FinalizerMode">
+/// How a typed final answer must be submitted, as a string: <c>Disabled</c>, <c>Shadow</c> or <c>Required</c>; null
+/// keeps the default.
+/// </param>
+/// <param name="MaxStructuredOutputRepairAttempts">
+/// Number of repair attempts for an invalid typed answer, clamped to 0 through 2; null keeps the default.
+/// </param>
+/// <param name="RequireStructuredOutputValidation">True (the default) to validate the typed answer.</param>
+/// <param name="AllowRequiredFinalizerStructuredOutputRecovery">
+/// True to recover the typed answer from the model's text when the required finalizer tool call is missing; the
+/// default is false.
+/// </param>
 public sealed record ExecutionInvocationPolicy(
     AgentFinalizerMode? FinalizerMode = null,
     int? MaxStructuredOutputRepairAttempts = null,
@@ -660,6 +743,15 @@ public sealed record AgentRuntimeExecutionOptions(
 {
     [JsonIgnore]
     public AgentExecutionOperationId? ActivityOperationId { get; init; }
+
+    [JsonIgnore]
+    public AgentToolSessionReference? AdmittedToolSession { get; init; }
+
+    [JsonIgnore]
+    public AgentToolAdmissionSupport ToolAdmissionSupport { get; init; }
+
+    [JsonIgnore]
+    public bool RequireDurableToolProtocol { get; init; }
 
     [JsonIgnore]
     public CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext History { get; init; } =
@@ -846,6 +938,9 @@ public sealed record ExecutionRunRecord(
     public string FailureProviderName { get; init; } = string.Empty;
 
     public string FailureModel { get; init; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentToolJournalRecord? ToolAdmission { get; init; }
 }
 
 public sealed record ExecutionApprovalRecord(
@@ -861,7 +956,9 @@ public sealed record ExecutionApprovalRecord(
     DateTimeOffset? DecidedAtUtc,
     string DecisionSourceKind,
     string DecisionSourceId,
-    string DecisionNotes);
+    string DecisionNotes) {
+    public AgentToolApprovalBinding? ToolAdmission { get; init; }
+}
 
 public sealed record AgentChatRunOptions(
     AgentExecutionOperationId InitialActivityOperationId,

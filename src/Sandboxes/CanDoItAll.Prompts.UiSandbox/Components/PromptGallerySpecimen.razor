@@ -1,0 +1,185 @@
+@page "/"
+@page "/prompt-gallery"
+@inject NavigationManager Navigation
+
+<PageTitle>Prompt Gallery UI sandbox</PageTitle>
+
+<header class="prompts-sandbox__controls">
+    <Stack GapScale="LayoutGap.Small">
+        <h1 class="cda-title-xl">Prompt Gallery UI sandbox</h1>
+        <p>Real Prompt Gallery surfaces with deterministic local state and recorded intents. No service, persistence or provider is involved.</p>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
+            <label for="prompts-sandbox-scenario">Scenario</label>
+            <select id="prompts-sandbox-scenario"
+                    class="cda-input"
+                    value="@PromptGallerySandboxContext.Token(context.Scenario)"
+                    @onchange="ChangeScenario"
+                    data-testid="prompts-sandbox-scenario">
+                @foreach (var scenario in Enum.GetValues<PromptGallerySandboxScenario>())
+                {
+                    <option value="@PromptGallerySandboxContext.Token(scenario)">@scenario</option>
+                }
+            </select>
+            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="prompts-sandbox-layout" />
+        </Cluster>
+        <output aria-live="polite" data-testid="prompts-sandbox-intent">@fixture.IntentLog</output>
+    </Stack>
+</header>
+
+<main class="@FrameClass" data-testid="prompts-sandbox-frame" data-scenario="@PromptGallerySandboxContext.Token(context.Scenario)">
+    <PageScaffold MaxWidthClass="max-w-full">
+        <Header>
+            <PageHeader Eyebrow="Shared prompt library"
+                        Title="Prompt gallery"
+                        Description="Browse, filter, version, and maintain the canonical prompts and prompt parts reused by workflows, agents, processes, roles, and chat."
+                        Compact="true">
+                <Stats>
+                    <CompactStat Label="search" Value="Paged" TooltipText="Search is delegated to the active Gallery search driver." Tone="info" />
+                    <CompactStat Label="versions" Value="Immutable" TooltipText="Final versions remain stable when a draft changes." Tone="success" />
+                    <CompactStat Label="projection" Value="Optional" TooltipText="A projection driver can replace standard database search without changing Gallery consumers." />
+                </Stats>
+                <Actions>
+                    <PageHeaderActionButton Icon="add"
+                                            Label="New item"
+                                            TooltipText="Create a reusable prompt or prompt part."
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Click="@(() => fixture.OpenNewEditor())" />
+                </Actions>
+            </PageHeader>
+        </Header>
+        <ChildContent>
+            <PromptGallerySearchSurface Presentation="@fixture.Search"
+                                        Compact="false"
+                                        AllowEdit="true"
+                                        ShowSelectAction="false"
+                                        Intent="HandleSearchIntent" />
+        </ChildContent>
+    </PageScaffold>
+</main>
+
+<Dialog IsOpen="@(fixture.Editor is not null)"
+        Eyebrow="Prompt gallery"
+        Title="@fixture.EditorTitle"
+        Subtitle="Edit canonical content and portable model recommendations."
+        Size="ModalSize.Full"
+        DenseChrome="true"
+        CloseOnBackdrop="false"
+        TestId="prompt-gallery-editor-dialog"
+        OnClose="@(() => fixture.CloseEditor())">
+    <ChildContent>
+        @if (fixture.Editor is { } editor)
+        {
+            <PromptGalleryItemEditorSurface Presentation="@editor" Intent="HandleEditorIntent" />
+        }
+    </ChildContent>
+</Dialog>
+
+<Dialog IsOpen="@fixture.PickerOpen"
+        Eyebrow="Reusable instructions"
+        Title="Prompt gallery"
+        Subtitle="Search the canonical Gallery and insert a prompt or prompt part."
+        Size="ModalSize.Full"
+        DenseChrome="true"
+        TestId="prompt-gallery-picker-dialog"
+        AriaLabel="Browse prompt gallery"
+        OnClose="@(() => fixture.ClosePicker())">
+    <ChildContent>
+        <PromptGallerySearchSurface Presentation="@fixture.PickerSearch"
+                                    Compact="true"
+                                    AllowEdit="true"
+                                    SelectText="Insert"
+                                    Intent="HandlePickerIntent" />
+    </ChildContent>
+</Dialog>
+
+<Dialog IsOpen="@fixture.CompatibilityOpen"
+        Eyebrow="Provider and model check"
+        Title="Prompt compatibility"
+        Subtitle="Review declared compatibility before inserting this prompt."
+        Size="ModalSize.Medium"
+        DenseChrome="true"
+        TestId="prompt-gallery-chat-compatibility-dialog"
+        AriaLabel="Prompt compatibility warning"
+        OnClose="@(() => fixture.ApplyCompatibility(PromptCompatibilityWarningDecision.Cancel))">
+    <ChildContent>
+        @if (fixture.Compatibility is { } compatibility)
+        {
+            <PromptCompatibilityWarningSurface Presentation="@compatibility" Decision="HandleDecision" />
+        }
+    </ChildContent>
+</Dialog>
+
+<Tooltip />
+
+@code {
+    private readonly PromptGallerySandboxFixture fixture = new();
+    private PromptGallerySandboxContext context = new();
+    private bool observed;
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "scenario")]
+    public string? ScenarioQuery { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "layout")]
+    public string? LayoutQuery { get; set; }
+
+    private string FrameClass => context.Layout switch
+    {
+        PromptGallerySandboxLayout.Matched => "prompts-sandbox__frame prompts-sandbox__frame--matched",
+        PromptGallerySandboxLayout.Narrow => "prompts-sandbox__frame prompts-sandbox__frame--narrow",
+        _ => "prompts-sandbox__frame"
+    };
+
+    private string LayoutLabel => context.Layout switch
+    {
+        PromptGallerySandboxLayout.Matched => "Layout: matched desktop (1600×1000)",
+        PromptGallerySandboxLayout.Narrow => "Layout: constrained 960px",
+        _ => "Layout: flexible"
+    };
+
+    protected override void OnParametersSet()
+    {
+        var next = PromptGallerySandboxContext.Parse(ScenarioQuery, LayoutQuery);
+        if (observed && next == context)
+        {
+            return;
+        }
+
+        var scenarioChanged = !observed || next.Scenario != context.Scenario;
+        observed = true;
+        context = next;
+        if (scenarioChanged)
+        {
+            fixture.SetScenario(context.Scenario);
+        }
+    }
+
+    private void ChangeScenario(ChangeEventArgs args)
+        => Apply(context with { Scenario = PromptGallerySandboxContext.ParseScenario(args.Value?.ToString()) });
+
+    private void CycleLayout()
+        => Apply(context with
+        {
+            Layout = context.Layout switch
+            {
+                PromptGallerySandboxLayout.Matched => PromptGallerySandboxLayout.Narrow,
+                PromptGallerySandboxLayout.Narrow => PromptGallerySandboxLayout.Flexible,
+                _ => PromptGallerySandboxLayout.Matched
+            }
+        });
+
+    private void Apply(PromptGallerySandboxContext next)
+    {
+        // The query is the reload context for this sandbox only; it replaces the current history entry.
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(next.ToQuery()), replace: true);
+    }
+
+    private void HandleSearchIntent(PromptGallerySearchIntent intent) => fixture.ApplySearch(intent);
+
+    private void HandlePickerIntent(PromptGallerySearchIntent intent) => fixture.ApplyPicker(intent);
+
+    private void HandleEditorIntent(PromptGalleryEditorIntent intent) => fixture.ApplyEditor(intent);
+
+    private void HandleDecision(PromptCompatibilityWarningDecision decision) => fixture.ApplyCompatibility(decision);
+}

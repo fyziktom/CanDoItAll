@@ -114,6 +114,7 @@ public sealed class AgentRecruitingApiIntegrationTests
             .Last();
         var primary = primaryEvidence.Interview;
         var primaryAttempt = primaryEvidence.Attempt;
+        ConfigureBearer(host, "reviewer-subject", "Trusted Reviewer", includeGeneralApiScope: false);
         using var spoofedReviewResponse = await host.Client.PostAsJsonAsync(
             $"/api/agent-recruiting/interviews/{primary.Id:D}/reviews",
             CreateReviewCommand(primaryAttempt.Id) with
@@ -144,6 +145,7 @@ public sealed class AgentRecruitingApiIntegrationTests
         Assert.Equal("Trusted Reviewer", review.ReviewerDisplayName);
         Assert.True(review.QualifiesForReadiness);
 
+        ConfigureBearer(host, "reviewer-subject", "Trusted Reviewer");
         using var detailResponse = await host.Client.GetAsync(
             $"/api/agent-recruiting/interviews/{primary.Id:D}");
         var detail = await ReadAsync<AgentRecruitingInterview>(detailResponse);
@@ -611,7 +613,6 @@ public sealed class AgentRecruitingApiIntegrationTests
         AssertResponseSchema(appendAttempt, "409", "ApiErrorResponse");
         AssertResponseSchema(appendReview, "400", "ApiErrorResponse");
         AssertResponseSchema(appendReview, "404", "ApiErrorResponse");
-        AssertResponseSchema(appendReview, "409", "ApiErrorResponse");
         AssertResponseSchema(detail, "404", "ApiErrorResponse");
         AssertResponseSchema(candidateInterviews, "400", "ApiErrorResponse");
         AssertResponseSchema(readiness, "404", "ApiErrorResponse");
@@ -665,17 +666,21 @@ public sealed class AgentRecruitingApiIntegrationTests
         ApiTestHost host,
         string subject,
         string displayName,
-        bool includeHumanReviewScope = true)
-    {
+        bool includeHumanReviewScope = true,
+        bool includeGeneralApiScope = true) {
+        List<string> scopes = [];
+        if (includeGeneralApiScope) {
+            scopes.Add(ApiAccessScopeNames.Api);
+        }
+        if (includeHumanReviewScope) {
+            scopes.Add(AgentRecruitingAuthorizationScopes.HumanReview);
+        }
         var tokenService = host.App.Services.GetRequiredService<IApiTokenService>();
         var token = tokenService.IssueToken(
-            new ApiTokenIssueRequest
-            {
+            new ApiTokenIssueRequest {
                 Subject = subject,
                 DisplayName = displayName,
-                Scopes = includeHumanReviewScope
-                    ? ["api", AgentRecruitingAuthorizationScopes.HumanReview]
-                    : ["api"]
+                Scopes = scopes
             });
         host.Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token.Token);

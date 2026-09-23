@@ -18,7 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI" Version="$(MicrosoftAgentsAIStableVersion)" />
     <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="$(MicrosoftAgentsAIStableVersion)" />
-    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="$(MicrosoftExtensionsAIPackageVersion)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsPackageVersion)" />
   </ItemGroup>
 

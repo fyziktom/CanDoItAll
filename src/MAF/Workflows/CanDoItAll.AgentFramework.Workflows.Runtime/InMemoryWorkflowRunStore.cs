@@ -60,9 +60,10 @@ public sealed class InMemoryWorkflowRunStore :
                 throw new WorkflowRunAlreadyExistsException(run.RunId);
             }
 
+            var existing = events.TryGetValue(run.RunId, out var retained) ? retained.ToArray() : [];
+            var append = WorkflowProviderDisclosureJournal.Prepare(run, existing, startedEvent, allowDeclaration: true);
             runs[run.RunId] = run;
-            events.GetOrAdd(run.RunId, _ => new ConcurrentQueue<WorkflowEventRecord>())
-                .Enqueue(startedEvent);
+            AppendDisclosureEvent(startedEvent, append);
         }
 
         return Task.CompletedTask;
@@ -90,6 +91,9 @@ public sealed class InMemoryWorkflowRunStore :
                 return Task.FromResult(new WorkflowRunTransitionResult(false, current));
             }
 
+            if (transitionEvent is not null) {
+                RequireOrdinaryAppend(transitionEvent);
+            }
             runs[runId] = updatedRun;
             if (transitionEvent is not null)
             {
@@ -184,6 +188,18 @@ public sealed class InMemoryWorkflowRunStore :
                 return false;
             }
 
+            var retained = events.TryGetValue(plan.UpdatedRun.RunId, out var priorEvents) ? priorEvents.ToList() : [];
+            var staged = new List<WorkflowEventRecord>();
+            foreach (var incoming in plan.Events.Concat(plan.TransitionEvent is { } transition ? [transition] : [])) {
+                var append = WorkflowProviderDisclosureJournal.Prepare(plan.UpdatedRun, retained, incoming);
+                if (!append.VisibleAlreadyRecorded) {
+                    var visible = WorkflowProviderDisclosureJournal.PublicEvent(incoming);
+                    retained.Add(visible);
+                    staged.Add(visible);
+                }
+                retained.AddRange(append.PrivateEvents);
+                staged.AddRange(append.PrivateEvents);
+            }
             requests[plan.RespondedRequest.Id] = plan.RespondedRequest;
             foreach (var request in plan.NextRequests)
             {
@@ -208,16 +224,10 @@ public sealed class InMemoryWorkflowRunStore :
             var eventQueue = events.GetOrAdd(
                 plan.UpdatedRun.RunId,
                 _ => new ConcurrentQueue<WorkflowEventRecord>());
-            foreach (var workflowEvent in plan.Events)
-            {
+            foreach (var workflowEvent in staged) {
                 eventQueue.Enqueue(workflowEvent);
             }
-
             runs[plan.UpdatedRun.RunId] = plan.UpdatedRun;
-            if (plan.TransitionEvent is not null)
-            {
-                eventQueue.Enqueue(plan.TransitionEvent);
-            }
 
             currentRun = plan.UpdatedRun;
             return true;
@@ -399,57 +409,72 @@ public sealed class InMemoryWorkflowRunStore :
             run.Summary,
             run.UpdatedAtUtc);
 
-    public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default)
-    {
+    public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(workflowEvent);
         cancellationToken.ThrowIfCancellationRequested();
-        lock (mutationSync)
-        {
-            events.GetOrAdd(workflowEvent.RunId, _ => new ConcurrentQueue<WorkflowEventRecord>())
-                .Enqueue(workflowEvent);
+        lock (mutationSync) {
+            runs.TryGetValue(workflowEvent.RunId, out var run);
+            var existing = events.TryGetValue(workflowEvent.RunId, out var queue) ? queue.ToArray() : [];
+            var append = WorkflowProviderDisclosureJournal.Prepare(run, existing, workflowEvent);
+            AppendDisclosureEvent(workflowEvent, append);
         }
-
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(
-        WorkflowRunId runId,
-        CancellationToken cancellationToken = default)
-    {
-        if (!events.TryGetValue(runId, out var queue))
-        {
-            return Task.FromResult<IReadOnlyList<WorkflowEventRecord>>([]);
+    private void AppendDisclosureEvent(WorkflowEventRecord visible, WorkflowProviderDisclosureJournal.Append append) {
+        var queue = events.GetOrAdd(visible.RunId, _ => new ConcurrentQueue<WorkflowEventRecord>());
+        if (!append.VisibleAlreadyRecorded) {
+            queue.Enqueue(WorkflowProviderDisclosureJournal.PublicEvent(visible));
         }
-
-        return Task.FromResult<IReadOnlyList<WorkflowEventRecord>>(queue.ToArray());
+        foreach (var row in append.PrivateEvents) {
+            queue.Enqueue(row);
+        }
     }
 
-    public Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
-        WorkflowEventPageRequest request,
-        CancellationToken cancellationToken = default)
-    {
+    private void RequireOrdinaryAppend(WorkflowEventRecord value) {
+        WorkflowProviderDisclosureJournal.RequireOrdinaryEvent(value);
+        var linkId = WorkflowProviderDisclosureJournal.LinkId(value.RunId, value.Id);
+        if (events.TryGetValue(value.RunId, out var queue) && queue.Any(row => row.Id == linkId)) {
+            throw new InvalidOperationException("A retained disclosure event cannot be replaced by an ordinary transition.");
+        }
+    }
+
+    public Task<WorkflowProviderDisclosureHistory> ReadProviderDisclosureAsync(WorkflowRunId runId,
+        CancellationToken cancellationToken = default) {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (mutationSync) {
+            runs.TryGetValue(runId, out var run);
+            var retained = events.TryGetValue(runId, out var queue) ? queue.ToArray() : [];
+            return Task.FromResult(WorkflowProviderDisclosureJournal.Read(run, runId, retained));
+        }
+    }
+
+    public Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(WorkflowRunId runId,
+        CancellationToken cancellationToken = default) {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (mutationSync) {
+            var visible = events.TryGetValue(runId, out var queue)
+                ? queue.Where(row => row.Kind != WorkflowEventKind.ProviderReadEvidence)
+                    .Select(WorkflowProviderDisclosureJournal.PublicEvent).ToArray()
+                : [];
+            return Task.FromResult<IReadOnlyList<WorkflowEventRecord>>(visible);
+        }
+    }
+
+    public Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(WorkflowEventPageRequest request,
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-
         var pageIndex = NormalizePageIndex(request.PageIndex);
         var pageSize = NormalizePageSize(request.PageSize);
-        if (!events.TryGetValue(request.RunId, out var queue))
-        {
-            return Task.FromResult(new WorkflowListPage<WorkflowEventRecord>([], pageIndex, pageSize, 0));
+        lock (mutationSync) {
+            var ordered = events.TryGetValue(request.RunId, out var queue)
+                ? queue.Where(row => row.Kind != WorkflowEventKind.ProviderReadEvidence)
+                    .OrderBy(row => row.CreatedAtUtc).Select(WorkflowProviderDisclosureJournal.PublicEvent).ToArray()
+                : [];
+            return Task.FromResult(new WorkflowListPage<WorkflowEventRecord>(
+                ordered.Skip(pageIndex * pageSize).Take(pageSize).ToArray(), pageIndex, pageSize, ordered.Length));
         }
-
-        var ordered = queue
-            .OrderBy(item => item.CreatedAtUtc)
-            .ToArray();
-        var items = ordered
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
-            .ToArray();
-
-        return Task.FromResult(new WorkflowListPage<WorkflowEventRecord>(
-            items,
-            pageIndex,
-            pageSize,
-            ordered.Length));
     }
 
     public Task<WorkflowCheckpointRecord> SaveCheckpointAsync(

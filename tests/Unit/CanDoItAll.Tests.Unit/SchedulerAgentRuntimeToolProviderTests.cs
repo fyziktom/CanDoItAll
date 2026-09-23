@@ -1,21 +1,55 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.SchedulerPlanner;
 using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class SchedulerAgentRuntimeToolProviderTests
+public sealed partial class SchedulerAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
     };
+
+    [Theory]
+    [InlineData(SchedulerToolPolicy.SchedulerWorkflowTargetsSearch, SchedulerToolPolicy.SchedulerWorkflowTargetsSearch)]
+    [InlineData(SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch, SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch)]
+    [InlineData(SchedulerToolPolicy.SchedulerWorkflowScheduleCreate, SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch)]
+    public async Task Saved_results_revalidate_the_current_read_capability_without_repeating_the_action(
+        string toolName, string readTool) {
+        var owner = new RecordingSchedulerPlannerService(new SchedulerPlannerWorkspace([], [], [],
+            new CanvasCalendarSurface { SurfaceId = "scheduler-disclosure-test" }));
+        var harness = CreateHarness(schedulerService: owner);
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item => item.ToolName == toolName);
+        var authorize = Assert.IsType<Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>>(
+            metadata.AuthorizeResultDisclosureAsync);
+        var disclosure = ManagedToolDisclosureTestData.Create(metadata, null);
+        var readKeys = new HashSet<string>(StringComparer.Ordinal) { SchedulerAgentCapabilityKeys.ToolNameToCapabilityKey[readTool] };
+        var readActor = harness.Context.Agent with {
+            Capabilities = harness.Context.Agent.Capabilities.Where(item => readKeys.Contains(item.CapabilityKey)).ToArray()
+        };
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var allowed = await authorize(disclosure, default)) {
+            Assert.Null(allowed);
+        }
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id
+            ? readActor with { Capabilities = [] } : item).ToArray();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(disclosure, default).AsTask());
+        harness.Workspace.Agents = harness.Workspace.Agents.Select(item => item.Id == readActor.Id ? readActor : item).ToArray();
+        await using (var restored = await authorize(disclosure, default)) {
+            Assert.Null(restored);
+        }
+        Assert.Equal(AgentToolEffectState.Unknown, disclosure.EffectState);
+        Assert.Null(owner.SavedEditor);
+    }
 
     [Fact]
     public async Task Provider_attaches_only_to_the_exact_managed_scheduler_agent_and_assigned_tools()
@@ -29,9 +63,9 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             SchedulerAgentCapabilityKeys.ToolNameToCapabilityKey.Keys.OrderBy(item => item, StringComparer.Ordinal),
             tools.Select(item => item.Name).OrderBy(item => item, StringComparer.Ordinal));
         Assert.Equal(3, metadata.Count);
-        Assert.False(metadata.Single(item => item.ToolName == AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch).RequiresApprovalByDefault);
-        Assert.False(metadata.Single(item => item.ToolName == AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch).RequiresApprovalByDefault);
-        Assert.True(metadata.Single(item => item.ToolName == AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate).RequiresApprovalByDefault);
+        Assert.False(metadata.Single(item => item.ToolName == SchedulerToolPolicy.SchedulerWorkflowTargetsSearch).RequiresApprovalByDefault);
+        Assert.False(metadata.Single(item => item.ToolName == SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch).RequiresApprovalByDefault);
+        Assert.True(metadata.Single(item => item.ToolName == SchedulerToolPolicy.SchedulerWorkflowScheduleCreate).RequiresApprovalByDefault);
 
         var spoofedContext = harness.Context with
         {
@@ -54,7 +88,7 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
         Assert.Empty(harness.Provider.GetToolMetadata(schedulingDisabledContext));
 
         var targetSearch = Assert.IsAssignableFrom<AIFunction>(tools.Single(item =>
-            item.Name == AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch));
+            item.Name == SchedulerToolPolicy.SchedulerWorkflowTargetsSearch));
         harness.Workspace.Agents =
         [
             harness.Context.Agent with
@@ -72,13 +106,13 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
     [Fact]
     public void Scheduler_tool_policy_requires_approval_and_redacts_schedule_content()
     {
-        Assert.True(ToolCapabilityRegistry.TryResolve(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
+        Assert.True(ProductToolPolicies.TryResolve(
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
             out var metadata));
         Assert.True(metadata.IsStateChanging);
         Assert.Equal(ToolCapabilitySideEffectKind.InternalStateMutation, metadata.SideEffectKind);
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate));
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate, ProductToolPolicies));
 
         var workflowId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         const string scheduleName = "Confidential customer schedule";
@@ -90,16 +124,16 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             inputJson
         };
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
         [
             new KeyValuePair<string, object?>("request", request)
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
             redacted);
         var audit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
-            AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
-            JsonSerializer.Serialize(new { request }));
+            SchedulerToolPolicy.SchedulerWorkflowScheduleCreate,
+            JsonSerializer.Serialize(new { request }), ProductToolPolicies);
 
         Assert.Contains(workflowId.ToString("D"), signature, StringComparison.Ordinal);
         Assert.DoesNotContain(scheduleName, signature, StringComparison.Ordinal);
@@ -183,19 +217,19 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             .ToDictionary(item => item.Name, StringComparer.Ordinal);
 
         var targetSearch = await InvokeAsync<SchedulerWorkflowTargetSearchResult>(
-            tools[AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch],
+            tools[SchedulerToolPolicy.SchedulerWorkflowTargetsSearch],
             new SchedulerWorkflowTargetSearchInput("release"));
         var target = Assert.Single(targetSearch.Items);
         Assert.Equal(workflowId, target.WorkflowId);
 
         var scheduleSearch = await InvokeAsync<SchedulerWorkflowScheduleSearchResult>(
-            tools[AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch],
+            tools[SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch],
             new SchedulerWorkflowScheduleSearchInput("release"));
         var schedule = Assert.Single(scheduleSearch.Items);
         Assert.Equal(existingPlanId, schedule.PlanId);
 
         var created = await InvokeAsync<SchedulerWorkflowScheduleCreateResult>(
-            tools[AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate],
+            tools[SchedulerToolPolicy.SchedulerWorkflowScheduleCreate],
             new SchedulerWorkflowScheduleCreateInput(
                 workflowId,
                 "Afternoon release",
@@ -205,9 +239,11 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
                 "Approved workflow schedule"));
 
         Assert.Equal(workflowId, created.WorkflowId);
+        Assert.Equal(schedulerService.SavedPlanId, created.PlanId);
         Assert.Equal(SchedulerPlanTargetKind.Workflow, schedulerService.SavedEditor?.TargetKind);
         Assert.Equal(workflowVersionId, schedulerService.SavedEditor?.TargetVersionId);
         Assert.Equal("0 0 15 ? * MON-FRI", schedulerService.SavedEditor?.CronExpression);
+        Assert.Null(schedulerService.SavedEditor?.StructureAuthority);
     }
 
     private static RuntimeHarness CreateHarness(RecordingSchedulerPlannerService? schedulerService = null)
@@ -293,7 +329,7 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             new CanvasCalendarSurface { SurfaceId = "scheduler-agent-tests" }));
         var runtimeProvider = new SchedulerAgentRuntimeToolProvider(
             schedulerService,
-            new SchedulerAgentRuntimeAuthorizationService(workspaceService));
+            new SchedulerAgentRuntimeAuthorizationService(workspaceService), new LegacyAuthorityFactory());
         var context = new AgentRuntimeToolProviderContext(
             agent,
             providerProfile,
@@ -308,18 +344,21 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
 
     private static async Task<TResult> InvokeAsync<TResult>(AIFunction function, object request)
     {
+        using var capture = AgentToolInvocationEffectScope.Begin();
         var rawResult = await function.InvokeAsync(new AIFunctionArguments
         {
             ["request"] = request
         });
-        return rawResult switch
+        var result = rawResult switch
         {
-            TResult result => result,
+            TResult typed => typed,
             JsonElement element => JsonSerializer.Deserialize<TResult>(element.GetRawText(), JsonOptions)
                 ?? throw new InvalidOperationException("Scheduler Agent runtime tool returned null JSON."),
             _ => throw new InvalidOperationException(
                 $"Unexpected Scheduler Agent runtime tool result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
         };
+        AssertOwnerAcknowledgement(function.Name, result, capture.CommittedEffect);
+        return result;
     }
 
     private sealed record RuntimeHarness(
@@ -331,6 +370,9 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
         SchedulerPlannerWorkspace workspace) : ISchedulerPlannerService
     {
         public SchedulerPlanEditorModel? SavedEditor { get; private set; }
+        public Guid SavedPlanId { get; } = Guid.NewGuid();
+        public bool RejectBeforeSave { get; set; }
+        public bool LoseAcknowledgement { get; set; }
 
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
             SchedulerHistoryQuery? historyQuery = null,
@@ -349,12 +391,15 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             SchedulerPlanEditorModel editor,
             CancellationToken cancellationToken = default)
         {
+            if (RejectBeforeSave) {
+                throw new IOException("Schedule write was not started.");
+            }
             SavedEditor = editor;
             var target = workspace.TargetOptions.Single(item =>
                 item.Kind == SchedulerPlanTargetKind.Workflow &&
                 item.Id == editor.TargetId);
-            return Task.FromResult(new SchedulerPlanSummary(
-                Guid.NewGuid(),
+            var saved = new SchedulerPlanSummary(
+                SavedPlanId,
                 editor.Name,
                 editor.Description,
                 editor.TargetKind,
@@ -371,7 +416,11 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
                 DateTimeOffset.Parse("2026-07-21T15:00:00Z"),
                 null,
                 string.Empty,
-                DateTimeOffset.Parse("2026-07-20T12:00:00Z")));
+                DateTimeOffset.Parse("2026-07-20T12:00:00Z"));
+            if (LoseAcknowledgement) {
+                throw new IOException("Schedule synchronization failed before the acknowledgement returned.");
+            }
+            return Task.FromResult(saved);
         }
 
         public Task SetPlanEnabledAsync(
@@ -403,4 +452,13 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             };
         }
     }
+    private sealed class LegacyAuthorityFactory : IWorkflowStructureAuthorityFactory {
+        public Task<WorkflowStructureAuthority> CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface surface, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("A legacy agent context must not acquire operator authority.");
+        public Task<WorkflowStructureAuthority> CaptureAuthenticatedOperatorAsync(string subject, DateTimeOffset expiresAtUtc, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("A legacy agent context must not acquire operator authority.");
+        public WorkflowStructureAuthority CaptureAgent(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance)
+            => throw new InvalidOperationException("The legacy fixture has no admitted governance to capture.");
+    }
+
 }

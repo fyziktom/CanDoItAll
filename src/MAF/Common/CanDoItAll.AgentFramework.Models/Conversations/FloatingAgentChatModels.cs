@@ -811,7 +811,8 @@ public sealed record AgentChatContextScope
         AgentChatContextScopeAccessMode accessMode = AgentChatContextScopeAccessMode.AllowListed,
         AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
         AgentChatSurfacePosition? surfacePosition = null,
-        AgentChatContextCompletionRefreshMode completionRefreshMode = AgentChatContextCompletionRefreshMode.None)
+        AgentChatContextCompletionRefreshMode completionRefreshMode = AgentChatContextCompletionRefreshMode.None,
+        AgentProjectStructureLifetime? observedProjectLifetime = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -884,6 +885,7 @@ public sealed record AgentChatContextScope
         Source = source;
         DisplayName = displayName.Trim();
         WorkspaceScope = workspaceScope;
+        ObservedProjectLifetime = observedProjectLifetime;
         AgentAccess = normalizedAgentAccess;
         AccessMode = accessMode;
         AccessState = accessState;
@@ -899,6 +901,8 @@ public sealed record AgentChatContextScope
     public string DisplayName { get; }
 
     public WorkspaceScopeDescriptor? WorkspaceScope { get; }
+
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; }
 
     public IReadOnlyList<AgentChatContextAgentAccess> AgentAccess { get; }
 

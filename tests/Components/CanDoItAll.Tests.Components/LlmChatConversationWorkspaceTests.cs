@@ -21,6 +21,30 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 
 public sealed class LlmChatConversationWorkspaceTests
 {
+    [Theory]
+    [InlineData("cs-CZ", false)]
+    [InlineData("ar-SA", true)]
+    public void Simple_chat_thread_and_message_times_are_UTC_in_full_and_focused_views(string culture, bool focused) {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        try {
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var conversation = CreateConversation();
+            var conversations = new StubConversationGateway();
+            conversations.ListPages.Enqueue(new([conversation], null));
+            conversations.TranscriptPages.Enqueue(CreateView(conversation, [CreateMessage(LlmMessageRole.User, "Retained product message")]));
+            using var context = CreateContext(conversations, new StubOperationGateway());
+            var cut = context.Render<LlmChatConversationWorkspace>(parameters => parameters
+                .Add(component => component.InitialConversationId, conversation.ConversationId)
+                .Add(component => component.Focused, focused));
+            cut.WaitForAssertion(() => Assert.Contains("Retained product message", cut.Markup));
+            Assert.Contains("2026-08-16 12:01:00 UTC", cut.Markup, StringComparison.Ordinal);
+            if (!focused) {
+                Assert.Contains("2026-08-16 12:00:00 UTC", cut.Markup, StringComparison.Ordinal);
+            }
+        } finally {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
+    }
     private static readonly Guid ActiveDefinitionId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid DraftDefinitionId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly Guid ConversationId = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -674,7 +698,7 @@ public sealed class LlmChatConversationWorkspaceTests
         Assert.Empty(cut.FindAll("[data-testid='conversation-message'][data-state='streaming']"));
     }
 
-    private static BunitContext CreateContext(
+    internal static BunitContext CreateContext(
         ILlmChatConversationUiGateway conversations,
         ILlmChatOperationUiGateway operations,
         ILlmChatUiEventSessionGateway? eventSessions = null)
@@ -692,7 +716,7 @@ public sealed class LlmChatConversationWorkspaceTests
         return context;
     }
 
-    private static LlmChatConversationListItem CreateConversation(
+    internal static LlmChatConversationListItem CreateConversation(
         Guid? conversationId = null,
         string title = "Primary chat",
         int definitionRevision = 3,
@@ -714,13 +738,13 @@ public sealed class LlmChatConversationWorkspaceTests
             activeOperationId,
             DateTimeOffset.Parse("2026-08-16T12:00:00Z"));
 
-    private static LlmChatConversationView CreateView(
+    internal static LlmChatConversationView CreateView(
         LlmChatConversationListItem conversation,
         IReadOnlyList<LlmChatMessageListItem> messages,
         LlmChatTranscriptCursor? nextCursor = null)
         => new(conversation, messages, nextCursor);
 
-    private static LlmChatMessageListItem CreateMessage(LlmMessageRole role, string text)
+    internal static LlmChatMessageListItem CreateMessage(LlmMessageRole role, string text)
         => new(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -890,7 +914,7 @@ public sealed class LlmChatConversationWorkspaceTests
             => new("This prompt-gallery operation is not used by the floating selection test.");
     }
 
-    private static LlmChatOperationView CreateOperationView(
+    internal static LlmChatOperationView CreateOperationView(
         Guid? operationId = null,
         LlmChatOperationStatus status = LlmChatOperationStatus.Pending)
         => new(
@@ -905,7 +929,7 @@ public sealed class LlmChatConversationWorkspaceTests
             string.Empty,
             null);
 
-    private sealed class StubDefinitionGateway : ILlmChatDefinitionUiGateway
+    internal sealed class StubDefinitionGateway : ILlmChatDefinitionUiGateway
     {
         private static readonly LlmChatDefinitionListItem Active = new(
             ActiveDefinitionId,
@@ -961,7 +985,7 @@ public sealed class LlmChatConversationWorkspaceTests
             => throw new NotSupportedException();
     }
 
-    private sealed class StubConversationGateway : ILlmChatConversationUiGateway
+    internal sealed class StubConversationGateway : ILlmChatConversationUiGateway
     {
         public Queue<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>> ListPages { get; } = [];
 
@@ -970,16 +994,24 @@ public sealed class LlmChatConversationWorkspaceTests
         public List<LlmChatConversationQuery> ListQueries { get; } = [];
 
         public List<LlmChatTranscriptQuery> TranscriptQueries { get; } = [];
+        public List<Guid> TranscriptTargets { get; } = [];
+        public Func<Guid, LlmChatTranscriptQuery, CancellationToken, Task<LlmChatUiResult<LlmChatConversationView>>>? Read { get; set; }
+        public Func<LlmChatConversationQuery, CancellationToken, Task<LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>>>? List { get; set; }
 
         public LlmChatConversationView? CreatedView { get; set; }
 
         public LlmChatConversationView? RenamedView { get; set; }
+        public Func<CancellationToken, Task<LlmChatUiResult<LlmChatConversationView>>>? Rename { get; set; }
 
         public LlmChatConversationView? ArchivedView { get; set; }
 
         public Guid? CreatedDefinitionId { get; private set; }
 
         public string? CreatedTitle { get; private set; }
+
+        public int CreateCalls { get; private set; }
+
+        public CancellationToken CreateToken { get; private set; }
 
         public string? RenamedTitle { get; private set; }
 
@@ -994,6 +1026,9 @@ public sealed class LlmChatConversationWorkspaceTests
             CancellationToken cancellationToken = default)
         {
             ListQueries.Add(query);
+            if (List is not null) {
+                return List(query, cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>.Success(
                 ListPages.Dequeue()));
         }
@@ -1004,6 +1039,10 @@ public sealed class LlmChatConversationWorkspaceTests
             CancellationToken cancellationToken = default)
         {
             TranscriptQueries.Add(transcriptQuery);
+            TranscriptTargets.Add(conversationId);
+            if (Read is not null) {
+                return Read(conversationId, transcriptQuery, cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(TranscriptPages.Dequeue()));
         }
 
@@ -1012,6 +1051,8 @@ public sealed class LlmChatConversationWorkspaceTests
             string title,
             CancellationToken cancellationToken = default)
         {
+            CreateCalls++;
+            CreateToken = cancellationToken;
             CreatedDefinitionId = definitionId;
             CreatedTitle = title;
             return Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(CreatedView!));
@@ -1027,7 +1068,7 @@ public sealed class LlmChatConversationWorkspaceTests
             RenamedTitle = title;
             RenameExpectedConcurrencyToken = expectedConcurrencyToken;
             RenameExpectedTranscriptRevision = expectedTranscriptRevision;
-            return Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(RenamedView!));
+            return Rename?.Invoke(cancellationToken) ?? Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(RenamedView!));
         }
 
         public Task<LlmChatUiResult<LlmChatConversationView>> ArchiveAsync(
@@ -1040,13 +1081,15 @@ public sealed class LlmChatConversationWorkspaceTests
         }
     }
 
-    private sealed class StubOperationGateway : ILlmChatOperationUiGateway
+    internal sealed class StubOperationGateway : ILlmChatOperationUiGateway
     {
         public Queue<LlmChatUiResult<LlmChatOperationView>> SendResults { get; } = [];
 
         public List<SendRequest> Sends { get; } = [];
 
         public LlmChatOperationView Current { get; set; } = CreateOperationView();
+        public Func<Guid, LlmChatOperationView>? Read { get; set; }
+        public Func<Guid, CancellationToken, Task<LlmChatUiResult<LlmChatOperationView>>>? ReadAsync { get; set; }
 
         public LlmChatUiResult<LlmChatOperationView>? ReconcileResult { get; set; }
 
@@ -1075,8 +1118,8 @@ public sealed class LlmChatConversationWorkspaceTests
         public Task<LlmChatUiResult<LlmChatOperationView>> GetAsync(
             Guid operationId,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(LlmChatUiResult<LlmChatOperationView>.Success(
-                Current with { OperationId = operationId }));
+            => ReadAsync?.Invoke(operationId, cancellationToken) ?? Task.FromResult(LlmChatUiResult<LlmChatOperationView>.Success(
+                Read?.Invoke(operationId) ?? Current with { OperationId = operationId }));
 
         public Task<LlmChatUiResult<LlmChatOperationView>> CancelAsync(
             Guid operationId,
@@ -1117,7 +1160,7 @@ public sealed class LlmChatConversationWorkspaceTests
             string Message);
     }
 
-    private sealed class ControlledEventSessionGateway : ILlmChatUiEventSessionGateway
+    internal sealed class ControlledEventSessionGateway : ILlmChatUiEventSessionGateway
     {
         public ControlledEventSession Session { get; } = new();
 
@@ -1132,7 +1175,7 @@ public sealed class LlmChatConversationWorkspaceTests
         }
     }
 
-    private sealed class ControlledEventSession : ILlmChatUiEventSession
+    internal sealed class ControlledEventSession : ILlmChatUiEventSession
     {
         private readonly Channel<LlmChatUiOperationEventPage> pages = Channel.CreateUnbounded<LlmChatUiOperationEventPage>();
         private readonly CancellationTokenSource profileLifetime = new();
@@ -1163,7 +1206,7 @@ public sealed class LlmChatConversationWorkspaceTests
         }
     }
 
-    private sealed class StubAuthorization : ILlmChatUiAuthorizationFacade
+    internal sealed class StubAuthorization : ILlmChatUiAuthorizationFacade
     {
         public ValueTask<LlmChatUiAuthorizationSnapshot> GetAsync(
             CancellationToken cancellationToken = default)

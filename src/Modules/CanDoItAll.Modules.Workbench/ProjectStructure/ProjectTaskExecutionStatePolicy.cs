@@ -1,5 +1,17 @@
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// Recorded execution state of a canonical task with its actual start and end instants, separate from the planned
+/// schedule and from displayed progress. The timestamps must match the state: Unknown and NotStarted have neither,
+/// Started has an actual start and no actual end, Completed has both, and Cancelled has an actual end and may have an
+/// actual start. An actual end cannot precede the actual start.
+/// </summary>
+/// <param name="State">
+/// Execution state, as a JSON integer: 0 Unknown (no state recorded yet), 1 NotStarted, 2 Started, 3 Completed,
+/// 4 Cancelled. Completed and Cancelled are final.
+/// </param>
+/// <param name="ActualStartedAtUtc">Instant work actually started, or null when it has not started.</param>
+/// <param name="ActualEndedAtUtc">Instant work actually ended, or null when it has not ended.</param>
 public sealed record ProjectTaskExecutionSnapshot(
     ProjectTaskExecutionState State,
     DateTimeOffset? ActualStartedAtUtc,
@@ -102,6 +114,19 @@ public static class ProjectTaskExecutionStatePolicy
 
     public static bool AllowsAuthoritativeRepricing(ProjectTaskExecutionState state)
         => state == ProjectTaskExecutionState.NotStarted;
+
+    // Every canvas node carries a status-backed progress hint (a "Draft" task renders as 28 %). For a canonical task
+    // the recorded execution state is the authoritative fact on every plan surface: a task that has not started has
+    // no progress, a completed task is done, a cancelled task has no trackable progress, and a task without a
+    // recorded state keeps the hint.
+    public static int ResolveExecutionBackedProgress(ProjectTaskExecutionState state, int progressPercent)
+        => state switch
+        {
+            ProjectTaskExecutionState.NotStarted => 0,
+            ProjectTaskExecutionState.Completed => 100,
+            ProjectTaskExecutionState.Cancelled => ProjectProgressPolicy.UntrackedPercent,
+            _ => progressPercent
+        };
 
     public static ProjectTaskExecutionState ResolveAuthoritativePricingState(
         ProjectTaskExecutionState current,

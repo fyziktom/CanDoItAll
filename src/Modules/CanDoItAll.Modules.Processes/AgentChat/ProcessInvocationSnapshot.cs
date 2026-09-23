@@ -354,7 +354,8 @@ public sealed class ProcessInvocationSnapshot : IAgentChatContextAttachment
         string attentionSummary,
         IReadOnlyList<ProcessInvocationSnapshotProvenance> provenance,
         ProcessInvocationSnapshotCoverage coverage,
-        DatabaseProfileGeneration databaseProfileGeneration)
+        DatabaseProfileGeneration databaseProfileGeneration,
+        AgentProjectStructureLifetime? observedProjectLifetime = null)
     {
         if (!Enum.IsDefined(surface))
         {
@@ -409,6 +410,10 @@ public sealed class ProcessInvocationSnapshot : IAgentChatContextAttachment
             ?? throw new ArgumentNullException(nameof(provenance));
         Coverage = coverage ?? throw new ArgumentNullException(nameof(coverage));
         DatabaseProfileGeneration = databaseProfileGeneration;
+        if (projectId.HasValue && observedProjectLifetime is not null && observedProjectLifetime.ProjectId != projectId) {
+            throw new ArgumentException("The Process observation lifetime belongs to a different project.", nameof(observedProjectLifetime));
+        }
+        ObservedProjectLifetime = observedProjectLifetime;
     }
 
     public ProcessInvocationSnapshotSurface Surface { get; }
@@ -418,6 +423,8 @@ public sealed class ProcessInvocationSnapshot : IAgentChatContextAttachment
     public string Route { get; }
 
     public Guid? ProjectId { get; }
+
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; }
 
     public AgentChatContextAccessState AccessState { get; }
 
@@ -517,7 +524,7 @@ internal static partial class ProcessInvocationSnapshotMapper
         ArgumentNullException.ThrowIfNull(context);
         var surface = ProcessAgentChatContextBuilder.BuildWorkspaceSurface(context);
         ProcessInvocationSnapshotCapture? capture = null;
-        if (context.AccessState == AgentChatContextAccessState.Ready &&
+        if (surface.AccessState == AgentChatContextAccessState.Ready &&
             context.Shell is not null &&
             TryResolveFreshUntilUtc(
                 context.Shell.Refresh,
@@ -544,7 +551,7 @@ internal static partial class ProcessInvocationSnapshotMapper
         ArgumentNullException.ThrowIfNull(context);
         var surface = ProcessAgentChatContextBuilder.BuildLiveSurface(context);
         ProcessInvocationSnapshotCapture? capture = null;
-        if (context.AccessState == AgentChatContextAccessState.Ready &&
+        if (surface.AccessState == AgentChatContextAccessState.Ready &&
             context.Shell is not null &&
             TryResolveFreshUntilUtc(
                 context.Shell.Refresh,
@@ -572,6 +579,11 @@ internal static partial class ProcessInvocationSnapshotMapper
         AppendValue(builder, snapshot.View);
         AppendValue(builder, snapshot.Route);
         AppendValue(builder, snapshot.ProjectId?.ToString("D"));
+        if (snapshot.ObservedProjectLifetime is { } lifetime) {
+            AppendValue(builder, lifetime.DatabaseProfileId.ToString("N"));
+            AppendValue(builder, lifetime.ProjectId.ToString("N"));
+            AppendValue(builder, lifetime.LifetimeId.ToString("N"));
+        }
         AppendValue(
             builder,
             snapshot.DatabaseProfileGeneration.Value.ToString(CultureInfo.InvariantCulture));
@@ -856,7 +868,8 @@ internal static partial class ProcessInvocationSnapshotMapper
             attentionSummary,
             provenance,
             coverage,
-            databaseProfileGeneration);
+            databaseProfileGeneration,
+            surface.ObservedProjectLifetime);
         var contentFingerprint = ComputeContentFingerprint(snapshot);
         var coverageFingerprint = ComputeCoverageFingerprint(snapshot);
         var freshnessFingerprint = ComputeFreshnessFingerprint(snapshot);

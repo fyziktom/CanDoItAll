@@ -48,9 +48,8 @@ public static class ProjectsAgentChatContextBuilder
         }
 
         var selectedProjectId = selectedProject?.Id;
-        var access = ContextualAgentAccessResolver.Resolve(
+        var access = ProjectAgentAccessPolicy.Resolve(
                 agents,
-                ContextualAgentWorkspaceKind.ProjectStructure,
                 selectedProjectId)
             .Select(item => new AgentChatContextAgentAccess(
                 item.Agent.Id,
@@ -63,6 +62,12 @@ public static class ProjectsAgentChatContextBuilder
         var workspaceScope = selectedProject is null
             ? null
             : WorkspaceScopeDescriptor.Project(selectedProject.Id.ToString("D"));
+        var observedLifetime = selectedProject?.ExpectedProjectAdmission is { } admission && admission.ProjectId == selectedProject.Id
+            ? new AgentProjectStructureLifetime(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId)
+            : null;
+        if (selectedProject is not null && observedLifetime is null && accessState == AgentChatContextAccessState.Ready) {
+            accessState = AgentChatContextAccessState.Loading;
+        }
 
         return new AgentChatContextScope(
             scopeId,
@@ -73,7 +78,8 @@ public static class ProjectsAgentChatContextBuilder
             AgentChatContextScopeAccessMode.AllowListed,
             accessState,
             BuildPosition(selectedProject, activeView),
-            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            observedProjectLifetime: observedLifetime);
     }
 
     public static AgentChatSurfacePosition BuildPosition(

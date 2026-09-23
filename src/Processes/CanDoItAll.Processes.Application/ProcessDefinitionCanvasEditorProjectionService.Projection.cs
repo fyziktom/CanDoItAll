@@ -22,7 +22,8 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
     private ProcessDefinitionCanvasSnapshot CreateTemplateSnapshot(
         ProcessWorkspaceShellScope scope,
-        ProcessTemplateDefinitionSummary template)
+        ProcessTemplateDefinitionSummary template,
+        ProcessProjectionProjectBinding? projectBinding)
     {
         var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>();
         var edges = new List<ProcessDefinitionCanvasEdgeProjection>();
@@ -306,7 +307,8 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         return new ProcessDefinitionCanvasSnapshot(
             scope,
             new ProcessDefinitionCatalogItemKey(template.Key),
-            new ProcessDefinitionCanvasVersionToken($"template:{template.Key}:canvas:{template.UpdatedAtUtc.UtcTicks}"),
+            new ProcessDefinitionCanvasVersionToken($"template:{template.Key}:canvas:{template.UpdatedAtUtc.UtcTicks}" +
+                (projectBinding is null ? string.Empty : $":{projectBinding.DatabaseProfileId:N}:{projectBinding.ProjectId:N}:{projectBinding.LifetimeId:N}")),
             nodes,
             edges,
             template.CanvasAuthoringDefaults.ToolboxActions.Select(CreateToolboxAction).ToArray(),

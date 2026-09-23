@@ -40,7 +40,9 @@ internal sealed class MafWorkflowNativeStartDriver(
         {
             turn = await runDriver.StartAsync(
                 build.Workflow!,
-                new WorkflowNodeInput(request.InputJson),
+                new WorkflowNodeInput(request.InputJson) {
+                    ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId)
+                },
                 checkpointManager,
                 session.Id.Value,
                 cancellationToken);

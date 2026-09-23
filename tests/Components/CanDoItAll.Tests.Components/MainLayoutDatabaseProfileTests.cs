@@ -176,60 +176,48 @@ public sealed class MainLayoutDatabaseProfileTests
         });
     }
 
-    private static async Task<ComponentTestHarness> CreateUnlockedHarnessAsync()
-    {
-        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-layout-tests");
-        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
-
-        return await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
-        {
-            TestEnvironment = testEnvironment,
-            ActiveProfile = activeProfile,
-            ConfigurationOverrides = new Dictionary<string, string?>
-            {
-                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath,
+    private static Task<ComponentTestHarness> CreateUnlockedHarnessAsync() {
+        return ComponentTestHarness.CreateAsync(options: new TestHarnessOptions {
+            ConfigurationOverrides = new Dictionary<string, string?> {
                 ["Database:Provider"] = null,
                 ["Database:ConnectionString"] = null
             }
         });
     }
 
-    private static async Task<ComponentTestHarness> CreatePersistedActiveHarnessAsync()
-    {
+    private static async Task<ComponentTestHarness> CreatePersistedActiveHarnessAsync() {
         var harness = await CreateUnlockedHarnessAsync();
-        var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
-        var persistedProfile = harness.TestEnvironment.CreatePostgreSqlProfile("persisted-active");
-        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
-            persistedProfile,
-            "Persisted active PostgreSQL workspace"));
-        Assert.True(saveResult.IsSuccess);
+        try {
+            var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
+            var persistedProfile = harness.TestEnvironment.CreatePostgreSqlProfile("persisted-active");
+            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                persistedProfile,
+                "Persisted active PostgreSQL workspace"));
+            Assert.True(saveResult.IsSuccess);
 
-        var activateResult = await profileService.ActivateAsync(saveResult.Value);
-        Assert.True(activateResult.IsSuccess);
-        var selection = await profileService.GetCurrentSelectionAsync();
-        Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, selection.ResolutionSource);
-        return harness;
+            var activateResult = await profileService.ActivateAsync(saveResult.Value);
+            Assert.True(activateResult.IsSuccess);
+            var selection = await profileService.GetCurrentSelectionAsync();
+            Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, selection.ResolutionSource);
+            return harness;
+        } catch (Exception failure) {
+            await TestFixtureCleanup.DisposeAfterFailureAsync(failure, harness);
+            throw;
+        }
     }
 
-    private static async Task<ComponentTestHarness> CreateRuntimeOverrideHarnessAsync()
-    {
-        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-layout-tests");
-        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
-
-        var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
-        {
-            TestEnvironment = testEnvironment,
-            ActiveProfile = activeProfile,
-            ConfigurationOverrides = new Dictionary<string, string?>
-            {
-                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath
-            }
-        });
-        var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
-        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
-            activeProfile,
-            "Configured PostgreSQL override"));
-        Assert.True(saveResult.IsSuccess);
-        return harness;
+    private static async Task<ComponentTestHarness> CreateRuntimeOverrideHarnessAsync() {
+        var harness = await ComponentTestHarness.CreateAsync();
+        try {
+            var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
+            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                harness.ActiveProfile,
+                "Configured PostgreSQL override"));
+            Assert.True(saveResult.IsSuccess);
+            return harness;
+        } catch (Exception failure) {
+            await TestFixtureCleanup.DisposeAfterFailureAsync(failure, harness);
+            throw;
+        }
     }
 }

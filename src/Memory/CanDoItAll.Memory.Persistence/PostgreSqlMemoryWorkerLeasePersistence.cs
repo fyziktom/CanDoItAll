@@ -1,6 +1,5 @@
 using System.Data;
 using System.Data.Common;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Persistence.Hosting;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +8,7 @@ namespace CanDoItAll.Memory.Persistence;
 internal static class PostgreSqlMemoryWorkerLeasePersistence
 {
     public static async Task<MemoryWorkerLease?> TryAcquireAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryBackgroundWorkerPhase phase,
         MemoryWorkerLeaseOwnerId ownerId,
         DateTimeOffset nowUtc,
@@ -61,7 +60,7 @@ internal static class PostgreSqlMemoryWorkerLeasePersistence
     }
 
     public static async Task<bool> RenewAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset nowUtc,
         TimeSpan leaseDuration,
@@ -78,21 +77,21 @@ internal static class PostgreSqlMemoryWorkerLeasePersistence
     }
 
     public static Task<bool> CompleteAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset completedAtUtc,
         CancellationToken cancellationToken) =>
         ReleaseAsync(dbContext, lease, completedAtUtc, requireUnexpired: true, cancellationToken);
 
     public static Task<bool> ReleaseAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset releasedAtUtc,
         CancellationToken cancellationToken) =>
         ReleaseAsync(dbContext, lease, releasedAtUtc, requireUnexpired: false, cancellationToken);
 
     private static async Task<bool> ReleaseAsync(
-        AppDbContext dbContext,
+        MemoryDbContext dbContext,
         MemoryWorkerLease lease,
         DateTimeOffset releasedAtUtc,
         bool requireUnexpired,

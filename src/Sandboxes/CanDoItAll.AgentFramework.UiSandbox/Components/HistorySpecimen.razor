@@ -1,0 +1,71 @@
+@using CanDoItAll.AgentFramework.UI.History
+<PageTitle>Request History sandbox</PageTitle>
+<header class="catalog-sandbox__controls">
+    <h1 class="cda-title-xl">Request History sandbox</h1>
+    <label for="history-scenario">Scenario</label>
+    <select id="history-scenario" class="cda-input" value="@scenario" @onchange="ChangeScenario">
+        @foreach (var value in HistorySandboxFixture.Scenarios) {
+            <option value="@value">@value</option>
+        }
+    </select>
+    <output aria-live="polite" data-testid="sandbox-intent">@intentLog</output>
+</header>
+<main class="catalog-sandbox__frame" data-testid="sandbox-history-specimen">
+    <ProviderHistoryResultsSurface Presentation="presentation" OnIntent="Apply" />
+    @if (showMetadata) {
+        <SurfaceCard data-testid="sandbox-history-metadata">
+            <ProviderHistoryMetadataView Entry="HistorySandboxFixture.Entry" />
+            <Button Text="Load synthetic content" Click="LoadContent" data-testid="sandbox-history-load-content" />
+        </SurfaceCard>
+    }
+    @if (showContent) {
+        <ProviderHistoryContentDialog Content="HistorySandboxFixture.Content" OnClose="@(() => showContent = false)" />
+    }
+</main>
+<Tooltip />
+@code {
+    [Parameter] public string? ScenarioQuery { get; set; }
+    private string? appliedQuery;
+    private string scenario = "not-requested";
+    private string intentLog = "No intent";
+    private bool showMetadata;
+    private bool showContent;
+    private HistoryResultsPresentation presentation = HistoryResultsPresentation.Initial;
+    protected override void OnParametersSet() {
+        if (appliedQuery != ScenarioQuery) {
+            appliedQuery = ScenarioQuery;
+            SetScenario(ScenarioQuery ?? "not-requested");
+        }
+    }
+    private void ChangeScenario(ChangeEventArgs args) => SetScenario(args.Value?.ToString() ?? "not-requested");
+    private void SetScenario(string value) {
+        scenario = value;
+        presentation = HistorySandboxFixture.Create(value);
+        showMetadata = false;
+        showContent = false;
+    }
+    private void LoadContent() {
+        showContent = true;
+        intentLog = "Load authorized synthetic content";
+    }
+    private void Apply(HistoryResultsIntent intent) {
+        intentLog = intent.ToString();
+        switch (intent) {
+            case HistoryResultsIntent.Details:
+                showMetadata = true;
+                break;
+            case HistoryResultsIntent.Clear:
+                SetScenario("not-requested");
+                break;
+            case HistoryResultsIntent.Cancel:
+                SetScenario("canceled");
+                break;
+            case HistoryResultsIntent.Next:
+                presentation = presentation with { PageNumber = presentation.PageNumber + 1, CanPrevious = true };
+                break;
+            case HistoryResultsIntent.Previous:
+                presentation = presentation with { PageNumber = Math.Max(1, presentation.PageNumber - 1), CanNext = true };
+                break;
+        }
+    }
+}

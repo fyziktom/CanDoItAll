@@ -1,0 +1,59 @@
+@implements IAsyncDisposable
+@inject IPromptGalleryService Gallery
+@inject NotificationService Notifications
+
+<PromptGalleryItemEditorSurface Presentation="@session.Presentation" Intent="HandleIntentAsync" />
+
+@code {
+    private PromptGalleryEditorSession session = default!;
+    private Guid? observedItemId;
+    private bool observed;
+
+    [Parameter]
+    public Guid? ItemId { get; set; }
+
+    [Parameter]
+    public EventCallback<PromptGalleryEditorCommit> Committed { get; set; }
+
+    [Parameter]
+    public EventCallback Cancelled { get; set; }
+
+    // The identity this instance currently edits, including one adopted from a first save before the owner echoes it.
+    public Guid? CurrentTarget => session.Target;
+
+    public PromptGalleryEditorPresentation Presentation => session.Presentation;
+
+    protected override void OnInitialized()
+    {
+        session = new PromptGalleryEditorSession(Gallery)
+        {
+            Changed = () => InvokeAsync(StateHasChanged),
+            NoticeRaised = notice =>
+            {
+                PromptGalleryNotices.Show(Notifications, notice);
+                return Task.CompletedTask;
+            },
+            Committed = commit => Committed.InvokeAsync(commit)
+        };
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        // Only a changed requested target is a transition; the owner echoing the same value is inert.
+        if (observed && observedItemId == ItemId)
+        {
+            return Task.CompletedTask;
+        }
+
+        observed = true;
+        observedItemId = ItemId;
+        return session.SetTargetAsync(ItemId);
+    }
+
+    private Task HandleIntentAsync(PromptGalleryEditorIntent intent)
+        => intent is PromptGalleryEditorIntent.Cancel
+            ? Cancelled.InvokeAsync()
+            : session.ApplyAsync(intent);
+
+    public ValueTask DisposeAsync() => session.DisposeAsync();
+}

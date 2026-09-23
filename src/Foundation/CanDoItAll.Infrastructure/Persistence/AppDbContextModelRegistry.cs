@@ -78,15 +78,13 @@ public static class AppDbContextModelRegistry
                 @interface.IsGenericType &&
                 @interface.GetGenericTypeDefinition() == EntityTypeConfigurationType));
 
-    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
-    {
-        try
-        {
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly) {
+        try {
             return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException exception)
-        {
-            return exception.Types.OfType<Type>();
+        } catch (ReflectionTypeLoadException exception) {
+            throw new InvalidOperationException(
+                $"Cannot configure the complete application model because assembly '{assembly.FullName}' contains types that could not be loaded. Resolve the missing or incompatible dependencies reported by the loader exceptions.",
+                exception);
         }
     }
 

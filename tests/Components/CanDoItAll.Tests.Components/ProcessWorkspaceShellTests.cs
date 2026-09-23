@@ -24,8 +24,65 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Processes;
 
-public sealed class ProcessWorkspaceShellTests
+public sealed partial class ProcessWorkspaceShellTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Delayed_dialog_callbacks_cannot_publish_old_rows_with_the_recreated_project_lifetime(bool live) {
+        if (live) {
+            await AssertDelayedProjectCallbacksAsync<LiveProcessesDashboard>(component => component.ProjectId, "OpenAgentDetailDialogAsync", "agentDetailAgent");
+        } else {
+            await AssertDelayedProjectCallbacksAsync<ProcessWorkspaceShell>(component => component.ProjectId, "OpenEventDetailDialogAsync", "eventDetail");
+        }
+    }
+
+    private static async Task AssertDelayedProjectCallbacksAsync<T>(System.Linq.Expressions.Expression<Func<T, Guid?>> projectParameter,
+        string secondCallback, string secondField) where T : ComponentBase {
+        using var context = CreateContext(out var client, timeProvider: new ManualTimeProvider(Now));
+        var projectId = Guid.NewGuid();
+        var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), projectId, Guid.NewGuid());
+        var successor = new ProcessProjectionProjectBinding(original.DatabaseProfileId, projectId, Guid.NewGuid());
+        var replace = false;
+        ProcessWorkspaceShellProjection? held = null;
+        client.ShellResultTransform = (_, projection) => {
+            var result = projection with {
+                ProjectBinding = replace ? successor : original,
+                Refresh = projection.Refresh with { Status = ProcessWorkspaceProjectionStatus.Ready },
+                Runtime = replace ? ProcessRuntimeWorkspaceProjection.Empty : projection.Runtime
+            };
+            if (!replace) {
+                held = result;
+            }
+            return result;
+        };
+        var cut = context.Render<T>(parameters => parameters.Add(projectParameter, projectId));
+        cut.WaitForAssertion(() => Assert.NotNull(held));
+        if (typeof(T) == typeof(ProcessWorkspaceShell)) {
+            cut.Find("[data-testid='processes-detail-tab-runs']").Click();
+            cut.WaitForAssertion(() => Assert.NotEmpty(held!.Runtime.Events));
+        }
+        var oldRun = held!.Runtime.Runs.First();
+        object oldDetail = secondField == "agentDetailAgent" ? held.Runtime.ActiveAgents.First() : held.Runtime.Events.First();
+        replace = true;
+        await cut.InvokeAsync(() => cut.Render());
+        cut.WaitForAssertion(() => Assert.Equal(successor,
+            ((ProcessWorkspaceShellProjection)typeof(T).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)!).ProjectBinding));
+        await cut.InvokeAsync(async () => {
+            foreach (var (method, value) in new[] { ("OpenRunDetailDialogAsync", (object)oldRun), (secondCallback, oldDetail) }) {
+                await (Task)typeof(T).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(cut.Instance, [value])!;
+            }
+            cut.Render();
+        });
+        cut.WaitForAssertion(() => {
+            Assert.Null(typeof(T).GetField("runDetailSnapshot", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            Assert.Null(typeof(T).GetField(secondField, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(context.Services.GetRequiredService<IAgentChatContextRegistry>().Capture());
+            Assert.Equal(successor.LifetimeId, snapshot.Scope.ObservedProjectLifetime!.LifetimeId);
+            Assert.DoesNotContain(snapshot.Scope.SurfacePosition!.Facts, fact => fact.Name == "focused-dialog");
+        });
+    }
+
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 30, 0, TimeSpan.Zero);
     private static readonly Guid ProjectSubprocessRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
     private static readonly Guid ProjectSubprocessProjectId = Guid.Parse("12121212-3434-5656-7878-909090909090");
@@ -1488,6 +1545,38 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public async Task Late_manager_chat_workspace_cannot_replace_the_new_project_lifetime_thread() {
+        var workspaceService = new RecordingManagerChatWorkspaceService { WorkspaceReadPause = new(TaskCreationOptions.RunContinuationsAsynchronously) };
+        var pause = workspaceService.WorkspaceReadPause;
+        using var context = CreateContext(out var client, workspaceService);
+        var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var binding = original;
+        client.ShellResultTransform = (_, projection) => projection with { ProjectBinding = binding };
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.ProjectId, original.ProjectId).Add(component => component.RunIdQuery, firstRun));
+        cut.WaitForAssertion(() => Assert.NotNull(typeof(ProcessWorkspaceShell).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)));
+        var load = typeof(ProcessWorkspaceShell).GetMethod("EnsureManagerChatLoadedAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var oldLoad = cut.InvokeAsync(() => (Task)load.Invoke(cut.Instance, [true])!);
+        await workspaceService.WorkspaceReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        try {
+            workspaceService.WorkspaceReadPause = null;
+            binding = new(original.DatabaseProfileId, original.ProjectId, Guid.NewGuid());
+            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await cut.InvokeAsync(() => (Task)load.Invoke(cut.Instance, [true])!);
+            Assert.Contains(secondRun.ToString("D"), workspaceService.LastWorkspaceSessionTitle, StringComparison.Ordinal);
+        } finally {
+            pause!.TrySetResult();
+        }
+        await oldLoad;
+        var current = Assert.IsType<ChatAgentWorkspaceSnapshot>(typeof(ProcessWorkspaceShell)
+            .GetField("managerChatWorkspace", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+        Assert.Contains(secondRun.ToString("D"), current.SelectedSession!.Title, StringComparison.Ordinal);
+        Assert.Equal(secondRun, (Guid?)typeof(ProcessWorkspaceShell).GetField("managerChatLoadedRunId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+    }
+
+    [Fact]
     public void Manager_chat_enables_voice_controls_for_voice_allowed_manager_agent()
     {
         var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true);
@@ -1507,6 +1596,223 @@ public sealed class ProcessWorkspaceShellTests
         cut.Find("[data-testid='chat-voice-mode-button']").Click();
 
         cut.WaitForAssertion(() => Assert.Contains("Audio on", cut.Markup, StringComparison.Ordinal));
+    }
+
+    public enum DeferredManagerChatOperation { Send, Approval, Rename, Artifacts, Transcription, Synthesis }
+
+    [Theory]
+    [InlineData(DeferredManagerChatOperation.Send, true)]
+    [InlineData(DeferredManagerChatOperation.Send, false)]
+    [InlineData(DeferredManagerChatOperation.Approval, true)]
+    [InlineData(DeferredManagerChatOperation.Rename, true)]
+    [InlineData(DeferredManagerChatOperation.Artifacts, true)]
+    [InlineData(DeferredManagerChatOperation.Transcription, true)]
+    [InlineData(DeferredManagerChatOperation.Synthesis, true)]
+    public async Task Late_manager_chat_operations_preserve_the_current_project_thread_and_draft(DeferredManagerChatOperation operation, bool recreateProject) {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true,
+            pendingApprovals: [new("approval-held", "call-held", "tool_a", "Function", "Approve A", "{}")]);
+        var voiceService = new RecordingAgentVoiceService();
+        using var context = CreateContext(out var client, workspaceService, voiceService);
+        context.JSInterop.Setup<BrowserVoiceRecording>("CanDoItAll.agentFramework.voice.stopRecordingForOwner", _ => true)
+            .SetResult(new() { Base64 = Convert.ToBase64String([1, 2, 3]) });
+        var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var binding = original;
+        client.ShellResultTransform = (_, projection) => projection with { ProjectBinding = binding };
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.ProjectId, original.ProjectId).Add(component => component.RunIdQuery, firstRun));
+        cut.WaitForAssertion(() => Assert.NotNull(typeof(ProcessWorkspaceShell).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)));
+        await InvokeManagerChatAsync(cut, "EnsureManagerChatLoadedAsync", true);
+        var oldWorkspace = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
+        var readPause = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var detailResponse = new TaskCompletionSource<ExecutionRunDetail>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var transcriptionResponse = new TaskCompletionSource<AgentVoiceTranscriptionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task entered;
+        Task pending;
+        switch (operation) {
+            case DeferredManagerChatOperation.Synthesis:
+                voiceService.SynthesisTerminalPause = readPause;
+                entered = voiceService.SynthesisTerminalEntered.Task;
+                pending = InvokeManagerChatAsync(cut, "SpeakManagerChatTextAsync", "Original project speech");
+                break;
+            case DeferredManagerChatOperation.Artifacts:
+                workspaceService.ExecutionDetailResponse = detailResponse;
+                entered = workspaceService.ExecutionDetailEntered.Task;
+                pending = InvokeManagerChatAsync(cut, "StageManagerChatRunArtifactsAsync");
+                break;
+            case DeferredManagerChatOperation.Transcription:
+                voiceService.TranscriptionResponse = transcriptionResponse;
+                entered = voiceService.TranscriptionEntered.Task;
+                pending = InvokeManagerChatAsync(cut, "StopManagerChatRecordingAndSendAsync");
+                break;
+            default:
+                workspaceService.WorkspaceReadPause = readPause;
+                entered = workspaceService.WorkspaceReadEntered.Task;
+                SetPrivateField(cut.Instance, "managerChatDraftPrompt", "Original project question");
+                pending = operation switch {
+                    DeferredManagerChatOperation.Send => InvokeManagerChatAsync(cut, "SendManagerChatMessageAsync"),
+                    DeferredManagerChatOperation.Approval => InvokeManagerChatAsync(cut, "ContinueManagerChatApprovalAsync",
+                        new PendingToolApprovalDecision[] { new("approval-held", Approved: true) }, false),
+                    DeferredManagerChatOperation.Rename => InvokeManagerChatAsync(cut, "RenameManagerChatSessionAsync", "Original project renamed"),
+                    _ => throw new ArgumentOutOfRangeException(nameof(operation))
+                };
+                break;
+        }
+        Guid? currentSession = null;
+        try {
+            await entered.WaitAsync(TimeSpan.FromSeconds(5));
+            if (operation != DeferredManagerChatOperation.Artifacts) {
+                await InvokeManagerChatAsync(cut, "ReloadManagerChatAsync");
+                Assert.Same(oldWorkspace, ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace"));
+            }
+            workspaceService.WorkspaceReadPause = null;
+            if (recreateProject) {
+                binding = new(original.DatabaseProfileId, original.ProjectId, Guid.NewGuid());
+            }
+            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await InvokeManagerChatAsync(cut, "EnsureManagerChatLoadedAsync", true);
+            currentSession = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace").SelectedSession!.Id;
+            await InvokeManagerChatAsync(cut, "HandleManagerChatDraftPromptChangedAsync", "New project draft");
+            SetPrivateField<IReadOnlyList<string>>(cut.Instance, "managerChatDraftAttachmentPaths", ["artifacts/new-project.md"]);
+        } finally {
+            readPause.TrySetResult();
+            detailResponse.TrySetResult(new(oldWorkspace.SelectedRun!, oldWorkspace.SelectedSession, [], []) {
+                Artifacts = [new(Guid.NewGuid(), oldWorkspace.SelectedRun!.Id, "report", "Original report", "artifacts/original-project.md",
+                    "text/markdown", "test", "Original project evidence", Now)]
+            });
+            transcriptionResponse.TrySetResult(new("Original project transcription", "test-stt"));
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(5));
+        var current = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
+        Assert.Equal(currentSession, current.SelectedSession!.Id);
+        Assert.NotEqual(oldWorkspace.SelectedSession!.Id, current.SelectedSession.Id);
+        Assert.Contains(secondRun.ToString("D"), current.SelectedSession.Title, StringComparison.Ordinal);
+        Assert.Empty(current.SelectedSession.Messages);
+        Assert.Equal("New project draft", ReadManagerChatField<string>(cut, "managerChatDraftPrompt"));
+        Assert.Equal(["artifacts/new-project.md"], ReadManagerChatField<IReadOnlyList<string>>(cut, "managerChatDraftAttachmentPaths"));
+        Assert.False(ReadManagerChatField<bool>(cut, "managerChatIsBusy"));
+        Assert.False(ReadManagerChatField<bool>(cut, "managerChatVoiceTranscribing"));
+        Assert.False(ReadManagerChatField<bool>(cut, "managerChatVoiceSpeaking"));
+        Assert.Empty(ReadManagerChatField<string>(cut, "managerChatVoiceStatusText"));
+        var orchestrator = Assert.IsType<RecordingManagerChatExecutionOrchestrator>(context.Services.GetRequiredService<IAgentChatExecutionOrchestrator>());
+        if (operation == DeferredManagerChatOperation.Send) {
+            Assert.Equal(oldWorkspace.SelectedSession.Id, orchestrator.LastSendRequest!.ChatSessionId);
+            Assert.Equal("Original project question", orchestrator.LastSendRequest.Prompt);
+        } else if (operation == DeferredManagerChatOperation.Transcription) {
+            Assert.Null(orchestrator.LastSendRequest);
+            Assert.Empty(workspaceService.LastPrompt);
+        }
+    }
+
+    private static Task InvokeManagerChatAsync(IRenderedComponent<ProcessWorkspaceShell> cut, string method, params object?[] arguments)
+        => cut.InvokeAsync(() => (Task)typeof(ProcessWorkspaceShell)
+            .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(cut.Instance, arguments)!);
+
+    private static T ReadManagerChatField<T>(IRenderedComponent<ProcessWorkspaceShell> cut, string field)
+        => Assert.IsAssignableFrom<T>(typeof(ProcessWorkspaceShell)
+            .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+
+    [Fact]
+    public async Task Manager_chat_reload_preserves_the_pending_send_until_completion() {
+        var workspaceService = new RecordingManagerChatWorkspaceService();
+        using var context = CreateContext(out _, workspaceService);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForAssertion(() => Assert.NotNull(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace")));
+        var pause = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        workspaceService.WorkspaceReadPause = pause;
+        await InvokeManagerChatAsync(cut, "HandleManagerChatDraftPromptChangedAsync", "Complete this question");
+        var send = InvokeManagerChatAsync(cut, "SendManagerChatMessageAsync");
+        try {
+            await workspaceService.WorkspaceReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            cut.WaitForAssertion(() => Assert.True(cut.Find("[data-testid='processes-manager-chat-reload']").HasAttribute("disabled")));
+            await InvokeManagerChatAsync(cut, "ReloadManagerChatAsync");
+        } finally {
+            pause.TrySetResult();
+        }
+        await send.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(ReadManagerChatField<bool>(cut, "managerChatIsBusy"));
+        Assert.Empty(ReadManagerChatField<string>(cut, "managerChatPendingPrompt"));
+        Assert.Contains(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace").SelectedSession!.Messages,
+            message => message.Role == ChatMessageRole.Assistant && message.Content == workspaceService.AssistantResponseText);
+    }
+
+    [Fact]
+    public async Task Manager_chat_retires_pending_microphone_owner_on_run_change_and_disposal() {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true);
+        using var context = CreateContext(out _, workspaceService);
+        var recording = context.JSInterop.SetupVoid("CanDoItAll.agentFramework.voice.startRecordingForOwner", _ => true);
+        var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.RunIdQuery, firstRun));
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForAssertion(() => Assert.NotNull(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace")));
+        var originalOwner = ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N");
+        var start = InvokeManagerChatAsync(cut, "ToggleManagerChatVoiceRecordingAsync");
+        try {
+            cut.WaitForAssertion(() => Assert.Single(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.startRecordingForOwner"]));
+            await InvokeManagerChatAsync(cut, "ReloadManagerChatAsync");
+            Assert.Equal(originalOwner, ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N"));
+            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            Assert.Contains(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.disposeOwner"],
+                invocation => Equals(invocation.Arguments[0], originalOwner));
+        } finally {
+            recording.SetVoidResult();
+        }
+        await start.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(ReadManagerChatField<bool>(cut, "managerChatVoiceRecording"));
+        var currentOwner = ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N");
+        Assert.NotEqual(originalOwner, currentOwner);
+        await InvokeManagerChatAsync(cut, "ToggleManagerChatVoiceRecordingAsync");
+        Assert.True(ReadManagerChatField<bool>(cut, "managerChatVoiceRecording"));
+        Assert.Equal(currentOwner, context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.startRecordingForOwner"].Last().Arguments[0]);
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        Assert.Contains(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.disposeOwner"],
+            invocation => Equals(invocation.Arguments[0], currentOwner));
+    }
+
+    [Fact]
+    public async Task Manager_chat_run_switch_rejects_old_projection_while_previous_voice_cleanup_is_pending() {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true);
+        using var context = CreateContext(out var client, workspaceService);
+        var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.RunIdQuery, firstRun));
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForAssertion(() => Assert.NotNull(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace")));
+        var oldWorkspace = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
+        var oldOwner = ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N");
+        var cleanup = context.JSInterop.SetupVoid("CanDoItAll.agentFramework.voice.disposeOwner",
+            invocation => Equals(invocation.Arguments[0], oldOwner));
+        SetPrivateField<IReadOnlyList<string>>(cut.Instance, "managerChatDraftAttachmentPaths", ["artifacts/old-run.md"]);
+        var requestCount = client.Requests.Count;
+        client.DeferShellRequests = true;
+        var oldLoad = InvokeManagerChatAsync(cut, "LoadAsync", false);
+        try {
+            cut.WaitForAssertion(() => Assert.Equal(requestCount + 1, client.Requests.Count));
+            client.DeferShellRequests = false;
+            var select = typeof(ProcessWorkspaceShell).GetMethod("SelectRuntimeRunAsync", BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null, types: [typeof(ChangeEventArgs)], modifiers: null)!;
+            var change = cut.InvokeAsync(() => (Task)select.Invoke(cut.Instance, [new ChangeEventArgs { Value = secondRun.ToString("D") }])!);
+            cut.WaitForAssertion(() => Assert.Contains(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.disposeOwner"],
+                invocation => Equals(invocation.Arguments[0], oldOwner)));
+            client.CompleteShellRequest(0);
+            await oldLoad.WaitAsync(TimeSpan.FromSeconds(5));
+            await change.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(secondRun, ReadManagerChatField<Guid>(cut, "selectedRuntimeRunId"));
+            Assert.Equal(secondRun, client.LastRequest!.RuntimeQuery!.SelectedRunId);
+            var current = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
+            Assert.NotEqual(oldWorkspace.SelectedSession!.Id, current.SelectedSession!.Id);
+            Assert.Contains(secondRun.ToString("D"), current.SelectedSession.Title, StringComparison.Ordinal);
+            Assert.Empty(ReadManagerChatField<IReadOnlyList<string>>(cut, "managerChatDraftAttachmentPaths"));
+            await InvokeManagerChatAsync(cut, "ToggleManagerChatVoiceRecordingAsync");
+            Assert.NotEqual(oldOwner, context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.startRecordingForOwner"].Last().Arguments[0]);
+        } finally {
+            client.CompleteShellRequest(0);
+            cleanup.SetVoidResult();
+        }
+        await oldLoad;
     }
 
     [Fact]
@@ -1538,10 +1844,10 @@ public sealed class ProcessWorkspaceShellTests
         {
             Assert.Contains(
                 context.JSInterop.Invocations,
-                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.clearAudioQueue");
+                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.clearAudioQueueForOwner");
             Assert.Contains(
                 context.JSInterop.Invocations,
-                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.enqueueAudio");
+                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.enqueueAudioForOwner");
         });
     }
 
@@ -1925,6 +2231,8 @@ public sealed class ProcessWorkspaceShellTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddSingleton<AgentToolPolicyCatalog>();
+        context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(new FixedAgentExecutionProfileGenerationSource(new(0)));
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
@@ -2164,6 +2472,11 @@ public sealed class ProcessWorkspaceShellTests
         IAgentFrameworkWorkspaceService? workspaceService,
         IAgentChatContextRegistry contextRegistry) : IAgentChatExecutionOrchestrator
     {
+        public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunResult> Completion) StartRunRecovery(
+            Guid agentId, Guid chatSessionId, Guid executionRunId, AgentExecutionActivityStreamId rejectedStreamId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("This Process workspace fixture does not recover Agent runs.");
+
         public AgentChatSendRequest? LastSendRequest { get; private set; }
 
         public AgentChatContextSnapshot? LastCapturedContext { get; private set; }
@@ -2410,6 +2723,10 @@ public sealed class ProcessWorkspaceShellTests
         public string LastWorkspaceSessionTitle { get; private set; } = string.Empty;
 
         public int SessionCount => sessions.Count;
+        public TaskCompletionSource? WorkspaceReadPause { get; set; }
+        public TaskCompletionSource WorkspaceReadEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<ExecutionRunDetail>? ExecutionDetailResponse { get; set; }
+        public TaskCompletionSource ExecutionDetailEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(
             bool includeTemplates = true,
@@ -2466,7 +2783,7 @@ public sealed class ProcessWorkspaceShellTests
             return Task.FromResult(sessions[sessionIndex]);
         }
 
-        public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(
+        public async Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(
             Guid agentId,
             Guid? preferredSessionId = null,
             CancellationToken cancellationToken = default)
@@ -2479,7 +2796,7 @@ public sealed class ProcessWorkspaceShellTests
                     .FirstOrDefault();
             LastWorkspaceSessionId = selectedSession?.Id;
             LastWorkspaceSessionTitle = selectedSession?.Title ?? string.Empty;
-            return Task.FromResult(new ChatAgentWorkspaceSnapshot(
+            var snapshot = new ChatAgentWorkspaceSnapshot(
                 agentId,
                 sessions
                     .Where(session => session.AgentId == agentId)
@@ -2492,7 +2809,12 @@ public sealed class ProcessWorkspaceShellTests
                 SelectedRun = selectedSession is null || pendingApprovals.Count == 0
                     ? null
                     : CreatePendingExecutionRun(selectedSession)
-            });
+            };
+            if (WorkspaceReadPause is { } pause) {
+                WorkspaceReadEntered.TrySetResult();
+                await pause.Task.WaitAsync(cancellationToken);
+            }
+            return snapshot;
         }
 
         private ExecutionRunRecord CreatePendingExecutionRun(ChatSessionRecord session)
@@ -2703,7 +3025,10 @@ public sealed class ProcessWorkspaceShellTests
             AgentExecutionReportQuery query,
             CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default) {
+            ExecutionDetailEntered.TrySetResult();
+            return ExecutionDetailResponse?.Task.WaitAsync(cancellationToken) ?? throw Unused();
+        }
 
         public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
 
@@ -2773,6 +3098,10 @@ public sealed class ProcessWorkspaceShellTests
     private sealed class RecordingAgentVoiceService : IAgentVoiceService
     {
         public List<AgentVoiceSynthesisRequest> SynthesisRequests { get; } = [];
+        public TaskCompletionSource<AgentVoiceTranscriptionResult>? TranscriptionResponse { get; set; }
+        public TaskCompletionSource TranscriptionEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource? SynthesisTerminalPause { get; set; }
+        public TaskCompletionSource SynthesisTerminalEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default) => throw Unused();
 
@@ -2782,8 +3111,11 @@ public sealed class ProcessWorkspaceShellTests
 
         public Task<AgentVoiceTranscriptionResult> TranscribeAsync(
             AgentVoiceTranscriptionRequest request,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(new AgentVoiceTranscriptionResult("Tell me about the selected run cost and tokens.", "test-stt"));
+            CancellationToken cancellationToken = default) {
+            TranscriptionEntered.TrySetResult();
+            return TranscriptionResponse?.Task.WaitAsync(cancellationToken)
+                ?? Task.FromResult(new AgentVoiceTranscriptionResult("Tell me about the selected run cost and tokens.", "test-stt"));
+        }
 
         public Task<AgentVoiceSynthesisResult> SynthesizeAsync(
             AgentVoiceSynthesisRequest request,
@@ -2806,11 +3138,15 @@ public sealed class ProcessWorkspaceShellTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(CreateSynthesisResult(new AgentVoiceSynthesisRequest(sampleText ?? "sample")));
 
-        private static async IAsyncEnumerable<AgentVoiceSynthesisResult> EnumerateSynthesisResult(
+        private async IAsyncEnumerable<AgentVoiceSynthesisResult> EnumerateSynthesisResult(
             AgentVoiceSynthesisResult result)
         {
             await Task.Yield();
             yield return result;
+            if (SynthesisTerminalPause is { } pause) {
+                SynthesisTerminalEntered.TrySetResult();
+                await pause.Task;
+            }
         }
 
         private static AgentVoiceSynthesisResult CreateSynthesisResult(AgentVoiceSynthesisRequest request)
@@ -2834,7 +3170,7 @@ public sealed class ProcessWorkspaceShellTests
         string panelTestId)
     {
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{tabTestId}']")));
-        cut.Find($"[data-testid='{tabTestId}']").Click();
+        cut.InvokeAsync(() => cut.Find($"[data-testid='{tabTestId}']").Click()).GetAwaiter().GetResult();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{panelTestId}']")));
     }
 
@@ -3160,7 +3496,9 @@ public sealed class ProcessWorkspaceShellTests
                 CreateAgentEntry(request))
             {
                 Runtime = runtime,
-                Provenance = provenance
+                Provenance = provenance,
+                ProjectBinding = request.Scope.ProjectId is { } projectId
+                    ? new(Guid.Parse("aaaaaaaa-1111-1111-1111-111111111111"), projectId, Guid.Parse("bbbbbbbb-2222-2222-2222-222222222222")) : null
             };
         }
 

@@ -43,7 +43,7 @@ public sealed class FileAccessAuthorizationTests
                     maximumMetadataProbes: 10,
                     maximumConcurrentMetadataProbes: 1,
                     maximumDuration: TimeSpan.FromSeconds(2))),
-            fixture.Storage,
+            fixture.Storage.ToDriverInput(),
             browseDriver);
         FileBrowserItem root = await provider.GetRootAsync(FileBrowserMetadataRequest.Standard);
         FileBrowserPage page = await provider.BrowseAsync(new FileBrowserBrowseRequest(
@@ -97,7 +97,7 @@ public sealed class FileAccessAuthorizationTests
                     maximumConcurrentMetadataProbes: 1,
                     maximumDuration: TimeSpan.FromSeconds(2)),
                 new FileToolsStorageRoot("allowed")),
-            fixture.Storage,
+            fixture.Storage.ToDriverInput(),
             browseDriver);
         FileBrowserItem root = await provider.GetRootAsync(FileBrowserMetadataRequest.Standard);
         FileBrowserPage page = await provider.BrowseAsync(new FileBrowserBrowseRequest(
@@ -638,7 +638,7 @@ public sealed class FileAccessAuthorizationTests
             StorageCapability.Read | StorageCapability.Write | StorageCapability.MutableUpdate;
 
         public Task<Stream> OpenReadAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
         {
@@ -647,13 +647,13 @@ public sealed class FileAccessAuthorizationTests
         }
 
         public Task<StorageContentRevision?> GetRevisionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => Task.FromResult<StorageContentRevision?>(new StorageContentRevision(Revision));
 
         public Task<StorageRevisionedWriteResult> ReplaceAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageRevisionedWriteRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -675,19 +675,19 @@ public sealed class FileAccessAuthorizationTests
         }
 
         public Task<StorageConnectionTestResult> TestConnectionAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<StorageWriteResult> SaveAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageWriteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -751,7 +751,7 @@ public sealed class FileAccessAuthorizationTests
             maximumDuration: TimeSpan.FromSeconds(2));
 
         public Task<StorageBrowsePage> BrowseAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -779,7 +779,7 @@ public sealed class FileAccessAuthorizationTests
         }
 
         public Task<StorageBrowseEntry> StatAsync(
-            StorageCatalogRecord storage,
+            StorageDriverInput storage,
             StorageBrowseStatRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -807,27 +807,56 @@ public sealed class FileAccessAuthorizationTests
     {
         public bool IsAvailable { get; set; } = true;
 
-        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord?> ReadRecordAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult<StorageCatalogRecord?>(IsAvailable && id == storage.Id ? storage : null);
 
-        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+        private Task<IReadOnlyList<StorageCatalogRecord>> ReadRecordsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>(IsAvailable ? [storage] : []);
 
-        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> ReadBootstrapRecordAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(storage);
 
-        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+        private Task<StorageCatalogRecord> SaveRecordAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
             => Task.FromResult(record);
 
         public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+        internal Task<IReadOnlyList<StorageRoutingRule>> ReadRoutingRecordsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
 
-        public Task<StorageRoutingRule> SaveRuleAsync(
+        private Task<StorageRoutingRule> SaveRoutingRecordAsync(
             StorageRoutingRule rule,
             CancellationToken cancellationToken = default)
             => Task.FromResult(rule);
+        public async Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToSnapshot();
+
+        public async Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default) =>
+            (await ReadRecordAsync(id, cancellationToken))?.ToDriverInput();
+
+        public async Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+            var row = await ReadRecordAsync(id, cancellationToken);
+            return row is null ? null : new(row.ToSnapshot(), StorageJson.ParseProviderConfiguration(row.ConfigJson));
+        }
+
+        public async Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default) =>
+            (await ReadBootstrapRecordAsync(cancellationToken)).ToDriverInput();
+
+        public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
+            (await ReadRoutingRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
+
+        public async Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest request, CancellationToken cancellationToken = default) =>
+            (await SaveRoutingRecordAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken)).ToSnapshot();
+
+        public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
     }
 
     private sealed class CapturingLoggerProvider : ILoggerProvider

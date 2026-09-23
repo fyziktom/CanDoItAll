@@ -107,6 +107,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<ISecretRedactor, SecretRedactor>();
         services.AddSingleton<IControlPlanePathResolver, ControlPlanePathResolver>();
         services.AddSingleton<IApiTokenRegistry, FileApiTokenRegistry>();
+        services.AddSingleton<IApiUserStore, FileApiUserStore>();
         services.AddSingleton<IFileApplicationPreferenceService, FileApplicationPreferenceService>();
         services.AddSingleton<IControlPlaneSecretProtector, ControlPlaneSecretProtector>();
         services.AddSingleton<DatabaseProfileControlPlaneService>();
@@ -114,6 +115,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IControlPlaneSecretContinuityVerifier>(serviceProvider =>
             serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
         services.AddScoped<IDatabaseTransferService, DatabaseTransferService>();
+        services.AddScoped<DatabaseTransferOwnerSessionRunner>();
+        services.AddScoped<ProjectTransferTargetInspectionRunner>();
+        services.AddScoped<DatabaseTransferOperationRunner>();
+        services.AddScoped<StorageProfileTransferService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             InfrastructureProjectTransferTargetStateParticipant>());
@@ -122,6 +127,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IDatabaseRuntimeWriteFence>(serviceProvider =>
             (DatabaseRuntimeState)serviceProvider.GetRequiredService<IDatabaseRuntimeState>());
         services.AddSingleton<ICanonicalRuntimeDatabase, CanonicalRuntimeDatabase>();
+        services.AddSingleton<CoordinatedDatabaseTransaction>();
         services.AddSingleton<CanonicalDatabaseProfileRuntimeAccessor>();
         services.AddSingleton<IActiveDatabaseProfileResolver>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());
         services.AddSingleton<IDatabaseProfileRuntimeAccessor>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());
@@ -135,6 +141,18 @@ public static class InfrastructureServiceCollectionExtensions
             var canonicalRuntimeDatabase = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
             AppDbContextOptionsConfigurator.Configure(optionsBuilder, canonicalRuntimeDatabase.Profile);
         });
+        services.AddPooledDbContextFactory<BackgroundJobsDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
+        services.AddPooledDbContextFactory<SearchDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
+        services.AddPooledDbContextFactory<StorageDbContext>((serviceProvider, optionsBuilder) => {
+            var database = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, database.Profile);
+        });
         services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
@@ -143,6 +161,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.AddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.AddSingleton<StorageCatalogService>();
+        services.AddScoped<StorageObjectDeletionService>();
         services.AddSingleton<IStorageCatalogService>(provider =>
             provider.GetRequiredService<StorageCatalogService>());
         services.AddSingleton<IStorageCatalogPathMigrationService>(provider =>
@@ -161,6 +180,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IStorageRoutingService, DefaultStorageRoutingService>();
         services.AddSingleton<IStorageConnectionTestService, StorageConnectionTestService>();
         services.AddSingleton<IStorageAccessService, StorageAccessService>();
+        services.AddSingleton<StorageStablePlacementService>();
         services.AddSingleton<StoragePlacementService>();
         services.AddSingleton<IStoragePlacementService>(provider =>
             provider.GetRequiredService<StoragePlacementService>());
@@ -171,7 +191,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IRuntimeReadinessService, RuntimeReadinessService>();
         services.AddSingleton<IPathFoundationReadinessProbe, PathFoundationReadinessProbe>();
         services.AddScoped<IBackgroundJobTracker, BackgroundJobTracker>();
-        services.AddScoped<ISearchIndexService, SearchIndexService>();
+        services.AddScoped<SearchIndexService>();
+        services.AddScoped<SearchProjectionStore>();
+        services.AddScoped<ISearchIndexService>(provider => provider.GetRequiredService<SearchIndexService>());
 
         services.AddHealthChecks()
             .AddCheck<RuntimeReadinessHealthCheck>("runtime-readiness");

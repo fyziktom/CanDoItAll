@@ -4,7 +4,7 @@
 
 <FormSection Title="Share this provider"
              Description="Publish this local provider through the instance's sanitized catalog and OpenAI-compatible relay.">
-    @if (State.Publication is { } publication && State.Eligibility is { } eligibility)
+    @if (State.Eligibility is { } eligibility)
     {
         <Stack GapScale="LayoutGap.Medium">
             <Split Breakpoint="LayoutBreakpoint.None"
@@ -14,14 +14,14 @@
                    Wrap="FlexWrap.Wrap">
                 <Cluster Gap="LayoutGap.Small">
                     <StatusBadge Tone="info" Text="Local" />
-                    <StatusBadge Tone="@(publication.IsPublished ? "success" : "neutral")"
-                                 Text="@(publication.IsPublished ? "Published" : "Not published")"
+                    <StatusBadge Tone="@(State.Publication?.IsPublished == true ? "success" : "neutral")"
+                                 Text="@(State.Publication?.IsPublished == true ? "Published" : "Not published")"
                                  data-testid="shared-provider-publication-status" />
                     <StatusBadge Tone="@(eligibility.IsEligible ? "success" : "warning")"
                                  Text="@(eligibility.IsEligible ? "Eligible" : "Ineligible")"
                                  data-testid="shared-provider-eligibility-status" />
                 </Cluster>
-                @if (publication.IsPublished)
+                @if (State.Publication?.IsPublished == true)
                 {
                     <Button Text="Unpublish"
                             ButtonStyle="ButtonStyle.Danger"
@@ -47,10 +47,15 @@
                 @eligibility.SanitizedReason
             </Alert>
 
+            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" data-testid="shared-provider-identity-policy">
+                @(State.Publication is null
+                    ? "Publishing creates a permanent public identity. After publishing, this provider can be unpublished but cannot be deleted."
+                    : "This public identity is permanent. Unpublish stops sharing; provider deletion remains blocked.")
+            </Alert>
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                 <SurfaceCard Soft="true">
                     <p class="cda-eyebrow">Public identity</p>
-                    <p class="break-all font-mono text-xs" data-testid="shared-provider-public-id">@publication.PublicId.Value.ToString("D")</p>
+                    <p class="break-all font-mono text-xs" data-testid="shared-provider-public-id">@(State.Publication?.PublicId.Value.ToString("D") ?? "Created by the first Publish")</p>
                 </SurfaceCard>
                 <SurfaceCard Soft="true">
                     <p class="cda-eyebrow">Discovery routes</p>

@@ -264,7 +264,7 @@ internal sealed class AgentExternalProvisioningService(
             var archivedAgent = agent with
             {
                 Status = AgentLifecycleStatus.Archived,
-                UpdatedAtUtc = now
+                UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
             };
             var archivedBinding = binding with
             {

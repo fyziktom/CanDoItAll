@@ -18,7 +18,7 @@ public sealed class CrmHrSensitiveDataFlowTests
     [Fact]
     public async Task Sensitive_directory_and_workforce_flows_preserve_privacy_markers_and_audit_history()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b12";
+        var evidenceDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "evidence", "crm-hr", "b12");
         Directory.CreateDirectory(evidenceDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -36,7 +36,7 @@ public sealed class CrmHrSensitiveDataFlowTests
         var partyId = await SeedSensitivePartyAsync(partyName, confidentialNote);
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/directory?partyId={partyId}");
-        await DismissStartupModalIfPresentAsync(page);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("crmhr-party-save-button").WaitForAsync();
 
         await page.GetByTestId("crmhr-directory-tab-handling").ClickAsync();
@@ -48,11 +48,16 @@ public sealed class CrmHrSensitiveDataFlowTests
         await page.GetByTestId("crmhr-directory-tab-profile").ClickAsync();
         await page.GetByTestId("crmhr-party-status").SelectOptionAsync(new[] { PartyLifecycleStatus.Archived.ToString() });
         await SavePartyAsync(page);
-        await ExpectTextContainsAsync(page.Locator("body"), $"Archived party '{partyName}'.");
+        await page.GetByTestId("crmhr-directory-tab-activity").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("crmhr-directory-activity-item")
+            .GetByText($"Archived party '{partyName}'.", new() { Exact = true })).ToBeVisibleAsync();
 
+        await page.GetByTestId("crmhr-directory-tab-profile").ClickAsync();
         await page.GetByTestId("crmhr-party-status").SelectOptionAsync(new[] { PartyLifecycleStatus.Active.ToString() });
         await SavePartyAsync(page);
-        await ExpectTextContainsAsync(page.Locator("body"), $"Reactivated party '{partyName}'.");
+        await page.GetByTestId("crmhr-directory-tab-activity").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("crmhr-directory-activity-item")
+            .GetByText($"Reactivated party '{partyName}'.", new() { Exact = true })).ToBeVisibleAsync();
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         await page.GetByTestId("crmhr-directory-tab-handling").ClickAsync();
@@ -74,6 +79,7 @@ public sealed class CrmHrSensitiveDataFlowTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/workforce?partyId={partyId}");
+        await page.GetByTestId("crmhr-workforce-create-profile").ClickAsync();
         await page.GetByTestId("crmhr-workforce-tab-profile").WaitForAsync();
         await page.GetByTestId("crmhr-workforce-tab-profile").ClickAsync();
         await page.GetByTestId("crmhr-workforce-job-title").WaitForAsync();
@@ -250,27 +256,6 @@ public sealed class CrmHrSensitiveDataFlowTests
         throw new TimeoutException($"Timed out waiting for text '{expectedValue}'.");
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
-    }
 
     private static async Task WaitForUrlContainsAsync(IPage page, string fragment, int timeoutMs = 10_000)
     {

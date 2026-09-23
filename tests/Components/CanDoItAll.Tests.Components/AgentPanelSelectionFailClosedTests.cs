@@ -33,7 +33,7 @@ public sealed class AgentPanelSelectionFailClosedTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Same(availableAgent, selectedAgents.Last());
+            Assert.Equivalent(availableAgent, selectedAgents.Last());
             Assert.Equal(AgentChatContextAccessState.Ready, accessStates.Last());
         });
 
@@ -153,6 +153,9 @@ public sealed class AgentPanelSelectionFailClosedTests
     private static BunitContext CreateChatTestContext(WorkspaceServiceProxy workspace)
     {
         var context = CreateBaseTestContext(workspace.Service);
+        context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(new FixedAgentExecutionProfileGenerationSource(new(0)));
+        context.Services.AddSingleton<AgentToolPolicyCatalog>();
+        context.Services.AddSingleton<IAgentCapabilitiesReads, AgentCapabilitiesReads>();
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentVoiceService, UnexpectedCallProxy>());
         context.Services.AddSingleton(
@@ -171,6 +174,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         IAgentChatLauncher? launcher = null)
     {
         var context = CreateBaseTestContext(workspace.Service);
+        context.Services.AddAgentFrameworkUi();
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentCapabilitySetupFlowService, UnexpectedCallProxy>());
         context.Services.AddSingleton(

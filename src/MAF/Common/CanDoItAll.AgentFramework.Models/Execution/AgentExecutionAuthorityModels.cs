@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace CanDoItAll.AgentFramework.Models;
 
 /// <summary>
-/// Identifies one resolved execution authority snapshot.
+/// Identifier of one resolved execution authority snapshot, as an object whose <c>value</c> is a GUID.
 /// </summary>
 public readonly record struct AgentExecutionAuthorityId
 {
@@ -20,8 +20,10 @@ public readonly record struct AgentExecutionAuthorityId
         Value = value;
     }
 
+    /// <summary>The authority snapshot GUID.</summary>
     public Guid Value { get; }
 
+    /// <summary>Computed: true when <c>value</c> is the all-zero GUID.</summary>
     public bool IsEmpty => Value == Guid.Empty;
 
     public static AgentExecutionAuthorityId Create()
@@ -44,7 +46,8 @@ public readonly record struct AgentExecutionAuthorityId
 /// </summary>
 public sealed record AgentExecutionAuthorityRecord
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int LegacySchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public const int MaximumAllowedEntryCount = 500;
     public const int MaximumEntryLength = 200;
 
@@ -64,7 +67,8 @@ public sealed record AgentExecutionAuthorityRecord
         IReadOnlyList<string>? allowedCapabilityKeys = null,
         IReadOnlyList<string>? allowedExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
-        int schemaVersion = CurrentSchemaVersion)
+        int schemaVersion = LegacySchemaVersion,
+        AgentProjectStructureLifetime? sourceProjectLifetime = null)
     {
         if (authorityId.IsEmpty)
         {
@@ -98,13 +102,15 @@ public sealed record AgentExecutionAuthorityRecord
                 nameof(policyFingerprint));
         }
 
-        if (schemaVersion <= 0)
+        if (schemaVersion is not (LegacySchemaVersion or CurrentSchemaVersion))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(schemaVersion),
                 schemaVersion,
-                "An authority schema version must be positive.");
+                "The authority schema version is unsupported.");
         }
+
+        ValidateSourceLifetime(schemaVersion, sourceProjectLifetime, databaseProfileId, workspaceScope);
 
         AuthorityId = authorityId;
         AgentId = agentId;
@@ -122,6 +128,7 @@ public sealed record AgentExecutionAuthorityRecord
         AllowedExternalTargetAliases = NormalizeEntries(allowedExternalTargetAliases, nameof(allowedExternalTargetAliases));
         ReadOnlyExternalTargetAliases = NormalizeEntries(readOnlyExternalTargetAliases, nameof(readOnlyExternalTargetAliases));
         SchemaVersion = schemaVersion;
+        SourceProjectLifetime = sourceProjectLifetime;
     }
 
     public AgentExecutionAuthorityId AuthorityId { get; }
@@ -155,6 +162,19 @@ public sealed record AgentExecutionAuthorityRecord
     public IReadOnlyList<string> ReadOnlyExternalTargetAliases { get; }
 
     public int SchemaVersion { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentProjectStructureLifetime? SourceProjectLifetime { get; }
+
+    internal static void ValidateSourceLifetime(int schemaVersion, AgentProjectStructureLifetime? lifetime,
+        Guid databaseProfileId, WorkspaceScopeDescriptor scope) {
+        if (schemaVersion is not (LegacySchemaVersion or CurrentSchemaVersion) ||
+                schemaVersion == LegacySchemaVersion && lifetime is not null ||
+                schemaVersion == CurrentSchemaVersion && scope.Kind == WorkspaceScopeKind.Project && lifetime is null ||
+                lifetime is not null && !lifetime.MatchesScope(databaseProfileId, scope)) {
+            throw new ArgumentException("The authority source lifetime does not match its schema, database profile and workspace scope.");
+        }
+    }
 
     private static ImmutableArray<string> NormalizeEntries(
         IReadOnlyList<string>? entries,

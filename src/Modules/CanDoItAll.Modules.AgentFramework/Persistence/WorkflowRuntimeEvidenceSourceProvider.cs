@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class WorkflowRuntimeEvidenceSourceProvider(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IWorkflowRuntimeEvidenceSourceProvider
+    IDbContextFactory<WorkflowDbContext> dbContextFactory) : IWorkflowRuntimeEvidenceSourceProvider
 {
     public async Task<MemorySourceSnapshot> ReadSnapshotAsync(
         WorkflowRuntimeEvidenceSourceRequest request,
@@ -29,7 +29,8 @@ public sealed class WorkflowRuntimeEvidenceSourceProvider(
                     MapRun),
                 CreateSource(
                     MemorySourceEntityKind.WorkflowEvent,
-                    FilterByRunId(dbContext.Set<WorkflowEventRecordEntity>().AsNoTracking(), runId),
+                    FilterByRunId(dbContext.Set<WorkflowEventRecordEntity>().AsNoTracking()
+                        .Where(row => row.Kind != WorkflowEventKind.ProviderReadEvidence), runId),
                     item => item.Id,
                     MapEvent),
                 CreateSource(

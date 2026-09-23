@@ -49,12 +49,14 @@ public sealed class ProjectStructurePersonTaskResourceCostStrategy(
         };
         var amount = decimal.Round(quantity * costRate.Rate, 2, MidpointRounding.AwayFromZero);
         var unitLabel = costRate.Unit == ProjectResourceRateUnit.Hour ? "hour" : "man-day";
+        // The quote travels to agents and plan surfaces; the person's rate is CRM-owned and privacy-filtered there,
+        // so the summary names the basis and quantity but never spells the rate out.
         return new ProjectStructureTaskResourceCostQuote(
             ProjectStructureTaskResourceCostQuoteStatus.Available,
             amount,
             costRate.CurrencyCode,
             Source,
-            $"Calculated from {quantity:0.##} {unitLabel}(s) at {costRate.CurrencyCode} {costRate.Rate:0.##} per {unitLabel}.",
+            $"Calculated from {quantity:0.##} {unitLabel}(s) at the CRM workforce rate per {unitLabel}.",
             calculatedAtUtc,
             ProjectStructureTaskResourceCostSource.CrmWorkforceRate);
     }

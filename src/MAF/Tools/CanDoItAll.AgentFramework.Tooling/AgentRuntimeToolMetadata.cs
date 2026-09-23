@@ -1,4 +1,13 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.AgentFramework.Tooling;
+
+public enum AgentRuntimeToolRecoveryPolicy {
+    Default,
+    ReconcileBeforeRetry
+}
 
 public sealed record AgentRuntimeToolMetadata
 {
@@ -16,6 +25,17 @@ public sealed record AgentRuntimeToolMetadata
         OwnershipTags = NormalizeOwnershipTags(ownershipTags);
     }
 
+    [JsonIgnore]
+    public Func<JsonElement, AgentToolPreparedPayload>? PrepareAdmission { get; init; }
+
+    [JsonIgnore]
+    public Func<AgentToolPreparedPayload, CancellationToken, ValueTask<IAsyncDisposable>>? AuthorizeAdmissionAsync { get; init; }
+
+    [JsonIgnore]
+    public Func<AgentToolResultDisclosure, CancellationToken, ValueTask<IAsyncDisposable?>>? AuthorizeResultDisclosureAsync { get; init; }
+
+    public AgentRuntimeToolUnavailability? Unavailability { get; init; }
+
     public string ProviderKey { get; }
 
     public string ToolName { get; }
@@ -23,6 +43,12 @@ public sealed record AgentRuntimeToolMetadata
     public AgentRuntimeToolOperationKind OperationKind { get; }
 
     public bool RequiresApprovalByDefault { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public AgentRuntimeToolRecoveryPolicy RecoveryPolicy {
+        get;
+        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value));
+    }
 
     public IReadOnlyList<string> OwnershipTags { get; }
 

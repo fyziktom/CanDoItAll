@@ -38,6 +38,24 @@ public sealed record SharedProviderCatalogSnapshot
     public SharedProviderCatalogDocument Catalog { get; }
 
     public SharedProviderCatalogEntityTag EntityTag { get; }
+
+    public SharedProviderCatalogSnapshot WithoutImageInputPrices() {
+        if (!Catalog.Providers.SelectMany(provider => provider.Models).Any(model =>
+                model.Price?.ImageInputPerMillionTokensUsd is not null || model.Price?.CachedImageInputPerMillionTokensUsd is not null)) {
+            return this;
+        }
+        var publications = Catalog.Providers.Select(provider => {
+            var publication = provider with {
+                Models = provider.Models.Select(model => model.Price is not { } price ? model : model with {
+                    Price = price with { ImageInputPerMillionTokensUsd = null, CachedImageInputPerMillionTokensUsd = null }
+                }).ToArray()
+            };
+            return publication with { Revision = SharedProviderCanonicalRevision.ComputePublication(publication) };
+        }).ToArray();
+        var catalog = Catalog with { Providers = publications };
+        catalog = catalog with { CatalogRevision = SharedProviderCanonicalRevision.ComputeCatalog(catalog) };
+        return new(catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision));
+    }
 }
 
 public sealed class SharedProviderCatalogProjection
@@ -76,6 +94,7 @@ public sealed class SharedProviderCatalogProjection
 public static class SharedProviderPublicHealthMapper
 {
     public const string HealthyStatus = "Healthy";
+    public const string UnhealthyStatus = "Unhealthy";
 
     public static SharedProviderHealthState Map(ProviderProfile profile)
     {

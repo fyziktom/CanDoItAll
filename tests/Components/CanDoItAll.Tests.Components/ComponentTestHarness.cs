@@ -35,59 +35,57 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
     public static async Task<ComponentTestHarness> CreateAsync(
         Action<IServiceCollection>? configureServices = null,
-        TestHarnessOptions? options = null)
-    {
-        if (options?.ActiveProfile is not null && options.TestEnvironment is null)
-        {
+        TestHarnessOptions? options = null) {
+        if (options?.ActiveProfile is not null && options.TestEnvironment is null) {
             throw new InvalidOperationException("TestEnvironment must be supplied when ActiveProfile is provided.");
         }
 
         var ownsTestEnvironment = options?.TestEnvironment is null;
         var testEnvironment = options?.TestEnvironment ?? CanDoItAllTestEnvironment.Create("candoitall-component-tests");
-        var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
+        BunitContext? context = null;
+        try {
+            var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
+            context = new BunitContext();
+            context.JSInterop.Mode = JSRuntimeMode.Loose;
+            context.AddAuthorization();
+            var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 
-        var context = new BunitContext();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
-        context.AddAuthorization();
-        var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
+            TestApplicationBootstrap.ConfigureDefaultServices(
+                context.Services,
+                configuration,
+                testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Components"));
+            context.Services.AddAgentFrameworkUi();
+            context.Services.AddScoped<TuningCoordinator>();
+            context.Services.AddHttpClient<DevelopmentManagerClient>();
+            configureServices?.Invoke(context.Services);
 
-        TestApplicationBootstrap.ConfigureDefaultServices(
-            context.Services,
-            configuration,
-            testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Components"));
-        context.Services.AddAgentFrameworkUi();
-        context.Services.AddScoped<TuningCoordinator>();
-        context.Services.AddHttpClient<DevelopmentManagerClient>();
-        configureServices?.Invoke(context.Services);
-
-        if (string.IsNullOrWhiteSpace(configuration["Database:Provider"]) &&
-            string.IsNullOrWhiteSpace(configuration["Database:ConnectionString"]))
-        {
-            await using var setupScope = context.Services.CreateAsyncScope();
-            var profileService = setupScope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
-            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
-                activeProfile,
-                "PostgreSQL bootstrap"));
-            if (saveResult.IsFailure)
-            {
-                throw new InvalidOperationException(string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+            if (string.IsNullOrWhiteSpace(configuration["Database:Provider"]) &&
+                string.IsNullOrWhiteSpace(configuration["Database:ConnectionString"])) {
+                await using var setupScope = context.Services.CreateAsyncScope();
+                var profileService = setupScope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
+                var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                    activeProfile,
+                    "PostgreSQL bootstrap"));
+                if (saveResult.IsFailure) {
+                    throw new InvalidOperationException(string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+                }
             }
+
+            await TestApplicationBootstrap.InitializeSchemaAsync(
+                context.Services,
+                options?.SchemaModules ?? TestSchemaBootstrapModules.Default);
+
+            return new ComponentTestHarness(testEnvironment, ownsTestEnvironment, activeProfile, context);
+        } catch (Exception failure) {
+            await TestFixtureCleanup.DisposeAfterFailureAsync(
+                failure,
+                context,
+                ownsTestEnvironment ? testEnvironment : null);
+            throw;
         }
-
-        await TestApplicationBootstrap.InitializeSchemaAsync(
-            context.Services,
-            options?.SchemaModules ?? TestSchemaBootstrapModules.Default);
-
-        return new ComponentTestHarness(testEnvironment, ownsTestEnvironment, activeProfile, context);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await Context.DisposeAsync();
-
-        if (_ownsTestEnvironment)
-        {
-            await TestEnvironment.DisposeAsync();
-        }
+    public ValueTask DisposeAsync() {
+        return TestFixtureCleanup.DisposeAsync(Context, _ownsTestEnvironment ? TestEnvironment : null);
     }
 }

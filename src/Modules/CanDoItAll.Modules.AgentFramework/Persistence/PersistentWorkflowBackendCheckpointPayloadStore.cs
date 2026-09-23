@@ -13,12 +13,12 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
     internal const string DataProtectionPurpose =
         "CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayload.v1";
 
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<WorkflowDbContext> dbContextFactory;
     private readonly IDataProtector payloadProtector;
     private readonly TimeProvider timeProvider;
 
     public PersistentWorkflowBackendCheckpointPayloadStore(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkflowDbContext> dbContextFactory,
         IDataProtectionProvider dataProtectionProvider,
         TimeProvider timeProvider)
     {
@@ -194,7 +194,7 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
     }
 
     private static async Task<WorkflowBackendCheckpointSessionEntity> EnsureAndLockSessionAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowBackendCheckpointSession session,
         CancellationToken cancellationToken)
     {
@@ -246,7 +246,7 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
     }
 
     private static Task<bool> CheckpointExistsAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowBackendCheckpointLink parent,
         CancellationToken cancellationToken)
         => dbContext.Set<WorkflowBackendCheckpointPayloadEntity>()

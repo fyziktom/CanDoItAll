@@ -46,7 +46,7 @@ public sealed class WorkflowProjectStructureReportPersistenceIntegrationTests
             await dbContext.SaveChangesAsync();
         }
 
-        var store = new PersistentWorkflowRunStore(new TestDbContextFactory(options));
+        var store = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(new TestDbContextFactory(options)));
         var report = await store.QueryProjectStructureReportAsync(
             new WorkflowProjectStructureReportQuery(
                 [projectId],

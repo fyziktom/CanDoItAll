@@ -1,5 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
-
 namespace CanDoItAll.Infrastructure.ControlPlane;
 
 public sealed record DatabaseTransferItemDescriptor(
@@ -26,8 +24,7 @@ public sealed record DatabaseTransferItemPreview(
     int SourceRecordCount,
     int TargetRecordCount);
 
-public sealed class DatabaseTransferRequest
-{
+public sealed class DatabaseTransferRequest {
     public Guid SourceProfileId { get; set; }
 
     public Guid TargetProfileId { get; set; }
@@ -47,35 +44,30 @@ public sealed record DatabaseTransferItemResult(
 public sealed record DatabaseTransferResult(
     Guid SourceProfileId,
     Guid TargetProfileId,
-    IReadOnlyList<DatabaseTransferItemResult> Items)
-{
+    IReadOnlyList<DatabaseTransferItemResult> Items) {
     public bool IsSuccess => Items.Count > 0 && Items.All(item => item.Success);
 
     public int RecordsCopied => Items.Sum(item => Math.Max(0, item.RecordsCopied));
 }
 
-public sealed record DatabaseTransferContext(
+public sealed record DatabaseTransferOperation(
     ResolvedDatabaseProfile SourceProfile,
     ResolvedDatabaseProfile TargetProfile,
-    AppDbContext SourceDbContext,
-    AppDbContext TargetDbContext,
     bool ReplaceExisting);
 
-public interface IDatabaseTransferHandler
-{
+public interface IDatabaseTransferHandler {
     DatabaseTransferItemDescriptor Descriptor { get; }
 
     Task<DatabaseTransferItemPreview> PreviewAsync(
-        DatabaseTransferContext context,
+        DatabaseTransferOperation context,
         CancellationToken cancellationToken = default);
 
     Task<DatabaseTransferItemResult> TransferAsync(
-        DatabaseTransferContext context,
+        DatabaseTransferOperation context,
         CancellationToken cancellationToken = default);
 }
 
-public interface IDatabaseTransferService
-{
+public interface IDatabaseTransferService {
     Task<IReadOnlyList<DatabaseTransferSourceSummary>> ListSourcesAsync(
         Guid targetProfileId,
         CancellationToken cancellationToken = default);

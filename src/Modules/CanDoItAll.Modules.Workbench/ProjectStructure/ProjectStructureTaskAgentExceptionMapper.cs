@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.Modules.Workbench;
 
 public static class ProjectStructureTaskAgentExceptionMapper
@@ -29,11 +31,13 @@ public static class ProjectStructureTaskAgentExceptionMapper
             ProjectStructureTaskDetailsErrorCode.AssignmentCompensationFailed => 500,
             _ => 500
         };
-        return new ProjectStructureAgentException(
+        return MapTaskRejection(
             statusCode,
             exception.Code.ToString(),
             exception.Message,
-            new { exception.Code });
+            new { exception.Code },
+            exception,
+            correctable: exception.Code is not ProjectStructureTaskDetailsErrorCode.AssignmentCompensationFailed);
     }
 
     public static ProjectStructureAgentException Map(ProjectStructureGanttMutationException exception)
@@ -50,10 +54,35 @@ public static class ProjectStructureTaskAgentExceptionMapper
             ProjectStructureGanttMutationErrorCode.CycleDetected => 409,
             _ => 400
         };
-        return new ProjectStructureAgentException(
+        return MapTaskRejection(
             statusCode,
             exception.Code.ToString(),
             exception.Message,
-            new { exception.Code });
+            new { exception.Code },
+            exception,
+            correctable: true);
+    }
+
+    // Task and schedule rejections are decided before the Gantt mutation saves. They prove no effect only while the
+    // tool invocation has saved no project row, for example before an assignee change was committed and compensated.
+    private static ProjectStructureAgentException MapTaskRejection(
+        int statusCode,
+        string errorCode,
+        string message,
+        object details,
+        Exception exception,
+        bool correctable)
+    {
+        var provenNoEffect = correctable &&
+                             ProjectStructureToolEffectObservation.Current is { DomainWriteSaved: false };
+        return ProjectStructureAgentException.CreateMapped(
+            statusCode,
+            errorCode,
+            message,
+            details,
+            isSafeToExpose: provenNoEffect,
+            canRetryWithCorrectedInput: provenNoEffect,
+            exception,
+            provenNoEffect ? AgentToolEffectState.NotCommitted : AgentToolEffectState.Unknown);
     }
 }

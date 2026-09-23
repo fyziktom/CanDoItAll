@@ -1,17 +1,20 @@
+using System.Data.Common;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
-public sealed class WorkflowUsagePersistenceIntegrationTests
+public sealed partial class WorkflowUsagePersistenceIntegrationTests
 {
     private static readonly DateTimeOffset RecordedAtUtc = new(2026, 7, 12, 20, 0, 0, TimeSpan.Zero);
 
@@ -27,8 +30,13 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         }
 
         var factory = new WorkflowUsagePostgresDbContextFactory(options);
-        var runStore = new PersistentWorkflowRunStore(factory);
-        var usageStore = new PersistentWorkflowUsageObservationStore(factory, new(new CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter(TimeProvider.System)));
+        var runStore = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory));
+        var history = new HistoryTargetWriteSession(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection
+        }, DatabaseProfileResolutionSource.ExplicitOverride, database.ConnectionString), TimeProvider.System);
+        var usageStore = new PersistentWorkflowUsageObservationStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
+            new(history.Partitions, history.Outbox), history.Transactions);
         var runId = WorkflowRunId.New();
         var workflowId = WorkflowId.New();
         var versionId = WorkflowVersionId.New();
@@ -78,7 +86,10 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
             Origin = origin
         };
 
-        await runStore.SaveRunAsync(run);
+        await using (var legacy = await WorkflowOwnerPersistenceTestFactory.FromCanonical(factory).CreateDbContextAsync()) {
+            legacy.Add(WorkflowRunRecordEntity.FromSnapshot(run));
+            await legacy.SaveChangesAsync();
+        }
         await usageStore.AppendRangeAsync([known, unknown, known]);
         await usageStore.AppendAsync(known);
 
@@ -117,7 +128,10 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         await using var history = await HistoryPersistenceTestDatabase.CreateAsync();
         var interceptor = new FailAfterWorkflowHistorySave(rollback);
         var factory = history.Factory.WithInterceptor(interceptor);
-        var store = new PersistentWorkflowUsageObservationStore(factory, new(history.Outbox));
+        var historyFactory = history.HistoryFactory.WithInterceptor(interceptor);
+        var outbox = new HistoryOutboxWriter(historyFactory.Options, history.Transactions, history.Clock);
+        var store = new PersistentWorkflowUsageObservationStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
+            new(history.Partitions, outbox), history.Transactions);
         var start = history.Start();
         var exact = HistoryAttemptEvidence.Create(start, history.Completion());
         var runId = WorkflowRunId.New();
@@ -147,14 +161,14 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         Assert.Empty(await db.Set<HistoryDetailRow>().ToListAsync());
         var restored = Assert.Single(await store.ListAsync(new() { RunIds = [runId] }));
         Assert.Equal(observation.HistoryEvidence, restored.HistoryEvidence);
-        var adapter = new WorkflowHistorySource(history.Factory, history.Outbox);
+        var adapter = new WorkflowHistorySource(WorkflowOwnerPersistenceTestFactory.FromCanonical(history.Factory), history.Partitions, history.Transactions, history.Outbox);
         var source = new CanonicalEvidenceReference(history.Partition, HistorySourceKind.Workflow,
             new(runId.Value.ToString("N")), new(observation.Id.Value.ToString("N")));
         var linked = await adapter.ReadAsync(source, default);
         Assert.Equal(exact.Id, Assert.Single(linked!.Attempts).Id);
         var progress = await adapter.ProcessAsync(history.Maintenance, null, 1, default);
         Assert.False(progress.BackfillComplete);
-        var resumed = await new WorkflowHistorySource(history.Factory, history.Outbox)
+        var resumed = await new WorkflowHistorySource(WorkflowOwnerPersistenceTestFactory.FromCanonical(history.Factory), history.Partitions, history.Transactions, history.Outbox)
             .ProcessAsync(history.Maintenance, progress.Cursor, 1, default);
         Assert.True(resumed.BackfillComplete);
         Assert.Equal(1, await history.Processor.ProcessAsync(history.Partition, 10, default));
@@ -185,13 +199,19 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
     }
 
     private sealed class FailAfterWorkflowHistorySave(bool enabled) : SaveChangesInterceptor {
+        private DbTransaction? outboxTransaction;
         public bool Failed { get; private set; }
 
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData,
             int result, CancellationToken cancellationToken = default) {
-            if (enabled && eventData.Context is { } db &&
+            if (eventData.Context is ProviderHistoryDbContext history &&
+                history.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
+                outboxTransaction = history.Database.CurrentTransaction?.GetDbTransaction();
+            }
+            if (enabled && eventData.Context is WorkflowDbContext db &&
                 db.ChangeTracker.Entries<WorkflowUsageObservationRecordEntity>().Any() &&
-                db.ChangeTracker.Entries<HistoryOutboxRow>().Any() && db.Database.CurrentTransaction is not null) {
+                db.Database.CurrentTransaction is { } transaction && outboxTransaction is not null &&
+                ReferenceEquals(transaction.GetDbTransaction(), outboxTransaction)) {
                 Failed = true;
                 throw new InvalidOperationException("Injected failure after workflow source and outbox flush.");
             }

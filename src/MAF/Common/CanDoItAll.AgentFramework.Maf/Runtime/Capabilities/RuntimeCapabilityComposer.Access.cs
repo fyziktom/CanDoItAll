@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
@@ -10,13 +11,19 @@ internal sealed class RuntimeCapabilityAccessPlanner
 {
     private readonly RuntimeCapabilityDescriptorCatalog descriptorCatalog;
     private readonly ICapabilityAccessPolicyEvaluator evaluator;
+    private readonly AgentToolPolicyCatalog toolPolicies;
+    private readonly IReadOnlyList<IAgentRuntimeCapabilityPolicyContributor> contextPolicyContributors;
 
     public RuntimeCapabilityAccessPlanner(
         RuntimeCapabilityDescriptorCatalog descriptorCatalog,
-        ICapabilityAccessPolicyEvaluator evaluator)
+        ICapabilityAccessPolicyEvaluator evaluator,
+        AgentToolPolicyCatalog? toolPolicies = null,
+        IReadOnlyList<IAgentRuntimeCapabilityPolicyContributor>? contextPolicyContributors = null)
     {
         this.descriptorCatalog = descriptorCatalog ?? throw new ArgumentNullException(nameof(descriptorCatalog));
         this.evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
+        this.toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
+        this.contextPolicyContributors = contextPolicyContributors ?? [];
     }
 
     public RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
@@ -24,7 +31,7 @@ internal sealed class RuntimeCapabilityAccessPlanner
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         AgentRuntimeContextIntent contextIntent,
-        RuntimeStorageToolAvailability storageAvailability)
+        IReadOnlyList<RuntimeToolProviderRegistration> runtimeToolProviders)
     {
         var catalogDescriptors = capabilities
             .Select(descriptorCatalog.CreateCatalogCapabilityDescriptor)
@@ -32,12 +39,17 @@ internal sealed class RuntimeCapabilityAccessPlanner
         var catalogByIdentity = catalogDescriptors
             .Zip(capabilities)
             .ToDictionary(pair => pair.First.Identity, pair => pair.Second);
+        var configuredPolicies = runtimeToolProviders
+            .Where(registration => registration.Descriptor.AttachmentPhase == AgentRuntimeToolAttachmentPhase.ConfiguredWorkspace)
+            .Select(registration => registration.ConfiguredWorkspacePolicy
+                ?? throw new InvalidOperationException("Configured runtime provider policy was not prepared before access planning."))
+            .ToArray();
         var configuredWorkspaceDescriptors = RuntimeConfiguredWorkspaceToolDescriptorCatalog.CreateConfiguredWorkspaceToolDescriptors(
-            workspaceToolAccess,
-            storageAvailability);
+            workspaceToolAccess).Concat(configuredPolicies.SelectMany(policy => policy.Capabilities));
         var candidates = DistinctCapabilityDescriptors(
             catalogDescriptors.Concat(configuredWorkspaceDescriptors));
-        var policies = RuntimeCapabilityAccessPolicyBuilder.BuildRuntimeCapabilityAccessPolicies(workspaceToolAccess, contextIntent);
+        var policies = RuntimeCapabilityAccessPolicyBuilder.BuildRuntimeCapabilityAccessPolicies(workspaceToolAccess, contextIntent, toolPolicies, contextPolicyContributors)
+            .Concat(configuredPolicies.SelectMany(policy => policy.AccessPolicies)).ToArray();
         var correlationId = ResolveCapabilityAccessCorrelationId(contextIntent);
         var requiredCapabilities = contextIntent.CapabilityScopeOverride?.RequiredCapabilities ?? [];
         var result = evaluator.Evaluate(new CapabilityAccessEvaluationContext(
@@ -153,7 +165,7 @@ internal sealed class RuntimeCapabilityAccessPlanner
 
         var descriptor = accessPlan.DescriptorsByKey.Values.FirstOrDefault(item => item.Identity == diagnostic.Identity);
         if (descriptor?.RuntimeToolName is { } runtimeToolName &&
-            IsWorkspaceOrStorageRuntimeTool(runtimeToolName.Value))
+            descriptor.Tags.Contains(CapabilityTag.Create("configured")))
         {
             return AgentRuntimeContextManifestSource.Excluded(
                 AgentRuntimeContextSourceCategories.WorkspaceTools,
@@ -163,10 +175,4 @@ internal sealed class RuntimeCapabilityAccessPlanner
 
         return null;
     }
-
-    private static bool IsWorkspaceOrStorageRuntimeTool(string runtimeToolName)
-        => runtimeToolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) ||
-           runtimeToolName.StartsWith("storage_", StringComparison.OrdinalIgnoreCase) ||
-           ToolContractCatalog.WorkspaceToolNames.Contains(runtimeToolName, StringComparer.OrdinalIgnoreCase);
-
 }

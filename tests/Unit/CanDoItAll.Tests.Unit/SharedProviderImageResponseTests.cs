@@ -27,6 +27,8 @@ public sealed class SharedProviderImageResponseTests {
     [InlineData("\"background\":\"opaque\"")]
     [InlineData("\"output_format\":\"png\"")]
     [InlineData("\"quality\":\"low\"")]
+    [InlineData("\"quality\":\"xhigh\"")]
+    [InlineData("\"quality\":\"max\"")]
     [InlineData("\"size\":\"1024x1024\"")]
     [InlineData("\"usage\":{\"input_tokens\":10,\"output_tokens\":20,\"total_tokens\":30,\"input_tokens_details\":{\"text_tokens\":10,\"image_tokens\":0},\"output_tokens_details\":{\"text_tokens\":0,\"image_tokens\":20}}")]
     public void Published_metadata_survives_image_response_projection(string metadata) {
@@ -70,6 +72,31 @@ public sealed class SharedProviderImageResponseTests {
         Assert.Throws<InvalidDataException>(() => SharedProviderRelayResponsePolicy.RewriteBuffered(
             "{\"data\":[{\"b64_json\":\"AQID\",\"url\":\"http://private.example\"}]}"u8.ToArray(),
             ModelId, SharedProviderRelayOperation.ImageGenerations));
+    }
+
+    [Fact]
+    public void Image_generation_identifier_is_accepted_without_exposing_upstream_identity() {
+        var result = SharedProviderRelayResponsePolicy.RewriteBuffered(
+            """{"data":[{"b64_json":"AQID","generation_id":"0efa0d3a-41c9-4873-888a-f245f13f9c6a"}]}"""u8.ToArray(),
+            ModelId, SharedProviderRelayOperation.ImageGenerations);
+
+        using var document = JsonDocument.Parse(result);
+        var item = Assert.Single(document.RootElement.GetProperty("data").EnumerateArray());
+        Assert.Equal(new byte[] { 1, 2, 3 }, item.GetProperty("b64_json").GetBytesFromBase64());
+        Assert.False(item.TryGetProperty("generation_id", out _));
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("42")]
+    [InlineData("{}")]
+    [InlineData("\"\"")]
+    [InlineData("\"http://private.example\"")]
+    public void Invalid_generation_identifier_is_rejected(string identifier) {
+        var payload = Encoding.UTF8.GetBytes($$"""{"data":[{"b64_json":"AQID","generation_id":{{identifier}}}]}""");
+
+        Assert.Throws<InvalidDataException>(() => SharedProviderRelayResponsePolicy.RewriteBuffered(
+            payload, ModelId, SharedProviderRelayOperation.ImageGenerations));
     }
 
     [Fact]

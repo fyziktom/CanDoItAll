@@ -358,7 +358,7 @@ internal sealed class WorkspaceRuntimePlugin(
 
             if (WorkspaceScriptArgumentPathParser.ContainsParentTraversal(candidate.Path))
             {
-                throw new InvalidOperationException(
+                throw AgentToolInputValidationException.Create(
                     "Script argument paths cannot contain parent traversal segments ('..'). Use a canonical workspace or external-target path.");
             }
 
@@ -366,7 +366,7 @@ internal sealed class WorkspaceRuntimePlugin(
             if (WorkspaceScriptArgumentPathParser.IsExternalTargetAliasPath(candidate.Path) &&
                 string.IsNullOrWhiteSpace(normalizedAlias))
             {
-                throw new InvalidOperationException(
+                throw AgentToolInputValidationException.Create(
                     "Script argument uses an invalid external-target path. Use a canonical alias without traversal segments.");
             }
 

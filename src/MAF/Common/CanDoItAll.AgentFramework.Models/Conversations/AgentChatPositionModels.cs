@@ -283,7 +283,8 @@ public sealed record AgentChatContextSurface
         IReadOnlyList<AgentChatContextAgentAccess>? agentAccess = null,
         AgentChatContextScopeAccessMode accessMode = AgentChatContextScopeAccessMode.AllowListed,
         AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
-        AgentChatContextCompletionRefreshMode completionRefreshMode = AgentChatContextCompletionRefreshMode.None)
+        AgentChatContextCompletionRefreshMode completionRefreshMode = AgentChatContextCompletionRefreshMode.None,
+        AgentProjectStructureLifetime? observedProjectLifetime = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(position);
@@ -337,6 +338,7 @@ public sealed record AgentChatContextSurface
 
         Position = position;
         WorkspaceScope = workspaceScope;
+        ObservedProjectLifetime = observedProjectLifetime;
         AgentAccess = normalizedAccess;
         AccessMode = accessMode;
         AccessState = accessState;
@@ -350,6 +352,8 @@ public sealed record AgentChatContextSurface
     public AgentChatSurfacePosition Position { get; }
 
     public WorkspaceScopeDescriptor? WorkspaceScope { get; }
+
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; }
 
     public IReadOnlyList<AgentChatContextAgentAccess> AgentAccess { get; }
 
@@ -369,7 +373,8 @@ public sealed record AgentChatContextSurface
             AccessMode,
             AccessState,
             Position,
-            CompletionRefreshMode);
+            CompletionRefreshMode,
+            ObservedProjectLifetime);
 }
 
 internal static class AgentChatPositionText

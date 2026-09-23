@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
@@ -28,6 +29,67 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         }
     };
 
+    [Theory]
+    [InlineData(WorkflowToolPolicy.WorkflowsRunStart)]
+    [InlineData(WorkflowToolPolicy.WorkflowsRunStatusGet)]
+    [InlineData(WorkflowToolPolicy.WorkflowsRunCancel)]
+    [InlineData(WorkflowToolPolicy.WorkflowsExternalResponseSubmit)]
+    public async Task Saved_runtime_results_require_current_status_read_without_repeating_launch_cancel_or_response(string toolName) {
+        var run = CreateRun(WorkflowRunState.Completed);
+        var runtime = new RecordingWorkflowRuntimeManager { Run = run };
+        var launches = new RecordingWorkflowLaunchService();
+        var harness = CreateHarness(runtimeManager: runtime, launchService: launches);
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item => item.ToolName == toolName);
+        var saved = ManagedToolDisclosureTestData.Create(metadata, result: new {
+            run = new WorkflowAgentRunDescriptor(run.RunId.Value, run.WorkflowId.Value, run.VersionId.Value, run.State,
+                run.Backend, run.Summary, run.CreatedAtUtc, run.UpdatedAtUtc, run.TerminalAtUtc)
+        });
+        var reader = harness.Context.Agent with { Capabilities = harness.Context.Agent.Capabilities.Where(item =>
+            item.CapabilityKey == WorkflowRuntimeCapabilityKeys.RunStatusGet).ToArray() };
+        harness.Workspace.Agents = [reader];
+        var authorize = metadata.AuthorizeResultDisclosureAsync!;
+        Assert.NotNull(authorize);
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+        harness.Workspace.Agents = [reader with { Capabilities = [] }];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        harness.Workspace.Agents = [reader];
+        runtime.Run = null;
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        runtime.Run = run with { WorkflowId = WorkflowId.New() };
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(saved, default).AsTask());
+        runtime.Run = run;
+        await using (var lease = await authorize(saved, default)) {
+            Assert.Null(lease);
+        }
+        Assert.Empty(launches.Intents);
+        Assert.Null(harness.ExternalResponses.Command);
+        Assert.Equal(0, runtime.CancellationRequests);
+        Assert.Equal(AgentToolEffectState.Unknown, saved.EffectState);
+    }
+
+    [Fact]
+    public async Task Saved_workflow_catalog_cannot_disclose_a_version_that_is_no_longer_readable_as_active() {
+        var definition = CreateDefinition(WorkflowId.New(), WorkflowVersionId.New(), WorkflowLifecycleStatus.Active, "Active selection");
+        var catalog = new RecordingWorkflowCatalog();
+        catalog.ActiveDefinitions.Add(definition.Id, new WorkflowDefinitionDetail(definition, WorkflowValidationResult.Success));
+        var harness = CreateHarness(catalog: catalog);
+        var metadata = harness.Provider.GetToolMetadata(harness.Context).Single(item => item.ToolName == WorkflowToolPolicy.WorkflowsDefinitionsList);
+        var result = new WorkflowAgentDefinitionListResult([new(definition.Id.Value, definition.VersionId.Value,
+            definition.Name, definition.Description, definition.RuntimePolicy.PreferredBackend, true, [])]);
+        var saved = ManagedToolDisclosureTestData.Create(metadata, result: result);
+        await using (var lease = await metadata.AuthorizeResultDisclosureAsync!(saved, default)) {
+            Assert.Null(lease);
+        }
+        catalog.ActiveDefinitions[definition.Id] = new WorkflowDefinitionDetail(definition with { Status = WorkflowLifecycleStatus.Archived },
+            WorkflowValidationResult.Success);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => metadata.AuthorizeResultDisclosureAsync!(saved, default).AsTask());
+        catalog.ActiveDefinitions[definition.Id] = new WorkflowDefinitionDetail(definition, WorkflowValidationResult.Success);
+        await using var restored = await metadata.AuthorizeResultDisclosureAsync!(saved, default);
+        Assert.Null(restored);
+    }
+
     [Fact]
     public async Task ProviderExposesFiveGovernedToolsWithAuthoritativeMetadata()
     {
@@ -42,48 +104,48 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         Assert.Equal(WorkflowAgentRuntimeToolProvider.ProviderKey, harness.Provider.Descriptor.ProviderKey);
         Assert.Equal(
             [
-                AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
-                AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
-                AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
-                AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet
+                WorkflowToolPolicy.WorkflowsDefinitionsList,
+                WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
+                WorkflowToolPolicy.WorkflowsRunCancel,
+                WorkflowToolPolicy.WorkflowsRunStart,
+                WorkflowToolPolicy.WorkflowsRunStatusGet
             ],
             tools.Select(tool => tool.Name).OrderBy(name => name, StringComparer.Ordinal).ToArray());
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+            WorkflowToolPolicy.WorkflowsDefinitionsList,
             AgentRuntimeToolOperationKind.Read,
             requiresApproval: false);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+            WorkflowToolPolicy.WorkflowsRunStatusGet,
             AgentRuntimeToolOperationKind.Read,
             requiresApproval: false);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+            WorkflowToolPolicy.WorkflowsRunStart,
             AgentRuntimeToolOperationKind.Mutation,
             requiresApproval: true);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+            WorkflowToolPolicy.WorkflowsRunCancel,
             AgentRuntimeToolOperationKind.Mutation,
             requiresApproval: true);
         AssertMetadata(
             metadata,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit,
             AgentRuntimeToolOperationKind.Mutation,
             requiresApproval: true);
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList));
+            WorkflowToolPolicy.WorkflowsDefinitionsList, ProductToolPolicies));
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet));
+            WorkflowToolPolicy.WorkflowsRunStatusGet, ProductToolPolicies));
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart));
+            WorkflowToolPolicy.WorkflowsRunStart, ProductToolPolicies));
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel));
+            WorkflowToolPolicy.WorkflowsRunCancel, ProductToolPolicies));
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit));
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit, ProductToolPolicies));
     }
 
     [Fact]
@@ -116,19 +178,19 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
 
         Assert.IsNotType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList));
+            WorkflowToolPolicy.WorkflowsDefinitionsList));
         Assert.IsNotType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet));
+            WorkflowToolPolicy.WorkflowsRunStatusGet));
         Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart));
+            WorkflowToolPolicy.WorkflowsRunStart));
         Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel));
+            WorkflowToolPolicy.WorkflowsRunCancel));
         Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
             governed.Tools,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit));
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit));
         Assert.All(
             suppressed.Tools.Where(tool => tool.Name.StartsWith("workflows_", StringComparison.Ordinal)),
             tool => Assert.IsNotType<ApprovalRequiredAIFunction>(tool));
@@ -162,7 +224,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         var tool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList);
+            WorkflowToolPolicy.WorkflowsDefinitionsList);
 
         var result = await InvokeAsync<WorkflowAgentDefinitionListResult>(tool);
 
@@ -184,7 +246,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         var tool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStart);
+            WorkflowToolPolicy.WorkflowsRunStart);
         var workflowId = Guid.NewGuid();
         var versionId = Guid.NewGuid();
         var exactRequest = new WorkflowAgentStartInput(
@@ -279,15 +341,15 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         var statusTool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet);
+            WorkflowToolPolicy.WorkflowsRunStatusGet);
         var cancelTool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel);
+            WorkflowToolPolicy.WorkflowsRunCancel);
         var responseTool = await GetToolAsync(
             harness.Provider,
             harness.Context,
-            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit);
+            WorkflowToolPolicy.WorkflowsExternalResponseSubmit);
 
         var status = await InvokeAsync<WorkflowAgentRunStatusResult>(
             statusTool,
@@ -403,11 +465,11 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     {
         var expected = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList] = WorkflowRuntimeCapabilityKeys.DefinitionsList,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunStart] = WorkflowRuntimeCapabilityKeys.RunStart,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet] = WorkflowRuntimeCapabilityKeys.RunStatusGet,
-            [AgentToolInvocationPolicyMetadata.WorkflowsRunCancel] = WorkflowRuntimeCapabilityKeys.RunCancel,
-            [AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit] = WorkflowRuntimeCapabilityKeys.ExternalResponseSubmit
+            [WorkflowToolPolicy.WorkflowsDefinitionsList] = WorkflowRuntimeCapabilityKeys.DefinitionsList,
+            [WorkflowToolPolicy.WorkflowsRunStart] = WorkflowRuntimeCapabilityKeys.RunStart,
+            [WorkflowToolPolicy.WorkflowsRunStatusGet] = WorkflowRuntimeCapabilityKeys.RunStatusGet,
+            [WorkflowToolPolicy.WorkflowsRunCancel] = WorkflowRuntimeCapabilityKeys.RunCancel,
+            [WorkflowToolPolicy.WorkflowsExternalResponseSubmit] = WorkflowRuntimeCapabilityKeys.ExternalResponseSubmit
         };
 
         Assert.Equal(expected.Count, WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.Count);
@@ -764,7 +826,8 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             runtimeManager ?? new RecordingWorkflowRuntimeManager(),
             externalResponseService ??= new RecordingWorkflowExternalResponseService(),
             new RecordingWorkflowExternalResponseActorContextFactory(),
-            new WorkflowAgentRuntimeAuthorizationService(workspaceService));
+            new WorkflowAgentRuntimeAuthorizationService(workspaceService),
+            new StructureAuthorityFixture());
         var profileId = Guid.NewGuid();
         var generation = new DatabaseProfileGeneration(1);
         var scope = WorkspaceScopeDescriptor.Organization(profileId.ToString("N"));
@@ -791,6 +854,17 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
                 allowedCapabilityKeys: capabilities.Select(item => item.Key).ToArray())
         };
         return new RuntimeHarness(provider, context, workspace, externalResponseService);
+    }
+
+    private sealed class StructureAuthorityFixture : IWorkflowStructureAuthorityFactory {
+        public WorkflowStructureAuthority CaptureAgent(AgentDefinition agent, AgentExecutionGovernanceSnapshot governance)
+            => new(WorkflowStructureAuthorityChannel.AgentExecution,
+                new WorkflowLaunchActor(WorkflowLaunchActorKind.Agent, agent.Id.ToString("D")), governance.DatabaseProfileId,
+                Guid.Empty, governance.MutationAllowed, false, null, governance.PolicyFingerprint) { AgentGovernance = governance };
+        public Task<WorkflowStructureAuthority> CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface surface, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<WorkflowStructureAuthority> CaptureAuthenticatedOperatorAsync(string subject, DateTimeOffset expiresAtUtc, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private static string FindRepositoryRoot()
@@ -1078,6 +1152,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     private sealed class RecordingWorkflowRuntimeManager : IWorkflowRuntimeManager
     {
         public WorkflowRunSnapshot? Run { get; set; }
+        public int CancellationRequests { get; private set; }
 
         public WorkflowRunCancellationResult CancellationResult { get; set; } = new(
             WorkflowRunCancellationOutcome.NotFound,
@@ -1100,7 +1175,10 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         public Task<WorkflowRunCancellationResult> RequestCancellationAsync(
             WorkflowRunId runId,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(CancellationResult);
+        {
+            CancellationRequests++;
+            return Task.FromResult(CancellationResult);
+        }
 
         public Task<WorkflowRunSnapshot> StartAsync(
             WorkflowDefinition definition,
@@ -1213,7 +1291,8 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             WorkflowId workflowId,
             WorkflowVersionId? versionId = null,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+            => Task.FromResult(ActiveDefinitions.TryGetValue(workflowId, out var detail) &&
+                (versionId is null || detail.Definition.VersionId == versionId) ? detail : null);
 
         public Task<WorkflowDefinition> SaveDefinitionAsync(
             WorkflowDefinitionSaveRequest request,

@@ -19,17 +19,39 @@ The default development profile listens on `http://localhost:5032`.
 | `GET /openapi/v1.json` | OpenAPI document when `Api:OpenApiEnabled` is enabled. |
 | `GET /swagger/v1/swagger.json` | Swagger-compatible alias for the same document. |
 
-OpenAPI endpoints require authorization when API authorization is enabled.
+The OpenAPI documents and Swagger UI are available without a token when enabled, including
+when API authorization is enabled. `Api:SwaggerUiEnabled=false` disables the interactive
+page; `Api:OpenApiEnabled=false` disables both the documents and the page.
+
+When user authentication is enabled, the Swagger route redirects HTTP requests to the
+configured HTTPS port, even when host-wide HTTPS redirection is disabled. In a container,
+set `ASPNETCORE_HTTPS_PORT` to the published HTTPS port, which may differ from Kestrel's
+internal listening port. The HTTPS listener or trusted TLS proxy must already be configured;
+the redirect setting does not create one. Without a resolvable HTTPS port, ASP.NET Core logs
+a warning and leaves documentation reachable over HTTP. Direct API requests still follow
+HTTPS enforcement and the explicit direct-loopback exception; they are not redirected.
+
+To call protected operations from Swagger, open `/swagger` on the host's HTTPS address,
+select **Authorize**, and paste a JWT into **Bearer** without the `Bearer ` prefix. Swagger
+adds the authorization header to protected operations when you use **Try it out**.
+Obtain a session token from `POST /api/access/login` when user authentication is enabled,
+or use a scoped token issued by an administrator. The API still validates the token and
+the scopes required by each operation. **Logout** in the authorization dialog clears the
+token from Swagger; use `POST /api/access/logout` to revoke a user session.
+
+The operation, parameter and schema descriptions in that document come from the C# XML documentation
+of the route handlers and serialized types, with explicit endpoint metadata and `Description` attributes for the new access and process-authoring contracts; [HTTP API documentation](architecture/api-documentation.md)
+describes that pipeline, its authoring conventions and the coverage gates.
 
 ## Access Configuration
 
-Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettings.json).
+Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettings.json) and the typed [API options](../src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs). See [API users and deployment access](api-user-access.md) for the configuration truth table, administrator hash helper, account lifecycle, transport and proxy setup.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `Api:Enabled` | `true` | Maps the main `/api` route families. |
-| `Api:OpenApiEnabled` | `true` | Maps the OpenAPI endpoints. |
-| `Api:SwaggerUiEnabled` | `true` | Serves the interactive `/swagger` page when OpenAPI is enabled. |
+| `Api:OpenApiEnabled` | `true` | Serves the OpenAPI documents anonymously; disabling it also disables Swagger UI. |
+| `Api:SwaggerUiEnabled` | `true` | Serves the interactive `/swagger` page anonymously when OpenAPI is enabled. |
 | `Api:Authorization:Enabled` | `false` | Requires bearer authorization for the API groups when enabled. |
 | `Api:Authorization:Issuer` | `CanDoItAll.Api` | JWT issuer. |
 | `Api:Authorization:Audience` | `CanDoItAll.Api` | JWT audience. |
@@ -46,8 +68,11 @@ loopback. This circuit identity is not installed in `HttpContext.User` and never
 authenticates HTTP API or authorized-file routes; those boundaries still require a
 valid bearer token.
 
-When authorization is enabled, `/api/access/tokens` requires the privileged
-`api.tokens.issue` scope. Memory-provider routes accept the existing umbrella `api`
+HTTP account and token administration, including `/api/access/tokens`, is absent unless
+`Api:AccessManagement:Enabled` is true. It requires a registered configured-administrator
+session; neither broad `api` nor old `api.tokens.issue` is sufficient.
+`Api:UserAuthentication:Enabled` independently enables login/me/logout and requires secure
+JWT configuration. Both new switches default to false. Memory-provider routes accept the existing umbrella `api`
 scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`, and
 `api.memory-providers.query` scopes for their respective operations.
 Workflow HITL response submission and operation-status reads require the exact
@@ -81,7 +106,7 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/agents` | Agent, provider, capability, memory, chat, execution, per-proposal approval, artifact, receipt, checkpoint, log, aggregate usage, metric, and runtime-snapshot operations. | [`AgentsApi.cs`](../src/App/CanDoItAll.Web/Api/AgentsApi.cs) |
 | `/api/agent-recruiting` | Candidate interviews, attempts, human reviews, interview history, and readiness. | [`AgentRecruitingApi.cs`](../src/App/CanDoItAll.Web/Api/AgentRecruitingApi.cs) |
 | `/api/prompt-gallery` | Prompt Gallery search, artifacts, versions, review, and application. | [`PromptGalleryApi.cs`](../src/App/CanDoItAll.Web/Api/PromptGalleryApi.cs) |
-| `/api/workflows` | Workflow settings, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
+| `/api/workflows` | Workflow settings, templates and draft creation, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
 | `/api/processes` | Process launch, dispatch, operator actions, live projections, durable run records, graphs, and analytics. | [`ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs) |
 | `/api/memory-providers` | Experimental provider profiles, context queries, and owned operation status. | [`MemoryProvidersApi.cs`](../src/App/CanDoItAll.Web/Api/MemoryProvidersApi.cs) |
 | `/api/plugins` | Plugin catalog, configuration, and runtime operations. | [`PluginsApi.cs`](../src/App/CanDoItAll.Web/Api/PluginsApi.cs) |
@@ -89,7 +114,8 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/llm-chats` | Simple Chat definition catalog, lifecycle, provider/model options, and conversation creation. | [`LlmChatDefinitionEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatDefinitionEndpoints.cs) |
 | `/api/llm-conversations` | Conversation paging, transcript reads, rename/archive, turn admission, and explicit recovery. | [`LlmChatConversationEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatConversationEndpoints.cs) |
 | `/api/llm-chat-operations` | Durable turn status, replayable SSE, cancellation, and evidence-based reconciliation. | [`LlmChatOperationsApi.cs`](../src/App/CanDoItAll.Web/Api/LlmChatOperationsApi.cs) |
-| `/api/runtime` | Host capability and bounded operation-readiness snapshots. | [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs) |
+| `/api/settings/workspace` | Workspace business defaults with separate read/write capabilities. | [`WorkspaceSettingsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkspaceSettingsApi.cs) |
+| `/api/runtime` | Host capability and bounded operation-readiness snapshots; `api.runtime.read` or compatible broad `api` is required when API authorization is enabled. | [`RuntimeEndpoints.cs`](../src/App/CanDoItAll.Web/RuntimeEndpoints.cs) |
 
 Use OpenAPI for exact methods and schemas. Do not copy a complete generated endpoint inventory into maintained documentation.
 
@@ -146,9 +172,14 @@ redacted `500`. The workflow response boundary never uses `502`.
 | Method | Route | Use |
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Discover the route contract. |
+| `GET` | `/api/processes/definitions` | Search current global definition catalog projections. |
+| `GET` | `/api/processes/definitions/{definitionKey}` | Read the definition overview. |
+| `GET` | `/api/processes/definitions/{definitionKey}/roles` | Read role and staffing projections. |
+| `GET` | `/api/processes/definitions/{definitionKey}/steps` | Read step contracts and bindings. |
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
-| `POST` | `/api/processes/launch` | Create and optionally queue a durable run. |
-| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work. |
+| `POST` | `/api/processes/launch` | Accept a prepared launch and optionally queue its durable run. |
+| `GET` | `/api/processes/launch/{admissionId}` | Observe the original preparation, accepted run and delivery state without executing it. |
+| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready steps within the request until none is ready or the run is blocked, cancel-requested or finished (at most 200 passes). |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
 | `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
 | `GET` | `/api/processes/live` | Read live run projections. |
@@ -161,7 +192,7 @@ redacted `500`. The workflow response boundary never uses `502`.
 | `GET` | `/api/processes/events/stream` | Subscribe to bounded all-run lifecycle signals. |
 | `GET` | `/api/processes/runs/{runId}/events/stream` | Subscribe to bounded exact-run lifecycle signals. |
 
-`launch/check` is non-mutating. `launch` persists the run when readiness permits; `execute: false` prevents immediate dispatch queueing but does not turn the launch into a dry run. See the [operator runbook](process-agent-operator-runbook.md) for triage and configuration.
+`launch/check` persists a reviewable preparation but does not create or dispatch a run. Retain its `callerIntentId` and returned admission identity for the subsequent launch and retry. The optional `callerIntentId` and `preparedAdmissionId` fields reuse the original plan and source; changed input conflicts. Callers omitting these identities retain intentional-repeat behavior and cannot safely infer whether an unacknowledged call created a run. `launch` persists the run when readiness permits; `execute: false` prevents immediate queueing but still accepts the run. Its `observation` distinguishes acceptance, continuation and Structure delivery. See the [operator runbook](process-agent-operator-runbook.md) for recovery and configuration.
 
 ## Agent Approval And Usage Contract
 
@@ -199,6 +230,8 @@ An HTTP route is not automatically available as an in-agent tool. Runtime tools 
 
 Attachment remains subject to execution purpose, agent permissions, assigned capabilities, project/process scope, and invocation policy. See [Agent runtime tool surface](agent-runtime-tool-surface.md).
 
+For supported durably admitted Agent runs, `POST /api/agents/execution-runs/{executionRunId}/recover` resumes the original run and provider segment under current authority. It does not start a replacement conversation or issue a new business intent. Pending approvals use the existing pending-approvals endpoint. `POST /api/agents/execution-runs/{executionRunId}/reconcile-cancellation` only reads approved owner receipts and retains confirmed effects; a missing receipt remains uncertain while an earlier owner transaction could still commit. Both requests accept an optional `activityOperationId` and expose the activity operation header. When HTTP authorization is enabled, both require the general `api` scope. Reconciliation projects effect identity and uncertainty without exposing the internal receipt protocol. See the [HR definition adapter contract](../src/Integration/CanDoItAll.Agents.SimpleChats/README.md) for recovery limits.
+
 ## Operator Skills
 
 Reusable `candoitall-api-*` skills are maintained in the canonical [CanDoItAll.SharedInfo skill source](https://github.com/fyziktom/CanDoItAll.SharedInfo/tree/main/codex/skills). No product-repository source copy is maintained.
@@ -219,3 +252,11 @@ git diff --check
 ```
 
 For API behavior changes, add focused route and application-service tests, then use the stable repository gate in [Testing](testing.md).
+
+## Capability verification and recovery
+
+`POST /api/agents/{agentId}/capabilities/{capabilityId}/verify` retains its successful `ApiAck` response. Invalid agent, capability, attachment, or required provider identity returns HTTP 400 with `outcome: Rejected`. Infrastructure unavailable before diagnostic dispatch returns HTTP 409 with `outcome: InfrastructureUnavailable`; other non-completed outcomes also return 409. Typed failure responses include the target identities, available proof receipt identity/time, and `automaticReplaySafe: false`. They contain no internal exception detail. Do not automatically retry this diagnostic POST.
+
+Agent `UpdatedAtUtc` is the concurrency revision of accepted configuration writes. Saves, provisioning, archiving and verification publication advance it past the previous value even when the wall clock repeats or moves backwards; a catalog change that binds project access lifetimes stamps the current time instead, so compare revisions for equality, not order. Keep sending the authoritative expected revision from the latest read when updating an agent: a verification advances it, so read `GET /api/agents/{agentId}` again afterwards. The proof itself is read from the agent's `capabilities` entry in `GET /api/agents`. Proof `LastVerifiedAtUtc` retains the actual observation time independently of that revision.
+
+The capabilities workspace keeps unresolved operations within the circuit. Retained assignment submissions and proof receipts use canonical reads for recovery, without replaying a write or diagnostic. If a diagnostic returns no correlatable receipt, explicit acknowledgement releases only the circuit block and does not prove rollback. Unknown Curator creation likewise requires inspecting managed chats and acknowledging uncertainty; it neither deletes a chat nor launches another. A subsequent diagnostic or launch is a new explicit user action. Recovery is not durable across a new circuit or process restart.

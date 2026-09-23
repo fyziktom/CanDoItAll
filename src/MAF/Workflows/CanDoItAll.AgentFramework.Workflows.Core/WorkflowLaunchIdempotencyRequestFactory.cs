@@ -33,7 +33,17 @@ public static class WorkflowLaunchIdempotencyRequestFactory
             requestedVersionId,
             intent.Mode,
             intent.Origin.Kind,
-            new WorkflowLaunchOriginScopeKey(Hash(CreateAuthorizedOriginScopePayload(intent.Origin))));
+            CreateOriginScopeKey(intent.Origin));
+    }
+
+    /// <summary>
+    /// Hashes who launches (the origin's actor or owner) together with the authorization scope and policy the launch
+    /// was admitted under; the origin must already carry its resolved authorization scope.
+    /// </summary>
+    public static WorkflowLaunchOriginScopeKey CreateOriginScopeKey(WorkflowLaunchOrigin origin)
+    {
+        ArgumentNullException.ThrowIfNull(origin);
+        return new WorkflowLaunchOriginScopeKey(Hash(CreateAuthorizedOriginScopePayload(origin)));
     }
 
     public static WorkflowLaunchRequestFingerprint CreateFingerprint(
@@ -100,6 +110,9 @@ public static class WorkflowLaunchIdempotencyRequestFactory
                 agent.Agent.Kind,
                 agent.Agent.SubjectId,
                 agent.RuntimeSessionId.Value),
+            WorkflowLaunchOrigin.ProcessToolInvocation tool => tool.Invocation,
+            WorkflowLaunchOrigin.ProcessDispatchAssignment mapped => new ProcessOriginScopePayload(
+                mapped.Dispatch.ProcessRun.Value, mapped.Dispatch.Assignment.Value),
             WorkflowLaunchOrigin.ProcessAssignment process => new ProcessOriginScopePayload(
                 process.ProcessRunId,
                 process.AssignmentId),

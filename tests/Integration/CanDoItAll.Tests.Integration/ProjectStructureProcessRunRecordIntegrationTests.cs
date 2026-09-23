@@ -1,3 +1,7 @@
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Processes;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -142,8 +146,9 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
     public async Task LoadAsync_caps_current_root_history_and_logs_older_records()
     {
         var projectId = Guid.NewGuid();
+        var databaseName = Guid.NewGuid().ToString("N");
         var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .UseInMemoryDatabase(databaseName)
             .Options;
         await using var processDbContext = new ProcessPersistenceDbContext(options);
         var rootRecords = Enumerable
@@ -204,7 +209,9 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
         await processDbContext.SaveChangesAsync();
         var logger = new RecordingLogger<ProjectStructureProcessRunRecordProjector>();
         var projector = new ProjectStructureProcessRunRecordProjector(
-            new ProcessRunRecordReader(new EfProcessRunRecordStore(processDbContext)),
+            new ProcessStructureProjectionQueryService(new PooledDbContextFactory<ProcessPersistenceDbContext>(options), options,
+                CoordinatedDatabaseTransaction.ForProfile(new(new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.InMemory },
+                    DatabaseProfileResolutionSource.ExplicitOverride, databaseName))),
             logger);
 
         var projections = await projector.LoadAsync(projectId, CancellationToken.None);

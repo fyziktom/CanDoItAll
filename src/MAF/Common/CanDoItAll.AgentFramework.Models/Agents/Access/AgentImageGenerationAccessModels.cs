@@ -3,14 +3,34 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Image generation access of an agent, the <c>imageGenerationAccess</c> member of the agent editor form, stored in the
+/// agent's <c>configurationJson</c> under <c>imageGeneration</c>. A save replaces that section, and an omitted or empty
+/// object removes it. The runtime image generation tool also needs the agent's <c>canUseTools</c> permission and, by
+/// default, approval of each call.
+/// </summary>
 public sealed class AgentImageGenerationAccessSettings
 {
+    /// <summary>Adds the image generation tool to the agent's runs.</summary>
     public bool CanGenerateImages { get; set; }
 
+    /// <summary>
+    /// Provider profile used for image generation when a tool call names none, or null for the default image provider.
+    /// It is a default, not a restriction, and the provider's purpose is checked only when the tool runs. The server
+    /// clears it when <c>canGenerateImages</c> is false or the value is the all-zero GUID.
+    /// </summary>
     public Guid? PreferredProviderProfileId { get; set; }
 
+    /// <summary>
+    /// Model used for image generation when a tool call names none; trimmed, and empty when <c>canGenerateImages</c> is
+    /// false. It is checked against the provider only when the tool runs.
+    /// </summary>
     public string DefaultModel { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Allows the image generation tool to prepare generated images as Project Structure assets. It grants no Project
+    /// Structure write access of its own and is kept even when <c>canGenerateImages</c> is false.
+    /// </summary>
     public bool CanStoreImagesAsProjectAssets { get; set; }
 }
 

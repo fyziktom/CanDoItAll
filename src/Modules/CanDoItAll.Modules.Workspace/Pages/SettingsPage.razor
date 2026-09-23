@@ -257,12 +257,24 @@
                     @if (apiStatus?.AuthorizationEnabled != true)
                     {
                         <Alert AlertStyle="AlertStyle.Info">
-                            <p>JWT authorization is disabled in configuration. API requests do not need bearer tokens until Api:Authorization:Enabled is set to true.</p>
+                            <p>API authorization is disabled. User permissions do not isolate anonymously accessible business operations.</p>
                         </Alert>
                     }
                     else if (apiStatus.SigningKeyConfigured)
                     {
                         <ApiTokenAdministrationPanel Status="apiStatus" />
+                        <Alert AlertStyle="AlertStyle.Info" data-testid="api-effective-configuration">
+                            User login: @(apiStatus.UserAuthenticationEnabled ? "enabled" : "disabled") (Api:UserAuthentication:Enabled).
+                            @if (!apiStatus.AccessManagementEnabled) {
+                                <p>HTTP access administration is disabled. Trusted local administration is still available.</p>
+                            } else {
+                                <p>HTTP access administration is enabled and requires a configured administrator session.</p>
+                            }
+                            <p>Api:AccessManagement:Enabled and other deployment options require configuration and restart. User sessions expire after @apiStatus.UserTokenLifetimeMinutes minutes.</p>
+                        </Alert>
+                        <FormSection Title="API users" Icon="group" Description="Manage instance-local accounts and explicit business capabilities.">
+                            <ApiUserAdministrationPanel />
+                        </FormSection>
                     }
                     else
                     {

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -7,6 +8,7 @@ using System.Text.Json;
 
 namespace CanDoItAll.Modules.Workbench;
 
+// Every failure here happens while reading stored asset content, which changes nothing.
 public sealed class ProjectStructureAssetContentReader(
     IStorageCatalogService storageCatalog,
     IStorageDriverRegistry storageDrivers,
@@ -41,7 +43,7 @@ public sealed class ProjectStructureAssetContentReader(
 
         ValidateManagedAssetBinding(reference, asset.MediaRelativePath, isProjectedProcessScreenshot);
 
-        StorageCatalogRecord storage = await ResolveStorageAsync(
+        StorageDriverInput storage = await ResolveStorageAsync(
             reference,
             isProjectedProcessScreenshot,
             cancellationToken);
@@ -203,7 +205,7 @@ public sealed class ProjectStructureAssetContentReader(
         }
     }
 
-    private async Task<StorageCatalogRecord> ResolveStorageAsync(
+    private async Task<StorageDriverInput> ResolveStorageAsync(
         StorageObjectReference reference,
         bool isProjectedProcessScreenshot,
         CancellationToken cancellationToken)
@@ -212,7 +214,7 @@ public sealed class ProjectStructureAssetContentReader(
         {
             if (!reference.StorageId.HasValue)
             {
-                StorageCatalogRecord authoritativeStorage = await storageCatalog
+                StorageDriverInput authoritativeStorage = await storageCatalog
                     .EnsureBootstrapFileSystemStorageAsync(cancellationToken);
                 if (!authoritativeStorage.IsSystemDefault ||
                     authoritativeStorage.ProviderKind != StorageProviderKind.FileSystem ||
@@ -222,13 +224,14 @@ public sealed class ProjectStructureAssetContentReader(
                         503,
                         "AssetStorageBootstrapUnavailable",
                         "The authoritative workspace storage is unavailable for asset reads.",
-                        canRetryWithCorrectedInput: false);
+                        canRetryWithCorrectedInput: false,
+                        effectState: AgentToolEffectState.None);
                 }
 
                 return authoritativeStorage;
             }
 
-            StorageCatalogRecord? storage = await storageCatalog.GetAsync(
+            StorageDriverInput? storage = await storageCatalog.GetDriverAsync(
                 reference.StorageId.Value,
                 cancellationToken);
             if (storage is null)
@@ -237,7 +240,8 @@ public sealed class ProjectStructureAssetContentReader(
                     409,
                     "AssetStorageCatalogMissing",
                     "The asset's bound storage catalog no longer exists.",
-                    canRetryWithCorrectedInput: false);
+                    canRetryWithCorrectedInput: false,
+                    effectState: AgentToolEffectState.None);
             }
 
             if (storage.Id != reference.StorageId.Value)
@@ -251,7 +255,7 @@ public sealed class ProjectStructureAssetContentReader(
                 return storage;
             }
 
-            StorageCatalogRecord bootstrap = await storageCatalog
+            StorageDriverInput bootstrap = await storageCatalog
                 .EnsureBootstrapFileSystemStorageAsync(cancellationToken);
             if (storage.Id != bootstrap.Id)
             {
@@ -281,7 +285,7 @@ public sealed class ProjectStructureAssetContentReader(
 
     private static void ValidateStorageBinding(
         StorageObjectReference reference,
-        StorageCatalogRecord storage)
+        StorageDriverInput storage)
     {
         if (!storage.IsEnabled)
         {
@@ -289,7 +293,8 @@ public sealed class ProjectStructureAssetContentReader(
                 503,
                 "AssetStorageDisabled",
                 "The asset's bound storage catalog is disabled.",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
 
         if (storage.ProviderKind != reference.ProviderKind)
@@ -304,14 +309,15 @@ public sealed class ProjectStructureAssetContentReader(
                 503,
                 "AssetStorageReadUnavailable",
                 "The asset's bound storage catalog does not allow reads.",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
     }
 
     private void ValidateCurrentManagedStorage(
         StorageObjectReference reference,
         string mediaRelativePath,
-        StorageCatalogRecord storage)
+        StorageDriverInput storage)
     {
         if (!ProjectManagedStorageProvenancePolicy.HasManagedMarker(reference))
         {
@@ -336,13 +342,14 @@ public sealed class ProjectStructureAssetContentReader(
                 409,
                 "AssetStorageBindingChanged",
                 "The asset's current storage namespace differs from its creation namespace.",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
     }
 
     private IStorageDriver ResolveDriver(
         StorageObjectReference reference,
-        StorageCatalogRecord storage)
+        StorageDriverInput storage)
     {
         if (!storageDrivers.TryResolve(reference.ProviderKind, out IStorageDriver driver) ||
             driver.ProviderKind != reference.ProviderKind ||
@@ -352,7 +359,8 @@ public sealed class ProjectStructureAssetContentReader(
                 503,
                 "AssetStorageDriverUnavailable",
                 "The asset's storage provider is unavailable for reads.",
-                canRetryWithCorrectedInput: false);
+                canRetryWithCorrectedInput: false,
+                effectState: AgentToolEffectState.None);
         }
 
         return driver;
@@ -494,26 +502,30 @@ public sealed class ProjectStructureAssetContentReader(
             400,
             "AssetStorageReferenceInvalid",
             safeMessage,
-            canRetryWithCorrectedInput: false);
+            canRetryWithCorrectedInput: false,
+            effectState: AgentToolEffectState.None);
 
     private static ProjectStructureAgentException AssetContentNotFound()
         => ProjectStructureAgentException.CreateAgentVisible(
             404,
             "AssetContentNotFound",
             "The asset content was not found.",
-            canRetryWithCorrectedInput: false);
+            canRetryWithCorrectedInput: false,
+            effectState: AgentToolEffectState.None);
 
     private static ProjectStructureAgentException AssetContentUnavailable()
         => ProjectStructureAgentException.CreateAgentVisible(
             503,
             "AssetContentUnavailable",
             "The asset content is temporarily unavailable from its bound storage provider.",
-            canRetryWithCorrectedInput: false);
+            canRetryWithCorrectedInput: false,
+            effectState: AgentToolEffectState.None);
 
     private static ProjectStructureAgentException AssetContentTooLarge()
         => ProjectStructureAgentException.CreateAgentVisible(
             413,
             "AssetContentTooLarge",
             $"Asset content exceeds the {MaximumContentBytes} byte limit.",
-            canRetryWithCorrectedInput: false);
+            canRetryWithCorrectedInput: false,
+            effectState: AgentToolEffectState.None);
 }

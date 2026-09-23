@@ -1,4 +1,5 @@
 using System.Text;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Tests.Unit.Projects;
@@ -32,8 +33,23 @@ public sealed class ProjectStructureSvgAssetValidatorTests
         Assert.Equal("InvalidSvgXml", exception.ErrorCode);
         Assert.True(exception.IsSafeToExpose);
         Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
         Assert.Contains("line 2", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("&amp;", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_rejects_a_non_svg_root_as_a_correctable_no_effect_failure()
+    {
+        var media = CreateSvg("""<html xmlns="http://www.w3.org/1999/xhtml"><body /></html>""");
+
+        var exception = Assert.Throws<ProjectStructureAgentException>(
+            () => ProjectStructureSvgAssetValidator.Validate(media));
+
+        Assert.Equal("InvalidSvgRoot", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
     }
 
     [Fact]

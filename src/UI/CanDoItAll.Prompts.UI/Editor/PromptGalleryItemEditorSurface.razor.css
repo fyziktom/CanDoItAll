@@ -1,0 +1,13 @@
+.prompt-gallery-item-editor__fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+}
+
+.prompt-gallery-item-editor__choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 10rem;
+}

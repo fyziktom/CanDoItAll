@@ -84,7 +84,7 @@
                                     <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Proof</p>
                                     @if (capability.LastVerifiedAtUtc.HasValue)
                                     {
-                                        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Checked @capability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
+                                        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Checked @CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(capability.LastVerifiedAtUtc.Value)</p>
                                     }
                                     <p class="mt-2 text-sm leading-6 text-slate-700">@ResolveProofNotes(capability)</p>
                                 </div>
@@ -168,7 +168,7 @@
                                 {
                                     <div>
                                         <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">Last verified</p>
-                                        <p class="mt-2 text-sm leading-6 text-slate-700">@selectedCapability.LastVerifiedAtUtc.Value.LocalDateTime:g</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-700">@CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(selectedCapability.LastVerifiedAtUtc.Value)</p>
                                     </div>
                                 }
 

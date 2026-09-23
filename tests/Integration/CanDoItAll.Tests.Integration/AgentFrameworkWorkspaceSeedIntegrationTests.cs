@@ -1203,6 +1203,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Assert.Equal(OpenAiModelIds.GptImage2, imageProvider.DefaultModel);
             Assert.False(imageProvider.SupportsTools);
             Assert.Contains(OpenAiModelIds.GptImage2, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains(OpenAiModelIds.GptImage25Sunburst, imageProvider.SuggestedModels, StringComparer.Ordinal);
+            Assert.Contains(OpenAiModelIds.GptImage25Flare, imageProvider.SuggestedModels, StringComparer.Ordinal);
             Assert.DoesNotContain(OpenAiModelIds.GptImage1Mini, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
             Assert.True(matrix.SupportsImageGeneration);
         }
@@ -1305,7 +1307,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             provider => provider.Purpose == ProviderProfilePurpose.ImageGeneration &&
                         string.Equals(provider.Name, "OpenAI image generation", StringComparison.Ordinal));
         Assert.Equal(OpenAiModelIds.GptImage2, seededProvider.DefaultModel);
-        Assert.Equal([OpenAiModelIds.GptImage2], seededProvider.SuggestedModels);
+        Assert.Equal(
+            [OpenAiModelIds.GptImage25Sunburst, OpenAiModelIds.GptImage25Flare, OpenAiModelIds.GptImage2],
+            seededProvider.SuggestedModels);
         var catalog = seed.ToCatalog() with
         {
             Providers = seed.Providers
@@ -1326,6 +1330,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             provider => provider.Id == seededProvider.Id);
         Assert.Equal(expectedModel, normalizedProvider.DefaultModel);
         Assert.Contains(OpenAiModelIds.GptImage2, normalizedProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(OpenAiModelIds.GptImage25Sunburst, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        Assert.Contains(OpenAiModelIds.GptImage25Flare, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
         if (string.Equals(configuredModel, OpenAiModelIds.GptImage1Mini, StringComparison.Ordinal))
         {
             Assert.DoesNotContain(OpenAiModelIds.GptImage1Mini, normalizedProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
@@ -1573,8 +1579,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         await workspaceService.SaveCapabilityAsync(firstEditor);
         staleEditor.Description = "Stale overwrite.";
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var stale = await Assert.ThrowsAsync<CapabilityCatalogRejectedException>(() =>
             workspaceService.SaveCapabilityAsync(staleEditor));
+        Assert.True(stale.IsConcurrencyConflict);
         var saved = await workspaceService.GetCapabilityEditorAsync(capabilityId);
         Assert.Equal("First accepted update.", saved.Description);
     }

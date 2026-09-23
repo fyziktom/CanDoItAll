@@ -1,13 +1,47 @@
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Projects;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// Task resource attachment request: a workflow or process definition to attach to a canonical task, the task's
+/// execution state as last read and, for a workflow, its run input settings. Persons and agents are assigned with the
+/// task update instead.
+/// </summary>
+/// <param name="Resource">
+/// Workflow (with its exact <c>versionId</c>) or process definition to attach; required. Person and Agent are rejected
+/// with HTTP 400 <c>TaskAttachedResourceKindInvalid</c>.
+/// </param>
+/// <param name="CurrentExecution">
+/// Execution state of the task from the caller's latest read, taken from <c>workItem.executionState</c>,
+/// <c>workItem.actualStartedAtUtc</c> and <c>workItem.actualEndedAtUtc</c> in its <c>metadataJson</c>; required. It
+/// is checked against the stored state before the task is repriced.
+/// </param>
+/// <param name="WorkflowInputSettings">
+/// Run input settings for a workflow resource; null uses the defaults. Sending them for a process is rejected with HTTP
+/// 400 <c>TaskWorkflowInputSettingsResourceKindInvalid</c>.
+/// </param>
 public sealed record ProjectStructureTaskResourceAttachRequest(
     [property: JsonRequired] ProjectStructureTaskResourceSelection Resource,
     [property: JsonRequired] ProjectTaskExecutionSnapshot CurrentExecution,
-    ProjectStructureWorkflowInputSettings? WorkflowInputSettings = null);
+    ProjectStructureWorkflowInputSettings? WorkflowInputSettings = null) {
+    /// <summary>
+    /// Project write admission returned as <c>expectedProjectAdmission</c> by the structure read, sent back unchanged.
+    /// Required: when it is omitted, null or names another project, the request is rejected with HTTP 409
+    /// <c>ProjectLifetimeRefreshRequired</c> and nothing is attached.
+    /// </summary>
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+}
 
+/// <summary>Result of a committed task resource attachment, with the repricing it caused.</summary>
+/// <param name="Resource">The attached resource.</param>
+/// <param name="Pricing">How the task's estimate was repriced for the resource.</param>
+/// <param name="CreatedNodeId">
+/// Identifier of the node created under the task for the resource (for example a workflow node); null when no node was
+/// created.
+/// </param>
 public sealed record ProjectStructureTaskResourceAttachResult(
     ProjectStructureTaskResourceSelection Resource,
     ProjectStructureTaskEstimateRefreshResult Pricing,
@@ -30,12 +64,16 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
     {
         if (request is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskResourceAttachRequestRequired",
                 "A task resource attachment request is required.");
         }
 
+        var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
+        if (agent.ExpectedProjectAdmission != expected) {
+            throw new InvalidOperationException("Task attachment requires its captured native mutation context.");
+        }
         ValidateRequiredRequestValues(request.Resource, request.CurrentExecution);
         return AttachCoreAsync(
             projectId,
@@ -60,7 +98,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         ValidateRequiredRequestValues(resource, previousExecution);
         if (expectedCurrentExecution is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskExecutionSnapshotRequired",
                 "The current task execution snapshot is required.");
@@ -90,7 +128,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         ValidateRequiredRequestValues(resource, previousExecution);
         if (expectedCurrentExecution is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskExecutionSnapshotRequired",
                 "The current task execution snapshot is required.");
@@ -109,7 +147,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
             resource,
             previousExecution,
             expectedCurrentExecution,
-            cancellationToken);
+            cancellationToken, agent);
         ProjectStructureTaskResourceAttachment? attachment = null;
         try
         {
@@ -185,6 +223,16 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         }
     }
 
+
+    // The attach request is validated before any resource, pricing, or task change is written.
+    private static ProjectStructureAgentException InvalidAttachRequest(int statusCode, string errorCode, string message)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            statusCode,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.None);
+
     private static ProjectStructureAgentException BuildCompensationException(
         ProjectStructureTaskResourceSelection resource,
         Exception failure,
@@ -208,7 +256,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
     {
         if (resource is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskResourceRequired",
                 "A task resource is required.");
@@ -216,7 +264,7 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
 
         if (execution is null)
         {
-            throw new ProjectStructureAgentException(
+            throw InvalidAttachRequest(
                 400,
                 "TaskExecutionSnapshotRequired",
                 "The current task execution snapshot is required.");

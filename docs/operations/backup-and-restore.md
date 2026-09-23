@@ -174,3 +174,17 @@ project. It must not be used against the normal development or production projec
 
 Before a production restore, verify the application version, migration level, backup
 integrity, target database identity, rollback point, and expected recovery time.
+
+## Upgrading an instance across a migration
+
+The host applies pending migrations at startup. Take the backup first: a migration can move rows
+between owners, and an older binary is not guaranteed to start against a database a newer one has
+already migrated. Roll back by restoring the backup, not by starting the previous version against
+the upgraded database.
+
+The `components-decoupling` candidate carries eight migrations that `development` does not have; the
+one that moves records is `MoveWorkItemAssignments`, which moves work-item assignee rows from the
+CRM / HR table to the Workbench owner. It verifies itself in SQL (row count, a field-by-field
+comparison and the exact deletion count, each raising on a mismatch), and
+`MergeTargetSchemaUpgradeIntegrationTests` upgrades a database that already holds such rows and
+reads them back from their new owner by their own identifiers.

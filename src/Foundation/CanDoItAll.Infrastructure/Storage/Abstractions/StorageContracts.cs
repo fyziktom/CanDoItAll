@@ -7,22 +7,22 @@ public interface IStorageDriver
     StorageCapability SupportedCapabilities { get; }
 
     Task<StorageConnectionTestResult> TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? secretValue,
         CancellationToken cancellationToken = default);
 
     Task<StorageWriteResult> SaveAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageWriteRequest request,
         CancellationToken cancellationToken = default);
 
     Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default);
 
     Task DeleteAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default);
 }
@@ -38,19 +38,25 @@ public interface IStorageDriverRegistry
 
 public interface IStorageCatalogService
 {
-    Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StorageCatalogSnapshot>> ListAsync(CancellationToken cancellationToken = default);
 
-    Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<StorageCatalogSnapshot?> GetAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default);
+    Task<StorageDriverInput> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default);
 
-    Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default);
+    Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest record, CancellationToken cancellationToken = default);
+
+    Task<StorageDriverInput?> GetDriverAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<StorageCatalogEditorSnapshot?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default);
 
-    Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default);
+    Task<StorageRoutingRuleSnapshot> SaveRuleAsync(StorageRoutingRuleSaveRequest rule, CancellationToken cancellationToken = default);
 }
 
 public enum StorageCatalogPathMigrationState
@@ -77,7 +83,7 @@ public interface IStorageCatalogPathMigrationService
 
     Task<StorageCatalogPathMigrationReport> RollbackAsync(CancellationToken cancellationToken = default);
 
-    Task<StorageCatalogRecord> RebindRootAsync(
+    Task<StorageCatalogSnapshot> RebindRootAsync(
         Guid storageId,
         string rootPath,
         CancellationToken cancellationToken = default);

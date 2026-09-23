@@ -43,6 +43,8 @@ public sealed record AgentRuntimeToolProviderContext
 
     public AgentRuntimeContextIntent ContextIntent { get; init; }
 
+    public AgentWorkspaceToolAccessSettings? WorkspaceToolAccess { get; init; }
+
     public IReadOnlyDictionary<string, string> Tags { get; init; }
 
     public ImmutableArray<AgentChatContextAttachmentEnvelope> Attachments { get; init; }
@@ -55,6 +57,20 @@ public sealed record AgentRuntimeToolProviderContext
     /// configuration or UI access entries when the snapshot is present.
     /// </summary>
     public AgentExecutionGovernanceSnapshot? Governance { get; init; }
+
+    public AgentToolSessionReference? AdmittedToolSession { get; init; }
+
+    public AgentToolAdmissionSupport ToolAdmissionSupport { get; init; }
+
+    /// <summary>
+    /// True when the caller only needs the inventory of tools the provider would
+    /// compose for this agent and context intent, for example the pre-dispatch
+    /// preflight of a governed process step. No execution identity, admitted
+    /// session or lease exists yet and the returned tools are never invoked, so
+    /// a provider that binds its actual tools to a saved execution identity
+    /// composes the inventory from the context intent instead of failing.
+    /// </summary>
+    public bool ToolInventoryOnly { get; init; }
 
     public ImmutableArray<AgentChatContextAttachmentEnvelope>
         GetAttachments<TAttachment>()

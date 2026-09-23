@@ -26,6 +26,7 @@ public sealed class ConnectorPluginIntegrationTests
         var saveResult = await resources.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
             ConnectorPluginKey = WebhookResourceConnectorPlugin.PluginKey,
             ConfigSchemaVersion = "1.0",
             Name = "Order status webhook",
@@ -69,6 +70,7 @@ public sealed class ConnectorPluginIntegrationTests
         var saveResult = await resources.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
             ConnectorPluginKey = WebhookResourceConnectorPlugin.PluginKey,
             ConfigSchemaVersion = "1.0",
             Name = "Broken webhook",

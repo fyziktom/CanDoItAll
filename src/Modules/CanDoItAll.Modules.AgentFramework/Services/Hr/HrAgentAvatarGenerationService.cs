@@ -17,19 +17,21 @@ public sealed class HrAgentAvatarGenerationService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
+        // Every request and configuration check below runs before the provider call and the catalog save, so a
+        // rejection has changed nothing and the HR agent can correct the request or report the configuration gap.
         if (input.AgentId == Guid.Empty)
         {
-            throw new ArgumentException("Target agent id cannot be empty.", nameof(input));
+            throw AgentToolInputValidationException.Create("Target agent id cannot be empty.");
         }
 
         if (input.AgentId == actorAgentId || input.AgentId == HrAgentIdentity.AgentId)
         {
-            throw new InvalidOperationException("The managed HR agent cannot replace its own avatar or authority.");
+            throw AgentToolInputValidationException.Create("The managed HR agent cannot replace its own avatar or authority.");
         }
 
         if (input.ExpectedUpdatedAtUtc == default)
         {
-            throw new InvalidOperationException("ExpectedUpdatedAtUtc is required for optimistic concurrency.");
+            throw AgentToolInputValidationException.Create("ExpectedUpdatedAtUtc is required for optimistic concurrency.");
         }
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: true, cancellationToken);
@@ -41,7 +43,8 @@ public sealed class HrAgentAvatarGenerationService(
         }
 
         var target = agents.FirstOrDefault(agent => agent.Id == input.AgentId)
-            ?? throw new InvalidOperationException($"Agent '{input.AgentId:D}' was not found.");
+            ?? throw AgentToolInputValidationException.Create(
+                $"Agent '{input.AgentId:D}' was not found. Search the agent catalog and retry with an existing agent id.");
         if (target.UpdatedAtUtc != input.ExpectedUpdatedAtUtc)
         {
             throw new AgentCatalogConcurrencyException(
@@ -54,32 +57,45 @@ public sealed class HrAgentAvatarGenerationService(
             AgentImageGenerationAccessMetadata.Read(actor.ConfigurationJson));
         if (!imageAccess.CanGenerateImages)
         {
-            throw new InvalidOperationException("The HR agent is not allowed to generate images.");
+            throw AgentToolInputValidationException.Create(
+                "The HR agent is not allowed to generate images. Ask the operator to enable image generation for the HR agent.");
         }
 
         if (!imageAccess.PreferredProviderProfileId.HasValue)
         {
-            throw new InvalidOperationException(
-                "The HR agent must explicitly configure a preferred image-generation provider.");
+            throw AgentToolInputValidationException.Create(
+                "The HR agent must explicitly configure a preferred image-generation provider. Ask the operator to configure one.");
         }
 
         if (string.IsNullOrWhiteSpace(imageAccess.DefaultModel))
         {
-            throw new InvalidOperationException(
-                "The HR agent must explicitly configure an image-generation model.");
+            throw AgentToolInputValidationException.Create(
+                "The HR agent must explicitly configure an image-generation model. Ask the operator to configure one.");
         }
 
         var provider = await providerSource.GetProviderAsync(
                 imageAccess.PreferredProviderProfileId.Value,
                 cancellationToken)
-            ?? throw new InvalidOperationException(
-                $"Image-generation provider '{imageAccess.PreferredProviderProfileId.Value:D}' was not found.");
-        var generated = await avatarGenerationService.GenerateAsync(
-            provider,
-            imageAccess.DefaultModel,
-            input.VisualBrief,
-            input.OutputCompression,
-            cancellationToken);
+            ?? throw AgentToolInputValidationException.Create(
+                $"Image-generation provider '{imageAccess.PreferredProviderProfileId.Value:D}' was not found. Ask the operator to repair the HR agent's image provider.");
+        AgentAvatarGenerationResult generated;
+        try
+        {
+            generated = await avatarGenerationService.GenerateAsync(
+                provider,
+                imageAccess.DefaultModel,
+                input.VisualBrief,
+                input.OutputCompression,
+                cancellationToken);
+        }
+        catch (AgentAvatarGenerationRejectedException exception)
+        {
+            // Only the avatar service's own request and image checks are shown; a provider failure stays opaque.
+            throw new AvatarGenerationFailure(
+                $"The avatar for agent '{target.Id:D}' was not stored, so the agent is unchanged. {exception.Message} " +
+                "Adjust the visual brief or compression and retry.",
+                exception);
+        }
 
         var editor = await workspaceService.GetAgentEditorAsync(target.Id, cancellationToken);
         editor.ExpectedUpdatedAtUtc = input.ExpectedUpdatedAtUtc;
@@ -120,5 +136,21 @@ public sealed class HrAgentAvatarGenerationService(
             generated.ContentLength,
             updated.UpdatedAtUtc,
             warnings);
+    }
+
+    // The avatar is generated and inspected before the catalog save, so a failed generation leaves the target agent
+    // unchanged and the HR agent may adjust the brief or retry.
+    private sealed class AvatarGenerationFailure(string message, Exception innerException)
+        : InvalidOperationException(message, innerException), IAgentToolFailureEffectEvidence
+    {
+        public string ErrorCode => "AvatarGenerationFailed";
+
+        public string SafeMessage => Message;
+
+        public bool IsSafeToExpose => true;
+
+        public bool CanRetryWithCorrectedInput => true;
+
+        public AgentToolEffectState EffectState => AgentToolEffectState.NotCommitted;
     }
 }

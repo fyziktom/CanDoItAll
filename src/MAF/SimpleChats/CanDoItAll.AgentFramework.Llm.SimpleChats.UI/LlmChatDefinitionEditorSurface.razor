@@ -1,0 +1,414 @@
+<Dialog IsOpen="true"
+        Eyebrow="Simple Chat definition"
+        Title="@DialogTitle"
+        Subtitle="Configure one reusable prompt and provider contract."
+        Size="ModalSize.Wide"
+        DenseChrome="true"
+        CloseOnBackdrop="false"
+        TestId="llm-chat-definition-editor-dialog"
+        OnClose="CancelAsync">
+    <ChildContent>
+        @if (isLoading) {
+            <LoadingState Eyebrow="Definition editor"
+                          Title="Loading definition"
+                          Description="Reading the current revision and provider capabilities." />
+        }
+        else if (!canManage) {
+            <EmptyState Eyebrow="Access required"
+                        Title="Definition editor is unavailable"
+                        Description="Manage Simple Chats permission is required to edit reusable definitions." />
+        }
+        else if (form is null) {
+            <EmptyState Eyebrow="Definition unavailable"
+                        Title="The definition could not be opened"
+                        Description="Close this editor and reload the definition catalog." />
+        }
+        else {
+            <ConversationDefinitionEditorShell @key="acceptedSource" Class="llm-chat-definition-editor">
+                <Header>
+                    @if (current is not null) {
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Text="@current.Status.ToString()"
+                                         Tone="@StatusTone(current.Status)"
+                                         data-testid="llm-chat-definition-editor-status" />
+                            <StatusBadge Text="@($"Revision {current.Revision}")"
+                                         Tone="info"
+                                         data-testid="llm-chat-definition-editor-revision" />
+                        </Cluster>
+                    }
+                </Header>
+                <Validation>
+                    @if (!string.IsNullOrWhiteSpace(errorMessage)) {
+                        <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="llm-chat-definition-editor-error">
+                            <Stack GapScale="LayoutGap.Small">
+                                <span>@errorMessage</span>
+                                @if (hasConcurrencyConflict) {
+                                    <Button Text="Reload current revision"
+                                            Icon="refresh"
+                                            Size="ButtonSize.Small"
+                                            Variant="Variant.Outlined"
+                                            Click="ReloadAsync"
+                                            Disabled="@isBusy"
+                                            data-testid="llm-chat-definition-editor-reload" />
+                                }
+                            </Stack>
+                        </Alert>
+                    }
+                </Validation>
+                <Sections>
+                    <Tabs SelectedIndex="@selectedTabIndex"
+                          SelectedIndexChanged="HandleSelectedTabChanged"
+                          Variant="TabsVariant.ModalCompact"
+                          BorderMode="TabsBorderMode.Soft"
+                          Tone="TabsTone.Info"
+                          OverflowMode="TabsOverflowMode.Scroll"
+                          PanelOverflowMode="TabsPanelOverflowMode.Auto"
+                          FillHeight="true"
+                          Class="llm-chat-definition-editor__tabs w-full min-w-0 flex-1 min-h-0"
+                          AriaLabel="Simple Chat definition sections"
+                          data-testid="llm-chat-definition-editor-tabs">
+                        <TabItems>
+                            <TabsItem Text="Identity" data-testid="llm-chat-definition-tab-identity">
+                                <FormSection Title="Identity" Description="Define how this Simple Chat appears in catalogs and conversation surfaces.">
+                                    <ConversationIdentityFields Name="@form.Name"
+                                                                NameChanged="HandleNameChanged"
+                                                                Summary="@form.Summary"
+                                                                SummaryChanged="HandleSummaryChanged"
+                                                                RoleLabel="@null"
+                                                                ShowInstructions="false"
+                                                                Avatar="@DefinitionAvatar"
+                                                                AvatarStatus="@ResolveAvatarSelectionText()"
+                                                                AvatarDescription="Stored with the Simple Chat definition and reused by conversation surfaces."
+                                                                Disabled="@isBusy"
+                                                                NameTestId="llm-chat-definition-name"
+                                                                AvatarTestId="llm-chat-definition-avatar-summary"
+                                                                SummaryTestId="llm-chat-definition-summary">
+                                        <AvatarActions>
+                                            @if (AvatarActions is not null) {
+                                                @AvatarActions(new(form, DefinitionAvatar, EventCallback.Factory.Create<string>(this, HandleAvatarChanged), isBusy))
+                                            }
+                                        </AvatarActions>
+                                        <AdditionalFields>
+                                            <FormField Text="Tags">
+                                                <TagEditor Value="@form.Tags"
+                                                           ValueChanged="HandleTagsChanged"
+                                                           Placeholder="Add Simple Chat tag"
+                                                           Hint="Use Enter or comma to add tags."
+                                                           MaxTags="12"
+                                                           Disabled="@isBusy"
+                                                           TestId="llm-chat-definition-tags"
+                                                           InputTestId="llm-chat-definition-tags-input" />
+                                            </FormField>
+                                        </AdditionalFields>
+                                    </ConversationIdentityFields>
+                                </FormSection>
+                            </TabsItem>
+
+                            <TabsItem Text="Runtime" data-testid="llm-chat-definition-tab-runtime">
+                                <FormSection Title="Runtime" Description="Bind the provider, model, prompt, and execution parameters used for every conversation.">
+                                    <Stack GapScale="LayoutGap.Large">
+                                        <Grid ColumnsMd="2" Gap="LayoutGap.Large">
+                                            <ConversationProviderSelector Options="@providerOptions"
+                                                                          Value="@SelectedProviderKey"
+                                                                          ValueChanged="HandleProviderChangedAsync"
+                                                                          Disabled="@isBusy"
+                                                                          IsLoading="@isLoadingProviders"
+                                                                          ErrorMessage="@providerErrorMessage"
+                                                                          EmptyMessage="No configured providers are available."
+                                                                          InputTestId="llm-chat-definition-provider" />
+                                            <ConversationProviderModelSelector Provider="@SelectedProviderOption"
+                                                                               Value="@form.Model"
+                                                                               ValueChanged="HandleModelChangedAsync"
+                                                                               UseEmptyValueForProviderDefault="false"
+                                                                               Disabled="@isBusy"
+                                                                               ChoiceTestId="llm-chat-definition-model"
+                                                                               OverrideTestId="llm-chat-definition-model-override"
+                                                                               CustomModelTestId="llm-chat-definition-custom-model" />
+                                        </Grid>
+                                        <FormField Text="System prompt">
+                                            <p class="mb-2 text-sm leading-6 text-slate-600">Applied to every conversation created from this definition.</p>
+                                            <ConversationPromptTextArea Value="@form.SystemPrompt"
+                                                                        ValueChanged="HandleSystemPromptChanged"
+                                                                        Rows="12"
+                                                                        ReadOnly="@isBusy"
+                                                                        data-testid="llm-chat-definition-system-prompt" />
+                                        </FormField>
+                                        <Grid ColumnsMd="3" Gap="LayoutGap.Large">
+                                            <ConversationTemperatureField Value="@form.Temperature"
+                                                                          ValueChanged="HandleTemperatureChanged"
+                                                                          Description="Use the provider default by leaving this empty."
+                                                                          Disabled="@isBusy"
+                                                                          InputTestId="llm-chat-definition-temperature" />
+                                            <FormField Text="Thinking effort">
+                                                <DropDown TValue="DefinitionEditorEffort?"
+                                                          Data="@ThinkingEffortChoices"
+                                                          Value="@form.ThinkingEffort"
+                                                          ValueChanged="HandleThinkingEffortChanged"
+                                                          Placeholder="Provider default"
+                                                          AllowClear="true"
+                                                          Disabled="@(isBusy || ThinkingEffortChoices.Count == 0)"
+                                                          data-testid="llm-chat-definition-thinking-effort" />
+                                                <p class="mt-2 text-sm leading-6 text-slate-600">@ThinkingEffortDescription</p>
+                                            </FormField>
+                                            <FormField Text="Timeout (seconds)">
+                                                <Numeric TValue="double?"
+                                                         Value="@form.TimeoutSeconds"
+                                                         ValueChanged="HandleTimeoutChanged"
+                                                         Min="1"
+                                                         Step="1"
+                                                         Disabled="@isBusy"
+                                                         data-testid="llm-chat-definition-timeout" />
+                                            </FormField>
+                                        </Grid>
+                                        <FormField Text="Model parameter configuration (JSON)">
+                                            <ConversationPromptTextArea Value="@form.ModelParameterConfigurationJson"
+                                                                        ValueChanged="HandleModelParametersChanged"
+                                                                        Rows="8"
+                                                                        ReadOnly="@isBusy"
+                                                                        data-testid="llm-chat-definition-model-parameters" />
+                                        </FormField>
+                                    </Stack>
+                                </FormSection>
+                            </TabsItem>
+
+                            <TabsItem Text="Output and revision" data-testid="llm-chat-definition-tab-output">
+                                <FormSection Title="Output and revision" Description="Control structured output and record why the new immutable revision is being saved.">
+                                    <Stack GapScale="LayoutGap.Large">
+                                        <FormField Text="Response format">
+                                            <DropDown TValue="DefinitionEditorFormat"
+                                                      Data="@ResponseFormatOptions"
+                                                      TextProperty="@nameof(ResponseFormatOption.Label)"
+                                                      ValueProperty="@nameof(ResponseFormatOption.Value)"
+                                                      Value="@form.ResponseFormat"
+                                                      ValueChanged="HandleResponseFormatChanged"
+                                                      Disabled="@isBusy"
+                                                      data-testid="llm-chat-definition-response-format" />
+                                        </FormField>
+
+                                        @if (form.ResponseFormat == DefinitionEditorFormat.JsonSchema) {
+                                            <Grid ColumnsMd="2" Gap="LayoutGap.Large">
+                                                <FormField Text="Schema name">
+                                                    <TextBox Value="@form.SchemaName"
+                                                             ValueChanged="HandleSchemaNameChanged"
+                                                             Disabled="@isBusy"
+                                                             data-testid="llm-chat-definition-schema-name" />
+                                                </FormField>
+                                                <FormField Text="Schema description">
+                                                    <TextBox Value="@form.SchemaDescription"
+                                                             ValueChanged="HandleSchemaDescriptionChanged"
+                                                             Disabled="@isBusy"
+                                                             data-testid="llm-chat-definition-schema-description" />
+                                                </FormField>
+                                            </Grid>
+                                            <FormField Text="JSON schema">
+                                                <ConversationPromptTextArea Value="@form.SchemaJson"
+                                                                            ValueChanged="HandleSchemaJsonChanged"
+                                                                            Rows="14"
+                                                                            ReadOnly="@isBusy"
+                                                                            data-testid="llm-chat-definition-schema-json" />
+                                            </FormField>
+                                        }
+
+                                        <FormField Text="Revision reason">
+                                            <TextArea Value="@form.RevisionReason"
+                                                      ValueChanged="HandleRevisionReasonChanged"
+                                                      Size="TextAreaSize.Standard"
+                                                      Disabled="@isBusy"
+                                                      data-testid="llm-chat-definition-revision-reason" />
+                                        </FormField>
+                                    </Stack>
+                                </FormSection>
+                            </TabsItem>
+                        </TabItems>
+                    </Tabs>
+                </Sections>
+                <Actions>
+                    <StickyActionFooter StatusLabel="Simple Chat definitions">
+                        <SecondaryActions>
+                            @if (current is not null) {
+                                @foreach (var status in DefinitionEditorTransitions.From(current.Status)) {
+                                    <Button Text="@DefinitionEditorTransitions.Label(status)"
+                                            Variant="Variant.Outlined"
+                                            ButtonStyle="@(status == LlmChatDefinitionStatusFilter.Archived ? ButtonStyle.Danger : ButtonStyle.Secondary)"
+                                            Click="@(() => ChangeStatusAsync(status))"
+                                            Disabled="@isBusy"
+                                            data-testid="@($"llm-chat-definition-status-{status.ToString().ToLowerInvariant()}")" />
+                                }
+                            }
+                        </SecondaryActions>
+                        <PrimaryActions>
+                            <Button Text="Cancel"
+                                    Variant="Variant.Outlined"
+                                    Click="CancelAsync"
+                                    Disabled="@isBusy"
+                                    data-testid="llm-chat-definition-editor-cancel" />
+                            <Button Text="Save definition"
+                                    Icon="save"
+                                    ButtonStyle="ButtonStyle.Primary"
+                                    Click="SaveAsync"
+                                    Disabled="@isBusy"
+                                    IsBusy="@isBusy"
+                                    data-testid="llm-chat-definition-editor-save" />
+                        </PrimaryActions>
+                    </StickyActionFooter>
+                </Actions>
+            </ConversationDefinitionEditorShell>
+        }
+    </ChildContent>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public DefinitionEditorPresentation Presentation { get; set; } = DefinitionEditorPresentation.Initial;
+    [Parameter] public EventCallback<DefinitionEditorIntent> Intent { get; set; }
+    [Parameter] public RenderFragment<DefinitionEditorAvatarContext>? AvatarActions { get; set; }
+    [Parameter] public System.Collections.Immutable.ImmutableArray<string> BundledAvatars { get; set; } = [];
+
+    private DefinitionEditorValues? form;
+    private DefinitionEditorValues? acceptedSource;
+    private DefinitionEditorSection section;
+    private DefinitionCatalogCard? current => Presentation.Definition;
+    private bool isLoading => Presentation.Phase == DefinitionEditorPhase.Loading;
+    private bool canManage => Presentation.Phase != DefinitionEditorPhase.Denied;
+    private bool isBusy => Presentation.IsSaving;
+    private bool isLoadingProviders => Presentation.ProvidersLoading;
+    private bool hasConcurrencyConflict => Presentation.Failure == DefinitionEditorFailure.Conflict;
+    private string errorMessage => Presentation.Error;
+    private string providerErrorMessage => Presentation.ProviderError;
+    private string DialogTitle => Presentation.Title;
+    private int selectedTabIndex => (int)section;
+    private IReadOnlyList<ConversationProviderOption> providerOptions => Presentation.Providers.IsDefault
+        ? [] : Presentation.Providers.Select(provider => provider.Option).ToArray();
+    private ConversationPresentationKey? SelectedProviderKey => form?.ProviderProfileId is { } id ? new(id.ToString("D")) : null;
+    private ConversationProviderOption? SelectedProviderOption => providerOptions.FirstOrDefault(option => option.Key == SelectedProviderKey);
+    private DefinitionEditorModel? SelectedModelCapability => Presentation.Providers.IsDefault ? null
+        : Presentation.Providers.FirstOrDefault(provider => provider.Option.Key == SelectedProviderKey)?.Models
+            .FirstOrDefault(model => string.Equals(model.Model, form?.Model, StringComparison.OrdinalIgnoreCase));
+    private IReadOnlyList<DefinitionEditorEffort> ThinkingEffortChoices => SelectedModelCapability?.AllowedEfforts ?? [];
+    private string ThinkingEffortDescription => SelectedModelCapability?.Support switch {
+        DefinitionEditorEffortSupport.Supported => "Choose an allowed effort or use the provider default.",
+        DefinitionEditorEffortSupport.Unsupported => "This model does not support thinking effort.",
+        _ => "Thinking effort capability is unknown for this model."
+    };
+    private ConversationAvatarPresentation DefinitionAvatar => new(
+        FirstNonEmpty(form?.Name, "Simple Chat avatar"), form?.AvatarImageUrl,
+        BuildInitials(FirstNonEmpty(form?.Name, "Simple Chat")),
+        current?.DefinitionId.ToString("D") ?? FirstNonEmpty(form?.Name, "Simple Chat avatar"));
+    private static readonly IReadOnlyList<ResponseFormatOption> ResponseFormatOptions = [
+        new(DefinitionEditorFormat.Text, "Text"), new(DefinitionEditorFormat.Json, "JSON object"),
+        new(DefinitionEditorFormat.JsonSchema, "JSON schema")
+    ];
+
+    protected override void OnParametersSet() {
+        if (ReferenceEquals(acceptedSource, Presentation.Source)) {
+            return;
+        }
+        acceptedSource = Presentation.Source;
+        form = acceptedSource;
+        section = DefinitionEditorSection.Identity;
+    }
+
+    private Task SaveAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Save, form));
+    private Task CancelAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Cancel));
+    private Task ReloadAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Reload));
+    private Task ChangeStatusAsync(LlmChatDefinitionStatusFilter status)
+        => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.ChangeStatus, Status: status));
+
+    private Task HandleProviderChangedAsync(ConversationPresentationKey? key) {
+        if (form is null) {
+            return Task.CompletedTask;
+        }
+        form = form with { ProviderProfileId = Guid.TryParse(key?.Value, out var id) && id != Guid.Empty ? id : null };
+        form = form with { Model = SelectedProviderOption?.DefaultModel ?? "" };
+        ApplyThinkingEffortCapability();
+        return Task.CompletedTask;
+    }
+    private Task HandleModelChangedAsync(string? model) {
+        if (form is not null) {
+            form = form with { Model = model ?? "" };
+            ApplyThinkingEffortCapability();
+        }
+        return Task.CompletedTask;
+    }
+    private void ApplyThinkingEffortCapability() {
+        if (form is not null && (SelectedModelCapability is not { Support: DefinitionEditorEffortSupport.Supported } capability
+            || form.ThinkingEffort is { } effort && !capability.AllowedEfforts.Contains(effort))) {
+            form = form with { ThinkingEffort = null };
+        }
+    }
+    private Task HandleSelectedTabChanged(int value) {
+        section = value switch {
+            0 => DefinitionEditorSection.Identity,
+            1 => DefinitionEditorSection.Runtime,
+            2 => DefinitionEditorSection.Output,
+            _ => throw new ArgumentOutOfRangeException(nameof(value))
+        };
+        return Task.CompletedTask;
+    }
+    private void HandleNameChanged(string? value) => form = form! with { Name = value ?? string.Empty };
+
+    private void HandleSummaryChanged(string? value) => form = form! with { Summary = value ?? string.Empty };
+
+    private void HandleAvatarChanged(string? value) => form = form! with { AvatarImageUrl = value ?? string.Empty };
+
+
+    private void HandleSystemPromptChanged(string? value) => form = form! with { SystemPrompt = value ?? string.Empty };
+
+    private void HandleTemperatureChanged(double? value) => form = form! with { Temperature = value };
+
+    private void HandleThinkingEffortChanged(DefinitionEditorEffort? value) => form = form! with { ThinkingEffort = value };
+
+    private void HandleTimeoutChanged(double? value) => form = form! with { TimeoutSeconds = value };
+
+    private void HandleResponseFormatChanged(DefinitionEditorFormat value)
+        => form = form! with { ResponseFormat = value };
+
+    private void HandleTagsChanged(IReadOnlyList<string> value) => form = form! with { Tags = System.Collections.Immutable.ImmutableArray.CreateRange(value) };
+
+    private void HandleSchemaNameChanged(string? value) => form = form! with { SchemaName = value ?? string.Empty };
+
+    private void HandleSchemaDescriptionChanged(string? value) => form = form! with { SchemaDescription = value ?? string.Empty };
+
+    private void HandleSchemaJsonChanged(string? value) => form = form! with { SchemaJson = value ?? string.Empty };
+
+    private void HandleModelParametersChanged(string? value) => form = form! with { ModelParameterConfigurationJson = value ?? string.Empty };
+
+    private void HandleRevisionReasonChanged(string? value) => form = form! with { RevisionReason = value ?? string.Empty };
+
+    private static string StatusTone(LlmChatDefinitionStatusFilter status)
+        => status switch {
+            LlmChatDefinitionStatusFilter.Draft => "base",
+            LlmChatDefinitionStatusFilter.Active => "success",
+            LlmChatDefinitionStatusFilter.Suspended => "warning",
+            LlmChatDefinitionStatusFilter.Archived => "danger",
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown definition status.")
+        };
+
+
+    private string ResolveAvatarSelectionText() {
+        var value = form?.AvatarImageUrl ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(value)) {
+            return "Default generated avatar";
+        }
+
+        if (BundledAvatars.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase)) {
+            return "Bundled avatar selected";
+        }
+
+        return value.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
+            ? "Custom avatar loaded"
+            : "Custom avatar selected";
+    }
+
+    private static string BuildInitials(string value)
+        => string.Concat(value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(part => char.ToUpperInvariant(part[0])));
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.First(value => !string.IsNullOrWhiteSpace(value))!.Trim();
+
+    private sealed record ResponseFormatOption(
+        DefinitionEditorFormat Value,
+        string Label);
+}

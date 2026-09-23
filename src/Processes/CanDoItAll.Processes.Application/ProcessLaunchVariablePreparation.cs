@@ -7,10 +7,13 @@ public interface IProcessLaunchVariableContributor
     void Enrich(ProcessLaunchPreparationContext context, IDictionary<string, string> variables);
 }
 
+public interface IProcessLaunchVariablePreparer {
+    void Enrich(ProcessLaunchPreparationContext context, IDictionary<string, string> variables);
+}
+
 public sealed class ProcessLaunchVariablePreparationService(
     IEnumerable<IProcessLaunchVariableContributor> registeredContributors,
-    ProcessTemplatePackLoader? templatePackLoader = null)
-{
+    ProcessTemplatePackLoader? templatePackLoader = null) : IProcessLaunchVariablePreparer {
     private readonly IReadOnlyList<IProcessLaunchVariableContributor> contributors = registeredContributors.ToArray();
 
     public void Enrich(

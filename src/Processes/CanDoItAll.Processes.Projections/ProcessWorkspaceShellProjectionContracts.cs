@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Processes.Projections;
 
@@ -706,6 +708,7 @@ public enum ProcessWorkspaceAgentEntryKind
     LaunchPlanContext
 }
 
+[Description("Classification of catalog scope kind. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionCatalogScopeKind
 {
     All,
@@ -713,6 +716,7 @@ public enum ProcessDefinitionCatalogScopeKind
     Project
 }
 
+[Description("Classification of catalog item status. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionCatalogItemStatus
 {
     TemplateDefault,
@@ -732,6 +736,7 @@ public enum ProcessDefinitionCatalogCommandStatus
     NoDefinitionsAvailable
 }
 
+[Description("Classification of authoring status. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionAuthoringStatus
 {
     TemplateDefault,
@@ -740,6 +745,7 @@ public enum ProcessDefinitionAuthoringStatus
     Archived
 }
 
+[Description("Classification of criticality level. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionCriticalityLevel
 {
     Unspecified,
@@ -749,6 +755,7 @@ public enum ProcessDefinitionCriticalityLevel
     MissionCritical
 }
 
+[Description("Classification of autonomy level. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionAutonomyLevel
 {
     Unspecified,
@@ -758,6 +765,7 @@ public enum ProcessDefinitionAutonomyLevel
     Delegated
 }
 
+[Description("Classification of operating mode kind. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionOperatingModeKind
 {
     Unspecified,
@@ -766,6 +774,7 @@ public enum ProcessDefinitionOperatingModeKind
     GovernedLive
 }
 
+[Description("Classification of editor command kind. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionEditorCommandKind
 {
     SaveDraft,
@@ -774,12 +783,14 @@ public enum ProcessDefinitionEditorCommandKind
     Delete
 }
 
+[Description("Classification of editor command status. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionEditorCommandStatus
 {
     Accepted,
     Rejected
 }
 
+[Description("Classification of editor lint severity. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionEditorLintSeverity
 {
     Info,
@@ -787,6 +798,7 @@ public enum ProcessDefinitionEditorLintSeverity
     Error
 }
 
+[Description("Classification of editor lint section. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionEditorLintSection
 {
     Identity,
@@ -795,6 +807,7 @@ public enum ProcessDefinitionEditorLintSection
     Simulation
 }
 
+[Description("Opaque catalog item key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionCatalogItemKey
 {
     public ProcessDefinitionCatalogItemKey(string value)
@@ -807,6 +820,7 @@ public readonly record struct ProcessDefinitionCatalogItemKey
         Value = value.Trim();
     }
 
+    [Description("Opaque identity or authoring-version text carried by this wrapper; preserve exactly.")]
     public string Value { get; }
 
     public override string ToString() => Value;
@@ -829,6 +843,7 @@ public readonly record struct ProcessDefinitionCatalogRefreshToken
     public override string ToString() => Value;
 }
 
+[Description("Opaque version of the editor projection. This is an authoring concurrency token, not an authentication credential.")]
 public readonly record struct ProcessDefinitionEditorVersionToken
 {
     public ProcessDefinitionEditorVersionToken(string value)
@@ -841,6 +856,7 @@ public readonly record struct ProcessDefinitionEditorVersionToken
         Value = value.Trim();
     }
 
+    [Description("Opaque identity or authoring-version text carried by this wrapper; preserve exactly.")]
     public string Value { get; }
 
     public override string ToString() => Value;
@@ -881,7 +897,9 @@ public sealed record ProcessWorkspaceShellRequest(
     ProcessTemplateCatalogQueryProjection TemplateCatalogQuery,
     bool ForceRefresh,
     ProcessRuntimeWorkspaceQueryProjection? RuntimeQuery = null,
-    ProcessDefinitionWorkspaceLoadOptions? DefinitionLoadOptions = null);
+    ProcessDefinitionWorkspaceLoadOptions? DefinitionLoadOptions = null) {
+    public ProcessProjectionProjectBinding? ProjectBinding { get; init; }
+}
 
 public sealed record ProcessDefinitionWorkspaceLoadOptions
 {
@@ -971,15 +989,25 @@ public sealed record ProcessDefinitionScopeGroupProjection(
     int Count,
     bool IsSelected);
 
+[Description("A process definition in the global catalog, with lifecycle, scope and compatibility information.")]
 public sealed record ProcessDefinitionCatalogItemProjection(
+    [property: Description("Opaque catalog identity of this item; do not derive it from its display name.")]
     ProcessDefinitionCatalogItemKey Key,
+    [property: Description("Catalog scope classification used by the process definition filter.")]
     ProcessDefinitionCatalogScopeKind ScopeKind,
+    [property: Description("Display name of the process definition.")]
     string Name,
+    [property: Description("Human-readable explanation of this item; display text is not an executable contract.")]
     string Summary,
+    [property: Description("Current lifecycle or command outcome of this projection.")]
     ProcessDefinitionCatalogItemStatus Status,
+    [property: Description("Operational criticality classification of the definition.")]
     string Criticality,
+    [property: Description("Operating mode governing execution of the definition.")]
     string OperatingMode,
+    [property: Description("Last recorded definition update time in UTC.")]
     DateTimeOffset UpdatedAtUtc,
+    [property: Description("Number of compatibility findings for this definition.")]
     int CompatibilityIssueCount);
 
 public sealed record ProcessDefinitionCatalogCommandReceipt(
@@ -991,34 +1019,60 @@ public sealed record ProcessDefinitionCatalogCommandReceipt(
     DateTimeOffset AcceptedAtUtc,
     string Summary);
 
+[Description("Definition identity, ownership, intended customer and value statement.")]
 public sealed record ProcessDefinitionEditorIdentityProjection(
+    [property: Description("Display name of the process definition.")]
     string Name,
+    [property: Description("Display label of the definition scope.")]
     string ScopeLabel,
+    [property: Description("Display name of the customer associated with the definition.")]
     string CustomerName,
+    [property: Description("Display name of the definition owner.")]
     string OwnerName,
+    [property: Description("Human-readable explanation of this item; display text is not an executable contract.")]
     string Summary,
+    [property: Description("Description of the business value the process is intended to deliver.")]
     string ValueStatement);
 
+[Description("Definition criticality, autonomy, working state and operator governance explanations.")]
 public sealed record ProcessDefinitionEditorGovernanceProjection(
+    [property: Description("Operational criticality classification of the definition.")]
     ProcessDefinitionCriticalityLevel Criticality,
+    [property: Description("Level of autonomy permitted by the definition governance policy.")]
     ProcessDefinitionAutonomyLevel AutonomyLevel,
+    [property: Description("Operating mode governing execution of the definition.")]
     ProcessDefinitionOperatingModeKind OperatingMode,
+    [property: Description("Working lifecycle state of the editable definition.")]
     ProcessDefinitionAuthoringStatus WorkingStatus,
+    [property: Description("Explanation of any manager override applied to the definition.")]
     string ManagerOverrideSummary,
+    [property: Description("Operator-authored notes explaining governance decisions.")]
     string GovernanceNotes,
+    [property: Description("Operator-authored explanation of the current definition changes.")]
     string ChangeSummary,
+    [property: Description("Human-readable summary of the effective governance policy.")]
     string GovernancePolicySummary);
 
+[Description("Human-readable interface, constitutional and operating-mode contracts of a definition.")]
 public sealed record ProcessDefinitionEditorContractProjection(
+    [property: Description("Human-readable contract for interaction with the process definition.")]
     string InterfaceContractSummary,
+    [property: Description("Human-readable constitutional rules applying to the definition.")]
     string ConstitutionRuleSummary,
+    [property: Description("Human-readable explanation of the selected operating mode.")]
     string OperatingModeSummary);
 
+[Description("Definition simulation prerequisites and readiness; reading this projection never starts a simulation.")]
 public sealed record ProcessDefinitionEditorSimulationProjection(
+    [property: Description("Human-readable explanation of simulation prerequisites and missing inputs.")]
     string SimulationReadinessSummary,
+    [property: Description("Number of steps in the definition.")]
     int StepCount,
+    [property: Description("Number of roles that must be staffed.")]
     int RequiredRoleCount,
+    [property: Description("Number of required artifact expectations in the definition.")]
     int RequiredArtifactExpectationCount,
+    [property: Description("Whether the current definition satisfies simulation prerequisites.")]
     bool IsReadyForSimulation);
 
 public sealed record ProcessDefinitionEditorDraftProjection(
@@ -1028,35 +1082,59 @@ public sealed record ProcessDefinitionEditorDraftProjection(
     ProcessDefinitionEditorContractProjection Contracts,
     ProcessDefinitionEditorSimulationProjection Simulation);
 
+[Description("One definition validation finding with its stable reason code and suggested correction.")]
 public sealed record ProcessDefinitionEditorLintIssueProjection(
+    [property: Description("Stable machine-readable reason code of this validation finding.")]
     string Code,
+    [property: Description("Severity of this validation finding.")]
     ProcessDefinitionEditorLintSeverity Severity,
+    [property: Description("Authoring section to which this validation finding belongs.")]
     ProcessDefinitionEditorLintSection Section,
+    [property: Description("Human-readable explanation of this validation finding.")]
     string Message,
+    [property: Description("Suggested authoring correction for this validation finding.")]
     string Suggestion);
 
+[Description("Definition validation findings and derived warning/blocking indicators.")]
 public sealed record ProcessDefinitionEditorLintProjection(
+    [property: Description("Validation findings for the current projection.")]
     IReadOnlyList<ProcessDefinitionEditorLintIssueProjection> Issues)
 {
+    [Description("True when at least one finding has warning or error severity.")]
     public bool HasWarningsOrErrors => Issues.Any(issue => issue.Severity is ProcessDefinitionEditorLintSeverity.Warning or ProcessDefinitionEditorLintSeverity.Error);
 
+    [Description("True when at least one error finding blocks the authoring action.")]
     public bool HasBlockingIssues => Issues.Any(issue => issue.Severity == ProcessDefinitionEditorLintSeverity.Error);
 }
 
+[Description("Availability of a definition-authoring command; this read API does not execute it.")]
 public sealed record ProcessDefinitionEditorCommandProjection(
+    [property: Description("Classification of this projected authoring item.")]
     ProcessDefinitionEditorCommandKind Kind,
+    [property: Description("User-facing command label.")]
     string Text,
+    [property: Description("Presentation icon name for the command or action.")]
     string Icon,
+    [property: Description("Whether the authoring application currently allows this command; this flag does not grant HTTP authority.")]
     bool IsEnabled,
+    [property: Description("Human-readable reason a command is unavailable, or null when it is available.")]
     string? DisabledReason);
 
+[Description("Most recent definition command result and validation findings at its observed version.")]
 public sealed record ProcessDefinitionEditorCommandReceipt(
+    [property: Description("Unique identifier of the recorded authoring command receipt.")]
     Guid ReceiptId,
+    [property: Description("Authoring command whose outcome this receipt records.")]
     ProcessDefinitionEditorCommandKind CommandKind,
+    [property: Description("Current lifecycle or command outcome of this projection.")]
     ProcessDefinitionEditorCommandStatus Status,
+    [property: Description("Opaque version of this authoring projection; it is not an authentication token.")]
     ProcessDefinitionEditorVersionToken VersionToken,
+    [property: Description("UTC instant when this command result was observed.")]
     DateTimeOffset ObservedAtUtc,
+    [property: Description("Human-readable explanation of this item; display text is not an executable contract.")]
     string Summary,
+    [property: Description("Validation findings associated with the recorded command.")]
     IReadOnlyList<ProcessDefinitionEditorLintIssueProjection> LintIssues);
 
 public sealed record ProcessDefinitionEditorCommand(
@@ -1070,24 +1148,39 @@ public sealed record ProcessDefinitionEditorCommandResult(
     ProcessDefinitionEditorCommandReceipt Receipt,
     ProcessDefinitionEditorProjection Projection);
 
+[Description("Current definition overview and optional role, step, canvas and template authoring projections. Read-only over this HTTP surface.")]
 public sealed record ProcessDefinitionEditorProjection(
+    [property: Description("Opaque catalog key of the process definition; preserve it exactly when constructing read URLs.")]
     ProcessDefinitionCatalogItemKey DefinitionKey,
+    [property: Description("Opaque version of this authoring projection; it is not an authentication token.")]
     ProcessDefinitionEditorVersionToken VersionToken,
+    [property: Description("Current lifecycle or command outcome of this projection.")]
     ProcessDefinitionAuthoringStatus Status,
+    [property: Description("Definition name, ownership and business-purpose projection.")]
     ProcessDefinitionEditorIdentityProjection Identity,
+    [property: Description("Current definition governance settings and explanations.")]
     ProcessDefinitionEditorGovernanceProjection Governance,
+    [property: Description("Declared interface and behavior contracts for this authoring item.")]
     ProcessDefinitionEditorContractProjection Contracts,
+    [property: Description("Simulation prerequisites and readiness, without executing a simulation.")]
     ProcessDefinitionEditorSimulationProjection Simulation,
+    [property: Description("Validation findings for the current authoring snapshot.")]
     ProcessDefinitionEditorLintProjection Lint,
+    [property: Description("Commands available in the authoring application; these read endpoints do not execute commands.")]
     IReadOnlyList<ProcessDefinitionEditorCommandProjection> Commands,
+    [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
     ProcessDefinitionEditorCommandReceipt? LastCommandReceipt)
 {
+    [Description("Optional role authoring projection associated with this definition.")]
     public ProcessDefinitionRoleEditorProjection? RoleEditor { get; init; }
 
+    [Description("Optional canvas authoring projection associated with this definition.")]
     public ProcessDefinitionCanvasEditorProjection? Canvas { get; init; }
 
+    [Description("Optional step authoring projection associated with this definition.")]
     public ProcessDefinitionStepEditorProjection? StepEditor { get; init; }
 
+    [Description("Optional template catalog projected for this definition.")]
     public ProcessTemplateCatalogProjection? TemplateCatalog { get; init; }
 }
 
@@ -1312,6 +1405,9 @@ public sealed record ProcessWorkspaceShellProjection(
     IReadOnlyList<ProcessWorkspaceCommandProjection> Commands,
     ProcessWorkspaceAgentEntryProjection AgentEntry)
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessProjectionProjectBinding? ProjectBinding { get; init; }
+
     public ProcessRuntimeWorkspaceProjection Runtime { get; init; } = ProcessRuntimeWorkspaceProjection.Empty;
 
     public ProcessWorkspaceProvenanceVector Provenance { get; init; } =

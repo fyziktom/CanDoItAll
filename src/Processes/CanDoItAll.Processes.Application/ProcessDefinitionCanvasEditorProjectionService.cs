@@ -39,22 +39,23 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
     public Task<ProcessDefinitionCanvasEditorProjection> GetCanvasAsync(
         ProcessWorkspaceShellScope scope,
         ProcessDefinitionCatalogItemKey definitionKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProcessProjectionProjectBinding? projectBinding = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ValidateScope(scope);
+        ValidateScope(scope, projectBinding);
 
         ProcessDefinitionCanvasEditorProjection projection;
         lock (stateGate)
         {
-            var stateKey = ProcessDefinitionCanvasStateKey.From(scope, definitionKey);
+            var stateKey = ProcessDefinitionCanvasStateKey.From(scope, definitionKey, projectBinding);
             if (snapshots.TryGetValue(stateKey, out var snapshot))
             {
                 projection = CreateProjection(snapshot, lastReceipt: null);
             }
             else
             {
-                var created = CreateTemplateSnapshot(scope, FindTemplateDefinition(definitionKey));
+                var created = CreateTemplateSnapshot(scope, FindTemplateDefinition(definitionKey), projectBinding);
                 snapshots[stateKey] = created;
                 projection = CreateProjection(created, lastReceipt: null);
             }
@@ -65,20 +66,21 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
     public Task<ProcessDefinitionCanvasCommandResult> ExecuteCommandAsync(
         ProcessDefinitionCanvasCommand command,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProcessProjectionProjectBinding? projectBinding = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.Scope);
-        ValidateScope(command.Scope);
+        ValidateScope(command.Scope, projectBinding);
 
         ProcessDefinitionCanvasCommandResult result;
         lock (stateGate)
         {
-            var stateKey = ProcessDefinitionCanvasStateKey.From(command.Scope, command.DefinitionKey);
+            var stateKey = ProcessDefinitionCanvasStateKey.From(command.Scope, command.DefinitionKey, projectBinding);
             var baseline = snapshots.TryGetValue(stateKey, out var existing)
                 ? existing
-                : CreateTemplateSnapshot(command.Scope, FindTemplateDefinition(command.DefinitionKey));
+                : CreateTemplateSnapshot(command.Scope, FindTemplateDefinition(command.DefinitionKey), projectBinding);
             snapshots.TryAdd(stateKey, baseline);
             var observedAtUtc = clock.GetUtcNow();
 

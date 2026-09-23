@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -14,6 +15,29 @@ internal static class HistorySourceIdentity {
 
     internal static string Hash(HistorySourceMutation mutation)
         => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(mutation)));
+
+    internal static bool MatchesHistoricalChatPrice(HistorySourceMutation mutation, string? historicalHash) {
+        if (mutation is not {
+            Source.Kind: HistorySourceKind.SimpleChat, Kind: HistorySourceMutationKind.Upsert,
+            Entry: { Granularity: HistoryGranularity.LegacyAggregate, Price: {
+                State: HistoryPriceState.ProviderReported or HistoryPriceState.CalculatedAtExecution, Amount: { } amount
+            } } entry
+        }) {
+            return false;
+        }
+        // PostgreSQL changed decimal scale; accept only the complete original evidence hash without rewriting it.
+        const int maximumDecimalScale = 28;
+        for (var scale = 0; scale <= maximumDecimalScale; scale++) {
+            var text = amount.ToString($"F{scale}", CultureInfo.InvariantCulture);
+            if (!decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var candidate) || candidate != amount) {
+                continue;
+            }
+            if (Hash(mutation with { Entry = entry with { Price = entry.Price with { Amount = candidate } } }) == historicalHash) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     internal static void Validate(HistorySourceMutation mutation) {
         var source = mutation.Source;

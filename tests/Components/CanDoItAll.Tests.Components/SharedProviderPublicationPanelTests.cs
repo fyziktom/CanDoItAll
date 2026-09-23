@@ -114,6 +114,7 @@ internal sealed class RecordingSharedProviderManagementService(
     public IReadOnlyList<SharedProviderSourceManagementSnapshot> Sources { get; } = sourceSnapshots ?? [];
 
     public SharedProviderPublicationAction? PublicationAction { get; private set; }
+    public int PublicationWrites { get; private set; }
 
     public SharedProviderImportedProfileUpdateRequest? ImportedUpdate { get; private set; }
 
@@ -125,9 +126,10 @@ internal sealed class RecordingSharedProviderManagementService(
     public Task<SharedProviderProfileSharingSnapshot> SetPublicationAsync(
         Guid providerProfileId,
         SharedProviderPublicationAction action,
-        Guid expectedConcurrencyToken,
+        Guid? expectedConcurrencyToken,
         CancellationToken cancellationToken = default)
     {
+        PublicationWrites++;
         PublicationAction = action;
         State = State with
         {
@@ -147,6 +149,10 @@ internal sealed class RecordingSharedProviderManagementService(
         ListSourcesCallCount++;
         return Task.FromResult(Sources);
     }
+
+    public Task<SharedProviderSourceVerificationResult> VerifySourceAsync(
+        SharedProviderSourceMutationAttempt attempt, CancellationToken cancellationToken = default)
+        => Task.FromResult(SharedProviderSourceVerification.Evaluate(attempt, Sources));
 
     public Task<SharedProviderSourceWriteResult> SaveSourceAsync(
         SharedProviderSourceEditorRequest request,

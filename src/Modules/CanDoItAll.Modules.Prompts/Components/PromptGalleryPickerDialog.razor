@@ -1,8 +1,9 @@
+@implements IDisposable
 @inject IPromptGalleryService Gallery
 @inject DialogService DialogService
 @inject NotificationService Notifications
 
-<PromptGallerySearchList @ref="searchList"
+<PromptGallerySearchHost @ref="searchHost"
                          Consumer="@Consumer"
                          Provider="@Provider"
                          Model="@Model"
@@ -15,8 +16,16 @@
                          EditRequested="HandleEditRequestedAsync" />
 
 @code {
-    private PromptGallerySearchList? searchList;
+    private readonly CancellationTokenSource lifetime = new();
+    private PromptGallerySearchHost? searchHost;
+    private DialogReference? itemDetailsDialog;
+    private Guid? resolvingItemId;
     private bool itemDetailsDirty;
+    private bool disposed;
+
+    // Supplied by DialogHost so this picker closes only itself, never an unrelated dialog on top of it.
+    [CascadingParameter]
+    public DialogReference? Dialog { get; set; }
 
     [Parameter]
     public PromptGalleryConsumer Consumer { get; set; } = PromptGalleryConsumer.Chat;
@@ -41,111 +50,188 @@
 
     private async Task ResolveSelectionAsync(PromptGallerySearchItem item)
     {
-        var detailsResult = await Gallery.GetItemAsync(item.Id);
-        if (!detailsResult.IsSuccess || detailsResult.Value is not { } details)
+        if (!IsOpen() || resolvingItemId.HasValue)
         {
-            Notifications.Warning("Prompt item unavailable", DescribeErrors(detailsResult.Errors));
             return;
         }
 
-        PromptGallerySelection selection;
-        if (details.CurrentVersionNumber > 0)
+        resolvingItemId = item.Id;
+        try
         {
-            var versionResult = await Gallery.GetVersionSnapshotAsync(details.Id, details.CurrentVersionNumber);
-            if (!versionResult.IsSuccess || versionResult.Value is not { } version)
+            var detailsResult = await Gallery.GetItemAsync(item.Id, lifetime.Token);
+            if (!IsOpen())
             {
-                Notifications.Warning("Prompt version unavailable", DescribeErrors(versionResult.Errors));
                 return;
             }
 
-            selection = new PromptGallerySelection(
-                details.Id,
-                version.PromptVersionId,
-                version.VersionNumber,
-                version.Title,
-                version.Summary,
-                version.Kind,
-                version.Content,
-                details.Tags,
-                details.SupportedModels,
-                version.Recommendations);
-        }
-        else
-        {
-            selection = new PromptGallerySelection(
-                details.Id,
-                VersionId: null,
-                VersionNumber: null,
-                details.Title,
-                details.Summary,
-                details.Kind,
-                details.DraftContent,
-                details.Tags,
-                details.SupportedModels,
-                details.Recommendations);
-        }
+            if (!detailsResult.IsSuccess || detailsResult.Value is not { } details)
+            {
+                Notifications.Warning(
+                    "Prompt item unavailable",
+                    PromptGalleryNotices.DescribeErrors(detailsResult.Errors, "The prompt item could not be loaded."));
+                return;
+            }
 
-        await DialogService.CloseAsync(selection);
+            PromptGallerySelection selection;
+            if (details.CurrentVersionNumber > 0)
+            {
+                // An item with a final version is inserted as that exact immutable snapshot; the draft is never substituted.
+                var versionResult = await Gallery.GetVersionSnapshotAsync(details.Id, details.CurrentVersionNumber, lifetime.Token);
+                if (!IsOpen())
+                {
+                    return;
+                }
+
+                if (!versionResult.IsSuccess || versionResult.Value is not { } version)
+                {
+                    Notifications.Warning(
+                        "Prompt version unavailable",
+                        PromptGalleryNotices.DescribeErrors(versionResult.Errors, "The prompt version could not be loaded."));
+                    return;
+                }
+
+                selection = new PromptGallerySelection(
+                    details.Id,
+                    version.PromptVersionId,
+                    version.VersionNumber,
+                    version.Title,
+                    version.Summary,
+                    version.Kind,
+                    version.Content,
+                    details.Tags,
+                    details.SupportedModels,
+                    version.Recommendations);
+            }
+            else
+            {
+                selection = new PromptGallerySelection(
+                    details.Id,
+                    VersionId: null,
+                    VersionNumber: null,
+                    details.Title,
+                    details.Summary,
+                    details.Kind,
+                    details.DraftContent,
+                    details.Tags,
+                    details.SupportedModels,
+                    details.Recommendations);
+            }
+
+            await CloseAsync(selection);
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!disposed)
+            {
+                Notifications.Error("Prompt selection failed", exception.Message);
+            }
+        }
+        finally
+        {
+            resolvingItemId = null;
+        }
     }
 
     private async Task HandleEditRequestedAsync(Guid itemId)
     {
+        if (disposed)
+        {
+            return;
+        }
+
         if (!EditRequested.HasDelegate)
         {
             await OpenItemDetailsAsync(itemId);
             return;
         }
 
-        await DialogService.CloseAsync();
+        // The picker closes first so the owner's callback observes no picker dialog.
+        await CloseAsync(null);
         await EditRequested.InvokeAsync(itemId);
     }
 
     private async Task OpenItemDetailsAsync(Guid itemId)
     {
         itemDetailsDirty = false;
-        _ = await DialogService.OpenAsync<PromptGalleryItemEditor>(
-            "Prompt details",
-            new Dictionary<string, object?>
-            {
-                [nameof(PromptGalleryItemEditor.ItemId)] = itemId,
-                [nameof(PromptGalleryItemEditor.Saved)] = EventCallback.Factory.Create<Guid>(
-                    this,
-                    (Guid savedItemId) => HandleItemSavedAsync(savedItemId)),
-                [nameof(PromptGalleryItemEditor.Cancelled)] = EventCallback.Factory.Create(
-                    this,
-                    () => CloseItemDetailsAsync())
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Prompt gallery",
-                Subtitle = "Review or edit this canonical prompt without leaving the current workflow or chat.",
-                Size = ModalSize.Full,
-                DenseChrome = true,
-                CloseOnBackdrop = false,
-                TestId = "prompt-gallery-item-details-dialog",
-                AriaLabel = "Prompt Gallery item details"
-            });
-        if (itemDetailsDirty)
+        try
         {
-            itemDetailsDirty = false;
-            if (searchList is not null)
-            {
-                await searchList.RefreshAsync();
-            }
+            var opened = DialogService.OpenAsync<PromptGalleryItemEditorHost>(
+                "Prompt details",
+                new Dictionary<string, object?>
+                {
+                    [nameof(PromptGalleryItemEditorHost.ItemId)] = itemId,
+                    [nameof(PromptGalleryItemEditorHost.Committed)] = EventCallback.Factory.Create<PromptGalleryEditorCommit>(
+                        this,
+                        (PromptGalleryEditorCommit commit) => HandleItemCommitted(commit)),
+                    [nameof(PromptGalleryItemEditorHost.Cancelled)] = EventCallback.Factory.Create(
+                        this,
+                        () => CloseItemDetailsAsync())
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Prompt gallery",
+                    Subtitle = "Review or edit this canonical prompt without leaving the current workflow or chat.",
+                    Size = ModalSize.Full,
+                    DenseChrome = true,
+                    CloseOnBackdrop = false,
+                    TestId = "prompt-gallery-item-details-dialog",
+                    AriaLabel = "Prompt Gallery item details"
+                },
+                lifetime.Token);
+            itemDetailsDialog = DialogService.Dialogs.LastOrDefault(dialog => dialog.ComponentType == typeof(PromptGalleryItemEditorHost));
+            _ = await opened;
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+        finally
+        {
+            itemDetailsDialog = null;
+        }
+
+        if (disposed || !itemDetailsDirty)
+        {
+            return;
+        }
+
+        // A persisted change inside the nested editor invalidates this picker's own list, not a remount of it.
+        itemDetailsDirty = false;
+        if (searchHost is not null)
+        {
+            await searchHost.RefreshAsync();
         }
     }
 
-    private Task HandleItemSavedAsync(Guid itemId)
+    private void HandleItemCommitted(PromptGalleryEditorCommit commit)
     {
-        itemDetailsDirty = true;
-        return Task.CompletedTask;
+        if (!disposed)
+        {
+            itemDetailsDirty = true;
+        }
     }
 
     private Task CloseItemDetailsAsync()
-        => DialogService.CloseAsync();
+        => itemDetailsDialog is { } dialog ? dialog.CloseAsync() : Task.CompletedTask;
 
-    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
-        => errors.Count == 0
-            ? "The prompt item could not be loaded."
-            : string.Join(" ", errors.Select(error => error.Message));
+    private bool IsOpen()
+        => !disposed && (Dialog is null || !Dialog.Result.IsCompleted);
+
+    private Task CloseAsync(object? result)
+        => Dialog is { } dialog ? dialog.CloseAsync(result) : DialogService.CloseAsync(result);
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
 }

@@ -41,7 +41,7 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
                     "The semantic file scope contains a duplicate storage binding."));
             }
 
-            StorageCatalogRecord storage = await storageCatalog.GetAsync(binding.StorageId, cancellationToken)
+            StorageDriverInput storage = await storageCatalog.GetDriverAsync(binding.StorageId, cancellationToken)
                 ?? throw new FileBrowserProviderException(new FileBrowserError(
                     FileBrowserErrorCode.NotFound,
                     "A storage binding for the semantic file scope no longer exists."));
@@ -112,7 +112,7 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
     }
 
     private static FileToolsBrowseSourceActionAvailability ResolveActionAvailability(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         IStorageDriverRegistry storageDriverRegistry,
         FileSystemStoragePathPolicy pathPolicy)
     {

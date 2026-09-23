@@ -657,12 +657,14 @@ public sealed class WorkspaceCommandExecutionService :
         catch (Exception exception) when (
             WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
         {
+            // Building the plan never starts a process or touches the workspace.
             return processRunner.CreateDeniedResult(
                 toolName,
                 recipeId,
                 riskClass,
                 approvalRequired,
-                GetSafeFailureMessage(exception));
+                GetSafeFailureMessage(exception),
+                rejectedBeforeLaunch: true);
         }
 
         try

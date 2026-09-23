@@ -12,6 +12,19 @@ public sealed record WorkspaceResolvedPath(
 
 public interface IWorkspacePathResolutionService
 {
+    WorkspaceExecutionScope ExecutionScope => throw new NotSupportedException(
+        "This workspace path owner does not expose its immutable execution scope.");
+
+    WorkspaceResolvedPath ResolvePath(string path) => throw new NotSupportedException(
+        "This workspace path owner does not expose its actual generic path resolution.");
+
+    /// <summary>
+    /// Returns the path owner for the same workspace root and external-target registry bound to another workspace
+    /// scope, such as the active scope of an agent run whose workspace tools map managed roots into that scope.
+    /// </summary>
+    IWorkspacePathResolutionService ForScope(WorkspaceScopeDescriptor workspaceScope) => throw new NotSupportedException(
+        "This workspace path owner cannot derive a path owner for another workspace scope.");
+
     WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing);
 
     WorkspaceResolvedPath ResolveDirectoryPath(string path, bool allowMissing);
@@ -34,6 +47,8 @@ public interface IWorkspacePathResolutionService
 public sealed class WorkspacePathResolutionService : IWorkspacePathResolutionService
 {
     private readonly WorkspacePathPolicy pathPolicy;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
+    private readonly IExternalTargetPathRegistry? externalTargetRegistry;
 
     public WorkspacePathResolutionService(
         string workspaceRoot,
@@ -46,6 +61,29 @@ public sealed class WorkspacePathResolutionService : IWorkspacePathResolutionSer
             physicalPathPolicyFactory,
             workspaceScope,
             externalTargetRegistry);
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory;
+        this.externalTargetRegistry = externalTargetRegistry;
+        ExecutionScope = new WorkspaceExecutionScope(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope,
+            rootCaseSensitivity: physicalPathPolicyFactory.Create(pathPolicy.WorkspaceRoot).CaseSensitivity);
+    }
+
+    public WorkspaceExecutionScope ExecutionScope { get; }
+
+    public IWorkspacePathResolutionService ForScope(WorkspaceScopeDescriptor workspaceScope)
+    {
+        ArgumentNullException.ThrowIfNull(workspaceScope);
+        return workspaceScope == ExecutionScope.Scope
+            ? this
+            : new WorkspacePathResolutionService(
+                ExecutionScope.WorkspaceRoot,
+                physicalPathPolicyFactory,
+                workspaceScope,
+                externalTargetRegistry);
+    }
+
+    public WorkspaceResolvedPath ResolvePath(string path) {
+        var resolution = pathPolicy.ResolveAccessiblePath(path);
+        return new(resolution.FullPath, resolution.RelativePath, resolution.IsWorkspacePath);
     }
 
     public WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing)

@@ -193,12 +193,12 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
 
             if (model.Id.HasValue && current is null)
             {
-                throw new InvalidOperationException($"Capability '{model.Id.Value:D}' was not found.");
+                throw new CapabilityCatalogRejectedException($"Capability '{model.Id.Value:D}' was not found.");
             }
 
             if (!model.Id.HasValue && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
             {
-                throw new InvalidOperationException("A capability create cannot specify an expected fingerprint.");
+                throw new CapabilityCatalogRejectedException("A capability create cannot specify an expected fingerprint.");
             }
 
             if (current is not null && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
@@ -207,8 +207,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     CapabilityEditorModel.FromDefinition(current));
                 if (!string.Equals(actualFingerprint, model.ExpectedFingerprint.Trim(), StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException(
-                        $"Capability '{current.Id:D}' changed after it was read. Reload it before saving.");
+                    throw new CapabilityCatalogRejectedException(
+                        $"Capability '{current.Id:D}' changed after it was read. Reload it before saving.",
+                        isConcurrencyConflict: true);
                 }
             }
 
@@ -247,72 +248,27 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return capabilityId;
     }
 
-    public async Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
-    {
-        await UpdateCatalogAsync(catalog => catalog with
-        {
+    public async Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) {
+        var now = DateTimeOffset.UtcNow;
+        await UpdateCatalogAsync(catalog => catalog with {
             Capabilities = catalog.Capabilities.Where(item => item.Id != capabilityId).ToList(),
-            Agents = catalog.Agents
-                .Select(agent => agent with
-                {
-                    Capabilities = agent.Capabilities
-                        .Where(item => item.CapabilityId != capabilityId)
-                        .ToList()
-                })
-                .ToList()
+            Agents = catalog.Agents.Select(agent => agent.Capabilities.All(item => item.CapabilityId != capabilityId)
+                ? agent : agent with {
+                    Capabilities = agent.Capabilities.Where(item => item.CapabilityId != capabilityId).ToList(),
+                    UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
+                }).ToList()
         }, cancellationToken);
     }
 
-    public async Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
-    {
-        var catalog = await store.LoadCatalogAsync(cancellationToken);
-        var agent = catalog.Agents.FirstOrDefault(item => item.Id == agentId)
-            ?? throw new InvalidOperationException("Agent was not found.");
-        var capability = catalog.Capabilities.FirstOrDefault(item => item.Id == capabilityId)
-            ?? throw new InvalidOperationException("Capability was not found.");
-        var provider = agent.ProviderProfileId.HasValue
-            ? await providerSource.GetProviderAsync(agent.ProviderProfileId.Value, cancellationToken)
-            : null;
-
-        var verification = await capabilityProofService.VerifyAsync(agent, provider, capability, cancellationToken);
-
-        await UpdateCatalogAsync(currentCatalog => currentCatalog with
-        {
-            Agents = currentCatalog.Agents.Select(currentAgent =>
-            {
-                if (currentAgent.Id != agentId)
-                {
-                    return currentAgent;
-                }
-
-                var updatedCapabilities = currentAgent.Capabilities
-                    .Select(item => item.CapabilityId == capabilityId
-                        ? item with
-                        {
-                            ProofStatus = verification.Status,
-                            LastVerifiedAtUtc = verification.CheckedAtUtc,
-                            ProofNotes = verification.Notes
-                        }
-                        : item)
-                    .ToList();
-
-                return currentAgent with
-                {
-                    Capabilities = updatedCapabilities,
-                    UpdatedAtUtc = verification.CheckedAtUtc
-                };
-            }).ToList(),
-            Capabilities = currentCatalog.Capabilities
-                .Select(item => item.Id == capabilityId
-                    ? item with
-                    {
-                        ProofStatus = verification.Status,
-                        LastVerifiedAtUtc = verification.CheckedAtUtc,
-                        ProofNotes = verification.Notes
-                    }
-                    : item)
-                .ToList()
-        }, cancellationToken);
+    public async Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
+        if (providerSource is not IProviderRuntimeProfileSnapshotSource snapshots) {
+            throw new CapabilityVerificationException(new(CapabilityVerificationDisposition.InfrastructureUnavailable));
+        }
+        var outcome = await new CapabilityVerificationPublication(store, capabilityProofService, snapshots)
+            .ExecuteAsync(agentId, capabilityId, cancellationToken);
+        if (outcome.Disposition != CapabilityVerificationDisposition.Committed) {
+            throw new CapabilityVerificationException(outcome);
+        }
     }
 
     private static void EnsureUniqueCapabilityIdentity(IEnumerable<CapabilityCatalogItem> existingCapabilities, CapabilityCatalogItem capability)
@@ -330,7 +286,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new CapabilityCatalogRejectedException(
             $"Capability save would reuse canonical capability identity '{identityKey}', which already belongs to: {string.Join(", ", collisions)}.");
     }
 

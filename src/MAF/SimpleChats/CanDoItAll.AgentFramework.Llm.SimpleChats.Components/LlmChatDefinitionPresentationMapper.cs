@@ -1,54 +1,25 @@
+using CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
 using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using System.Collections.Immutable;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
-public enum LlmChatDefinitionStatusFilter
-{
-    All,
-    Draft,
-    Active,
-    Suspended,
-    Archived
-}
+internal static class LlmChatDefinitionPresentationMapper {
+    public static DefinitionCatalogCard ToCatalogCard(LlmChatDefinitionListItem definition) => new(
+        definition.DefinitionId, definition.Name, definition.Summary, definition.AvatarImageUrl,
+        definition.Status switch {
+            LlmChatDefinitionStatus.Draft => LlmChatDefinitionStatusFilter.Draft,
+            LlmChatDefinitionStatus.Active => LlmChatDefinitionStatusFilter.Active,
+            LlmChatDefinitionStatus.Suspended => LlmChatDefinitionStatusFilter.Suspended,
+            LlmChatDefinitionStatus.Archived => LlmChatDefinitionStatusFilter.Archived,
+            _ => throw new ArgumentOutOfRangeException(nameof(definition), "Unknown definition status.")
+        }, definition.Revision, definition.UpdatedAtUtc, definition.Tags.ToImmutableArray());
 
-public sealed record LlmChatDefinitionStatusFilterOption(
-    LlmChatDefinitionStatusFilter Value,
-    string Label);
+    public static ConversationParticipantPresentation ToParticipant(LlmChatDefinitionListItem definition, Guid? selectedDefinitionId = null)
+        => ToCatalogCard(definition).ToParticipant(selectedDefinitionId);
 
-internal static class LlmChatDefinitionPresentationMapper
-{
-    public const string DefinitionKeyPrefix = "llm-chat-definition:";
-
-    public static ConversationParticipantPresentation ToParticipant(
-        LlmChatDefinitionListItem definition,
-        Guid? selectedDefinitionId = null)
-    {
-        ArgumentNullException.ThrowIfNull(definition);
-        return new(
-            ToKey(definition.DefinitionId),
-            definition.Name,
-            subtitle: $"Revision {definition.Revision}",
-            summary: definition.Summary,
-            avatarImageUrl: definition.AvatarImageUrl,
-            avatarSeed: definition.DefinitionId.ToString("D"),
-            avatarFallbackText: BuildFallback(definition.Name),
-            searchText: string.Join(' ', definition.Name, definition.Summary, string.Join(' ', definition.Tags)),
-            badges: [new(
-                definition.Status.ToString(),
-                ToTone(definition.Status),
-                testId: $"llm-chat-definition-status-{definition.DefinitionId:D}")],
-            tags: definition.Tags,
-            metadata:
-            [
-                new(definition.UpdatedAtUtc.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), "Updated")
-            ],
-            isSelected: definition.DefinitionId == selectedDefinitionId);
-    }
-
-    public static ConversationProviderOption ToProvider(LlmChatProviderOptionPresentation provider)
-    {
+    public static ConversationProviderOption ToProvider(LlmChatProviderOptionPresentation provider) {
         ArgumentNullException.ThrowIfNull(provider);
         var models = provider.Models
             .Select(option => option.Model)
@@ -67,26 +38,19 @@ internal static class LlmChatDefinitionPresentationMapper
     }
 
     public static ConversationPresentationKey ToKey(Guid definitionId)
-        => new($"{DefinitionKeyPrefix}{definitionId:D}");
+        => DefinitionCatalogMapping.ToKey(definitionId);
 
     public static ConversationPresentationKey ToProviderKey(Guid providerProfileId)
         => new(providerProfileId.ToString("D"));
 
     public static bool TryGetDefinitionId(ConversationPresentationKey key, out Guid definitionId)
-    {
-        ArgumentNullException.ThrowIfNull(key);
-        definitionId = Guid.Empty;
-        return key.Value.StartsWith(DefinitionKeyPrefix, StringComparison.Ordinal) &&
-               Guid.TryParse(key.Value[DefinitionKeyPrefix.Length..], out definitionId) &&
-               definitionId != Guid.Empty;
-    }
+        => DefinitionCatalogMapping.TryGetDefinitionId(key, out definitionId);
 
     public static bool TryGetProviderId(ConversationPresentationKey? key, out Guid providerProfileId)
         => Guid.TryParse(key?.Value, out providerProfileId) && providerProfileId != Guid.Empty;
 
     public static LlmChatDefinitionStatus? ToStatus(LlmChatDefinitionStatusFilter filter)
-        => filter switch
-        {
+        => filter switch {
             LlmChatDefinitionStatusFilter.All => null,
             LlmChatDefinitionStatusFilter.Draft => LlmChatDefinitionStatus.Draft,
             LlmChatDefinitionStatusFilter.Active => LlmChatDefinitionStatus.Active,
@@ -96,8 +60,7 @@ internal static class LlmChatDefinitionPresentationMapper
         };
 
     public static IReadOnlyList<LlmChatDefinitionStatus> GetAllowedTransitions(LlmChatDefinitionStatus status)
-        => status switch
-        {
+        => status switch {
             LlmChatDefinitionStatus.Draft => [LlmChatDefinitionStatus.Active, LlmChatDefinitionStatus.Archived],
             LlmChatDefinitionStatus.Active => [LlmChatDefinitionStatus.Suspended, LlmChatDefinitionStatus.Archived],
             LlmChatDefinitionStatus.Suspended => [LlmChatDefinitionStatus.Active, LlmChatDefinitionStatus.Archived],
@@ -106,8 +69,7 @@ internal static class LlmChatDefinitionPresentationMapper
         };
 
     public static string GetTransitionLabel(LlmChatDefinitionStatus status)
-        => status switch
-        {
+        => status switch {
             LlmChatDefinitionStatus.Active => "Activate",
             LlmChatDefinitionStatus.Suspended => "Suspend",
             LlmChatDefinitionStatus.Archived => "Archive",
@@ -115,19 +77,4 @@ internal static class LlmChatDefinitionPresentationMapper
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown definition status.")
         };
 
-    private static PresentationTone ToTone(LlmChatDefinitionStatus status)
-        => status switch
-        {
-            LlmChatDefinitionStatus.Draft => PresentationTone.Default,
-            LlmChatDefinitionStatus.Active => PresentationTone.Success,
-            LlmChatDefinitionStatus.Suspended => PresentationTone.Warning,
-            LlmChatDefinitionStatus.Archived => PresentationTone.Danger,
-            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown definition status.")
-        };
-
-    private static string BuildFallback(string name)
-    {
-        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return string.Concat(words.Take(2).Select(word => char.ToUpperInvariant(word[0])));
-    }
 }

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Components;
@@ -26,6 +27,7 @@ public partial class ProviderRequestHistoryPanel : IDisposable {
 
     protected override void OnInitialized() {
         state = new(History, Logger);
+        state.Changed += Render;
         ResetDraft();
         ProfileChanges.Changed += ProfileChanged;
     }
@@ -55,6 +57,31 @@ public partial class ProviderRequestHistoryPanel : IDisposable {
         await state.SearchAsync(draft.ToQuery(Scope, Clock.GetUtcNow()));
     }
 
+    private void Render() => _ = InvokeAsync(() => {
+        if (!disposed) {
+            StateHasChanged();
+        }
+    });
+
+    private Task DispatchAsync(HistoryResultsIntent intent) {
+        switch (intent) {
+            case HistoryResultsIntent.Previous:
+                return state.PreviousAsync();
+            case HistoryResultsIntent.Next:
+                return state.NextAsync();
+            case HistoryResultsIntent.Cancel:
+                state.Cancel();
+                break;
+            case HistoryResultsIntent.Clear:
+                ClearResults();
+                break;
+            case HistoryResultsIntent.Details details when state.Page?.Entries.Any(entry => entry.Id == details.EntryId) == true:
+                selectedEntry = details.EntryId;
+                break;
+        }
+        return Task.CompletedTask;
+    }
+
     private void DraftChanged() => draftChanged = true;
 
     private void ClearResults() {
@@ -77,6 +104,9 @@ public partial class ProviderRequestHistoryPanel : IDisposable {
     }
 
     public void Dispose() {
+        if (disposed) {
+            return;
+        }
         disposed = true;
         ProfileChanges.Changed -= ProfileChanged;
         state.Dispose();

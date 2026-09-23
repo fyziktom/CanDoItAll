@@ -7,6 +7,63 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ProviderRequestHistoryPanelTests {
+    public enum Replacement { Search, Clear, Profile, Scope, Authentication }
+
+    [Theory]
+    [InlineData(Replacement.Search)]
+    [InlineData(Replacement.Clear)]
+    [InlineData(Replacement.Profile)]
+    [InlineData(Replacement.Scope)]
+    [InlineData(Replacement.Authentication)]
+    public async Task Internal_replacement_never_renders_canceled(Replacement replacement) {
+        var backend = new ProviderHistoryUiFixture();
+        var pending = new TaskCompletionSource<HistoryPage>();
+        CancellationToken observed = default;
+        backend.Search = (_, token) => {
+            observed = token;
+            return pending.Task;
+        };
+        using var context = backend.CreateContext();
+        var authorization = context.AddAuthorization();
+        authorization.SetAuthorized("operator");
+        var host = context.Render<Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>(p =>
+            p.AddChildContent<ProviderRequestHistoryPanel>(child => child.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized())));
+        var cut = host.FindComponent<ProviderRequestHistoryPanel>();
+        var renders = new List<string>();
+        cut.OnMarkupUpdated += (_, _) => renders.Add(cut.Markup);
+        var submitted = cut.Find("[data-testid='history-search-form']").SubmitAsync();
+        cut.WaitForElement("[data-testid='history-cancel']");
+        backend.Search = (_, _) => Task.FromResult(new HistoryPage([], null, new(HistoryCoverageState.Current, null), ProviderHistoryUiFixture.Now));
+        switch (replacement) {
+            case Replacement.Search:
+                await cut.Find("[data-testid='history-search-form']").SubmitAsync();
+                break;
+            case Replacement.Clear:
+                await cut.Find("[data-testid='history-clear']").ClickAsync();
+                break;
+            case Replacement.Profile:
+                await cut.InvokeAsync(() => context.Services.GetRequiredService<IDatabaseSwitchNotificationService>()
+                    .Publish(new(null, null, Guid.NewGuid(), "new-profile", 2)));
+                break;
+            case Replacement.Scope:
+                cut.Render(p => p.Add(x => x.Scope, new HistoryProviderScope.SingleProvider(new(Guid.NewGuid()))));
+                break;
+            case Replacement.Authentication:
+                authorization.SetNotAuthorized();
+                break;
+        }
+        Assert.True(observed.IsCancellationRequested);
+        Assert.True(observed.WaitHandle.WaitOne(0));
+        pending.SetResult(new([backend.Entry], null, new(HistoryCoverageState.Current, null), ProviderHistoryUiFixture.Now));
+        await submitted;
+        Assert.NotEmpty(renders);
+        Assert.All(renders, markup => Assert.DoesNotContain("Search canceled", markup));
+        Assert.Empty(cut.FindAll("[data-testid='history-details']"));
+        if (replacement != Replacement.Search) {
+            Assert.Contains("History not requested", cut.Markup);
+        }
+    }
+
     [Fact]
     public void Render_filter_edits_and_controls_do_not_read_until_form_submission() {
         var backend = new ProviderHistoryUiFixture();

@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -7,8 +6,6 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -201,21 +198,16 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton(
             DispatchProxy.Create<IProviderRuntimeAdministrationService, RecordingWorkspaceServiceProxy>());
-        context.Services.AddSingleton(
-            (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
-        context.Services.AddSingleton(
-            (SecretService)RuntimeHelpers.GetUninitializedObject(typeof(SecretService)));
+        context.Services.AddAgentEditorReadFixture();
         return context;
     }
 
-    private static IRenderedComponent<TestAgentDetailsDialog> RenderRuntimeTab(
+    private static IRenderedComponent<AgentDetailsDialog> RenderRuntimeTab(
         BunitContext context,
         AgentEditorModel editor,
         IReadOnlyList<ProviderProfile> providers)
     {
-        return context.Render<TestAgentDetailsDialog>(parameters => parameters
-            .Add(component => component.TestEditor, editor)
-            .Add(component => component.TestProviders, providers));
+        return context.RenderEditor(editor, AgentEditorSection.Runtime, providers: providers);
     }
 
     private static AgentEditorModel CreateEditor(ProviderProfile provider)
@@ -254,7 +246,7 @@ public sealed class AgentDetailsDialogThinkingEffortTests
     }
 
     private static void ChangeSelectToLabel(
-        IRenderedComponent<TestAgentDetailsDialog> component,
+        IRenderedComponent<AgentDetailsDialog> component,
         string testId,
         string label)
     {
@@ -267,7 +259,7 @@ public sealed class AgentDetailsDialogThinkingEffortTests
     }
 
     private static AngleSharp.Dom.IElement FindSelect(
-        IRenderedComponent<TestAgentDetailsDialog> component,
+        IRenderedComponent<AgentDetailsDialog> component,
         string testId)
     {
         var element = component.Find($"[data-testid='{testId}']");
@@ -281,7 +273,7 @@ public sealed class AgentDetailsDialogThinkingEffortTests
     }
 
     private static AngleSharp.Dom.IElement FindSaveButton(
-        IRenderedComponent<TestAgentDetailsDialog> component)
+        IRenderedComponent<AgentDetailsDialog> component)
     {
         var element = component.Find($"[data-testid='{SaveTestId}']");
         if (string.Equals(element.TagName, "BUTTON", StringComparison.OrdinalIgnoreCase))
@@ -291,34 +283,6 @@ public sealed class AgentDetailsDialogThinkingEffortTests
 
         return element.QuerySelector("button")
             ?? throw new InvalidOperationException($"Control '{SaveTestId}' does not contain a button element.");
-    }
-
-    public sealed class TestAgentDetailsDialog : AgentDetailsDialog
-    {
-        [Parameter]
-        public AgentEditorModel TestEditor { get; set; } = new();
-
-        [Parameter]
-        public IReadOnlyList<ProviderProfile> TestProviders { get; set; } = [];
-
-        protected override Task OnInitializedAsync()
-        {
-            SetBaseField("editorModel", TestEditor);
-            SetBaseField("providers", TestProviders);
-            SetBaseField("areProvidersLoaded", true);
-            SetBaseField("selectedTabIndex", 1);
-            SetBaseField("isLoading", false);
-            return Task.CompletedTask;
-        }
-
-        private void SetBaseField(string fieldName, object value)
-        {
-            var field = typeof(AgentDetailsDialog).GetField(
-                fieldName,
-                BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(AgentDetailsDialog).FullName, fieldName);
-            field.SetValue(this, value);
-        }
     }
 
     public class RecordingWorkspaceServiceProxy : DispatchProxy

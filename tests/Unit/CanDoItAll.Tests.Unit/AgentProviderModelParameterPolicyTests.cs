@@ -129,6 +129,19 @@ public sealed class AgentProviderModelParameterPolicyTests
     }
 
     [Theory]
+    [InlineData(ProviderTransportKind.Responses)]
+    [InlineData(ProviderTransportKind.ChatCompletions)]
+    public void Astra_exposes_only_documented_efforts_and_omits_temperature(ProviderTransportKind transport) {
+        var capability = AgentThinkingEffortPolicy.ResolveDefinedCapability(ProviderKind.OpenAi, transport, OpenAiModelIds.Gpt6Astra);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Supported, capability.Status);
+        Assert.Equal(new[] { AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.Medium,
+            AgentReasoningEffortLevel.High, AgentReasoningEffortLevel.ExtraHigh, AgentReasoningEffortLevel.Max }, capability.AllowedEfforts);
+        Assert.True(AgentProviderModelParameterPolicy.ShouldOmitTemperature(ProviderKind.OpenAi, OpenAiModelIds.Gpt6Astra));
+        Assert.Throws<InvalidOperationException>(() => AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+            ProviderKind.OpenAi, transport, OpenAiModelIds.Gpt6Astra, "{\"reasoningEffort\":\"none\"}", string.Empty));
+    }
+
+    [Theory]
     [InlineData(OpenAiModelIds.Gpt56Sol)]
     [InlineData(OpenAiModelIds.Gpt56Terra)]
     [InlineData(OpenAiModelIds.Gpt56Luna)]

@@ -8,11 +8,14 @@ services, and module-specific tool providers.
 | [AgentFramework](CanDoItAll.Modules.AgentFramework/README.md) | Agents, providers, execution, conversations, and capability setup |
 | [Collaboration](CanDoItAll.Modules.Collaboration/README.md) | Collaboration product surfaces |
 | [CRM/HR](CanDoItAll.Modules.CrmHr/README.md) | Parties, CRM, workforce, recruiting, and staffing |
+| [CRM/HR contracts](CanDoItAll.Modules.CrmHr.Contracts/README.md) | Public CRM / HR enums, records, editor inputs, read ports and the route catalog shared with the rendering UI |
 | [Memory](CanDoItAll.Modules.Memory/README.md) | Memory provider configuration and operations |
 | [Plugins](CanDoItAll.Modules.Plugins/README.md) | Plugin catalog, activation, grants, OAuth, and settings |
 | [Processes](CanDoItAll.Modules.Processes/README.md) | Process authoring, launch, monitoring, and recovery |
 | [Projects](CanDoItAll.Modules.Projects/README.md) | Project portfolio, hierarchy, planning, and files |
+| [Projects contracts](CanDoItAll.Modules.Projects.Contracts/README.md) | Project admission, assignment and record-query contracts shared with lightweight consumers |
 | [Prompts](CanDoItAll.Modules.Prompts/README.md) | Prompt catalog and curation |
+| [Prompts contracts](CanDoItAll.Modules.Prompts.Contracts/README.md) | Public Prompt Gallery value contracts, enums and ports shared with the rendering UI |
 | [Resources](CanDoItAll.Modules.Resources/README.md) | Reusable workspace resources |
 | [Scheduler Planner](CanDoItAll.Modules.SchedulerPlanner/README.md) | Scheduled process and workflow launches |
 | [Security](CanDoItAll.Modules.Security/README.md) | Application security contracts |

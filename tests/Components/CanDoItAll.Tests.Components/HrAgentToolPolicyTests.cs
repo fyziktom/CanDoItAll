@@ -1,3 +1,5 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
+using CanDoItAll.Modules.AgentFramework;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
@@ -10,17 +12,17 @@ namespace CanDoItAll.Tests.Components.CrmHr;
 public sealed class HrAgentToolPolicyTests
 {
     [Theory]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrAgentCreate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrAgentAvatarGenerate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest)]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmPartyCreate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert)]
+    [InlineData(HrAgentToolPolicy.HrAgentCreate)]
+    [InlineData(HrAgentToolPolicy.HrAgentSettingsUpdate)]
+    [InlineData(HrAgentToolPolicy.HrAgentAvatarGenerate)]
+    [InlineData(HrAgentToolPolicy.HrAgentProcessManagerReviewRequest)]
+    [InlineData(HrAgentToolPolicy.HrCrmPartyCreate)]
+    [InlineData(HrAgentToolPolicy.HrCrmAffiliationUpsert)]
     public void HR_mutations_require_host_approval(string toolName)
     {
-        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName));
-        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
-        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName));
+        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName, ProductToolPolicies));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(toolName, ProductToolPolicies));
     }
 
     [Fact]
@@ -28,7 +30,7 @@ public sealed class HrAgentToolPolicyTests
     {
         var targetAgentId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            HrAgentToolPolicy.HrAgentSettingsUpdate,
         [
             new KeyValuePair<string, object?>("request", new
             {
@@ -36,9 +38,9 @@ public sealed class HrAgentToolPolicyTests
                 name = "Private agent name",
                 instructions = "Confidential operating instructions"
             })
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            HrAgentToolPolicy.HrAgentSettingsUpdate,
             redacted);
 
         Assert.Contains(targetAgentId.ToString("D"), signature, StringComparison.Ordinal);
@@ -51,16 +53,16 @@ public sealed class HrAgentToolPolicyTests
     {
         const string privateSearchText = "private.person@example.test";
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.HrCrmSearch,
+            HrAgentToolPolicy.HrCrmSearch,
         [
             new KeyValuePair<string, object?>("request", new
             {
                 searchText = privateSearchText,
                 take = 20
             })
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.HrCrmSearch,
+            HrAgentToolPolicy.HrCrmSearch,
             redacted);
 
         Assert.DoesNotContain(privateSearchText, signature, StringComparison.Ordinal);
@@ -68,8 +70,8 @@ public sealed class HrAgentToolPolicyTests
     }
 
     [Theory]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmPartyCreate)]
-    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert)]
+    [InlineData(HrAgentToolPolicy.HrCrmPartyCreate)]
+    [InlineData(HrAgentToolPolicy.HrCrmAffiliationUpsert)]
     public void HR_CRM_mutation_redaction_masks_party_business_data(
         string toolName)
     {
@@ -87,7 +89,7 @@ public sealed class HrAgentToolPolicyTests
                 displayName = privateDisplayName,
                 jobTitle = privateTitle
             })
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
             toolName,
             redacted);
@@ -112,15 +114,15 @@ public sealed class HrAgentToolPolicyTests
         const string personPartyId =
             "11111111-1111-1111-1111-111111111111";
         var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
-            AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList,
+            HrAgentToolPolicy.HrCrmPartyAffiliationsList,
         [
             new KeyValuePair<string, object?>("request", new
             {
                 personPartyId
             })
-        ]);
+        ], ProductToolPolicies);
         var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
-            AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList,
+            HrAgentToolPolicy.HrCrmPartyAffiliationsList,
             redacted);
 
         Assert.DoesNotContain(
@@ -135,7 +137,7 @@ public sealed class HrAgentToolPolicyTests
         const string privateInstructions = "Only promote agents approved by the confidential committee.";
         var pendingApproval = CreatePendingApproval(
             "approval-create",
-            AgentToolInvocationPolicyMetadata.HrAgentCreate,
+            HrAgentToolPolicy.HrAgentCreate,
             CreateRequestArguments(new { instructions = privateInstructions }));
         var run = CreateRun([pendingApproval]);
 
@@ -160,7 +162,7 @@ public sealed class HrAgentToolPolicyTests
         {
             CreatePendingApproval(
                 "approval-create",
-                AgentToolInvocationPolicyMetadata.HrAgentCreate,
+                HrAgentToolPolicy.HrAgentCreate,
                 CreateRequestArguments(new
                 {
                     agentId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -168,7 +170,7 @@ public sealed class HrAgentToolPolicyTests
                 })),
             CreatePendingApproval(
                 "approval-review",
-                AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest,
+                HrAgentToolPolicy.HrAgentProcessManagerReviewRequest,
                 CreateRequestArguments(new
                 {
                     processRunId = "run-42",
@@ -176,7 +178,7 @@ public sealed class HrAgentToolPolicyTests
                 })),
             CreatePendingApproval(
                 "approval-avatar",
-                AgentToolInvocationPolicyMetadata.HrAgentAvatarGenerate,
+                HrAgentToolPolicy.HrAgentAvatarGenerate,
                 CreateRequestArguments(new
                 {
                     agentId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
@@ -193,7 +195,8 @@ public sealed class HrAgentToolPolicyTests
                 .ToArray(),
             DateTimeOffset.Parse("2026-07-14T16:00:00Z"),
             "chat-session",
-            "session-42");
+            "session-42",
+            ProductToolPolicies);
 
         Assert.All(decision.Decided, approval =>
         {
@@ -209,10 +212,10 @@ public sealed class HrAgentToolPolicyTests
 
         var firstAudit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
             pendingApprovals[0].ToolName,
-            pendingApprovals[0].ArgumentsJson);
+            pendingApprovals[0].ArgumentsJson, ProductToolPolicies);
         var repeatedAudit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
             pendingApprovals[0].ToolName,
-            pendingApprovals[0].ArgumentsJson);
+            pendingApprovals[0].ArgumentsJson, ProductToolPolicies);
         Assert.Equal(firstAudit, repeatedAudit);
 
         using var firstAuditDocument = JsonDocument.Parse(firstAudit);
@@ -234,7 +237,7 @@ public sealed class HrAgentToolPolicyTests
 
         var reprotectedAudit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
             pendingApprovals[0].ToolName,
-            firstAudit);
+            firstAudit, ProductToolPolicies);
         using var reprotectedAuditDocument = JsonDocument.Parse(reprotectedAudit);
         Assert.NotEqual(
             expectedCanonicalArgumentsSha256,
@@ -243,7 +246,7 @@ public sealed class HrAgentToolPolicyTests
             firstAudit,
             AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
                 pendingApprovals[0].ToolName,
-                firstAudit));
+                firstAudit, ProductToolPolicies));
     }
 
     [Fact]
@@ -261,15 +264,15 @@ public sealed class HrAgentToolPolicyTests
         {
             CreatePendingApproval(
                 "approval-create",
-                AgentToolInvocationPolicyMetadata.HrAgentCreate,
+                HrAgentToolPolicy.HrAgentCreate,
                 CreateRequestArguments(new { instructions = privateInstructions })),
             CreatePendingApproval(
                 "approval-review",
-                AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest,
+                HrAgentToolPolicy.HrAgentProcessManagerReviewRequest,
                 CreateRequestArguments(new { question = privateQuestion })),
             CreatePendingApproval(
                 "approval-avatar",
-                AgentToolInvocationPolicyMetadata.HrAgentAvatarGenerate,
+                HrAgentToolPolicy.HrAgentAvatarGenerate,
                 CreateRequestArguments(new { visualBrief = privateAvatarBrief }))
         };
         var run = CreateRun(pendingApprovals) with
@@ -373,7 +376,7 @@ public sealed class HrAgentToolPolicyTests
 
         try
         {
-            var packageService = new ZipAgentPackageService(workspaceRoot);
+            var packageService = new ZipAgentPackageService(workspaceRoot, toolPolicies: ProductToolPolicies);
             var export = await packageService.ExportAsync(document, agent);
             using var archive = ZipFile.OpenRead(export.PackagePath);
             var exportedText = new StringBuilder();
@@ -415,7 +418,7 @@ public sealed class HrAgentToolPolicyTests
 
         var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
             "workspace_write_text",
-            argumentsJson);
+            argumentsJson, ProductToolPolicies);
 
         Assert.Equal(argumentsJson, protectedArguments);
     }

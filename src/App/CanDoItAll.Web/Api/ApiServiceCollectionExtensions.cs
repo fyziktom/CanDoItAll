@@ -1,4 +1,5 @@
 using System.Text;
+using CanDoItAll.Infrastructure.Storage;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -7,6 +8,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -44,9 +46,19 @@ public static class ApiServiceCollectionExtensions
             .Validate(options => ApiAccessOptions.Validate(options).Count == 0, "API configuration is invalid.")
             .ValidateOnStart();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
+        services.TryAddSingleton<ApiPasswordService>();
+        services.TryAddSingleton<ApiSessionService>();
+        services.TryAddSingleton<ApiLoginThrottle>();
+        services.TryAddScoped<ApiUserAdministrationService>();
         services.Replace(ServiceDescriptor.Scoped<IApiTokenAdministrationAccess, WebApiTokenAdministrationAccess>());
         services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<MemoryProviderApiService>();
+        services.TryAddScoped<WebCurrentPrincipalResolver>();
+        services.TryAddScoped<IStoragePlacementRecoveryAccess, WebStoragePlacementRecoveryAccess>();
+        services.TryAddScoped<StoragePlacementRecoveryService>();
+        services.TryAddScoped<IStoragePlacementRecovery>(provider => provider.GetRequiredService<StoragePlacementRecoveryService>());
+        services.AddScoped<ProjectWorkflowAssetContinuationService>();
+        services.TryAddScoped<IStoragePlacementOwnerContinuation, StoragePlacementOwnerContinuationService>();
         services.TryAddSingleton(
             typeof(ProfileBoundedReplayEventStream<>),
             typeof(ProfileBoundedReplayEventStream<>));
@@ -54,7 +66,13 @@ public static class ApiServiceCollectionExtensions
         services.ConfigureLlmChatApiJson();
         services.AddOpenApi(options =>
         {
+            options.AddOperationTransformer(ApiAccessOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(ApiEndpointDocumentation.TransformAsync);
+            options.AddSchemaTransformer(ApiAccessOpenApiContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(new OpenApiNullableTypeDescriptions());
+            options.AddSchemaTransformer(OpenApiAttributeDescriptions.TransformAsync);
             options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
+            options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
             options.AddOperationTransformer(
@@ -63,9 +81,46 @@ public static class ApiServiceCollectionExtensions
                 SharedProviderCatalogOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(
                 SharedProviderInferenceOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(OpenApiFormParameterDescriptions.TransformOperationAsync);
+            options.AddOperationTransformer(OpenApiDuplicateParameters.TransformOperationAsync);
+            options.AddDocumentTransformer(OpenApiDiscriminatorDescriptions.TransformDocumentAsync);
+            options.AddDocumentTransformer(OpenApiAttributeDescriptions.TransformDocumentAsync);
+            options.AddDocumentTransformer(OpenApiDescriptionText.TransformDocumentAsync);
         });
         services.AddAuthorization(options =>
         {
+            foreach (var scope in ApiScopeCatalog.All.Where(scope => scope.UserSelectable)) {
+                options.AddPolicy(scope.Name, policy => {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireAssertion(context => ApiAuthorizationPolicies.HasApiOrSpecificScope(context.User, scope.Name));
+                });
+            }
+            options.AddPolicy(ApiAuthorizationPolicies.UserSession, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => context.Resource is HttpContext http &&
+                    http.Features.Get<ValidatedApiCredential>()?.Session is not null);
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ManageAccess, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => configuredOptions.AccessManagement.Enabled && context.Resource is HttpContext http &&
+                    http.Features.Get<ValidatedApiCredential>() is { Kind: CanDoItAll.Infrastructure.ControlPlane.ApiCredentialKind.AdministratorSession, Session.IsAdministrator: true });
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.GeneralApi, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.Api));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ReadStoragePlacementRecovery, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.ReadStoragePlacementRecovery));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ReconcileStoragePlacement, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.ReconcileStoragePlacement));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.VerifyStorageExternalTermination, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.VerifyStorageExternalTermination));
+            });
             options.AddPolicy(ApiAuthorizationPolicies.IssueTokens, policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -180,6 +235,9 @@ public static class ApiServiceCollectionExtensions
                     ValidateAudience = true,
                     ValidAudience = configuredOptions.Authorization.Audience,
                     ValidateIssuerSigningKey = true,
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    RequireSignedTokens = true,
+                    RequireExpirationTime = true,
                     IssuerSigningKey = signingKey,
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30)
@@ -190,6 +248,7 @@ public static class ApiServiceCollectionExtensions
                     OnChallenge = context =>
                     {
                         context.HandleResponse();
+                        context.Response.Headers.WWWAuthenticate = "Bearer";
                         return SharedProviderApiResponseWriter.WriteAuthorizationErrorAsync(
                             context.HttpContext,
                             StatusCodes.Status401Unauthorized);

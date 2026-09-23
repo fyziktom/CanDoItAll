@@ -47,3 +47,13 @@ After streaming headers have started, an upstream failure cannot change HTTP 200
 Generic AI-provider database transfer is blocked when either database contains publication/import references, or when it would replace a secret used by a target shared source. It is not a complete sharing-state migration. Do not delete references or bypass the guard to force a transfer; use a reviewed backup/restore plan that preserves database and vault identities together.
 
 See [request history](provider-request-history.md), [pricing](provider-capability-and-pricing.md), and [backup and restore](operations/backup-and-restore.md).
+
+## Image pricing extension
+
+The catalog remains schema `1.1`. Updated clients request `CanDoItAll-Catalog-Features: image-pricing` to receive the optional `imageInputPerMillionTokensUsd` and `cachedImageInputPerMillionTokensUsd` price fields. For image-generation models the existing input and cached-input fields describe text tokens, and output describes image tokens. The server acknowledges the feature in its response header. Both new fields survive publication, import, editing, and synchronization.
+
+Requests without that feature header retain the original price shape, so older strict clients continue working. The response varies by the feature header, and each representation has its own revision and ETag. An updated client also accepts an older publisher's ordinary catalog. Synchronize the source after updating to import the added metadata; user accounts, publication identities and conversations are preserved.
+
+Manual acceptance must use real upstream endpoints. Fixture responses prove protocol behavior only. Compare source and client model names, options, and prices, then verify client Simple Chats and agents against upstream request evidence, Ollama loaded-model evidence, and an actual generated image. Leave the manual pair connected to real providers after acceptance.
+
+GPT Image 2.5 responses can include an upstream `generation_id` on each image. The relay accepts a bounded opaque identifier and omits it from the public projection, while preserving image data and supported usage metadata. Image URLs and unexpected private fields remain rejected.

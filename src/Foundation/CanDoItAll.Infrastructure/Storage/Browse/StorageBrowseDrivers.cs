@@ -9,7 +9,7 @@ public interface IStorageBrowseDriver
     StorageBrowseWorkBudget MaximumBudget { get; }
 
     Task<StorageBrowsePage> BrowseAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseRequest request,
         CancellationToken cancellationToken = default);
 }
@@ -19,7 +19,7 @@ public interface IStorageBrowseSearchDriver
     StorageBrowseSearchBudget MaximumSearchBudget { get; }
 
     Task<StorageBrowsePage> SearchAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseSearchRequest request,
         CancellationToken cancellationToken = default);
 }
@@ -27,7 +27,7 @@ public interface IStorageBrowseSearchDriver
 public interface IStorageBrowseStatDriver
 {
     Task<StorageBrowseEntry> StatAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageBrowseStatRequest request,
         CancellationToken cancellationToken = default);
 }

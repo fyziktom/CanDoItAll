@@ -5,6 +5,10 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Infrastructure.Readiness;
 
+/// <summary>
+/// Readiness of an application path, as a string token: <c>Ready</c> (the root resolved, is writable and passed the
+/// path safety checks) or <c>Unavailable</c>.
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PathFoundationReadinessState
 {
@@ -12,6 +16,12 @@ public enum PathFoundationReadinessState
     Unavailable
 }
 
+/// <summary>
+/// Reason for the readiness of an application path, as a string token: <c>Ready</c>, <c>InvalidConfiguration</c>
+/// (the root could not be resolved from the configuration), <c>AccessDenied</c> (the operating-system account cannot
+/// write it), <c>UnsafePath</c> (the path failed the path safety checks, for example link traversal) or
+/// <c>IoFailure</c> (an input/output error while probing it).
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PathFoundationReadinessReason
 {
@@ -26,6 +36,23 @@ public sealed record PathCapabilityReadiness(
     PathFoundationReadinessState State,
     PathFoundationReadinessReason Reason);
 
+/// <summary>
+/// Readiness of one application purpose root in a runtime host snapshot: which root, where its location comes from
+/// and whether the host can use it. The root's path itself is never reported.
+/// </summary>
+/// <param name="Purpose">
+/// The root, as a string token: <c>Workspace</c>, <c>ControlPlane</c>, <c>DatabaseProfiles</c>,
+/// <c>DataProtectionKeys</c>, <c>State</c>, <c>Logs</c> or <c>RuntimeTemporary</c>.
+/// </param>
+/// <param name="ConfigurationSource">
+/// Where the root's location comes from, as a string token: <c>PlatformDefault</c>, <c>ExplicitConfiguration</c>,
+/// <c>ActiveDatabaseProfile</c>, <c>DerivedFromControlPlaneRoot</c> or <c>OwnerResolved</c>.
+/// </param>
+/// <param name="State">Whether the root is usable, as a string token: <c>Ready</c> or <c>Unavailable</c>.</param>
+/// <param name="Reason">
+/// Why, as a string token: <c>Ready</c>, <c>InvalidConfiguration</c>, <c>AccessDenied</c>, <c>UnsafePath</c> or
+/// <c>IoFailure</c>.
+/// </param>
 public sealed record ApplicationPurposeRootReadiness(
     ApplicationPurposeRootKind Purpose,
     ApplicationPurposeRootConfigurationSource ConfigurationSource,

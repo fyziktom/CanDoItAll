@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Models;
+
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectStructureAssetMediaTypePolicy
@@ -37,16 +39,33 @@ internal static class ProjectStructureWorkspaceAssetReader
 
     public static async Task<byte[]> ReadAsync(string fullPath, CancellationToken cancellationToken)
     {
-        await using var stream = new FileStream(
-            fullPath,
-            new FileStreamOptions
-            {
-                Mode = FileMode.Open,
-                Access = FileAccess.Read,
-                Share = FileShare.Read,
-                BufferSize = BufferSize,
-                Options = FileOptions.Asynchronous | FileOptions.SequentialScan
-            });
+        FileStream opened;
+        try
+        {
+            opened = new FileStream(
+                fullPath,
+                new FileStreamOptions
+                {
+                    Mode = FileMode.Open,
+                    Access = FileAccess.Read,
+                    Share = FileShare.Read,
+                    BufferSize = BufferSize,
+                    Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+                });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // The source is read before any asset is stored, so a locked or unreadable file changes nothing.
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                409,
+                "SourceWorkspaceFileUnavailable",
+                $"Workspace asset source '{Path.GetFileName(fullPath)}' could not be opened for reading. It may be open in another application or not readable; close it or copy it to a new workspace file, then retry.",
+                canRetryWithCorrectedInput: true,
+                diagnosticDetails: new { FailureType = exception.GetType().Name },
+                effectState: AgentToolEffectState.NotCommitted);
+        }
+
+        await using var stream = opened;
 
         EnsureWithinLimit(stream.Length);
 
@@ -81,6 +100,7 @@ internal static class ProjectStructureWorkspaceAssetReader
             413,
             "SourceWorkspaceFileTooLarge",
             $"Workspace asset sources are limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 }

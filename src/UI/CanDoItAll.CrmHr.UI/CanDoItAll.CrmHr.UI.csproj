@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CanDoItAll.CrmHr.UI</RootNamespace>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Charts" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.CrmHr.Contracts\CanDoItAll.Modules.CrmHr.Contracts.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.UI\CanDoItAll.AgentFramework.UI.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AppComponents.RecordBrowsing\CanDoItAll.AppComponents.RecordBrowsing.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -162,9 +162,8 @@ public sealed class LlmChatApiPrivacyIntegrationTests
 
         await using (var scope = host.App.Services.CreateAsyncScope())
         {
-            var accessor = scope.ServiceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-            var factory = scope.ServiceProvider.GetRequiredService<IProfileAppDbContextFactory>();
-            await using var dbContext = await factory.CreateDbContextForProfileAsync(accessor.ResolveCurrentProfile());
+            var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<SimpleChatsDbContext>>();
+            await using var dbContext = await factory.CreateDbContextAsync();
             var document = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
             LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, document);
             dbContext.Add(new LlmChatTranscriptRow
@@ -372,7 +371,7 @@ public sealed class LlmChatApiMetadataIntegrationTests
         var paths = document.RootElement.GetProperty("paths");
         var expected = new Dictionary<(string Path, string Method), string[]>
         {
-            [("/api/llm-chats/provider-options", "get")] = ["422", "500"],
+            [("/api/llm-chats/provider-options", "get")] = ["422"],
             [("/api/llm-chats", "get")] = ["400"],
             [("/api/llm-chats", "post")] = ["400", "422"],
             [("/api/llm-chats/{definitionId}", "get")] = ["400", "404"],
@@ -386,7 +385,7 @@ public sealed class LlmChatApiMetadataIntegrationTests
             [("/api/llm-conversations/{conversationId}", "get")] = ["400", "404"],
             [("/api/llm-conversations/{conversationId}/title", "patch")] = ["400", "404", "409"],
             [("/api/llm-conversations/{conversationId}/archive", "post")] = ["400", "404", "409"],
-            [("/api/llm-conversations/{conversationId}/turns", "post")] = ["400", "404", "409", "422", "503", "504"],
+            [("/api/llm-conversations/{conversationId}/turns", "post")] = ["400", "404", "409", "422", "503"],
             [("/api/llm-conversations/{conversationId}/active-turns/{turnId}/abandon", "post")] = ["400", "404", "409"],
             [("/api/llm-chat-operations/{operationId}", "get")] = ["400", "404"],
             [("/api/llm-chat-operations/{operationId}/events", "get")] = ["400", "404", "409"],
@@ -420,7 +419,7 @@ public sealed class LlmChatOperationStorageContractIntegrationTests
     public async Task Unknown_persisted_operation_kind_fails_as_storage_corrupted()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatinvalidoperationkind");
-        await using var dbContext = database.CreateDbContext();
+        await using var dbContext = database.CreateSimpleChatsDbContext();
         var conversationId = Guid.NewGuid();
         var document = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
         LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, document);

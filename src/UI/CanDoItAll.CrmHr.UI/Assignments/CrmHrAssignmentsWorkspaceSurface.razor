@@ -1,0 +1,191 @@
+@namespace CanDoItAll.CrmHr.UI.Assignments
+@inherits CrmHrWorkspaceSurface<ICrmHrAssignmentsWorkspaceView>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="CRM / HR"
+                    Title="Assignments workspace"
+                    Description="Keep commercial, staffing, and project allocations aligned with the live project portfolio."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="projects"
+                             Value="@View.ProjectCount.ToString()"
+                             TooltipText="Projects currently available for CRM-HR relationship binding." />
+                <CompactStat Label="open requests"
+                             Value="@View.StaffingDashboard.OpenRequestCount.ToString()"
+                             TooltipText="Open staffing demand across the CRM-HR module."
+                             Tone="info" />
+                <CompactStat Label="open demand"
+                             Value="@($"{View.StaffingDashboard.OpenDemandPercent:0.##}%")"
+                             TooltipText="Requested allocation still flowing through open staffing requests."
+                             Tone="warning" />
+                <CompactStat Label="bench"
+                             Value="@View.StaffingDashboard.BenchCount.ToString()"
+                             TooltipText="Profiles currently available for staffing."
+                             Tone="success" />
+                <CompactStat Label="overallocated"
+                             Value="@View.StaffingDashboard.OverallocatedCount.ToString()"
+                             TooltipText="Profiles already exceeding available capacity."
+                             Tone="danger" />
+            </Stats>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            @SecondaryNavigation
+
+            <AssignmentsProjectContextBar SelectedProject="View.SelectedProject"
+                                          SelectedProjectId="View.SelectedProjectId"
+                                          SelectedProjectIdChanged="View.HandleProjectChanged"
+                                          ProjectLoadFailed="View.HandleProjectPickerLoadFailed"
+                                          AssignmentCount="View.AssignmentCounts.TotalCount"
+                                          AllocationCount="View.AssignmentCounts.AllocationCount"
+                                          StaffingRequestCount="View.StaffingRequestCount"
+                                          OpenStructure="View.OpenStructure"
+                                          OpenGantt="View.OpenGantt" />
+
+            <Tabs @key="View.WorkspaceTabsKey"
+                  SelectedIndex="@((int)View.SelectedWorkspaceTab)"
+                  SelectedIndexChanged="View.HandleWorkspaceTabChangedAsync"
+                  RenderMode="TabRenderMode.Server"
+                  Variant="TabsVariant.WorkspaceSecondary"
+                  BorderMode="TabsBorderMode.Soft"
+                  OverflowMode="TabsOverflowMode.Wrap"
+                  AriaLabel="Project assignment workflows"
+                  data-testid="crmhr-assignments-workspace-tabs">
+                <TabsItem Text="Resource schedule"
+                          Icon="view_timeline"
+                          BadgeText="@View.AssignmentCounts.ScheduledCount.ToString()"
+                          data-testid="crmhr-assignments-tab-schedule">
+                    @if (View.IsLoading(AssignmentSelectionData.ScheduleAssignments))
+                    {
+                        <LoadingState Eyebrow="Resource schedule"
+                                      Title="Loading the bounded schedule window"
+                                      Description="Only the current project's dated allocation view is being loaded." />
+                    }
+                    else
+                    {
+                        <ProjectAssignmentResourceGanttPanel ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
+                                                             Assignments="View.ScheduleAssignments"
+                                                             TotalCount="View.ScheduleAssignmentTotalCount" />
+                    }
+                </TabsItem>
+
+                <TabsItem Text="Relationships"
+                          Icon="hub"
+                          BadgeText="@View.AssignmentCounts.TotalCount.ToString()"
+                          data-testid="crmhr-assignments-tab-relationships">
+                    @if (View.IsLoading(AssignmentSelectionData.RelationshipAssignments))
+                    {
+                        <LoadingState Eyebrow="Project relationships"
+                                      Title="Loading relationship records"
+                                      Description="The selected relationship page is being loaded from the server." />
+                    }
+                    else
+                    {
+                        <ProjectPartyAssignmentPanel ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
+                                                     CanCreate="@(View.SelectedProjectId.HasValue && !View.IsProjectContextLoading)"
+                                                     Draft="View.DraftAssignment"
+                                                     Assignments="View.RelationshipAssignments"
+                                                     PageIndex="View.RelationshipAssignmentPageIndex"
+                                                     PageSize="CrmHrAssignmentsWorkspacePresentation.AssignmentPageSize"
+                                                     TotalCount="View.RelationshipAssignmentTotalCount"
+                                                     SearchText="@View.RelationshipAssignmentSearchText"
+                                                     SearchTextChanged="View.HandleRelationshipSearchTextChangedAsync"
+                                                     RoleFilter="View.RelationshipAssignmentRoleFilter"
+                                                     RoleFilterChanged="View.HandleRelationshipRoleFilterChangedAsync"
+                                                     PageChanged="View.HandleRelationshipPageChangedAsync"
+                                                     PrepareCreate="View.PrepareRelationshipCreateAsync"
+                                                     SaveDraft="View.SaveDraftAsync"
+                                                     ResetDraft="View.ResetDraftAsync"
+                                                     DeleteAssignment="View.DeleteAssignmentAsync"
+                                                     LoadTaskDetails="View.LoadTaskDetailsAsync"
+                                                     OpenStructure="View.OpenSelectedProjectStructure"
+                                                     OpenGantt="View.OpenSelectedProjectGantt" />
+                    }
+                </TabsItem>
+
+                <TabsItem Text="Staffing requests"
+                          Icon="person_search"
+                          BadgeText="@View.StaffingRequestBadgeText"
+                          data-testid="crmhr-assignments-tab-staffing">
+                    @if (View.IsLoading(AssignmentSelectionData.StaffingRequests))
+                    {
+                        <LoadingState Eyebrow="Staffing requests"
+                                      Title="Loading project demand"
+                                      Description="Only this tab's staffing records are being loaded." />
+                    }
+                    else
+                    {
+                        <StaffingRequestEditor ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
+                                               CanCreate="@(View.SelectedProjectId.HasValue && !View.IsProjectContextLoading)"
+                                               Draft="View.StaffingRequestDraft"
+                                               SkillCatalog="View.SkillCatalog"
+                                               Requests="View.StaffingRequests"
+                                               PageIndex="View.StaffingRequestPageIndex"
+                                               PageSize="CrmHrAssignmentsWorkspacePresentation.StaffingPageSize"
+                                               TotalCount="View.StaffingRequestTotalCount"
+                                               SearchText="@View.StaffingRequestSearchText"
+                                               SearchTextChanged="View.HandleStaffingRequestSearchTextChangedAsync"
+                                               StatusFilter="View.StaffingRequestStatusFilter"
+                                               StatusFilterChanged="View.HandleStaffingRequestStatusFilterChangedAsync"
+                                               PageChanged="View.HandleStaffingRequestPageChangedAsync"
+                                               PrepareCreate="View.PrepareStaffingCreateAsync"
+                                               SaveRequest="View.SaveStaffingRequestAsync"
+                                               ResetRequest="View.ResetStaffingRequestAsync"
+                                               DeleteRequest="View.DeleteStaffingRequestAsync" />
+                    }
+                </TabsItem>
+
+                <TabsItem Text="Allocations"
+                          Icon="groups"
+                          BadgeText="@View.AssignmentCounts.AllocationCount.ToString()"
+                          data-testid="crmhr-assignments-tab-allocations">
+                    @if (View.IsLoading(AssignmentSelectionData.AllocationAssignments))
+                    {
+                        <LoadingState Eyebrow="Project allocations"
+                                      Title="Loading allocation records"
+                                      Description="The selected allocation page is being loaded from the server." />
+                    }
+                    else
+                    {
+                        <ProjectAllocationEditor Draft="View.AllocationDraft"
+                                                 ProjectName="@(View.SelectedProject?.Name ?? string.Empty)"
+                                                 CanCreate="@(View.SelectedProjectId.HasValue && !View.IsProjectContextLoading)"
+                                                 Allocations="View.AllocationAssignments"
+                                                 PageIndex="View.AllocationAssignmentPageIndex"
+                                                 PageSize="CrmHrAssignmentsWorkspacePresentation.AssignmentPageSize"
+                                                 TotalCount="View.AllocationAssignmentTotalCount"
+                                                 SearchText="@View.AllocationAssignmentSearchText"
+                                                 SearchTextChanged="View.HandleAllocationSearchTextChangedAsync"
+                                                 RoleFilter="View.AllocationAssignmentRoleFilter"
+                                                 RoleFilterChanged="View.HandleAllocationRoleFilterChangedAsync"
+                                                 PageChanged="View.HandleAllocationPageChangedAsync"
+                                                 SkillCatalog="View.SkillCatalog"
+                                                 Candidates="View.StaffingCandidates"
+                                                 CandidatePageIndex="View.StaffingCandidatePageIndex"
+                                                 CandidatePageSize="CrmHrAssignmentsWorkspacePresentation.StaffingPageSize"
+                                                 CandidateTotalCount="View.StaffingCandidateTotalCount"
+                                                 CandidatePageChanged="View.HandleCandidatePageChangedAsync"
+                                                 CandidateSearchText="@View.CandidateSearchText"
+                                                 CandidateSearchTextChanged="View.HandleCandidateSearchTextChanged"
+                                                 CandidateSkillFilter="View.CandidateSkillFilter"
+                                                 CandidateSkillFilterChanged="View.HandleCandidateSkillFilterChanged"
+                                                 CandidateAvailabilityFilter="View.CandidateAvailabilityFilter"
+                                                 CandidateAvailabilityFilterChanged="View.HandleCandidateAvailabilityFilterChanged"
+                                                 SearchCandidates="View.SearchCandidatesAsync"
+                                                 ResetCandidateFilters="View.ResetCandidateFiltersAsync"
+                                                 PrepareCreate="View.PrepareAllocationCreateAsync"
+                                                 SaveAllocation="View.SaveAllocationAsync"
+                                                 ResetAllocation="View.ResetAllocationAsync"
+                                                 DeleteAllocation="View.DeleteAllocationAsync"
+                                                 LoadTaskDetails="View.LoadTaskDetailsAsync"
+                                                 OpenStructure="View.OpenSelectedProjectStructure"
+                                                 OpenGantt="View.OpenSelectedProjectGantt" />
+                    }
+                </TabsItem>
+            </Tabs>
+        </Stack>
+    </ChildContent>
+</PageScaffold>

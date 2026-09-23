@@ -1,3 +1,4 @@
+using static CanDoItAll.Tests.Support.ProductToolPolicyTestRegistration;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -22,7 +23,8 @@ public sealed class RuntimePortDecoratorFallthroughTests
         var processMock = new ProcessMockAgentRuntime(
             DispatchProxy.Create<IWorkspaceFileService, ThrowingProxy>(),
             "unused-root",
-            Options.Create(new ProcessMockAgentOptions { Enabled = true }));
+            Options.Create(new ProcessMockAgentOptions { Enabled = true }),
+            ProductToolPolicies);
         var decorator = new ProcessMockDiagnosticsDecorator(
             DispatchProxy.Create<IProviderDiagnosticsRuntime, ThrowingProxy>(),
             DispatchProxy.Create<IProviderModelAdministrationRuntime, ThrowingProxy>(),
@@ -39,7 +41,8 @@ public sealed class RuntimePortDecoratorFallthroughTests
         var processMock = new ProcessMockAgentRuntime(
             DispatchProxy.Create<IWorkspaceFileService, ThrowingProxy>(),
             "unused-root",
-            Options.Create(new ProcessMockAgentOptions { Enabled = true }));
+            Options.Create(new ProcessMockAgentOptions { Enabled = true }),
+            ProductToolPolicies);
         var decorator = new ProcessMockDiagnosticsDecorator(
             DispatchProxy.Create<IProviderDiagnosticsRuntime, ThrowingProxy>(),
             DispatchProxy.Create<IProviderModelAdministrationRuntime, ThrowingProxy>(),

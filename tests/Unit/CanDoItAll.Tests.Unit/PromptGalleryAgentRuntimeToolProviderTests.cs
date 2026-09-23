@@ -14,6 +14,82 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
+    [Theory]
+    [InlineData(PromptGalleryToolPolicy.PromptGallerySearch, "archive")]
+    [InlineData(PromptGalleryToolPolicy.PromptGallerySearch, "model")]
+    [InlineData(PromptGalleryToolPolicy.PromptGallerySearch, "consumer")]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryItemGet, "archive")]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryItemGet, "model")]
+    [InlineData(PromptGalleryToolPolicy.PromptGalleryItemGet, "consumer")]
+    public async Task Saved_gallery_results_recheck_current_owner_eligibility_and_keep_the_original_immutable_content(
+        string toolName, string revocation) {
+        var gallery = PromptGalleryTestSupport.CreateService(PromptGalleryTestSupport.CreateFactory(
+            $"{nameof(Saved_gallery_results_recheck_current_owner_eligibility_and_keep_the_original_immutable_content)}-{toolName}-{revocation}"));
+        var saved = Require(await gallery.SaveDraftAsync(CreateDraft("Original immutable prompt.")));
+        var version = Require(await gallery.CreateVersionAsync(saved.PromptArtifactId, new("Original version", saved.UpdatedAtUtc)));
+        var provider = new PromptGalleryAgentRuntimeToolProvider(gallery, new PromptGalleryCompatibilityEvaluator());
+        var context = CreateContext("gpt-5-mini");
+        var tool = (await provider.CreateToolsAsync(context, default)).Single(item => item.Name == toolName);
+        var metadata = provider.GetToolMetadata(context).Single(item => item.ToolName == toolName);
+        object request = toolName == PromptGalleryToolPolicy.PromptGallerySearch
+            ? new PromptGalleryAgentSearchInput(text: "Runtime prompt") : new PromptGalleryAgentItemInput(saved.PromptArtifactId);
+        object result = toolName == PromptGalleryToolPolicy.PromptGallerySearch
+            ? await InvokeAsync<PromptGalleryAgentSearchResult>(tool, request) : await InvokeAsync<PromptGalleryAgentItemResult>(tool, request);
+        var disclosure = ManagedToolDisclosureTestData.Create(metadata, request, result);
+        var authorize = metadata.AuthorizeResultDisclosureAsync!;
+        Assert.NotNull(authorize);
+        await using (var lease = await authorize(disclosure, default)) {
+            Assert.Null(lease);
+        }
+        var current = Require(await gallery.GetItemAsync(saved.PromptArtifactId));
+        if (revocation == "archive") {
+            Assert.True((await gallery.ArchiveAsync(saved.PromptArtifactId, true)).IsSuccess);
+        } else {
+            var changed = CreateDraft("Human changed draft must never replace the cached body.", saved.PromptArtifactId, current.UpdatedAtUtc);
+            changed = revocation == "model"
+                ? changed with { SupportedModels = [new(ProviderKind.OpenAi.ToString(), "another-model")] }
+                : changed with { SupportedConsumers = [PromptGalleryConsumer.Workflow] };
+            Require(await gallery.SaveDraftAsync(changed));
+        }
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => authorize(disclosure, default).AsTask());
+        if (revocation == "archive") {
+            Assert.True((await gallery.ArchiveAsync(saved.PromptArtifactId, false)).IsSuccess);
+        } else {
+            current = Require(await gallery.GetItemAsync(saved.PromptArtifactId));
+            Require(await gallery.SaveDraftAsync(CreateDraft("Human changed draft remains untouched.", saved.PromptArtifactId, current.UpdatedAtUtc)));
+        }
+        var beforeObservation = Require(await gallery.GetItemAsync(saved.PromptArtifactId));
+        await using (var lease = await authorize(disclosure, default)) {
+            Assert.Null(lease);
+        }
+        var afterObservation = Require(await gallery.GetItemAsync(saved.PromptArtifactId));
+        Assert.Equal(beforeObservation.UpdatedAtUtc, afterObservation.UpdatedAtUtc);
+        Assert.Equal(beforeObservation.DraftContent, afterObservation.DraftContent);
+        Assert.Single(afterObservation.Versions);
+        if (result is PromptGalleryAgentItemResult item) {
+            Assert.Equal(version.PromptVersionId, item.PromptVersionId);
+            Assert.Equal("Original immutable prompt.", item.Content);
+        }
+    }
+
+    [Fact]
+    public async Task Saved_gallery_body_cannot_be_bound_to_another_item_or_changed_immutable_content() {
+        var gallery = PromptGalleryTestSupport.CreateService(PromptGalleryTestSupport.CreateFactory(
+            nameof(Saved_gallery_body_cannot_be_bound_to_another_item_or_changed_immutable_content)));
+        var saved = Require(await gallery.SaveDraftAsync(CreateDraft("Original immutable prompt.")));
+        Require(await gallery.CreateVersionAsync(saved.PromptArtifactId, new("Original version", saved.UpdatedAtUtc)));
+        var provider = new PromptGalleryAgentRuntimeToolProvider(gallery, new PromptGalleryCompatibilityEvaluator());
+        var context = CreateContext("gpt-5-mini");
+        var tool = (await provider.CreateToolsAsync(context, default)).Single(item => item.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
+        var metadata = provider.GetToolMetadata(context).Single(item => item.ToolName == tool.Name);
+        var request = new PromptGalleryAgentItemInput(saved.PromptArtifactId);
+        var result = await InvokeAsync<PromptGalleryAgentItemResult>(tool, request);
+        var wrongItem = ManagedToolDisclosureTestData.Create(metadata, new PromptGalleryAgentItemInput(Guid.NewGuid()), result);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => metadata.AuthorizeResultDisclosureAsync!(wrongItem, default).AsTask());
+        var changedBody = ManagedToolDisclosureTestData.Create(metadata, request, result with { Content = "Substituted body" });
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => metadata.AuthorizeResultDisclosureAsync!(changedBody, default).AsTask());
+    }
+
     [Fact]
     public async Task Item_tool_returns_immutable_current_version_and_enforces_runtime_model()
     {
@@ -39,7 +115,7 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
         var tools = await toolProvider.CreateToolsAsync(compatibleContext, CancellationToken.None);
         var itemTool = Assert.Single(
             tools,
-            tool => tool.Name == AgentToolInvocationPolicyMetadata.PromptGalleryItemGet);
+            tool => tool.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
 
         var result = await InvokeAsync<PromptGalleryAgentItemResult>(
             itemTool,
@@ -55,12 +131,49 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
             CancellationToken.None);
         var incompatibleItemTool = Assert.Single(
             incompatibleTools,
-            tool => tool.Name == AgentToolInvocationPolicyMetadata.PromptGalleryItemGet);
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            tool => tool.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
             InvokeAsync<PromptGalleryAgentItemResult>(
                 incompatibleItemTool,
                 new PromptGalleryAgentItemInput(promptId)));
         Assert.Contains("not declared as supported", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AgentToolEffectState.None, exception.EffectState);
+        Assert.True(exception.IsSafeToExpose);
+    }
+
+    [Fact]
+    public async Task Item_get_for_an_unknown_item_is_a_correctable_read_rejection()
+    {
+        var gallery = PromptGalleryTestSupport.CreateService(
+            PromptGalleryTestSupport.CreateFactory(nameof(Item_get_for_an_unknown_item_is_a_correctable_read_rejection)));
+        var toolProvider = new PromptGalleryAgentRuntimeToolProvider(
+            gallery,
+            new PromptGalleryCompatibilityEvaluator());
+        var tools = await toolProvider.CreateToolsAsync(CreateContext("gpt-5-mini"), CancellationToken.None);
+        var itemTool = Assert.Single(
+            tools,
+            tool => tool.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
+        var missingId = Guid.NewGuid();
+
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
+            InvokeAsync<PromptGalleryAgentItemResult>(
+                itemTool,
+                new PromptGalleryAgentItemInput(missingId)));
+
+        Assert.Contains("prompts.gallery.not-found", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(missingId.ToString(), exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AgentToolEffectState.None, exception.EffectState);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+
+        // An approval continuation re-authorizes the saved rejection; it carries no item body to re-check.
+        var metadata = toolProvider.GetToolMetadata(CreateContext("gpt-5-mini"))
+            .Single(item => item.ToolName == PromptGalleryToolPolicy.PromptGalleryItemGet);
+        var saved = ManagedToolDisclosureTestData.CreateTypedFailure(metadata, new PromptGalleryAgentItemInput(missingId), exception);
+        await using (var lease = await metadata.AuthorizeResultDisclosureAsync!(saved, default)) {
+            Assert.Null(lease);
+        }
+        await Assert.ThrowsAnyAsync<Exception>(() =>
+            metadata.AuthorizeResultDisclosureAsync!(saved with { IsTypedFailure = false }, default).AsTask());
     }
 
     private static PromptGalleryDraft CreateDraft(

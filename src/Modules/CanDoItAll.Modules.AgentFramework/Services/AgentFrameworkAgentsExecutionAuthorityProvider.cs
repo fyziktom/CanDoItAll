@@ -14,7 +14,7 @@ internal sealed class AgentFrameworkAgentsExecutionAuthorityProvider
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        if (request.ObservedWorkspaceScope is not null)
+        if (request.ObservedWorkspaceScope is not null && !request.IsCapturedSandboxRevalidation)
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"The agents source '{request.SourceId.Value}' cannot publish workspace scope '{request.ObservedWorkspaceScope.DisplayName}'.");

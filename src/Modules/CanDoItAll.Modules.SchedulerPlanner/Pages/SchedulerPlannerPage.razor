@@ -5,6 +5,7 @@
 @using System.Text.Json.Nodes
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Workflows.Abstractions
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
@@ -12,6 +13,7 @@
 @using Microsoft.JSInterop
 @inject IJSRuntime JsRuntime
 @inject ISchedulerPlannerService SchedulerPlannerService
+@inject IWorkflowStructureAuthorityFactory StructureAuthorityFactory
 @inject ICronDescriptionService CronDescriptionService
 @inject ISchedulerWorkflowInputSchemaService WorkflowInputSchemaService
 @inject ISchedulerWorkflowInputOptionService WorkflowInputOptionService
@@ -1229,6 +1231,7 @@
                 return;
             }
 
+            editor.StructureAuthority = await StructureAuthorityFactory.CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.UserInterface);
             await SchedulerPlannerService.SavePlanAsync(editor);
             workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
             editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
@@ -1307,6 +1310,7 @@
 
         await RunUiOperationAsync(async () =>
         {
+            editScheduleEditor.StructureAuthority = await StructureAuthorityFactory.CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.UserInterface);
             await SchedulerPlannerService.SavePlanAsync(editScheduleEditor);
             workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
             selectedPlanForEdit = editScheduleEditor.Id.HasValue

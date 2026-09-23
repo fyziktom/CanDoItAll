@@ -3,16 +3,19 @@ using System.Net.Sockets;
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
 
 public sealed class HttpFetchWorkflowExecutor(
-    ISecretRuntimeResolver? secretResolver = null,
+    IWorkflowHttpSecretHeaderApplier? secretHeaders = null,
     IWorkspaceFileService? files = null) : IWorkflowExecutor
 {
-    public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.HttpFetch;
+    public static WorkflowExecutorDescriptor CredentialAwareDescriptor { get; } = BuiltInWorkflowExecutorDescriptors.HttpFetch with {
+        ProviderReadOwner = WorkflowHttpSecretUse.DisclosureOwner
+    };
+
+    public WorkflowExecutorDescriptor Descriptor => CredentialAwareDescriptor;
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
         WorkflowExecutorExecutionContext context,
@@ -34,7 +37,9 @@ public sealed class HttpFetchWorkflowExecutor(
             request.Headers.TryAddWithoutValidation(header.Key.Trim(), header.Value);
         }
 
-        await ApplySecretHeaderAsync(request, settings.SecretHeader, context, cancellationToken);
+        using var secretUse = settings.SecretHeader.SecretId is null ? null : await (secretHeaders
+            ?? throw new InvalidOperationException("HTTP executor secret header binding requires a registered Workflow owner header applier."))
+            .ApplyAsync(context, input, request, cancellationToken);
         await EnsureAllowedTargetAsync(uri, settings.AllowPrivateNetworkTargets, cancellationToken);
 
         if (!string.IsNullOrEmpty(settings.Body) && settings.Method is not WorkflowHttpMethodKind.Get)
@@ -42,12 +47,17 @@ public sealed class HttpFetchWorkflowExecutor(
             request.Content = new StringContent(settings.Body, Encoding.UTF8, "application/json");
         }
 
-        using var client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = secretUse is null }) { Timeout = Timeout.InfiniteTimeSpan };
+        using var response = await SendAsync(client, request, secretUse, cancellationToken);
         var body = await ReadBoundedBodyAsync(response, maxBytes, cancellationToken);
+        body.Text = secretUse?.Redact(body.Text, body.IsTruncated) ?? body.Text;
+        var reason = secretUse?.Redact(response.ReasonPhrase) ?? response.ReasonPhrase ?? string.Empty;
+        if (secretUse is not null && response.Headers.Location is not null && (int)response.StatusCode is >= 300 and < 400) {
+            throw new InvalidOperationException("Credentialed HTTP redirects require review and approval of the exact redirect destination; no redirect request was sent.");
+        }
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"HTTP executor received {(int)response.StatusCode} {response.ReasonPhrase} from '{uri}'.");
+            throw new InvalidOperationException($"HTTP executor received {(int)response.StatusCode} {reason} from '{secretUse?.Redact(uri.ToString()) ?? uri.ToString()}'.");
         }
 
         var outputPath = string.Empty;
@@ -58,31 +68,44 @@ public sealed class HttpFetchWorkflowExecutor(
                 throw new InvalidOperationException("HTTP download-to-workspace requires a registered workspace file service.");
             }
 
-            outputPath = ResolveOutputPath(settings, uri);
+            outputPath = secretUse?.Redact(ResolveOutputPath(settings, uri)) ?? ResolveOutputPath(settings, uri);
             var writeResult = files.WriteTextFile(outputPath, body.Text, settings.Overwrite);
             EnsureSucceeded(writeResult);
         }
 
         var result = new
         {
-            url = uri.ToString(),
+            url = secretUse?.Redact(uri.ToString()) ?? uri.ToString(),
             statusCode = (int)response.StatusCode,
-            reasonPhrase = response.ReasonPhrase ?? string.Empty,
-            contentType = response.Content.Headers.ContentType?.ToString() ?? string.Empty,
+            reasonPhrase = reason,
+            contentType = secretUse?.Redact(response.Content.Headers.ContentType?.ToString()) ?? response.Content.Headers.ContentType?.ToString() ?? string.Empty,
             body.Text,
             body.IsTruncated,
             downloadToWorkspace = settings.DownloadToWorkspace,
             outputPath,
-            inputPayload = settings.IncludeInputPayload ? input.PayloadJson : string.Empty,
+            inputPayload = settings.IncludeInputPayload ? secretUse?.Redact(input.PayloadJson) ?? input.PayloadJson : string.Empty,
             headers = response.Headers
                 .Concat(response.Content.Headers)
-                .ToDictionary(header => header.Key, header => string.Join(",", header.Value), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(header => secretUse?.Redact(header.Key) ?? header.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => string.Join(",", group.Select(header =>
+                    secretUse?.RedactHeader(header.Key, string.Join(",", header.Value)) ?? string.Join(",", header.Value))), StringComparer.OrdinalIgnoreCase)
         };
 
-        return WorkflowExecutorJson.Result(context, result);
+        return WorkflowExecutorJson.Result(context, result) with {
+            ProviderReadEvidence = secretUse?.Evidence is { } evidence ? [evidence] : []
+        };
     }
 
-    private static HttpMethod ToHttpMethod(WorkflowHttpMethodKind method)
+    private static async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request,
+        WorkflowHttpSecretUse? secretUse, CancellationToken cancellationToken) {
+        try {
+            return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        } catch (HttpRequestException exception) when (secretUse is not null) {
+            throw new HttpRequestException(secretUse.Redact(exception.Message), inner: null, exception.StatusCode);
+        }
+    }
+
+    public static HttpMethod ToHttpMethod(WorkflowHttpMethodKind method)
         => method switch
         {
             WorkflowHttpMethodKind.Get => HttpMethod.Get,
@@ -177,111 +200,10 @@ public sealed class HttpFetchWorkflowExecutor(
         return $"downloads/{PortablePhysicalFileNamePolicy.Encode(fileName).PhysicalName}";
     }
 
-    private static T EnsureSucceeded<T>(T result)
-    {
-        var succeededProperty = typeof(T).GetProperty("Succeeded");
-        var messageProperty = typeof(T).GetProperty("Message");
-        if (succeededProperty?.GetValue(result) is false)
-        {
-            var message = messageProperty?.GetValue(result)?.ToString() ?? "HTTP workspace write failed.";
-            throw new InvalidOperationException(message);
+    private static void EnsureSucceeded(WorkspaceFileMutationResult result) {
+        if (!result.Succeeded) {
+            throw new InvalidOperationException(result.Message);
         }
-
-        return result;
-    }
-
-    private async Task ApplySecretHeaderAsync(
-        HttpRequestMessage request,
-        WorkflowHttpSecretHeaderBinding binding,
-        WorkflowExecutorExecutionContext context,
-        CancellationToken cancellationToken)
-    {
-        if (binding.SecretId is not { } secretId)
-        {
-            return;
-        }
-
-        if (secretResolver is null)
-        {
-            throw new InvalidOperationException("HTTP executor secret header binding requires a registered secret runtime resolver.");
-        }
-
-        var headerName = NormalizeHeaderName(binding.HeaderName);
-        var secretValue = await secretResolver.ResolveValueAsync(
-            new SecretRuntimeRequest(
-                secretId,
-                string.IsNullOrWhiteSpace(binding.Purpose)
-                    ? WorkflowSecretPurposes.HttpHeader
-                    : binding.Purpose.Trim(),
-                [secretId],
-                ConsumerType: SecretRuntimeConsumerTypes.WorkflowHttpExecutor,
-                ConsumerId: SecretRuntimeConsumerIds.WorkflowNode(context.Definition.Id.Value, context.Node.Id.Value)),
-            cancellationToken);
-        if (string.IsNullOrWhiteSpace(secretValue))
-        {
-            throw new InvalidOperationException($"HTTP executor secret '{secretId:D}' was not found or did not contain a usable value.");
-        }
-
-        var headerValue = FormatSecretHeaderValue(binding, secretValue);
-        request.Headers.Remove(headerName);
-        if (!request.Headers.TryAddWithoutValidation(headerName, headerValue))
-        {
-            throw new InvalidOperationException($"HTTP executor could not apply secret header '{headerName}'.");
-        }
-    }
-
-    private static string NormalizeHeaderName(string headerName)
-    {
-        if (string.IsNullOrWhiteSpace(headerName))
-        {
-            throw new InvalidOperationException("HTTP executor secret header name is required.");
-        }
-
-        var normalized = headerName.Trim();
-        if (normalized.Contains('\r', StringComparison.Ordinal) ||
-            normalized.Contains('\n', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("HTTP executor secret header name cannot contain line breaks.");
-        }
-
-        return normalized;
-    }
-
-    private static string FormatSecretHeaderValue(
-        WorkflowHttpSecretHeaderBinding binding,
-        string secretValue)
-    {
-        if (secretValue.Contains('\r', StringComparison.Ordinal) ||
-            secretValue.Contains('\n', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("HTTP executor secret header value cannot contain line breaks.");
-        }
-
-        return binding.ValueFormat switch
-        {
-            WorkflowHttpSecretValueFormat.Raw => secretValue,
-            WorkflowHttpSecretValueFormat.Bearer => $"Bearer {secretValue}",
-            WorkflowHttpSecretValueFormat.Basic => $"Basic {secretValue}",
-            WorkflowHttpSecretValueFormat.CustomPrefix => $"{NormalizeHeaderPrefix(binding.CustomPrefix)} {secretValue}",
-            _ => throw new InvalidOperationException($"HTTP secret header value format '{binding.ValueFormat}' is not supported.")
-        };
-    }
-
-    private static string NormalizeHeaderPrefix(string prefix)
-    {
-        if (string.IsNullOrWhiteSpace(prefix))
-        {
-            throw new InvalidOperationException("HTTP executor custom secret header prefix is required.");
-        }
-
-        var normalized = prefix.Trim();
-        if (normalized.Contains('\r', StringComparison.Ordinal) ||
-            normalized.Contains('\n', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("HTTP executor custom secret header prefix cannot contain line breaks.");
-        }
-
-        return normalized;
     }
 
     private static async Task<(string Text, bool IsTruncated)> ReadBoundedBodyAsync(
