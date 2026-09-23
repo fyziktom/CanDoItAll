@@ -109,13 +109,13 @@ Assert-Condition `
     -Condition ($databaseInstallerText -notmatch '(?i)docker\s+compose') `
     -Message "Installed database setup must not use development Docker Compose."
 Assert-Condition `
-    -Condition ($databaseInstallerText.Contains("postgres:16.14-alpine")) `
-    -Message "Database installer must pin the PostgreSQL 16.14 Docker image."
+    -Condition ($databaseInstallerText.Contains("postgres:18.6-alpine")) `
+    -Message "Database installer must pin the PostgreSQL 18.6 Docker image."
 Assert-Condition `
-    -Condition ($databaseInstallerText.Contains("sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777")) `
+    -Condition ($databaseInstallerText.Contains("sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873")) `
     -Message "Database installer must pin the PostgreSQL Docker image by immutable digest."
 Assert-Condition `
-    -Condition ($databaseInstallerText.Contains("8A7F54C1968D5D49BDCD3F66B1291F736C74B8CB6A26E9874771FCC7837DBF38")) `
+    -Condition ($databaseInstallerText.Contains("1DF55002AFE95B945D934C078B13E82C1603FA546731E511D068AA983B4EAD28")) `
     -Message "Database installer must verify the pinned EDB archive hash."
 Assert-Condition `
     -Condition ($webInstallerText.Contains('$env:Database__Provider = "PostgreSql"')) `

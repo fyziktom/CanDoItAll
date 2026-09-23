@@ -825,11 +825,11 @@ function Start-DockerDatabase {
 
     $containerName = [string]$Manifest.docker.containerName
     $expectedVolume = [string]$Manifest.docker.volumeName
-    $expectedImage = "postgres:16.14-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+    $expectedImage = "postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873"
     if ($containerName -ne "candoitall-webapp-db" -or
         $expectedVolume -ne "candoitall-webapp-db-data" -or
         [string]$Manifest.docker.image -ne $expectedImage) {
-        throw "Installed database manifest does not name the dedicated Docker database resources."
+        throw "Installed database manifest does not name the dedicated PostgreSQL 18 Docker resources. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
     }
 
     try {
@@ -865,7 +865,7 @@ function Start-DockerDatabase {
     $dataMounts = @($inspect.Mounts | Where-Object {
         [string]$_.Type -eq "volume" -and
         [string]$_.Name -eq $expectedVolume -and
-        [string]$_.Destination -eq "/var/lib/postgresql/data" -and
+        [string]$_.Destination -eq "/var/lib/postgresql" -and
         [bool]$_.RW
     })
     $portBindings = $inspect.HostConfig.PortBindings
@@ -899,6 +899,20 @@ function Start-DockerDatabase {
         $null -eq $logMaxFileProperty -or
         [string]$logMaxFileProperty.Value -ne "3") {
         throw "Docker container '$containerName' does not match the installed database restart or bounded logging policy. Re-run the database installation script."
+    }
+
+    $dataEnvironment = @($inspect.Config.Env | Where-Object { [string]$_ -match '^PGDATA=' })
+    $passwordEnvironment = @($inspect.Config.Env | Where-Object { [string]$_ -match '^POSTGRES_PASSWORD(_FILE)?=' })
+    $databaseMounts = @($inspect.Mounts | Where-Object { [string]$_.Destination -match '^/var/lib/postgresql(/|$)' })
+    if ($dataEnvironment.Count -ne 1 -or $dataEnvironment[0] -ne "PGDATA=/var/lib/postgresql/18/docker" -or
+        $databaseMounts.Count -ne 1 -or $passwordEnvironment.Count -gt 0) {
+        throw "Installed Docker database has unexpected data or credential configuration. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+    }
+
+    $probeScript = 'if ! find /var/lib/postgresql -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then exit 10; fi; test -f /var/lib/postgresql/18/docker/PG_VERSION && test ! -L /var/lib/postgresql/18/docker/PG_VERSION && test $(cat /var/lib/postgresql/18/docker/PG_VERSION) = 18 && test $(find /var/lib/postgresql -maxdepth 3 -name PG_VERSION | wc -l) -eq 1 && test -f /var/lib/postgresql/18/docker/global/pg_control && test $(find /var/lib/postgresql -name pg_control | wc -l) -eq 1 || exit 20; if find /var/lib/postgresql -mindepth 1 -maxdepth 1 ! -name 18 -print -quit | grep -q .; then exit 20; fi; if find /var/lib/postgresql/18 -mindepth 1 -maxdepth 1 ! -name docker -print -quit | grep -q .; then exit 20; fi; exit 0'
+    & $dockerPath run --rm --network none --read-only --mount "type=volume,source=$expectedVolume,target=/var/lib/postgresql,readonly" --entrypoint sh $expectedImage -ec $probeScript *> $null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Installed Docker database data is missing, incompatible or incomplete. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
     }
 
     if (-not [bool]$inspect.State.Running) {
@@ -962,6 +976,30 @@ function Rotate-NativePostgreSqlLog {
     Move-Item -LiteralPath $LogPath -Destination $archivePath
 }
 
+function Start-NativePostgreSqlProcess {
+    param(
+        [Parameter(Mandatory = $true)][string]$PgCtlPath,
+        [Parameter(Mandatory = $true)][string]$DataPath,
+        [Parameter(Mandatory = $true)][string]$LogPath
+    )
+
+    $arguments = 'start -D "{0}" -l "{1}" -w -t 120' -f $DataPath, $LogPath
+    $process = Start-Process -FilePath $PgCtlPath -ArgumentList $arguments -WindowStyle Hidden `
+        -RedirectStandardOutput "$LogPath.startup.stdout" -RedirectStandardError "$LogPath.startup.stderr" -PassThru
+    try {
+        $process.Handle | Out-Null
+        if (-not $process.WaitForExit(130000)) {
+            throw "Native PostgreSQL startup did not finish within 130 seconds. Inspect '$LogPath' and the startup diagnostics before retrying."
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "Native PostgreSQL startup failed with exit code $($process.ExitCode). Inspect '$LogPath.startup.stderr'."
+        }
+    }
+    finally {
+        $process.Dispose()
+    }
+}
+
 function Start-NativeDatabase {
     param(
         [Parameter(Mandatory = $true)]
@@ -988,8 +1026,16 @@ function Start-NativeDatabase {
 
     $pgVersionPath = Join-Path $dataPath "PG_VERSION"
     if (-not (Test-Path -LiteralPath $pgVersionPath -PathType Leaf) -or
-        (Get-Content -LiteralPath $pgVersionPath -Raw).Trim() -ne "16") {
-        throw "Installed native PostgreSQL data is missing or is not major version 16. Re-run the database installation script."
+        (Get-Content -LiteralPath $pgVersionPath -Raw).Trim() -ne "18" -or
+        -not (Test-Path -LiteralPath (Join-Path $dataPath "global/pg_control") -PathType Leaf)) {
+        throw "Installed native PostgreSQL data is missing or is not major version 18. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+    }
+
+    foreach ($executable in @($pgCtlPath, $pgIsReadyPath, (Join-Path $binPath "postgres.exe"))) {
+        $version = @(& $executable --version 2>&1)
+        if ($LASTEXITCODE -ne 0 -or ($version -join " ") -notmatch 'PostgreSQL\)\s+18\.6(?:\s|$)') {
+            throw "Installed native PostgreSQL binaries must be version 18.6. Re-run the database installation script after migrating existing data."
+        }
     }
 
     & $pgCtlPath status -D $dataPath *> $null
@@ -997,10 +1043,7 @@ function Start-NativeDatabase {
     if ($statusExitCode -eq 3) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $logPath) | Out-Null
         Rotate-NativePostgreSqlLog -LogPath $logPath
-        Invoke-CheckedExternalCommand `
-            -FilePath $pgCtlPath `
-            -Arguments @("start", "-D", $dataPath, "-l", $logPath, "-w", "-t", "60") `
-            -Description "Starting installed native PostgreSQL database" | Out-Null
+        Start-NativePostgreSqlProcess -PgCtlPath $pgCtlPath -DataPath $dataPath -LogPath $logPath
     }
     elseif ($statusExitCode -ne 0) {
         throw "pg_ctl could not determine the installed native PostgreSQL status (exit code $statusExitCode)."

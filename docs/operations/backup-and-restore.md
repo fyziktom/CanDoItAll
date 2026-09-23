@@ -59,7 +59,12 @@ never run two client containers against the same database and data.
 
 ## Backup
 
-Create an ignored artifact directory, then capture a custom-format dump:
+For a major upgrade use the [PostgreSQL preservation runbook](../../tools/dev/Migrate-PostgreSql16To18.md).
+Stop the application and every other writer first, leaving PostgreSQL running for the
+logical dump. Disable automatic relaunch during capture. For the base development stack,
+run `docker compose stop app` and check that no other host writes to the same database.
+
+Create an access-controlled ignored artifact directory, then capture a custom-format dump:
 
 ```powershell
 $backupPath = ".\artifacts\backups\candoitall-development.dump"
@@ -92,7 +97,7 @@ finally {
 Store required backups outside the development workstation with access control,
 encryption, retention, and integrity verification appropriate to the data.
 
-After creating the PostgreSQL dump, stop the stack without removing volumes and back up
+Keep application writers stopped after creating the PostgreSQL dump and back up
 the Compose-scoped `app-data` volume with the workstation's approved volume-backup tool.
 Restore it only into a new empty project-scoped volume, restore the matching database
 dump into that project's empty database volume, and validate `/health` plus representative

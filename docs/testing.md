@@ -21,6 +21,23 @@ Process-host tests deliberately orphan descendants; the container needs an init 
 to reap them. A `sleep` entry point alone leaves zombies in the owned process group and
 correctly causes process-cleanup assertions to fail.
 
+## PostgreSQL test server
+
+Database-backed tests require an explicitly isolated PostgreSQL 18 server through
+`CANDOITALL_TESTS_POSTGRES_CONNECTION`. The availability helper fails on a missing
+configuration, unavailable server or wrong major version. It never starts the development
+Compose stack or probes the ordinary development database. Keep the test endpoint separate
+from installed resources, the application on port 5032 and retained manual-provider data.
+Leases create uniquely named databases and retain the existing bounded cleanup contract.
+CI records `server_version_num` before its database lanes.
+
+For local runs provision a disposable PostgreSQL 18 cluster, then set the existing
+connection variable privately for the test process. The role needs database-creation
+privileges. Record `show server_version_num` and the sanitized endpoint in the test report.
+Do not print the password-bearing connection string. An ignored `.env` can still override
+a new Compose image default; follow the [migration runbook](../tools/dev/Migrate-PostgreSql16To18.md)
+before changing any retained cluster.
+
 ## Test Entry Points
 
 | Entry point | Scope |
@@ -270,6 +287,42 @@ still verifies 24 concurrent captures, 20 searches and deletion of 5,000 expired
 batches of at most 1,000, with positive progress and a two-minute cancellation guard.
 Use the opt-in `SharedProviderPremergePerformanceTests` for allocation and timing
 measurements; retain its bounded-cleanup and revocation checks.
+
+## PostgreSQL 18 migration and installer proof
+
+Set `CANDOITALL_TESTS_POSTGRES_CONNECTION` to a separately provisioned PostgreSQL 18
+fixture with permission to create/drop test databases. The availability helper requires
+this explicit setting and reports the observed server major; it never provisions Compose
+or probes a default development database. Keep credentials out of tracked files and
+command transcripts. `CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY=WAL_LOG` retains the
+ordinary stable-gate policy.
+
+`PostgreSqlProtocolRestoreTests` is a `LiveProcess` test because it runs real `pg_dump`
+and `pg_restore` executables. Place verified PostgreSQL 18 clients on the calling
+process's PATH, discover this exact filter, then run it against the isolated fixture:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --list-tests --filter "FullyQualifiedName~PostgreSqlProtocolRestoreTests" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~PostgreSqlProtocolRestoreTests" /m:1
+```
+
+The case verifies legacy v1 and compressed v2 protocol envelopes, corrupt-payload
+rejection, stable run identity and a 256-batch journal through a real JSONB dump/restore.
+Its table is a transport fixture, not a new application storage contract. The existing
+`MafLongJournalIntegrationTests` separately covers the production filesystem journal.
+
+On Windows, run the installer checks in Windows PowerShell 5.1:
+
+```powershell
+powershell -NoProfile -File ./tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1
+powershell -NoProfile -File ./tools/install/tests/Test-PostgreSql18Safety.ps1 -RunDocker -NativeBinPath '<verified PostgreSQL 18.6 bin directory>'
+```
+
+The safety harness rejects legacy, unknown, partial and conflicting data before setup,
+and exercises fresh setup, repair, persistence and database startup from the generated
+launcher. It uses unique fixture resource names through test-only seams; a different
+InstallRoot by itself would not isolate the production installer's fixed Docker names.
+Without `-RunDocker` or `-NativeBinPath`, only non-provisioning native rejection cases run.
 
 ## Broad Stable Gate
 

@@ -53,6 +53,11 @@ contract remains available to remote clients: turn admission returns a durable o
 dispatcher owns provider execution, and clients follow status or replayable SSE. See
 [LLM Chats product and API](docs/llm-chats-api.md).
 
+> **Existing PostgreSQL installations: migrate before updating.** Give your coding agent
+> [the PostgreSQL 16-to-18 preservation runbook](tools/dev/Migrate-PostgreSql16To18.md)
+> before running an installer or changing an image. Preserve and restore existing data
+> into a separate PostgreSQL 18 cluster. Changing the tag or `PG_VERSION` is not a migration.
+
 ## Requirements
 
 - the .NET SDK selected by [`global.json`](global.json)
@@ -60,7 +65,7 @@ dispatcher owns provider execution, and clients follow status or replayable SSE.
   described in [Installing instances](docs/operations/installing-instances.md#choose-a-deployment-model)
 - sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` source repositories for the
   default local-development dependency mode, or an explicit package-mode build
-- PostgreSQL 16 or a compatible supported server
+- PostgreSQL 18 (the provisioned and tested baseline), or a compatible externally managed server
 - Docker Desktop or another Compose v2 runtime when using the development application stack
 - Node.js and npm when rebuilding application Tailwind output
 - PowerShell 7 on Windows, Linux, or macOS for repository automation; the dedicated

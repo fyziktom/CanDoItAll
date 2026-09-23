@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-21T13:01:49.745149+00:00",
+  "generated_utc": "2026-09-23T13:01:33.428129+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14940,
+  "allowance_count": 14958,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -113,7 +113,7 @@
       "path": ".github/workflows/ci.yml",
       "category": "shell-elevation",
       "source_fingerprint": "169474ed3ed740281cc4bb3d19b54beeaaef4f70b989caddbbb49e292d447a78",
-      "count": 20
+      "count": 22
     },
     {
       "path": ".github/workflows/ci.yml",
@@ -79083,26 +79083,56 @@
     },
     {
       "path": "tools/dev/Ensure-DevelopmentPostgres.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "4885c49660f66a1451501e4b32cddfb4f166b1ce0abeb3b232f76d477b64164d",
+      "count": 1
+    },
+    {
+      "path": "tools/dev/Ensure-DevelopmentPostgres.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "d8bb7102081a08fe239bffeeebd23567cf512e8f117a3e28b99b12dffa12cb5a",
+      "count": 1
+    },
+    {
+      "path": "tools/dev/Ensure-DevelopmentPostgres.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "f0ec8f89be0fadeecff48209fe5ad9c2b61c469ec2b3cdcbf92c06ccd46f74d7",
+      "count": 1
+    },
+    {
+      "path": "tools/dev/Migrate-PostgreSql16To18.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "1dca82f62ace73ef8fafb1e23a62d91842d345c6da808c80d544d0beec314a46",
+      "count": 1
+    },
+    {
+      "path": "tools/dev/Migrate-PostgreSql16To18.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "6a28aa03b927f14d97c649bdab84cf9f0deb93e5b00f0e4478794a0945d169bc",
+      "count": 1
+    },
+    {
+      "path": "tools/dev/Migrate-PostgreSql16To18.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "9da11365bd5d7f60564f18b573ea9a397ce1c7eafd7a4d2a4906d5b4df48b2a6",
+      "count": 1
+    },
+    {
+      "path": "tools/dev/Migrate-PostgreSql16To18.md",
       "category": "windows-executable",
-      "source_fingerprint": "73cec7756886dab16cce92af15162280ac6f57b123060a02051ef5745a929d73",
+      "source_fingerprint": "3e587e2ef19d7ab099babf07cf25ded7b896a026e52f578ab0e587ac36d33c25",
       "count": 1
     },
     {
-      "path": "tools/dev/Ensure-DevelopmentPostgres.ps1",
-      "category": "windows-path",
-      "source_fingerprint": "015450506693759c2bdef9f56be41b3622c11e663cf21392a587ed624faa70bd",
+      "path": "tools/dev/Migrate-PostgreSql16To18.md",
+      "category": "windows-executable",
+      "source_fingerprint": "4c9efeddacd18513b62a3d388abd74aad7cde82248f6d95cb1536642a816a185",
       "count": 1
     },
     {
-      "path": "tools/dev/Ensure-DevelopmentPostgres.ps1",
-      "category": "windows-path",
-      "source_fingerprint": "58d9f5cd960b09b2e177b5dae76d1d794959384aa6a0c8dccf5d544072213a7e",
-      "count": 1
-    },
-    {
-      "path": "tools/dev/Ensure-DevelopmentPostgres.ps1",
-      "category": "windows-path",
-      "source_fingerprint": "bd1aa41396e0e5b62bb3060df8637922faee4fc54ce663f50f85bd4426da873a",
+      "path": "tools/dev/Migrate-PostgreSql16To18.md",
+      "category": "windows-executable",
+      "source_fingerprint": "83db671bc26e6212e1a81078fca35c17833fd91b435ec6757f9f9a98199fdd6b",
       "count": 1
     },
     {
@@ -80104,6 +80134,12 @@
     {
       "path": "tools/install/Install-CanDoItAllWebApp.ps1",
       "category": "windows-executable",
+      "source_fingerprint": "77436fb5ae8e347e4bde6951315d1a206fb2c0b5b03b451da5c58dce948d9c7a",
+      "count": 1
+    },
+    {
+      "path": "tools/install/Install-CanDoItAllWebApp.ps1",
+      "category": "windows-executable",
       "source_fingerprint": "a2c22390fc8ffcc53980ba7e5991bc6cebbd55160f2294b2dbbb34a889b8e189",
       "count": 1
     },
@@ -80214,6 +80250,12 @@
       "category": "link-reparse",
       "source_fingerprint": "e196ea43fca0e5ff84a87b99e34bbe388896f3dca02f45540e5dec525819e300",
       "count": 60
+    },
+    {
+      "path": "tools/install/Install-CanDoItAllWebAppDatabase.ps1",
+      "category": "link-reparse",
+      "source_fingerprint": "ed72b3a255ddba816915fbf1158868e0b380e6a382b5a03a36cb509573d2e77a",
+      "count": 1
     },
     {
       "path": "tools/install/Install-CanDoItAllWebAppDatabase.ps1",
@@ -80429,6 +80471,42 @@
       "path": "tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1",
       "category": "windows-executable",
       "source_fingerprint": "dca8fad6babeb0fbb37e0cd3629e8a9b52365e5de578d5a7c1cb775845326ec6",
+      "count": 1
+    },
+    {
+      "path": "tools/install/tests/Test-PostgreSql18Safety.ps1",
+      "category": "link-reparse",
+      "source_fingerprint": "1b7aa1d4920a5a6aff7e7b3cb8ed4eed1527bdb4e4fe86984ea88be73b65e37c",
+      "count": 1
+    },
+    {
+      "path": "tools/install/tests/Test-PostgreSql18Safety.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "cdf3aeabec912081bdba4b9c0e4bd24048342a9e35a5778ff3cac2cacf17412a",
+      "count": 1
+    },
+    {
+      "path": "tools/install/tests/Test-PostgreSql18Safety.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "dfeaddfbf24a13d7581cfe3417b00f756a96947627e1c9082422793b993b0ed8",
+      "count": 1
+    },
+    {
+      "path": "tools/install/tests/Test-PostgreSql18Safety.ps1",
+      "category": "windows-executable",
+      "source_fingerprint": "4f2954bb247e7ec3a33759e771f922fa4fccff1f403914613677bc18ecdadc22",
+      "count": 3
+    },
+    {
+      "path": "tools/install/tests/Test-PostgreSql18Safety.ps1",
+      "category": "windows-executable",
+      "source_fingerprint": "80516381a1289b8e6689d2c6e05dbf63112180b3a0237fbc947b3da4bb3a6a94",
+      "count": 2
+    },
+    {
+      "path": "tools/install/tests/Test-PostgreSql18Safety.ps1",
+      "category": "windows-executable",
+      "source_fingerprint": "b2ed1102dd625eda62416096759257c7ee4380f9022f8d7f485901aada170c5a",
       "count": 1
     },
     {
