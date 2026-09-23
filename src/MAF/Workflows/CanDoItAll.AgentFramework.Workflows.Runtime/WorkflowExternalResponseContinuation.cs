@@ -425,6 +425,15 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
                 CancellationToken.None);
         }
 
+        if (runStore is not null) {
+            var recordedEventIds = (await runStore.ListEventsAsync(context.Run.RunId, CancellationToken.None))
+                .Select(workflowEvent => workflowEvent.Id)
+                .ToHashSet();
+            backendResult = backendResult with {
+                Events = backendResult.Events.Where(workflowEvent => !recordedEventIds.Contains(workflowEvent.Id)).ToArray()
+            };
+        }
+
         await leaseHeartbeat.StopAsync();
         if (await FailIfLeaseLostAsync(leaseHeartbeat, request.LeaseOwnerId) is { } commitLeaseFailure)
         {

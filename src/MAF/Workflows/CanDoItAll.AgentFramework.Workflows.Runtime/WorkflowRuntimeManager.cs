@@ -449,12 +449,14 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         var backendTransitionEvent = WorkflowRuntimeTransitionRules.FindBackendTransitionEvent(
             result.Run.State,
             result.Events);
-        var existingEvents = await store.ListEventsAsync(runId, cancellationToken);
+        var existingEventIds = (await store.ListEventsAsync(runId, cancellationToken))
+            .Select(workflowEvent => workflowEvent.Id)
+            .ToHashSet();
         foreach (var workflowEvent in result.Events)
         {
             if ((backendTransitionEvent is not null && workflowEvent.Id == backendTransitionEvent.Id) ||
                 IsLifecycleEvent(workflowEvent) ||
-                IsDuplicateProgressEvent(existingEvents, workflowEvent))
+                !existingEventIds.Add(workflowEvent.Id))
             {
                 continue;
             }
@@ -697,19 +699,6 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
                WorkflowEventKind.Cancelled or
                WorkflowEventKind.WaitingForInput or
                WorkflowEventKind.Error;
-
-    private static bool IsDuplicateProgressEvent(
-        IReadOnlyList<WorkflowEventRecord> existingEvents,
-        WorkflowEventRecord candidate)
-        => (candidate.Kind is
-               WorkflowEventKind.ExecutorInvoked or
-               WorkflowEventKind.ExecutorCompleted or
-               WorkflowEventKind.ExecutorFailed) &&
-           candidate.NodeId.HasValue &&
-           existingEvents.Any(workflowEvent =>
-               workflowEvent.Kind == candidate.Kind &&
-               workflowEvent.NodeId == candidate.NodeId &&
-               workflowEvent.CreatedAtUtc == candidate.CreatedAtUtc);
 
     private async Task PublishAndStoreEventAsync(
         WorkflowEventRecord workflowEvent,
