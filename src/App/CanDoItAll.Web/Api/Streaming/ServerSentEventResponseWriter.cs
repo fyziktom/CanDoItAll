@@ -115,6 +115,7 @@ public static class ServerSentEventResponseWriter
                 streamLifetime)
             : null;
         var streamCancellationToken = lifetime?.Token ?? context.RequestAborted;
+        bool IsCancellationRequested() => context.RequestAborted.IsCancellationRequested || streamLifetime.IsCancellationRequested;
         Task<BoundedReplayReadResult<T>>? pendingRead = null;
         var completeProfileBoundResponse = false;
         try
@@ -123,7 +124,7 @@ public static class ServerSentEventResponseWriter
             await context.Response.Body.FlushAsync(context.RequestAborted);
             using var heartbeatTimer = new PeriodicTimer(stream.HeartbeatInterval);
             Task<bool>? pendingHeartbeat = null;
-            while (!streamCancellationToken.IsCancellationRequested)
+            while (!IsCancellationRequested())
             {
                 BoundedReplayReadResult<T> result;
                 var read = stream.ReadAsync(afterExclusive, streamCancellationToken);
@@ -157,7 +158,7 @@ public static class ServerSentEventResponseWriter
                     pendingRead = null;
                 }
 
-                if (streamCancellationToken.IsCancellationRequested)
+                if (IsCancellationRequested())
                 {
                     completeProfileBoundResponse = ShouldCompleteProfileBoundResponse(
                         context,
@@ -173,7 +174,7 @@ public static class ServerSentEventResponseWriter
 
                 foreach (var entry in result.Events)
                 {
-                    if (streamCancellationToken.IsCancellationRequested)
+                    if (IsCancellationRequested())
                     {
                         completeProfileBoundResponse = ShouldCompleteProfileBoundResponse(
                             context,
@@ -209,13 +210,13 @@ public static class ServerSentEventResponseWriter
                 context,
                 streamLifetime);
         }
-        catch (OperationCanceledException) when (streamCancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (IsCancellationRequested())
         {
             if (pendingRead is not null)
             {
                 await DrainReadAfterCancellationAsync(
                     pendingRead,
-                    streamCancellationToken);
+                    streamLifetime.IsCancellationRequested ? streamLifetime : context.RequestAborted);
             }
 
             completeProfileBoundResponse = ShouldCompleteProfileBoundResponse(

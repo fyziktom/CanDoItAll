@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Api.Streaming;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
@@ -293,11 +294,10 @@ public sealed class ApiStreamingTransportTests : IDisposable {
     }
 
     [Fact]
-    public async Task Streaming_writer_emits_heartbeats_and_treats_disconnect_as_normal_completion()
-    {
+    public async Task Streaming_writer_emits_heartbeats_and_treats_disconnect_as_normal_completion() {
         var context = CreateContext();
-        await using var body = new MemoryStream();
-        using var disconnected = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+        await using var body = new ObservedFlushStream();
+        using var disconnected = new CancellationTokenSource();
         context.Response.Body = body;
         context.RequestAborted = disconnected.Token;
         var stream = new BoundedReplayEventStream<string>(
@@ -305,15 +305,16 @@ public sealed class ApiStreamingTransportTests : IDisposable {
             maxBatchSize: 4,
             heartbeatInterval: TimeSpan.FromMilliseconds(10));
 
-        await ServerSentEventResponseWriter.WriteAsync(
-            context,
-            stream,
-            "test.changed",
-            _ => true);
+        var writing = ServerSentEventResponseWriter.WriteAsync(context, stream, "test.changed", _ => true);
+        try {
+            await body.ContentFlushed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        } finally {
+            disconnected.Cancel();
+            await writing.WaitAsync(TimeSpan.FromSeconds(10));
+        }
 
         body.Position = 0;
-        var output = await new StreamReader(body, Encoding.UTF8).ReadToEndAsync(
-            CancellationToken.None);
+        var output = await new StreamReader(body, Encoding.UTF8).ReadToEndAsync(CancellationToken.None);
         Assert.Contains(": heartbeat ", output, StringComparison.Ordinal);
     }
 
@@ -392,6 +393,105 @@ public sealed class ApiStreamingTransportTests : IDisposable {
 
         stream.ReleaseRead();
         await writing.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task Streaming_writer_handles_source_cancellation_before_linked_token_callbacks_run(bool profileSwitch, bool cancelledRead) {
+        var context = CreateContext();
+        await using var body = new MemoryStream();
+        using var profileLifetime = new CancellationTokenSource();
+        using var requestLifetime = new CancellationTokenSource();
+        using var releaseCancellation = new ManualResetEventSlim();
+        var cancellationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Response.Body = body;
+        context.RequestAborted = requestLifetime.Token;
+        var responseBody = new TrackingResponseBodyFeature(
+            context.Features.GetRequiredFeature<IHttpResponseBodyFeature>());
+        context.Features.Set<IHttpResponseBodyFeature>(responseBody);
+        var stream = new ControlledCompletionReader();
+        var writing = ServerSentEventResponseWriter.WriteAsync(
+            context, stream, "test.changed", _ => true, profileLifetime.Token);
+        await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var source = profileSwitch ? profileLifetime : requestLifetime;
+        using var registration = source.Token.Register(() => {
+            cancellationStarted.TrySetResult();
+            releaseCancellation.Wait();
+        });
+        var cancelling = Task.Run(source.Cancel);
+        try {
+            await cancellationStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(source.IsCancellationRequested);
+            Assert.False(stream.ReadToken.IsCancellationRequested);
+            if (cancelledRead) {
+                stream.Completion.TrySetCanceled(source.Token);
+            } else {
+                stream.Completion.TrySetResult(new([new(1, "must-not-send")], null, true));
+            }
+
+            await writing.WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Equal(profileSwitch, responseBody.CompleteWasCalled);
+            Assert.Empty(body.ToArray());
+        } finally {
+            releaseCancellation.Set();
+            await cancelling.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [Fact]
+    public async Task Streaming_writer_profile_switch_closes_http_response_before_linked_callbacks_run() {
+        using var profileLifetime = new CancellationTokenSource();
+        using var releaseCancellation = new ManualResetEventSlim();
+        var cancellationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stream = new ControlledCompletionReader();
+        const string streamRoute = "/api/test/profile-switch-stream";
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            useInMemoryDatabase: true,
+            configureApplication: app => app.MapGet(streamRoute, (HttpContext context) =>
+                ServerSentEventResponseWriter.WriteAsync(
+                    context, stream, "test.changed", _ => true, profileLifetime.Token)));
+        using var request = new HttpRequestMessage(HttpMethod.Get, streamRoute);
+        using var response = await host.Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+        await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        using var registration = profileLifetime.Token.Register(() => {
+            cancellationStarted.TrySetResult();
+            releaseCancellation.Wait();
+        });
+        var cancelling = Task.Run(profileLifetime.Cancel);
+        try {
+            await cancellationStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.False(stream.ReadToken.IsCancellationRequested);
+            stream.Completion.TrySetCanceled(profileLifetime.Token);
+
+            var content = await response.Content.ReadAsStringAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Empty(content);
+        } finally {
+            releaseCancellation.Set();
+            await cancelling.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [Fact]
+    public async Task Streaming_writer_propagates_cancellation_when_neither_lifetime_has_ended() {
+        var context = CreateContext();
+        await using var body = new MemoryStream();
+        context.Response.Body = body;
+        var stream = new ControlledCompletionReader();
+        var writing = ServerSentEventResponseWriter.WriteAsync(
+            context, stream, "test.changed", _ => true);
+        await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var failure = new OperationCanceledException("Unexpected reader cancellation.");
+        stream.Completion.TrySetException(failure);
+
+        Assert.Same(failure, await Assert.ThrowsAsync<OperationCanceledException>(
+            () => writing.WaitAsync(TimeSpan.FromSeconds(10))));
     }
 
     [Fact]
@@ -639,6 +739,31 @@ public sealed class ApiStreamingTransportTests : IDisposable {
         {
             await inner.CompleteAsync();
             CompleteWasCalled = true;
+        }
+    }
+
+    private sealed class ObservedFlushStream : MemoryStream {
+        public TaskCompletionSource ContentFlushed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override async Task FlushAsync(CancellationToken cancellationToken) {
+            await base.FlushAsync(cancellationToken);
+            if (Length > 0) {
+                ContentFlushed.TrySetResult();
+            }
+        }
+    }
+
+    private sealed class ControlledCompletionReader : IBoundedReplayEventReader<string> {
+        public TaskCompletionSource ReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<BoundedReplayReadResult<string>> Completion { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationToken ReadToken { get; private set; }
+        public TimeSpan HeartbeatInterval => TimeSpan.FromHours(1);
+
+        public ValueTask<BoundedReplayReadResult<string>> ReadAsync(long afterExclusive, CancellationToken cancellationToken) {
+            ReadToken = cancellationToken;
+            ReadStarted.TrySetResult();
+            return new(Completion.Task);
         }
     }
 

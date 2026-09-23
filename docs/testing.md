@@ -97,6 +97,12 @@ event together inside `cut.InvokeAsync`. A render between `Find` and `Click` can
 the event handler and make bUnit report `UnknownEventHandlerIdException`. Re-querying the
 element outside the dispatcher does not close that race.
 
+Workflow canvas preview tests must wait until the supplied definition name appears in
+`workflow-canvas-name` before starting the preview. The toolbar renders while
+`OnInitializedAsync` is still loading secrets; button existence alone does not prove
+that `OnParametersSetAsync` has replaced the initial empty draft. Use the shared
+`RunWorkflowCanvasPreviewAsync` test helper to wait for that state and await the click.
+
 In bUnit 2.7.2, synchronous `Click()` discards the event-dispatch task. Use
 `await ClickAsync()` before asserting callback effects, including the absence of a
 second intent; a busy dispatcher can otherwise leave the click queued during the
@@ -224,6 +230,22 @@ field is `not-run` when the gate was closed, `rehearsal` when the journey stoppe
 Send, and `live` only when a model was actually reached, and `modelRequests.used` is the number of
 requests the provider journal counted. A report that claims live proof cites that manifest, the
 provider and model it names, and the persisted run and owner state it recorded.
+
+## Event Stream Shutdown
+
+A profile switch or client disconnect can cancel an underlying event read before the
+linked token in the SSE writer observes cancellation. Check the original lifetime
+signals when deciding whether to stop or handle cancellation, and drain the pending
+read before releasing its scope. Finish an in-progress frame using the request token;
+a profile switch must end the HTTP response cleanly without emitting subsequent events.
+Do not suppress unrelated reader failures or accept a truncated HTTP body in tests.
+
+`ApiStreamingTransportTests` forces delayed cancellation propagation, both cancelled
+and successful reads during shutdown, and a real HTTP profile-switch race.
+`ApiRunEventAdapterTests` checks clean profile-switch closure for global and run-specific
+workflow/process streams. `LlmChatsApiPostgreSqlIntegrationTests` retains the PostgreSQL
+profile-fencing and durable-usage assertions. The heartbeat/disconnect test waits for
+an observed flush before disconnecting instead of assuming a heartbeat arrives in 150 ms.
 
 ## Timing And Scale Checks
 

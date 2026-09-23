@@ -53,9 +53,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
-        cut.WaitForAssertion(() => Assert.Equal(definition.Name,
-            cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value")));
-        await cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync();
+        await RunWorkflowCanvasPreviewAsync(cut, definition);
         if (lane == 0) {
             cut.WaitForAssertion(() => {
                 Assert.NotNull(cut.Find("[data-testid='workflow-canvas-preview-input-dialog']"));
@@ -1074,7 +1072,7 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain("workflow-canvas-validation-issue", cut.Markup);
         });
 
-        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
         cut.WaitForAssertion(() =>
         {
@@ -1247,8 +1245,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
 
-        cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").Click());
+        await RunWorkflowCanvasPreviewAsync(cut, definition);
 
         cut.WaitForElement("[data-testid='workflow-canvas-preview-input-dialog']");
         cut.WaitForAssertion(() =>
@@ -1261,7 +1258,7 @@ public sealed class WorkflowsPageTests
             cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node"));
         await cut.InvokeAsync(() =>
             cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true));
-        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-preview-input-run']").ClickAsync());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
@@ -1300,8 +1297,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.Definition, published)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
-        cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").Click());
+        await RunWorkflowCanvasPreviewAsync(cut, published);
 
         // The launch service admits only Draft definitions as draft previews, so an Active canvas must be sent as an
         // unsaved draft of its current content rather than failing every preview with a generic error.
@@ -1442,8 +1438,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
 
-        cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        await cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync(new MouseEventArgs());
+        await RunWorkflowCanvasPreviewAsync(cut, definition);
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
@@ -2276,6 +2271,15 @@ public sealed class WorkflowsPageTests
             $"{backendRunId} completed.",
             createdAtUtc,
             createdAtUtc);
+
+    private static Task RunWorkflowCanvasPreviewAsync(
+        IRenderedComponent<WorkflowCanvasEditor> cut,
+        WorkflowDefinition definition) {
+        cut.WaitForAssertion(() => Assert.Equal(
+            definition.Name,
+            cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value")));
+        return cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync());
+    }
 
     private static Task ClickWorkflowCanvasTabAsync(IRenderedComponent<IComponent> cut, string testId)
         => cut.InvokeAsync(() =>
