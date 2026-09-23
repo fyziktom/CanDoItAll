@@ -3,10 +3,14 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Agents.SimpleChats;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.AgentFramework.Llm.SimpleChats;
@@ -24,6 +28,10 @@ using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Runtime;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.SharedProviders.Http;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -38,8 +46,6 @@ using Microsoft.Extensions.Options;
 using System.Data;
 using System.Data.Common;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Composition;
 
@@ -54,8 +60,18 @@ public static class RuntimeHostServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
 
+        services.Configure<ProviderInitializationOptions>(configuration.GetSection(ProviderInitializationOptions.SectionName));
+
         services.AddSecurityModule(configuration);
+        services.AddAgentFrameworkProviderManagement();
         services.AddWorkspaceModule();
+        services.AddScoped<IWorkspaceProviderCatalog, ProviderManagementWorkspaceProviderCatalog>();
+        services.AddScoped<IDatabaseTransferHandler, WorkspaceDefaultProviderDatabaseTransferHandler>();
+        services.AddSharedProviderHttpDescriptors();
+        services.AddSharedProviderRuntimeAccessContextPropagation();
+        services.TryAddSingleton<
+            IProviderHttpClientSelector,
+            SharedProviderRuntimeHttpClientSelector>();
         services.AddProjectsModule();
         services.AddCanDoItAllMemory(configuration);
         services.AddWorkbenchModule(configuration);
@@ -65,6 +81,29 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddCanDoItAllGmailPlugin();
         services.AddCanDoItAllOffice365Plugin();
         services.AddProcessesModule(configuration);
+        services.TryAddScoped<IAgentCatalogReadLeaseStore, CanonicalAgentCatalogLeaseSource>();
+        services.TryAddScoped<IProcessProjectAdmissionPolicy, ProjectProcessAdmissionPolicy>();
+        services.TryAddScoped<ProjectProcessLaunchTargetQuery>();
+        services.TryAddScoped<ProjectProcessLaunchDeliveryService>();
+        services.TryAddScoped<ProjectProcessLaunchAuthorityService>();
+        services.TryAddScoped<IProcessLaunchAuthorityPolicy>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
+        services.TryAddScoped<IProcessLaunchOperatorAuthoritySource>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
+        services.TryAddScoped<IProcessSourceAuthorityObservationPolicy>(provider => provider.GetRequiredService<ProjectProcessLaunchAuthorityService>());
+        services.TryAddScoped<ProjectProcessExecutionMutationService>();
+        services.TryAddScoped<ProjectAgentNativeMutationService>();
+        services.TryAddScoped<ProjectAgentSourceMutationAuthority>();
+        services.TryAddScoped<IProjectCreationCompensationGuard, ProjectCreationCompensationGuard>();
+        services.TryAddSingleton<ProjectProcessAssetProposalCodec>();
+        services.TryAddScoped<ProjectProcessAssetToolAdmission>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider>(provider => provider.GetRequiredService<ProjectProcessAssetToolAdmission>());
+        services.TryAddScoped<IProcessToolLaunchAdmissionPolicy, ProjectProcessToolLaunchAdmissionPolicy>();
+        services.TryAddSingleton<WorkflowProcessToolProposalCodec>();
+        services.TryAddScoped<WorkflowProcessToolAdmission>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider>(provider => provider.GetRequiredService<WorkflowProcessToolAdmission>());
+        services.TryAddSingleton<ProjectStructureProcessProposalCodec>();
+        services.TryAddScoped<ProjectStructureProcessToolAdmission>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider>(provider => provider.GetRequiredService<ProjectStructureProcessToolAdmission>());
+        services.TryAddScoped<IWorkflowScheduledSourceAuthorityPolicy, ProjectScheduledWorkflowSourceAuthorityPolicy>();
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
         services
@@ -88,9 +127,12 @@ public static class RuntimeHostServiceCollectionExtensions
             provider.GetRequiredService<IOptions<LlmChatStreamingOptions>>().Value);
         services.AddSingleton(provider =>
             provider.GetRequiredService<IOptions<LlmChatTransferOptions>>().Value);
+        services.TryAddSingleton<IAgentToolAdmissionVerifier, AgentToolAdmissionVerifier>();
+        services.AddHrSimpleChatDefinitionTools();
         services.AddSimpleChatsApplication();
         services.AddSimpleChatsRuntime();
         services.AddLlmChatsPersistence();
+        services.AddProviderHistoryPersistence();
         services.AddHostedService<LlmChatOperationDispatcherHostedService>();
         services.AddSchedulerPlannerModule(configuration);
         services.AddCollaborationModule();
@@ -172,10 +214,13 @@ public sealed class AppDatabaseBootstrapper(
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IDatabaseDriverRegistry driverRegistry,
     IProfileAppDbContextFactory dbContextFactory,
-    ISecretVault secretVault,
+    EnvironmentSecretBootstrapService secretBootstrap,
+    ProviderDefaultsBootstrapService providerBootstrap,
+    WorkspaceDefaultsBootstrapService workspaceBootstrap,
     IEnumerable<IProviderRuntimeProfileSnapshotInitializer>
         providerRuntimeProfileSnapshotInitializers,
-    ILogger<AppDatabaseBootstrapper> logger) : IAppDatabaseBootstrapper
+    ILogger<AppDatabaseBootstrapper> logger,
+    IOptions<ProviderInitializationOptions> providerInitialization) : IAppDatabaseBootstrapper
 {
     private static readonly Guid ManagedDeliveryUnitPartyId = Guid.Parse("10BE49B1-EF4D-4A58-B9EA-B3F7D40F31A1");
     private static readonly Guid ManagedProductOwnerPartyId = Guid.Parse("A6BBAD2B-9D18-40EA-95B5-6D73C20C3078");
@@ -185,27 +230,6 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly Guid ManagedDeliveryManagerRoleId = Guid.Parse("2D9DF6AC-8B49-43EA-960E-8B912A758296");
     private static readonly Guid ManagedProductOwnerProfileId = Guid.Parse("61C29FAE-C560-4C2D-993E-BE842FD635FB");
     private static readonly Guid ManagedDeliveryManagerProfileId = Guid.Parse("E0EBEC09-C37B-4F42-9FA4-1B2DDAC20572");
-    private static readonly Guid RuntimeBootstrapOpenAiProviderId = Guid.Parse("C1C103DB-707E-3F52-8809-8D804FC171D1");
-    private static readonly Guid RuntimeBootstrapOpenAiChatCompletionsProviderId = Guid.Parse("036B360A-E3F4-8350-97CA-F88DE60BA2BB");
-    private static readonly Guid RuntimeBootstrapOpenAiImageProviderId = Guid.Parse("8958FA61-4BD6-1451-8123-4E4E4FEA2E26");
-    private static readonly Guid RuntimeBootstrapComfyUiProviderId = Guid.Parse("509EAF62-4A4E-1C50-856F-8836328A519E");
-    private static readonly Guid RuntimeBootstrapLocalOllamaProviderId = Guid.Parse("BD2BFFBB-23D5-D152-82F6-E1D37908B169");
-    private const string RuntimeBootstrapOpenAiProviderName = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName;
-    private const string RuntimeBootstrapOpenAiChatCompletionsProviderName = ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName;
-    private const string RuntimeBootstrapOpenAiImageProviderName = "OpenAI image generation";
-    private const string RuntimeBootstrapOpenAiBaseUrl = "https://api.openai.com/v1";
-    private const string RuntimeBootstrapOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
-    private const string RuntimeBootstrapOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
-    private const string RuntimeBootstrapLegacyOpenAiImageModel = OpenAiModelIds.GptImage1Mini;
-    private const string RuntimeBootstrapOpenAiImageModel = OpenAiModelIds.GptImage2;
-    private const string RuntimeBootstrapLocalOllamaProviderName = "Local Ollama";
-    private const string RuntimeBootstrapLocalOllamaBaseUrl = "http://127.0.0.1:11434";
-    private const string RuntimeBootstrapLocalOllamaModel = "llama3.1";
-    private const string RuntimeBootstrapProviderSchemaVersion = "1.0";
-    private const int RuntimeBootstrapOpenAiTimeoutSeconds = 600;
-    private const int RuntimeBootstrapLocalOllamaTimeoutSeconds = 45;
-    private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
-    private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
     private static readonly string[] BaselineSentinelTables =
     [
         "Projects_Projects",
@@ -257,7 +281,6 @@ public sealed class AppDatabaseBootstrapper(
                 profile.Profile.Id);
             await EnsureAgentProviderBootstrapAsync(
                 profile,
-                dbContext,
                 cancellationToken);
             logger.LogInformation(
                 "Non-relational database profile {ProfileId} is ready.",
@@ -273,19 +296,15 @@ public sealed class AppDatabaseBootstrapper(
         logger.LogInformation(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
             profile.Profile.Id);
-        await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        logger.LogInformation(
-            "Ensuring plugin runtime schema for profile {ProfileId}.",
-            profile.Profile.Id);
-        await PluginSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        logger.LogInformation(
-            "Ensuring scheduler planner schema for profile {ProfileId}.",
-            profile.Profile.Id);
-        await SchedulerPlannerSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var crmOptions = new DbContextOptionsBuilder<CrmHrDbContext>();
+        AppDbContextOptionsConfigurator.Configure(crmOptions, profile);
+        await using (var crm = new CrmHrDbContext(crmOptions.Options)) {
+            await CrmHrSchemaInitializer.EnsureAsync(crm, cancellationToken);
+        }
         logger.LogInformation(
             "Ensuring agent provider bootstrap for profile {ProfileId}.",
             profile.Profile.Id);
-        await EnsureAgentProviderBootstrapAsync(profile, dbContext, cancellationToken);
+        await EnsureAgentProviderBootstrapAsync(profile, cancellationToken);
         logger.LogInformation(
             "Runtime database profile {ProfileId} is ready.",
             profile.Profile.Id);
@@ -749,710 +768,23 @@ public sealed class AppDatabaseBootstrapper(
 
     private async Task EnsureAgentProviderBootstrapAsync(
         ResolvedDatabaseProfile profile,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
+        if (!providerInitialization.Value.SeedDefaults) {
+            logger.LogInformation("Default provider seeding is disabled for profile {ProfileId}; explicit provider configuration is required.", profile.Profile.Id);
+            return;
+        }
+
         var timestamp = DateTimeOffset.UtcNow;
-        var changed = false;
-        var openAiSecretId = await EnsureDefaultOpenAiSecretAsync(dbContext, cancellationToken);
-        var openAiProvider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .SingleOrDefaultAsync(item => item.Id == RuntimeBootstrapOpenAiProviderId, cancellationToken)
-            ?? await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-                .Where(item => item.Name == RuntimeBootstrapOpenAiProviderName)
-                .OrderBy(item => item.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-        if (openAiProvider is null)
-        {
-            openAiProvider = new CanDoItAll.Modules.Workspace.ProviderProfile
-            {
-                Id = RuntimeBootstrapOpenAiProviderId,
-                Name = RuntimeBootstrapOpenAiProviderName,
-                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
-                ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
-                ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-                BaseUrl = RuntimeBootstrapOpenAiBaseUrl,
-                ApiKeySecretId = openAiSecretId,
-                DefaultModel = RuntimeBootstrapOpenAiModel,
-                TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds,
-                IsEnabled = true,
-                SupportsStreaming = true,
-                SupportsToolCalling = true,
-                SupportsStructuredOutput = true,
-                SupportsVision = false,
-                LastHealthStatus = "OpenAI active",
-                LastHealthCheckAtUtc = null,
-                ExtraSettingsJson = JsonSerializer.Serialize(new
-                {
-                    history = "service-managed",
-                    modelParameters = new
-                    {
-                        reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
-                    },
-                    apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
-                    connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-                    configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-                    secretRecordId = openAiSecretId?.ToString("D"),
-                    providerTransport = nameof(ProviderTransportKind.Responses),
-                    timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
-                })
-            };
-            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(openAiProvider);
-            changed = true;
-        }
-        else
-        {
-            changed |= UpdateRuntimeBootstrapOpenAiProvider(openAiProvider);
-        }
-
-        if (openAiSecretId.HasValue && openAiProvider.ApiKeySecretId != openAiSecretId.Value)
-        {
-            openAiProvider.ApiKeySecretId = openAiSecretId.Value;
-            changed = true;
-        }
-
-        changed |= UpdateRuntimeBootstrapOpenAiProviderConfigurationJson(openAiProvider);
-
-        var openAiChatCompletionsProvider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .SingleOrDefaultAsync(item => item.Id == RuntimeBootstrapOpenAiChatCompletionsProviderId, cancellationToken)
-            ?? await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-                .Where(item => item.Name == RuntimeBootstrapOpenAiChatCompletionsProviderName)
-                .OrderBy(item => item.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-        if (openAiChatCompletionsProvider is null)
-        {
-            openAiChatCompletionsProvider = new CanDoItAll.Modules.Workspace.ProviderProfile
-            {
-                Id = RuntimeBootstrapOpenAiChatCompletionsProviderId,
-                Name = RuntimeBootstrapOpenAiChatCompletionsProviderName,
-                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
-                ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
-                ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-                BaseUrl = RuntimeBootstrapOpenAiBaseUrl,
-                ApiKeySecretId = openAiSecretId,
-                DefaultModel = RuntimeBootstrapOpenAiModel,
-                TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds,
-                IsEnabled = true,
-                SupportsStreaming = true,
-                SupportsToolCalling = true,
-                SupportsStructuredOutput = true,
-                SupportsVision = false,
-                LastHealthStatus = "OpenAI active",
-                LastHealthCheckAtUtc = null,
-                ExtraSettingsJson = BuildRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(openAiSecretId)
-            };
-            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(openAiChatCompletionsProvider);
-            changed = true;
-        }
-        else
-        {
-            changed |= UpdateRuntimeBootstrapOpenAiChatCompletionsProvider(openAiChatCompletionsProvider);
-        }
-
-        if (openAiSecretId.HasValue && openAiChatCompletionsProvider.ApiKeySecretId != openAiSecretId.Value)
-        {
-            openAiChatCompletionsProvider.ApiKeySecretId = openAiSecretId.Value;
-            changed = true;
-        }
-
-        changed |= UpdateRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(openAiChatCompletionsProvider);
-        changed |= await EnsureManagedCatalogProviderSeedsAsync(
-            dbContext,
-            openAiSecretId,
-            cancellationToken);
-
-        var settings = await dbContext.Set<WorkspaceSettings>()
-            .FirstOrDefaultAsync(cancellationToken);
-        if (settings is null)
-        {
-            dbContext.Set<WorkspaceSettings>().Add(new WorkspaceSettings
-            {
-                DefaultProviderProfileId = RuntimeBootstrapOpenAiProviderId,
-                WorkspaceName = "CanDoItAll",
-                DefaultPromptOutputFormat = "Markdown",
-                Notes = "Runtime bootstrap default provider.",
-                UpdatedAtUtc = timestamp
-            });
-            changed = true;
-        }
-        else if (ShouldReplaceDefaultProvider(settings.DefaultProviderProfileId, openAiProvider.Id, dbContext))
-        {
-            settings.DefaultProviderProfileId = openAiProvider.Id;
-            settings.UpdatedAtUtc = timestamp;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            logger.LogInformation(
-                "Seeded OpenAI provider bootstrap for profile {ProfileId}.",
-                profile.Profile.Id);
+        var secretId = await secretBootstrap.EnsureOpenAiEnvironmentSecretAsync(profile, cancellationToken);
+        await using var providers = await providerBootstrap.PrepareAsync(profile, secretId, cancellationToken);
+        using var participation = providers.EnterTransaction();
+        var workspaceChanged = await workspaceBootstrap.EnsureAsync(profile, providers.Transactions,
+            providers.NewWorkspaceDefaultProviderId, providers.MatchedProviderId,
+            providers.ProviderExistsAsync, timestamp, cancellationToken);
+        if (await providers.CommitAsync(workspaceChanged, cancellationToken)) {
+            logger.LogInformation("Seeded OpenAI provider bootstrap for profile {ProfileId}.", profile.Profile.Id);
         }
     }
-
-    private async Task<bool> EnsureManagedCatalogProviderSeedsAsync(
-        AppDbContext dbContext,
-        Guid? openAiSecretId,
-        CancellationToken cancellationToken)
-    {
-        var seeds = CreateManagedCatalogProviderSeeds(openAiSecretId);
-        var seedIds = seeds.Select(seed => seed.Id).ToArray();
-        var seedNames = seeds.Select(seed => seed.Name).ToArray();
-        var existingProviders = await dbContext
-            .Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .Where(provider =>
-                seedIds.Contains(provider.Id) ||
-                seedNames.Contains(provider.Name))
-            .ToListAsync(cancellationToken);
-        var changed = false;
-
-        foreach (var seed in seeds)
-        {
-            var byId = existingProviders
-                .FirstOrDefault(provider => provider.Id == seed.Id);
-            var byName = existingProviders
-                .FirstOrDefault(provider =>
-                    string.Equals(
-                        provider.Name,
-                        seed.Name,
-                        StringComparison.Ordinal));
-            if (byId is not null &&
-                !string.Equals(byId.Name, seed.Name, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Managed provider seed '{seed.Name}' cannot use Id '{seed.Id:D}' because that Id belongs to '{byId.Name}'.");
-            }
-
-            if (byName is not null && byName.Id != seed.Id)
-            {
-                throw new InvalidOperationException(
-                    $"Managed provider seed '{seed.Name}' must use Id '{seed.Id:D}', but the canonical provider uses '{byName.Id:D}'.");
-            }
-
-            if (byId is not null)
-            {
-                changed |= UpgradeManagedOpenAiImageProviderModel(byId);
-                changed |= UpgradeManagedLocalOllamaCapabilities(byId);
-                continue;
-            }
-
-            dbContext
-                .Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-                .Add(seed.CreateEntity());
-            changed = true;
-        }
-
-        return changed;
-    }
-
-    private static bool UpgradeManagedOpenAiImageProviderModel(
-        CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        if (provider.Id != RuntimeBootstrapOpenAiImageProviderId ||
-            !string.Equals(
-                provider.DefaultModel,
-                RuntimeBootstrapLegacyOpenAiImageModel,
-                StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        provider.DefaultModel = RuntimeBootstrapOpenAiImageModel;
-        return true;
-    }
-
-    private static bool UpgradeManagedLocalOllamaCapabilities(
-        CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        if (provider.Id != RuntimeBootstrapLocalOllamaProviderId ||
-            provider.SupportsStructuredOutput)
-        {
-            return false;
-        }
-
-        provider.SupportsStructuredOutput = true;
-        return true;
-    }
-
-    private static IReadOnlyList<ManagedCatalogProviderSeed>
-        CreateManagedCatalogProviderSeeds(Guid? openAiSecretId)
-    {
-        return
-        [
-            new ManagedCatalogProviderSeed(
-                RuntimeBootstrapOpenAiImageProviderId,
-                RuntimeBootstrapOpenAiImageProviderName,
-                CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
-                OpenAiProviderAdapter.PluginKey,
-                RuntimeBootstrapOpenAiBaseUrl,
-                openAiSecretId,
-                RuntimeBootstrapOpenAiImageModel,
-                RuntimeBootstrapOpenAiTimeoutSeconds,
-                SupportsStreaming: false,
-                SupportsToolCalling: false,
-                SupportsStructuredOutput: false,
-                BuildManagedProviderConfigurationJson(
-                    "{}",
-                    OpenAiProviderAdapter.PluginKey,
-                    openAiSecretId,
-                    RuntimeBootstrapOpenAiTimeoutSeconds,
-                    ProviderTransportKind.Responses,
-                    ProviderProfilePurpose.ImageGeneration,
-                    ["cloud", "image", "image-generation", "openai"],
-                    isPrivateProvider: false,
-                    ProviderPricingDefaults.CreateDefaultPrices(
-                        CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-                        RuntimeBootstrapOpenAiImageModel))),
-            new ManagedCatalogProviderSeed(
-                RuntimeBootstrapComfyUiProviderId,
-                ComfyUiFluxProviderDefaults.ProviderName,
-                ProviderKind: null,
-                ComfyUiProviderAdapter.PluginKey,
-                ComfyUiFluxProviderDefaults.DefaultBaseUrl,
-                ApiKeySecretId: null,
-                ComfyUiFluxProviderDefaults.DefaultModel,
-                ComfyUiFluxProviderDefaults.TimeoutSeconds,
-                SupportsStreaming: false,
-                SupportsToolCalling: false,
-                SupportsStructuredOutput: false,
-                BuildManagedProviderConfigurationJson(
-                    ComfyUiFluxProviderDefaults.CreateConfigurationJson(),
-                    ComfyUiProviderAdapter.PluginKey,
-                    secretRecordId: null,
-                    ComfyUiFluxProviderDefaults.TimeoutSeconds,
-                    ProviderTransportKind.ChatCompletions,
-                    ProviderProfilePurpose.ImageGeneration,
-                    ["comfyui", "flux", "image", "image-generation", "local"],
-                    isPrivateProvider: true,
-                    ProviderPricingDefaults.CreateDefaultPrices(
-                        CanDoItAll.AgentFramework.Models.ProviderKind.ComfyUi,
-                        ComfyUiFluxProviderDefaults.DefaultModel))),
-            new ManagedCatalogProviderSeed(
-                RuntimeBootstrapLocalOllamaProviderId,
-                RuntimeBootstrapLocalOllamaProviderName,
-                CanDoItAll.Modules.Workspace.ProviderKind.OllamaLocal,
-                OllamaProviderAdapter.PluginKey,
-                RuntimeBootstrapLocalOllamaBaseUrl,
-                ApiKeySecretId: null,
-                RuntimeBootstrapLocalOllamaModel,
-                RuntimeBootstrapLocalOllamaTimeoutSeconds,
-                SupportsStreaming: true,
-                SupportsToolCalling: true,
-                SupportsStructuredOutput: true,
-                BuildManagedProviderConfigurationJson(
-                    JsonSerializer.Serialize(new
-                    {
-                        history = "framework-managed",
-                        local = true,
-                        modelParameters = new
-                        {
-                            numPredict =
-                                AgentProviderModelParameterPolicy
-                                    .DefaultOllamaMaxOutputTokens
-                        }
-                    }),
-                    OllamaProviderAdapter.PluginKey,
-                    secretRecordId: null,
-                    RuntimeBootstrapLocalOllamaTimeoutSeconds,
-                    ProviderTransportKind.ChatCompletions,
-                    ProviderProfilePurpose.Chat,
-                    ["chat", "local", "ollama"],
-                    isPrivateProvider: true,
-                    ProviderPricingDefaults.CreateDefaultPrices(
-                        CanDoItAll.AgentFramework.Models.ProviderKind.Ollama,
-                        RuntimeBootstrapLocalOllamaModel)))
-        ];
-    }
-
-    private static string BuildManagedProviderConfigurationJson(
-        string configurationJson,
-        string connectorPluginKey,
-        Guid? secretRecordId,
-        int timeoutSeconds,
-        ProviderTransportKind transport,
-        ProviderProfilePurpose purpose,
-        IEnumerable<string> tags,
-        bool isPrivateProvider,
-        IReadOnlyList<ProviderModelTokenPrice> modelPrices)
-    {
-        var configuration = JsonNode.Parse(configurationJson)?.AsObject()
-            ?? new JsonObject();
-        configuration["connectorPluginKey"] = connectorPluginKey;
-        configuration["configSchemaVersion"] =
-            RuntimeBootstrapProviderSchemaVersion;
-        configuration["timeoutSeconds"] = timeoutSeconds;
-        configuration["providerTransport"] = transport.ToString();
-        configuration["providerPurpose"] = purpose.ToString();
-        if (secretRecordId.HasValue)
-        {
-            configuration["secretRecordId"] =
-                secretRecordId.Value.ToString("D");
-            configuration["apiKeyEnvironmentVariable"] =
-                RuntimeBootstrapOpenAiApiKeyEnvironmentVariable;
-        }
-
-        var tagArray = new JsonArray();
-        foreach (var tag in tags
-                     .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                     .Select(tag => tag.Trim().TrimStart('#').ToLowerInvariant())
-                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                     .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase))
-        {
-            tagArray.Add(tag);
-        }
-
-        configuration["tags"] = tagArray;
-        return ProviderPricingMetadata.Write(
-            configuration.ToJsonString(),
-            isPrivateProvider,
-            modelPrices);
-    }
-
-    private sealed record ManagedCatalogProviderSeed(
-        Guid Id,
-        string Name,
-        CanDoItAll.Modules.Workspace.ProviderKind? ProviderKind,
-        string ConnectorPluginKey,
-        string BaseUrl,
-        Guid? ApiKeySecretId,
-        string DefaultModel,
-        int TimeoutSeconds,
-        bool SupportsStreaming,
-        bool SupportsToolCalling,
-        bool SupportsStructuredOutput,
-        string ExtraSettingsJson)
-    {
-        public CanDoItAll.Modules.Workspace.ProviderProfile CreateEntity()
-        {
-            return new CanDoItAll.Modules.Workspace.ProviderProfile
-            {
-                Id = Id,
-                Name = Name,
-                ProviderKind = ProviderKind,
-                ConnectorPluginKey = ConnectorPluginKey,
-                ConfigSchemaVersion =
-                    RuntimeBootstrapProviderSchemaVersion,
-                BaseUrl = BaseUrl,
-                ApiKeySecretId = ApiKeySecretId,
-                DefaultModel = DefaultModel,
-                TimeoutSeconds = TimeoutSeconds,
-                IsEnabled = true,
-                SupportsStreaming = SupportsStreaming,
-                SupportsToolCalling = SupportsToolCalling,
-                SupportsStructuredOutput = SupportsStructuredOutput,
-                SupportsVision = false,
-                LastHealthStatus = "Not checked",
-                ExtraSettingsJson = ExtraSettingsJson
-            };
-        }
-    }
-
-    private async Task<Guid?> EnsureDefaultOpenAiSecretAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var configuredKey = Environment.GetEnvironmentVariable(RuntimeBootstrapOpenAiApiKeyEnvironmentVariable);
-        var existingSecret = await dbContext.Set<SecretRecord>()
-            .Where(item => item.Id == DefaultOpenAiApiKeySecretId || item.Name == DefaultOpenAiApiKeySecretName)
-            .OrderBy(item => item.Id == DefaultOpenAiApiKeySecretId ? 0 : 1)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(configuredKey))
-        {
-            return existingSecret?.Id;
-        }
-
-        var normalizedKey = configuredKey.Trim();
-        var timestamp = DateTimeOffset.UtcNow;
-        if (existingSecret is null)
-        {
-            existingSecret = new SecretRecord
-            {
-                Id = DefaultOpenAiApiKeySecretId,
-                CreatedAtUtc = timestamp
-            };
-            dbContext.Set<SecretRecord>().Add(existingSecret);
-        }
-
-        var oldVaultKey = SecretVaultRecordReference.TryParse(existingSecret.EncryptedPayload, out var parsedOldVaultKey)
-            ? parsedOldVaultKey
-            : null;
-        var existingValue = string.IsNullOrWhiteSpace(oldVaultKey)
-            ? null
-            : await secretVault.GetAsync(oldVaultKey, cancellationToken);
-        var metadataJson = JsonSerializer.Serialize(new
-        {
-            source = "environment",
-            environmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
-            managedBy = "runtime-bootstrap"
-        });
-        var metadataChanged =
-            !string.Equals(existingSecret.Name, DefaultOpenAiApiKeySecretName, StringComparison.Ordinal) ||
-            existingSecret.Kind != SecretKind.ApiKey ||
-            !string.Equals(existingSecret.Scope, "workspace", StringComparison.Ordinal) ||
-            !string.Equals(existingSecret.MetadataJson, metadataJson, StringComparison.Ordinal);
-
-        if (string.Equals(existingValue, normalizedKey, StringComparison.Ordinal) && !metadataChanged)
-        {
-            return existingSecret.Id;
-        }
-
-        var newVaultKey = SecretVaultRecordReference.BuildKey(existingSecret.Id, Guid.NewGuid());
-        await secretVault.SetAsync(newVaultKey, normalizedKey, cancellationToken);
-
-        existingSecret.Name = DefaultOpenAiApiKeySecretName;
-        existingSecret.Kind = SecretKind.ApiKey;
-        existingSecret.Scope = "workspace";
-        existingSecret.MetadataJson = metadataJson;
-        existingSecret.RotationNote = $"Synchronized from {RuntimeBootstrapOpenAiApiKeyEnvironmentVariable}.";
-        existingSecret.EncryptedPayload = SecretVaultRecordReference.Create(newVaultKey);
-        existingSecret.UpdatedAtUtc = timestamp;
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(oldVaultKey) &&
-            !string.Equals(oldVaultKey, newVaultKey, StringComparison.Ordinal))
-        {
-            await secretVault.DeleteAsync(oldVaultKey, cancellationToken);
-        }
-
-        return existingSecret.Id;
-    }
-
-    private static bool ShouldReplaceDefaultProvider(
-        Guid? currentDefaultProviderId,
-        Guid openAiProviderId,
-        AppDbContext dbContext)
-    {
-        if (currentDefaultProviderId == openAiProviderId)
-        {
-            return false;
-        }
-
-        if (!currentDefaultProviderId.HasValue)
-        {
-            return true;
-        }
-
-        return !dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .Any(item => item.Id == currentDefaultProviderId.Value);
-    }
-
-    private static bool UpdateRuntimeBootstrapOpenAiProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        var changed = false;
-        if (!string.Equals(provider.Name, RuntimeBootstrapOpenAiProviderName, StringComparison.Ordinal))
-        {
-            provider.Name = RuntimeBootstrapOpenAiProviderName;
-            changed = true;
-        }
-
-        if (provider.ProviderKind != CanDoItAll.Modules.Workspace.ProviderKind.OpenAi)
-        {
-            provider.ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.ConnectorPluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.Ordinal))
-        {
-            provider.ConnectorPluginKey = OpenAiProviderAdapter.PluginKey;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.ConfigSchemaVersion, RuntimeBootstrapProviderSchemaVersion, StringComparison.Ordinal))
-        {
-            provider.ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.BaseUrl, RuntimeBootstrapOpenAiBaseUrl, StringComparison.Ordinal))
-        {
-            provider.BaseUrl = RuntimeBootstrapOpenAiBaseUrl;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.DefaultModel, RuntimeBootstrapOpenAiModel, StringComparison.Ordinal))
-        {
-            provider.DefaultModel = RuntimeBootstrapOpenAiModel;
-            changed = true;
-        }
-
-        if (provider.TimeoutSeconds != RuntimeBootstrapOpenAiTimeoutSeconds)
-        {
-            provider.TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds;
-            changed = true;
-        }
-
-        if (!provider.IsEnabled)
-        {
-            provider.IsEnabled = true;
-            changed = true;
-        }
-
-        if (!provider.SupportsStreaming)
-        {
-            provider.SupportsStreaming = true;
-            changed = true;
-        }
-
-        if (!provider.SupportsToolCalling)
-        {
-            provider.SupportsToolCalling = true;
-            changed = true;
-        }
-
-        if (!provider.SupportsStructuredOutput)
-        {
-            provider.SupportsStructuredOutput = true;
-            changed = true;
-        }
-
-        if (provider.SupportsVision)
-        {
-            provider.SupportsVision = false;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.LastHealthStatus, "OpenAI active", StringComparison.Ordinal))
-        {
-            provider.LastHealthStatus = "OpenAI active";
-            changed = true;
-        }
-
-        return changed;
-    }
-
-    private static bool UpdateRuntimeBootstrapOpenAiProviderConfigurationJson(CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        var expectedExtraSettingsJson = JsonSerializer.Serialize(new
-        {
-            history = "service-managed",
-            modelParameters = new
-            {
-                reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
-            },
-            apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
-            connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-            configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-            secretRecordId = provider.ApiKeySecretId?.ToString("D"),
-            providerTransport = nameof(ProviderTransportKind.Responses),
-            timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
-        });
-        if (string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        provider.ExtraSettingsJson = expectedExtraSettingsJson;
-        return true;
-    }
-
-    private static bool UpdateRuntimeBootstrapOpenAiChatCompletionsProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        var changed = false;
-        if (!string.Equals(provider.Name, RuntimeBootstrapOpenAiChatCompletionsProviderName, StringComparison.Ordinal))
-        {
-            provider.Name = RuntimeBootstrapOpenAiChatCompletionsProviderName;
-            changed = true;
-        }
-
-        if (provider.ProviderKind != CanDoItAll.Modules.Workspace.ProviderKind.OpenAi)
-        {
-            provider.ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.ConnectorPluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.Ordinal))
-        {
-            provider.ConnectorPluginKey = OpenAiProviderAdapter.PluginKey;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.ConfigSchemaVersion, RuntimeBootstrapProviderSchemaVersion, StringComparison.Ordinal))
-        {
-            provider.ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.BaseUrl, RuntimeBootstrapOpenAiBaseUrl, StringComparison.Ordinal))
-        {
-            provider.BaseUrl = RuntimeBootstrapOpenAiBaseUrl;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.DefaultModel, RuntimeBootstrapOpenAiModel, StringComparison.Ordinal))
-        {
-            provider.DefaultModel = RuntimeBootstrapOpenAiModel;
-            changed = true;
-        }
-
-        if (provider.TimeoutSeconds != RuntimeBootstrapOpenAiTimeoutSeconds)
-        {
-            provider.TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds;
-            changed = true;
-        }
-
-        if (!provider.IsEnabled)
-        {
-            provider.IsEnabled = true;
-            changed = true;
-        }
-
-        if (!provider.SupportsStreaming)
-        {
-            provider.SupportsStreaming = true;
-            changed = true;
-        }
-
-        if (!provider.SupportsToolCalling)
-        {
-            provider.SupportsToolCalling = true;
-            changed = true;
-        }
-
-        if (!provider.SupportsStructuredOutput)
-        {
-            provider.SupportsStructuredOutput = true;
-            changed = true;
-        }
-
-        if (provider.SupportsVision)
-        {
-            provider.SupportsVision = false;
-            changed = true;
-        }
-
-        if (!string.Equals(provider.LastHealthStatus, "OpenAI active", StringComparison.Ordinal))
-        {
-            provider.LastHealthStatus = "OpenAI active";
-            changed = true;
-        }
-
-        return changed;
-    }
-
-    private static bool UpdateRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        var expectedExtraSettingsJson = BuildRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(provider.ApiKeySecretId);
-        if (string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        provider.ExtraSettingsJson = expectedExtraSettingsJson;
-        return true;
-    }
-
-    private static string BuildRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(Guid? secretRecordId)
-        => JsonSerializer.Serialize(new
-        {
-            history = "framework-managed",
-            apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
-            connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-            configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-            secretRecordId = secretRecordId?.ToString("D"),
-            providerTransport = nameof(ProviderTransportKind.ChatCompletions),
-            timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
-        });
 
 }
 

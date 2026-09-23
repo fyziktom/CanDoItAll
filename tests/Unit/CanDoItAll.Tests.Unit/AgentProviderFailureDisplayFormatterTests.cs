@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
+using System.Net;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
@@ -192,6 +194,90 @@ public sealed class AgentProviderFailureDisplayFormatterTests
         Assert.Equal(AgentProviderFailureCategory.ProviderError, display.Category);
         Assert.True(display.ProviderDetail.Length <= 480);
     }
+
+    [Theory]
+    [InlineData(401, "token")]
+    [InlineData(403, "permissions")]
+    public void Format_shared_access_rejection_preserves_status_and_safe_recovery(int status, string guidance) {
+        var provider = CreateSharedProvider();
+        const string remoteSecret = "private-upstream-body-must-not-escape";
+        var boundary = ProviderFailureDisclosurePolicy.CreateBoundaryException(provider,
+            ProviderFailureOperation.RuntimeRequest,
+            new InvalidOperationException($"{remoteSecret} at {provider.BaseUrl}"), status);
+        var exception = CreateProviderFailure("Provider failed.", new AggregateException(boundary));
+
+        Assert.True(AgentProviderFailureDisplayFormatter.TryFormat(provider, exception, out var display));
+        Assert.Equal(AgentProviderFailureCategory.ProviderConfiguration, display.Category);
+        Assert.Contains($"HTTP {status}", display.ProviderDetail, StringComparison.Ordinal);
+        Assert.Contains("shared", display.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(guidance, display.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Shared provider connections", display.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(remoteSecret, display.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(provider.BaseUrl, display.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderFailureBoundaryException", display.Message, StringComparison.Ordinal);
+        Assert.Null(boundary.InnerException);
+    }
+
+    [Theory]
+    [InlineData(400)]
+    [InlineData(502)]
+    [InlineData(503)]
+    public void Format_shared_other_status_is_not_reported_as_expired_token(int status) {
+        var provider = CreateSharedProvider();
+        var boundary = ProviderFailureDisclosurePolicy.CreateBoundaryException(provider,
+            ProviderFailureOperation.RuntimeRequest, diagnosticStatusCode: status);
+
+        Assert.True(AgentProviderFailureDisplayFormatter.TryFormat(provider,
+            CreateProviderFailure("Provider failed.", boundary), out var display));
+        Assert.Equal(AgentProviderFailureCategory.ProviderError, display.Category);
+        Assert.Contains($"HTTP {status}", display.ProviderDetail, StringComparison.Ordinal);
+        Assert.DoesNotContain("expired", display.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Format_local_upstream_401_does_not_claim_shared_connection_failure() {
+        var exception = CreateProviderFailure("Provider failed.",
+            new HttpRequestException("Sensitive upstream body.", null, HttpStatusCode.Unauthorized));
+
+        Assert.True(AgentProviderFailureDisplayFormatter.TryFormat(CreateProvider(), exception, out var display));
+        Assert.Equal(AgentProviderFailureCategory.ProviderError, display.Category);
+        Assert.Contains("HTTP 401", display.ProviderDetail, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shared provider connections", display.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Sensitive upstream body", display.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(999)]
+    public void Format_unknown_boundary_does_not_guess_authentication_failure(int? status) {
+        var provider = CreateSharedProvider();
+        var boundary = ProviderFailureDisclosurePolicy.CreateBoundaryException(provider,
+            ProviderFailureOperation.RuntimeRequest, diagnosticStatusCode: status);
+
+        Assert.True(AgentProviderFailureDisplayFormatter.TryFormat(provider,
+            CreateProviderFailure("Provider failed.", boundary), out var display));
+        Assert.Equal(AgentProviderFailureCategory.ProviderError, display.Category);
+        Assert.DoesNotContain("expired", display.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("HTTP 999", display.ProviderDetail, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(AgentRuntimeFailureOrigin.Tool)]
+    [InlineData(AgentRuntimeFailureOrigin.Runtime)]
+    public void Format_shared_tool_or_runtime_failure_is_not_reclassified(AgentRuntimeFailureOrigin origin) {
+        var provider = CreateSharedProvider();
+        var boundary = ProviderFailureDisclosurePolicy.CreateBoundaryException(provider,
+            ProviderFailureOperation.RuntimeRequest, diagnosticStatusCode: 401);
+        var exception = new AgentRuntimeUsageException("Non-provider failure.", boundary, [], failureOrigin: origin);
+
+        Assert.False(AgentProviderFailureDisplayFormatter.TryFormat(provider, exception, out _));
+    }
+
+    private static ProviderProfile CreateSharedProvider() => CreateProvider() with {
+        BaseUrl = "http://private-source.example.test/api/shared-providers/openai/v1",
+        CredentialBinding = new ProviderCredentialBinding(Guid.NewGuid(),
+            ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid())
+    };
 
     private static ProviderProfile CreateProvider(
         ProviderTransportKind transport = ProviderTransportKind.Responses)

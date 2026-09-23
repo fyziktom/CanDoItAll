@@ -88,6 +88,13 @@ public interface IAgentChatExecutionOrchestrator
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 
+    (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunResult> Completion) StartRunRecovery(
+        Guid agentId,
+        Guid chatSessionId,
+        Guid executionRunId,
+        AgentExecutionActivityStreamId rejectedStreamId,
+        CancellationToken cancellationToken = default);
+
     Task<AgentChatRunResult> SendMessageAsync(
         AgentChatSendRequest request,
         CancellationToken cancellationToken = default);

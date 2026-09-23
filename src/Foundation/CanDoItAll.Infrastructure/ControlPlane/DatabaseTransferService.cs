@@ -7,8 +7,7 @@ public sealed class DatabaseTransferService(
     IDatabaseProfileService profileService,
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IProfileAppDbContextFactory dbContextFactory,
-    IEnumerable<IDatabaseTransferHandler> handlers) : IDatabaseTransferService
-{
+    IEnumerable<IDatabaseTransferHandler> handlers) : IDatabaseTransferService {
     private readonly IReadOnlyList<IDatabaseTransferHandler> _handlers = handlers
         .OrderBy(handler => handler.Descriptor.SortOrder)
         .ThenBy(handler => handler.Descriptor.Label, StringComparer.OrdinalIgnoreCase)
@@ -16,8 +15,7 @@ public sealed class DatabaseTransferService(
 
     public async Task<IReadOnlyList<DatabaseTransferSourceSummary>> ListSourcesAsync(
         Guid targetProfileId,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         var runtimeProfile = profileAccessor.ResolveCurrentProfile();
         var profiles = await profileService.ListAsync(cancellationToken);
         return profiles
@@ -42,10 +40,8 @@ public sealed class DatabaseTransferService(
     public async Task<IReadOnlyList<DatabaseTransferItemPreview>> PreviewAsync(
         Guid sourceProfileId,
         Guid targetProfileId,
-        CancellationToken cancellationToken = default)
-    {
-        if (sourceProfileId == targetProfileId)
-        {
+        CancellationToken cancellationToken = default) {
+        if (sourceProfileId == targetProfileId) {
             return _handlers
                 .Select(handler => new DatabaseTransferItemPreview(
                     handler.Descriptor,
@@ -65,16 +61,13 @@ public sealed class DatabaseTransferService(
         await EnsureCanOpenAsync(sourceDbContext, cancellationToken);
         await EnsureCanOpenAsync(targetDbContext, cancellationToken);
 
-        var context = new DatabaseTransferContext(
+        var context = new DatabaseTransferOperation(
             sourceProfile,
             targetProfile,
-            sourceDbContext,
-            targetDbContext,
             ReplaceExisting: true);
 
         var previews = new List<DatabaseTransferItemPreview>();
-        foreach (var handler in _handlers)
-        {
+        foreach (var handler in _handlers) {
             previews.Add(await PreviewHandlerAsync(handler, context, cancellationToken));
         }
 
@@ -83,12 +76,10 @@ public sealed class DatabaseTransferService(
 
     public async Task<DatabaseTransferResult> TransferAsync(
         DatabaseTransferRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (request.SourceProfileId == request.TargetProfileId)
-        {
+        if (request.SourceProfileId == request.TargetProfileId) {
             return new DatabaseTransferResult(
                 request.SourceProfileId,
                 request.TargetProfileId,
@@ -101,8 +92,7 @@ public sealed class DatabaseTransferService(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        if (selectedKeys.Count == 0)
-        {
+        if (selectedKeys.Count == 0) {
             return new DatabaseTransferResult(
                 request.SourceProfileId,
                 request.TargetProfileId,
@@ -129,15 +119,12 @@ public sealed class DatabaseTransferService(
         await EnsureCanOpenAsync(sourceDbContext, cancellationToken);
         await EnsureCanOpenAsync(targetDbContext, cancellationToken);
 
-        var context = new DatabaseTransferContext(
+        var context = new DatabaseTransferOperation(
             sourceProfile,
             targetProfile,
-            sourceDbContext,
-            targetDbContext,
             request.ReplaceExisting);
 
-        foreach (var handler in selectedHandlers)
-        {
+        foreach (var handler in selectedHandlers) {
             results.Add(await TransferHandlerAsync(handler, context, cancellationToken));
         }
 
@@ -146,15 +133,11 @@ public sealed class DatabaseTransferService(
 
     private static async Task<DatabaseTransferItemPreview> PreviewHandlerAsync(
         IDatabaseTransferHandler handler,
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
+        DatabaseTransferOperation context,
+        CancellationToken cancellationToken) {
+        try {
             return await handler.PreviewAsync(context, cancellationToken);
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             return new DatabaseTransferItemPreview(
                 handler.Descriptor,
                 false,
@@ -167,15 +150,11 @@ public sealed class DatabaseTransferService(
 
     private static async Task<DatabaseTransferItemResult> TransferHandlerAsync(
         IDatabaseTransferHandler handler,
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
+        DatabaseTransferOperation context,
+        CancellationToken cancellationToken) {
+        try {
             return await handler.TransferAsync(context, cancellationToken);
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             return new DatabaseTransferItemResult(
                 handler.Descriptor.Key,
                 handler.Descriptor.Label,
@@ -187,10 +166,8 @@ public sealed class DatabaseTransferService(
 
     private static async Task EnsureCanOpenAsync(
         DbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        if (!await dbContext.Database.CanConnectAsync(cancellationToken))
-        {
+        CancellationToken cancellationToken) {
+        if (!await dbContext.Database.CanConnectAsync(cancellationToken)) {
             throw new InvalidOperationException("The selected database profile cannot be opened.");
         }
     }

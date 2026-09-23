@@ -16,7 +16,8 @@ internal sealed class ContextCapabilityBuilder
     public ContextCapabilityBuilder(
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
-        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+        WorkspacePathScopeContribution? workspacePaths = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         this.workspaceRoot = Path.GetFullPath(workspaceRoot);
@@ -24,7 +25,8 @@ internal sealed class ContextCapabilityBuilder
         ragRetriever = new WorkspaceRagRetriever(
             this.workspaceRoot,
             workspaceScope,
-            physicalPathPolicyFactory);
+            physicalPathPolicyFactory,
+            workspacePaths);
     }
 
     public bool AddRagProvider(

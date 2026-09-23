@@ -13,11 +13,14 @@ public enum SpreadsheetWriteInputFailureKind
     InvalidRangeAddress,
     MissingRangeValues,
     MissingRangeRow,
-    InputWorkbookMissing
+    InputWorkbookMissing,
+    CellTextTooLong
 }
 
 public sealed class SpreadsheetWriteInputException : InvalidOperationException
 {
+    public const int MaximumCellTextLength = 32_767;
+
     private SpreadsheetWriteInputException(
         SpreadsheetWriteInputFailureKind kind,
         int? writeNumber = null,
@@ -76,6 +79,9 @@ public sealed class SpreadsheetWriteInputException : InvalidOperationException
     public static SpreadsheetWriteInputException InputWorkbookMissing()
         => new(SpreadsheetWriteInputFailureKind.InputWorkbookMissing);
 
+    public static SpreadsheetWriteInputException CellTextTooLong()
+        => new(SpreadsheetWriteInputFailureKind.CellTextTooLong);
+
     private static string CreateMessage(
         SpreadsheetWriteInputFailureKind kind,
         int? writeNumber,
@@ -110,6 +116,8 @@ public sealed class SpreadsheetWriteInputException : InvalidOperationException
                 $"Spreadsheet range write {writeNumber.Value} values row {valuesRowNumber.Value} is missing.",
             SpreadsheetWriteInputFailureKind.InputWorkbookMissing =>
                 "The spreadsheet input workbook is missing.",
+            SpreadsheetWriteInputFailureKind.CellTextTooLong =>
+                $"A spreadsheet cell value exceeds the {MaximumCellTextLength} character limit of a cell.",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(kind),
                 kind,

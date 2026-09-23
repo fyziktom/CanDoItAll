@@ -128,6 +128,7 @@ internal static class ProviderDriverProtocol
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "input_tokens") : 0,
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "output_tokens") : 0)
         {
+            ObservedUsage = ProviderObservedUsage.Responses(usage),
             CachedInputTokens = ReadCachedTokens(usage, "input_tokens_details")
         };
     }
@@ -377,11 +378,18 @@ internal static class ProviderDriverProtocol
     public static async Task EnsureSuccessAsync(
         HttpResponseMessage response,
         string operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeRemoteError = true)
     {
         if (response.IsSuccessStatusCode)
         {
             return;
+        }
+
+        if (!includeRemoteError)
+        {
+            throw new InvalidOperationException(
+                $"{operation} failed with HTTP {(int)response.StatusCode}.");
         }
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

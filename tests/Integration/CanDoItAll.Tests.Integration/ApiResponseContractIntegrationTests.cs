@@ -172,8 +172,7 @@ public sealed class ApiResponseContractIntegrationTests
             "400",
             "401",
             "403",
-            "404",
-            "409"),
+            "404"),
         Contract(
             "/api/agent-recruiting/interviews/{interviewId}",
             "get",

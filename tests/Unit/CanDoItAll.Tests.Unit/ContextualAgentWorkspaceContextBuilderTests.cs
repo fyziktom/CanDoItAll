@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Processes.AgentChat;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
@@ -6,12 +7,16 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ContextualAgentWorkspaceContextBuilderTests
 {
+    private static ContextualAgentWorkspacePolicyCatalog Policies { get; } = new([
+        new ProjectStructureContextualWorkspacePolicy(), new ProcessContextualWorkspacePolicy()
+    ]);
+
     [Fact]
     public void BuildPrompt_includes_project_structure_asset_guidance()
     {
         var projectId = Guid.NewGuid();
 
-        var prompt = ContextualAgentWorkspaceContextBuilder.BuildPrompt(
+        var prompt = Policies.BuildPrompt(
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId,
             processDefinitionId: null,
@@ -74,32 +79,32 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
                     CanWriteNonTaskStructure = true,
                     AllowAllProjects = true
                 }));
-        var agents = ContextualAgentAccessResolver.Resolve(
+        var agents = Policies.Resolve(
             [readAgent, nonTaskStructureWriteAgent, taskWriteAgent, writeAgent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: projectId);
 
-        Assert.False(ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+        Assert.False(Policies.ShouldAutoApproveContextualRun(
             agents,
             ContextualAgentWorkspaceKind.ProjectStructure,
             readAgent.Id,
             projectId: projectId));
-        Assert.True(ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+        Assert.True(Policies.ShouldAutoApproveContextualRun(
             agents,
             ContextualAgentWorkspaceKind.ProjectStructure,
             writeAgent.Id,
             projectId: projectId));
-        Assert.False(ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+        Assert.False(Policies.ShouldAutoApproveContextualRun(
             agents,
             ContextualAgentWorkspaceKind.ProjectStructure,
             taskWriteAgent.Id,
             projectId: projectId));
-        Assert.False(ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+        Assert.False(Policies.ShouldAutoApproveContextualRun(
             agents,
             ContextualAgentWorkspaceKind.ProjectStructure,
             nonTaskStructureWriteAgent.Id,
             projectId: projectId));
-        Assert.False(ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+        Assert.False(Policies.ShouldAutoApproveContextualRun(
             agents,
             ContextualAgentWorkspaceKind.ProjectStructure,
             writeAgent.Id));
@@ -122,7 +127,6 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
                 new AgentChatContextEntityReference("project-node", "node:alpha", "Duplicate alpha")
             ]);
 
-        // The volatile UI fragment keeps factual observation context only.
         Assert.Contains($"Selected project id: {projectId:D}", baseFragment.Content);
         Assert.Contains("project_structure_asset_content_get", baseFragment.Content);
         Assert.Contains("workspace_convert_document", baseFragment.Content);

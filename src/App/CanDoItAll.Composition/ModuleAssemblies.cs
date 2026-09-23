@@ -1,6 +1,7 @@
 using System.Reflection;
 using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Memory;
@@ -21,11 +22,13 @@ using CanDoItAll.Processes.Persistence;
 
 namespace CanDoItAll.Composition;
 
-public static class ModuleAssemblies
-{
+public static class ModuleAssemblies {
     public static readonly Assembly[] All =
     [
+        typeof(ModuleAssemblies).Assembly,
         typeof(AgentFrameworkModuleAssemblyMarker).Assembly,
+        typeof(ProviderManagementModuleAssemblyMarker).Assembly,
+        typeof(CanDoItAll.AgentFramework.ProviderHistory.Persistence.ProviderHistoryPersistenceAssemblyMarker).Assembly,
         typeof(CollaborationModuleAssemblyMarker).Assembly,
         typeof(CrmHrModuleAssemblyMarker).Assembly,
         typeof(MemoryModuleAssemblyMarker).Assembly,

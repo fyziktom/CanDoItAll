@@ -10,7 +10,7 @@ internal static class ProjectStructureTaskResourceGraphPolicy
         => objectType == ProjectObjectType.WorkflowDefinition;
 
     public static Task<bool> IsAttachedAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskResourceSelection resource,
@@ -43,7 +43,7 @@ internal static class ProjectStructureTaskResourceGraphPolicy
     }
 
     public static async Task ReconcileAfterStructureMutationAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         IEnumerable<string> candidateTaskNodeIds,
         DateTimeOffset updatedAtUtc,
@@ -104,7 +104,7 @@ internal static class ProjectStructureTaskResourceGraphPolicy
     }
 
     private static async Task<bool> IsWorkflowAttachedAsync(
-        AppDbContext dbContext,
+        WorkbenchDbContext dbContext,
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskResourceSelection resource,

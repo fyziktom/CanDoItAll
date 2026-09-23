@@ -24,6 +24,8 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
         ArgumentNullException.ThrowIfNull(request);
         var operationId = operationScope.Current?.OperationId
             ?? throw new InvalidOperationException("An LLM Chat operation scope is required for invocation audit.");
+        request = LlmChatHistoryContext.Attach(request, operationId, operationScope.Current?.HistoryCaller);
+        var firstHistoryAttempt = request.History.Attempts.Count;
         var requestedEffort = request.Settings?.ThinkingEffort;
         var effectiveEffort = requestedEffort ??
             capabilityResolver.ResolveProviderDefaultThinkingEffort(request.Provider, request.Model);
@@ -58,6 +60,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                     {
                         case LlmStreamingAttemptStarted started:
                             activeAttempt = started;
+                            firstHistoryAttempt = request.History.Attempts.Count;
                             await evidenceSink.MarkProviderDispatchStartedAsync(
                                 operationId,
                                 started,
@@ -66,6 +69,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                         case LlmStreamingCompleted completed:
                             await RecordAsync(
                                 request,
+                                firstHistoryAttempt,
                                 operationId,
                                 requestedEffort,
                                 effectiveEffort,
@@ -84,6 +88,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                         case LlmStreamingFailed failed:
                             await RecordAsync(
                                 request,
+                                firstHistoryAttempt,
                                 operationId,
                                 requestedEffort,
                                 effectiveEffort,
@@ -111,6 +116,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                 {
                     await RecordAsync(
                         request,
+                        firstHistoryAttempt,
                         operationId,
                         requestedEffort,
                         effectiveEffort,
@@ -135,6 +141,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                 var completedAtUtc = timeProvider.GetUtcNow();
                 await RecordAsync(
                     request,
+                    firstHistoryAttempt,
                     operationId,
                     requestedEffort,
                     effectiveEffort,
@@ -164,6 +171,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
             {
                 await RecordAsync(
                     request,
+                    firstHistoryAttempt,
                     operationId,
                     requestedEffort,
                     effectiveEffort,
@@ -187,6 +195,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
 
     private Task<LlmChatOperation> RecordAsync(
         LlmInvocationRequest request,
+        int firstHistoryAttempt,
         LlmChatOperationId operationId,
         AgentReasoningEffortLevel? requestedEffort,
         AgentReasoningEffortLevel? effectiveEffort,
@@ -224,7 +233,9 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
             pricing.ProviderCostUsd,
             pricing.CalculatedCostUsd,
             pricing.PricingProfileHash,
-            pricing.PricingVersion), CancellationToken.None);
+            pricing.PricingVersion) {
+                HistoryAttempts = request.History.Attempts.EvidenceSnapshot(firstHistoryAttempt)
+            }, CancellationToken.None);
     }
 
     private static DateTimeOffset RequireStartedAt(

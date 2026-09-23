@@ -18,6 +18,79 @@ public sealed class LlmChatDefinitionUiTests
     private static readonly Guid DefinitionId = Guid.Parse("10101010-1010-1010-1010-101010101010");
     private static readonly Guid ProviderId = Guid.Parse("20202020-2020-2020-2020-202020202020");
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-02.jpg")]
+    [InlineData("data:image/png;base64,AQID")]
+    public void Existing_avatar_matches_catalog_in_editor_and_picker_and_is_preserved_on_save(string avatarUrl) {
+        var editor = CreateEditor(avatarUrl: avatarUrl);
+        var gateway = new StubDefinitionGateway(editor);
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var catalog = context.Render<LlmChatDefinitionCatalogPanel>();
+        var expected = catalog.WaitForElement($"[data-testid='llm-chat-definition-{DefinitionId:D}'] img").GetAttribute("src");
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId));
+
+        Assert.Equal(expected, cut.WaitForElement("[data-testid='llm-chat-definition-avatar-summary'] img").GetAttribute("src"));
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        Assert.Equal(expected, cut.WaitForElement("[data-testid='llm-chat-definition-avatar-dialog'] img").GetAttribute("src"));
+        cut.Find("[data-testid='llm-chat-definition-avatar-close']").Click();
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(avatarUrl, gateway.UpdatedMutation?.AvatarImageUrl));
+    }
+
+    [Fact]
+    public void Renaming_existing_definition_keeps_its_default_avatar_identity() {
+        var gateway = new StubDefinitionGateway(CreateEditor());
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId));
+        cut.WaitForElement("[data-testid='llm-chat-definition-name']");
+        cut.Find("[data-testid='llm-chat-definition-name']").Change("Renamed assistant");
+
+        Assert.Equal(DefinitionId.ToString("D"), Assert.IsType<ConversationAvatarPresentation>(
+            cut.FindComponent<ConversationIdentityFields>().Instance.Avatar).Seed);
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-avatar-dialog']");
+        Assert.Equal(DefinitionId.ToString("D"), cut.FindComponent<AvatarPicker>().FindComponent<Avatar>().Instance.DefaultImageSeed);
+    }
+
+    [Fact]
+    public void Resetting_explicit_avatar_restores_catalog_default_in_both_previews() {
+        var gateway = new StubDefinitionGateway(CreateEditor(avatarUrl: AgentAvatarImageCatalog.BundledAvatarUrls[1]));
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId));
+        cut.WaitForElement("[data-testid='llm-chat-definition-avatar-clear']").Click();
+
+        var avatar = Assert.IsType<ConversationAvatarPresentation>(cut.FindComponent<ConversationIdentityFields>().Instance.Avatar);
+        Assert.Equal(string.Empty, avatar.ImageUrl);
+        Assert.Equal(DefinitionId.ToString("D"), avatar.Seed);
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        var preview = cut.WaitForElement("[data-testid='llm-chat-definition-avatar-dialog'] img");
+        Assert.Equal(cut.Find("[data-testid='llm-chat-definition-avatar-summary'] img").GetAttribute("src"), preview.GetAttribute("src"));
+    }
+
+    [Fact]
+    public void Shared_definition_shows_labels_but_saves_nondefault_route_and_forbids_override() {
+        var gateway = new StubDefinitionGateway(CreateEditor());
+        using var context = CreateContext(gateway,
+            new StubProviderGateway("opaque-default", "opaque-secondary", true),
+            new StubAuthorization(canRead: true, canManage: true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>();
+        cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
+        cut.Find("[data-testid='llm-chat-definition-name']").Change("Shared chat");
+        cut.Find("[data-testid='llm-chat-definition-tab-runtime']").Click();
+        cut.Find("[data-testid='llm-chat-definition-provider']").Change("0");
+
+        cut.WaitForAssertion(() => Assert.Equal(["Provider default (Readable default)", "Readable secondary"],
+            cut.FindAll("[data-testid='llm-chat-definition-model'] option").Select(option => option.TextContent)));
+        Assert.Empty(cut.FindAll("[data-testid='llm-chat-definition-model-override']"));
+        cut.Find("[data-testid='llm-chat-definition-model']").Change("1");
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Equal("opaque-secondary", gateway.CreatedMutation?.Model));
+    }
+
     [Fact]
     public void Read_only_catalog_renders_neutral_cards_without_mutation_controls_or_prompt_access()
     {
@@ -335,7 +408,7 @@ public sealed class LlmChatDefinitionUiTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private static BunitContext CreateContext(
+    internal static BunitContext CreateContext(
         ILlmChatDefinitionUiGateway definitions,
         ILlmChatProviderUiGateway providers,
         ILlmChatUiAuthorizationFacade authorization,
@@ -343,6 +416,7 @@ public sealed class LlmChatDefinitionUiTests
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(definitions);
         context.Services.AddSingleton(providers);
@@ -351,19 +425,20 @@ public sealed class LlmChatDefinitionUiTests
         return context;
     }
 
-    private static LlmChatDefinitionEditor CreateEditor(
+    internal static LlmChatDefinitionEditor CreateEditor(
         string name = "Research assistant",
         string summary = "Summarizes research.",
         long concurrencyToken = 7,
         LlmChatDefinitionStatus status = LlmChatDefinitionStatus.Draft,
         Guid? definitionId = null,
-        IReadOnlyList<string>? tags = null)
+        IReadOnlyList<string>? tags = null,
+        string avatarUrl = "")
     {
         var definition = new LlmChatDefinitionListItem(
             definitionId ?? DefinitionId,
             name,
             summary,
-            string.Empty,
+            avatarUrl,
             status,
             3,
             concurrencyToken,
@@ -386,13 +461,20 @@ public sealed class LlmChatDefinitionUiTests
             "Previous revision");
     }
 
-    private sealed class StubDefinitionGateway(params LlmChatDefinitionEditor[] editorValues)
+    internal sealed class StubDefinitionGateway(params LlmChatDefinitionEditor[] editorValues)
         : ILlmChatDefinitionUiGateway
     {
         private readonly Queue<LlmChatDefinitionEditor> editors = new(editorValues);
         private LlmChatDefinitionEditor current = editorValues[0];
 
         public int GetEditorCalls { get; private set; }
+        public List<Guid> EditorTargets { get; } = [];
+        public Func<LlmChatDefinitionQuery, CancellationToken, Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>>>? ListHandler { get; set; }
+        public Func<Guid, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? EditorHandler { get; set; }
+        public Func<Guid, CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? EditorRead { get; set; }
+        public Func<LlmChatDefinitionMutation, CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionEditor>>>? SaveHandler { get; set; }
+        public Func<CancellationToken, Task<LlmChatUiResult<LlmChatDefinitionListItem>>>? StatusHandler { get; set; }
+
 
         public IReadOnlyList<LlmChatDefinitionListItem>? ListItems { get; init; }
 
@@ -415,6 +497,9 @@ public sealed class LlmChatDefinitionUiTests
             CancellationToken cancellationToken = default)
         {
             ListQueries.Add(query);
+            if (ListHandler is not null) {
+                return ListHandler(query, cancellationToken);
+            }
             var items = (ListItems ?? [current.Definition])
                 .Where(item => query.Status is null || item.Status == query.Status)
                 .Where(item => MatchesSearch(item, query.SearchText))
@@ -436,6 +521,13 @@ public sealed class LlmChatDefinitionUiTests
             CancellationToken cancellationToken = default)
         {
             GetEditorCalls++;
+            EditorTargets.Add(definitionId);
+            if (EditorRead is not null) {
+                return EditorRead(definitionId, cancellationToken);
+            }
+            if (EditorHandler is not null) {
+                return EditorHandler(definitionId);
+            }
             if (editors.Count > 0)
             {
                 current = editors.Dequeue();
@@ -449,6 +541,9 @@ public sealed class LlmChatDefinitionUiTests
             CancellationToken cancellationToken = default)
         {
             CreatedMutation = mutation;
+            if (SaveHandler is not null) {
+                return SaveHandler(mutation, cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Success(current));
         }
 
@@ -460,6 +555,9 @@ public sealed class LlmChatDefinitionUiTests
         {
             UpdatedMutation = mutation;
             UpdateExpectedConcurrencyToken = expectedConcurrencyToken;
+            if (SaveHandler is not null) {
+                return SaveHandler(mutation, cancellationToken);
+            }
             return Task.FromResult(UpdateFailure is null
                 ? LlmChatUiResult<LlmChatDefinitionEditor>.Success(current)
                 : LlmChatUiResult<LlmChatDefinitionEditor>.Failure(UpdateFailure));
@@ -473,6 +571,9 @@ public sealed class LlmChatDefinitionUiTests
         {
             RequestedStatus = status;
             StatusExpectedConcurrencyToken = expectedConcurrencyToken;
+            if (StatusHandler is not null) {
+                return StatusHandler(cancellationToken);
+            }
             return Task.FromResult(LlmChatUiResult<LlmChatDefinitionListItem>.Success(
                 current.Definition with { Status = status }));
         }
@@ -490,9 +591,9 @@ public sealed class LlmChatDefinitionUiTests
         }
     }
 
-    private sealed class StubProviderGateway(
+    internal sealed class StubProviderGateway(
         string defaultModel = "model-a",
-        string? suggestedModel = null) : ILlmChatProviderUiGateway
+        string? suggestedModel = null, bool sourceManaged = false) : ILlmChatProviderUiGateway
     {
         public Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>> ListAsync(
             CancellationToken cancellationToken = default)
@@ -508,7 +609,9 @@ public sealed class LlmChatDefinitionUiTests
                                 LlmChatThinkingEffortSupport.Supported,
                                 LlmChatThinkingEffortControl.EffortLevels,
                                 [LlmChatThinkingEffort.Low, LlmChatThinkingEffort.High],
-                                LlmChatThinkingEffort.Low)),
+                                LlmChatThinkingEffort.Low)) {
+                            DisplayName = sourceManaged ? "Readable default" : defaultModel
+                        },
                         .. suggestedModel is null
                             ? []
                             : new LlmChatModelOptionPresentation[]
@@ -519,18 +622,21 @@ public sealed class LlmChatDefinitionUiTests
                                         LlmChatThinkingEffortSupport.Supported,
                                         LlmChatThinkingEffortControl.EffortLevels,
                                         [LlmChatThinkingEffort.Low, LlmChatThinkingEffort.High],
-                                        LlmChatThinkingEffort.Low))
+                                        LlmChatThinkingEffort.Low)) {
+                                    DisplayName = sourceManaged ? "Readable secondary" : suggestedModel
+                                }
                             }
-                    ])
+                    ]) { IsSourceManaged = sourceManaged }
             ]));
     }
 
-    private sealed class StubAuthorization(bool canRead, bool canManage)
+    internal sealed class StubAuthorization(bool canRead, bool canManage)
         : ILlmChatUiAuthorizationFacade
     {
+        public Func<CancellationToken, ValueTask<LlmChatUiAuthorizationSnapshot>>? Read { get; set; }
         public ValueTask<LlmChatUiAuthorizationSnapshot> GetAsync(
             CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(new LlmChatUiAuthorizationSnapshot(canRead, canManage, false));
+            => Read?.Invoke(cancellationToken) ?? ValueTask.FromResult(new LlmChatUiAuthorizationSnapshot(canRead, canManage, false));
 
         public ValueTask<bool> IsAllowedAsync(
             LlmChatUiPermission permission,

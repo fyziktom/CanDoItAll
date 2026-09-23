@@ -1,3 +1,6 @@
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Agents.Storage;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Mcp;
@@ -16,6 +19,9 @@ internal static class MafRuntimeTestServices
     public static ServiceCollection CreateProviderRuntimeServiceCollection()
     {
         var services = new ServiceCollection();
+        services.AddProductToolPolicies();
+        services.AddSingleton<IToolInvocationPolicyContextContributor, ProjectWorkspacePathContributor>();
+        services.AddAgentStorageTools();
         services.AddSingleton<IMafProviderRuntimeGateway>(new UnavailableMafProviderRuntimeGateway());
         services.AddSingleton<IMafProviderStreamingDispatchGate>(NoOpMafProviderStreamingDispatchGate.Instance);
         services.AddSingleton<IAgentImageAnalysisService, UnavailableAgentImageAnalysisService>();
@@ -27,10 +33,13 @@ internal static class MafRuntimeTestServices
             new ManagedCodeMarkItDownDocumentMarkdownConverter(),
             TestWorkspaceServices.PhysicalPathPolicyFactory,
             new ExternalTargetPathRegistryFactory()));
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder, RecordingProviderHistory>();
+        services.AddSingleton(TimeProvider.System);
         services.AddMafRuntimeArchitectureServices();
         services.AddSingleton<IMafProviderAgentFactory>(serviceProvider => new MafProviderAgentFactory(
             serviceProvider.GetRequiredService<IMafProviderCredentialService>(),
-            serviceProvider.GetRequiredService<IMafProviderStreamingDispatchGate>()));
+            serviceProvider.GetRequiredService<IMafProviderStreamingDispatchGate>(),
+            serviceProvider.GetRequiredService<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder>()));
         return services;
     }
 

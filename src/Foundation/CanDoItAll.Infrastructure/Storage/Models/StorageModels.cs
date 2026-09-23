@@ -19,6 +19,11 @@ public enum StorageCapability
     ConnectionTest = 1 << 10
 }
 
+/// <summary>
+/// Kind of storage provider, as a JSON integer: 0 FileSystem (a directory of a file system; objects are addressed by
+/// relative paths), 1 Ipfs (IPFS content-addressed storage; stored content cannot be changed), 2 Ftp (an FTP server;
+/// objects are addressed by remote paths).
+/// </summary>
 public enum StorageProviderKind
 {
     FileSystem,
@@ -80,6 +85,11 @@ public enum StorageRoutingScopeKind
     Node
 }
 
+/// <summary>
+/// How a storage locator is to be read, as a JSON integer: 0 RelativePath (a path relative to the root of a file system
+/// storage), 1 ContentAddress (an IPFS content identifier), 2 RemotePath (a path on an FTP server), 3 AbsoluteUrl (an
+/// absolute URL).
+/// </summary>
 public enum StorageLocatorKind
 {
     RelativePath,
@@ -128,8 +138,16 @@ public sealed record StorageObjectReference(
     string MetadataJson = "{}")
 {
     public const int CurrentFormatVersion = 2;
+    public const int StablePlacementFormatVersion = 3;
+    public const int MaximumSupportedFormatVersion = StablePlacementFormatVersion;
 
     public int FormatVersion { get; init; } = CurrentFormatVersion;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? PlacementIntentId { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public StorageReferenceImportHistory? ImportedHistory { get; init; }
 }
 
 public sealed record StorageAccessDescriptor(
@@ -222,8 +240,8 @@ public sealed record StorageTransferManifest(
     Guid? SourceStorageId,
     Guid? TargetStorageId,
     IReadOnlyList<StorageTransferItem> Items,
-    StorageCatalogRecord? SourceStorage = null,
-    StorageCatalogRecord? TargetStorage = null,
+    StorageDriverInput? SourceStorage = null,
+    StorageDriverInput? TargetStorage = null,
     StorageTransferOptions? Options = null);
 
 public sealed record StorageTransferItemResult(

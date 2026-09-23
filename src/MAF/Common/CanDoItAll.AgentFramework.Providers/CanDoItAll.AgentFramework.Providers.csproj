@@ -11,4 +11,7 @@
     <ProjectReference Include="..\CanDoItAll.AgentFramework.ProviderPipelines\CanDoItAll.AgentFramework.ProviderPipelines.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
+  </ItemGroup>
 </Project>

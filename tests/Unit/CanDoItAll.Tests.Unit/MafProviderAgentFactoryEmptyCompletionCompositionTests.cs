@@ -328,7 +328,8 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 AgentReasoningEffortLevel.Medium));
         var factory = new MafProviderAgentFactory(
             new MafProviderCredentialService(new FixedCredentialResolver()),
-            NoOpMafProviderStreamingDispatchGate.Instance);
+            NoOpMafProviderStreamingDispatchGate.Instance,
+            new RecordingProviderHistory());
 
         var agent = factory.CreateFrameworkAgent(
             provider,
@@ -395,7 +396,8 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
         IMafProviderCredentialService credentialService)
         => new(
             credentialService,
-            NoOpMafProviderStreamingDispatchGate.Instance);
+            NoOpMafProviderStreamingDispatchGate.Instance,
+            new RecordingProviderHistory());
 
     private sealed class FixedCredentialResolver :
         IAgentProviderCredentialResolver

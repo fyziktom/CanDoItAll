@@ -6,6 +6,10 @@ public sealed record SandboxWorkspaceCatalogSnapshot(
     SandboxWorkspaceCatalog Catalog,
     CatalogDataRevision Revision);
 
+public sealed record AgentWorkspaceCatalogSnapshot(
+    AgentExecutionActivityWorkspaceIdentity Workspace,
+    SandboxWorkspaceCatalogSnapshot Snapshot);
+
 public sealed record SandboxWorkspaceDocumentSnapshot(
     SandboxWorkspaceDocument Document,
     long Revision);
@@ -15,7 +19,8 @@ public static class ExecutionRunSessionConcurrencyPolicy
     public static bool BlocksSession(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
-        return run.PendingApprovals.Count > 0 ||
+        return run.ToolAdmission?.HasUnresolvedEffects == true ||
+               run.PendingApprovals.Count > 0 ||
                BlocksSession(run.State);
     }
 

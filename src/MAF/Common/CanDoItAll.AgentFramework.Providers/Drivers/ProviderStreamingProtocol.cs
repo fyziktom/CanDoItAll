@@ -19,6 +19,7 @@ internal static class ProviderStreamingProtocol
         var inputTokens = 0;
         var outputTokens = 0;
         var cachedInputTokens = 0;
+        CanDoItAll.AgentFramework.ProviderHistory.HistoryUsage? observedUsage = null;
         var terminalMarkerReceived = false;
         await foreach (var data in ReadSseDataAsync(stream, cancellationToken).ConfigureAwait(false))
         {
@@ -42,6 +43,8 @@ internal static class ProviderStreamingProtocol
                 inputTokens = ProviderDriverJson.ReadInt(usage, "prompt_tokens");
                 outputTokens = ProviderDriverJson.ReadInt(usage, "completion_tokens");
                 cachedInputTokens = ProviderDriverProtocol.ReadChatCompletionsCachedTokens(usage);
+                observedUsage = ProviderObservedUsage.ChatCompletions(usage);
+                yield return new ProviderChatUsageObserved(observedUsage);
             }
 
             if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array)
@@ -86,6 +89,7 @@ internal static class ProviderStreamingProtocol
             outputTokens,
             string.IsNullOrWhiteSpace(finishReason) ? "completed" : finishReason)
         {
+            ObservedUsage = observedUsage,
             CachedInputTokens = cachedInputTokens
         };
     }
@@ -143,6 +147,7 @@ internal static class ProviderStreamingProtocol
                 usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "output_tokens") : 0,
                 string.IsNullOrWhiteSpace(status) ? "completed" : status)
             {
+                ObservedUsage = ProviderObservedUsage.Responses(usage),
                 CachedInputTokens = ReadResponsesCachedTokens(usage)
             };
             yield break;
@@ -181,7 +186,9 @@ internal static class ProviderStreamingProtocol
                 string.IsNullOrWhiteSpace(model) ? fallbackModel : model,
                 ProviderDriverJson.ReadInt(root, "prompt_eval_count"),
                 ProviderDriverJson.ReadInt(root, "eval_count"),
-                string.IsNullOrWhiteSpace(finishReason) ? "completed" : finishReason);
+                string.IsNullOrWhiteSpace(finishReason) ? "completed" : finishReason) {
+                ObservedUsage = ProviderObservedUsage.Ollama(root)
+            };
             yield break;
         }
 

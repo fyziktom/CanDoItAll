@@ -28,33 +28,34 @@ internal sealed class TestApplication : IAsyncDisposable
 
     public ServiceProvider Services { get; }
 
-    public static async Task<TestApplication> CreateAsync(TestHarnessOptions? options = null)
-    {
-        if (options?.ActiveProfile is not null && options.TestEnvironment is null)
-        {
+    public static async Task<TestApplication> CreateAsync(TestHarnessOptions? options = null) {
+        if (options?.ActiveProfile is not null && options.TestEnvironment is null) {
             throw new InvalidOperationException("TestEnvironment must be supplied when ActiveProfile is provided.");
         }
 
         var ownsTestEnvironment = options?.TestEnvironment is null;
         var testEnvironment = options?.TestEnvironment ?? CanDoItAllTestEnvironment.Create("candoitall-tests");
-        var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
-        var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
-            activeProfile,
-            "CanDoItAll.Tests",
-            options?.SchemaModules ?? TestSchemaBootstrapModules.Full,
-            options?.ConfigurationOverrides,
-            options?.ConfigureServices);
+        ServiceProvider? provider = null;
+        try {
+            var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
+            provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+                activeProfile,
+                "CanDoItAll.Tests",
+                options?.SchemaModules ?? TestSchemaBootstrapModules.Full,
+                options?.ConfigurationOverrides,
+                options?.ConfigureServices);
 
-        return new TestApplication(testEnvironment, ownsTestEnvironment, activeProfile, provider);
+            return new TestApplication(testEnvironment, ownsTestEnvironment, activeProfile, provider);
+        } catch (Exception failure) {
+            await TestFixtureCleanup.DisposeAfterFailureAsync(
+                failure,
+                provider,
+                ownsTestEnvironment ? testEnvironment : null);
+            throw;
+        }
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await Services.DisposeAsync();
-
-        if (_ownsTestEnvironment)
-        {
-            await TestEnvironment.DisposeAsync();
-        }
+    public ValueTask DisposeAsync() {
+        return TestFixtureCleanup.DisposeAsync(Services, _ownsTestEnvironment ? TestEnvironment : null);
     }
 }

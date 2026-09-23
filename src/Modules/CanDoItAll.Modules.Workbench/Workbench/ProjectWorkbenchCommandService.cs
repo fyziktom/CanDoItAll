@@ -7,24 +7,30 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectWorkbenchCommandService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<WorkbenchDbContext> dbContextFactory,
+    ProjectStructureMutationScopeFactory mutationScopes,
     IClock clock,
-    IPromptGalleryService promptGalleryService,
+    IPromptGalleryMutationService promptGalleryService,
+    IPromptArtifactProjectionQueryService prompts,
+    ProjectRecordQueryService projects,
+    CoordinatedDatabaseTransaction transactions,
     ProjectStructureAssemblyService projectStructureAssemblyService)
 {
     public async Task<ArtifactReference?> ExecuteNodeCommandAsync(
         Guid projectId,
         string nodeKey,
         ProjectStructureCommandKind commandKind,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProjectStructureAgentContext? mutationOwner = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+            await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-                cancellationToken);
+                cancellationToken, mutationOwner?.ExpectedProjectAdmission is { } expected ? [expected] : null,
+                mutationOwner?.ProcessMutationAdmission, mutationOwner?.AgentMutationAdmission);
         var node = await projectStructureAssemblyService.FindNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
         if (node is null)
         {
@@ -34,7 +40,7 @@ public sealed class ProjectWorkbenchCommandService(
         if (IsPromptObject(node.ObjectType) &&
             commandKind is ProjectStructureCommandKind.Open or ProjectStructureCommandKind.Wizard)
         {
-            var artifact = await EnsurePromptGalleryArtifactAsync(dbContext, projectId, node, cancellationToken);
+            var prepared = await EnsurePromptGalleryArtifactAsync(dbContext, projectId, node, cancellationToken);
             if (!node.IsSystemManaged)
             {
                 await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
@@ -42,7 +48,9 @@ public sealed class ProjectWorkbenchCommandService(
 
             await dbContext.SaveChangesAsync(cancellationToken);
             await mutationScope.CommitAsync(cancellationToken);
-            return artifact;
+            await mutationScope.DisposeAsync();
+            await CompletePromptCreationAsync(prepared, cancellationToken);
+            return prepared.Artifact;
         }
 
         await mutationScope.CommitAsync(cancellationToken);
@@ -55,21 +63,18 @@ public sealed class ProjectWorkbenchCommandService(
         };
     }
 
-    public async Task<ArtifactReference?> EnsurePromptGalleryArtifactAsync(
-        AppDbContext dbContext,
+    internal async Task<ProjectPromptBindingPreparation> EnsurePromptGalleryArtifactAsync(
+        WorkbenchDbContext dbContext,
         Guid projectId,
         ProjectObjectRecord node,
         CancellationToken cancellationToken)
     {
+        using var coordination = transactions.Enter(dbContext);
         var binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
         if (string.Equals(binding.ExternalArtifactKind, "prompt", StringComparison.OrdinalIgnoreCase) &&
             binding.ExternalArtifactId.HasValue)
         {
-            var prompt = await dbContext.Set<PromptArtifact>()
-                .AsNoTracking()
-                .Where(item => item.Id == binding.ExternalArtifactId.Value)
-                .Select(item => new { item.ProjectId, item.Kind })
-                .FirstOrDefaultAsync(cancellationToken);
+            var prompt = await prompts.GetBindingFactForMutationAsync(binding.ExternalArtifactId.Value, cancellationToken);
             if (prompt is null)
             {
                 throw new InvalidOperationException(
@@ -90,11 +95,11 @@ public sealed class ProjectWorkbenchCommandService(
 
             ApplyPromptArtifactBinding(node, binding.ExternalArtifactId.Value);
             node.UpdatedAtUtc = clock.GetUtcNow();
-            return BuildArtifactReference(node, projectId);
+            return new(BuildArtifactReference(node, projectId), null);
         }
 
         var phase = await ResolvePromptPhaseAsync(dbContext, projectId, node, cancellationToken);
-        var saveResult = await promptGalleryService.SaveDraftAsync(
+        var saveResult = await promptGalleryService.StageCreateDraftAsync(
             new PromptGalleryDraft(
                 Id: null,
                 ProjectId: projectId,
@@ -106,16 +111,21 @@ public sealed class ProjectWorkbenchCommandService(
                 Content: string.Empty,
                 SupportedConsumers: [PromptGalleryConsumer.ProjectWorkbench]),
             cancellationToken);
-        if (saveResult.IsFailure)
+        if (saveResult.IsFailure || saveResult.Value is null)
         {
             throw new InvalidOperationException(
                 $"Could not create a Gallery prompt for project node '{node.NodeKey}': {string.Join(" ", saveResult.Errors.Select(error => error.Message))}");
         }
 
-        ApplyPromptArtifactBinding(node, saveResult.Value.PromptArtifactId);
+        ApplyPromptArtifactBinding(node, saveResult.Value.Receipt.PromptArtifactId);
         node.UpdatedAtUtc = clock.GetUtcNow();
-        return BuildArtifactReference(node, projectId);
+        return new(BuildArtifactReference(node, projectId), saveResult.Value);
     }
+
+    internal Task CompletePromptCreationAsync(ProjectPromptBindingPreparation preparation, CancellationToken cancellationToken) =>
+        preparation.Creation is { } creation
+            ? promptGalleryService.CompleteDraftCreationAsync(creation, cancellationToken)
+            : Task.CompletedTask;
 
     private static void ApplyPromptArtifactBinding(ProjectObjectRecord node, Guid promptArtifactId)
     {
@@ -162,8 +172,8 @@ public sealed class ProjectWorkbenchCommandService(
     private static bool IsPromptObject(ProjectObjectType objectType)
         => objectType is ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep;
 
-    private static async Task<string> ResolvePromptPhaseAsync(
-        AppDbContext dbContext,
+    private async Task<string> ResolvePromptPhaseAsync(
+        WorkbenchDbContext dbContext,
         Guid projectId,
         ProjectObjectRecord node,
         CancellationToken cancellationToken)
@@ -190,9 +200,8 @@ public sealed class ProjectWorkbenchCommandService(
             }
         }
 
-        return (await dbContext.Set<Project>()
-            .Where(item => item.Id == projectId)
-            .Select(item => item.CurrentPhase)
-            .FirstOrDefaultAsync(cancellationToken))?.Trim() ?? string.Empty;
+        return (await projects.GetForMutationAsync(projectId, cancellationToken))?.CurrentPhase.Trim() ?? string.Empty;
     }
 }
+
+internal sealed record ProjectPromptBindingPreparation(ArtifactReference? Artifact, PromptDraftCreationPreparation? Creation);

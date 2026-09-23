@@ -1,3 +1,7 @@
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Tests.Support;
+using CanDoItAll.Agents.Storage;
+using CanDoItAll.Modules.AgentFramework;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -143,6 +147,74 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public async Task Runtime_build_preserves_recorded_tool_traces_when_cleanup_fails_after_response()
+    {
+        var provider = CreateProviderProfile();
+        var recorder = new ToolInvocationTraceRecorder();
+        var sequence = recorder.Start(
+            "project_structure_asset_create",
+            ToolInvocationClassification.Mutation,
+            "project_structure_asset_create|projectId=project-id",
+            new AgentRuntimeToolOwnership(
+                "project-structure.runtime-tools",
+                "Project structure runtime tools",
+                "project_structure_asset_create"),
+            ToolInvocationPathArgumentSet.Empty);
+        recorder.Complete(
+            sequence,
+            succeeded: false,
+            failureMessage: "The request field is required.",
+            failureMessageSafeForPersistence: true,
+            outcome: AgentToolInvocationOutcome.Failed,
+            effectState: AgentToolEffectState.NotCommitted,
+            failureCode: "tool_argument_validation_failed",
+            canRetryWithCorrectedInput: true);
+        var usage = new ProviderUsageObservation(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            provider.Name,
+            provider.Kind,
+            "unit-model",
+            provider.Transport,
+            ProviderUsageSourcePhases.AgentRuntime,
+            ProviderUsageObservationStatus.Observed,
+            InputTokens: 1,
+            CachedInputTokens: 0,
+            OutputTokens: 2,
+            ReasoningTokens: 0,
+            TotalTokens: 3,
+            ToolCallCount: 1);
+        var runtimeBuild = new RuntimeBuildResult(
+            new DelayedStreamingAgent(TimeSpan.Zero),
+            provider,
+            "unit-model",
+            [new RecordingAsyncDisposable("cleanup", [], new IOException("cleanup failed"))],
+            [],
+            hasApprovalTools: false,
+            isTemperatureOmitted: false,
+            finalizerCapture: null,
+            toolInvocationTraceRecorder: recorder,
+            contextContributionTraceCollector: null);
+        var response = new AgentRuntimeResponse("done", 1, 2, 1, "session", null, [])
+        {
+            UsageObservations = [usage]
+        };
+
+        var exception = await Assert.ThrowsAsync<AgentRuntimeUsageException>(() =>
+            runtimeBuild.ExecuteWithLifetimeAsync(() => Task.FromResult(response)));
+
+        Assert.Equal(AgentRuntimeFailureOrigin.Runtime, exception.FailureOrigin);
+        Assert.Same(usage, Assert.Single(exception.UsageObservations));
+        var trace = Assert.Single(exception.ToolInvocationTraces);
+        Assert.Equal("project_structure_asset_create", trace.ToolName);
+        Assert.Equal(AgentToolInvocationOutcome.Failed, trace.Outcome);
+        Assert.Equal(AgentToolEffectState.NotCommitted, trace.EffectState);
+        Assert.Equal("tool_argument_validation_failed", trace.FailureCode);
+        Assert.True(trace.CanRetryWithCorrectedInput);
+        Assert.IsType<IOException>(exception.InnerException);
+    }
+
+    [Fact]
     public async Task Concurrent_runtime_build_disposal_callers_await_the_same_cleanup()
     {
         var provider = CreateProviderProfile();
@@ -189,7 +261,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(ToolCapabilityBuilder),
             typeof(WorkspaceRuntimePlugin),
             typeof(WorkspaceImageAnalysisModelResolver),
-            typeof(StorageRuntimePlugin),
+            typeof(StorageAgentRuntimeToolProvider),
             typeof(WorkspaceSearchSupport),
             typeof(InputAttachmentPreparer),
             typeof(InputAttachmentSupport),
@@ -864,10 +936,33 @@ public sealed class MafRuntimeArchitectureServicesTests
         });
 
         Assert.True(driver.ShouldSkipRuntimeSessionSerialization(options, []));
+        Assert.True(driver.ShouldSkipRuntimeSessionSerialization(options with { RequireDurableToolProtocol = true }, []));
+        Assert.False(driver.ShouldSkipRuntimeSessionSerialization(options, [], MafRuntimeSessionCapturePurpose.ToolAdmissionCheckpoint));
         Assert.Contains(
             "governed process step",
             driver.ResolveRuntimeSessionSerializationSkipMessage(options),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafRuntimeSessionPersistenceDriver_tool_checkpoint_does_not_persist_request_scoped_attachments() {
+        var driver = new MafRuntimeSessionPersistenceDriver();
+        var options = CreateExecutionOptions(AgentRuntimeContextIntent.Empty with { IsGovernedProcessStep = true },
+            [new AgentRuntimeInputAttachment("private.png", "image/png", [1, 2, 3], string.Empty)]);
+
+        Assert.True(driver.ShouldSkipRuntimeSessionSerialization(options, [], MafRuntimeSessionCapturePurpose.ToolAdmissionCheckpoint));
+    }
+
+    [Theory]
+    [InlineData(false, "{}")]
+    [InlineData(true, null)]
+    public async Task MafRuntimeSessionBuilder_tool_checkpoint_never_creates_a_session_from_unavailable_restore_evidence(
+        bool shouldRestore, string? payload) {
+        var failure = await Assert.ThrowsAsync<AgentToolAdmissionException>(() =>
+            MafRuntimeSessionBuilder.RestoreToolAdmissionSessionAsync(new ThrowingSerializationAgent(),
+                new(shouldRestore, null, payload, null), CancellationToken.None).AsTask());
+
+        Assert.Equal("tool-admission.runtime-denied", failure.Code);
     }
 
     [Fact]
@@ -1065,9 +1160,61 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public async Task RuntimeToolProviderComposer_accepts_a_contributed_tool_without_a_core_name_entry() {
+        const string toolName = "module_extension_write";
+        var contribution = PromptGalleryToolPolicy.Capabilities.Single(policy => policy.Name == PromptGalleryToolPolicy.PromptGalleryDraftCreate)
+            with { Name = toolName };
+        var policies = new AgentToolPolicyCatalog([contribution]);
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(policies), policies);
+        var provider = new TestRuntimeToolProvider(10, CreateDescriptor("tests.contributed"), toolName);
+        var state = new RuntimeCapabilityState();
+
+        await composer.AttachAsync(new RuntimeToolProviderAttachmentRequest(state, CreateAllowAllAccessPlan(),
+            composer.ComposeRegistrations([provider]), CreateContext(), SuppressApprovalRequirements: false), CancellationToken.None);
+
+        var tool = Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(state.Tools));
+        Assert.Equal(toolName, tool.Name);
+        Assert.Same(policies, state.ToolPolicies);
+        Assert.False(ToolCapabilityRegistry.TryResolve(toolName, out _));
+        Assert.Equal(AgentRuntimeToolOperationKind.Mutation, Assert.Single(state.RuntimeToolMetadata).OperationKind);
+        Assert.Equal(CapabilitySideEffectKind.InternalStateMutation,
+            RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolSideEffectProfile(toolName, state.ToolPolicies).Kind);
+    }
+
+    [Fact]
+    public async Task RuntimeToolProviderComposer_rejects_a_live_descriptor_that_downgrades_owner_approval() {
+        var policies = new AgentToolPolicyCatalog(PromptGalleryToolPolicy.Capabilities);
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(policies), policies);
+        var descriptor = CreateDescriptor("tests.policy-downgrade");
+        var provider = new TestRuntimeToolProvider(10, descriptor, PromptGalleryToolPolicy.PromptGalleryDraftCreate) {
+            Metadata = [new AgentRuntimeToolMetadata(descriptor.ProviderKey, PromptGalleryToolPolicy.PromptGalleryDraftCreate,
+                AgentRuntimeToolOperationKind.Read, requiresApprovalByDefault: false, [])]
+        };
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => composer.AttachAsync(
+            new RuntimeToolProviderAttachmentRequest(new RuntimeCapabilityState(), CreateAllowAllAccessPlan(),
+                composer.ComposeRegistrations([provider]), CreateContext(), SuppressApprovalRequirements: false), CancellationToken.None));
+        Assert.Contains("disagrees with its registered invocation policy", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RuntimeToolProviderComposer_rejects_a_tool_when_its_owner_policy_is_not_registered() {
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
+        var provider = new TestRuntimeToolProvider(10, CreateDescriptor("tests.missing-owner-policy"),
+            PromptGalleryToolPolicy.PromptGalleryDraftCreate);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => composer.AttachAsync(
+            new RuntimeToolProviderAttachmentRequest(new RuntimeCapabilityState(), CreateAllowAllAccessPlan(),
+                composer.ComposeRegistrations([provider]), CreateContext(), SuppressApprovalRequirements: false), CancellationToken.None));
+
+        Assert.Contains("registered invocation policy classification", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RuntimeToolProviderComposer_attaches_tools_metadata_and_approval_wrappers()
     {
-        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
+        var composer = new RuntimeToolProviderComposer(
+            new RuntimeToolProviderAccessFilter(ProductToolPolicyTestRegistration.ProductToolPolicies),
+            ProductToolPolicyTestRegistration.ProductToolPolicies);
         var provider = new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.process"),
@@ -1100,15 +1247,17 @@ public sealed class MafRuntimeArchitectureServicesTests
     [Fact]
     public async Task RuntimeToolProviderComposer_allow_only_provider_key_policy_prunes_other_provider_tools()
     {
-        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
+        var composer = new RuntimeToolProviderComposer(
+            new RuntimeToolProviderAccessFilter(ProductToolPolicyTestRegistration.ProductToolPolicies),
+            ProductToolPolicyTestRegistration.ProductToolPolicies);
         var allowedProvider = new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.allowed-provider"),
-            AgentToolInvocationPolicyMetadata.ProcessesRunsList);
+            ProcessCompatibilityToolPolicy.ProcessesRunsList);
         var deniedProvider = new TestRuntimeToolProvider(
             20,
             CreateDescriptor("tests.denied-provider"),
-            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList);
+            ProcessCompatibilityToolPolicy.ProcessesDefinitionsList);
         var registrations = composer.ComposeRegistrations([allowedProvider, deniedProvider]);
         var allowedProviderTag = RuntimeToolProviderCapabilityTags.CreateProviderKeyTag("tests.allowed-provider");
         var allowOnlyPolicy = new CapabilityAccessPolicy(
@@ -1135,13 +1284,13 @@ public sealed class MafRuntimeArchitectureServicesTests
             CancellationToken.None);
 
         Assert.Equal(1, result.AttachedToolCount);
-        Assert.Equal([AgentToolInvocationPolicyMetadata.ProcessesRunsList], state.Tools.Select(tool => tool.Name));
+        Assert.Equal([ProcessCompatibilityToolPolicy.ProcessesRunsList], state.Tools.Select(tool => tool.Name));
         Assert.Equal("tests.allowed-provider", Assert.Single(state.RuntimeToolProviderDescriptors).ProviderKey);
         Assert.Contains(state.EffectiveCapabilityDescriptors, descriptor =>
-            descriptor.RuntimeToolName?.Value == AgentToolInvocationPolicyMetadata.ProcessesRunsList &&
+            descriptor.RuntimeToolName?.Value == ProcessCompatibilityToolPolicy.ProcessesRunsList &&
             descriptor.Tags.Contains(allowedProviderTag));
         Assert.Contains(state.CapabilityAccessDiagnostics, diagnostic =>
-            diagnostic.Identity.Key.Value == AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList.Replace('_', '-') &&
+            diagnostic.Identity.Key.Value == ProcessCompatibilityToolPolicy.ProcessesDefinitionsList.Replace('_', '-') &&
             diagnostic.Category == CapabilityDiagnosticCategory.AccessPolicy);
     }
 
@@ -1542,6 +1691,12 @@ public sealed class MafRuntimeArchitectureServicesTests
             Order = order;
             Descriptor = descriptor;
             this.toolNames = toolNames;
+        }
+
+        public IReadOnlyList<AgentRuntimeToolMetadata> Metadata { get; init; } = [];
+
+        public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(AgentRuntimeToolProviderContext context) {
+            return Metadata;
         }
 
         public int Order { get; }

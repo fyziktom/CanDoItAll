@@ -382,6 +382,44 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
             logger: null);
     }
 
+    [Fact]
+    public void Injected_context_cannot_split_parallel_tool_results_and_caller_history_is_unchanged() {
+        AIChatMessage call = new(ChatRole.Assistant, [new FunctionCallContent("a", "first", null), new FunctionCallContent("b", "second", null)]);
+        AIChatMessage firstResult = new(ChatRole.Tool, [new FunctionResultContent("a", "first result")]);
+        AIChatMessage secondResult = new(ChatRole.Tool, [new FunctionResultContent("b", "second result")]);
+        var firstContext = new AIChatMessage(ChatRole.User, "First context")
+            .WithAgentRequestMessageSource(AgentRequestMessageSourceType.AIContextProvider, "first");
+        var secondContext = new AIChatMessage(ChatRole.System, "Second context")
+            .WithAgentRequestMessageSource(AgentRequestMessageSourceType.AIContextProvider, "second");
+        var laterContext = new AIChatMessage(ChatRole.User, "Later context")
+            .WithAgentRequestMessageSource(AgentRequestMessageSourceType.AIContextProvider, "later");
+        AIChatMessage[] original = [call, firstContext, firstResult, secondContext, secondResult, laterContext];
+
+        var normalized = OpenAiChatCompletionsCompatibilityChatClient.NormalizeToolHistory(original);
+
+        Assert.Equal([firstContext, secondContext, call, firstResult, secondResult, laterContext], normalized);
+        Assert.Equal([call, firstContext, firstResult, secondContext, secondResult, laterContext], original);
+        Assert.Equal("a", call.Contents.OfType<FunctionCallContent>().First().CallId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void External_or_historical_messages_are_not_reordered_or_used_to_fabricate_missing_results(bool historical) {
+        AIChatMessage call = new(ChatRole.Assistant, [new FunctionCallContent("a", "first", null)]);
+        var external = new AIChatMessage(ChatRole.User, "Actual user message");
+        if (historical) {
+            external = external.WithAgentRequestMessageSource(AgentRequestMessageSourceType.ChatHistory, "history");
+        }
+        AIChatMessage unrelatedResult = new(ChatRole.Tool, [new FunctionResultContent("foreign", "result")]);
+        AIChatMessage[] original = [call, external, unrelatedResult];
+
+        var normalized = OpenAiChatCompletionsCompatibilityChatClient.NormalizeToolHistory(original);
+
+        Assert.Equal(original, normalized);
+        Assert.DoesNotContain(normalized.SelectMany(message => message.Contents).OfType<FunctionResultContent>(), result => result.CallId == "a");
+    }
+
     private static async Task InvokeAsync(
         IChatClient client,
         bool streaming,

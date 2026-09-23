@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Plugins.Abstractions;
@@ -17,7 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Plugins;
 
 public sealed class PluginOAuthService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PluginsDbContext> dbContextFactory,
     PluginCatalogService catalogService,
     PluginConnectionStore connectionStore,
     PluginGrantEvaluator grantEvaluator,
@@ -686,7 +685,7 @@ public sealed class PluginOAuthService(
     }
 
     private async Task StoreTokenEnvelopeAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
         PluginOAuthTokenEnvelope envelope,
         DateTimeOffset timestamp,
@@ -741,7 +740,7 @@ public sealed class PluginOAuthService(
     }
 
     private async Task MarkSessionFailedAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
         string errorCode,
         string errorDescription,
@@ -756,7 +755,7 @@ public sealed class PluginOAuthService(
     }
 
     private async Task UpsertOAuthConnectionErrorAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
         PluginOAuthConnectionStatusKind status,
         string errorCode,
@@ -787,7 +786,7 @@ public sealed class PluginOAuthService(
     }
 
     private static async Task MarkReconnectRequiredAsync(
-        AppDbContext dbContext,
+        PluginsDbContext dbContext,
         PluginOAuthConnectionRecord record,
         string errorCode,
         string errorDescription,
@@ -1061,6 +1060,8 @@ public sealed class PluginOAuthService(
             .ToArray();
     }
 
+    // The return path must stay on this host. Browsers read a backslash as a slash and drop tabs and line breaks from
+    // an address, so "/\host" and "/<tab>/host" leave the site just like "//host" does.
     private static string NormalizeReturnPath(string? returnPath)
     {
         if (string.IsNullOrWhiteSpace(returnPath))
@@ -1069,7 +1070,9 @@ public sealed class PluginOAuthService(
         }
 
         var normalized = returnPath.Trim();
-        if (normalized[0] != '/' || normalized.StartsWith("//", StringComparison.Ordinal))
+        if (normalized[0] != '/' ||
+            (normalized.Length > 1 && normalized[1] is '/' or '\\') ||
+            normalized.Any(char.IsControl))
         {
             return "/plugins";
         }

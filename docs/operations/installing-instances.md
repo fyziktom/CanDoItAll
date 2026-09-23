@@ -39,7 +39,7 @@ that deployment contract. Verify that the artifact contains `CanDoItAll.Web.dll`
 
 Every non-development instance also requires:
 
-- PostgreSQL 16 with a dedicated non-superuser application role;
+- PostgreSQL 18 with a dedicated non-superuser application role;
 - owned, writable workspace and control-plane purpose roots;
 - a stable `CANDOITALL_HOST_BINDING_ID` containing 8-128 ASCII letters, digits, hyphens,
   or underscores;
@@ -55,7 +55,9 @@ curl --fail http://127.0.0.1:5032/api/runtime/operations
 ```
 
 The operations endpoint reports typed platform, host-profile, capability, path-readiness,
-and deployment-support state without returning secret values or full physical roots.
+and deployment-support state without returning secret values or full physical roots. With
+API authorization enabled it requires a bearer token issued by the host (add
+`-H "Authorization: Bearer $CANDOITALL_API_TOKEN"`); `/health` stays anonymous.
 
 ## Default User-Owned Runtime Roots
 
@@ -174,6 +176,10 @@ same-user access is not acceptable.
 
 ## macOS
 
+For direct source development with PostgreSQL in Podman, use the
+[Podman development guide](podman-macos-development.md). It is separate from the
+headless installation procedure below and retains its unverified macOS execution status.
+
 Use RID `osx-arm64` on Apple silicon and `osx-x64` on Intel. Interactive runs use the
 Application Support, Logs, and temporary roots in the default-root table. A system
 LaunchDaemon must instead use a dedicated service account and explicit owned roots below
@@ -209,9 +215,10 @@ launchd, validation, restart, and rollback procedure.
 ## Development Compose Stack
 
 The repository Compose model always runs the Linux Web image, even when Docker Desktop is
-hosted on Windows or macOS. It uses package-mode restore and owns `app-data` and `db-data`
+hosted on Windows or macOS. It uses sibling source-context restore and owns `app-data` and `db-data`
 named volumes. Application state is under `/data`; PostgreSQL state is under
-`/var/lib/postgresql/data` in the database volume.
+`/var/lib/postgresql/18/docker` inside the volume mounted at `/var/lib/postgresql`.
+Migrate retained older clusters using the [preservation runbook](../../tools/dev/Migrate-PostgreSql16To18.md).
 
 Normal teardown preserves both volumes:
 

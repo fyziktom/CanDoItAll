@@ -144,6 +144,17 @@ public sealed record WorkflowExternalResponseStatusQuery(
     WorkflowExternalResponseOperationId OperationId,
     WorkflowLaunchCorrelationId CorrelationId);
 
+/// <summary>
+/// Result of submitting an external response or reading the attempt, as a JSON integer, grouped by the HTTP status
+/// the workflow API returns with it. 200: 0 Completed (the run completed), 1 WaitingAgain (the run waits for another
+/// request), 2 Denied (the approval was denied). 202: 3 Resuming (still processing). 401: 4 Unauthenticated.
+/// 403: 5 Forbidden, 18 AuthorizationContextUnavailable. 400: 6 InvalidResponse. 404: 7 RequestNotFound,
+/// 8 RunNotFound, 9 OperationNotFound. 409: 10 RequestVersionMismatch, 11 RequestNotPending, 12 RunNotWaiting,
+/// 13 IdempotencyConflict, 14 ActiveOperationConflict. 410: 15 Cancelled, 16 Superseded. 422: 17 LegacyNonResumable,
+/// 19 CheckpointMissing, 20 CheckpointCorrupt, 21 CheckpointIncompatible, 22 TopologyMismatch,
+/// 23 WorkflowVersionMismatch, 24 RequestMismatch. 503: 25 BackendUnavailable, 26 RetryableFailure.
+/// 500: 27 TerminalFailure.
+/// </summary>
 public enum WorkflowExternalResponseServiceOutcome
 {
     Completed,

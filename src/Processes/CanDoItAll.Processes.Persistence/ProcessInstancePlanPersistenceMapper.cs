@@ -173,7 +173,7 @@ internal static class ProcessInstancePlanPersistenceMapper
             ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2);
     }
 
-    private static JsonSerializerOptions CreateSerializerOptions()
+    internal static JsonSerializerOptions CreateSerializerOptions()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {

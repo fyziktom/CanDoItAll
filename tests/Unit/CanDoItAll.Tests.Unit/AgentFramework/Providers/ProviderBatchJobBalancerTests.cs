@@ -6,6 +6,52 @@ namespace CanDoItAll.Tests.Unit.AgentFramework.Providers;
 
 public sealed class ProviderBatchJobBalancerTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProviderBatchBalancer_never_repeats_inference_after_history_failure(bool wrapped) {
+        var provider = CreateProvider("History failure", Guid.NewGuid());
+        await using var pool = CreateRuntimePool([provider], new FakeChatDriver(new Dictionary<Guid, ProviderDispatchLimits> {
+            [provider.Id] = ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(5))
+        }));
+        var calls = 0;
+        var result = await new ProviderBatchJobBalancer(pool).ExecuteAsync<int, int>(
+            CreateRequest(inputs: CreateInputs(1), providers: [new(provider)],
+                policy: new ProviderBatchExecutionPolicy(MaxAttempts: 3)),
+            (context, cancellationToken) => {
+                calls++;
+                var failure = new CanDoItAll.AgentFramework.ProviderHistory.ProviderHistoryException(
+                    CanDoItAll.AgentFramework.ProviderHistory.HistoryFailure.Unavailable, "Terminal persistence failed.");
+                throw wrapped ? new InvalidOperationException("Invocation failed.", failure) : failure;
+            });
+        Assert.Equal(1, calls);
+        Assert.Equal(1, Assert.Single(result.Items).AttemptCount);
+        Assert.Equal(ProviderBatchItemStatus.Failed, result.Items[0].Status);
+    }
+
+    [Fact]
+    public async Task ProviderBatchBalancer_retries_share_a_stable_checkpointed_history_context() {
+        var provider = CreateProvider("History context", Guid.NewGuid());
+        await using var pool = CreateRuntimePool([provider], new FakeChatDriver(new Dictionary<Guid, ProviderDispatchLimits> {
+            [provider.Id] = ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(5))
+        }));
+        var contexts = new List<CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext>();
+        var request = CreateRequest(inputs: CreateInputs(1), providers: [new(provider)],
+            policy: new ProviderBatchExecutionPolicy(MaxAttempts: 2, PersistenceMode: ProviderBatchPersistenceMode.Checkpointed));
+        var result = await new ProviderBatchJobBalancer(pool, new InMemoryProviderBatchJobCheckpointStore()).ExecuteAsync<int, int>(request, (context, cancellationToken) => {
+            contexts.Add(context.History);
+            if (contexts.Count == 1) {
+                throw new IOException("Retry fixture.");
+            }
+            return Task.FromResult(ProviderBatchDispatchOutcome<int>.FromValue(1));
+        });
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, contexts.Count);
+        Assert.Same(contexts[0], contexts[1]);
+        Assert.Null(contexts[0].Owner);
+        Assert.Equal(ProviderBatchHistoryContext.Create(request.JobId, request.Inputs[0].InputId).RequestId, contexts[0].RequestId);
+    }
+
     [Fact]
     public async Task ProviderBatchBalancer_PartitionsItemsAcrossEligibleProviderProfilesByDispatchLimits()
     {

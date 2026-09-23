@@ -1,12 +1,14 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectsDatabaseTransferHandler(
     IDatabaseProfileRuntimeAccessor profileAccessor,
-    ProjectTransferTargetStateGuard targetStateGuard) : IDatabaseTransferHandler
-{
+    ProjectTransferTargetStateGuard targetStateGuard, DatabaseTransferOperationRunner operations, ProjectsProfileTransferStore projects) : IDatabaseTransferHandler {
+    private readonly ProjectTransferStore data = new(operations, projects);
+
     public DatabaseTransferItemDescriptor Descriptor { get; } = new(
         "projects",
         "Projects",
@@ -14,36 +16,37 @@ public sealed class ProjectsDatabaseTransferHandler(
         SortOrder: 25);
 
     public async Task<DatabaseTransferItemPreview> PreviewAsync(
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var sourceCounts = await ProjectTransferDataSet.CountAsync(context.SourceDbContext, cancellationToken);
-        var targetCounts = await ProjectTransferDataSet.CountAsync(context.TargetDbContext, cancellationToken);
+        DatabaseTransferOperation context,
+        CancellationToken cancellationToken = default) {
+        var sourceCounts = await operations.RunIndependentAsync(context.SourceProfile, data.CountAsync, cancellationToken);
+        var targetCounts = await operations.RunIndependentAsync(context.TargetProfile, data.CountAsync, cancellationToken);
 
         return new DatabaseTransferItemPreview(
             Descriptor,
-            sourceCounts.Projects > 0,
+            sourceCounts.Total > 0,
             $"{sourceCounts.Projects} project(s), {sourceCounts.Objects} structure object(s), and {sourceCounts.ViewStates} view state record(s) are available.",
-            sourceCounts.Projects == 0 ? "The source database does not contain projects." : null,
+            sourceCounts.Total == 0 ? "The source database does not contain projects or retained project history." : null,
             sourceCounts.Total,
             targetCounts.Total);
     }
 
     public async Task<DatabaseTransferItemResult> TransferAsync(
-        DatabaseTransferContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var sourceData = await ProjectTransferDataSet.LoadAsync(context.SourceDbContext, cancellationToken);
-        sourceData.ValidateForImport();
+        DatabaseTransferOperation context,
+        CancellationToken cancellationToken = default) {
+        CoordinatedDatabaseTransaction.RequireDistinctPhysicalDatabases(context.SourceProfile, context.TargetProfile);
+        var sourceData = await operations.RunSerializableAsync(context.SourceProfile,
+            [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], async (session, token) => {
+                var loaded = await data.LoadAsync(session, token);
+                loaded.ValidateForImport();
+                return loaded;
+            }, cancellationToken);
         var sourceCounts = sourceData.Counts;
-        if (sourceCounts.Projects == 0)
-        {
-            return new DatabaseTransferItemResult(Descriptor.Key, Descriptor.Label, false, "The source database has no projects to transfer.", 0);
+        if (sourceCounts.Total == 0) {
+            return new DatabaseTransferItemResult(Descriptor.Key, Descriptor.Label, false, "The source database has no projects or retained project history to transfer.", 0);
         }
 
         if (context.TargetProfile.Profile.Id ==
-            profileAccessor.ResolveCurrentProfile().Profile.Id)
-        {
+            profileAccessor.ResolveCurrentProfile().Profile.Id) {
             return new DatabaseTransferItemResult(
                 Descriptor.Key,
                 Descriptor.Label,
@@ -52,18 +55,16 @@ public sealed class ProjectsDatabaseTransferHandler(
                 0);
         }
 
-        if (sourceData.HasStorageBindings)
-        {
+        if (sourceData.HasStorageBindings) {
             return new DatabaseTransferItemResult(
                 Descriptor.Key,
                 Descriptor.Label,
                 false,
-                "The source contains project media bindings. Database-row transfer cannot copy or restamp their bytes; use project package v2 export/import into an empty inactive profile.",
+                "The source contains project media bindings. Database-row transfer cannot copy or restamp their bytes; use project package export/import into an empty inactive profile.",
                 0);
         }
 
-        if (sourceData.HasCrossModuleMutations)
-        {
+        if (sourceData.HasCrossModuleMutations) {
             return new DatabaseTransferItemResult(
                 Descriptor.Key,
                 Descriptor.Label,
@@ -72,14 +73,11 @@ public sealed class ProjectsDatabaseTransferHandler(
                 0);
         }
 
-        var targetData = await ProjectTransferDataSet.LoadAsync(
-            context.TargetDbContext,
-            cancellationToken);
-        var targetResidues = await targetStateGuard.FindResiduesAsync(
-            context.TargetDbContext,
-            cancellationToken);
-        if (targetData.HasStorageBindings)
-        {
+        var targetPreflight = await operations.RunIndependentAsync(context.TargetProfile, async (session, token) =>
+            (Data: await data.LoadAsync(session, token), Residues: await targetStateGuard.FindPreflightResiduesAsync(session, token)), cancellationToken);
+        var targetData = targetPreflight.Data;
+        var targetResidues = targetPreflight.Residues;
+        if (targetData.HasStorageBindings) {
             return new DatabaseTransferItemResult(
                 Descriptor.Key,
                 Descriptor.Label,
@@ -88,8 +86,7 @@ public sealed class ProjectsDatabaseTransferHandler(
                 0);
         }
 
-        if (targetData.Counts.Total > 0 || targetResidues.Count > 0)
-        {
+        if (targetData.Counts.Total > 0 || targetResidues.Count > 0) {
             var residueDetails = targetResidues.Count == 0
                 ? string.Empty
                 : $" Related state found: {ProjectTransferTargetStateGuard.Describe(targetResidues)}.";
@@ -102,42 +99,39 @@ public sealed class ProjectsDatabaseTransferHandler(
                 0);
         }
 
-        await using var transferScope = await SerializableMutationScope.BeginAsync(
-            context.TargetDbContext,
-            ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey,
-            cancellationToken);
-        await targetStateGuard.AcquireExclusiveImportLocksAsync(
-            context.TargetDbContext,
-            cancellationToken);
-        var lockedTargetCounts = await ProjectTransferDataSet.CountAsync(
-            context.TargetDbContext,
-            cancellationToken);
-        var lockedTargetResidues = await targetStateGuard.FindResiduesAsync(
-            context.TargetDbContext,
-            cancellationToken);
-        if (lockedTargetCounts.Total > 0 || lockedTargetResidues.Count > 0)
-        {
-            var residueDetails = lockedTargetResidues.Count == 0
-                ? string.Empty
-                : $" Related state found: {ProjectTransferTargetStateGuard.Describe(lockedTargetResidues)}.";
+        sourceData.PrepareForTargetImport(context.SourceProfile.Profile.Id, Guid.NewGuid());
+        return await targetStateGuard.RunLockedImportAsync(context.TargetProfile, async (session, token) => {
+            if (context.TargetProfile.Profile.Id == profileAccessor.ResolveCurrentProfile().Profile.Id) {
+                throw new InvalidOperationException("Project transfer requires an inactive target database profile; the running profile was left unchanged.");
+            }
+            var lockedTargetCounts = await data.CountAsync(
+                session,
+                cancellationToken);
+            var lockedTargetResidues = await targetStateGuard.FindLockedResiduesAsync(
+                session,
+                cancellationToken);
+            if (lockedTargetCounts.Total > 0 || lockedTargetResidues.Count > 0) {
+                var residueDetails = lockedTargetResidues.Count == 0
+                    ? string.Empty
+                    : $" Related state found: {ProjectTransferTargetStateGuard.Describe(lockedTargetResidues)}.";
+                return new DatabaseTransferItemResult(
+                    Descriptor.Key,
+                    Descriptor.Label,
+                    false,
+                    "The inactive target acquired project or project-related data before exclusive import locks were established; nothing was replaced." +
+                    residueDetails,
+                    0);
+            }
+
+            await data.ClearAsync(session, cancellationToken);
+            await data.SaveAsync(session, sourceData, cancellationToken);
+
             return new DatabaseTransferItemResult(
                 Descriptor.Key,
                 Descriptor.Label,
-                false,
-                "The inactive target acquired project or project-related data before exclusive import locks were established; nothing was replaced." +
-                residueDetails,
-                0);
-        }
-
-        await ProjectTransferDataSet.ClearAsync(context.TargetDbContext, cancellationToken);
-        await ProjectTransferDataSet.SaveAsync(context.TargetDbContext, sourceData, cancellationToken);
-        await transferScope.CommitAsync(cancellationToken);
-
-        return new DatabaseTransferItemResult(
-            Descriptor.Key,
-            Descriptor.Label,
-            true,
-            $"Copied {sourceCounts.Projects} project(s) with their structure workbench data.",
-            sourceCounts.Total);
+                true,
+                $"Copied {sourceCounts.Projects} project(s) with their structure workbench data and retained history. New target admissions are required to execute imported history.",
+                sourceCounts.Total);
+        }, cancellationToken);
     }
 }

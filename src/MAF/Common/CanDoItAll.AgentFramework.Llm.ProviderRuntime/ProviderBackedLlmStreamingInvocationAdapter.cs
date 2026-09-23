@@ -136,6 +136,9 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapter(
                                 delta.Text,
                                 ++providerSequence);
                             break;
+                        case ProviderChatCorrelationObserved:
+                        case ProviderChatUsageObserved:
+                            break;
                         case ProviderChatCompleted completed when providerCompletion is null:
                             providerCompletion = completed;
                             break;
@@ -312,6 +315,7 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapter(
                         result.OutputTokens,
                         "completed")
                     {
+                        ObservedUsage = result.ObservedUsage,
                         CachedInputTokens = result.CachedInputTokens
                     }, token).ConfigureAwait(false);
                     return true;

@@ -64,6 +64,7 @@ public sealed class TestDatabaseProfile
                 _ => throw new InvalidOperationException($"Unsupported provider '{Provider}'.")
             },
             ["Database:ConnectionString"] = ConnectionString,
+            ["ControlPlane:RootPath"] = Path.Combine(EnvironmentRootPath, "control-plane"),
             ["Storage:WorkspaceRoot"] = WorkspaceRootPath,
             ["Storage:ManagedFilesFolder"] = "managed-files",
             ["Storage:ExportsFolder"] = "exports",

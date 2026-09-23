@@ -4,6 +4,8 @@ using CanDoItAll.AgentFramework.Runtime.Abstractions;
 
 namespace CanDoItAll.Tests.Support;
 
+using RuntimeProviderHealthResult = CanDoItAll.AgentFramework.Models.ProviderHealthResult;
+
 /// <summary>
 /// Test-only stand-in for the whole-runtime double shape the deleted production
 /// <c>IAgentRuntime</c> interface used to expose (SB18 deleted that interface; production
@@ -15,7 +17,7 @@ namespace CanDoItAll.Tests.Support;
 /// </summary>
 public interface IFakeAgentRuntime
 {
-    Task<ProviderHealthResult> TestProviderAsync(
+    Task<RuntimeProviderHealthResult> TestProviderAsync(
         ProviderProfile provider,
         CancellationToken cancellationToken = default);
 
@@ -123,7 +125,7 @@ public sealed class FakeAgentRuntimePortAdapter(IFakeAgentRuntime runtime) :
             request.ExecutionOptions);
     }
 
-    public Task<ProviderHealthResult> TestHealthAsync(
+    public Task<RuntimeProviderHealthResult> TestHealthAsync(
         ProviderProfile provider,
         CancellationToken cancellationToken = default)
         => runtime.TestProviderAsync(provider, cancellationToken);

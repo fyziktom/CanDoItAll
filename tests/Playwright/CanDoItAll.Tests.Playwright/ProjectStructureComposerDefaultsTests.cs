@@ -1,4 +1,7 @@
 using System.IO;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
@@ -50,32 +53,47 @@ public sealed partial class AppSmokeTests
         await addParticipantButton.ClickAsync();
         await page.WaitForSelectorAsync("text=Autoselected Freelancer");
 
+        await CloseStructureToolboxWindowAsync(page);
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+        await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
+        await page.GetByTestId("project-structure-object-index-window")
+            .WaitForAsync(new() { State = WaitForSelectorState.Hidden });
         await EnsureStructureToolboxWindowExpandedAsync(page);
         await EnsureStructureToolboxGroupExpandedAsync(page, "work");
 
         await page.GetByTestId("project-structure-toolbox-add-work-task").ClickAsync();
-        await composer.WaitForAsync();
+        var taskDialog = page.GetByTestId("project-structure-task-create-dialog");
+        await taskDialog.WaitForAsync();
 
-        var workItemKindSelect = composer.Locator("select").First;
-        Assert.Equal(
-            "task",
-            await workItemKindSelect.InputValueAsync());
+        await taskDialog.GetByTestId("project-structure-task-create-title").FillAsync("Autoselected Task");
+        await taskDialog.GetByTestId("project-structure-task-create-subtitle").FillAsync("Canvas QA");
+        await taskDialog.GetByTestId("project-structure-task-create-notes").FillAsync("Subtype-specific work-item create should not require a redundant kind selection.");
 
-        await composer.Locator("input[placeholder='Implement export flow']").FillAsync("Autoselected Task");
-        await composer.Locator("input[placeholder='Sprint or owner']").FillAsync("Canvas QA");
-        await composer.Locator("textarea[placeholder='Definition of done or context']").FillAsync("Subtype-specific work-item create should not require a redundant kind selection.");
-
-        var addWorkItemButton = page.GetByRole(AriaRole.Button, new() { Name = "Add work item", Exact = true });
+        var addWorkItemButton = taskDialog.GetByTestId("project-structure-task-create-submit");
         Assert.True(
             await addWorkItemButton.IsEnabledAsync(),
-            "Expected the task composer to be submittable after the visible required fields are filled.");
+            "Expected the task dialog to be submittable after the visible required fields are filled.");
 
         await CapturePrimaryWorkbenchShellAsync(page, Path.Combine(artifactsDir, "bundle-p3-01-structure-composer-defaults.png"));
         await addWorkItemButton.ClickAsync();
+        await taskDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await page.WaitForSelectorAsync("text=Autoselected Task");
+        var taskNode = Assert.Single((await ReadSceneSnapshotAsync(page)).Nodes,
+            node => string.Equals(node.Title, "Autoselected Task", StringComparison.Ordinal));
+        Assert.False(string.IsNullOrWhiteSpace(fixture.DatabaseConnectionString),
+            "Expected the Playwright fixture to expose its isolated database connection.");
+        var options = new DbContextOptionsBuilder<WorkbenchDbContext>()
+            .UseNpgsql(fixture.DatabaseConnectionString)
+            .Options;
+        await using var owner = new WorkbenchDbContext(options);
+        var savedTask = await owner.Set<ProjectObjectRecord>().AsNoTracking()
+            .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == taskNode.Id);
+        Assert.Equal(ProjectObjectType.WorkItem, savedTask.ObjectType);
+        Assert.Equal("task", savedTask.ObjectSubtype);
+        var workItem = ProjectObjectMetadataSerializer.Parse(savedTask.MetadataJson).WorkItem;
+        Assert.NotNull(workItem);
+        Assert.Equal(ProjectWorkItemKind.Task, workItem.WorkItemKind);
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -114,9 +132,12 @@ public sealed partial class AppSmokeTests
             $"Expected the online meeting repeat select to expose the shared cadence options, but only found {repeatOptionCount} selectable options.");
 
         await page.Keyboard.PressAsync("Escape");
+        await CloseStructureToolboxWindowAsync(page);
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
-        await page.WaitForTimeoutAsync(200);
+        await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
+        await page.GetByTestId("project-structure-object-index-window")
+            .WaitForAsync(new() { State = WaitForSelectorState.Hidden });
         await EnsureStructureToolboxWindowExpandedAsync(page);
         await EnsureStructureToolboxGroupExpandedAsync(page, "work");
 
@@ -147,6 +168,25 @@ public sealed partial class AppSmokeTests
         Assert.True(
             await WaitForLocatorAsync(groupBody, 2_000),
             $"Expected the project structure toolbox group '{groupKey}' to be expanded before interacting with its actions.");
+    }
+
+    // The test opened the standard-blocks toolbox itself. Floating windows may overlap, and the shared canvas window
+    // runtime re-raises a window on every state sync, so an open toolbox can legitimately cover the object index
+    // outline. Close it through its toolbar toggle and prove it is hidden instead of clicking through it.
+    private static async Task CloseStructureToolboxWindowAsync(IPage page)
+    {
+        var window = page.GetByTestId("project-structure-toolbox-window");
+        if (!await window.IsVisibleAsync())
+        {
+            return;
+        }
+
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-toolbox-window");
+        await page.GetByTestId("project-structure-toolbox-toggle").ClickAsync();
+        await window.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
+        Assert.False(
+            await window.IsVisibleAsync(),
+            "Expected the project structure toolbox window to be closed before using the object index outline.");
     }
 
     private static Task<int> ReadSelectableOptionCountAsync(ILocator select)

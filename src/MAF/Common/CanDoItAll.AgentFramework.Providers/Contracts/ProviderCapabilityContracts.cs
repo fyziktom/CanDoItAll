@@ -52,6 +52,13 @@ public interface IProviderStreamingChatCompletionDriver : IAgentProviderDriver
         CancellationToken cancellationToken = default);
 }
 
+public interface IProviderInferenceRelayDriver : IAgentProviderDriver
+{
+    Task<ProviderInferenceRelayTransportResponse> RelayAsync(
+        ProviderInferenceRelayRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IProviderImageGenerationDriver : IAgentProviderDriver
 {
     Task<ProviderImageGenerationResult> GenerateImageAsync(

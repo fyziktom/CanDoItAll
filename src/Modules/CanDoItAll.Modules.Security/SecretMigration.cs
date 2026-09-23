@@ -111,7 +111,7 @@ public interface ISecretMigrationCoordinatorFactory
 }
 
 public sealed class SecretMigrationCoordinatorFactory(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SecurityDbContext> dbContextFactory,
     ISecretProtector legacyDataProtectionProtector,
     ISecretVault destinationVault,
     IControlPlaneSecretContinuityVerifier controlPlaneContinuityVerifier,
@@ -155,7 +155,7 @@ public sealed class SecretMigrationCoordinatorFactory(
 }
 
 public sealed class SecretMigrationCoordinator(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<SecurityDbContext> dbContextFactory,
     ISecretProtector legacyDataProtectionProtector,
     ISecretVault sourceVault,
     ISecretVault destinationVault,
@@ -374,7 +374,7 @@ public sealed class SecretMigrationCoordinator(
         SecretMigrationSourceSelection selection,
         CancellationToken cancellationToken)
     {
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
+        await using SecurityDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
             .ConfigureAwait(false);
         List<SecretRecord> records = await dbContext.Set<SecretRecord>()
             .AsNoTracking()
@@ -516,7 +516,7 @@ public sealed class SecretMigrationCoordinator(
         SecretMigrationJournalRecord record,
         CancellationToken cancellationToken)
     {
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
+        await using SecurityDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
             .ConfigureAwait(false);
         SecretRecord entity = await dbContext.Set<SecretRecord>()
             .SingleOrDefaultAsync(item => item.Id == record.SecretRecordId, cancellationToken)
@@ -541,7 +541,7 @@ public sealed class SecretMigrationCoordinator(
         SecretMigrationJournalRecord record,
         CancellationToken cancellationToken)
     {
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
+        await using SecurityDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
             .ConfigureAwait(false);
         string? payload = await dbContext.Set<SecretRecord>()
             .Where(item => item.Id == record.SecretRecordId)
@@ -571,7 +571,7 @@ public sealed class SecretMigrationCoordinator(
         CancellationToken cancellationToken)
     {
         _ = await ResolveSourceValueAsync(record, cancellationToken).ConfigureAwait(false);
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
+        await using SecurityDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
             .ConfigureAwait(false);
         SecretRecord entity = await dbContext.Set<SecretRecord>()
             .SingleOrDefaultAsync(item => item.Id == record.SecretRecordId, cancellationToken)

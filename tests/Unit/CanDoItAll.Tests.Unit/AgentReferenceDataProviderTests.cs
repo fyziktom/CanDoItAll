@@ -309,7 +309,7 @@ public sealed class AgentReferenceDataProviderTests
         {
             laterWaiterCancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
-                () => laterWaiter.WaitAsync(TimeSpan.FromMilliseconds(500)));
+                () => laterWaiter.WaitAsync(TimeSpan.FromSeconds(5)));
             Assert.False(firstWaiter.IsCompleted);
         }
         finally

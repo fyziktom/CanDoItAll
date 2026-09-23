@@ -1,5 +1,3 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Net.Sockets;
 using Npgsql;
 
@@ -11,21 +9,17 @@ public sealed record PostgresAvailabilityResult(
     string? ConnectionString,
     string Message);
 
-public static class PostgresTestAvailability
-{
+public static class PostgresTestAvailability {
     private const string ConnectionOverrideVariable = "CANDOITALL_TESTS_POSTGRES_CONNECTION";
-    private const string LocalDefaultConnectionString = "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
-    private const string DockerComposeConnectionString = "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
+    public const int RequiredMajorVersion = 18;
 
     public static async Task<PostgresAvailabilityResult> EnsureAvailableAsync(
         string repositoryRoot,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
 
         var overrideConnectionString = Environment.GetEnvironmentVariable(ConnectionOverrideVariable);
-        if (!string.IsNullOrWhiteSpace(overrideConnectionString))
-        {
+        if (!string.IsNullOrWhiteSpace(overrideConnectionString)) {
             return await TryConnectAsync(
                 overrideConnectionString,
                 provisionedByDocker: false,
@@ -33,78 +27,42 @@ public static class PostgresTestAvailability
                 cancellationToken);
         }
 
-        var localDefaultResult = await TryConnectAsync(
-            LocalDefaultConnectionString,
-            provisionedByDocker: false,
-            sourceDescription: "local PostgreSQL service with project default credentials",
-            cancellationToken,
-            timeout: TimeSpan.FromSeconds(3));
-        if (localDefaultResult.IsAvailable)
-        {
-            return localDefaultResult;
-        }
-
-        var composeFilePath = Path.Combine(repositoryRoot, "compose.yaml");
-        if (!File.Exists(composeFilePath))
-        {
-            return new PostgresAvailabilityResult(false, false, null, $"Missing docker compose file at '{composeFilePath}'.");
-        }
-
-        var composeVersionResult = await RunProcessAsync("docker", "compose version", repositoryRoot, cancellationToken);
-        if (composeVersionResult.ExitCode != 0)
-        {
-            return new PostgresAvailabilityResult(
-                false,
-                false,
-                null,
-                $"Docker Compose is unavailable. {composeVersionResult.DescribeFailure()}");
-        }
-
-        var composeUpResult = await RunProcessAsync("docker", "compose up -d postgres", repositoryRoot, cancellationToken);
-        if (composeUpResult.ExitCode != 0)
-        {
-            return new PostgresAvailabilityResult(
-                false,
-                false,
-                null,
-                $"Failed to provision the postgres compose service. {composeUpResult.DescribeFailure()}");
-        }
-
-        return await TryConnectAsync(
-            DockerComposeConnectionString,
-            provisionedByDocker: true,
-            sourceDescription: "docker compose postgres service",
-            cancellationToken);
+        return new PostgresAvailabilityResult(
+            false,
+            false,
+            null,
+            $"Set {ConnectionOverrideVariable} to an isolated PostgreSQL {RequiredMajorVersion} test server. Development and installed databases are not test fixtures; see docs/testing.md.");
     }
 
     private static async Task<PostgresAvailabilityResult> TryConnectAsync(
         string connectionString,
         bool provisionedByDocker,
         string sourceDescription,
-        CancellationToken cancellationToken,
-        TimeSpan? timeout = null)
-    {
+        CancellationToken cancellationToken) {
         Exception? lastError = null;
-        var timeoutAt = DateTimeOffset.UtcNow.Add(timeout ?? TimeSpan.FromSeconds(30));
+        var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(30);
 
-        while (DateTimeOffset.UtcNow < timeoutAt)
-        {
-            try
-            {
+        while (DateTimeOffset.UtcNow < timeoutAt) {
+            try {
                 await using var connection = new NpgsqlConnection(connectionString);
                 await connection.OpenAsync(cancellationToken);
                 await using var command = connection.CreateCommand();
-                command.CommandText = "select 1;";
-                await command.ExecuteScalarAsync(cancellationToken);
+                command.CommandText = "select current_setting('server_version_num')::int;";
+                var serverVersion = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
+                if (serverVersion / 10000 != RequiredMajorVersion) {
+                    return new PostgresAvailabilityResult(
+                        false,
+                        provisionedByDocker,
+                        null,
+                        $"PostgreSQL server_version_num={serverVersion} does not satisfy the required major {RequiredMajorVersion} test gate via {sourceDescription}.");
+                }
 
                 return new PostgresAvailabilityResult(
                     true,
                     provisionedByDocker,
                     connectionString,
-                    $"PostgreSQL is available via {sourceDescription}.");
-            }
-            catch (Exception exception) when (exception is NpgsqlException or TimeoutException or IOException or SocketException)
-            {
+                    $"PostgreSQL server_version_num={serverVersion} is available via {sourceDescription}.");
+            } catch (Exception exception) when (exception is NpgsqlException or TimeoutException or IOException or SocketException) {
                 lastError = exception;
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
@@ -114,72 +72,7 @@ public static class PostgresTestAvailability
             false,
             provisionedByDocker,
             null,
-            $"PostgreSQL was not reachable via {sourceDescription}. {lastError?.Message}");
+            $"PostgreSQL was not reachable via {sourceDescription}. Failure type: {lastError?.GetType().Name}.");
     }
 
-    private static async Task<ProcessExecutionResult> RunProcessAsync(
-        string fileName,
-        string arguments,
-        string workingDirectory,
-        CancellationToken cancellationToken)
-    {
-        var startInfo = new ProcessStartInfo(fileName, arguments)
-        {
-            WorkingDirectory = workingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        Process? process;
-        try
-        {
-            process = Process.Start(startInfo);
-        }
-        catch (Win32Exception exception)
-        {
-            return new ProcessExecutionResult(
-                -1,
-                string.Empty,
-                $"Unable to start '{fileName}'. {exception.Message}");
-        }
-
-        if (process is null)
-        {
-            return new ProcessExecutionResult(
-                -1,
-                string.Empty,
-                $"Unable to start '{fileName}'.");
-        }
-
-        using (process)
-        {
-            var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-            var standardErrorTask = process.StandardError.ReadToEndAsync();
-
-            await process.WaitForExitAsync(cancellationToken);
-
-            return new ProcessExecutionResult(
-                process.ExitCode,
-                (await standardOutputTask).Trim(),
-                (await standardErrorTask).Trim());
-        }
-    }
-
-    private sealed record ProcessExecutionResult(int ExitCode, string StandardOutput, string StandardError)
-    {
-        public string DescribeFailure()
-        {
-            var output = string.Join(
-                " ",
-                new[] { StandardOutput, StandardError }
-                    .Where(value => !string.IsNullOrWhiteSpace(value))
-                    .Select(value => value.Trim()));
-
-            return string.IsNullOrWhiteSpace(output)
-                ? $"Exit code {ExitCode}."
-                : $"Exit code {ExitCode}. {output}";
-        }
-    }
 }

@@ -4,7 +4,9 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.Llm.Abstractions;
 
 /// <summary>
-/// The role a single lightweight LLM message plays in a conversation turn sequence.
+/// Author of a chat message: System (instructions, such as a definition's system prompt), User (text sent by the person
+/// or client) or Assistant (the model's reply). HTTP responses write it as a camel-case JSON string (<c>system</c>,
+/// <c>user</c>, <c>assistant</c>); the LLM Chat transcript reads never return system messages.
 /// </summary>
 public enum LlmMessageRole
 {
@@ -208,6 +210,10 @@ public sealed record LlmInvocationRequest
         Settings = settings;
     }
 
+    [System.Text.Json.Serialization.JsonIgnore]
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext History { get; init; } =
+        CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext.Create();
+
     public ProviderProfile Provider { get; }
 
     public string Model { get; }
@@ -349,6 +355,13 @@ public interface ILlmInvocationPort
     Task<LlmInvocationResult> InvokeAsync(LlmInvocationRequest request, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// How a provider attempt delivered its reply. In the LLM Chat operation resource
+/// (<c>invocationAttempts[].deliveryMode</c>) it is a JSON integer: 0 Incremental (the provider streamed the reply in
+/// parts as it was generated), 1 CompletedFallback (the provider could not stream, so the reply was obtained in one
+/// piece). In the operation event stream (<c>payload.deliveryMode</c>) it is a camel-case string: <c>incremental</c>,
+/// <c>completedFallback</c>.
+/// </summary>
 public enum LlmStreamingDeliveryMode
 {
     Incremental,

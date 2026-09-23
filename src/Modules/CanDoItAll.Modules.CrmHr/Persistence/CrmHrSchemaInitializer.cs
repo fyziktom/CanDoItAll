@@ -5,7 +5,7 @@ namespace CanDoItAll.Modules.CrmHr;
 
 public static class CrmHrSchemaInitializer
 {
-    public static async Task EnsureAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
+    public static async Task EnsureAsync(CrmHrDbContext dbContext, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
 

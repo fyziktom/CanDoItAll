@@ -25,6 +25,8 @@ public sealed record AgentRuntimeResponse(
 
     public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];
 
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation? HistoryEvidence { get; init; }
+
     public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
 
     public AgentRuntimeContextAssemblyManifest? ContextAssemblyManifest { get; init; }
@@ -68,6 +70,8 @@ public sealed class AgentRuntimeUsageException : Exception
         FailureOrigin = failureOrigin;
         ProviderFailureIdentity = providerFailureIdentity;
     }
+
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation? HistoryEvidence { get; init; }
 
     public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; }
 

@@ -28,6 +28,7 @@ PostgreSQL is the application database. InMemory is test-only. Generic Memory pr
 
 - Keep components focused on rendering and orchestration; move non-trivial behavior to the owning service.
 - Keep lifecycle side effects and state transitions explicit and testable.
+- Follow [UI component seams](../docs/architecture/ui-component-seams.md) when separating a feature's rendering from the host that owns its state, reads and writes: placement, seam contracts, state and effect ownership, mutation outcomes, reconciliation after a commit, the scenario host and the proof layers.
 - Reuse `CanDoItAll.Components.*` contracts before adding raw structural markup or page-local layout abstractions.
 - For non-WebGL shared-component work, query the `candoitall_components` MCP: inspect libraries, request recommendations for the concrete use case, and inspect the selected component contract and examples.
 - Improve the sibling `CanDoItAll.Components` library when a reusable contract is missing. Do not copy its implementation into this repository.
@@ -55,6 +56,13 @@ launch configuration and local MCP settings outside this repository.
   narrowest relevant test with a stated and confirmed discovery count. Run the broad
   stable gate only for CI, release/merge closure, a frozen checkpoint, or a named
   invalidation trigger from `docs/testing.md`.
+- Treat `portability-static` as a mandatory closure gate for every change under
+  `.github`, `src`, `Templates`, or `tools`, and for protected root build/configuration
+  files. Follow the review-and-refresh procedure in `docs/testing.md`: repair genuine
+  portability defects; refresh the reviewed baseline in the same change only for
+  intentional findings; inspect its diff; and rerun enforcement without
+  `--write-baseline`. Never dismiss `ADDED` or `STALE` findings as CI-only or close the
+  task while this gate is failing.
 - Use Playwright for shipped UI behavior and capture evidence at the supported large-desktop viewport.
 - Never describe quarantined, skipped, unavailable, or unfiltered failing tests as green.
 - Update maintained docs when public behavior, configuration, architecture, or validation changes.

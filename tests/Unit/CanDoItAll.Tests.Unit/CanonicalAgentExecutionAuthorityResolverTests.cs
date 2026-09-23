@@ -2,6 +2,7 @@ using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Processes.AgentChat;
@@ -9,6 +10,8 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -16,10 +19,11 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 /// Canonical authority resolution: durable agent configuration decides
 /// project-structure rights; UI hints and payloads cannot grant or widen them.
 /// </summary>
-public sealed class CanonicalAgentExecutionAuthorityResolverTests
+public sealed partial class CanonicalAgentExecutionAuthorityResolverTests
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid ProfileId = Guid.NewGuid();
+    private static readonly AgentProjectStructureLifetime ProjectLifetime = new(ProfileId, ProjectId, Guid.NewGuid());
 
     [Fact]
     public async Task Project_structure_mutation_comes_from_agent_configuration_not_ui_hint()
@@ -56,6 +60,34 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
         {
             CanRead = true,
             CanWrite = true,
+            AllowAllProjects = true
+        });
+        var resolver = CreateResolver(agent);
+
+        var authority = await resolver.ResolveAsync(CreateRequest(agent.Id));
+
+        Assert.True(authority.MutationAllowed);
+    }
+
+    [Theory]
+    [InlineData(true, false, false, false)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, false, false, true)]
+    public async Task Project_structure_narrow_mutation_configuration_grants_mutation_authority(
+        bool canWriteNonTaskStructure,
+        bool canWriteTasks,
+        bool canCreateProjects,
+        bool canCreateSubprojects)
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings
+        {
+            CanRead = true,
+            CanWrite = false,
+            CanWriteNonTaskStructure = canWriteNonTaskStructure,
+            CanWriteTasks = canWriteTasks,
+            CanCreateProjects = canCreateProjects,
+            CanCreateSubprojects = canCreateSubprojects,
             AllowAllProjects = true
         });
         var resolver = CreateResolver(agent);
@@ -260,7 +292,7 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
     {
         var agent = CreateAgent(new AgentProjectStructureAccessSettings());
         var resolver = CreateResolverWithProviders(
-            [new ProjectsExecutionAuthorityProvider()],
+            [new ProjectsExecutionAuthorityProvider(CreateProjectAdmissions())],
             agent);
 
         var authority = await resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
@@ -288,8 +320,8 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
         var expectedScope = WorkspaceScopeDescriptor.Project(ProjectId.ToString("D"));
         IAgentExecutionSourceAuthorityProvider[] providers =
         [
-            new ProcessesExecutionAuthorityProvider(),
-            new LiveProcessesExecutionAuthorityProvider()
+            new ProcessesExecutionAuthorityProvider(CreateProjectAdmissions()),
+            new LiveProcessesExecutionAuthorityProvider(CreateProjectAdmissions())
         ];
 
         foreach (var provider in providers)
@@ -301,11 +333,38 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
                 new AgentChatContextSourceId($"surface:project:{ProjectId:D}"),
                 expectedScope,
                 new DatabaseProfileGeneration(1),
-                UiAccessHint: null));
+                UiAccessHint: null) { ObservedProjectLifetime = ProjectLifetime });
 
             Assert.Equal(expectedScope, authority.WorkspaceScope);
             Assert.True(authority.ReadAllowed);
             Assert.True(authority.MutationAllowed);
+        }
+    }
+
+    [Fact]
+    public async Task Process_sources_keep_global_surfaces_read_only_and_sandboxed()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings());
+        IAgentExecutionSourceAuthorityProvider[] providers =
+        [
+            new ProcessesExecutionAuthorityProvider(CreateProjectAdmissions()),
+            new LiveProcessesExecutionAuthorityProvider(CreateProjectAdmissions())
+        ];
+
+        foreach (var provider in providers)
+        {
+            var resolver = CreateResolverWithProviders([provider], agent);
+            var authority = await resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
+                agent.Id,
+                new AgentChatContextSourceKind(provider.SourceKind),
+                new AgentChatContextSourceId("surface:global"),
+                ObservedWorkspaceScope: null,
+                new DatabaseProfileGeneration(1),
+                UiAccessHint: null));
+
+            Assert.Equal(WorkspaceScopeDescriptor.Sandbox, authority.WorkspaceScope);
+            Assert.True(authority.ReadAllowed);
+            Assert.False(authority.MutationAllowed);
         }
     }
 
@@ -319,12 +378,25 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
             new AgentChatContextSourceId(ProjectId.ToString("D")),
             observedScope ?? WorkspaceScopeDescriptor.Project(ProjectId.ToString("D")),
             new DatabaseProfileGeneration(1),
-            uiAccessHint);
+            uiAccessHint) { ObservedProjectLifetime = ProjectLifetime };
+
+    private static ProjectWriteAdmissionService CreateProjectAdmissions() {
+        var options = new DbContextOptionsBuilder<ProjectsDbContext>().UseInMemoryDatabase($"source-authority-{Guid.NewGuid():N}").Options;
+        var factory = new PooledDbContextFactory<ProjectsDbContext>(options);
+        using var context = factory.CreateDbContext();
+        var project = new Project { Id = ProjectId, Name = "Authority project", CreatedAtUtc = DateTimeOffset.UtcNow.AddDays(-1) };
+        context.Add(project);
+        context.Entry(project).Property(item => item.LifetimeId).CurrentValue = ProjectLifetime.LifetimeId;
+        context.Entry(project).Property(item => item.LegacyAgentAccessBindingEligible).CurrentValue = true;
+        context.SaveChanges();
+        var profile = new FixedDatabaseProfileRuntimeAccessor(ProfileId);
+        return new(factory, options, CoordinatedDatabaseTransaction.ForProfile(profile.ResolveCurrentProfile()), profile);
+    }
 
     private static CanonicalAgentExecutionAuthorityResolver CreateResolver(
         params AgentDefinition[] agents)
         => CreateResolverWithProviders(
-            [new ProjectStructureExecutionAuthorityProvider()],
+            [new ProjectStructureExecutionAuthorityProvider(CreateProjectAdmissions())],
             agents);
 
     private static CanonicalAgentExecutionAuthorityResolver CreateResolverWithProviders(
@@ -373,7 +445,8 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
             descriptor =>
                 descriptor.ServiceType == typeof(IAgentExecutionSourceAuthorityProvider) &&
                 descriptor.ImplementationType?.Name == implementationTypeName &&
-                descriptor.Lifetime == ServiceLifetime.Singleton);
+                descriptor.Lifetime == (implementationTypeName == nameof(AgentFrameworkAgentsExecutionAuthorityProvider)
+                    ? ServiceLifetime.Singleton : ServiceLifetime.Scoped));
     }
 
     private static string FindRepositoryRoot()
@@ -430,7 +503,7 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
     }
 
     private sealed class FixedDatabaseProfileRuntimeAccessor(Guid profileId)
-        : IDatabaseProfileRuntimeAccessor
+        : IDatabaseProfileRuntimeAccessor, ICanonicalRuntimeDatabase
     {
         private readonly ResolvedDatabaseProfile resolvedProfile = new(
             new DatabaseProfileRecord
@@ -445,6 +518,9 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
 
         public ResolvedDatabaseProfile ResolveCurrentProfile()
             => resolvedProfile;
+
+        public ResolvedDatabaseProfile Profile => resolvedProfile;
+        public long Generation => 1;
 
         public ResolvedDatabaseProfile ResolveProfile(Guid requestedProfileId)
             => resolvedProfile;

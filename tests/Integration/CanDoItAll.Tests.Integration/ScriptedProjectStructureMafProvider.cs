@@ -379,8 +379,17 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
         var json = result is string text
             ? text
             : JsonSerializer.Serialize(result, FunctionResultJsonOptions);
-        return JsonSerializer.Deserialize<T>(json, FunctionResultJsonOptions)
-            ?? throw new InvalidOperationException($"Function result '{callId}' could not be read as {typeof(T).Name}.");
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, FunctionResultJsonOptions)
+                ?? throw new InvalidOperationException($"Function result '{callId}' could not be read as {typeof(T).Name}.");
+        }
+        catch (JsonException exception) when (result is string resultText)
+        {
+            throw new InvalidOperationException(
+                $"Function result '{callId}' was textual instead of {typeof(T).Name}: {resultText}",
+                exception);
+        }
     }
 
     private static JsonSerializerOptions CreateFunctionResultJsonOptions()

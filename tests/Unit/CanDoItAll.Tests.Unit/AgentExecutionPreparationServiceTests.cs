@@ -201,6 +201,17 @@ public sealed class AgentExecutionPreparationServiceTests
         var service = CreateService(store, registry, cache);
         var prepared = await service.AcquireForAtomicConsumerAsync(AgentId);
 
+        registry.Replace(catalog.Providers.Single() with
+        {
+            IsEnabled = false
+        });
+
+        var unavailable = await Assert.ThrowsAsync<
+            ProviderRuntimeProfileUnavailableException>(
+            () => service.AcquireForAtomicConsumerAsync(AgentId));
+
+        Assert.Equal(ProviderId, unavailable.ProviderId);
+
         registry.RemoveSelected();
 
         Assert.Equal(

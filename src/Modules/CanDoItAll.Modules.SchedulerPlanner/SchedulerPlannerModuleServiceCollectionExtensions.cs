@@ -1,3 +1,7 @@
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure.ControlPlane;
+using Microsoft.EntityFrameworkCore;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
@@ -5,7 +9,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Quartz;
+using Quartz.Logging;
+using Quartz.Simpl;
+using Quartz.Spi;
 
 namespace CanDoItAll.Modules.SchedulerPlanner;
 
@@ -16,12 +24,21 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
         IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        services.AddPooledDbContextFactory<SchedulerPlannerDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             SchedulerPlannerProjectTransferTargetStateParticipant>());
         var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
             configuration["LaneKind"]);
+
+        // Quartz resolves its configuration processor before the scheduler factory binds logging.
+        services.TryAddSingleton<ITypeLoadHelper>(provider => {
+            LogContext.SetCurrentLogProvider(provider.GetRequiredService<ILoggerFactory>());
+            return new SimpleTypeLoadHelper();
+        });
 
         services.AddQuartz(options =>
         {
@@ -33,9 +50,14 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
         services.AddScoped<ISchedulerWorkflowInputOptionService, SchedulerWorkflowInputOptionService>();
         services.AddScoped<ISchedulerTargetLauncher, SchedulerTargetLauncher>();
         services.AddScoped<ISchedulerPlannerTriggerScheduler, SchedulerPlannerTriggerScheduler>();
+        services.AddScoped<SchedulerFireAdmissionStore>();
+        services.AddScoped<IWorkflowScheduledAuthorityPolicy, SchedulerWorkflowAuthorityPolicy>();
         services.AddScoped<ISchedulerPlannerRunDispatcher, SchedulerPlannerRunDispatcher>();
         services.AddScoped<ISchedulerPlannerService, SchedulerPlannerService>();
         services.AddScoped<SchedulerAgentRuntimeAuthorizationService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IAgentExecutionSourceAuthorityProvider,
+            SchedulerExecutionAuthorityProvider>());
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, SchedulerAgentRuntimeToolProvider>());
 
@@ -46,8 +68,15 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
                 options.WaitForJobsToComplete = true;
             });
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchedulerPlannerProjectionHostedService>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchedulerFireRecoveryWorker>());
         }
 
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in SchedulerToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         return services;
     }
 }

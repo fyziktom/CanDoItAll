@@ -14,7 +14,7 @@ $script:DatabaseHost = "127.0.0.1"
 $script:AdminUsername = "candoitall_admin"
 $script:DockerContainerName = "candoitall-webapp-db"
 $script:DockerVolumeName = "candoitall-webapp-db-data"
-$script:DockerImage = "postgres:16.14-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+$script:DockerImage = "postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873"
 $script:DockerOwnerLabel = "com.candoitall.owner"
 $script:DockerOwnerLabelValue = "webapp-install"
 $script:DockerSchemaLabel = "com.candoitall.database-schema"
@@ -31,10 +31,10 @@ $script:AppPasswordRelativePath = "secrets\app-password.dpapi"
 $script:NativeBinRelativePath = "native\pgsql\bin"
 $script:NativeDataRelativePath = "native\data"
 $script:NativeLogRelativePath = "native\logs\postgresql.log"
-$script:EdBArchiveUri = "https://get.enterprisedb.com/postgresql/postgresql-16.14-2-windows-x64-binaries.zip"
-$script:EdBArchiveName = "postgresql-16.14-2-windows-x64-binaries.zip"
-$script:EdBArchiveLength = [int64]325741585
-$script:EdBArchiveSha256 = "8A7F54C1968D5D49BDCD3F66B1291F736C74B8CB6A26E9874771FCC7837DBF38"
+$script:EdBArchiveUri = "https://get.enterprisedb.com/postgresql/postgresql-18.6-4-windows-x64-binaries.zip"
+$script:EdBArchiveName = "postgresql-18.6-4-windows-x64-binaries.zip"
+$script:EdBArchiveLength = [int64]382815572
+$script:EdBArchiveSha256 = "1DF55002AFE95B945D934C078B13E82C1603FA546731E511D068AA983B4EAD28"
 $script:DockerExe = $null
 
 function Write-Status {
@@ -318,7 +318,7 @@ function Read-DatabaseManifest {
         if ($containerName -ne $script:DockerContainerName -or
             $volumeName -ne $script:DockerVolumeName -or
             $image -ne $script:DockerImage) {
-            throw "Docker database manifest metadata does not match the dedicated installed-web-app resources."
+            throw "Docker database manifest metadata does not match the dedicated PostgreSQL 18 resources. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
         }
     }
     else {
@@ -691,7 +691,14 @@ function Assert-ManagedDockerContainer {
     }
 
     if ([string]$Inspect.Config.Image -ne $script:DockerImage) {
-        throw "Docker container '$($script:DockerContainerName)' uses image '$($Inspect.Config.Image)' instead of '$($script:DockerImage)'."
+        throw "Docker container '$($script:DockerContainerName)' uses image '$($Inspect.Config.Image)' instead of '$($script:DockerImage)'. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+    }
+
+    $dataEnvironment = @($Inspect.Config.Env | Where-Object { [string]$_ -match '^PGDATA=' })
+    $databaseMounts = @($Inspect.Mounts | Where-Object { [string]$_.Destination -match '^/var/lib/postgresql(/|$)' })
+    if ($dataEnvironment.Count -ne 1 -or $dataEnvironment[0] -ne "PGDATA=/var/lib/postgresql/18/docker" -or
+        $databaseMounts.Count -ne 1) {
+        throw "Docker database PGDATA or mounts do not match the PostgreSQL 18 layout. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
     }
 
     $passwordEnvironment = @($Inspect.Config.Env | Where-Object { [string]$_ -match '^POSTGRES_PASSWORD(_FILE)?=' })
@@ -726,7 +733,7 @@ function Assert-ManagedDockerContainer {
     $dataMount = @($Inspect.Mounts | Where-Object {
         [string]$_.Type -eq "volume" -and
         [string]$_.Name -eq $script:DockerVolumeName -and
-        [string]$_.Destination -eq "/var/lib/postgresql/data" -and
+        [string]$_.Destination -eq "/var/lib/postgresql" -and
         [bool]$_.RW
     })
     if ($dataMount.Count -ne 1) {
@@ -771,7 +778,7 @@ function Assert-ManagedDockerInitializerContainer {
     $dataMount = @($Inspect.Mounts | Where-Object {
         [string]$_.Type -eq "volume" -and
         [string]$_.Name -eq $script:DockerVolumeName -and
-        [string]$_.Destination -eq "/var/lib/postgresql/data" -and
+        [string]$_.Destination -eq "/var/lib/postgresql" -and
         [bool]$_.RW
     })
     if ($dataMount.Count -ne 1) {
@@ -837,24 +844,43 @@ function Remove-StaleDockerInitializerContainers {
 }
 
 function Get-DockerVolumeState {
-    $probeScript = 'if [ -f /var/lib/postgresql/data/PG_VERSION ]; then exit 0; fi; if find /var/lib/postgresql/data -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then exit 20; fi; exit 10'
+    $probeScript = 'if ! find /var/lib/postgresql -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then exit 10; fi; test -f /var/lib/postgresql/18/docker/PG_VERSION && test ! -L /var/lib/postgresql/18/docker/PG_VERSION && test $(cat /var/lib/postgresql/18/docker/PG_VERSION) = 18 && test $(find /var/lib/postgresql -maxdepth 3 -name PG_VERSION | wc -l) -eq 1 && test -f /var/lib/postgresql/18/docker/global/pg_control && test $(find /var/lib/postgresql -name pg_control | wc -l) -eq 1 || exit 20; if find /var/lib/postgresql -mindepth 1 -maxdepth 1 ! -name 18 -print -quit | grep -q .; then exit 20; fi; if find /var/lib/postgresql/18 -mindepth 1 -maxdepth 1 ! -name docker -print -quit | grep -q .; then exit 20; fi; exit 0'
     $result = Invoke-DockerProbe -Arguments @(
-        "run",
-        "--rm",
-        "--mount",
-        "type=volume,source=$($script:DockerVolumeName),target=/var/lib/postgresql/data,readonly",
-        "--entrypoint",
-        "sh",
-        $script:DockerImage,
-        "-ec",
-        $probeScript
+        "run", "--rm", "--network", "none", "--read-only",
+        "--mount", "type=volume,source=$($script:DockerVolumeName),target=/var/lib/postgresql,readonly",
+        "--entrypoint", "sh", $script:DockerImage, "-ec", $probeScript
     )
 
     switch ($result.ExitCode) {
         0 { return "Initialized" }
         10 { return "Empty" }
-        20 { return "Partial" }
+        20 { throw "The database volume contains old-layout, incompatible, conflicting or incomplete data. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation." }
         default { throw "Docker could not inspect the installed-web-app database volume (exit code $($result.ExitCode))." }
+    }
+}
+
+function Assert-ExistingDockerDatabase {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$ConfiguredPort,
+        [Parameter(Mandatory = $true)]
+        [bool]$ManifestExists
+    )
+
+    $volumeExists = Test-DockerVolumeExists -Name $script:DockerVolumeName
+    $containerExists = Test-DockerContainerExists -Name $script:DockerContainerName
+    if (($ManifestExists -or $containerExists) -and -not $volumeExists) {
+        throw "The installed database volume is missing. Refusing an empty replacement. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+    }
+    if ($containerExists) {
+        Assert-ManagedDockerContainer -Inspect (Get-DockerContainerInspect -Name $script:DockerContainerName) -ConfiguredPort $ConfiguredPort
+    }
+    if ($volumeExists) {
+        Assert-ManagedDockerVolume -Inspect (Get-DockerVolumeInspect -Name $script:DockerVolumeName)
+        $state = Get-DockerVolumeState
+        if ($state -eq "Empty" -and ($ManifestExists -or $containerExists)) {
+            throw "The installed database volume is empty. Refusing to reinitialize existing state. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+        }
     }
 }
 
@@ -1190,13 +1216,13 @@ function New-PlaintextCredentialFiles {
         $adminPlainText = ConvertFrom-SecureStringToPlainText -Secret $AdminSecret
         $appPlainText = ConvertFrom-SecureStringToPlainText -Secret $AppSecret
 
-        Write-Utf8NoBomFile -Path $adminPasswordPath -Content ($adminPlainText + [Environment]::NewLine)
+        Write-Utf8NoBomFile -Path $adminPasswordPath -Content $adminPlainText
         Write-Utf8NoBomFile `
             -Path $adminPgPassPath `
-            -Content ("$($script:DatabaseHost):${ServerPort}:*:$($script:AdminUsername):$adminPlainText" + [Environment]::NewLine)
+            -Content ("$($script:DatabaseHost):${ServerPort}:*:$($script:AdminUsername):$adminPlainText" + "`n")
         Write-Utf8NoBomFile `
             -Path $appPgPassPath `
-            -Content ("$($script:DatabaseHost):${ServerPort}:$ConfiguredDatabaseName`:$ConfiguredAppUsername`:$appPlainText" + [Environment]::NewLine)
+            -Content ("$($script:DatabaseHost):${ServerPort}:$ConfiguredDatabaseName`:$ConfiguredAppUsername`:$appPlainText" + "`n")
         Write-Utf8NoBomFile `
             -Path $provisioningSqlPath `
             -Content (New-ProvisioningSql `
@@ -1341,7 +1367,7 @@ function Initialize-DockerVolume {
             "--stop-timeout",
             [string]$script:DockerStopTimeoutSeconds,
             "--mount",
-            "type=volume,source=$($script:DockerVolumeName),target=/var/lib/postgresql/data",
+            "type=volume,source=$($script:DockerVolumeName),target=/var/lib/postgresql",
             "--mount",
             "type=bind,source=$TemporaryRoot,target=/input,readonly",
             "--env",
@@ -1424,7 +1450,7 @@ function Start-OrCreateStableDockerContainer {
             "--publish",
             "$($script:DatabaseHost):${ConfiguredPort}:5432",
             "--mount",
-            "type=volume,source=$($script:DockerVolumeName),target=/var/lib/postgresql/data",
+            "type=volume,source=$($script:DockerVolumeName),target=/var/lib/postgresql",
             "--health-cmd",
             "pg_isready -h 127.0.0.1 -p 5432 -d postgres",
             "--health-interval",
@@ -1467,6 +1493,7 @@ function Invoke-DockerDatabaseSetup {
         [bool]$ManifestExists
     )
 
+    Assert-ExistingDockerDatabase -ConfiguredPort $ConfiguredPort -ManifestExists $ManifestExists
     Remove-StaleDockerInitializerContainers
 
     $volumeExists = Test-DockerVolumeExists -Name $script:DockerVolumeName
@@ -1632,7 +1659,7 @@ function Get-VerifiedEdBArchive {
     Assert-PathHasNoReparsePoints `
         -PathValue $partialPath `
         -Description "Native PostgreSQL partial download path"
-    Write-Status "Downloading the pinned EnterpriseDB PostgreSQL 16.14 Windows x64 archive"
+    Write-Status "Downloading the pinned EnterpriseDB PostgreSQL 18.6 Windows x64 archive"
     $previousSecurityProtocol = [Net.ServicePointManager]::SecurityProtocol
     try {
         [Net.ServicePointManager]::SecurityProtocol = $previousSecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -1719,8 +1746,8 @@ function Assert-NativePostgreSqlLoads {
         }
 
         $versionText = ($result.Output | ForEach-Object { [string]$_ }) -join " "
-        if ($result.ExitCode -ne 0 -or $versionText -notmatch '(?i)PostgreSQL\)\s+16\.14(?:\s|$)') {
-            throw "Native PostgreSQL executable '$executable' failed its exact version check. Expected PostgreSQL 16.14, but it returned exit code $($result.ExitCode). Install the supported Microsoft Visual C++ x64 runtime if Windows reported a missing runtime DLL."
+        if ($result.ExitCode -ne 0 -or $versionText -notmatch '(?i)PostgreSQL\)\s+18\.6(?:\s|$)') {
+            throw "Native PostgreSQL executable '$executable' failed its exact version check. Expected PostgreSQL 18.6, but it returned exit code $($result.ExitCode). Install the supported Microsoft Visual C++ x64 runtime if Windows reported a missing runtime DLL."
         }
     }
 }
@@ -1747,7 +1774,8 @@ function Test-NativePostgreSqlDistribution {
 function Assert-SupportedNativeDataVersion {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$DataPath
+        [string]$DataPath,
+        [switch]$RequireInitialized
     )
 
     Assert-PathHasNoReparsePoints `
@@ -1758,6 +1786,15 @@ function Assert-SupportedNativeDataVersion {
         -PathValue $pgVersionPath `
         -Description "Native PostgreSQL data version marker"
     if (-not (Test-Path -LiteralPath $pgVersionPath)) {
+        if ($RequireInitialized) {
+            throw "The installed native database data is missing or empty. Refusing to initialize a replacement. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+        }
+        if (Test-Path -LiteralPath $DataPath) {
+            if (-not (Test-Path -LiteralPath $DataPath -PathType Container) -or
+                @(Get-ChildItem -LiteralPath $DataPath -Force).Count -gt 0) {
+                throw "Native PostgreSQL data is nonempty or invalid without PG_VERSION. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+            }
+        }
         return
     }
     if (-not (Test-Path -LiteralPath $pgVersionPath -PathType Leaf)) {
@@ -1765,8 +1802,13 @@ function Assert-SupportedNativeDataVersion {
     }
 
     $majorVersion = (Get-Content -LiteralPath $pgVersionPath -Raw).Trim()
-    if ($majorVersion -ne "16") {
-        throw "Native PostgreSQL data uses major version '$majorVersion'; this installer requires major version 16."
+    if ($majorVersion -ne "18") {
+        throw "Native PostgreSQL data uses major version '$majorVersion'; this installer requires major version 18. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
+    }
+    $controlPath = Join-Path $DataPath "global/pg_control"
+    Assert-PathHasNoReparsePoints -PathValue $controlPath -Description "Native PostgreSQL control file"
+    if (-not (Test-Path -LiteralPath $controlPath -PathType Leaf)) {
+        throw "Native PostgreSQL data is incomplete. See tools/dev/Migrate-PostgreSql16To18.md before updating an existing installation."
     }
 }
 
@@ -1859,6 +1901,30 @@ function Stop-NativePostgreSqlForBinaryReplacement {
     }
 }
 
+function Start-NativePostgreSqlProcess {
+    param(
+        [Parameter(Mandatory = $true)][string]$PgCtlPath,
+        [Parameter(Mandatory = $true)][string]$DataPath,
+        [Parameter(Mandatory = $true)][string]$LogPath
+    )
+
+    $arguments = 'start -D "{0}" -l "{1}" -w -t 120' -f $DataPath, $LogPath
+    $process = Start-Process -FilePath $PgCtlPath -ArgumentList $arguments -WindowStyle Hidden `
+        -RedirectStandardOutput "$LogPath.startup.stdout" -RedirectStandardError "$LogPath.startup.stderr" -PassThru
+    try {
+        $process.Handle | Out-Null
+        if (-not $process.WaitForExit(130000)) {
+            throw "Native PostgreSQL startup did not finish within 130 seconds. Inspect '$LogPath' and the startup diagnostics before retrying."
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "Native PostgreSQL startup failed with exit code $($process.ExitCode). Inspect '$LogPath.startup.stderr'."
+        }
+    }
+    finally {
+        $process.Dispose()
+    }
+}
+
 function Start-NativePostgreSqlAfterBinaryRollback {
     param(
         [Parameter(Mandatory = $true)]
@@ -1880,16 +1946,7 @@ function Start-NativePostgreSqlAfterBinaryRollback {
     New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
     Rotate-NativePostgreSqlLog -LogPath $LogPath
     Write-Status "Restarting native PostgreSQL after restoring its previous binary distribution"
-    Invoke-CheckedExternal -FilePath $pgCtlPath -Arguments @(
-        "start",
-        "-D",
-        $DataPath,
-        "-l",
-        $LogPath,
-        "-w",
-        "-t",
-        "120"
-    ) | Out-Null
+    Start-NativePostgreSqlProcess -PgCtlPath $pgCtlPath -DataPath $DataPath -LogPath $LogPath
 }
 
 function Ensure-NativePostgreSqlBinaries {
@@ -2461,16 +2518,7 @@ function Invoke-NativeDatabaseSetup {
     if ($status -eq "Stopped") {
         Rotate-NativePostgreSqlLog -LogPath $LogPath
         Write-Status "Starting native PostgreSQL"
-        Invoke-CheckedExternal -FilePath $pgCtlPath -Arguments @(
-            "start",
-            "-D",
-            $DataPath,
-            "-l",
-            $LogPath,
-            "-w",
-            "-t",
-            "120"
-        ) | Out-Null
+        Start-NativePostgreSqlProcess -PgCtlPath $pgCtlPath -DataPath $DataPath -LogPath $LogPath
     }
 
     Wait-NativePostgreSqlReady -PgIsReadyPath $pgIsReadyPath -ConfiguredPort $ConfiguredPort
@@ -2764,6 +2812,8 @@ else {
     Assert-PathHasNoReparsePoints `
         -PathValue $defaultNativeMarker `
         -Description "Default native PostgreSQL data marker"
+    $defaultNativeDataPath = Split-Path -Parent $defaultNativeMarker
+    Assert-SupportedNativeDataVersion -DataPath $defaultNativeDataPath
     $nativeStateExists = Test-Path -LiteralPath $defaultNativeMarker -PathType Leaf
 
     if ($nativeStateExists -and $dockerStateExists) {
@@ -2841,6 +2891,13 @@ if ($engine -eq "docker") {
 }
 elseif (-not [Environment]::Is64BitOperatingSystem) {
     throw "The selected native PostgreSQL fallback requires 64-bit Windows."
+}
+
+if ($engine -eq "docker") {
+    Assert-ExistingDockerDatabase -ConfiguredPort $Port -ManifestExists ($null -ne $manifest)
+}
+else {
+    Assert-SupportedNativeDataVersion -DataPath $nativeDataPath -RequireInitialized:($null -ne $manifest)
 }
 
 foreach ($managedDirectoryPath in @($runtimeRoot, $databaseRoot)) {

@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/src/Sandboxes/">
+    <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CanDoItAll.CrmHr.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Prompts.UiSandbox/CanDoItAll.Prompts.UiSandbox.csproj" />
+  </Folder>
   <Folder Name="/src/App/">
     <Project Path="src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" />
     <Project Path="src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
@@ -12,8 +17,12 @@
     <Project Path="src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj" />
   </Folder>
   <Folder Name="/src/Integration/">
+    <Project Path="src/Integration/CanDoItAll.Agents.SimpleChats/CanDoItAll.Agents.SimpleChats.csproj" />
+    <Project Path="src/Integration/CanDoItAll.Agents.Storage/CanDoItAll.Agents.Storage.csproj" />
     <Project Path="src/Integration/CanDoItAll.FileTools.Integration.Abstractions/CanDoItAll.FileTools.Integration.Abstractions.csproj" />
     <Project Path="src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj" />
+    <Project Path="src/Integration/CanDoItAll.SharedProviders.Abstractions/CanDoItAll.SharedProviders.Abstractions.csproj" />
+    <Project Path="src/Integration/CanDoItAll.SharedProviders.Http/CanDoItAll.SharedProviders.Http.csproj" />
   </Folder>
   <Folder Name="/src/Memory/">
     <Project Path="src/Memory/CanDoItAll.Memory.Abstractions/CanDoItAll.Memory.Abstractions.csproj" />
@@ -29,9 +38,13 @@
     <Project Path="src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory/CanDoItAll.Memory.Drivers.CognitiveMemory.csproj" />
   </Folder>
   <Folder Name="/src/UI/">
+    <Project Path="src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
+    <Project Path="src/UI/CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj" />
+    <Project Path="src/UI/CanDoItAll.CrmHr.UI/CanDoItAll.CrmHr.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Prompts.UI/CanDoItAll.Prompts.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj" />
   </Folder>
   <Folder Name="/src/MAF/Common/">
@@ -49,6 +62,11 @@
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/CanDoItAll.AgentFramework.Runtime.Abstractions.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Usage/CanDoItAll.AgentFramework.Usage.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj" />
+  </Folder>
+  <Folder Name="/src/MAF/ProviderHistory/">
+    <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />
+    <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/CanDoItAll.AgentFramework.ProviderHistory.Application.csproj" />
+    <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
   </Folder>
   <Folder Name="/src/MAF/Capabilities/">
     <Project Path="src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
@@ -71,6 +89,7 @@
   </Folder>
   <Folder Name="/src/MAF/Workflows/">
     <Project Path="src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/CanDoItAll.AgentFramework.Workflows.Abstractions.csproj" />
+    <Project Path="src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj" />
     <Project Path="src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Builder/CanDoItAll.AgentFramework.Workflows.Builder.csproj" />
     <Project Path="src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/CanDoItAll.AgentFramework.Workflows.Core.csproj" />
     <Project Path="src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj" />
@@ -94,15 +113,19 @@
   </Folder>
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.CrmHr.Contracts/CanDoItAll.Modules.CrmHr.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj" />
     <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj" />
     <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Projects.Contracts/CanDoItAll.Modules.Projects.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Prompts.Contracts/CanDoItAll.Modules.Prompts.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj" />
@@ -111,6 +134,7 @@
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj" />
   </Folder>
   <Folder Name="/src/MAF/SimpleChats/">
+    <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/CanDoItAll.AgentFramework.Llm.SimpleChats.UI.csproj" />
     <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/CanDoItAll.AgentFramework.Llm.SimpleChats.Core.csproj" />
     <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj" />
     <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.csproj" />
@@ -148,10 +172,16 @@
   <Folder Name="/tools/Seeding/">
     <Project Path="tools/Seeding/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj" />
   </Folder>
+  <Folder Name="/tools/SharedProviders/">
+    <Project Path="tools/SharedProviders/CanDoItAll.SharedProviders.E2E/CanDoItAll.SharedProviders.E2E.csproj" />
+  </Folder>
   <Folder Name="/tools/Diagnostics/">
     <Project Path="tools/Diagnostics/CanDoItAll.OpenAiContextProbe/CanDoItAll.OpenAiContextProbe.csproj" />
   </Folder>
   <Folder Name="/tools/Validation/">
     <Project Path="tools/Validation/CanDoItAll.RpiValidationArtifacts/CanDoItAll.RpiValidationArtifacts.csproj" />
+  </Folder>
+  <Folder Name="/tests/Support/">
+    <Project Path="tests/Support/CanDoItAll.SharedProviders.TestUpstream/CanDoItAll.SharedProviders.TestUpstream.csproj" />
   </Folder>
 </Solution>

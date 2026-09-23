@@ -429,14 +429,20 @@ public static class ExecutionInvocationMetadata
         ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
-        if (string.IsNullOrWhiteSpace(run.MetadataJson))
+        return ResolveExternalTargetRootBindings(run.MetadataJson);
+    }
+
+    public static IReadOnlyList<ExternalTargetRootBinding> ResolveExternalTargetRootBindings(
+        string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
         {
             return [];
         }
 
         try
         {
-            using var document = JsonDocument.Parse(run.MetadataJson);
+            using var document = JsonDocument.Parse(metadataJson);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
                 throw new InvalidOperationException("Execution metadata must be a JSON object.");
@@ -461,6 +467,26 @@ public static class ExecutionInvocationMetadata
                 "External-target root binding metadata is malformed.",
                 exception);
         }
+    }
+
+    public static IReadOnlyList<ExternalTargetRootBinding> ResolveExternalTargetRootBindings(
+        string? metadataJson,
+        IEnumerable<ExternalTargetRootBinding>? configuredBindings)
+    {
+        var mergedBindings = new Dictionary<string, ExternalTargetRootBinding>(StringComparer.OrdinalIgnoreCase);
+        foreach (var binding in ResolveExternalTargetRootBindings(metadataJson)
+                     .Concat(ValidateExternalTargetRootBindings(configuredBindings ?? [])))
+        {
+            if (mergedBindings.TryGetValue(binding.RootId, out var existing) && existing != binding)
+            {
+                throw new InvalidOperationException(
+                    $"Conflicting external-target root bindings use identity '{binding.RootId}'.");
+            }
+
+            mergedBindings.TryAdd(binding.RootId, binding);
+        }
+
+        return mergedBindings.Values.ToArray();
     }
 
     public static IReadOnlyList<string> ResolveAllowedManagedArtifactReadRefs(ExecutionRunRecord run)
@@ -1288,7 +1314,7 @@ public static class ExecutionInvocationMetadata
                !string.IsNullOrWhiteSpace(run.ProcessStepId);
     }
 
-    private static bool IsTrustedGovernedProcessRun(ExecutionRunRecord run)
+    internal static bool IsTrustedGovernedProcessRun(ExecutionRunRecord run)
     {
         return string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
                string.Equals(run.RequestedByKind, "system", StringComparison.OrdinalIgnoreCase) &&

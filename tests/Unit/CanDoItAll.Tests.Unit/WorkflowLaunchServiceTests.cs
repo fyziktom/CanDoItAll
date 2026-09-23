@@ -10,6 +10,40 @@ public sealed class WorkflowLaunchServiceTests
 {
     private static readonly DateTimeOffset FixedUtcNow = new(2026, 7, 12, 19, 0, 0, TimeSpan.Zero);
 
+    [Fact]
+    public async Task LaunchAsync_StructureOperator_PreservesUserIdentityAndExactLineage() {
+        var definition = CreateDefinition(status: WorkflowLifecycleStatus.Active);
+        var fixture = CreateFixture([definition]);
+        var origin = new WorkflowLaunchOrigin.ProjectStructureNode(Guid.NewGuid(), new("operator-workflow-node"),
+            CreateActor(), CreateSession(), CreateCorrelation());
+        var result = await fixture.Service.LaunchAsync(CreateIntent(
+            new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
+            WorkflowLaunchMode.Production) with { Origin = origin });
+
+        var actual = Assert.IsType<WorkflowLaunchOrigin.ProjectStructureNode>(Assert.Single(fixture.RunLauncher.Requests).Origin);
+        Assert.Equal(WorkflowLaunchActorKind.User, actual.RequestingActor.Kind);
+        Assert.Equal(origin.RequestingActor, actual.RequestingActor);
+        Assert.Equal(origin.ProjectId, actual.ProjectId);
+        Assert.Equal(origin.NodeId, actual.NodeId);
+        Assert.Equal(origin.SessionId, actual.SessionId);
+        Assert.Equal(origin.CorrelationId, actual.CorrelationId);
+        Assert.Equal(actual, result.ResolvedRequest.Origin);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_StructureServiceActor_IsRejectedBeforeCatalogOrRuntime() {
+        var definition = CreateDefinition(status: WorkflowLifecycleStatus.Active);
+        var fixture = CreateFixture([definition]);
+        var origin = new WorkflowLaunchOrigin.ProjectStructureNode(Guid.NewGuid(), new("service-workflow-node"),
+            new(WorkflowLaunchActorKind.Service, "synthetic-service"), CreateSession(), CreateCorrelation());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.LaunchAsync(CreateIntent(
+            new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
+            WorkflowLaunchMode.Production) with { Origin = origin }));
+        Assert.Empty(fixture.Catalog.Requests);
+        Assert.Empty(fixture.RunLauncher.Requests);
+    }
+
     [Theory]
     [InlineData(WorkflowLifecycleStatus.Draft)]
     [InlineData(WorkflowLifecycleStatus.Suspended)]
@@ -379,30 +413,54 @@ public sealed class WorkflowLaunchServiceTests
         Assert.Equal(WorkflowLaunchIdempotencyDisposition.EnforcedNewRun, retried.IdempotencyDisposition);
     }
 
-    [Fact]
-    public async Task LaunchAsync_FailureAfterRunPersistence_ReplaysReservedRunWithoutStartingAgain()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LaunchAsync_FailureAfterRunPersistence_ReturnsAdmittedRunAndReplaysWithoutStartingAgain(bool argumentFailure) {
         var definition = CreateDefinition(status: WorkflowLifecycleStatus.Active);
         var fixture = CreateFixture([definition]);
         fixture.RunLauncher.FailuresRemaining = 1;
         fixture.RunLauncher.PersistRunBeforeFailure = true;
+        fixture.RunLauncher.Failure = argumentFailure ? new ArgumentException("Lost launch acknowledgement")
+            : new InvalidOperationException("Lost launch acknowledgement");
         var intent = CreateIntent(
             new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
-            WorkflowLaunchMode.Production) with
-        {
+            WorkflowLaunchMode.Production) with {
             Idempotency = new WorkflowLaunchIdempotency.CallerSupplied(
                 new WorkflowLaunchIdempotencyKey("crash-window-reserved-run"))
         };
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.LaunchAsync(intent));
+        var admitted = await fixture.Service.LaunchAsync(intent);
         var replay = await fixture.Service.LaunchAsync(intent);
 
         var request = Assert.Single(fixture.RunLauncher.Requests);
         Assert.NotNull(request.RequestedRunId);
-        Assert.Equal(request.RequestedRunId, replay.Run.RunId);
-        Assert.Equal(
-            WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun,
-            replay.IdempotencyDisposition);
+        Assert.Equal(request.RequestedRunId, admitted.Run.RunId);
+        Assert.Same(fixture.RunLauncher.Failure, admitted.ObservationException);
+        Assert.Equal(WorkflowLaunchObservation.RecoveredAfterObserverFailure, admitted.Observation);
+        Assert.Equal(admitted.Run.RunId, replay.Run.RunId);
+        Assert.Equal(WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun, replay.IdempotencyDisposition);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_LegacyRepeatedLaunchesRemainDistinctAfterAnObservedLostAcknowledgement() {
+        var definition = CreateDefinition(status: WorkflowLifecycleStatus.Active);
+        var fixture = CreateFixture([definition]);
+        fixture.RunLauncher.FailuresRemaining = 1;
+        fixture.RunLauncher.PersistRunBeforeFailure = true;
+        fixture.RunLauncher.Failure = new ArgumentException("Lost legacy launch acknowledgement");
+        var intent = CreateIntent(new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
+            WorkflowLaunchMode.Production) with { Idempotency = new WorkflowLaunchIdempotency.NotRequested() };
+
+        var admitted = await fixture.Service.LaunchAsync(intent);
+        var intentionalRepeat = await fixture.Service.LaunchAsync(intent);
+
+        Assert.Same(fixture.RunLauncher.Failure, admitted.ObservationException);
+        Assert.Equal(WorkflowLaunchObservation.RecoveredAfterObserverFailure, admitted.Observation);
+        Assert.NotEqual(admitted.Run.RunId, intentionalRepeat.Run.RunId);
+        Assert.Equal(2, fixture.RunLauncher.Requests.Count);
+        Assert.All(fixture.RunLauncher.Requests, request => Assert.NotNull(request.RequestedRunId));
+        Assert.Equal(WorkflowLaunchIdempotencyDisposition.NotRequested, intentionalRepeat.IdempotencyDisposition);
     }
 
     [Fact]
@@ -824,6 +882,8 @@ public sealed class WorkflowLaunchServiceTests
 
         public bool PersistRunBeforeFailure { get; set; }
 
+        public Exception Failure { get; set; } = new InvalidOperationException("Fixture workflow launch failed.");
+
         public TaskCompletionSource StartEntered { get; } = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -859,7 +919,7 @@ public sealed class WorkflowLaunchServiceTests
                     await runStore.SaveRunAsync(run, CancellationToken.None);
                 }
 
-                throw new InvalidOperationException("Fixture workflow launch failed.");
+                throw Failure;
             }
 
             return run;

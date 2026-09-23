@@ -1,0 +1,87 @@
+@using CanDoItAll.AgentFramework.ProviderHistory
+
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="history-policy-panel">
+    <FormSection Title="Provider history policy" Description="Applies to history owned by this instance and database profile. Shared publishers and clients each apply their own policy.">
+        <Button Text="Load current policy" ButtonStyle="ButtonStyle.Light" Click="LoadAsync" Disabled="@isBusy"
+                IsBusy="@isBusy" data-testid="history-policy-load" />
+    </FormSection>
+    @if (error is not null) {
+        <Alert AlertStyle="AlertStyle.Danger" data-testid="history-policy-error">@error</Alert>
+    }
+    @if (message is not null) {
+        <Alert AlertStyle="AlertStyle.Success" data-testid="history-policy-success">@message</Alert>
+    }
+    @if (snapshot is not null) {
+        <EditForm EditContext="editContext" OnSubmit="ApplyFutureAsync" data-testid="history-policy-form">
+            <DataAnnotationsValidator />
+            <FormStack>
+                <FormSection Title="@($"Policy version {snapshot.Version}")" Description="Light keeps request metadata. Detailed can retain bounded current-turn text and responses; it never copies assembled conversation history.">
+                    <FormRow Split="true">
+                        <FormField Text="Capture mode">
+                            <DropDown TValue="HistoryCaptureMode" Data="CaptureModes" @bind-Value="draft.CaptureMode"
+                                      @bind-Value:after="DraftChanged" Disabled="@isBusy" aria-label="Capture mode" data-testid="history-policy-mode" />
+                        </FormField>
+                        <FormField Text="Maintenance batch size (1–1,000)">
+                            <InputNumber @bind-Value="draft.BatchSize" @bind-Value:after="DraftChanged" disabled="@isBusy"
+                                         class="cda-input" aria-label="Maintenance batch size" data-testid="history-policy-batch" />
+                        </FormField>
+                    </FormRow>
+                    <FormRow Split="true">
+                        <FormField Text="Metadata retention days (1–3,650)">
+                            <InputNumber @bind-Value="draft.MetadataRetentionDays" @bind-Value:after="DraftChanged" disabled="@isBusy"
+                                         class="cda-input" aria-label="Metadata retention days" data-testid="history-policy-metadata-days" />
+                        </FormField>
+                        <FormField Text="Detail retention days (no longer than metadata)">
+                            <InputNumber @bind-Value="draft.DetailRetentionDays" @bind-Value:after="DraftChanged" disabled="@isBusy"
+                                         class="cda-input" aria-label="Detail retention days" data-testid="history-policy-detail-days" />
+                        </FormField>
+                    </FormRow>
+                    <FormRow Split="true">
+                        <FormField Text="Maximum text bytes per segment (1–131,072)">
+                            <InputNumber @bind-Value="draft.MaximumTextBytes" @bind-Value:after="DraftChanged" disabled="@isBusy"
+                                         class="cda-input" aria-label="Maximum text bytes" data-testid="history-policy-text-bytes" />
+                        </FormField>
+                        <FormField Text="Total retained detail quota (bytes)">
+                            <InputNumber @bind-Value="draft.DetailQuotaBytes" @bind-Value:after="DraftChanged" disabled="@isBusy"
+                                         class="cda-input" aria-label="Detail quota bytes" data-testid="history-policy-quota" />
+                        </FormField>
+                    </FormRow>
+                </FormSection>
+                @if (draft.CaptureMode == HistoryCaptureMode.Detailed) {
+                    <Alert AlertStyle="AlertStyle.Warning">Detailed capture can contain sensitive user text. Storage is protected, bounded and subject to quota; unsupported content or unavailable protection is reported explicitly.</Alert>
+                }
+                <Alert AlertStyle="AlertStyle.Info">Agent, chat and workflow records keep their own retention. These settings do not extend expired data, reconstruct old prompts, or delete canonical conversations.</Alert>
+                <ValidationSummary />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Apply to future requests" Type="submit" Disabled="@isBusy" data-testid="history-policy-apply" />
+                    <Button Text="Preview shorter retention for existing records" ButtonStyle="ButtonStyle.Light"
+                            Click="PreviewAsync" Disabled="@isBusy" data-testid="history-policy-preview" />
+                </Cluster>
+            </FormStack>
+        </EditForm>
+    } else if (!isBusy) {
+        <EmptyState Title="Policy not requested" Description="Load the current policy to check management access and edit retention. No policy or history data is loaded when this tab opens." />
+    }
+</Stack>
+@if (preview is { } pending) {
+    <Dialog IsOpen="true" Title="Shorten existing history retention?" Size="ModalSize.Compact" DenseChrome="true"
+            CloseOnBackdrop="false" OnClose="ClosePreview" TestId="history-policy-confirmation">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Small">
+                <p>Standalone metadata: @pending.Preview.MetadataRecords · Captured detail: @pending.Preview.DetailRecords</p>
+                <p>This preview is bounded to @pending.Preview.Limit records per category. Counts can change before Apply; the server checks the limit and policy version again.</p>
+                <p>Earlier expiry can make records unavailable immediately. Canonical conversations are unchanged.</p>
+                @if (pending.Preview.ExceedsLimit) {
+                    <Alert AlertStyle="AlertStyle.Warning">The preview exceeds the safe batch limit. Existing retention cannot be changed in this action. Close this preview and apply the policy to future requests only.</Alert>
+                }
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="ClosePreview" Disabled="@isBusy" />
+                <Button Text="Apply and shorten existing retention" ButtonStyle="ButtonStyle.Danger" Click="ConfirmShorterAsync"
+                        Disabled="@(isBusy || pending.Preview.ExceedsLimit)" data-testid="history-policy-confirm" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}

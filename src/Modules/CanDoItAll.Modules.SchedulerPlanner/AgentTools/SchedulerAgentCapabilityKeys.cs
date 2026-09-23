@@ -14,9 +14,9 @@ public static class SchedulerAgentCapabilityKeys
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch] = WorkflowTargetsSearch,
-            [AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch] = WorkflowSchedulesSearch,
-            [AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate] = WorkflowScheduleCreate
+            [SchedulerToolPolicy.SchedulerWorkflowTargetsSearch] = WorkflowTargetsSearch,
+            [SchedulerToolPolicy.SchedulerWorkflowSchedulesSearch] = WorkflowSchedulesSearch,
+            [SchedulerToolPolicy.SchedulerWorkflowScheduleCreate] = WorkflowScheduleCreate
         }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static IReadOnlySet<string> PrivilegedKeys => SchedulerAgentIdentity.PrivilegedCapabilityKeys;

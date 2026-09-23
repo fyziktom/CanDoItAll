@@ -11,6 +11,7 @@ using OllamaSharp.Models;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Responses;
+using System.ClientModel.Primitives;
 using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -204,16 +205,25 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 {
     private readonly IMafProviderCredentialService credentialService;
     private readonly IMafProviderStreamingDispatchGate dispatchGate;
+    private readonly IProviderHttpClientSelector? httpClientSelector;
     private readonly ILoggerFactory loggerFactory;
+    private readonly CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder history;
+    private readonly TimeProvider clock;
 
     public MafProviderAgentFactory(
         IMafProviderCredentialService credentialService,
         IMafProviderStreamingDispatchGate dispatchGate,
-        ILoggerFactory? loggerFactory = null)
+        CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryRecorder history,
+        ILoggerFactory? loggerFactory = null,
+        IProviderHttpClientSelector? httpClientSelector = null,
+        TimeProvider? clock = null)
     {
         this.credentialService = credentialService ?? throw new ArgumentNullException(nameof(credentialService));
         this.dispatchGate = dispatchGate ?? throw new ArgumentNullException(nameof(dispatchGate));
         this.loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        this.httpClientSelector = httpClientSelector;
+        this.history = history ?? throw new ArgumentNullException(nameof(history));
+        this.clock = clock ?? TimeProvider.System;
     }
 
     public AIAgent CreateFrameworkAgent(
@@ -226,6 +236,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(options);
 
+        ValidateProviderAvailability(provider, model);
         ValidateModel(provider, model);
         ValidateProviderKind(provider, model);
         ValidateProviderTransport(provider, model);
@@ -270,7 +281,8 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
@@ -280,13 +292,14 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                     provider,
                     model,
                     allowBackgroundResponses)
-                .AsAIAgent(options: options),
+                .AsAIAgent(options: options, loggerFactory: loggerFactory),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             _ => throw new MafProviderConfigurationException(
                 provider,
                 model,
@@ -315,6 +328,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
             options: new OpenAIClientOptions
             {
                 Endpoint = ResolveAzureOpenAiEndpoint(provider, model),
+                RetryPolicy = new MafNativeRequestRetryPolicy(),
                 NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
             });
 
@@ -324,7 +338,8 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
@@ -334,13 +349,14 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                     provider,
                     model,
                     allowBackgroundResponses)
-                .AsAIAgent(options: options),
+                .AsAIAgent(options: options, loggerFactory: loggerFactory),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses),
+                    loggerFactory: loggerFactory),
             _ => throw new MafProviderConfigurationException(
                 provider,
                 model,
@@ -378,7 +394,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 string.Empty),
             ResolveDefaultOllamaThinkingValue(provider, model, options.ChatOptions));
         return AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses)
-            .AsAIAgent(options: options);
+            .AsAIAgent(options: options, loggerFactory: loggerFactory);
     }
 
     private static object? ResolveDefaultOllamaThinkingValue(
@@ -421,13 +437,14 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
                 $"Provider '{provider.Name}' model '{model}' already contains empty-completion recovery.");
         }
 
+        chatClient = new ProviderHistoryChatClient(chatClient, provider, model, history, clock);
         var logger = loggerFactory.CreateLogger<EmptyCompletionRetryChatClient>();
-        return new EmptyCompletionRetryChatClient(
+        return new MafToolAdmissionChatClient(new EmptyCompletionRetryChatClient(
             chatClient,
             provider,
             model,
             allowBackgroundResponses,
-            logger);
+            logger));
     }
 
     private IChatClient AddProviderTransportBoundary(
@@ -473,7 +490,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
             logger);
     }
 
-    private static OpenAIClientOptions CreateOpenAiClientOptions(
+    private OpenAIClientOptions CreateOpenAiClientOptions(
         ProviderProfile provider,
         string model)
     {
@@ -481,11 +498,17 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 
         var options = new OpenAIClientOptions
         {
+            RetryPolicy = new MafNativeRequestRetryPolicy(),
             NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
         };
         if (!MafProviderRuntimeSettings.ShouldUseDefaultOpenAiEndpoint(provider.BaseUrl))
         {
             options.Endpoint = ResolveProviderEndpoint(provider, model);
+        }
+
+        if (httpClientSelector?.TryGetClient(provider, out var httpClient) == true)
+        {
+            options.Transport = new HttpClientPipelineTransport(httpClient);
         }
 
         return options;
@@ -559,6 +582,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
     {
         if (!string.IsNullOrWhiteSpace(model))
         {
+            ProviderModelSelectionPolicy.EnsureAllowed(provider, model);
             return;
         }
 
@@ -566,6 +590,21 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
             provider,
             string.Empty,
             MafProviderConfigurationFailureReason.InvalidModel);
+    }
+
+    private static void ValidateProviderAvailability(
+        ProviderProfile provider,
+        string model)
+    {
+        if (provider.IsEnabled)
+        {
+            return;
+        }
+
+        throw new MafProviderConfigurationException(
+            provider,
+            model,
+            MafProviderConfigurationFailureReason.ProviderUnavailable);
     }
 
     private static void ValidateProviderKind(

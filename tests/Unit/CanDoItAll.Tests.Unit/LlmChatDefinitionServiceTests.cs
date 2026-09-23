@@ -217,7 +217,7 @@ public sealed class LlmChatDefinitionServiceTests
     private static LlmChatDefinitionApplicationService CreateService(
         InMemoryLlmChatDefinitionRepository repository,
         StubLlmChatProviderResolver resolver)
-        => new(repository, repository, new InlineLlmChatUnitOfWork(), resolver, new FixedTimeProvider(Now));
+        => new(repository, repository, new InlineLlmChatUnitOfWork(), resolver, new FixedTimeProvider(Now), repository);
 
     internal static async Task<LlmChatDefinitionDetails> CreateDefinitionAsync(
         LlmChatDefinitionApplicationService service)

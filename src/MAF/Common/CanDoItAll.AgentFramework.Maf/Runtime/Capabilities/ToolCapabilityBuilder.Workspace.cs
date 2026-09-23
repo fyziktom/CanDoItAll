@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using AccessCapabilityTag = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityTag;
@@ -11,9 +12,9 @@ internal sealed class WorkspaceToolSet(
     WorkspaceFilesystemRuntimePlugin filesystemPlugin,
     WorkspaceRuntimePlugin workspacePlugin,
     WorkspaceSpreadsheetRuntimePlugin spreadsheetPlugin,
-    StorageRuntimePlugin? storagePlugin,
     RuntimeCapabilityAccessPlan capabilityAccessPlan)
 {
+    private const string MetadataOwnerKey = "configured-workspace-tools";
     private const string SpreadsheetWriteDescription = "Creates or updates a workspace .xlsx workbook and worksheet using typed cell and range writes. Cell values may be strings, numbers, booleans, or null; null writes a blank cell. Each rangeWrites values row must fit within the columns of its rangeAddress, and the number of values rows must fit within that range. String values beginning with = are stored as formulas. Creates missing workbooks and worksheets when requested.";
 
     private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
@@ -24,26 +25,29 @@ internal sealed class WorkspaceToolSet(
     {
         ArgumentNullException.ThrowIfNull(catalogCapabilities);
 
-        var access = workspaceToolAccess;
         var tools = CreateWorkspaceTools(
             catalogCapabilities,
             includeConfiguredTools: true,
             suppressApprovalRequirements);
 
-        if (storagePlugin is not null && (access.CanReadStorage || access.CanWriteStorage))
-        {
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageCatalogList, () => AIFunctionFactory.Create(storagePlugin.ListStorageCatalogs, ToolContractCatalog.StorageCatalogList, "Lists storage catalogs this agent is allowed to use."));
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageBrowse, () => AIFunctionFactory.Create(storagePlugin.BrowseStorage, ToolContractCatalog.StorageBrowse, "Lists one bounded page of direct child folders and objects in an allowed storage catalog. Use entryId as the read locator and a container entry id as containerKey to descend. When nextCursor is returned, pass it in the next call while repeating the same storageId, containerKey, pageSize, and includeMetadata values."));
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageReadTextFile, () => AIFunctionFactory.Create(storagePlugin.ReadStorageTextFile, ToolContractCatalog.StorageReadTextFile, "Reads a text object from an allowed storage catalog through the configured storage driver."));
-        }
-
-        if (storagePlugin is not null && access.CanWriteStorage)
-        {
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageWriteTextFile, () => WrapWithApproval(AIFunctionFactory.Create(storagePlugin.WriteStorageTextFile, ToolContractCatalog.StorageWriteTextFile, "Writes a text object to an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
-            AddConfiguredToolIfAllowed(tools, ToolContractCatalog.StorageDeleteObject, () => WrapWithApproval(AIFunctionFactory.Create(storagePlugin.DeleteStorageObject, ToolContractCatalog.StorageDeleteObject, "Deletes an object from an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
-        }
-
         return tools;
+    }
+
+    internal static IReadOnlyList<AgentRuntimeToolMetadata> CreateRecoveryMetadata(IReadOnlyList<AITool> tools)
+        => tools.Where(tool => tool.Name is ToolContractCatalog.WorkspaceAnalyzeImage or ToolContractCatalog.WorkspaceAnalyzeImages)
+            .Select(tool => new AgentRuntimeToolMetadata(MetadataOwnerKey, tool.Name,
+                AgentRuntimeToolOperationKind.Read, tool is ApprovalRequiredAIFunction, ["workspace"]) {
+                RecoveryPolicy = AgentRuntimeToolRecoveryPolicy.ReconcileBeforeRetry
+            }).ToArray();
+
+    internal static AgentRuntimeToolMetadata CreateResultMetadata(AIFunction function, AgentToolPolicyCatalog policies) {
+        var operation = policies.Classify(function.Name) switch {
+            ToolInvocationClassification.Read => AgentRuntimeToolOperationKind.Read,
+            ToolInvocationClassification.Mutation => AgentRuntimeToolOperationKind.Mutation,
+            ToolInvocationClassification.Validation => AgentRuntimeToolOperationKind.Validation,
+            _ => throw new InvalidOperationException("The configured workspace tool has no owned invocation classification.")
+        };
+        return new(MetadataOwnerKey, function.Name, operation, function is ApprovalRequiredAIFunction, ["workspace"]);
     }
 
     public bool TryCreateCatalogCapabilityTools(
@@ -165,9 +169,9 @@ internal sealed class WorkspaceToolSet(
         =>
         [
             new(ToolContractCatalog.WorkspaceExecutionBoundary, description => AIFunctionFactory.Create(workspacePlugin.GetWorkspaceExecutionBoundary, ToolContractCatalog.WorkspaceExecutionBoundary, description), "Describes the effective tool-execution boundary and whether the host provides real sandboxing."),
-                new(ToolContractCatalog.WorkspaceListDirectory, description => AIFunctionFactory.Create(filesystemPlugin.ListWorkspaceDirectory, ToolContractCatalog.WorkspaceListDirectory, description), "Lists direct child files and directories from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt. Use this before recursive browsing when the folder shape is unknown."),
-                new(ToolContractCatalog.WorkspaceListFiles, description => AIFunctionFactory.Create(filesystemPlugin.ListWorkspaceFiles, ToolContractCatalog.WorkspaceListFiles, description), "Lists files and directories from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt. searchPattern uses glob syntax, not regex; examples: *quote*.pdf and **/*.pdf. For project-structure assets, prefer project_structure_read and project_structure_asset_content_get before browsing."),
-                new(ToolContractCatalog.WorkspaceSearch, description => AIFunctionFactory.Create(filesystemPlugin.SearchWorkspace, ToolContractCatalog.WorkspaceSearch, description), "Searches text across the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt. Use project-structure tools for project asset discovery; this is text search, not binary media discovery."),
+                new(ToolContractCatalog.WorkspaceListDirectory, description => WorkspaceToolResultDisclosure.CreateCollectionTool(filesystemPlugin.ListWorkspaceDirectory, ToolContractCatalog.WorkspaceListDirectory, description), "Lists direct child files and directories from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt. Use this before recursive browsing when the folder shape is unknown."),
+                new(ToolContractCatalog.WorkspaceListFiles, description => WorkspaceToolResultDisclosure.CreateCollectionTool(filesystemPlugin.ListWorkspaceFiles, ToolContractCatalog.WorkspaceListFiles, description), "Lists files and directories from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt. searchPattern uses glob syntax, not regex; examples: *quote*.pdf and **/*.pdf. For project-structure assets, prefer project_structure_read and project_structure_asset_content_get before browsing."),
+                new(ToolContractCatalog.WorkspaceSearch, description => WorkspaceToolResultDisclosure.CreateCollectionTool(filesystemPlugin.SearchWorkspace, ToolContractCatalog.WorkspaceSearch, description), "Searches text across the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt. Use project-structure tools for project asset discovery; this is text search, not binary media discovery."),
                 new(ToolContractCatalog.WorkspaceReadFile, description => AIFunctionFactory.Create(filesystemPlugin.ReadWorkspaceTextFile, ToolContractCatalog.WorkspaceReadFile, description), "Reads text files from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt."),
                 new(ToolContractCatalog.WorkspaceStatPath, description => AIFunctionFactory.Create(filesystemPlugin.StatWorkspacePath, ToolContractCatalog.WorkspaceStatPath, description), "Returns file or directory metadata for a managed workspace path, configured external workspace root, or prompt-grounded absolute external path."),
                 new(ToolContractCatalog.WorkspaceHashPath, description => AIFunctionFactory.Create(filesystemPlugin.HashWorkspacePath, ToolContractCatalog.WorkspaceHashPath, description), "Computes a bounded SHA-256 hash for an allowed file or directory manifest."),

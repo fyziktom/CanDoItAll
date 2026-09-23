@@ -6,6 +6,7 @@ public static class AgentWorkspaceTabs
     public const string Agents = "agents";
     public const string SimpleChats = "simple-chats";
     public const string Providers = "providers";
+    public const string RequestHistory = "request-history";
     public const string Voice = "voice";
     public const string FloatingChat = "floating-chat";
     public const string Chat = "chat";
@@ -19,6 +20,7 @@ public static class AgentWorkspaceTabs
         Agents,
         SimpleChats,
         Providers,
+        RequestHistory,
         Voice,
         FloatingChat,
         Chat,

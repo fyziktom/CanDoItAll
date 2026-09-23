@@ -5,9 +5,9 @@ using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Composition;
+using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -50,7 +50,7 @@ public sealed class LlmChatUiCompositionTests
         var authorization = new RecordingAuthorizationService();
         var evaluator = new WebLlmChatUiPolicyEvaluator(
             authorization,
-            new FixedAuthenticationStateProvider(),
+            new FixedInteractiveAccessPrincipalProvider(),
             Options.Create(new ApiAccessOptions
             {
                 Authorization = new() { Enabled = true }
@@ -74,7 +74,7 @@ public sealed class LlmChatUiCompositionTests
         var authorization = new RecordingAuthorizationService();
         var evaluator = new WebLlmChatUiPolicyEvaluator(
             authorization,
-            new FixedAuthenticationStateProvider(),
+            new FixedInteractiveAccessPrincipalProvider(),
             Options.Create(new ApiAccessOptions
             {
                 Authorization = new() { Enabled = false }
@@ -84,12 +84,18 @@ public sealed class LlmChatUiCompositionTests
         Assert.Empty(authorization.Policies);
     }
 
-    private sealed class FixedAuthenticationStateProvider : AuthenticationStateProvider
+    private sealed class FixedInteractiveAccessPrincipalProvider : IInteractiveAccessPrincipalProvider
     {
-        public override Task<AuthenticationState> GetAuthenticationStateAsync()
-            => Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(
+        public bool IsAvailable => true;
+
+        public ValueTask<ClaimsPrincipal> GetCurrentAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new ClaimsPrincipal(new ClaimsIdentity(
                 [new Claim(ClaimTypes.NameIdentifier, "test-user")],
-                "test"))));
+                "test")));
+        }
     }
 
     private sealed class RecordingAuthorizationService : IAuthorizationService

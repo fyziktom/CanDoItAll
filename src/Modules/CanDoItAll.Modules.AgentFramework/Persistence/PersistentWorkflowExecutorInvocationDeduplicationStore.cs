@@ -16,11 +16,11 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
     internal const string DataProtectionPurpose =
         "CanDoItAll.Modules.AgentFramework.WorkflowExecutorInvocationResult.v1";
     private const int MaximumClaimContentionRetries = 5;
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly IDbContextFactory<WorkflowDbContext> dbContextFactory;
     private readonly IDataProtector resultProtector;
 
     public PersistentWorkflowExecutorInvocationDeduplicationStore(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDbContextFactory<WorkflowDbContext> dbContextFactory,
         IDataProtectionProvider dataProtectionProvider)
     {
         this.dbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
@@ -506,7 +506,7 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
     }
 
     private async Task<WorkflowExecutorInvocationMutationResult> MutateInMemoryAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExecutorInvocationKey key,
         WorkflowExecutorInputHash? expectedInputHash,
         WorkflowExecutorInvocationConcurrencyVersion expectedVersion,
@@ -625,7 +625,7 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
     }
 
     private static async Task<WorkflowExecutorInvocationRecordEntity?> FindByScopeAsync(
-        AppDbContext dbContext,
+        WorkflowDbContext dbContext,
         WorkflowExecutorInvocationScopeKey scopeKey,
         CancellationToken cancellationToken)
         => await dbContext.Set<WorkflowExecutorInvocationRecordEntity>()

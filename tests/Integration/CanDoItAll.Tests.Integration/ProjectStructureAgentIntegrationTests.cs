@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Net;
-using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -157,12 +156,13 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
-    public async Task LeaseService_RunWithProjectMutationLeaseAsync_waits_once_for_near_expiry_competing_lease()
-    {
+    public async Task LeaseService_RunWithProjectMutationLeaseAsync_does_not_run_callback_before_competing_lease_expires() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        DateTimeOffset leaseExpiresAt;
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Near-expiry lease project");
@@ -170,40 +170,37 @@ public sealed class ProjectStructureAgentIntegrationTests
             new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString("D"), "Competing short mutation", 1),
             DefaultAgent);
 
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
-        {
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync()) {
             var leaseRecord = await dbContext.Set<ProjectStructureLeaseRecord>()
                 .SingleAsync(item => item.LeaseToken == competingLease.LeaseToken);
 
-            var now = DateTimeOffset.UtcNow;
+            var now = clock.GetUtcNow();
+            leaseExpiresAt = now.AddMilliseconds(750);
             leaseRecord.RenewedAtUtc = now;
-            leaseRecord.ExpiresAtUtc = now.AddMilliseconds(750);
+            leaseRecord.ExpiresAtUtc = leaseExpiresAt;
             await dbContext.SaveChangesAsync();
         }
 
-        var nextAgent = DefaultAgent with
-        {
+        var nextAgent = DefaultAgent with {
             AgentId = "next-agent",
             AgentName = "Next Agent",
             MachineName = "next-machine"
         };
 
-        var elapsed = Stopwatch.StartNew();
-        var result = await leaseService.RunWithProjectMutationLeaseAsync(
+        var callbackAt = await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             null,
             nextAgent,
             "Wait for near-expiry competing mutation",
-            _ => Task.FromResult("ok"));
-        elapsed.Stop();
+            _ => Task.FromResult(clock.GetUtcNow()));
 
         var activeLease = await leaseService.GetActiveLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
             projectId.ToString("D"),
             CancellationToken.None);
 
-        Assert.Equal("ok", result);
-        Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(500));
+        Assert.True(callbackAt >= leaseExpiresAt,
+            $"Mutation ran at {callbackAt:O}, before the competing lease expired at {leaseExpiresAt:O}.");
         Assert.Null(activeLease);
     }
 
@@ -729,6 +726,8 @@ public sealed class ProjectStructureAgentIntegrationTests
                 null,
                 "delivery"));
 
+        var authority = await scope.ServiceProvider.GetRequiredService<IProcessLaunchOperatorAuthoritySource>()
+            .CaptureUserInterfaceAsync(projectId);
         var result = await launchService.LaunchAsync(
             new ProcessLaunchRequest(
                 DefinitionKey: "software-delivery",
@@ -743,7 +742,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                     ["OutputRoot"] = productRoot
                 },
                 RunReadiness: false,
-                Execute: false));
+                Execute: false) { Authority = authority, ProjectAdmission = authority.ProjectAdmission });
 
         Assert.True(result.RunId.HasValue);
         var runId = result.RunId.Value;
@@ -814,7 +813,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         FileToolsStorageBinding outputBinding = Assert.Single(
             await nodeStorageBindingSource.ResolveAsync(outputScope));
         Assert.Equal(
-            WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
+            WorkspaceScopeDescriptor.Organization(authority.DatabaseProfileId.ToString("N"))
                 .CombineArtifactPath("process-runs", runId.Value.ToString("D")),
             outputBinding.Root.Value);
         var summaryNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(runId.Value), StringComparison.Ordinal));
@@ -857,7 +856,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             runtimeTools,
             tool => string.Equals(
                 tool.Name,
-                AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze,
+                ProjectStructureToolPolicy.ProjectStructureAssetImageAnalyze,
                 StringComparison.Ordinal)));
         object? analysisResult = await analyzeImage.InvokeAsync(new AIFunctionArguments
         {

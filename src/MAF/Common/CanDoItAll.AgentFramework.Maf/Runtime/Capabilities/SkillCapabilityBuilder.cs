@@ -123,7 +123,8 @@ internal sealed class SkillCapabilityBuilder(
         return resolved;
     }
 
-    public IReadOnlyList<AgentSkill> ResolveInlineSkills(IReadOnlyList<CapabilityCatalogItem> capabilities)
+    public IReadOnlyList<AgentSkill> ResolveInlineSkills(IReadOnlyList<CapabilityCatalogItem> capabilities,
+        Func<AgentSkill, CapabilityCatalogItem, AgentSkill>? decorate = null)
     {
         var resolved = new List<AgentSkill>();
 
@@ -151,13 +152,14 @@ internal sealed class SkillCapabilityBuilder(
                 skill.AddResource(resource.Name, resource.Content, resource.Description);
             }
 
-            resolved.Add(skill);
+            resolved.Add(decorate is null ? skill : decorate(skill, capability));
         }
 
         return resolved;
     }
 
-    public IReadOnlyList<AgentSkill> ResolveRegisteredSkills(IReadOnlyList<CapabilityCatalogItem> capabilities)
+    public IReadOnlyList<AgentSkill> ResolveRegisteredSkills(IReadOnlyList<CapabilityCatalogItem> capabilities,
+        Func<AgentSkill, CapabilityCatalogItem, AgentSkill>? decorate = null)
     {
         var resolved = new List<AgentSkill>();
 
@@ -214,13 +216,13 @@ internal sealed class SkillCapabilityBuilder(
 
             if (service is AgentSkill singleSkill)
             {
-                resolved.Add(singleSkill);
+                resolved.Add(decorate is null ? singleSkill : decorate(singleSkill, capability));
                 continue;
             }
 
             if (service is IEnumerable<AgentSkill> skillCollection)
             {
-                resolved.AddRange(skillCollection);
+                resolved.AddRange(decorate is null ? skillCollection : skillCollection.Select(skill => decorate(skill, capability)));
                 continue;
             }
 

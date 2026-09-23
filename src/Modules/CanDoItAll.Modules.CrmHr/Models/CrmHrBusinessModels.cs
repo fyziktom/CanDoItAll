@@ -4,194 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.CrmHr;
 
-public enum InteractionType
-{
-    Meeting,
-    Call,
-    Email,
-    Message,
-    Note
-}
-
-public enum InteractionPartyRole
-{
-    Author,
-    Account,
-    Contact,
-    Attendee,
-    Recipient,
-    Stakeholder
-}
-
-public enum CrmAccountRelationshipStage
-{
-    Prospect,
-    ActiveCustomer,
-    DormantCustomer,
-    LostCustomer
-}
-
-public enum CrmAccountConnectionRole
-{
-    PrimaryContact,
-    Stakeholder,
-    BillingContact,
-    ContractContact,
-    AccountManager,
-    DeliveryLead,
-    Sponsor,
-    TechnicalContact
-}
-
-public enum OpportunityStage
-{
-    Identified,
-    Qualified,
-    Proposal,
-    Negotiation,
-    Won,
-    Lost
-}
-
-public enum OpportunitySource
-{
-    Direct,
-    Partner,
-    Renewal,
-    Upsell
-}
-
-public enum OpportunityPartyRole
-{
-    Customer,
-    Partner,
-    Sponsor,
-    TechnicalContact,
-    BillingContact,
-    DeliveryLead,
-    Stakeholder
-}
-
-public enum WorkforceKind
-{
-    Employee,
-    Contractor,
-    Freelancer,
-    DeliveryUnit
-}
-
-public enum SkillProficiencyLevel
-{
-    Basic,
-    Working,
-    Strong,
-    Expert
-}
-
-public enum CapacityBlockKind
-{
-    Leave,
-    Unavailable,
-    Reserve,
-    Tentative
-}
-
-public enum StaffingRequestStatus
-{
-    Draft,
-    Open,
-    Proposed,
-    Confirmed,
-    Closed,
-    Cancelled
-}
-
-public enum RecruitmentStage
-{
-    Applied,
-    Screening,
-    Interviewing,
-    Offer,
-    Hired,
-    Rejected,
-    Withdrawn
-}
-
-public enum RecruitmentDecision
-{
-    Pending,
-    Approved,
-    Rejected,
-    Withdrawn
-}
-
-public enum RecruitmentInterviewType
-{
-    Screening,
-    Technical,
-    Manager,
-    Panel,
-    Culture
-}
-
-public enum RecruitmentInterviewOutcome
-{
-    Pending,
-    StrongYes,
-    Yes,
-    Mixed,
-    No,
-    StrongNo
-}
-
-public enum LifecycleTaskKind
-{
-    Onboarding,
-    Offboarding,
-    Training
-}
-
-public enum LifecycleTaskStatus
-{
-    NotStarted,
-    InProgress,
-    Completed,
-    Cancelled
-}
-
-public enum AiExecutionMode
-{
-    Local,
-    Remote,
-    ThirdParty
-}
-
-public enum AiValidationStatus
-{
-    Draft,
-    ReviewRequired,
-    Approved,
-    Suspended
-}
-
-public enum ProjectPartyAssignmentKind
-{
-    Customer,
-    CustomerContact,
-    DeliveryUnit,
-    TeamMember,
-    Manager,
-    Partner,
-    Vendor,
-    Stakeholder,
-    MeetingParticipant,
-    WorkItemAssignee,
-    Reviewer,
-    AiAgent,
-    BillingContact,
-    TechnicalContact
-}
-
 public sealed class InteractionRecord
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -355,6 +167,7 @@ public sealed class StaffingRequest
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid? ProjectId { get; set; }
+    public Guid? ProjectLifetimeId { get; set; }
     public Guid? RequestedByPartyId { get; set; }
     public Guid? DeliveryUnitPartyId { get; set; }
     public string Title { get; set; } = string.Empty;
@@ -428,6 +241,7 @@ public sealed class ProjectPartyAssignment
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
+    public Guid? ProjectLifetimeId { get; set; }
     public Guid PartyId { get; set; }
     public Guid? PartyOrganizationAffiliationId { get; set; }
     public ProjectPartyAssignmentKind AssignmentKind { get; set; }
@@ -446,6 +260,9 @@ public sealed class ProjectPartyAssignmentMoveReceipt
 {
     public Guid OperationId { get; set; }
     public Guid SourceProjectId { get; set; }
+    public Guid? DatabaseProfileId { get; set; }
+    public Guid? SourceProjectLifetimeId { get; set; }
+    public Guid? TargetProjectLifetimeId { get; set; }
     public Guid TargetProjectId { get; set; }
     public string NodeSetFingerprint { get; set; } = string.Empty;
     public DateTimeOffset CompletedAtUtc { get; set; }
@@ -654,7 +471,13 @@ internal sealed class StaffingRequestConfiguration : IEntityTypeConfiguration<St
 {
     public void Configure(EntityTypeBuilder<StaffingRequest> builder)
     {
-        builder.ToTable("CrmHr_StaffingRequests");
+        builder.ToTable("CrmHr_StaffingRequests", table => table.HasCheckConstraint(
+            "CK_CrmHr_StaffingRequests_ProjectLifetime", """
+            "ProjectLifetimeId" IS NULL OR (
+                "ProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "ProjectId" IS NOT NULL
+                AND "ProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+            """));
         builder.HasKey(request => request.Id);
         builder.Property(request => request.Title).HasMaxLength(200).IsRequired();
         builder.Property(request => request.NeededRole).HasMaxLength(160);
@@ -730,7 +553,14 @@ internal sealed class ProjectPartyAssignmentConfiguration : IEntityTypeConfigura
 {
     public void Configure(EntityTypeBuilder<ProjectPartyAssignment> builder)
     {
-        builder.ToTable("CrmHr_ProjectPartyAssignments");
+        builder.ToTable("CrmHr_ProjectPartyAssignments", table => {
+            table.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ParticipationRole", "\"AssignmentKind\" <> 'WorkItemAssignee'");
+            table.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ProjectLifetime", """
+                "ProjectLifetimeId" IS NULL OR (
+                    "ProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                    AND "ProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+                """);
+        });
         builder.HasKey(assignment => assignment.Id);
         builder.Property(assignment => assignment.AssignmentKind).HasConversion<string>().HasMaxLength(48);
         builder.Property(assignment => assignment.NodeKey).HasMaxLength(160);
@@ -755,7 +585,16 @@ internal sealed class ProjectPartyAssignmentMoveReceiptConfiguration
 {
     public void Configure(EntityTypeBuilder<ProjectPartyAssignmentMoveReceipt> builder)
     {
-        builder.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts");
+        builder.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts", table => table.HasCheckConstraint(
+            "CK_CrmHr_ProjectPartyAssignmentMoveReceipts_Lifetimes", """
+            ("DatabaseProfileId" IS NULL AND "SourceProjectLifetimeId" IS NULL AND "TargetProjectLifetimeId" IS NULL)
+            OR ("DatabaseProfileId" IS NOT NULL AND "SourceProjectLifetimeId" IS NOT NULL AND "TargetProjectLifetimeId" IS NOT NULL
+                AND "DatabaseProfileId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "SourceProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "TargetProjectLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "SourceProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "TargetProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+            """));
         builder.HasKey(receipt => receipt.OperationId);
         builder.Property(receipt => receipt.NodeSetFingerprint)
             .HasMaxLength(64)

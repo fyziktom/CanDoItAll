@@ -149,7 +149,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
             BuildAttachments(request.Attachments),
             ResolveModelParameterConfiguration(request.Settings),
             request.Settings?.Temperature,
-            BuildResponseFormat(request.ResponseFormat));
+            BuildResponseFormat(request.ResponseFormat)) { History = request.History };
 
     private async ValueTask<IProviderRuntimeHandle> GetRuntimeHandleAsync(
         ProviderProfile provider,

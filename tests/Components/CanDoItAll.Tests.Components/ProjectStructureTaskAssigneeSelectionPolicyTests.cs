@@ -102,6 +102,27 @@ public sealed class ProjectStructureTaskAssigneeSelectionPolicyTests
         Assert.False(result.CanChangeDirectAssignee);
     }
 
+    [Fact]
+    public void Missing_catalog_option_is_reconstructed_from_the_current_representative()
+    {
+        var assignment = CreateAssignment(
+            TaskNodeId,
+            ProjectPartyType.Person,
+            isPrimary: true);
+        var resolution = ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
+            [assignment],
+            TaskNodeId);
+
+        var options = ProjectStructureTaskAssigneeSelectionPolicy
+            .IncludeRepresentativeOption([], resolution);
+
+        var option = Assert.Single(options);
+        Assert.Equal(ProjectStructureTaskResourceKind.Person, option.Kind);
+        Assert.Equal(assignment.PartyId, option.ResourceId);
+        Assert.Equal(assignment.PartyDisplayName, option.DisplayName);
+        Assert.Equal(assignment.PartyTypeLabel, option.TypeLabel);
+    }
+
     private static ProjectPartyAssignmentDetail CreateAssignment(
         string nodeKey,
         ProjectPartyType partyType,

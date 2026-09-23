@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -44,11 +45,17 @@ public static class MafProviderRuntimeServiceCollectionExtensions
             serviceProvider => serviceProvider.GetRequiredService<IProviderRuntimeDescriptorStore>());
         services.TryAddSingleton<IProviderDriverCredentialResolver, MafProviderDriverCredentialResolver>();
         services.TryAddSingleton<MafProviderDriverHttpClientPool>();
+        services.TryAddSingleton<IProviderHistorySecrets, ProviderHistorySecrets>();
+        services.TryAddSingleton<IProviderHistoryRecorder, MissingProviderHistoryRecorder>();
         services.TryAddSingleton<IAgentProviderFactory>(serviceProvider =>
         {
-            return CreateDefaultProviderFactory(
+            return new HistoryProviderDriverFactory(CreateDefaultProviderFactory(
                 serviceProvider.GetRequiredService<MafProviderDriverHttpClientPool>(),
-                serviceProvider.GetRequiredService<IProviderDriverCredentialResolver>());
+                serviceProvider.GetRequiredService<IProviderDriverCredentialResolver>(),
+                serviceProvider.GetService<IProviderHttpClientSelector>(),
+                serviceProvider.GetService<IProviderInferenceRelayTransport>()),
+                serviceProvider.GetRequiredService<IProviderHistoryRecorder>(),
+                serviceProvider.GetRequiredService<TimeProvider>());
         });
         services.TryAddSingleton<IProviderDispatchLaneGate, ProviderDispatchLaneGate>();
         services.TryAddSingleton<IMafProviderStreamingDispatchGate, MafProviderStreamingDispatchGate>();
@@ -65,12 +72,18 @@ public static class MafProviderRuntimeServiceCollectionExtensions
 
     private static IAgentProviderFactory CreateDefaultProviderFactory(
         MafProviderDriverHttpClientPool httpClients,
-        IProviderDriverCredentialResolver credentialResolver)
+        IProviderDriverCredentialResolver credentialResolver,
+        IProviderHttpClientSelector? httpClientSelector,
+        IProviderInferenceRelayTransport? inferenceRelayTransport)
     {
         return new AgentProviderDriverRegistryBuilder()
-            .AddOpenAiProviderDriver(httpClients.OpenAi, credentialResolver)
+            .AddOpenAiProviderDriver(
+                httpClients.OpenAi,
+                credentialResolver,
+                httpClientSelector,
+                inferenceRelayTransport)
             .AddAzureOpenAiProviderDriver(httpClients.AzureOpenAi, credentialResolver)
-            .AddOllamaProviderDriver(httpClients.Ollama)
+            .AddOllamaProviderDriver(httpClients.Ollama, inferenceRelayTransport)
             .AddComfyUiProviderDriver(httpClients.ComfyUi)
             .Build();
     }
@@ -130,7 +143,7 @@ internal sealed class MafProviderRuntimeGateway(
                 ? "You are validating a provider profile. Reply clearly and directly to the user's request."
                 : request.SystemPrompt.Trim(),
             request.Messages ?? [],
-            request.Prompt);
+            request.Prompt) { History = request.History };
         var result = await handle.DispatchAsync(
             new ProviderRuntimeDispatchRequest<ProviderChatCompletionRequest>(query, payload),
             async (context, token) =>
@@ -186,7 +199,7 @@ internal sealed class MafProviderRuntimeGateway(
             request.Messages ?? [],
             request.Prompt,
             attachments,
-            modelParameterConfigurationJson);
+            modelParameterConfigurationJson) { History = request.History };
         var result = await handle.DispatchAsync(
             new ProviderRuntimeDispatchRequest<ProviderChatCompletionRequest>(query, payload),
             async (context, token) =>

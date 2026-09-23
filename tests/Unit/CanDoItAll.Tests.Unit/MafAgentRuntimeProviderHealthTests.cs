@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
@@ -83,6 +84,32 @@ public sealed class MafAgentRuntimeProviderHealthTests
         Assert.Equal(1, gateway.HealthCalls);
         Assert.Equal(1, gateway.ChatCalls);
         Assert.Equal(1, gateway.MaintenanceCalls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MafProviderRuntimeGateway_preserves_trusted_history_context(bool vision) {
+        var descriptors = new ProviderProfileRuntimeDescriptorStore();
+        var driver = new ConcurrentChatDriver();
+        var factory = new AgentProviderDriverRegistryBuilder().AddDriver(driver).Build();
+        await using var pool = new ProviderRuntimePool(descriptors, new ProviderRuntimeHandleFactory(factory));
+        var gateway = new MafProviderRuntimeGateway(descriptors, pool);
+        var provider = CreateProvider(ProviderKind.OpenAi, "gpt-test");
+        var request = new ProviderTestChatRequest("gpt-test", "prior", [], "current") {
+            History = HistoryInvocationContext.Create(
+                caller: new(HistoryAuthenticationKind.ManagedCredential, new(Guid.NewGuid())),
+                currentTurn: new("current", 0))
+        };
+        if (vision) {
+            await gateway.RunProviderImageChatAsync(provider, request, "gpt-test",
+                [new("image.png", "image/png", [1])]);
+        } else {
+            await gateway.RunProviderTestChatAsync(provider, request, "gpt-test");
+        }
+        Assert.Same(request.History, driver.History);
+        var serialized = System.Text.Json.JsonSerializer.Serialize(request);
+        Assert.DoesNotContain("History", serialized, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -336,9 +363,13 @@ public sealed class MafAgentRuntimeProviderHealthTests
         public IReadOnlySet<AgentProviderCapabilityKind> Capabilities => SupportedCapabilities;
 
         public int MaxObservedInFlight => Volatile.Read(ref maxObservedInFlight);
+        public HistoryInvocationContext? History { get; private set; }
 
         public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query)
         {
+            if (expectedConcurrentRequests == 1) {
+                return ProviderDispatchLimits.Unbatched();
+            }
             return ProviderDispatchLimits.Batched(
                 maxBatchSize: expectedConcurrentRequests,
                 maxInFlightBatches: 1,
@@ -358,6 +389,7 @@ public sealed class MafAgentRuntimeProviderHealthTests
             ProviderChatCompletionRequest request,
             CancellationToken cancellationToken = default)
         {
+            History = request.History;
             var current = Interlocked.Increment(ref inFlight);
             TrackMaxObservedInFlight(current);
             try

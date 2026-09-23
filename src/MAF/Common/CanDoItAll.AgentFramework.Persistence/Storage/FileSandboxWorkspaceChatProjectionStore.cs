@@ -542,8 +542,8 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
     public async Task PersistExistingRunUpdateAsync(
         ExistingExecutionRunPersistencePlan persistencePlan,
         ExistingExecutionRunChatProjectionPlan chatProjectionPlan,
-        CancellationToken cancellationToken)
-    {
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(persistencePlan);
         ArgumentNullException.ThrowIfNull(chatProjectionPlan);
         ArgumentNullException.ThrowIfNull(chatProjectionPlan.PreviousIndex);
@@ -588,10 +588,18 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
                 $"Pending execution-run update '{persistencePlan.TargetDetail.Run.Id:N}' found an unexpected chat index.");
         }
 
-        await jsonStore.WriteJsonIfChangedAsync(
-            layout.ExecutionChatIndexPath,
-            chatProjectionPlan.TargetIndex,
-            cancellationToken);
+        if (origin == ExistingRunDetailCommitOrigin.Prepared &&
+            jsonStore.RequiresSave(currentChatIndex, chatProjectionPlan.TargetIndex)) {
+            await jsonStore.WriteJsonAtomicallyAsync(
+                layout.ExecutionChatIndexPath,
+                chatProjectionPlan.TargetIndex,
+                cancellationToken);
+        } else {
+            await jsonStore.WriteJsonIfChangedAsync(
+                layout.ExecutionChatIndexPath,
+                chatProjectionPlan.TargetIndex,
+                cancellationToken);
+        }
     }
 
     private async Task<ExecutionChatIndex> CreateRunDetailChatIndexAsync(

@@ -39,13 +39,14 @@ public sealed partial class WorkspaceService
             return NewStorage(StorageProviderKind.FileSystem);
         }
 
-        var storage = await storageCatalogService.GetAsync(id.Value, cancellationToken);
-        if (storage is null)
+        var editor = await storageCatalogService.GetEditorAsync(id.Value, cancellationToken);
+        if (editor is null)
         {
             return NewStorage(StorageProviderKind.FileSystem);
         }
 
-        var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+        var storage = editor.Catalog;
+        var configuration = editor.Configuration;
         var rules = await storageCatalogService.ListRulesAsync(cancellationToken);
         return new StorageCatalogEditorModel
         {
@@ -110,7 +111,7 @@ public sealed partial class WorkspaceService
         }
 
         var capabilityMask = ResolveCapabilityMask(model.ProviderKind, model.IsReadOnly);
-        var record = new StorageCatalogRecord
+        var record = new StorageCatalogSaveRequest
         {
             Id = model.Id ?? Guid.NewGuid(),
             Name = model.Name.Trim(),
@@ -126,7 +127,7 @@ public sealed partial class WorkspaceService
             HealthStatus = model.HealthStatus,
             LastTestedAtUtc = model.LastTestedAtUtc,
             LastHealthMessage = model.LastHealthMessage,
-            ConfigJson = StorageJson.SerializeProviderConfiguration(new StorageProviderConfiguration
+            Configuration = new StorageProviderConfiguration
             {
                 GatewayBaseUrl = model.GatewayBaseUrl.Trim(),
                 Port = model.Port,
@@ -135,11 +136,11 @@ public sealed partial class WorkspaceService
                 BasePath = model.BasePath.Trim(),
                 UseSsl = model.UseSsl,
                 UsePassiveMode = model.UsePassiveMode
-            })
+            }
         };
 
         var saved = await storageCatalogService.SaveAsync(record, cancellationToken);
-        await ApplyDefaultPurposesAsync(saved.Id, model.DefaultPurposes, cancellationToken);
+        await storageCatalogService.ApplyDefaultPurposesAsync(saved.Id, model.DefaultPurposes, cancellationToken);
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "storage",
             model.Id.HasValue ? "update" : "create",
@@ -172,7 +173,7 @@ public sealed partial class WorkspaceService
 
     public async Task<StorageCatalogTestResult> TestStorageAsync(StorageCatalogEditorModel model, CancellationToken cancellationToken = default)
     {
-        var record = new StorageCatalogRecord
+        var request = new StorageCatalogSaveRequest
         {
             Id = model.Id ?? Guid.NewGuid(),
             Name = string.IsNullOrWhiteSpace(model.Name) ? $"Storage {model.ProviderKind}" : model.Name.Trim(),
@@ -185,7 +186,7 @@ public sealed partial class WorkspaceService
             IsReadOnly = model.IsReadOnly,
             DisplayOrder = model.DisplayOrder,
             CapabilityMask = ResolveCapabilityMask(model.ProviderKind, model.IsReadOnly),
-            ConfigJson = StorageJson.SerializeProviderConfiguration(new StorageProviderConfiguration
+            Configuration = new StorageProviderConfiguration
             {
                 GatewayBaseUrl = model.GatewayBaseUrl.Trim(),
                 Port = model.Port,
@@ -194,8 +195,10 @@ public sealed partial class WorkspaceService
                 BasePath = model.BasePath.Trim(),
                 UseSsl = model.UseSsl,
                 UsePassiveMode = model.UsePassiveMode
-            })
+            }
         };
+
+        var record = StorageDriverInput.FromDraft(request);
 
         if (!storageDriverRegistry.TryResolve(record.ProviderKind, out var driver))
         {
@@ -216,7 +219,7 @@ public sealed partial class WorkspaceService
 
         if (model.Id.HasValue)
         {
-            await storageCatalogService.SaveAsync(new StorageCatalogRecord
+            await storageCatalogService.SaveAsync(new StorageCatalogSaveRequest
             {
                 Id = model.Id.Value,
                 Name = record.Name,
@@ -232,7 +235,7 @@ public sealed partial class WorkspaceService
                 HealthStatus = result.HealthStatus,
                 LastTestedAtUtc = result.TestedAtUtc,
                 LastHealthMessage = result.Message,
-                ConfigJson = record.ConfigJson
+                Configuration = request.Configuration
             }, cancellationToken);
         }
 
@@ -254,7 +257,7 @@ public sealed partial class WorkspaceService
     }
 
     private async Task<string?> ResolveStorageCredentialAsync(
-        StorageCatalogRecord record,
+        StorageDriverInput record,
         CancellationToken cancellationToken)
     {
         if (record.CredentialSecretId is not { } secretId)
@@ -294,61 +297,6 @@ public sealed partial class WorkspaceService
                     rule?.Reason ?? string.Empty);
             })
             .ToList();
-    }
-
-    private async Task ApplyDefaultPurposesAsync(
-        Guid storageId,
-        IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
-        CancellationToken cancellationToken)
-    {
-        var trackedPurposes = WorkspaceStorageDefaults.TrackedPurposes;
-        var rules = await storageCatalogService.ListRulesAsync(cancellationToken);
-
-        foreach (var purpose in trackedPurposes)
-        {
-            var existing = rules.FirstOrDefault(rule =>
-                rule.ScopeKind == StorageRoutingScopeKind.Workspace &&
-                rule.UsagePurpose == purpose);
-            var selected = defaultPurposes.Contains(purpose);
-
-            if (!selected && existing?.PreferredStorageId != storageId)
-            {
-                continue;
-            }
-
-            if (!selected)
-            {
-                if (existing is null)
-                {
-                    continue;
-                }
-
-                existing.IsEnabled = false;
-                await storageCatalogService.SaveRuleAsync(existing, cancellationToken);
-                continue;
-            }
-
-            var previewRequired = RequiresPreviewCapability(purpose);
-            var rule = existing ?? new StorageRoutingRule();
-            rule.Name = $"{WorkspaceStorageDefaults.DescribePurpose(purpose)} default";
-            rule.IsEnabled = true;
-            rule.Priority = ResolvePriority(purpose);
-            rule.ScopeKind = StorageRoutingScopeKind.Workspace;
-            rule.ProjectId = null;
-            rule.NodeKey = string.Empty;
-            rule.UsagePurpose = purpose;
-            rule.ContentKind = StorageContentKind.Unknown;
-            rule.MimePattern = string.Empty;
-            rule.EditIntent = purpose is StorageUsagePurpose.ProjectAsset or StorageUsagePurpose.PromptExport;
-            rule.PreviewRequired = previewRequired;
-            rule.PublishIntent = purpose is StorageUsagePurpose.ReleasePackage or StorageUsagePurpose.DeploymentMirror;
-            rule.RequiredCapabilities = StorageCapability.Write |
-                (previewRequired ? StorageCapability.InlinePreview : StorageCapability.None);
-            rule.PreferredStorageId = storageId;
-            rule.AlternativeStorageIdsJson = "[]";
-            rule.Reason = BuildRoutingReason(purpose);
-            await storageCatalogService.SaveRuleAsync(rule, cancellationToken);
-        }
     }
 
     private static StorageCatalogEditorModel NewStorage(StorageProviderKind providerKind)
@@ -418,43 +366,4 @@ public sealed partial class WorkspaceService
             ~StorageCapability.BatchFolderUpload;
     }
 
-    private static bool RequiresPreviewCapability(StorageUsagePurpose purpose)
-    {
-        return purpose is StorageUsagePurpose.ProjectAsset or
-            StorageUsagePurpose.PromptAttachment or
-            StorageUsagePurpose.Evidence or
-            StorageUsagePurpose.RecordingMedia;
-    }
-
-    private static int ResolvePriority(StorageUsagePurpose purpose)
-    {
-        return purpose switch
-        {
-            StorageUsagePurpose.ProjectAsset => 100,
-            StorageUsagePurpose.PromptAttachment => 110,
-            StorageUsagePurpose.PromptExport => 120,
-            StorageUsagePurpose.Evidence => 130,
-            StorageUsagePurpose.RecordingMedia => 140,
-            StorageUsagePurpose.SnapshotPackage => 150,
-            StorageUsagePurpose.ReleasePackage => 160,
-            StorageUsagePurpose.DeploymentMirror => 170,
-            _ => 500
-        };
-    }
-
-    private static string BuildRoutingReason(StorageUsagePurpose purpose)
-    {
-        return purpose switch
-        {
-            StorageUsagePurpose.ProjectAsset => "Workspace default for editable project assets.",
-            StorageUsagePurpose.PromptAttachment => "Workspace default for prompt attachments.",
-            StorageUsagePurpose.PromptExport => "Workspace default for generated prompt exports.",
-            StorageUsagePurpose.Evidence => "Workspace default for shareable evidence artifacts.",
-            StorageUsagePurpose.RecordingMedia => "Workspace default for recordings and captured media.",
-            StorageUsagePurpose.SnapshotPackage => "Workspace default for snapshot packages.",
-            StorageUsagePurpose.ReleasePackage => "Workspace default for publish-ready release packages.",
-            StorageUsagePurpose.DeploymentMirror => "Workspace default for deployment mirror targets.",
-            _ => "Workspace default storage route."
-        };
-    }
 }

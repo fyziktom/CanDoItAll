@@ -12,7 +12,17 @@ public sealed record AgentExecutionSourceAuthorityRequest(
     AgentChatContextSourceKind SourceKind,
     AgentChatContextSourceId SourceId,
     WorkspaceScopeDescriptor? ObservedWorkspaceScope,
-    Guid CurrentDatabaseProfileId);
+    Guid CurrentDatabaseProfileId) {
+    public AgentExecutionAuthorityRevalidation? Revalidation { get; init; }
+
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; init; }
+
+    public bool IsCapturedSandboxRevalidation => Revalidation is { } captured &&
+        captured.Source.SourceKind == SourceKind && captured.Source.SourceId == SourceId &&
+        captured.Authority.AgentId == Agent.Id && captured.Authority.DatabaseProfileId == CurrentDatabaseProfileId &&
+        captured.Authority.WorkspaceScope == WorkspaceScopeDescriptor.Sandbox &&
+        ObservedWorkspaceScope == captured.Authority.WorkspaceScope;
+}
 
 /// <summary>
 /// Durable authority decision for one source kind: the canonical workspace
@@ -24,7 +34,9 @@ public sealed record AgentExecutionSourceAuthorityDecision(
     WorkspaceScopeDescriptor WorkspaceScope,
     bool ReadAllowed,
     bool MutationAllowed,
-    string PolicyVersion);
+    string PolicyVersion) {
+    public AgentProjectStructureLifetime? SourceProjectLifetime { get; init; }
+}
 
 public static class AgentExecutionAuthorityPolicyVersions
 {
@@ -46,40 +58,4 @@ public interface IAgentExecutionSourceAuthorityProvider
     ValueTask<AgentExecutionSourceAuthorityDecision> ResolveAsync(
         AgentExecutionSourceAuthorityRequest request,
         CancellationToken cancellationToken = default);
-}
-
-public static class ProjectScopedExecutionAuthority
-{
-    public static AgentExecutionSourceAuthorityDecision Resolve(
-        AgentDefinition agent,
-        Guid projectId,
-        WorkspaceScopeDescriptor? observedScope)
-    {
-        ArgumentNullException.ThrowIfNull(agent);
-        if (projectId == Guid.Empty)
-        {
-            throw new ArgumentException("A project id is required.", nameof(projectId));
-        }
-
-        var canonicalScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
-        if (observedScope is not null && observedScope != canonicalScope)
-        {
-            throw new AgentExecutionAuthorityMismatchException(
-                $"The published workspace scope '{observedScope.DisplayName}' does not match the canonical project scope '{canonicalScope.DisplayName}'.");
-        }
-
-        var summary = ContextualAgentAccessResolver
-            .Resolve([agent], ContextualAgentWorkspaceKind.ProjectStructure, projectId)
-            .FirstOrDefault();
-        if (summary is null || !summary.CanRead)
-        {
-            throw new AgentChatContextAccessDeniedException(agent.Id, default);
-        }
-
-        return new AgentExecutionSourceAuthorityDecision(
-            canonicalScope,
-            ReadAllowed: true,
-            MutationAllowed: summary.CanWrite,
-            AgentExecutionAuthorityPolicyVersions.Canonical);
-    }
 }

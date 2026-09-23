@@ -1,0 +1,232 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "project-structure-note-writeback",
+  "DisplayName": "Project structure note writeback",
+  "Summary": "Reads the project-structure node the process was started from and writes one durable note node back under the process run node.",
+  "ValueStatement": "Proves that a governed process started from project structure can read the selected node through the Workbench owner and write its result back through the same owned tools, without any direct cross-module dependency.",
+  "CustomerName": "Platform validation",
+  "OwnerName": "Delivery governance",
+  "InterfaceContractSummary": "Project structure supplies the selected node and the process-run node context through launch variables; this process returns one note node under the process-run node plus its receipt artifacts.",
+  "GovernanceNotes": "Both steps declare explicit operations and target scope. Only the writeback step may mutate project structure, and only through the owned project-structure runtime tools.",
+  "ChangeSummary": "Adds a minimal two-step process for validating project-structure launch and writeback across module boundaries.",
+  "GovernancePolicySummary": "No step may mutate product files; the writeback step may create exactly one note node through externally controlled project-structure tools.",
+  "ConstitutionRuleSummary": "Typed process artifacts and project-structure receipts are the source of truth for the run result.",
+  "OperatingModeSummary": "Governed live execution started from a project-structure node.",
+  "SimulationReadinessSummary": "Small enough for deterministic projection and for a short live validation run.",
+  "Criticality": "Low",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager"
+  ],
+  "SharedArtifactRefs": [
+    "project-structure-context-brief",
+    "implementation-plan"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Share of completed runs whose note node is present under the process-run node after readback.",
+    "Elapsed time from process start to the note node readback receipt."
+  ],
+  "Risks": [
+    "The process-run node is projection-backed and the write step cannot resolve it; the step must then fall back to the selected node instead of blocking.",
+    "The note node is created twice on retry instead of being reused."
+  ],
+  "TailoringRules": [
+    "Keep the note node a single ProjectBlock with subtype operations; do not create runnable or delivery nodes.",
+    "When the selected node has no children, record that explicitly in the brief instead of inventing content."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "structure-note-writer",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Structure note writer",
+      "Purpose": "Read the selected project-structure node and write the note node for the current process run.",
+      "StaffingIntent": "Manager-capable agent with project-structure read and write access.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 40,
+      "CanvasY": 40
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "read-selected-node",
+      "Title": "Read the selected project-structure node",
+      "Subtitle": "Selected node brief",
+      "Notes": "Read the project structure, locate the node identified by ProjectNodeId, summarize it and its direct children, and resolve the process-run node that will receive the note. No project-structure mutation in this step.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Launch variables ProjectId, ProjectNodeId, ProjectNodeTitle and the process-run node context.",
+      "OutputContractSummary": "Selected node brief with the resolved writeback parent node id.",
+      "EvidenceContractSummary": "Node ids, titles, object types, child count and the project_structure_read receipt.",
+      "DecisionRightsSummary": "The writer may block only when the project or the selected node cannot be read at all.",
+      "ExceptionPolicySummary": "Block on a missing project or selected node; do not block on a projection-backed process-run node.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "structure-note-writer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can read project structure."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "selected-node-brief",
+          "TemplateKey": "project-structure-context-brief",
+          "Title": "Selected node brief",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 90,
+          "AllowedFutureUsageSummary": "Reusable by the writeback step and by later run analysis.",
+          "ValidationRequirementSummary": "Must include the project id, the selected node id and title, its direct children, the resolved writeback parent node id and the exact artifact path steps/read-selected-node.md."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/project-structure-note-writeback/steps/read-selected-node.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/project-structure-note-writeback/steps/read-selected-node.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "write-note-node",
+      "Title": "Write the process note node",
+      "Subtitle": "Project-structure writeback",
+      "Notes": "Create exactly one ProjectBlock (operations) note node under the resolved process-run node, or under the selected node when no process-run node is present, then read it back and write the receipt artifact.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "note-node-create",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_node_create",
+            "Activation": "Always",
+            "Purpose": "AcceptanceProof",
+            "Reason": "The note writeback must create the durable note node through the owned project-structure tool."
+          },
+          {
+            "Key": "note-node-readback",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_read",
+            "Activation": "Always",
+            "Purpose": "AcceptanceProof",
+            "Reason": "The note writeback must read the created node back before completion."
+          }
+        ]
+      },
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Selected node brief and the process-run node context.",
+      "OutputContractSummary": "One ProjectBlock (operations) note node under the resolved parent and its receipt artifact.",
+      "EvidenceContractSummary": "Created node id, parent node id, write and read receipt ids written to steps/write-note-node.md.",
+      "DecisionRightsSummary": "The writer can complete only after the create and readback receipts exist.",
+      "ExceptionPolicySummary": "Block with the exact tool failure when the node cannot be created; never complete with a placeholder node id.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "read-selected-node",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "read-selected-node",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "structure-note-writer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can write project-structure nodes."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "note-node-receipt",
+          "TemplateKey": "implementation-plan",
+          "Title": "Process note node receipt",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 90,
+          "AllowedFutureUsageSummary": "Reusable by later run analysis and by operators verifying the writeback.",
+          "ValidationRequirementSummary": "Must include the project id, the parent node id, the created node id, the node title, the write and read receipt ids, the status and the exact artifact path steps/write-note-node.md."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "selected-node-brief",
+          "SourceStepKey": "read-selected-node"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/project-structure-note-writeback/steps/write-note-node.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/project-structure-note-writeback/steps/write-note-node.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    }
+  ]
+}

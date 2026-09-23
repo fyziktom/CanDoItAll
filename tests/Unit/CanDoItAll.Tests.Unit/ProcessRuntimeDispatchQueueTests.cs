@@ -1772,6 +1772,39 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
+    public void Claim_recovery_does_not_preempt_fresh_terminal_execution_owned_by_live_dispatch()
+    {
+        var observedAtUtc = new DateTimeOffset(2026, 8, 23, 18, 0, 0, TimeSpan.Zero);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            "dispatcher",
+            observedAtUtc.AddMinutes(-1),
+            observedAtUtc.AddMinutes(24));
+        var freshTerminalExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            observedAtUtc.AddSeconds(-6),
+            ExecutionState.Failed,
+            RunOutcome.Failed,
+            candidate.ClaimToken);
+
+        Assert.Null(AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [freshTerminalExecution],
+            candidate,
+            observedAtUtc));
+        Assert.Equal(
+            freshTerminalExecution.Id,
+            AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+                [freshTerminalExecution],
+                candidate,
+                observedAtUtc.AddSeconds(30))?.Id);
+    }
+
+    [Fact]
     public void Claim_recovery_selects_exact_claim_identity_when_another_claim_execution_is_newer()
     {
         var now = new DateTimeOffset(2026, 7, 30, 14, 0, 0, TimeSpan.Zero);

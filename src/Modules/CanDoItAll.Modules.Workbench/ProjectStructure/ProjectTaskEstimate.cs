@@ -1,11 +1,39 @@
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// Unit in which a task's expected effort is entered and displayed. In HTTP request bodies it is a JSON integer:
+/// 0 Hours, 1 ManDays. Inside a node's <c>metadataJson</c> string it appears as the text tokens <c>hours</c> and
+/// <c>manDays</c>. The unit never changes the stored quantity, which is always in hours.
+/// </summary>
 public enum ProjectWorkItemEffortUnit
 {
     Hours,
     ManDays
 }
 
+/// <summary>
+/// Expected effort and expected monetary cost of a canonical project task. Effort is always stored in hours, whatever
+/// unit is selected, and a null amount means unknown, not zero. The task owner validates and normalizes an estimate
+/// before comparing or storing it.
+/// </summary>
+/// <param name="ExpectedEffortHours">
+/// Expected effort in hours, or null when no effort estimate is recorded. A supplied value must be greater than zero.
+/// It stays in hours when <c>expectedEffortUnit</c> is ManDays (one man-day is 8 hours by default), so never send an
+/// unconverted man-day quantity here.
+/// </param>
+/// <param name="ExpectedEffortUnit">
+/// Unit selected for entering and displaying the effort, as a JSON integer: 0 Hours, 1 ManDays. It does not change the
+/// unit of <c>expectedEffortHours</c>.
+/// </param>
+/// <param name="ExpectedCostAmount">
+/// Expected total monetary cost of the task, or null when no cost is recorded. A supplied amount must be from 0
+/// through 1,000,000,000,000,000. It is a total estimate, not a rate.
+/// </param>
+/// <param name="ExpectedCostCurrencyCode">
+/// Currency of <c>expectedCostAmount</c>. When an amount is supplied the code is trimmed and upper-cased and must then
+/// be exactly three ASCII letters, for example <c>EUR</c>; this is a format check, not a lookup in a currency
+/// registry. When the amount is null the owner stores an empty code, so send an empty string in that case.
+/// </param>
 public sealed record ProjectTaskEstimate(
     decimal? ExpectedEffortHours,
     ProjectWorkItemEffortUnit ExpectedEffortUnit,

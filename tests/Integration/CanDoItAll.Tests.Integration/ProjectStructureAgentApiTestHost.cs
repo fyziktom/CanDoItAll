@@ -16,6 +16,8 @@ namespace CanDoItAll.Tests.Integration;
 
 internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
 {
+    private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(30);
+
     private ProjectStructureAgentApiTestHost(
         CanDoItAllTestEnvironment testEnvironment,
         TestDatabaseProfile activeProfile,
@@ -47,7 +49,8 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
     public static async Task<ProjectStructureAgentApiTestHost> CreateAsync(
         string testEnvironmentKey,
         Func<CanDoItAllTestEnvironment, TestDatabaseProfile> profileFactory,
-        Action<IServiceCollection>? configureServices = null)
+        Action<IServiceCollection>? configureServices = null,
+        TimeSpan? requestTimeout = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(testEnvironmentKey);
         ArgumentNullException.ThrowIfNull(profileFactory);
@@ -93,7 +96,7 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
         var client = new HttpClient
         {
             BaseAddress = new Uri(addresses.Single()),
-            Timeout = TimeSpan.FromSeconds(30)
+            Timeout = requestTimeout ?? DefaultRequestTimeout
         };
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentId, "api-test-agent");
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentName, "API Test Agent");

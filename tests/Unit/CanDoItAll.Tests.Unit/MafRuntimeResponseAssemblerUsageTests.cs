@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -25,6 +26,37 @@ public sealed class MafRuntimeResponseAssemblerUsageTests
         Assert.DoesNotContain("AccountKey", diagnostic, StringComparison.Ordinal);
         Assert.Contains("HttpStatus=502", diagnostic, StringComparison.Ordinal);
         Assert.True(diagnostic.Length < 1024);
+    }
+
+    [Fact]
+    public void Provider_failure_diagnostic_includes_safe_source_managed_root_type()
+    {
+        var provider = CreateProvider() with
+        {
+            CredentialBinding = new ProviderCredentialBinding(
+                Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.NewGuid())
+        };
+        var boundary = ProviderFailureDisclosurePolicy.CreateBoundaryException(
+            provider,
+            ProviderFailureOperation.RuntimeRequest,
+            new ObjectDisposedException("sensitive-instance"),
+            diagnosticStatusCode: 401);
+        var exception = new MafProviderTransportException(
+            provider.Id,
+            provider.DefaultModel,
+            boundary);
+
+        var diagnostic = MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception);
+
+        Assert.Contains(
+            $"RootFailureType={typeof(ObjectDisposedException).FullName}",
+            diagnostic,
+            StringComparison.Ordinal);
+        Assert.Contains("HttpStatus=401", diagnostic, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-instance", diagnostic, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -54,6 +54,8 @@ public static class TestApplicationBootstrap
         IHostEnvironment environment,
         bool registerTestHostApplicationLifetime = true)
     {
+        // Expiration timers otherwise retain disposed fixture providers through singleton clients.
+        services.ConfigureHttpClientDefaults(builder => builder.SetHandlerLifetime(Timeout.InfiniteTimeSpan));
         services.AddLogging();
         services.AddSingleton(configuration);
         if (registerTestHostApplicationLifetime)
@@ -90,8 +92,13 @@ public static class TestApplicationBootstrap
         configureServices?.Invoke(services);
 
         var serviceProvider = services.BuildServiceProvider(DefaultServiceProviderOptions);
-        await InitializeSchemaAsync(serviceProvider, schemaModules, cancellationToken);
-        return serviceProvider;
+        try {
+            await InitializeSchemaAsync(serviceProvider, schemaModules, cancellationToken);
+            return serviceProvider;
+        } catch (Exception failure) {
+            await TestFixtureCleanup.DisposeAfterFailureAsync(failure, serviceProvider);
+            throw;
+        }
     }
 
     public static async Task InitializeSchemaAsync(

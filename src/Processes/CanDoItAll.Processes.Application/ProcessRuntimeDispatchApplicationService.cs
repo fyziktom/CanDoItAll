@@ -446,6 +446,11 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     await Task.Delay(ClaimCleanupConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
                     reloadAfterConcurrentClaimChange = true;
                 }
+                catch (ProcessRuntimeDispatchInProgressException exception) when (claimCreated && !resultSubmitted) {
+                    diagnostics.Add(exception.Message);
+                    var active = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? state;
+                    return new ProcessRuntimeDispatchResult(runId, ToStage(active.Status), active.Status, diagnostics);
+                }
                 catch (ProcessRuntimeDispatchDeferredException exception) when (claimCreated && !resultSubmitted)
                 {
                     diagnostics.Add(exception.Message);

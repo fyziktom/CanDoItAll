@@ -1,3 +1,0 @@
-Total messages inspected: warnings and errors
-Errors: 0
-Warnings: 0

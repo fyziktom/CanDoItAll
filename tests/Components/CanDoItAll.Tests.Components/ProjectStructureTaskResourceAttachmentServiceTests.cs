@@ -8,6 +8,77 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTaskResourceAttachmentServiceTests
 {
+    [Theory]
+    [InlineData(ProjectStructureTaskResourceKind.Workflow, ProjectStructureTaskResourceKind.Process, "custom:workflow", "process-definition:1")]
+    [InlineData(ProjectStructureTaskResourceKind.Workflow, ProjectStructureTaskResourceKind.Workflow, null, null)]
+    [InlineData(ProjectStructureTaskResourceKind.Process, ProjectStructureTaskResourceKind.Process, null, null)]
+    public void Malformed_attachment_receipts_are_rejected_before_pricing_commit(
+        ProjectStructureTaskResourceKind requestedKind,
+        ProjectStructureTaskResourceKind receiptKind,
+        string? createdNodeId,
+        string? linkTargetNodeId)
+    {
+        var resource = new ProjectStructureTaskResourceSelection(
+            requestedKind,
+            Guid.NewGuid(),
+            requestedKind == ProjectStructureTaskResourceKind.Workflow ? Guid.NewGuid() : null);
+        var receipt = new ProjectStructureTaskResourceAttachment(
+            receiptKind,
+            createdNodeId,
+            linkTargetNodeId);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            ProjectStructureTaskResourceAttachmentService.ValidateAttachmentReceipt(resource, receipt));
+    }
+
+    [Theory]
+    [InlineData(ProjectStructureTaskResourceKind.Person)]
+    [InlineData(ProjectStructureTaskResourceKind.Agent)]
+    [InlineData(ProjectStructureTaskResourceKind.Process)]
+    public async Task Non_workflow_resources_reject_workflow_input_settings(
+        ProjectStructureTaskResourceKind resourceKind)
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var resource = new ProjectStructureTaskResourceSelection(resourceKind, Guid.NewGuid());
+        var inputSettings = new ProjectStructureWorkflowInputSettings
+        {
+            IncludeParentSubtree = true
+        };
+        var agent = CreateAgent(admission);
+
+        var attachmentException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            services.GetRequiredService<ProjectStructureTaskResourceAttachmentService>().AttachAsync(
+                projectId,
+                "custom:task",
+                new ProjectStructureTaskResourceAttachRequest(
+                    resource,
+                    ProjectTaskExecutionSnapshot.NotStarted,
+                    inputSettings) { ExpectedProjectAdmission = admission },
+                agent));
+        var resourceException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            services.GetRequiredService<ProjectStructureTaskResourceService>().AttachAsync(
+                projectId,
+                "custom:task",
+                resource,
+                inputSettings,
+                agent));
+
+        Assert.Equal(400, attachmentException.StatusCode);
+        Assert.Equal(
+            resourceKind == ProjectStructureTaskResourceKind.Process
+                ? ProjectStructureTaskResourceSelectionPolicy.WorkflowInputSettingsResourceKindInvalidErrorCode
+                : ProjectStructureTaskResourceSelectionPolicy.DefinitionAttachmentResourceKindInvalidErrorCode,
+            attachmentException.ErrorCode);
+        Assert.Equal(400, resourceException.StatusCode);
+        Assert.Equal(
+            ProjectStructureTaskResourceSelectionPolicy.WorkflowInputSettingsResourceKindInvalidErrorCode,
+            resourceException.ErrorCode);
+    }
+
     [Fact]
     public async Task Pricing_conflict_rolls_back_attachment_and_preserves_concurrent_task_change()
     {
@@ -23,6 +94,9 @@ public sealed class ProjectStructureTaskResourceAttachmentServiceTests
         var resourceService = services.GetRequiredService<ProjectStructureTaskResourceService>();
         var attachmentService = services.GetRequiredService<ProjectStructureTaskResourceAttachmentService>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var agent = CreateAgent(admission);
         var processes = (await resourceService.ListOptionsAsync(projectId))
             .Where(option => option.Kind == ProjectStructureTaskResourceKind.Process)
             .Take(2)
@@ -66,7 +140,7 @@ public sealed class ProjectStructureTaskResourceAttachmentServiceTests
             projectId,
             task.Id,
             existingSelection,
-            CreateAgent(projectId));
+            agent);
         var existingCostBasis = new ProjectTaskExpectedCostBasis
         {
             ResourceKind = ProjectStructureTaskResourceKind.Process,
@@ -100,12 +174,32 @@ public sealed class ProjectStructureTaskResourceAttachmentServiceTests
                 task.Id,
                 new ProjectStructureTaskResourceAttachRequest(
                     selection,
-                    ProjectTaskExecutionSnapshot.NotStarted),
-                CreateAgent(projectId)));
+                    ProjectTaskExecutionSnapshot.NotStarted) { ExpectedProjectAdmission = admission },
+                agent));
 
         Assert.Equal(409, exception.StatusCode);
         Assert.Equal("TaskResourceAttachmentPricingConflict", exception.ErrorCode);
         Assert.Equal(1, strategy.CallCount);
+
+        var compensatedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.DoesNotContain(compensatedSurface.Links, link =>
+            link.SourceId == task.Id &&
+            link.Kind == ProjectObjectLinkKind.Uses &&
+            link.TargetId == $"process-definition:{process.ResourceId:D}");
+        var compensatedLink = Assert.Single(compensatedSurface.Links, link =>
+            link.SourceId == task.Id && link.Kind == ProjectObjectLinkKind.Uses);
+        Assert.Equal(existingAttachment.LinkTargetNodeId, compensatedLink.TargetId);
+        var compensatedTask = Assert.Single(compensatedSurface.Nodes, node => node.Id == task.Id);
+        Assert.Equal(task.Title, compensatedTask.Title);
+        var compensatedMetadata = ProjectObjectMetadataSerializer.Parse(compensatedTask.MetadataJson).WorkItem;
+        Assert.NotNull(compensatedMetadata);
+        Assert.Equal(ProjectTaskExecutionState.NotStarted, compensatedMetadata!.ExecutionState);
+        Assert.Equal(4m, compensatedMetadata.ExpectedEffortHours);
+        Assert.Equal(initialEstimate.ExpectedEffortUnit, compensatedMetadata.ExpectedEffortUnit);
+        Assert.Equal(999m, compensatedMetadata.ExpectedCostAmount);
+        Assert.Equal("EUR", compensatedMetadata.ExpectedCostCurrencyCode);
+        Assert.Equal(existingCostBasis, compensatedMetadata.ExpectedCostBasis);
+
         await resourceService.DetachAsync(
             projectId,
             task.Id,
@@ -113,7 +207,7 @@ public sealed class ProjectStructureTaskResourceAttachmentServiceTests
                 ProjectStructureTaskResourceKind.Process,
                 CreatedNodeId: null,
                 $"process-definition:{process.ResourceId:D}"),
-            CreateAgent(projectId));
+            agent);
         var surface = await workbenchService.GetStructureAsync(projectId);
         var resourceLink = Assert.Single(surface.Links, link =>
             link.SourceId == task.Id &&
@@ -198,14 +292,14 @@ public sealed class ProjectStructureTaskResourceAttachmentServiceTests
         return result.Value;
     }
 
-    private static ProjectStructureAgentContext CreateAgent(Guid projectId)
+    private static ProjectStructureAgentContext CreateAgent(ProjectWriteAdmission admission)
         => new(
             "component-tests-resource-attachment",
             "Component tests",
             Environment.MachineName,
             AppContext.BaseDirectory,
             string.Empty,
-            $"{projectId:D}-resource-attachment");
+            $"{admission.ProjectId:D}-resource-attachment") { ExpectedProjectAdmission = admission };
 
     private sealed class MutatingProcessQuoteStrategy : IProjectStructureTaskResourceCostStrategy
     {

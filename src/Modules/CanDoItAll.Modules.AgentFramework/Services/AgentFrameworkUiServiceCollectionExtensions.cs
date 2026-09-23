@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -10,6 +11,24 @@ public static class AgentFrameworkUiServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddCascadingAuthenticationState();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        services.TryAddSingleton<ContextualAgentWorkspacePolicyCatalog>();
+        services.TryAddScoped<IAgentsWorkspaceQuery, AgentsWorkspaceQuery>();
+        services.TryAddScoped<IAgentGovernanceReads, AgentGovernanceReads>();
+        services.TryAddScoped<IAgentDiagnosticsReads, AgentDiagnosticsReads>();
+        services.TryAddScoped<IAgentCatalogOperations, AgentCatalogOperations>();
+        services.TryAddScoped<IAgentCapabilitiesReads, AgentCapabilitiesReads>();
+        services.TryAddScoped<IAgentCapabilityCommands, AgentCapabilityCommands>();
+        services.TryAddScoped<AgentCapabilityOperations>();
+        services.TryAddScoped<CapabilityCuratorLaunch>();
+        services.TryAddScoped<IAgentEditorReads, AgentEditorReads>();
+        services.TryAddScoped<IProviderProfilesReads, ProviderProfilesReads>();
+        services.TryAddScoped<IProviderEditorCommands, ProviderEditorCommands>();
+        services.TryAddScoped<ProviderEditorRecovery>();
+        services.TryAddScoped<SharedProviderRecovery>();
+        services.TryAddScoped<IAgentEditorCommands, AgentEditorCommands>();
+        services.TryAddScoped<IAgentEditorAccessQuery, AgentEditorAccessQuery>();
+        services.TryAddScoped<IBoundAgentResourceQuery, BoundAgentResourceQuery>();
         services.TryAddScoped<
             IWorkflowExternalResponsePageActorContextProvider,
             WorkflowExternalResponsePageActorContextProvider>();

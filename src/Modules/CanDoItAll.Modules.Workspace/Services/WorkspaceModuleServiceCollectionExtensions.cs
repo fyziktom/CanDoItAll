@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 
 namespace CanDoItAll.Modules.Workspace;
@@ -10,31 +12,30 @@ public static class WorkspaceModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkspaceModule(this IServiceCollection services)
     {
+        services.AddPooledDbContextFactory<WorkspaceSettingsDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
+        services.AddPooledDbContextFactory<WorkspaceConnectorCommandDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             WorkspaceProjectTransferTargetStateParticipant>());
-        services.AddHttpClient();
         services.AddOptions<ApiAccessOptions>();
+        services.AddSingleton<WorkspaceDefaultsBootstrapService>();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
-        services.AddScoped<IProviderAdapter, OpenAiProviderAdapter>();
-        services.AddScoped<IProviderAdapter, ScenarioHarnessProviderAdapter>();
-        services.AddScoped<IProviderAdapter, ProcessMockProviderAdapter>();
-        services.AddScoped<IProviderAdapter, ComfyUiProviderAdapter>();
-        services.AddScoped<IProviderAdapter, OllamaProviderAdapter>();
-        services.AddScoped<IProviderAdapter, OllamaRemoteProviderAdapter>();
-        services.AddScoped<ProviderRegistry>();
-        services.TryAddScoped<LegacyProviderRuntimeGateway>();
-        services.TryAddScoped<IProviderRuntimeGateway>(serviceProvider => serviceProvider.GetRequiredService<LegacyProviderRuntimeGateway>());
-        services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>());
+        services.TryAddSingleton<ApiPasswordService>();
+        services.TryAddSingleton<ApiSessionService>();
+        services.TryAddScoped<ApiUserAdministrationService>();
+        services.TryAddScoped<IApiTokenAdministrationAccess, UnavailableApiTokenAdministrationAccess>();
+        services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<ConnectorPluginRegistry>();
         services.TryAddScoped<ISettingsRendererRegistry, SettingsRendererRegistry>();
         services.AddScoped<ConnectorCommandProcessor>();
         services.AddScoped<ConnectorOutboxService>();
-        services.AddScoped<ProviderExecutionService>();
         services.AddScoped<WorkspaceService>();
         services.TryAddScoped<IStorageCatalogSelectionSource, WorkspaceStorageCatalogSelectionSource>();
         services.AddScoped<DatabaseProfileWorkspaceService>();
-        services.AddScoped<IDatabaseTransferHandler, AiProvidersDatabaseTransferHandler>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
         services.AddScoped<ProjectManagementKnowledgeService>();
         return services;

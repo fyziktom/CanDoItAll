@@ -1,5 +1,11 @@
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Whether a model's thinking effort can be set. Agent and provider operations use a JSON integer: 0 Supported (one of
+/// the allowed efforts may be set), 1 Unsupported (the model has no configurable thinking; no effort may be set),
+/// 2 Unknown (support is not known; no effort may be set). LLM Chats model options write it as camel-case text
+/// instead: <c>supported</c>, <c>unsupported</c>, <c>unknown</c>.
+/// </summary>
 public enum AgentThinkingEffortSupportStatus
 {
     Supported,
@@ -7,12 +13,24 @@ public enum AgentThinkingEffortSupportStatus
     Unknown
 }
 
+/// <summary>
+/// Where a thinking-effort capability comes from, as a JSON integer: 0 Defined (built-in product rules or a shared
+/// provider source's catalog), 1 Discovered (reported by the provider, for example during a health check),
+/// 2 Configured (set in the provider profile's configuration).
+/// </summary>
 public enum AgentThinkingEffortCapabilitySource
 {
     Defined,
-    Discovered
+    Discovered,
+    Configured
 }
 
+/// <summary>
+/// How a model's thinking is controlled. Agent and provider operations use a JSON integer: 0 Unspecified (no control;
+/// used whenever the status is not Supported), 1 BooleanToggle (thinking on or off, offered as exactly Medium and
+/// None), 2 EffortLevels (a choice among effort levels). LLM Chats model options write it as camel-case text instead:
+/// <c>unspecified</c>, <c>booleanToggle</c>, <c>effortLevels</c>.
+/// </summary>
 public enum AgentThinkingEffortControlMode
 {
     Unspecified,
@@ -20,6 +38,30 @@ public enum AgentThinkingEffortControlMode
     EffortLevels
 }
 
+/// <summary>
+/// Thinking (reasoning) effort capability of one model of a provider profile: whether an effort can be set and which
+/// levels are accepted.
+/// </summary>
+/// <param name="Model">Model identifier the capability applies to.</param>
+/// <param name="Status">
+/// Whether an effort can be set, as a JSON integer: 0 Supported, 1 Unsupported, 2 Unknown; only Supported allows an
+/// effort.
+/// </param>
+/// <param name="Source">
+/// Where the capability comes from, as a JSON integer: 0 Defined, 1 Discovered, 2 Configured.
+/// </param>
+/// <param name="AllowedEfforts">
+/// Accepted effort levels, as JSON integers (0 None, 1 Low, 2 Medium, 3 High, 4 ExtraHigh, 5 Max, 6 Minimal); must be
+/// empty unless <c>status</c> is 0 Supported and not empty when it is.
+/// </param>
+/// <param name="ModelFamily">
+/// Model family the capability was derived from, for example <c>qwen3</c>; may be empty.
+/// </param>
+/// <param name="Summary">Human-readable explanation of the capability; may be empty.</param>
+/// <param name="ControlMode">
+/// How thinking is controlled, as a JSON integer: 0 Unspecified, 1 BooleanToggle (<c>allowedEfforts</c> must be
+/// exactly None and Medium), 2 EffortLevels.
+/// </param>
 public sealed record ProviderModelThinkingEffortCapability(
     string Model,
     AgentThinkingEffortSupportStatus Status,
@@ -27,7 +69,19 @@ public sealed record ProviderModelThinkingEffortCapability(
     IReadOnlyList<AgentReasoningEffortLevel> AllowedEfforts,
     string ModelFamily = "",
     string Summary = "",
-    AgentThinkingEffortControlMode ControlMode = AgentThinkingEffortControlMode.Unspecified);
+    AgentThinkingEffortControlMode ControlMode = AgentThinkingEffortControlMode.Unspecified) {
+    /// <summary>
+    /// Default effort published by a shared provider source, as a JSON integer (0 None, 1 Low, 2 Medium, 3 High,
+    /// 4 ExtraHigh, 5 Max, 6 Minimal), or null; used only for profiles imported from that source.
+    /// </summary>
+    public AgentReasoningEffortLevel? SourceDefaultEffort { get; init; }
+
+    /// <summary>
+    /// True when requests to the model must not carry a temperature; used only for profiles imported from a shared
+    /// provider source.
+    /// </summary>
+    public bool OmitTemperature { get; init; }
+}
 
 public static class AgentThinkingEffortPolicy
 {
@@ -62,6 +116,17 @@ public static class AgentThinkingEffortPolicy
         ArgumentNullException.ThrowIfNull(provider);
 
         var normalizedModel = NormalizeModel(model);
+        if (provider.IsSourceManaged) {
+            var published = provider.ModelThinkingEffortCapabilities.FirstOrDefault(item =>
+                string.Equals(item.Model, normalizedModel, StringComparison.Ordinal));
+            if (published is not null) {
+                return NormalizeCapability(published);
+            }
+            return CreateUnknownCapability(
+                normalizedModel,
+                AgentThinkingEffortCapabilitySource.Defined,
+                $"The imported catalog has no thinking capabilities for '{provider.GetModelDisplayName(normalizedModel)}'. Refresh the shared provider to load the source's current settings.");
+        }
         if (string.IsNullOrWhiteSpace(normalizedModel))
         {
             return CreateUnknownCapability(
@@ -84,6 +149,11 @@ public static class AgentThinkingEffortPolicy
                 normalizedModel,
                 AgentThinkingEffortCapabilitySource.Defined,
                 $"Transport '{provider.Transport}' cannot apply configurable thinking effort.");
+        }
+
+        if (ProviderModelThinkingConfiguration.Find(provider.ConfigurationJson, normalizedModel) is { } configured) {
+            ProviderModelThinkingConfiguration.ValidateForProvider(provider.ConfigurationJson, provider.Kind, provider.Transport, provider.Purpose);
+            return configured.ToCapability();
         }
 
         var storedCapability = provider.ModelThinkingEffortCapabilities.FirstOrDefault(item =>
@@ -273,7 +343,7 @@ public static class AgentThinkingEffortPolicy
             provider.Name,
             model,
             ResolveCapability(provider, model),
-            provider.ConfigurationJson,
+            provider.IsSourceManaged ? null : provider.ConfigurationJson,
             agentConfigurationJson,
             includeLegacyOllamaThink: provider.Kind == ProviderKind.Ollama);
     }
@@ -285,10 +355,12 @@ public static class AgentThinkingEffortPolicy
         string? providerConfigurationJson,
         string? agentConfigurationJson)
     {
+        ProviderModelThinkingConfiguration.ValidateForProvider(providerConfigurationJson, providerKind, providerTransport, ProviderProfilePurpose.Chat);
         return ResolveEffectiveEffort(
             providerKind.ToString(),
             model,
-            ResolveDefinedCapability(providerKind, providerTransport, model),
+            ProviderModelThinkingConfiguration.Find(providerConfigurationJson, model)?.ToCapability() ??
+                ResolveDefinedCapability(providerKind, providerTransport, model),
             providerConfigurationJson,
             agentConfigurationJson,
             includeLegacyOllamaThink: providerKind == ProviderKind.Ollama);
@@ -306,9 +378,9 @@ public static class AgentThinkingEffortPolicy
             return null;
         }
 
-        var providerDefault = ReadConfiguredEffort(
+        var providerDefault = provider.IsSourceManaged ? capability.SourceDefaultEffort : ProviderModelThinkingConfiguration.ReadDefault(
             provider.ConfigurationJson,
-            "provider",
+            model,
             includeLegacyOllamaThink: provider.Kind == ProviderKind.Ollama);
         if (providerDefault is null)
         {
@@ -476,9 +548,9 @@ public static class AgentThinkingEffortPolicy
             return null;
         }
 
-        var providerDefault = ReadConfiguredEffort(
+        var providerDefault = ProviderModelThinkingConfiguration.ReadDefault(
             providerConfigurationJson,
-            "provider",
+            model,
             includeLegacyOllamaThink);
         if (providerDefault is null)
         {

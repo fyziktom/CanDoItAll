@@ -9,6 +9,7 @@ using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,7 +43,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
     IDatabaseSwitchNotificationService databaseSwitchNotificationService,
     ILogger<CanDoItAllAgentWorkspaceFactory> logger,
-    IOptions<ProcessMockAgentOptions> processMockAgentOptions) :
+    IOptions<ProcessMockAgentOptions> processMockAgentOptions,
+    IEnumerable<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null) :
     ICanDoItAllAgentWorkspaceFactory,
     IDisposable
 {
@@ -108,7 +110,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             var workspaceService = CreateWorkspaceService(
                 scope,
                 workspaceIdentity,
-                workspaceRoot);
+                workspaceRoot,
+                confirmedProfile.Runtime.Fingerprint);
             workspaceServices[workspaceIdentity] = workspaceService;
             return workspaceService;
         }
@@ -117,9 +120,15 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     private AgentFrameworkWorkspaceService CreateWorkspaceService(
         WorkspaceScopeDescriptor scope,
         AgentExecutionActivityWorkspaceIdentity workspaceIdentity,
-        string workspaceRoot)
+        string workspaceRoot,
+        string profileFingerprint)
     {
-        var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
+        var store = new FileSandboxWorkspaceStore(workspaceRoot, scope,
+            new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId));
+        var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
+            new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
+                workspaceIdentity.DatabaseProfileGeneration), backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
+                contextAttachmentCodecs: contextAttachmentCodecs);
         var lifecycleFactExtractors = serviceProvider
             .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
             .ToList();
@@ -144,7 +153,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var workspaceBundle = workspaceRuntimeServicesFactory.Create(
             workspaceExecutionScope);
         var processHost = workspaceBundle.ProcessHost;
-        var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope, workspaceRuntimeServicesFactory);
+        var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope, workspaceRuntimeServicesFactory, toolAdmission);
         // SB18: the deterministic interception cores no longer implement any runtime interface or
         // hold an inner fallback; the workspace service consumes the narrow runtime ports directly:
         // native MAF adapters at the bottom, scenario harness decorators above them, process mock
@@ -157,7 +166,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var processMock = new ProcessMockAgentRuntime(
             workspaceBundle.FileService,
             workspaceRoot,
-            processMockAgentOptions);
+            processMockAgentOptions,
+            serviceProvider.GetRequiredService<AgentToolPolicyCatalog>());
         var scenarioExecution = new ScenarioHarnessExecutionDecorator(
             mafRuntime.ExecutionPort,
             mafRuntime.ContinuationPort,
@@ -178,7 +188,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var providerDiagnosticsService = new ProviderDiagnosticsService(diagnosticsPorts, diagnosticsPorts);
         var workspaceService = new AgentFrameworkWorkspaceService(
             store,
-            new ZipAgentPackageService(workspaceRoot, scope),
+            new ZipAgentPackageService(workspaceRoot, scope, serviceProvider.GetRequiredService<AgentToolPolicyCatalog>()),
             executionPorts,
             executionPorts,
             diagnosticsPorts,
@@ -214,7 +224,11 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             providerRuntimeProfileSource: providerRuntimeProfileSource,
             providerSelectionPolicies: serviceProvider.GetServices<IAgentExecutionProviderSelectionPolicy>().ToList(),
             runCriticalityPolicies: serviceProvider.GetServices<IAgentExecutionRunCriticalityPolicy>().ToList(),
-            ownedWorkspaceBundle: workspaceBundle);
+            ownedWorkspaceBundle: workspaceBundle,
+            toolAdmissionJournal: toolAdmission,
+            executionAuthorityResolver: serviceProvider.GetService<IAgentExecutionAuthorityResolver>(),
+            receiptReconciliationProviders: serviceProvider.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray(),
+            toolPolicies: serviceProvider.GetRequiredService<AgentToolPolicyCatalog>());
         return workspaceService;
     }
 

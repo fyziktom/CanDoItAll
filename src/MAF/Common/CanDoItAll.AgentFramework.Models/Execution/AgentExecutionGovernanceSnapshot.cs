@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Models;
@@ -29,7 +31,9 @@ public sealed record AgentExecutionGovernanceSnapshot
         IReadOnlyList<string>? allowedCapabilityKeys = null,
         IReadOnlyList<string>? writableExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
-        IReadOnlyList<string>? allowedManagedArtifactReadRefs = null)
+        IReadOnlyList<string>? allowedManagedArtifactReadRefs = null,
+        int schemaVersion = AgentExecutionAuthorityRecord.LegacySchemaVersion,
+        AgentProjectStructureLifetime? sourceProjectLifetime = null)
     {
         if (authorityId.IsEmpty)
         {
@@ -42,6 +46,7 @@ public sealed record AgentExecutionGovernanceSnapshot
         }
 
         ArgumentNullException.ThrowIfNull(workspaceScope);
+        AgentExecutionAuthorityRecord.ValidateSourceLifetime(schemaVersion, sourceProjectLifetime, databaseProfileId, workspaceScope);
         if (mutationAllowed && !readAllowed)
         {
             throw new ArgumentException(
@@ -57,6 +62,8 @@ public sealed record AgentExecutionGovernanceSnapshot
         DatabaseProfileId = databaseProfileId;
         DatabaseProfileGeneration = databaseProfileGeneration;
         WorkspaceScope = workspaceScope;
+        SchemaVersion = schemaVersion == AgentExecutionAuthorityRecord.LegacySchemaVersion ? null : schemaVersion;
+        SourceProjectLifetime = sourceProjectLifetime;
         ReadAllowed = readAllowed;
         MutationAllowed = mutationAllowed;
         PolicyVersion = policyVersion.Trim();
@@ -66,6 +73,19 @@ public sealed record AgentExecutionGovernanceSnapshot
         WritableExternalTargetAliases = NormalizeSet(writableExternalTargetAliases, ExternalTargetAliasCodec.EqualityComparer);
         ReadOnlyExternalTargetAliases = NormalizeSet(readOnlyExternalTargetAliases, ExternalTargetAliasCodec.EqualityComparer);
         AllowedManagedArtifactReadRefs = NormalizeSet(allowedManagedArtifactReadRefs, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [JsonConstructor]
+    private AgentExecutionGovernanceSnapshot(AgentExecutionAuthorityId authorityId, Guid agentId, Guid databaseProfileId,
+        DatabaseProfileGeneration databaseProfileGeneration, WorkspaceScopeDescriptor workspaceScope, bool readAllowed,
+        bool mutationAllowed, string policyVersion, string policyFingerprint, ImmutableHashSet<string>? allowedOperations,
+        ImmutableHashSet<string>? allowedCapabilityKeys, ImmutableHashSet<string>? writableExternalTargetAliases,
+        ImmutableHashSet<string>? readOnlyExternalTargetAliases, ImmutableHashSet<string>? allowedManagedArtifactReadRefs,
+        int? schemaVersion = null, AgentProjectStructureLifetime? sourceProjectLifetime = null)
+        : this(authorityId, agentId, databaseProfileId, databaseProfileGeneration, workspaceScope, readAllowed, mutationAllowed,
+            policyVersion, policyFingerprint, (IReadOnlyList<string>?)allowedOperations?.ToArray(), allowedCapabilityKeys?.ToArray(),
+            writableExternalTargetAliases?.ToArray(), readOnlyExternalTargetAliases?.ToArray(), allowedManagedArtifactReadRefs?.ToArray(),
+            schemaVersion ?? AgentExecutionAuthorityRecord.LegacySchemaVersion, sourceProjectLifetime) {
     }
 
     public AgentExecutionAuthorityId AuthorityId { get; }
@@ -78,6 +98,15 @@ public sealed record AgentExecutionGovernanceSnapshot
 
     public WorkspaceScopeDescriptor WorkspaceScope { get; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? SchemaVersion { get; }
+
+    [JsonIgnore]
+    public int EffectiveSchemaVersion => SchemaVersion ?? AgentExecutionAuthorityRecord.LegacySchemaVersion;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentProjectStructureLifetime? SourceProjectLifetime { get; }
+
     public bool ReadAllowed { get; }
 
     public bool MutationAllowed { get; }
@@ -87,15 +116,20 @@ public sealed record AgentExecutionGovernanceSnapshot
     public string PolicyFingerprint { get; }
 
     /// <summary>Empty means "not operation-restricted by the admitted authority".</summary>
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> AllowedOperations { get; }
 
     /// <summary>Empty means "not capability-restricted by the admitted authority".</summary>
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> AllowedCapabilityKeys { get; }
 
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> WritableExternalTargetAliases { get; }
 
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> ReadOnlyExternalTargetAliases { get; }
 
+    [JsonConverter(typeof(GrantSetJsonConverter))]
     public ImmutableHashSet<string> AllowedManagedArtifactReadRefs { get; }
 
     /// <summary>
@@ -120,7 +154,28 @@ public sealed record AgentExecutionGovernanceSnapshot
             authority.AllowedOperations,
             authority.AllowedCapabilityKeys,
             authority.AllowedExternalTargetAliases,
-            authority.ReadOnlyExternalTargetAliases);
+            authority.ReadOnlyExternalTargetAliases,
+            schemaVersion: authority.SchemaVersion,
+            sourceProjectLifetime: authority.SourceProjectLifetime);
+    }
+
+    private sealed class GrantSetJsonConverter : JsonConverter<ImmutableHashSet<string>> {
+        public GrantSetJsonConverter() {
+        }
+
+        public override ImmutableHashSet<string> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+            var entries = JsonSerializer.Deserialize<string[]>(ref reader, options)
+                ?? throw new JsonException("An Agent governance grant set must be an array.");
+            return entries.ToImmutableHashSet(StringComparer.Ordinal);
+        }
+
+        public override void Write(Utf8JsonWriter writer, ImmutableHashSet<string> value, JsonSerializerOptions options) {
+            writer.WriteStartArray();
+            foreach (var entry in value.Order(StringComparer.Ordinal)) {
+                writer.WriteStringValue(entry);
+            }
+            writer.WriteEndArray();
+        }
     }
 
     private static ImmutableHashSet<string> NormalizeSet(

@@ -1,6 +1,4 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -9,26 +7,31 @@ public sealed class ProjectManagerSummaryScopeResolver
     public const int LargeScopeWarningThreshold =
         ProjectManagerSummaryScopePolicy.ConfirmationDescendantCount;
 
-    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+    private readonly ProjectRecordQueryService projects;
+    private readonly ProjectStructureProjectionQueryService hierarchy;
     private readonly ProjectPlanAnalyticsQueryService planAnalytics;
     private readonly ProjectManagerSummaryScopeLimits limits;
 
     public ProjectManagerSummaryScopeResolver(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        ProjectRecordQueryService projects,
+        ProjectStructureProjectionQueryService hierarchy,
         ProjectPlanAnalyticsQueryService planAnalytics)
         : this(
-            dbContextFactory,
+            projects,
+            hierarchy,
             planAnalytics,
             ProjectManagerSummaryScopeLimits.Default)
     {
     }
 
     internal ProjectManagerSummaryScopeResolver(
-        IDbContextFactory<AppDbContext> dbContextFactory,
+        ProjectRecordQueryService projects,
+        ProjectStructureProjectionQueryService hierarchy,
         ProjectPlanAnalyticsQueryService planAnalytics,
         ProjectManagerSummaryScopeLimits limits)
     {
-        this.dbContextFactory = dbContextFactory;
+        this.projects = projects;
+        this.hierarchy = hierarchy;
         this.planAnalytics = planAnalytics;
         this.limits = limits.Validate();
     }
@@ -45,12 +48,7 @@ public sealed class ProjectManagerSummaryScopeResolver
         }
 
         var planMode = ResolvePlanMode(contentMode);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var projectName = await dbContext.Set<Project>()
-            .AsNoTracking()
-            .Where(project => project.Id == projectId)
-            .Select(project => project.Name)
-            .SingleOrDefaultAsync(cancellationToken);
+        var projectName = (await projects.GetAsync(projectId, cancellationToken))?.Name;
         if (projectName is null)
         {
             throw new ProjectStructureAgentException(
@@ -79,7 +77,6 @@ public sealed class ProjectManagerSummaryScopeResolver
         else if (scope == ProjectManagerSummaryScope.ProjectAndDescendants)
         {
             projectIds = await ResolveDescendantsAsync(
-                dbContext,
                 projectId,
                 cancellationToken);
             descendantCount = projectIds.Count - 1;
@@ -126,7 +123,6 @@ public sealed class ProjectManagerSummaryScopeResolver
     }
 
     private async Task<IReadOnlyList<Guid>> ResolveDescendantsAsync(
-        AppDbContext dbContext,
         Guid rootProjectId,
         CancellationToken cancellationToken)
     {
@@ -141,16 +137,8 @@ public sealed class ProjectManagerSummaryScopeResolver
                 cancellationToken.ThrowIfCancellationRequested();
                 var remainingProjectCapacity = limits.MaximumProjectCount - visited.Count;
                 var visitedProjectIds = visited.ToArray();
-                var childProjectIds = await dbContext.Set<ProjectHierarchyLink>()
-                    .AsNoTracking()
-                    .Where(link =>
-                        parentBatch.Contains(link.ParentProjectId) &&
-                        !visitedProjectIds.Contains(link.ChildProjectId))
-                    .Select(link => link.ChildProjectId)
-                    .Distinct()
-                    .OrderBy(childProjectId => childProjectId)
-                    .Take(remainingProjectCapacity + 1)
-                    .ToArrayAsync(cancellationToken);
+                var childProjectIds = await hierarchy.GetChildIdsAsync(parentBatch, visitedProjectIds,
+                    remainingProjectCapacity + 1, cancellationToken);
                 foreach (var childProjectId in childProjectIds)
                 {
                     if (!visited.Add(childProjectId))

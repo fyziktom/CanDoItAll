@@ -7,7 +7,8 @@ public sealed record ProjectStructureTaskCreateApplicationRequest(
     Guid ProjectId,
     ProjectTaskEstimate Estimate,
     ProjectStructureTaskResourceSelection? Assignee,
-    string AssignmentSource);
+    string AssignmentSource,
+    ProjectStructureAgentContext? MutationOwner = null);
 
 public sealed record ProjectStructureTaskCreateApplicationResult(
     ProjectStructureNode Task,
@@ -21,7 +22,8 @@ public sealed record ProjectStructureTaskEditApplicationRequest(
     ProjectTaskExecutionSnapshot ProposedExecution,
     bool AssigneeChanged,
     ProjectStructureTaskResourceSelection? ProposedAssignee,
-    string AssignmentSource);
+    string AssignmentSource,
+    ProjectStructureAgentContext? MutationOwner = null);
 
 public sealed record ProjectStructureTaskEditCommitContext(
     ProjectStructureNode CurrentTask,
@@ -74,6 +76,7 @@ public sealed class ProjectStructureTaskApplicationService(
         CancellationToken cancellationToken = default)
     {
         ValidateCreateRequest(request);
+        ProjectAssignmentAdmission.Require(request.ProjectId, request.MutationOwner?.ExpectedProjectAdmission);
         ArgumentNullException.ThrowIfNull(createTask);
 
         var pricing = await estimateRefreshService.RefreshAsync(
@@ -102,11 +105,11 @@ public sealed class ProjectStructureTaskApplicationService(
                 createdTask.Id,
                 request.Assignee,
                 request.AssignmentSource,
-                cancellationToken);
+                cancellationToken, request.MutationOwner);
             var committed = await assigneeService.ReadAsync(
                 request.ProjectId,
                 createdTask.Id,
-                cancellationToken);
+                cancellationToken, request.MutationOwner!.ExpectedProjectAdmission);
             if (!MatchesSelection(
                     committed.DirectAssignments,
                     request.Assignee))
@@ -124,7 +127,7 @@ public sealed class ProjectStructureTaskApplicationService(
             await CompensateCreateAsync(
                 request.ProjectId,
                 createdTask.Id,
-                failure);
+                failure, request.MutationOwner);
             throw;
         }
     }
@@ -139,12 +142,13 @@ public sealed class ProjectStructureTaskApplicationService(
             CancellationToken cancellationToken = default)
     {
         ValidateEditRequest(request);
+        ProjectAssignmentAdmission.Require(request.ProjectId, request.MutationOwner?.ExpectedProjectAdmission);
         ArgumentNullException.ThrowIfNull(persist);
 
         var current = await assigneeService.ReadAsync(
             request.ProjectId,
             request.TaskNodeId,
-            cancellationToken);
+            cancellationToken, request.MutationOwner!.ExpectedProjectAdmission);
         var originalState =
             ProjectStructureTaskEditStatePolicy.Read(current.Task);
         if (originalState != request.ExpectedState)
@@ -230,7 +234,7 @@ public sealed class ProjectStructureTaskApplicationService(
                         request.AssignmentSource,
                         current.DirectAssignments,
                         originalState.DirectAssignmentRevision,
-                        cancellationToken);
+                        cancellationToken, request.MutationOwner);
                 assignmentCommitted = true;
                 commitTask = replacement.Task;
                 commitAssignments = replacement.DirectAssignments;
@@ -257,7 +261,7 @@ public sealed class ProjectStructureTaskApplicationService(
             var verified = await assigneeService.ReadAsync(
                 request.ProjectId,
                 request.TaskNodeId,
-                cancellationToken);
+                cancellationToken, request.MutationOwner!.ExpectedProjectAdmission);
             var verifiedState =
                 ProjectStructureTaskEditStatePolicy.Read(verified.Task);
             if (verifiedState != commitState ||
@@ -303,14 +307,14 @@ public sealed class ProjectStructureTaskApplicationService(
     private async Task CompensateCreateAsync(
         Guid projectId,
         string taskNodeId,
-        Exception creationFailure)
+        Exception creationFailure, ProjectStructureAgentContext? mutationOwner)
     {
         try
         {
             var deletedCount = await projectWorkbenchService.DeleteObjectAsync(
                 projectId,
                 taskNodeId,
-                CancellationToken.None);
+                CancellationToken.None, mutationOwner);
             if (deletedCount == 0)
             {
                 throw new InvalidOperationException(
@@ -357,7 +361,7 @@ public sealed class ProjectStructureTaskApplicationService(
                     previousAssignment,
                     expectedAssignments,
                     expectedDirectAssignmentRevision,
-                    CancellationToken.None);
+                    CancellationToken.None, request.MutationOwner);
             var postRestoreState =
                 ProjectStructureTaskEditStatePolicy.Read(restored.Task);
             await compensationService.RestorePricingAsync(
@@ -365,7 +369,7 @@ public sealed class ProjectStructureTaskApplicationService(
                 request.TaskNodeId,
                 postRestoreState,
                 originalState,
-                CancellationToken.None);
+                CancellationToken.None, request.MutationOwner);
             logger.LogWarning(
                 "Restored the previous task assignee and pricing after task persistence failed. ProjectId={ProjectId} TaskId={TaskId} FailureType={FailureType}",
                 Mask(request.ProjectId),

@@ -3,65 +3,42 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Projects;
 
-public enum ProjectRecordScope
-{
-    All,
-    Open,
-    Active,
-    Completed,
-    Archived
-}
-
-public static class ProjectRecordQueryLimits
-{
-    public const int DefaultPageSize = 24;
-    public const int MaximumPageSize = 100;
-    public const int MaximumSearchLength = 200;
-}
-
-public sealed record ProjectRecordQuery(
-    string SearchText = "",
-    ProjectRecordScope Scope = ProjectRecordScope.All,
-    int PageIndex = 0,
-    int PageSize = ProjectRecordQueryLimits.DefaultPageSize);
-
-public sealed record ProjectRecordQueryItem(
-    Guid Id,
-    string Name,
-    ProjectStatus Status,
-    string CurrentPhase,
-    string Description,
-    DateTimeOffset UpdatedAtUtc);
-
-public sealed record ProjectRecordPage(
-    IReadOnlyList<ProjectRecordQueryItem> Items,
-    int PageIndex,
-    int PageSize,
-    int TotalCount)
-{
-    public int TotalPages => TotalCount == 0
-        ? 0
-        : (int)Math.Ceiling(TotalCount / (double)PageSize);
-}
-
-public interface IProjectRecordQueryService
-{
-    Task<ProjectRecordQueryItem?> GetAsync(
-        Guid projectId,
-        CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<ProjectRecordQueryItem>> GetManyAsync(
-        IReadOnlyCollection<Guid> projectIds,
-        CancellationToken cancellationToken = default);
-
-    Task<ProjectRecordPage> SearchAsync(
-        ProjectRecordQuery query,
-        CancellationToken cancellationToken = default);
-}
+public sealed record ProjectNameMatch(Guid Id, string Name, bool Matches, Guid? LifetimeId = null);
 
 public sealed class ProjectRecordQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IProjectRecordQueryService
-{
+    IDbContextFactory<ProjectsDbContext> dbContextFactory,
+    DbContextOptions<ProjectsDbContext> contextOptions,
+    CoordinatedDatabaseTransaction coordinatedTransaction) : IProjectRecordQueryService {
+    public async Task<ProjectNameMatch?> GetNameMatchAsync(Guid projectId, string searchText,
+        CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
+            throw new ArgumentException("A project is required.", nameof(projectId));
+        }
+        ArgumentNullException.ThrowIfNull(searchText);
+        if (searchText.Length > ProjectRecordQueryLimits.MaximumSearchLength) {
+            throw new ArgumentException("The project name search exceeds the supported length.", nameof(searchText));
+        }
+        var search = searchText.ToUpperInvariant();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.Set<Project>().AsNoTracking().Where(project => project.Id == projectId)
+            .Select(project => new ProjectNameMatch(project.Id, project.Name, project.Name.ToUpper().Contains(search), project.LifetimeId))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProjectAccessListItem>> ListReferencesAsync(
+        int maximumItems, CancellationToken cancellationToken = default) {
+        if (maximumItems is < 1 or > ProjectRecordQueryLimits.MaximumReferenceCount) {
+            throw new ArgumentOutOfRangeException(nameof(maximumItems));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Set<Project>().AsNoTracking()
+            .OrderBy(project => project.Name).ThenBy(project => project.Id)
+            .Take(maximumItems)
+            .Select(project => new ProjectAccessListItem(project.Id, project.Name))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<ProjectRecordQueryItem?> GetAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)
@@ -76,21 +53,43 @@ public sealed class ProjectRecordQueryService(
 
     public async Task<IReadOnlyList<ProjectRecordQueryItem>> GetManyAsync(
         IReadOnlyCollection<Guid> projectIds,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(projectIds);
-        if (projectIds.Any(projectId => projectId == Guid.Empty))
-        {
-            throw new ArgumentException("Project identifiers cannot be empty.", nameof(projectIds));
-        }
-
-        var distinctProjectIds = projectIds.Distinct().ToList();
-        if (distinctProjectIds.Count == 0)
-        {
+        CancellationToken cancellationToken = default) {
+        var distinctProjectIds = NormalizeIds(projectIds);
+        if (distinctProjectIds.Count == 0) {
             return [];
         }
-
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await ReadManyAsync(dbContext, distinctProjectIds, cancellationToken);
+    }
+
+    public async Task<ProjectRecordQueryItem?> GetForMutationAsync(
+        Guid projectId, CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
+            throw new ArgumentException("A project is required.", nameof(projectId));
+        }
+        return (await GetManyForMutationAsync([projectId], cancellationToken)).SingleOrDefault();
+    }
+
+    public async Task<IReadOnlyList<ProjectRecordQueryItem>> GetManyForMutationAsync(
+        IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default) {
+        var distinctProjectIds = NormalizeIds(projectIds);
+        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+            contextOptions, static options => new ProjectsDbContext(options), cancellationToken);
+        return distinctProjectIds.Count == 0
+            ? []
+            : await ReadManyAsync(dbContext, distinctProjectIds, cancellationToken);
+    }
+
+    private static List<Guid> NormalizeIds(IReadOnlyCollection<Guid> projectIds) {
+        ArgumentNullException.ThrowIfNull(projectIds);
+        if (projectIds.Any(projectId => projectId == Guid.Empty)) {
+            throw new ArgumentException("Project identifiers cannot be empty.", nameof(projectIds));
+        }
+        return projectIds.Distinct().ToList();
+    }
+
+    private static async Task<IReadOnlyList<ProjectRecordQueryItem>> ReadManyAsync(
+        ProjectsDbContext dbContext, List<Guid> distinctProjectIds, CancellationToken cancellationToken) {
         return await dbContext.Set<Project>()
             .AsNoTracking()
             .Where(project => distinctProjectIds.Contains(project.Id))
@@ -102,7 +101,7 @@ public sealed class ProjectRecordQueryService(
                 project.Status,
                 project.CurrentPhase,
                 project.Description,
-                project.UpdatedAtUtc))
+                project.UpdatedAtUtc) { LifetimeId = project.LifetimeId })
             .ToListAsync(cancellationToken);
     }
 
@@ -139,7 +138,7 @@ public sealed class ProjectRecordQueryService(
                 project.Status,
                 project.CurrentPhase,
                 project.Description,
-                project.UpdatedAtUtc))
+                project.UpdatedAtUtc) { LifetimeId = project.LifetimeId })
             .ToListAsync(cancellationToken);
 
         return new ProjectRecordPage(

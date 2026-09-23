@@ -1,4 +1,5 @@
 using System.Text;
+using CanDoItAll.Infrastructure.Storage;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -7,8 +8,10 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
@@ -43,7 +46,19 @@ public static class ApiServiceCollectionExtensions
             .Validate(options => ApiAccessOptions.Validate(options).Count == 0, "API configuration is invalid.")
             .ValidateOnStart();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
+        services.TryAddSingleton<ApiPasswordService>();
+        services.TryAddSingleton<ApiSessionService>();
+        services.TryAddSingleton<ApiLoginThrottle>();
+        services.TryAddScoped<ApiUserAdministrationService>();
+        services.Replace(ServiceDescriptor.Scoped<IApiTokenAdministrationAccess, WebApiTokenAdministrationAccess>());
+        services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<MemoryProviderApiService>();
+        services.TryAddScoped<WebCurrentPrincipalResolver>();
+        services.TryAddScoped<IStoragePlacementRecoveryAccess, WebStoragePlacementRecoveryAccess>();
+        services.TryAddScoped<StoragePlacementRecoveryService>();
+        services.TryAddScoped<IStoragePlacementRecovery>(provider => provider.GetRequiredService<StoragePlacementRecoveryService>());
+        services.AddScoped<ProjectWorkflowAssetContinuationService>();
+        services.TryAddScoped<IStoragePlacementOwnerContinuation, StoragePlacementOwnerContinuationService>();
         services.TryAddSingleton(
             typeof(ProfileBoundedReplayEventStream<>),
             typeof(ProfileBoundedReplayEventStream<>));
@@ -51,13 +66,61 @@ public static class ApiServiceCollectionExtensions
         services.ConfigureLlmChatApiJson();
         services.AddOpenApi(options =>
         {
+            options.AddOperationTransformer(ApiAccessOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(ApiEndpointDocumentation.TransformAsync);
+            options.AddSchemaTransformer(ApiAccessOpenApiContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(new OpenApiNullableTypeDescriptions());
+            options.AddSchemaTransformer(OpenApiAttributeDescriptions.TransformAsync);
+            options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
+            options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
             options.AddOperationTransformer(
                 WorkflowExternalResponseOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(
+                SharedProviderCatalogOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(
+                SharedProviderInferenceOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(OpenApiFormParameterDescriptions.TransformOperationAsync);
+            options.AddOperationTransformer(OpenApiDuplicateParameters.TransformOperationAsync);
+            options.AddDocumentTransformer(OpenApiDiscriminatorDescriptions.TransformDocumentAsync);
+            options.AddDocumentTransformer(OpenApiAttributeDescriptions.TransformDocumentAsync);
+            options.AddDocumentTransformer(OpenApiDescriptionText.TransformDocumentAsync);
         });
         services.AddAuthorization(options =>
         {
+            foreach (var scope in ApiScopeCatalog.All.Where(scope => scope.UserSelectable)) {
+                options.AddPolicy(scope.Name, policy => {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireAssertion(context => ApiAuthorizationPolicies.HasApiOrSpecificScope(context.User, scope.Name));
+                });
+            }
+            options.AddPolicy(ApiAuthorizationPolicies.UserSession, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => context.Resource is HttpContext http &&
+                    http.Features.Get<ValidatedApiCredential>()?.Session is not null);
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ManageAccess, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => configuredOptions.AccessManagement.Enabled && context.Resource is HttpContext http &&
+                    http.Features.Get<ValidatedApiCredential>() is { Kind: CanDoItAll.Infrastructure.ControlPlane.ApiCredentialKind.AdministratorSession, Session.IsAdministrator: true });
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.GeneralApi, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.Api));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ReadStoragePlacementRecovery, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.ReadStoragePlacementRecovery));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ReconcileStoragePlacement, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.ReconcileStoragePlacement));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.VerifyStorageExternalTermination, policy => {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context => ApiAuthorizationPolicies.HasScope(context.User, ApiAccessScopeNames.VerifyStorageExternalTermination));
+            });
             options.AddPolicy(ApiAuthorizationPolicies.IssueTokens, policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -90,6 +153,22 @@ public static class ApiServiceCollectionExtensions
                         context.User,
                         ApiAccessScopeNames.QueryMemoryProviders));
             });
+            options.AddPolicy(ApiAuthorizationPolicies.ReadSharedProviderCatalog, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.ReadSharedProviderCatalog));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.InvokeSharedProviders, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.InvokeSharedProviders));
+            });
             options.AddPolicy(ApiAuthorizationPolicies.WriteProjectStructure, policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -114,8 +193,16 @@ public static class ApiServiceCollectionExtensions
                 options,
                 ApiAuthorizationPolicies.RespondWorkflows,
                 ApiAccessScopeNames.RespondWorkflows);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadProviderHistory, ApiAccessScopeNames.ReadProviderHistory);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadProviderHistoryContent, ApiAccessScopeNames.ReadProviderHistoryContent);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ManageProviderHistory, ApiAccessScopeNames.ManageProviderHistory);
         });
         services.AddHttpContextAccessor();
+        services.AddScoped<WebHistoryPrincipalResolver>();
+        services.Replace(ServiceDescriptor.Scoped<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistoryAccess, WebProviderHistoryAccess>());
+        services.TryAddScoped<AccessContextReferenceState>();
+        services.TryAddScoped<IAccessContextReferenceAccessor>(serviceProvider =>
+            serviceProvider.GetRequiredService<AccessContextReferenceState>());
         services.TryAddScoped<WorkflowExternalResponseApiActorResolver>();
         services.Replace(ServiceDescriptor.Singleton<IWorkflowEventSink, WorkflowApiEventSink>());
         services.TryAddScoped<ProcessRuntimeProjectionProjector>();
@@ -125,6 +212,9 @@ public static class ApiServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ProfileBoundedReplayEventStream<ProcessApiRunEvent>>(),
                 serviceProvider.GetRequiredService<ILogger<ApiNotifyingProcessRuntimeProjector>>())));
         services.TryAddScoped<IAgentRecruitingTargetResolver, WorkspaceAgentRecruitingTargetResolver>();
+        services.TryAddScoped<
+            IInteractiveAccessPrincipalProvider,
+            AnonymousInteractiveAccessPrincipalProvider>();
         services.Replace(ServiceDescriptor.Scoped<IFileAccessContextProvider, HttpFileAccessContextProvider>());
         services.Replace(ServiceDescriptor.Singleton<IFileAccessPolicy, WebFileAccessPolicy>());
 
@@ -145,26 +235,27 @@ public static class ApiServiceCollectionExtensions
                     ValidateAudience = true,
                     ValidAudience = configuredOptions.Authorization.Audience,
                     ValidateIssuerSigningKey = true,
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    RequireSignedTokens = true,
+                    RequireExpirationTime = true,
                     IssuerSigningKey = signingKey,
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30)
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    OnTokenValidated = ApiManagedTokenValidation.ValidateAsync,
                     OnChallenge = context =>
                     {
                         context.HandleResponse();
-                        return WriteAuthorizationErrorAsync(
+                        context.Response.Headers.WWWAuthenticate = "Bearer";
+                        return SharedProviderApiResponseWriter.WriteAuthorizationErrorAsync(
                             context.HttpContext,
-                            StatusCodes.Status401Unauthorized,
-                            "api.authorization-required",
-                            "A valid bearer token is required.");
+                            StatusCodes.Status401Unauthorized);
                     },
-                    OnForbidden = context => WriteAuthorizationErrorAsync(
+                    OnForbidden = context => SharedProviderApiResponseWriter.WriteAuthorizationErrorAsync(
                         context.HttpContext,
-                        StatusCodes.Status403Forbidden,
-                        "api.authorization-forbidden",
-                        "The bearer token does not authorize this operation.")
+                        StatusCodes.Status403Forbidden)
                 };
             });
 
@@ -218,16 +309,4 @@ public static class ApiServiceCollectionExtensions
         return services;
     }
 
-    private static Task WriteAuthorizationErrorAsync(
-        HttpContext httpContext,
-        int statusCode,
-        string code,
-        string message)
-    {
-        httpContext.Response.StatusCode = statusCode;
-        return httpContext.Response.WriteAsJsonAsync(
-            new ApiErrorResponse(
-                [new ApiErrorItem(code, message, ErrorSeverity.Error)]),
-            httpContext.RequestAborted);
-    }
 }

@@ -22,6 +22,15 @@ The authoritative project and package dependency list is in [CanDoItAll.Migratio
 
 This project owns provider-specific EF Core migration assets only. Runtime behavior belongs in Infrastructure or the owning product module.
 
+`PostgreSqlAppDbContextFactory` uses the complete `CanDoItAll.Composition.ModuleAssemblies.All`
+catalog. The Infrastructure compatibility factory requires that same catalog and fails
+if it cannot be loaded. Model registration rejects partially loadable assemblies instead
+of generating a subset schema.
+
+Plugin and Scheduler tables are owned by this migration chain. Runtime startup does not
+recreate them with separate SQL definitions. The CRM/HR lookup seed still runs after
+migrations; it inserts missing lookup values without changing schema.
+
 `20260728161028_InitialPostgreSqlBaseline` defines the complete baseline database required
 by the application model. Provider-specific indexes that EF cannot represent in the
 model are owned by
@@ -54,6 +63,30 @@ The LLM Chats schema is an append-only migration chain:
 
 The model snapshot and database-transfer contract must represent the same final shape. Never remove or
 rename an applied migration to make a pending-model check pass.
+
+## Shared providers and request history
+
+The branch adds seven migrations after the development baseline
+`20260822013043_AddWorkflowNativeCheckpointRequestUniqueness`:
+
+- `20260824224847_AddSharedProviderPersistence`: service identity, publications, sources and imports.
+- `20260828153731_AddProviderInvocationPriceEvidence`: frozen provider invocation price evidence.
+- `20260828164039_AddProviderRequestHistory`: request history persistence.
+- `20260828175631_AddProviderHistoryCallerAttribution`: caller attribution.
+- `20260828195043_AddProviderHistoryCanonicalEvidence`: canonical ownership/evidence.
+- `20260828205045_AddProviderHistoryLocatorsAndChatCaller`: source locators and chat caller evidence.
+- `20260830104752_AddProviderHistoryExternalReference`: opaque external references.
+
+The premerge repairs add no EF model change. The logical input capture deadline is an
+in-memory invocation contract and uses existing detail expiry columns. Do not modify
+these applied migrations or manufacture a repair migration merely for an export.
+
+Validate both development-to-final upgrade (existing canonical data) and reviewed-head
+preservation (populated sharing/history, supported history transfer and explicit
+rejection of unsafe generic AI-provider transfer), using isolated PostgreSQL
+databases. Generate pending-model evidence and idempotent SQL into ignored
+`artifacts/providers-shared-premerge/schema`; do not apply it to a live profile as part
+of review. See [request history](../../../docs/provider-request-history.md).
 
 ## Migration Validation
 

@@ -1,0 +1,49 @@
+.shared-provider-management {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.shared-provider-source-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.shared-provider-status-note {
+    border-left: 0.2rem solid var(--cda-color-warning-500, #f59e0b);
+    color: var(--cda-color-text-muted, #64748b);
+    font-size: 0.875rem;
+    padding-left: 0.75rem;
+}
+
+.shared-provider-catalog-list {
+    display: grid;
+    gap: 0.75rem;
+    max-height: min(52vh, 34rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.shared-provider-catalog-item {
+    align-items: flex-start;
+    border: 1px solid var(--cda-color-border, #e2e8f0);
+    border-radius: 0.6rem;
+    cursor: pointer;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 0.85rem;
+}
+
+.shared-provider-catalog-item > span {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.shared-provider-catalog-item small,
+.shared-provider-catalog-item span > span {
+    color: var(--cda-color-text-muted, #64748b);
+}
+
+.shared-provider-catalog-item input {
+    margin-top: 0.2rem;
+}

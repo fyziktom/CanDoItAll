@@ -106,6 +106,12 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.Origin is WorkflowLaunchOrigin.ProcessDispatchAssignment mapped &&
+                (mapped.StructureAuthority is not null || mapped.Dispatch.WorkflowId != definition.Id ||
+                    mapped.Dispatch.RequestedVersionId is { } version && version != definition.VersionId ||
+                    WorkflowMappedProcessInputFingerprint.Compute(request.InputJson) != mapped.Dispatch.InputFingerprint)) {
+            throw new InvalidOperationException("Mapped Workflow input or selected executor differs from its original Process owner admission.");
+        }
         var requestedBackend = request.RequestedBackend ?? definition.RuntimePolicy.PreferredBackend;
         ValidateBackendPolicy(definition, requestedBackend);
         var backend = GetRequiredBackend(definition, requestedBackend);
@@ -130,7 +136,14 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         {
             Origin = request.Origin
         };
-        var startedEvent = CreateStartedEvent(definition, running, now);
+        var startedEvent = CreateStartedEvent(definition, running, now) with {
+            DisclosureDeclaration = new(running.RunId, definition.Id, definition.VersionId,
+                WorkflowProviderDisclosureContent.Definition(definition), WorkflowProviderDisclosureContent.Source(running.Origin),
+                WorkflowProviderDisclosureProtocol.Current) {
+                    Simulations = [.. request.PreviewSimulationPlan.Steps.Select(step =>
+                        new WorkflowNodeSimulationAdmission(step.NodeId, WorkflowProviderDisclosureContent.Simulation(step)) { Step = step })]
+                }
+        };
         if (!activeRuns.TryRegister(
                 runId,
                 backend.Descriptor.SupportsActiveCancellation,
@@ -196,8 +209,11 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
                     RunningState,
                     CancellationToken.None);
             }
-            catch (OperationCanceledException) when (activeRun.IsCancellationRequested)
+            catch (OperationCanceledException exception) when (activeRun.IsCancellationRequested)
             {
+                if (WorkflowRuntimeTransitionRules.TryFindUsageObservationException(exception, out var usageException)) {
+                    await AppendUsageObservationsAsync(running, usageException!.Observations, CancellationToken.None);
+                }
                 return await FinalizeCancellationAsync(running, CancellationToken.None);
             }
             catch (Exception exception) when (WorkflowRuntimeTransitionRules.TryFindUsageObservationException(exception, out var usageException))
@@ -433,12 +449,14 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         var backendTransitionEvent = WorkflowRuntimeTransitionRules.FindBackendTransitionEvent(
             result.Run.State,
             result.Events);
-        var existingEvents = await store.ListEventsAsync(runId, cancellationToken);
+        var existingEventIds = (await store.ListEventsAsync(runId, cancellationToken))
+            .Select(workflowEvent => workflowEvent.Id)
+            .ToHashSet();
         foreach (var workflowEvent in result.Events)
         {
             if ((backendTransitionEvent is not null && workflowEvent.Id == backendTransitionEvent.Id) ||
                 IsLifecycleEvent(workflowEvent) ||
-                IsDuplicateProgressEvent(existingEvents, workflowEvent))
+                !existingEventIds.Add(workflowEvent.Id))
             {
                 continue;
             }
@@ -681,19 +699,6 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
                WorkflowEventKind.Cancelled or
                WorkflowEventKind.WaitingForInput or
                WorkflowEventKind.Error;
-
-    private static bool IsDuplicateProgressEvent(
-        IReadOnlyList<WorkflowEventRecord> existingEvents,
-        WorkflowEventRecord candidate)
-        => (candidate.Kind is
-               WorkflowEventKind.ExecutorInvoked or
-               WorkflowEventKind.ExecutorCompleted or
-               WorkflowEventKind.ExecutorFailed) &&
-           candidate.NodeId.HasValue &&
-           existingEvents.Any(workflowEvent =>
-               workflowEvent.Kind == candidate.Kind &&
-               workflowEvent.NodeId == candidate.NodeId &&
-               workflowEvent.CreatedAtUtc == candidate.CreatedAtUtc);
 
     private async Task PublishAndStoreEventAsync(
         WorkflowEventRecord workflowEvent,

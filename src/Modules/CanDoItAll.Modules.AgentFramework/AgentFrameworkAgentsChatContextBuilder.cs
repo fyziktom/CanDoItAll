@@ -14,7 +14,8 @@ public enum AgentFrameworkAgentsChatView
     Chat,
     Capabilities,
     Governance,
-    Diagnostics
+    Diagnostics,
+    RequestHistory
 }
 
 public static class AgentFrameworkAgentsChatContextBuilder
@@ -31,6 +32,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
             AgentWorkspaceTabs.Agents => AgentFrameworkAgentsChatView.Agents,
             AgentWorkspaceTabs.SimpleChats => AgentFrameworkAgentsChatView.SimpleChats,
             AgentWorkspaceTabs.Providers => AgentFrameworkAgentsChatView.Providers,
+            AgentWorkspaceTabs.RequestHistory => AgentFrameworkAgentsChatView.RequestHistory,
             AgentWorkspaceTabs.Voice => AgentFrameworkAgentsChatView.Voice,
             AgentWorkspaceTabs.FloatingChat => AgentFrameworkAgentsChatView.FloatingChat,
             AgentWorkspaceTabs.Chat => AgentFrameworkAgentsChatView.Chat,
@@ -46,18 +48,21 @@ public static class AgentFrameworkAgentsChatContextBuilder
         Guid? requestedTeamId,
         int technicalAgentCount,
         int providerCount,
-        int boundResourceCount,
+        int? boundResourceCount,
         int capabilityCount,
         int activeRunCount,
         int failedRunCount,
         AgentDefinition? selectedAgent = null,
-        AgentTeamDefinition? selectedTeam = null)
+        AgentTeamDefinition? selectedTeam = null,
+        bool includeSummaryFacts = true)
     {
         ValidateOptionalId(requestedAgentId, nameof(requestedAgentId));
         ValidateOptionalId(requestedTeamId, nameof(requestedTeamId));
         ValidateCount(technicalAgentCount, nameof(technicalAgentCount));
         ValidateCount(providerCount, nameof(providerCount));
-        ValidateCount(boundResourceCount, nameof(boundResourceCount));
+        if (boundResourceCount is { } knownBoundCount) {
+            ValidateCount(knownBoundCount, nameof(boundResourceCount));
+        }
         ValidateCount(capabilityCount, nameof(capabilityCount));
         ValidateCount(activeRunCount, nameof(activeRunCount));
         ValidateCount(failedRunCount, nameof(failedRunCount));
@@ -93,20 +98,20 @@ public static class AgentFrameworkAgentsChatContextBuilder
                 Route,
                 primarySelection,
                 selectedEntities,
-                BuildFacts(
+                includeSummaryFacts ? BuildFacts(
                     technicalAgentCount,
                     providerCount,
                     boundResourceCount,
                     capabilityCount,
                     activeRunCount,
-                    failedRunCount)),
+                    failedRunCount) : []),
             accessMode: AgentChatContextScopeAccessMode.Unrestricted);
     }
 
     private static IReadOnlyList<AgentChatContextPositionFact> BuildFacts(
         int technicalAgentCount,
         int providerCount,
-        int boundResourceCount,
+        int? boundResourceCount,
         int capabilityCount,
         int activeRunCount,
         int failedRunCount)
@@ -114,7 +119,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
         [
             new("technical-agent-count", technicalAgentCount.ToString()),
             new("provider-count", providerCount.ToString()),
-            new("bound-resource-count", boundResourceCount.ToString()),
+            .. (boundResourceCount is { } count ? new[] { new AgentChatContextPositionFact("bound-resource-count", count.ToString()) } : []),
             new("capability-count", capabilityCount.ToString()),
             new("active-run-count", activeRunCount.ToString()),
             new("failed-run-count", failedRunCount.ToString())
@@ -171,6 +176,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
             AgentFrameworkAgentsChatView.Agents => AgentWorkspaceTabs.Agents,
             AgentFrameworkAgentsChatView.SimpleChats => AgentWorkspaceTabs.SimpleChats,
             AgentFrameworkAgentsChatView.Providers => AgentWorkspaceTabs.Providers,
+            AgentFrameworkAgentsChatView.RequestHistory => AgentWorkspaceTabs.RequestHistory,
             AgentFrameworkAgentsChatView.Voice => AgentWorkspaceTabs.Voice,
             AgentFrameworkAgentsChatView.FloatingChat => AgentWorkspaceTabs.FloatingChat,
             AgentFrameworkAgentsChatView.Chat => AgentWorkspaceTabs.Chat,
@@ -187,6 +193,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
             AgentFrameworkAgentsChatView.Agents => "Agents",
             AgentFrameworkAgentsChatView.SimpleChats => "Simple Chats",
             AgentFrameworkAgentsChatView.Providers => "Providers",
+            AgentFrameworkAgentsChatView.RequestHistory => "Request history",
             AgentFrameworkAgentsChatView.Voice => "Voice",
             AgentFrameworkAgentsChatView.FloatingChat => "Floating chat",
             AgentFrameworkAgentsChatView.Chat => "Chat",

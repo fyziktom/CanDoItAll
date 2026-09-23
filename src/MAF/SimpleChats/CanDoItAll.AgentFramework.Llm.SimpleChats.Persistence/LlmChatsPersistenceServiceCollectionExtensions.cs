@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Usage;
 using CanDoItAll.AgentFramework.Usage;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -18,8 +19,19 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
     public static IServiceCollection AddLlmChatsPersistence(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.AddDbContextFactory<SimpleChatsDbContext>((provider, options) => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(options, database.Profile);
+        });
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxWriter>();
+        services.TryAddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionStore>();
         services.TryAddSingleton<ILlmChatRuntimeLeaseFactory, DatabaseProfileLlmChatRuntimeLeaseFactory>();
-        services.AddScoped<ILlmChatDefinitionRepository, EfLlmChatDefinitionRepository>();
+        services.AddScoped<EfLlmChatDefinitionRepository>();
+        services.AddScoped<ILlmChatDefinitionRepository>(provider =>
+            provider.GetRequiredService<EfLlmChatDefinitionRepository>());
+        services.AddScoped<ILlmChatDefinitionCreateReceiptRepository>(provider =>
+            provider.GetRequiredService<EfLlmChatDefinitionRepository>());
         services.AddScoped<ILlmChatDefinitionReadStore, EfLlmChatDefinitionReadStore>();
         services.AddScoped<ILlmChatConversationRepository, EfLlmChatConversationRepository>();
         services.AddScoped<ILlmChatConversationReadStore, EfLlmChatConversationReadStore>();
@@ -27,6 +39,10 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.AddScoped<ILlmChatOperationReadStore, EfLlmChatOperationReadStore>();
         services.AddScoped<ILlmChatProjectStructureReportStore, EfLlmChatProjectStructureReportStore>();
         services.AddScoped<ILlmChatTurnStateRepository, EfLlmChatTurnStateRepository>();
+        services.AddSingleton<LlmChatHistoryProjection>();
+        services.AddSingleton<LlmChatHistorySource>();
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.IProviderHistorySource>(provider => provider.GetRequiredService<LlmChatHistorySource>());
+        services.AddSingleton<CanDoItAll.AgentFramework.ProviderHistory.Persistence.IHistorySourceMaintenance>(provider => provider.GetRequiredService<LlmChatHistorySource>());
         services.AddScoped<ILlmChatInvocationRecordRepository, EfLlmChatInvocationRecordRepository>();
         services.AddScoped<ILlmChatOperationEventRepository, EfLlmChatOperationEventRepository>();
         services.AddScoped<ILlmChatCommitFence, DatabaseProfileLlmChatCommitFence>();

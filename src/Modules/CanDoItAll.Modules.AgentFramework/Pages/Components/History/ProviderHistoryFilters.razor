@@ -1,0 +1,113 @@
+<FormStack>
+    <FormRow Split="true">
+        <FormField Text="Time range">
+            <DropDown TValue="ProviderHistoryRange" Data="Ranges" TextProperty="@nameof(RangeOption.Text)" ValueProperty="@nameof(RangeOption.Value)"
+                      @bind-Value="Draft.Range" @bind-Value:after="OnChangedAsync" aria-label="Time range" data-testid="history-range" />
+        </FormField>
+        <FormField Text="Exact model identity">
+            <TextBox @bind-Value="Draft.Model" @bind-Value:after="OnChangedAsync" Placeholder="All models"
+                     aria-label="Exact model identity" data-testid="history-model" />
+        </FormField>
+    </FormRow>
+    @if (Draft.Range == ProviderHistoryRange.Custom) {
+        <FormRow Split="true">
+            <FormField Text="From (UTC, inclusive)">
+                <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="Draft.FromUtc" @bind-Value:after="OnChangedAsync"
+                           class="cda-input" aria-label="From UTC" data-testid="history-from" />
+            </FormField>
+            <FormField Text="To (UTC, exclusive)">
+                <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="Draft.ToUtc" @bind-Value:after="OnChangedAsync"
+                           class="cda-input" aria-label="To UTC" data-testid="history-to" />
+            </FormField>
+        </FormRow>
+    }
+    <FormRow Split="true">
+        <FormField Text="Outcome">
+            <DropDown TValue="HistoryOutcome?" Data="Outcomes" AllowClear="true" Placeholder="All outcomes"
+                      @bind-Value="Draft.Outcome" @bind-Value:after="OnChangedAsync" aria-label="Outcome" data-testid="history-outcome" />
+        </FormField>
+        <FormField Text="Managed credential ID">
+            <TextBox @bind-Value="Draft.CredentialId" @bind-Value:after="OnChangedAsync" Placeholder="All credentials (ID, never the API key)"
+                     aria-label="Managed credential ID" data-testid="history-credential" />
+        </FormField>
+    </FormRow>
+    @if (AllowProvider) {
+        <FormField Text="Provider ID">
+            <TextBox @bind-Value="Draft.ProviderId" @bind-Value:after="OnChangedAsync" Placeholder="All authorized providers"
+                     aria-label="Provider ID" data-testid="history-provider" />
+        </FormField>
+    }
+    <Button Text="@(advanced ? "Fewer filters" : "More filters")" ButtonStyle="ButtonStyle.Light"
+            Click="@(() => advanced = !advanced)" aria-expanded="@advanced" data-testid="history-more-filters" />
+    @if (advanced) {
+        <FormRow Split="true">
+            <FormField Text="Workload">
+                <DropDown TValue="HistoryWorkload?" Data="Workloads" AllowClear="true" Placeholder="All workloads"
+                          @bind-Value="Draft.Workload" @bind-Value:after="OnChangedAsync" aria-label="Workload" />
+            </FormField>
+            <FormField Text="Operation">
+                <DropDown TValue="HistoryOperation?" Data="Operations" AllowClear="true" Placeholder="All operations"
+                          @bind-Value="Draft.Operation" @bind-Value:after="OnChangedAsync" aria-label="Operation" />
+            </FormField>
+        </FormRow>
+        <FormRow Split="true">
+            <FormField Text="Price evidence">
+                <DropDown TValue="HistoryPriceState?" Data="Prices" AllowClear="true" Placeholder="All price states"
+                          @bind-Value="Draft.PriceState" @bind-Value:after="OnChangedAsync" aria-label="Price evidence" />
+            </FormField>
+            <FormField Text="Rows per page (1–200)">
+                <InputNumber @bind-Value="Draft.PageSize" @bind-Value:after="OnChangedAsync" class="cda-input"
+                             aria-label="Rows per page" data-testid="history-page-size" />
+            </FormField>
+        </FormRow>
+        <FormRow Split="true">
+            <FormField Text="Subject">
+                <TextBox @bind-Value="Draft.Subject" @bind-Value:after="OnChangedAsync" aria-label="Subject" />
+            </FormField>
+            <FormField Text="Issuer">
+                <TextBox @bind-Value="Draft.Issuer" @bind-Value:after="OnChangedAsync" aria-label="Issuer" />
+            </FormField>
+        </FormRow>
+        <FormRow Split="true">
+            <FormField Text="Request ID">
+                <TextBox @bind-Value="Draft.RequestId" @bind-Value:after="OnChangedAsync" aria-label="Request ID" />
+            </FormField>
+            <FormField Text="Attempt ID">
+                <TextBox @bind-Value="Draft.AttemptId" @bind-Value:after="OnChangedAsync" aria-label="Attempt ID" />
+            </FormField>
+        </FormRow>
+        <FormRow Split="true">
+            <FormField Text="External reference type">
+                <TextBox @bind-Value="Draft.ExternalReferenceType" @bind-Value:after="OnChangedAsync"
+                         Placeholder="For example project or erp.company-project"
+                         aria-label="External reference type" data-testid="history-external-reference-type" />
+            </FormField>
+            <FormField Text="External reference value">
+                <TextBox @bind-Value="Draft.ExternalReferenceValue" @bind-Value:after="OnChangedAsync"
+                         Placeholder="Exact third-party identifier"
+                         aria-label="External reference value" data-testid="history-external-reference-value" />
+            </FormField>
+        </FormRow>
+        <FormField Text="Correlation ID">
+            <TextBox @bind-Value="Draft.CorrelationId" @bind-Value:after="OnChangedAsync" aria-label="Correlation ID" />
+        </FormField>
+    }
+</FormStack>
+
+@code {
+    [Parameter, EditorRequired] public ProviderHistoryFilterDraft Draft { get; set; } = default!;
+    [Parameter] public bool AllowProvider { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private bool advanced;
+    private sealed record RangeOption(ProviderHistoryRange Value, string Text);
+    private static readonly RangeOption[] Ranges = [
+        new(ProviderHistoryRange.Last24Hours, "Last 24 hours"),
+        new(ProviderHistoryRange.Last7Days, "Last 7 days"),
+        new(ProviderHistoryRange.Custom, "Custom")
+    ];
+    private static readonly HistoryOutcome[] Outcomes = Enum.GetValues<HistoryOutcome>();
+    private static readonly HistoryWorkload[] Workloads = Enum.GetValues<HistoryWorkload>();
+    private static readonly HistoryOperation[] Operations = Enum.GetValues<HistoryOperation>();
+    private static readonly HistoryPriceState[] Prices = Enum.GetValues<HistoryPriceState>();
+    private Task OnChangedAsync() => Changed.InvokeAsync();
+}

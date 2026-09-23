@@ -65,6 +65,14 @@ public sealed class ProcessRuntimeStateEntity
 
     public string BlockedRecoveryActionsJson { get; set; } = "[]";
 
+    public Guid? LaunchAdmissionId { get; set; }
+
+    public Guid? ProjectAdmissionDatabaseProfileId { get; set; }
+
+    public Guid? ProjectAdmissionProjectId { get; set; }
+
+    public Guid? ProjectAdmissionLifetimeId { get; set; }
+
     public List<ProcessRuntimeStepEntity> Steps { get; } = [];
 
     public List<ProcessDispatchClaimEntity> Claims { get; } = [];

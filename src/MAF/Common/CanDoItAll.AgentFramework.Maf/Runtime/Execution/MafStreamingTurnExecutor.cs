@@ -31,6 +31,7 @@ internal sealed class MafStreamingTurnExecutor
     private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
     private readonly IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy> executionOutcomeRecoveryPolicies;
     private readonly MafProviderUpdatePump providerUpdatePump = new();
+    private readonly AgentToolPolicyCatalog toolPolicies;
 
     public MafStreamingTurnExecutor(
         string workspaceRoot,
@@ -39,8 +40,8 @@ internal sealed class MafStreamingTurnExecutor
         IMafApprovalContinuationDriver approvalContinuationDriver,
         IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver,
         IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
-        IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy>? executionOutcomeRecoveryPolicies = null)
-    {
+        IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy>? executionOutcomeRecoveryPolicies = null,
+        AgentToolPolicyCatalog? toolPolicies = null) {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
             throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
@@ -53,6 +54,7 @@ internal sealed class MafStreamingTurnExecutor
         this.sessionPersistenceDriver = sessionPersistenceDriver ?? throw new ArgumentNullException(nameof(sessionPersistenceDriver));
         this.physicalPathPolicyFactory = physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
         this.executionOutcomeRecoveryPolicies = executionOutcomeRecoveryPolicies ?? [];
+        this.toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
     }
 
     public async Task<AgentRuntimeResponse> ExecuteTurnAsync(
@@ -87,10 +89,12 @@ internal sealed class MafStreamingTurnExecutor
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var synthesizedFinalizerInvocations = new List<AgentFinalizerInvocation>();
         var streamedFinalizerRecorder = new MafFinalizerDriver.StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
+        var requiresDurableFinalizerInvocation = runtimeOptions.RequireDurableToolProtocol ||
+            runtimeOptions.AdmittedToolSession is not null;
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotEffectiveToolInvocationTraces = () =>
             MafFinalizerDriver.CreateEffectiveToolInvocationTraces(
                 snapshotToolInvocationTraces(),
-                streamedFinalizerRecorder.SnapshotToolInvocationTraces());
+                requiresDurableFinalizerInvocation ? [] : streamedFinalizerRecorder.SnapshotToolInvocationTraces());
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotEffectiveFinalizerInvocations = () =>
             MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
                 structuredOutput,
@@ -98,7 +102,8 @@ internal sealed class MafStreamingTurnExecutor
                 snapshotFinalizerInvocations(),
                 snapshotToolInvocationTraces(),
                 streamedFinalizerRecorder.SnapshotFinalizerInvocations(),
-                synthesizedFinalizerInvocations);
+                synthesizedFinalizerInvocations,
+                requireCapturedInvocation: requiresDurableFinalizerInvocation);
         var pollCount = 0;
         var resolvedModel = model;
 
@@ -128,14 +133,14 @@ internal sealed class MafStreamingTurnExecutor
 
             foreach (var toolCall in snapshot.Contents.OfType<ToolCallContent>())
             {
-                var toolKey = MafToolInvocationArgumentFormatter.ResolveToolCallKey(toolCall);
+                var toolKey = MafToolInvocationArgumentFormatter.ResolveToolCallKey(toolCall, toolPolicies);
                 streamedFinalizerRecorder.Record(toolCall);
                 if (!announcedToolCalls.Add(toolKey))
                 {
                     continue;
                 }
 
-                await progressCallback(ExecutionState.WaitingOnTool, "Tool", MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall));
+                await progressCallback(ExecutionState.WaitingOnTool, "Tool", MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall, toolPolicies));
             }
 
             return await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
@@ -198,8 +203,9 @@ internal sealed class MafStreamingTurnExecutor
             var repairContext = MafFinalizerDriver.BuildRequiredFinalizerRepairContext(
                 response,
                 snapshotEffectiveToolInvocationTraces(),
-                inputMessages);
-            var repairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool);
+                inputMessages,
+                toolPolicies);
+            var repairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool, runtimeOptions.History);
             var repairMessages = new[]
             {
                 MafFinalizerDriver.CreateRequiredFinalizerRepairMessage(finalizerPolicy, response, repairContext)
@@ -436,7 +442,7 @@ internal sealed class MafStreamingTurnExecutor
                 forceOmitTemperature,
                 finalizerPolicy);
             var jsonRepairSession = await jsonRepairAgent.CreateSessionAsync(cancellationToken);
-            var jsonRepairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerJsonRepairRunOptions();
+            var jsonRepairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerJsonRepairRunOptions(runtimeOptions.History);
             var jsonRepairMessages = new[]
             {
                 MafFinalizerDriver.CreateRequiredFinalizerJsonRepairMessage(finalizerPolicy, previousResponse, repairContext)
@@ -771,6 +777,12 @@ internal sealed class MafStreamingTurnExecutor
                     pendingApprovals,
                     progressCallback,
                     cancellationToken);
+
+                if (pendingApprovals.Count > 0 && MafToolRunContext.Current is { } admitted) {
+                    pendingApprovals = (await admitted.SaveApprovalsAsync(serializedSessionJson
+                        ?? throw new InvalidOperationException("Admitted approvals require the exact SDK checkpoint."),
+                        pendingApprovals, cancellationToken)).ToList();
+                }
 
                 if (pendingApprovals.Count > 0)
                 {

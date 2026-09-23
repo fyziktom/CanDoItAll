@@ -40,6 +40,72 @@ public sealed class BrowserRuntimeLifecycleCompletionGateContributionTests
         Assert.Contains("not correlated", issue.Summary, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("runtime-provider")]
+    [InlineData("agent-tool-trace")]
+    public void Validate_uses_command_lifecycle_receipts_when_later_invocation_traces_exist(string traceFamily) {
+        var executionRunId = Guid.NewGuid();
+        var context = CreateContext(executionRunId, "http://127.0.0.1:5173", "http://127.0.0.1:5173");
+        var receipts = context.ToolReceipts!;
+        var traceCompletedAt = receipts.Max(receipt => receipt.CompletedAtUtc).AddSeconds(1);
+        var contribution = new BrowserRuntimeLifecycleCompletionGateContribution();
+
+        var issue = contribution.Validate(context with {
+            ToolReceipts = [
+                .. receipts,
+                receipts[0] with {
+                    ToolFamily = traceFamily,
+                    RequestSummary = "workspace_sample_run|targetPath=src/App/App.csproj",
+                    CompletedAtUtc = traceCompletedAt
+                },
+                receipts[3] with {
+                    ToolFamily = traceFamily,
+                    RequestSummary = "workspace_sample_stop|startupReceiptPath=artifacts/process-runs/test/tool-runs/runtime/startup.json",
+                    CompletedAtUtc = traceCompletedAt
+                }
+            ]
+        });
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public void Validate_rejects_invocation_traces_without_command_lifecycle_receipts() {
+        var executionRunId = Guid.NewGuid();
+        var context = CreateContext(executionRunId, "http://127.0.0.1:5173", "http://127.0.0.1:5173");
+        var contribution = new BrowserRuntimeLifecycleCompletionGateContribution();
+
+        var issue = contribution.Validate(context with {
+            ToolReceipts = context.ToolReceipts!
+                .Select(receipt => receipt with { ToolFamily = "runtime-provider" })
+                .ToArray()
+        });
+
+        Assert.NotNull(issue);
+        Assert.Contains("current execution-run host lifecycle", issue.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_rejects_latest_command_lifecycle_mismatch_even_when_earlier_pair_matches() {
+        var executionRunId = Guid.NewGuid();
+        var context = CreateContext(executionRunId, "http://127.0.0.1:5173", "http://127.0.0.1:5173");
+        var receipts = context.ToolReceipts!;
+        var contribution = new BrowserRuntimeLifecycleCompletionGateContribution();
+
+        var issue = contribution.Validate(context with {
+            ToolReceipts = [
+                .. receipts,
+                receipts[0] with {
+                    RequestSummary = "startupReceipt=artifacts/process-runs/test/tool-runs/different/startup.json; hostUrl=http://127.0.0.1:5173",
+                    CompletedAtUtc = receipts.Max(receipt => receipt.CompletedAtUtc).AddSeconds(1)
+                }
+            ]
+        });
+
+        Assert.NotNull(issue);
+        Assert.Contains("same startup.json receipt", issue.Summary, StringComparison.Ordinal);
+    }
+
     private static ProcessCompletionGateContext CreateContext(
         Guid executionRunId,
         string runHost,

@@ -24,9 +24,9 @@ public sealed class CorePortabilityBrowserSmokeTests(PlaywrightAppFixture fixtur
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected runtime capabilities page to return 2xx, got {(int)response.Status}.");
         ILocator readiness = page.GetByTestId("runtime-readiness-summary");
-        await readiness.WaitForAsync();
         await Assertions.Expect(readiness).ToContainTextAsync("Mandatory runtime capabilities are ready.");
-        await page.GetByTestId("runtime-capability-grid").WaitForAsync();
+        ILocator desktopCapability = page.GetByTestId("runtime-capability-filetoolsdesktop");
+        await Assertions.Expect(desktopCapability).ToContainTextAsync("Unsupported");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 }

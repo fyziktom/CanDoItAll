@@ -14,7 +14,7 @@ public sealed record StoragePlacementRequest(
     Guid? PreferredStorageId = null);
 
 public sealed record StoragePlacementResult(
-    StorageCatalogRecord Storage,
+    StorageDriverInput Storage,
     StorageRecommendation Recommendation,
     StorageWriteResult WriteResult,
     string Route,

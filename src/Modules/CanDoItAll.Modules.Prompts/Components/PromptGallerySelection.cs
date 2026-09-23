@@ -11,10 +11,3 @@ public sealed record PromptGallerySelection(
     IReadOnlyList<string> Tags,
     IReadOnlyList<PromptProviderModel> SupportedModels,
     PromptModelRecommendations Recommendations);
-
-public enum PromptCompatibilityWarningDecision
-{
-    Cancel,
-    InsertAnyway,
-    InsertAndSuppress
-}

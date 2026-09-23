@@ -18,7 +18,7 @@ public sealed class ProcessExecutionProviderSelectionPolicyTests
     public void ShouldOverrideConfiguredProvider_is_true_for_a_governed_process_step_whose_provider_lacks_structured_output()
     {
         var policy = new ProcessExecutionProviderSelectionPolicy(new ProviderProfileService());
-        var configuredProvider = CreateProvider(ProviderKind.Ollama, ProviderTransportKind.ChatCompletions);
+        var configuredProvider = CreateProvider(ProviderKind.ComfyUi, ProviderTransportKind.ChatCompletions);
         var request = new AgentExecutionProviderSelectionRequest(
             "process-step",
             IsGovernedProcessStep: true,

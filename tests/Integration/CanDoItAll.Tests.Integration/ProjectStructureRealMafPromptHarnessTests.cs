@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -22,6 +23,7 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 public sealed class ProjectStructureRealMafPromptHarnessTests
 {
     private const string UnauthorizedSentinelAssetTitle = "Authority-negative sentinel asset";
+    private static readonly TimeSpan RealMafExecutionRequestTimeout = TimeSpan.FromMinutes(2);
 
     private static readonly byte[] BaselineAssetBytes = Encoding.UTF8.GetBytes(
         "# Acceptance baseline\n\nThis content hash must remain exact.\n");
@@ -42,7 +44,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 services.AddSingleton<ScriptedProjectStructureChatClient>();
                 services.Replace(
                     ServiceDescriptor.Singleton<IMafProviderAgentFactory, ScriptedProjectStructureMafProviderAgentFactory>());
-            });
+            },
+            RealMafExecutionRequestTimeout);
         var project = await CreateProjectAsync(host.Client);
         var parentNode = await CreateParentNodeAsync(host.Client, project.Id);
         var baselineAsset = await CreateBaselineAssetAsync(host.Client, project.Id, parentNode.Id);
@@ -255,7 +258,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 services.AddSingleton<ScriptedProjectStructureChatClient>();
                 services.Replace(
                     ServiceDescriptor.Singleton<IMafProviderAgentFactory, ScriptedProjectStructureMafProviderAgentFactory>());
-            });
+            },
+            RealMafExecutionRequestTimeout);
         var project = await CreateProjectAsync(host.Client);
         var fixture = await CreateCopyFixtureAsync(host.App.Services, project.Id);
         var canonicalGraphBefore = await CaptureAcceptanceGraphAsync(host.App.Services, project.Id);
@@ -477,7 +481,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 services.AddSingleton<ScriptedReadOnlyProjectStructureChatClient>();
                 services.Replace(
                     ServiceDescriptor.Singleton<IMafProviderAgentFactory, ScriptedReadOnlyProjectStructureMafProviderAgentFactory>());
-            });
+            },
+            RealMafExecutionRequestTimeout);
         var project = await CreateProjectAsync(host.Client);
         await CreateParentNodeAsync(host.Client, project.Id);
         var graphBefore = await ReadCanonicalGraphAsync(host.App.Services, project.Id);
@@ -533,10 +538,10 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
             toolNames =>
             {
                 Assert.Contains(ScriptedReadOnlyProjectStructureChatClient.StructureReadToolName, toolNames);
-                Assert.Contains(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, toolNames);
-                Assert.DoesNotContain(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate, toolNames);
+                Assert.Contains(ImageGenerationToolPolicy.ImageGenerationCreate, toolNames);
+                Assert.DoesNotContain(ProjectStructureToolPolicy.ProjectStructureAssetCreate, toolNames);
                 Assert.DoesNotContain(
-                    AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools,
+                    ProjectStructureToolPolicy.MutationTools,
                     toolNames.Contains);
             });
 
@@ -563,7 +568,7 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
         Assert.Equal("project-structure.runtime-tools", readReceipt.RuntimeToolProviderKey);
         Assert.DoesNotContain(
             receipts,
-            receipt => AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Contains(
+            receipt => ProjectStructureToolPolicy.MutationTools.Contains(
                 receipt.ToolName,
                 StringComparer.Ordinal));
 
@@ -822,7 +827,7 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 link.LinkKind == ProjectObjectLinkKind.DependsOn);
         var assembly = await scope.ServiceProvider
             .GetRequiredService<ProjectStructureAssemblyService>()
-            .LoadAsync(dbContext, projectId);
+            .LoadAsync(projectId);
         var expectedCopiedRootPosition = ProjectStructureAutomaticPlacementPolicy.Resolve(
             assembly.Nodes,
             new ProjectStructureAutomaticPlacementRequest(

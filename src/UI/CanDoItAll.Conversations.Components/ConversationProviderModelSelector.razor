@@ -11,15 +11,17 @@
                       Disabled="@(Disabled || isOverrideEnabled)"
                       data-testid="@ChoiceTestId" />
 
-            <label class="cda-inline-option">
-                <CheckBox TValue="bool"
-                          Value="@isOverrideEnabled"
-                          ValueChanged="HandleOverrideChangedAsync"
-                          Disabled="@Disabled"
-                          aria-label="Override model name"
-                          data-testid="@OverrideTestId" />
-                <span>Override model name</span>
-            </label>
+            @if (Provider?.AllowsModelOverride != false) {
+                <label class="cda-inline-option">
+                    <CheckBox TValue="bool"
+                              Value="@isOverrideEnabled"
+                              ValueChanged="HandleOverrideChangedAsync"
+                              Disabled="@Disabled"
+                              aria-label="Override model name"
+                              data-testid="@OverrideTestId" />
+                    <span>Override model name</span>
+                </label>
+            }
 
             @if (isOverrideEnabled)
             {
@@ -35,6 +37,9 @@
 </div>
 
 @code {
+    private static readonly IComparer<string> ModelNameComparer = Comparer<string>.Create((left, right) =>
+        System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(left, right,
+            System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.NumericOrdering));
     private readonly List<ProviderModelSelectorOption> modelChoices = [];
     private ProviderModelSelectorOption? selectedChoice;
     private string customModelName = string.Empty;
@@ -93,7 +98,7 @@
         var valueChangedExternally = !suppressNextParameterSync &&
                                      !string.Equals(previousValue, currentValue, StringComparison.Ordinal);
 
-        if (!hasSyncedParameters || providerChanged || valueChangedExternally)
+        if (!hasSyncedParameters || providerChanged || valueChangedExternally || Provider?.AllowsModelOverride == false)
         {
             ApplyExternalValue(currentValue);
         }
@@ -112,7 +117,7 @@
         var providerDefault = ResolveProviderDefaultModel();
         var defaultLabel = string.IsNullOrWhiteSpace(providerDefault)
             ? "Provider default"
-            : $"Provider default ({providerDefault})";
+            : $"Provider default ({Provider?.GetModelDisplayName(providerDefault) ?? providerDefault})";
 
         modelChoices.Clear();
         modelChoices.Add(new ProviderModelSelectorOption(
@@ -131,17 +136,23 @@
             modelChoices.Add(new ProviderModelSelectorOption(
                 ProviderModelChoiceKind.SuggestedModel,
                 option,
-                option));
+                Provider?.GetModelDisplayName(option) ?? option));
         }
     }
 
     private IReadOnlyList<string> ResolveModelOptions()
     {
-        return Provider?.SuggestedModels
+        var models = Provider?.SuggestedModels ?? [];
+        var selected = NormalizeModel(Value);
+        if (Provider?.ModelDisplayNames.ContainsKey(selected) == true) {
+            models = [.. models, selected];
+        }
+        return models
             .Where(model => !string.IsNullOrWhiteSpace(model))
             .Select(model => model.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList() ?? [];
+            .OrderBy(model => Provider?.GetModelDisplayName(model) ?? model, ModelNameComparer)
+            .ToList();
     }
 
     private void ApplyExternalValue(string currentValue)
@@ -157,6 +168,13 @@
         }
 
         selectedChoice = modelChoices[0];
+        if (Provider?.AllowsModelOverride == false) {
+            selectedChoice = new ProviderModelSelectorOption(
+                ProviderModelChoiceKind.SuggestedModel, currentValue, "Unavailable shared model — select a published model");
+            modelChoices.Add(selectedChoice);
+            isOverrideEnabled = false;
+            return;
+        }
         isOverrideEnabled = true;
         customModelName = currentValue;
     }
@@ -166,7 +184,7 @@
         out ProviderModelSelectorOption choice)
     {
         if (string.IsNullOrWhiteSpace(currentValue) ||
-            !UseEmptyValueForProviderDefault && IsProviderDefaultModel(currentValue))
+            (!UseEmptyValueForProviderDefault || Provider?.AllowsModelOverride == false) && IsProviderDefaultModel(currentValue))
         {
             choice = modelChoices[0];
             return true;
@@ -262,7 +280,8 @@
             Provider?.Key.Value ?? string.Empty,
             Provider?.Name ?? string.Empty,
             ResolveProviderDefaultModel(),
-            modelOptions);
+            modelOptions,
+            string.Join('\u001f', modelChoices.Select(choice => choice.Text)));
     }
 
     private static string NormalizeModel(string? value)

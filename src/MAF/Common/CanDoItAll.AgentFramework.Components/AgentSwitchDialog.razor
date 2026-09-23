@@ -101,9 +101,9 @@
                 .Select(item => item.Id == updatedAgent.Id ? updatedAgent : item)
                 .ToList();
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            NotificationService.Error("Favorite update failed", exception.Message);
+            NotificationService.Error("Favorite update failed", "The favorite change could not be confirmed. Reload the agent list before trying again.");
         }
         finally
         {

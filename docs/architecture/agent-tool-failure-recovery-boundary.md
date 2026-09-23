@@ -23,6 +23,163 @@ tool input
 This is an adapter pattern. It is not a reason to expose `InvalidOperationException`
 or other arbitrary exception messages globally.
 
+## Durable pre-dispatch failures
+
+The runtime records a host-determined refusal before dispatch as trusted invocation
+failure evidence, separately from the model-visible tool result. A policy-denial string
+remains the same string; unavailable-tool and argument-validation results retain their
+existing JSON and correction guidance. Generic result classification must preserve the
+host's failure code, retryability and `NotCommitted` effect state on the first call and
+after journal restart. Tool-supplied JSON cannot create this trusted evidence.
+
+The existing file-journal owner checkpoints the result and its failure evidence in one
+mutation. Restoring that checkpoint also restores the trusted invocation capture, so the
+journal and durable tool trace agree. Because a pre-dispatch denial never reached its
+owner, replay restores it without consulting the owner's result-disclosure check: it
+holds no owner data and no disclosure evidence, and a later approval or reauthorization
+in the same session must not fail closed on it. Ordinary successful results and legacy
+checkpoints keep their existing representation; absent evidence is omitted. Newly
+distinguished private result kinds make older readers explicitly reject these new failure
+checkpoints instead of silently treating their visible text or JSON as successful
+completion.
+Resuming such a checkpoint requires a reader that understands its kind. No SQL migration
+or claim of an external effect receipt is implied.
+
+A server tool can also return `AgentToolFailureResult`, or raise a reviewed exception
+that the existing failure mapper converts to that contract. These failures may occur
+after entering the tool body. Their separate typed result kind preserves the original
+`None` or `NotCommitted` evidence and correction guidance without adding pre-dispatch
+provenance. Legacy JSON and tool-controlled JSON remain untyped, even when they contain
+fields that imitate this failure contract.
+
+A restored pre-dispatch denial must also agree with its journal outcome: the saved
+proposal carries `NotCommitted`, and a denial checkpoint whose proposal claims any other
+effect state is refused as inconsistent evidence before any owner disclosure check or
+dispatch. The refusal keeps the saved checkpoint for explicit reconciliation; it does
+not rewrite the journal or repeat the tool.
+
+`None` classification of a thrown owner rejection is trusted only where the owner proves
+the phase. The project asset owner raises its own `ProjectAssetContentValidationException`
+from content validation that precedes placement and the database write; the Structure
+tool provider maps only that type to `ProjectAssetContentInvalid` with `None`. Any other
+failure from the asset path, including a later `InvalidDataException`, stays opaque and
+uncertain.
+
+## Process pre-dispatch tool inventory
+
+The Processes preflight asks every runtime tool provider for the tools a governed step
+would receive before the step has an execution run, admission or lease. The provider
+context carries `ToolInventoryOnly`; the Workbench provider answers from the step's
+declared operations (`ProjectStructureScopedProcessAccess.ForToolInventory`) and reports
+the task and project tools the agent's own configuration could compose, because the
+saved launch authority that narrows them exists only at dispatch. The inventory is not a
+grant: the access state allows no project, not even the empty placeholder, and every
+composed tool is wrapped as `ProjectStructureInventoryOnlyTool`, which keeps the name,
+description and schema for matching but refuses invocation with
+`ProcessToolInventoryNotExecutable`. Actual dispatch composes its own tools from the
+saved lineage; a governed context without the flag and without a saved execution still
+fails closed at composition with `ProcessExecutionReconciliationRequired`.
+
+## Agent chat context scope lifetime
+
+The agent chat context registry keeps one active scope per circuit and the last
+publisher wins. A module context provider therefore holds a lease that can end in two
+ways: its own disposal, or supersession by a newer scope or publication. A lease reports
+`IsActive`; a provider synchronizes navigation and publishes only through an active
+lease and stands down otherwise, so a render that completes after supersession neither
+throws nor overwrites the live scope. An execution-completed notification is admitted
+against the scope that is active when it arrives and dispatched on the renderer later;
+the dispatch rechecks that the same scope is still current (disposal, a switch to another
+project or a re-activation of the same project id with a new lifetime ends it), so a
+stale notification never refreshes the page that replaced its scope, while a
+notification for the current scope still refreshes the same target once.
+
+## Durable invocation and result recovery
+
+The admission journal binds the original provider segment, tool batch, exact arguments,
+server-issued intent, approval and dispatch claim before serial invocation. Provider-native
+calls also retain dispatch evidence; a cancelled or disconnected provider request is not
+proof that its external effect did not occur. Transport hashing omits only the private
+per-call provider-history request identifier through the existing transport normalization.
+Actual messages, tool schemas and provider options still participate in the digest.
+
+Trusted pre-dispatch denial can complete a fresh Prepared proposal as `NotCommitted`.
+It cannot overwrite an earlier claimed, committed or uncertain effect during recovery.
+Explicit owner observations control required reconciliation; a generic completed result
+with `Unknown` effect state keeps its existing completion semantics. Cancellation of a
+reconciliation-required read after dispatch retains uncertainty, including metered reads.
+
+A stored result is not continuing permission to disclose it. Before restoring a saved
+result into provider context, the owning callback checks its original target and current
+read authority and holds any returned lease through restoration. A missing owner policy
+or withdrawn read grant denies disclosure while retaining the original result and intent.
+Reauthorization restores that same checkpoint without executing the tool again. Storage
+and Memory check current canonical Agent grants as well as the original configured limit,
+including when the runtime and attached tool instances have not been recreated.
+
+Owner receipts and result-disclosure evidence remain separate. Process node-start recovery
+preserves the exact launch admission receipt instead of a generic project effect marker.
+SDK string-enum and canonical numeric results read compatibly; canonical proposal
+fingerprints retain their original representation. New private journal evidence requires
+an aware reader and is not covered by SQL downgrade alone.
+
+Saved source revalidation retains the original source reference and governance. The
+canonical resolver distinguishes that saved authority from a new UI scope claim, derives
+current grants from the owning source, and rejects actor, profile, generation or scope
+changes. An Agents source can revalidate its originally resolved Sandbox without
+publishing Sandbox as a new UI claim. This does not refresh or widen the original grant.
+
+Registered workspace list and search tools capture their typed owner's exact physical
+selection before SDK JSON marshalling. The private result evidence retains the original
+root and selected children; current containment, existence and reparse checks precede
+restoration. Public display paths never locate a physical child. List shorthand such as
+`sources/**` uses the same Core parser as the file owner while retaining the original SDK
+arguments and approval digest. Human content edits do not cause a directory relist or
+repeat the read; loss of the original target denies disclosure.
+
+Collection evidence uses version2. A new reader refuses an old collection result that
+lacks exact child evidence; it preserves the saved result for explicit resolution and
+does not rerun the tool. Older readers reject version2. Noncollection result evidence
+retains its original version1 bytes and semantics. This private result-evidence version
+is separate from the attachment journal schema below and has no SQL migration.
+
+## Returned owner acknowledgements
+
+HR, curator and Scheduler adapters capture a confirmed owner effect immediately after the
+owner returns its typed save result, before reading an editor or updating a projection.
+When that failure can be checkpointed, the trace retains `Failed` with `Committed`
+effect state. Failure to capture or save the result checkpoint instead leaves the journal
+`ReconciliationRequired` with an `Unknown` effect and no result. Neither case proves rollback
+or successful completion. An unexpected or unresolved throw before the owner returns,
+including a lost response after a write, requires owner reconciliation. Reviewed typed
+pre-write refusals retain their explicit `None` or `NotCommitted` evidence.
+An acknowledgement alone does not provide atomic deduplication for another invocation.
+
+The private `CommittedOwnerResult` checkpoint persists its committed effect and kind
+together. Restoration requires the corresponding committed journal state and a valid pair;
+legacy unmarked results keep their original bytes. Older readers reject this new kind.
+The marker is trusted runtime evidence and is not disclosed as model-controlled content.
+
+Governed Process tool admission persists the exact SDK session before dispatch even when
+there is no pending approval. Final conversation persistence keeps its existing governed
+run policy. Missing or unreadable recovery state refuses continuation instead of creating
+a fresh session; original serial ordering, approvals and current authority still apply.
+
+## Captured context across restart
+
+Recoverable interactive runs persist supported context attachments through explicit owner
+codecs. Workbench owns Structure snapshots and Gantt observations; Core owns captured
+external-read bindings. The saved envelope retains the original source, scope, publication,
+fingerprints, profile generation, capture time and expiry. Restoration validates the owner
+payload and original runtime digest. It does not recapture current UI selection, refresh an
+expired snapshot, grant a new external root, or replace current receiving-owner authority.
+
+Typed attachments use journal schema 4. Attachment-free versions 1–3 retain their original
+encoding; old readers reject schema 4. Unknown new attachment kinds and unsaved byte/image
+inputs remain request-scoped. Unsupported or corrupt saved attachments fail explicitly.
+The complete serialized journal size bound also covers these payloads. No SQL migration
+is needed, but rollback to an older binary cannot resume schema-4 runs.
+
 ## Incident evidence
 
 Execution run `e3a22e82-d3db-48af-abb7-22c35083d3f3` had the spreadsheet skill,
@@ -54,6 +211,8 @@ overwrite authority.
 | Workspace tool set | Materialize each workspace tool once from configured, plugin, and individual declarations; preserve deterministic descriptions, monotonic approvals, and effective access policy. |
 | Capability composer | Attach the unified workspace tool set once and account for catalog declarations without order-dependent shadowing. |
 | MAF invocation boundary | Expose only typed safe failures; persist safe error evidence; mask unexpected exceptions. |
+| Project asset owner validation | Reject invalid upload content with `ProjectAssetContentValidationException` before placement or persistence; later failures stay opaque and uncertain. |
+| Structure tool inventory | Compose inert, contract-preserving tools for the process preflight without a project, admission or lease; refuse every invocation. |
 | Project asset source resolver | Accept exact target-project paths from every canonical managed root and reject foreign scopes. |
 | Project asset content sanitizer | Inline only bounded safe text; never infer that an unknown small payload is text. |
 | Project-structure context | Require correction/retry, workbook validation, asset registration, and persisted readback before claiming completion. |

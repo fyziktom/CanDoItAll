@@ -1,0 +1,38 @@
+@using CanDoItAll.AgentFramework.UI.Diagnostics
+<PageTitle>Diagnostics sandbox</PageTitle>
+<header class="catalog-sandbox__controls">
+    <h1 class="cda-title-xl">Diagnostics sandbox</h1>
+    <label for="diagnostics-scenario">Scenario</label>
+    <select id="diagnostics-scenario" class="cda-input" value="@scenario" @onchange="ChangeScenario">
+        @foreach (var value in DiagnosticsSandboxFixture.Scenarios) {
+            <option value="@value">@value</option>
+        }
+    </select>
+    <output aria-live="polite" data-testid="sandbox-intent">@intentLog</output>
+</header>
+<main class="catalog-sandbox__frame" data-testid="sandbox-diagnostics-specimen">
+    <AgentDiagnosticsSurface Presentation="presentation" OnIntent="Apply" />
+</main>
+<Tooltip />
+@code {
+    [Parameter] public string? ScenarioQuery { get; set; }
+    private string? appliedQuery;
+    private string scenario = "ready";
+    private string intentLog = "No intent";
+    private DiagnosticsPresentation presentation = DiagnosticsSandboxFixture.Create("ready");
+    protected override void OnParametersSet() {
+        if (appliedQuery != ScenarioQuery) {
+            appliedQuery = ScenarioQuery;
+            SetScenario(ScenarioQuery ?? "ready");
+        }
+    }
+    private void ChangeScenario(ChangeEventArgs args) => SetScenario(args.Value?.ToString() ?? "ready");
+    private void SetScenario(string value) {
+        scenario = value;
+        presentation = DiagnosticsSandboxFixture.Create(value);
+    }
+    private void Apply(DiagnosticsIntent intent) {
+        intentLog = intent.ToString();
+        SetScenario("ready");
+    }
+}

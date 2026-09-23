@@ -111,7 +111,8 @@ internal sealed class WorkspaceRuntimeFileAccessGuard(
         return EffectiveExternalTargetAccessResolver.Resolve(
             accessSettings,
             auditScope?.AllowedExternalTargetAliases,
-            auditScope?.ReadOnlyExternalTargetAliases);
+            auditScope?.ReadOnlyExternalTargetAliases,
+            auditScope?.InvocationExternalTargetScopeIsAuthoritative == true);
     }
 
     public bool IsManagedWorkspaceAbsolutePath(string path)

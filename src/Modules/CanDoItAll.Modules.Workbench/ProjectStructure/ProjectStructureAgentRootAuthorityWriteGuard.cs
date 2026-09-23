@@ -90,6 +90,11 @@ internal static class ProjectStructureAgentRootAuthorityWriteGuard
             .ToDictionary(group => group.Key, group => group.Take(2).ToArray(), StringComparer.Ordinal);
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var currentNodeKey = parentNodeKey.Trim();
+        if (!nodeGroups.ContainsKey(currentNodeKey))
+        {
+            throw CreateParentNotFoundFailure(currentNodeKey);
+        }
+
         while (!string.IsNullOrWhiteSpace(currentNodeKey))
         {
             if (!visited.Add(currentNodeKey) ||
@@ -181,19 +186,31 @@ internal static class ProjectStructureAgentRootAuthorityWriteGuard
         }
     }
 
+    // Both guards run before the owner writes: request metadata is validated up front and the parent chain is read at
+    // the start of the leased mutation, so their rejections are proven no-effect failures the model may correct.
     private static ProjectStructureAgentException CreateRequestFailure(string fieldName)
         => ProjectStructureAgentException.CreateAgentVisible(
             403,
             FailureCode,
             $"request.metadataJson projectBlock.{fieldName} is outside the managed workspace and this execution's external-target scope. Retry with a managed-workspace path or a root already authorized for this run, omit the root metadata, or ask an operator to make the authority-changing edit.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.None);
 
     private static ProjectStructureAgentException CreateParentFailure(string fieldName)
         => ProjectStructureAgentException.CreateAgentVisible(
             403,
             FailureCode,
             $"The requested parent belongs to a ProjectBlock whose projectBlock.{fieldName} is outside the managed workspace and this execution's external-target scope. Retry under a parent already authorized for this run or ask an operator to make the authority-changing edit.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
+
+    private static ProjectStructureAgentException CreateParentNotFoundFailure(string parentNodeKey)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            404,
+            "ParentNodeNotFound",
+            $"Parent node '{parentNodeKey}' was not found in the project structure. Read the current structure and retry with an existing node id, or use project:{{projectId}} for a top-level node.",
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
 
     private static ProjectBlockMetadata? ReadLegacyProjectBlockMetadata(
         string metadataJson)

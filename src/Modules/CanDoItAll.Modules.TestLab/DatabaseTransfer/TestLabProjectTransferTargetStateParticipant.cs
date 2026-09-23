@@ -3,9 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.TestLab;
 
-internal sealed class TestLabProjectTransferTargetStateParticipant
-    : IProjectTransferTargetStateParticipant
-{
+internal sealed class TestLabProjectTransferTargetStateParticipant(ProjectTransferTargetInspectionRunner inspections)
+    : IProjectTransferTargetStateParticipant {
     public ProjectTransferTargetStateArea Area =>
         ProjectTransferTargetStateArea.TestLab;
 
@@ -14,10 +13,13 @@ internal sealed class TestLabProjectTransferTargetStateParticipant
         typeof(TestPlan)
     ];
 
-    public async Task<IReadOnlyList<ProjectTransferTargetStateResidue>>
-        FindResiduesAsync(
-            AppDbContext dbContext,
-            CancellationToken cancellationToken)
+    public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
+        ProjectTransferTargetInspection request, CancellationToken cancellationToken)
+        => inspections.ReadOwnerAsync<TestLabDbContext, IReadOnlyList<ProjectTransferTargetStateResidue>>(
+            request, static options => new(options), ReadResiduesAsync, cancellationToken);
+
+    private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
+        TestLabDbContext dbContext, CancellationToken cancellationToken)
         => await dbContext.Set<TestPlan>()
             .AsNoTracking()
             .AnyAsync(item => item.ProjectId.HasValue, cancellationToken)

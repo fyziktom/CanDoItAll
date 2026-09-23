@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 

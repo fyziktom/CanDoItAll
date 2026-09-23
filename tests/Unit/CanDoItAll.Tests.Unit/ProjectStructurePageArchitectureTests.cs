@@ -1,224 +1,157 @@
+using System.Reflection;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Tests.Unit.Architecture;
+
 namespace CanDoItAll.Tests.Unit.Projects;
 
+// These checks read compiled symbols and IL instead of source text, so formatting, argument spelling, partial-file
+// layout or interface declarations elsewhere in a file cannot make them pass or fail. The former source assertion that
+// the page keeps captured action admission and restores saved launch preparations is covered behaviorally by
+// ProjectStructurePageActionLifetimeTests and ProjectStructurePageProcessLaunchScopeTests (Components).
 public sealed class ProjectStructurePageArchitectureTests
 {
+    private const BindingFlags DeclaredMembers = BindingFlags.Public | BindingFlags.NonPublic |
+                                                 BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+
     private static readonly string[] FormerLaunchContextPolicyMembers =
     [
-        "BuildProjectStructureContextSummary(",
-        "AppendVisualTargetAssetSummary(",
-        "IsVisualTargetAsset(",
-        "ContainsVisualTargetKeyword(",
-        "EnumerateProjectStructureContextNodes(",
-        "ResolveOutputRoot(",
-        "ApplyProductRootLaunchVariables(",
-        "TryReadOutputRootFromMetadata(",
-        "TryReadOutputRootFromElement(",
-        "NormalizeProcessContextText(",
-        "RedactNonCitableProcessContextPaths(",
-        "NormalizeContextText(",
-        "RedactNonCitableContextPaths(",
+        "BuildProjectStructureContextSummary",
+        "AppendVisualTargetAssetSummary",
+        "IsVisualTargetAsset",
+        "ContainsVisualTargetKeyword",
+        "EnumerateProjectStructureContextNodes",
+        "ResolveOutputRoot",
+        "ApplyProductRootLaunchVariables",
+        "TryReadOutputRootFromMetadata",
+        "TryReadOutputRootFromElement",
+        "NormalizeProcessContextText",
+        "RedactNonCitableProcessContextPaths",
+        "NormalizeContextText",
+        "RedactNonCitableContextPaths",
         "OutputRootMetadataKeys"
     ];
 
     private static readonly string[] FormerHierarchyPolicyMembers =
     [
-        "private static bool CanAttachProjectAsSubproject(",
-        "private static bool CanReconnectProjectToParent(",
-        "private static HashSet<Guid> ExpandReachableProjectIds("
+        "CanAttachProjectAsSubproject",
+        "CanReconnectProjectToParent",
+        "ExpandReachableProjectIds"
     ];
 
-    [Fact]
-    public void Process_launch_callers_delegate_to_the_shared_context_builder_and_result()
+    [Theory]
+    [InlineData(typeof(ProjectStructurePage))]
+    [InlineData(typeof(ProjectStructureProcessNodeService))]
+    public void Process_launch_callers_delegate_to_the_shared_context_builder_and_result(Type caller)
     {
-        var root = FindRepositoryRoot();
-        var pageSource = ReadSource(
-            root,
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workbench",
-            "Pages",
-            "ProjectStructurePage.Processes.cs");
-        var serviceSource = ReadSource(
-            root,
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workbench",
-            "ProjectStructure",
-            "ProjectStructureProcessNodeService.cs");
+        var called = CompiledTypeReferences.CalledMethods(caller);
 
-        Assert.Contains(
-            "ProjectStructureProcessLaunchContextBuilder.Build(surface, targetNode)",
-            pageSource,
-            StringComparison.Ordinal);
-        Assert.Contains("launchContext.ApplyContextSummaryTo(variables)", pageSource, StringComparison.Ordinal);
-        Assert.Contains("launchContext.ApplyOutputRootAliasesTo(variables)", pageSource, StringComparison.Ordinal);
-
-        Assert.Contains(
-            "ProjectStructureProcessLaunchContextBuilder.Build(surface, targetNode)",
-            serviceSource,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "ProjectStructureProcessLaunchContextBuilder.Build(surface, projectNode)",
-            serviceSource,
-            StringComparison.Ordinal);
-        Assert.Contains("launchContext.ApplyContextSummaryTo(variables)", serviceSource, StringComparison.Ordinal);
-        Assert.Contains(
-            "launchContext.ApplyContextSummaryTo(variables, removeWhenEmpty: true)",
-            serviceSource,
-            StringComparison.Ordinal);
-        Assert.Contains("launchContext.ApplyOutputRootAliasesTo(variables)", serviceSource, StringComparison.Ordinal);
+        Assert.Contains(called, method =>
+            method.DeclaringType == typeof(ProjectStructureProcessLaunchContextBuilder) &&
+            method.Name == nameof(ProjectStructureProcessLaunchContextBuilder.Build));
+        Assert.Contains(called, method =>
+            method.DeclaringType == typeof(ProjectStructureProcessLaunchContext) &&
+            method.Name == nameof(ProjectStructureProcessLaunchContext.ApplyContextSummaryTo));
+        Assert.Contains(called, method =>
+            method.DeclaringType == typeof(ProjectStructureProcessLaunchContext) &&
+            method.Name == nameof(ProjectStructureProcessLaunchContext.ApplyOutputRootAliasesTo));
     }
 
-    [Fact]
-    public void Former_launch_context_policy_members_are_absent_from_both_callers()
+    [Theory]
+    [InlineData(typeof(ProjectStructurePage))]
+    [InlineData(typeof(ProjectStructureProcessNodeService))]
+    public void Former_launch_context_policy_members_are_absent_from_the_callers(Type caller)
     {
-        var root = FindRepositoryRoot();
-        var callerSources = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["ProjectStructurePage.Processes.cs"] = ReadSource(
-                root,
-                "src",
-                "Modules",
-                "CanDoItAll.Modules.Workbench",
-                "Pages",
-                "ProjectStructurePage.Processes.cs"),
-            ["ProjectStructureProcessNodeService.cs"] = ReadSource(
-                root,
-                "src",
-                "Modules",
-                "CanDoItAll.Modules.Workbench",
-                "ProjectStructure",
-                "ProjectStructureProcessNodeService.cs")
-        };
-
-        var findings = callerSources
-            .SelectMany(caller => FormerLaunchContextPolicyMembers
-                .Where(member => caller.Value.Contains(member, StringComparison.Ordinal))
-                .Select(member => $"{caller.Key}: {member}"))
+        var findings = DeclaredMemberNames(caller)
+            .Where(name => FormerLaunchContextPolicyMembers.Contains(name, StringComparer.Ordinal))
             .ToArray();
 
         Assert.True(
             findings.Length == 0,
-            "Launch-context policy must live only in the shared builder: " + string.Join(", ", findings));
+            $"Launch-context policy must live only in the shared builder; {caller.Name} declares: {string.Join(", ", findings)}");
     }
 
     [Fact]
-    public void Launch_context_boundary_is_top_level_internal_and_adds_no_interface_or_partial()
+    public void Launch_context_boundary_is_a_top_level_internal_policy_without_page_or_service_location()
     {
-        var root = FindRepositoryRoot();
-        var source = ReadSource(
-            root,
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workbench",
-            "ProjectStructure",
-            "ProjectStructureProcessLaunchContextBuilder.cs");
+        AssertTopLevelInternalStatic(typeof(ProjectStructureProcessLaunchContextBuilder));
+        var context = typeof(ProjectStructureProcessLaunchContext);
+        Assert.False(context.IsNested);
+        Assert.False(context.IsPublic);
+        Assert.True(context.IsSealed);
+        Assert.NotNull(context.GetMethod("<Clone>$", DeclaredMembers));
 
-        Assert.Contains(
-            "internal static class ProjectStructureProcessLaunchContextBuilder",
-            source,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "internal sealed record ProjectStructureProcessLaunchContext(",
-            source,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain(" interface ", source, StringComparison.Ordinal);
-        Assert.DoesNotContain(" partial ", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProjectStructurePage", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("IServiceProvider", source, StringComparison.Ordinal);
+        AssertNoPageUiOrServiceLocatorDependency(typeof(ProjectStructureProcessLaunchContextBuilder), context);
     }
 
     [Fact]
     public void Project_hierarchy_page_delegates_to_the_shared_selection_policy()
     {
-        var root = FindRepositoryRoot();
-        var source = ReadSource(
-            root,
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workbench",
-            "Pages",
-            "ProjectStructurePage.ProjectHierarchy.cs");
+        var called = CompiledTypeReferences.CalledMethods(typeof(ProjectStructurePage));
 
-        Assert.Contains(
-            "ProjectStructureProjectHierarchySelectionPolicy.CanAttachProjectAsSubproject(",
-            source,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "ProjectStructureProjectHierarchySelectionPolicy.CanReconnectProjectToParent(",
-            source,
-            StringComparison.Ordinal);
-
-        var findings = FormerHierarchyPolicyMembers
-            .Where(member => source.Contains(member, StringComparison.Ordinal))
+        Assert.Contains(called, method =>
+            method.DeclaringType == typeof(ProjectStructureProjectHierarchySelectionPolicy) &&
+            method.Name == nameof(ProjectStructureProjectHierarchySelectionPolicy.CanAttachProjectAsSubproject));
+        Assert.Contains(called, method =>
+            method.DeclaringType == typeof(ProjectStructureProjectHierarchySelectionPolicy) &&
+            method.Name == nameof(ProjectStructureProjectHierarchySelectionPolicy.CanReconnectProjectToParent));
+        var redeclared = DeclaredMemberNames(typeof(ProjectStructurePage))
+            .Where(name => FormerHierarchyPolicyMembers.Contains(name, StringComparer.Ordinal))
             .ToArray();
         Assert.True(
-            findings.Length == 0,
-            "Hierarchy selection policy must live only in the shared policy: " +
-            string.Join(", ", findings));
+            redeclared.Length == 0,
+            "Hierarchy selection policy must live only in the shared policy: " + string.Join(", ", redeclared));
     }
 
     [Fact]
-    public void Project_hierarchy_boundary_is_top_level_internal_and_has_no_page_dependency()
+    public void Project_hierarchy_boundary_is_a_top_level_internal_policy_without_page_dependency()
     {
-        var root = FindRepositoryRoot();
-        var source = ReadSource(
-            root,
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workbench",
-            "ProjectStructure",
-            "ProjectStructureProjectHierarchySelectionPolicy.cs");
+        var policy = typeof(ProjectStructureProjectHierarchySelectionPolicy);
+        AssertTopLevelInternalStatic(policy);
+        AssertNoPageUiOrServiceLocatorDependency(policy);
 
-        Assert.Contains(
-            "internal static class ProjectStructureProjectHierarchySelectionPolicy",
-            source,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain(" interface ", source, StringComparison.Ordinal);
-        Assert.DoesNotContain(" partial ", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProjectStructurePage", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProjectStructureProjectHierarchyDialogMode", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("IServiceProvider", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            CompiledTypeReferences.ReferencedTypes(policy),
+            type => type.Name == "ProjectStructureProjectHierarchyDialogMode");
     }
 
     [Fact]
-    public void Project_structure_page_partial_count_does_not_increase()
+    public void Provider_prompt_execution_uses_the_AgentFramework_runtime_port()
     {
-        var root = FindRepositoryRoot();
-        var pagesDirectory = Path.Combine(
-            root,
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workbench",
-            "Pages");
-        var explicitPartialCount = Directory
-            .EnumerateFiles(
-                pagesDirectory,
-                "ProjectStructurePage*.cs",
-                SearchOption.TopDirectoryOnly)
-            .Count(path => File.ReadAllText(path).Contains(
-                "partial class ProjectStructurePage",
-                StringComparison.Ordinal));
+        var page = typeof(ProjectStructurePage);
 
-        Assert.Equal(22, explicitPartialCount);
+        Assert.Contains(page.GetProperties(DeclaredMembers), property =>
+            property.PropertyType.Name == "IProviderPromptExecutionService" &&
+            property.GetCustomAttributes().Any(attribute => attribute.GetType().Name == "InjectAttribute"));
+        Assert.Contains(CompiledTypeReferences.CalledMethods(page), method =>
+            method.DeclaringType?.Name == "IProviderPromptExecutionService" &&
+            method.Name == "ExecuteAsync");
+        var referenced = CompiledTypeReferences.ReferencedTypes(page);
+        Assert.DoesNotContain(referenced, type =>
+            type.Name is "ProviderExecutionService" or "IProviderExecutionService" or "ProviderExecutionRequest");
+        Assert.DoesNotContain(referenced, type =>
+            type.Namespace?.StartsWith("CanDoItAll.Modules.Workspace.Providers", StringComparison.Ordinal) == true);
     }
 
-    private static string ReadSource(string root, params string[] segments)
-        => File.ReadAllText(Path.Combine([root, .. segments]));
+    private static IEnumerable<string> DeclaredMemberNames(Type type)
+        => CompiledTypeReferences.SelfAndNestedTypes(type)
+            .SelectMany(candidate => candidate.GetMembers(DeclaredMembers))
+            .Select(member => member.Name)
+            .Distinct(StringComparer.Ordinal);
 
-    private static string FindRepositoryRoot()
+    private static void AssertTopLevelInternalStatic(Type type)
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
-            {
-                return directory.FullName;
-            }
+        Assert.False(type.IsNested, $"{type.Name} must be a top-level type.");
+        Assert.False(type.IsPublic, $"{type.Name} must stay internal to its owner.");
+        Assert.True(type.IsAbstract && type.IsSealed, $"{type.Name} must be a static policy.");
+    }
 
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate repository root.");
+    private static void AssertNoPageUiOrServiceLocatorDependency(params Type[] types)
+    {
+        var referenced = types.SelectMany(CompiledTypeReferences.ReferencedTypes).ToHashSet();
+        Assert.DoesNotContain(typeof(ProjectStructurePage), referenced);
+        Assert.DoesNotContain(typeof(IServiceProvider), referenced);
+        Assert.DoesNotContain(referenced, type =>
+            type.Namespace?.StartsWith("Microsoft.AspNetCore.Components", StringComparison.Ordinal) == true);
     }
 }

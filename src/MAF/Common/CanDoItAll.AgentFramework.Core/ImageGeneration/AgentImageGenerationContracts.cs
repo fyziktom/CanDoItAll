@@ -25,6 +25,9 @@ public sealed record AgentImageGenerationRequest(
     IReadOnlyList<AgentImageGenerationSource> Sources)
 {
     public int? OutputCompression { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext History { get; init; } =
+        CanDoItAll.AgentFramework.ProviderHistory.HistoryInvocationContext.Create(currentTurn: new(Prompt, 0));
 }
 
 public sealed record AgentGeneratedImage(

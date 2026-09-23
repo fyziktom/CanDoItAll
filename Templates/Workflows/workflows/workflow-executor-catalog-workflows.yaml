@@ -139,6 +139,7 @@ workflows:
           y: 220
           executor:
             id: http.fetch
+            policy: fast
             settings:
               method: Get
               url: https://example.com
@@ -289,6 +290,7 @@ workflows:
           y: 220
           executor:
             id: http.fetch
+            policy: fast
             settings:
               method: Get
               url: https://example.com

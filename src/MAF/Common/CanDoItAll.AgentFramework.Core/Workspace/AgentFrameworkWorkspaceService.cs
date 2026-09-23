@@ -55,8 +55,11 @@ public sealed partial class AgentFrameworkWorkspaceService :
         IProviderRuntimeProfileSource? providerRuntimeProfileSource = null,
         IEnumerable<IAgentExecutionProviderSelectionPolicy>? providerSelectionPolicies = null,
         IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null,
-        WorkspaceRuntimeServices? ownedWorkspaceBundle = null)
-    {
+        WorkspaceRuntimeServices? ownedWorkspaceBundle = null,
+        AgentToolAdmissionJournal? toolAdmissionJournal = null,
+        IAgentExecutionAuthorityResolver? executionAuthorityResolver = null,
+        IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
+        AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
         ArgumentNullException.ThrowIfNull(executionRuntime);
@@ -141,7 +144,11 @@ public sealed partial class AgentFrameworkWorkspaceService :
             outputRepairService,
             workspacePathResolutionService,
             providerSelectionPolicies,
-            runCriticalityPolicies);
+            runCriticalityPolicies,
+            toolAdmissionJournal,
+            executionAuthorityResolver,
+            receiptReconciliationProviders,
+            toolPolicies);
 
         executionService.ExecutionUpdated += HandleExecutionUpdated;
     }
@@ -218,7 +225,8 @@ public sealed partial class AgentFrameworkWorkspaceService :
     {
         var catalogTask = store.LoadCatalogAsync(cancellationToken);
         var executionSummaryTask = store.LoadExecutionSummaryAsync(cancellationToken);
-        await Task.WhenAll(catalogTask, executionSummaryTask);
+        var providersTask = catalogService.ListProvidersAsync(cancellationToken);
+        await Task.WhenAll(catalogTask, executionSummaryTask, providersTask);
 
         var catalog = await catalogTask;
         var executionSummary = await executionSummaryTask;
@@ -226,7 +234,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         return new SandboxDashboardSnapshot(
             AgentCount: catalog.Agents.Count(item => !item.IsTemplate),
             TemplateCount: catalog.Agents.Count(item => item.IsTemplate),
-            ProviderCount: catalog.Providers.Count,
+            ProviderCount: (await providersTask).Count,
             CapabilityCount: catalog.Capabilities.Count,
             SessionCount: executionSummary.SessionCount,
             MemoryCount: catalog.Memory.Count,
@@ -245,7 +253,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         var catalog = await catalogTask;
         var executionSummary = await executionSummaryTask;
         var usageProjection = await usageProjectionTask;
-        var totals = CreateOverviewTotals(catalog, executionSummary, usageProjection);
+        var totals = await CreateOverviewTotalsAsync(catalog, executionSummary, usageProjection, cancellationToken);
         var agentRows = MapAgentRows(catalog, usageProjection.Agents);
 
         return new AgentOverviewSnapshot(
@@ -277,7 +285,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         var usageProjection = await usageProjectionTask;
         return new AgentUsageDetailSnapshot(
             MapAgentRows(catalog, usageProjection.Agents),
-            CreateOverviewTotals(catalog, executionSummary, usageProjection),
+            await CreateOverviewTotalsAsync(catalog, executionSummary, usageProjection, cancellationToken),
             usageProjection.UpdatedAtUtc);
     }
 
@@ -293,7 +301,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         var usageProjection = await usageProjectionTask;
         return new ProviderUsageDetailSnapshot(
             MapProviderRows(usageProjection.Providers),
-            CreateOverviewTotals(catalog, executionSummary, usageProjection),
+            await CreateOverviewTotalsAsync(catalog, executionSummary, usageProjection, cancellationToken),
             usageProjection.UpdatedAtUtc);
     }
 
@@ -309,20 +317,21 @@ public sealed partial class AgentFrameworkWorkspaceService :
         var usageProjection = await usageProjectionTask;
         return new ModelUsageDetailSnapshot(
             MapModelRows(usageProjection.Models),
-            CreateOverviewTotals(catalog, executionSummary, usageProjection),
+            await CreateOverviewTotalsAsync(catalog, executionSummary, usageProjection, cancellationToken),
             usageProjection.UpdatedAtUtc);
     }
 
-    private static AgentOverviewTotals CreateOverviewTotals(
+    private async Task<AgentOverviewTotals> CreateOverviewTotalsAsync(
         SandboxWorkspaceCatalog catalog,
         SandboxWorkspaceExecutionSummary executionSummary,
-        AgentUsageProjection usageProjection)
-    {
+        AgentUsageProjection usageProjection,
+        CancellationToken cancellationToken) {
+        var providers = await catalogService.ListProvidersAsync(cancellationToken);
         return new AgentOverviewTotals(
             AgentCount: catalog.Agents.Count(item => !item.IsTemplate),
             TemplateCount: catalog.Agents.Count(item => item.IsTemplate),
             TeamCount: catalog.AgentTeams.Count,
-            ProviderCount: catalog.Providers.Count,
+            ProviderCount: providers.Count,
             CapabilityCount: catalog.Capabilities.Count,
             SessionCount: executionSummary.SessionCount,
             MemoryCount: catalog.Memory.Count,

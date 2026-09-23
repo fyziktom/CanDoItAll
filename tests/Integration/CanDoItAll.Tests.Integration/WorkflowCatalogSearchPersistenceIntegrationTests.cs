@@ -40,7 +40,7 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
 
         var gallery = CreateGallery(factory);
         IWorkflowCatalogSearchService searchService = new PersistentWorkflowCatalogService(
-            factory,
+            WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
             new WorkflowDefinitionValidator(),
             gallery,
             gallery);
@@ -266,8 +266,9 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
             VersionId = versionId
         };
 
-    private static PromptsService CreateGallery(WorkflowUsagePostgresDbContextFactory factory)
-        => new(
+    private static PromptsService CreateGallery(WorkflowUsagePostgresDbContextFactory canonicalFactory) {
+        var factory = PromptsPersistenceTestFactory.FromCanonical(canonicalFactory);
+        return new(
             factory,
             new SystemClock(),
             new NullActivityStream(),
@@ -275,6 +276,7 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
             new PromptGalleryProjectionCoordinator(factory, new DisabledPromptGalleryProjectionDriver()),
             new PromptGalleryCompatibilityEvaluator(),
             NullLogger<PromptsService>.Instance);
+    }
 
     private sealed record SeededCatalog(
         IReadOnlyList<WorkflowId> MatchingIds,

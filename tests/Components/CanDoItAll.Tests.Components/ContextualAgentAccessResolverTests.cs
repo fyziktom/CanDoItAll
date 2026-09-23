@@ -1,3 +1,5 @@
+using CanDoItAll.Modules.Workbench.ProjectStructure;
+using CanDoItAll.Modules.Processes.AgentChat;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -6,6 +8,10 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ContextualAgentAccessResolverTests
 {
+    private static ContextualAgentWorkspacePolicyCatalog Policies { get; } = new([
+        new ProjectStructureContextualWorkspacePolicy(), new ProcessContextualWorkspacePolicy()
+    ]);
+
     [Fact]
     public void Project_structure_context_filters_to_active_agents_with_matching_project_access()
     {
@@ -65,7 +71,7 @@ public sealed class ContextualAgentAccessResolverTests
             matchingAgent.ConfigurationJson,
             isTemplate: true);
 
-        var result = ContextualAgentAccessResolver.Resolve(
+        var result = Policies.Resolve(
             [matchingAgent, nonTaskStructureWriteAgent, taskWriteAgent, writeAgent, wrongProjectAgent, templateAgent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: projectId);
@@ -77,6 +83,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.Equal(matchingAgent.Id, item.Agent.Id);
                 Assert.True(item.CanRead);
                 Assert.False(item.CanWrite);
+                Assert.False(item.CanMutate);
                 Assert.Equal("This project", item.ScopeLabel);
             },
             item =>
@@ -86,6 +93,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.True(item.CanWriteNonTaskStructure);
                 Assert.False(item.CanWriteTasks);
                 Assert.False(item.CanWrite);
+                Assert.True(item.CanMutate);
                 Assert.Equal("All projects", item.ScopeLabel);
             },
             item =>
@@ -95,6 +103,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.False(item.CanWriteNonTaskStructure);
                 Assert.True(item.CanWriteTasks);
                 Assert.False(item.CanWrite);
+                Assert.True(item.CanMutate);
                 Assert.Equal("All projects", item.ScopeLabel);
             },
             item =>
@@ -102,6 +111,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.Equal(writeAgent.Id, item.Agent.Id);
                 Assert.True(item.CanRead);
                 Assert.True(item.CanWrite);
+                Assert.True(item.CanMutate);
                 Assert.Equal("All projects", item.ScopeLabel);
             });
     }
@@ -121,7 +131,7 @@ public sealed class ContextualAgentAccessResolverTests
                     AllowedProjectIds = [projectId]
                 }));
 
-        var result = Assert.Single(ContextualAgentAccessResolver.Resolve(
+        var result = Assert.Single(Policies.Resolve(
             [agent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: projectId));
@@ -130,6 +140,7 @@ public sealed class ContextualAgentAccessResolverTests
         Assert.True(result.CanWriteNonTaskStructure);
         Assert.True(result.CanWriteTasks);
         Assert.False(result.CanWrite);
+        Assert.True(result.CanMutate);
         Assert.Equal("This project", result.ScopeLabel);
     }
 
@@ -148,7 +159,7 @@ public sealed class ContextualAgentAccessResolverTests
                     AllowedProjectIds = [projectId]
                 }));
 
-        var result = Assert.Single(ContextualAgentAccessResolver.Resolve(
+        var result = Assert.Single(Policies.Resolve(
             [agent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: projectId));
@@ -157,6 +168,7 @@ public sealed class ContextualAgentAccessResolverTests
         Assert.False(result.CanWrite);
         Assert.False(result.CanCreateProjects);
         Assert.True(result.CanCreateSubprojects);
+        Assert.True(result.CanMutate);
         Assert.Equal("This project", result.ScopeLabel);
     }
 
@@ -175,7 +187,7 @@ public sealed class ContextualAgentAccessResolverTests
                     AllowedProjectIds = []
                 }));
 
-        var result = Assert.Single(ContextualAgentAccessResolver.Resolve(
+        var result = Assert.Single(Policies.Resolve(
             [agent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: null));
@@ -185,7 +197,7 @@ public sealed class ContextualAgentAccessResolverTests
         Assert.True(result.CanCreateProjects);
         Assert.False(result.CanCreateSubprojects);
         Assert.Equal("Project creation only", result.ScopeLabel);
-        Assert.Empty(ContextualAgentAccessResolver.Resolve(
+        Assert.Empty(Policies.Resolve(
             [agent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: Guid.NewGuid()));
@@ -228,7 +240,7 @@ public sealed class ContextualAgentAccessResolverTests
             allDefinitionsAgent.ConfigurationJson,
             status: AgentLifecycleStatus.Suspended);
 
-        var result = ContextualAgentAccessResolver.Resolve(
+        var result = Policies.Resolve(
             [matchingAgent, allDefinitionsAgent, wrongDefinitionAgent, suspendedAgent],
             ContextualAgentWorkspaceKind.Processes,
             processDefinitionId: definitionId);
@@ -256,7 +268,7 @@ public sealed class ContextualAgentAccessResolverTests
     {
         var projectId = Guid.NewGuid();
 
-        var prompt = ContextualAgentWorkspaceContextBuilder.BuildPrompt(
+        var prompt = Policies.BuildPrompt(
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId,
             processDefinitionId: null,

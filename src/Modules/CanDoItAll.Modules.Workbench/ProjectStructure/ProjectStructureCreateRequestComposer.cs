@@ -31,6 +31,16 @@ internal static class ProjectStructureCreateRequestComposer
 
         switch (definition.ObjectType)
         {
+            case ProjectObjectType.ProjectBlock:
+                metadata.ProjectBlock = new ProjectBlockMetadata
+                {
+                    OutputRoot = GetValue(inputValues, "outputRoot"),
+                    ProductRoot = GetValue(inputValues, "productRoot"),
+                    TargetRoot = GetValue(inputValues, "targetRoot"),
+                    RepositoryRoot = GetValue(inputValues, "repositoryRoot"),
+                    WorkspaceRoot = GetValue(inputValues, "workspaceRoot")
+                };
+                break;
             case ProjectObjectType.Meeting:
                 metadata.Meeting = new ProjectMeetingMetadata
                 {

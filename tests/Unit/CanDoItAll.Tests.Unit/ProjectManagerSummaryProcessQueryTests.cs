@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -25,9 +26,8 @@ public sealed class ProjectManagerSummaryProcessQueryTests
             typeof(ProjectsModuleAssemblyMarker).Assembly,
             typeof(WorkbenchModuleAssemblyMarker).Assembly
         ]);
-        var databaseOptions = AppDbContextTestOptionsBuilder.Create()
-            .UseInMemoryDatabase($"manager-summary-process-{Guid.NewGuid():N}")
-            .Options;
+        var owners = new WorkbenchOwnerInMemoryFixture("ProjectManagerSummaryProcessQueryTests");
+            var databaseOptions = owners.CompleteOptions;
         var projectId = Guid.NewGuid();
         await using (var dbContext = new AppDbContext(databaseOptions))
         {
@@ -45,7 +45,8 @@ public sealed class ProjectManagerSummaryProcessQueryTests
             operationDelay: TimeSpan.FromMilliseconds(25));
         var service = new ProjectManagerSummaryQueryService(
             new ProjectPlanAnalyticsQueryService(
-                new TestDbContextFactory(databaseOptions),
+                owners.WorkbenchFactory,
+                owners.Projects,
                 new NoopProjectPartyIntegrationBridge(),
                 new ProjectPlanSummaryCalculator()),
             new EmptyAgentExecutionReportReader(),
@@ -469,14 +470,6 @@ public sealed class ProjectManagerSummaryProcessQueryTests
         }
     }
 
-    private sealed class TestDbContextFactory(
-        DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
-        {
-            return new AppDbContext(options);
-        }
-    }
 
     private sealed class FixedClock(DateTimeOffset now) : IClock
     {

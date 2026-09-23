@@ -12,19 +12,20 @@ public sealed class HrAgentUsageAnalyticsService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
+        // A rejected usage query reads nothing, so the caller can correct the scope, agent or window and retry.
         if (!Enum.IsDefined(input.Scope))
         {
-            throw new ArgumentOutOfRangeException(nameof(input), input.Scope, "Usage scope is not defined.");
+            throw AgentToolInputValidationException.Create($"Usage scope '{input.Scope}' is not defined.");
         }
 
         if (input.AgentId == Guid.Empty)
         {
-            throw new ArgumentException("Agent id cannot be empty.", nameof(input));
+            throw AgentToolInputValidationException.Create("Agent id cannot be empty.");
         }
 
         if (input.FromUtc.HasValue && input.ToUtc.HasValue && input.FromUtc > input.ToUtc)
         {
-            throw new InvalidOperationException("FromUtc cannot be later than ToUtc.");
+            throw AgentToolInputValidationException.Create("FromUtc cannot be later than ToUtc.");
         }
 
         var referenceData = await referenceDataProvider.GetAsync(
@@ -33,7 +34,8 @@ public sealed class HrAgentUsageAnalyticsService(
         if (input.AgentId.HasValue &&
             referenceData.Agents.All(agent => agent.Id != input.AgentId.Value))
         {
-            throw new InvalidOperationException($"Agent '{input.AgentId.Value:D}' was not found.");
+            throw AgentToolInputValidationException.Create(
+                $"Agent '{input.AgentId.Value:D}' was not found. Search the agent catalog and retry with an existing agent id.");
         }
 
         var state = await executionStore.LoadExecutionAsync(cancellationToken);

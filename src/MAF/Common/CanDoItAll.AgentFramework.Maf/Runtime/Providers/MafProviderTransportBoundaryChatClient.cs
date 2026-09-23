@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -69,9 +70,17 @@ internal sealed class MafProviderTransportException : Exception
     public string Model { get; }
 
     internal static string ResolveDiagnosticFailureType(Exception exception)
-        => (exception as MafProviderTransportException)?.InnerException?.GetType().FullName ??
-           exception.GetType().FullName ??
-           exception.GetType().Name;
+    {
+        var innerException = (exception as MafProviderTransportException)?.InnerException;
+        return innerException is ProviderFailureBoundaryException
+            {
+                DiagnosticFailureType: { Length: > 0 } diagnosticFailureType
+            }
+                ? diagnosticFailureType
+                : innerException?.GetType().FullName ??
+                  exception.GetType().FullName ??
+                  exception.GetType().Name;
+    }
 }
 
 internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatClient
@@ -159,7 +168,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
             }
             catch (MafProviderTransportException exception)
             {
-                primaryFailure = exception;
+                primaryFailure = CreateTransportException(exception);
             }
             catch (Exception exception)
             {
@@ -212,7 +221,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
             }
             catch (MafProviderTransportException exception)
             {
-                primaryFailure = exception;
+                primaryFailure = CreateTransportException(exception);
             }
             catch (Exception exception)
             {
@@ -262,7 +271,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
                 catch (MafProviderTransportException exception)
                 {
                     inFlightMoveNext = null;
-                    primaryFailure = exception;
+                    primaryFailure = CreateTransportException(exception);
                     break;
                 }
                 catch (Exception exception)
@@ -564,7 +573,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         }
         catch (MafProviderTransportException exception)
         {
-            return exception;
+            return CreateTransportException(exception);
         }
         catch (Exception exception)
         {
@@ -592,7 +601,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         }
     }
 
-    private static async ValueTask<Exception?> CaptureDispatchLeaseDisposalFailureAsync(
+    private async ValueTask<Exception?> CaptureDispatchLeaseDisposalFailureAsync(
         IAsyncDisposable dispatchLease)
     {
         try
@@ -602,7 +611,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         }
         catch (Exception exception)
         {
-            return exception;
+            return CreateTransportException(exception);
         }
     }
 
@@ -643,6 +652,34 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
             : secondaryFailure.GetType().FullName ?? secondaryFailure.GetType().Name;
     }
 
-    private MafProviderTransportException CreateTransportException(Exception exception)
-        => new(provider, model, exception);
+    private MafProviderTransportException CreateTransportException(
+        Exception exception)
+    {
+        if (ProviderFailureDisclosurePolicy.RequiresSanitization(provider))
+        {
+            if (exception is MafProviderTransportException
+                {
+                    InnerException: ProviderFailureBoundaryException
+                } sanitizedException)
+            {
+                return sanitizedException;
+            }
+
+            return new MafProviderTransportException(
+                provider,
+                model,
+                ProviderFailureDisclosurePolicy.CreateBoundaryException(
+                    provider,
+                    ProviderFailureOperation.RuntimeRequest,
+                    exception,
+                    exception switch {
+                        System.ClientModel.ClientResultException result => result.Status,
+                        HttpRequestException { StatusCode: { } status } => (int)status,
+                        _ => null
+                    }));
+        }
+
+        return exception as MafProviderTransportException ??
+            new MafProviderTransportException(provider, model, exception);
+    }
 }

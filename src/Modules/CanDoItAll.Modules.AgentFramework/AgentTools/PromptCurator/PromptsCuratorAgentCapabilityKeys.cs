@@ -15,11 +15,11 @@ public static class PromptsCuratorAgentCapabilityKeys
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [AgentToolInvocationPolicyMetadata.PromptGalleryCatalogSearch] = CatalogSearch,
-            [AgentToolInvocationPolicyMetadata.PromptGalleryItemEditorGet] = ItemEditorGet,
-            [AgentToolInvocationPolicyMetadata.PromptGalleryDraftCreate] = DraftCreate,
-            [AgentToolInvocationPolicyMetadata.PromptGalleryDraftUpdate] = DraftUpdate,
-            [AgentToolInvocationPolicyMetadata.PromptGalleryVersionCreate] = VersionCreate
+            [PromptGalleryToolPolicy.PromptGalleryCatalogSearch] = CatalogSearch,
+            [PromptGalleryToolPolicy.PromptGalleryItemEditorGet] = ItemEditorGet,
+            [PromptGalleryToolPolicy.PromptGalleryDraftCreate] = DraftCreate,
+            [PromptGalleryToolPolicy.PromptGalleryDraftUpdate] = DraftUpdate,
+            [PromptGalleryToolPolicy.PromptGalleryVersionCreate] = VersionCreate
         }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static IReadOnlySet<string> PrivilegedKeys { get; } = ToolNameToCapabilityKey.Values

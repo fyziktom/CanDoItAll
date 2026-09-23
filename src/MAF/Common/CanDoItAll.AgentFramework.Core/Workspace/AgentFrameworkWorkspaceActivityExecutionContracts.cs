@@ -22,6 +22,16 @@ public interface IAgentFrameworkWorkspaceActivityExecutionService
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 
+    Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support durable cancelled-run reconciliation.");
+
+    Task<ExecutionRunResult> RecoverExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
+        Guid executionRunId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support activity-bound admitted-run recovery.");
+
     Task<AgentChatRunResult> SendMessageWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation,
         Guid agentId,

@@ -98,7 +98,7 @@ internal static class MafModelParametersBuilder
             return true;
         }
 
-        return AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider.Kind, model);
+        return AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider, model);
     }
 
     public static bool ShouldRetryWithoutTemperature(

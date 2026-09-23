@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.EntityFrameworkCore;
@@ -86,12 +87,62 @@ public sealed class WorkflowLaunchIdempotencyInMemoryStoreTests
         Assert.Equal(1, record?.ReplayCount);
     }
 
+    [Fact]
+    public async Task Public_api_key_of_one_caller_conflicts_for_another_caller_instead_of_replaying_its_run()
+    {
+        IWorkflowLaunchIdempotencyStore[] stores = [CreateStore(), new InMemoryWorkflowLaunchIdempotencyStore()];
+        foreach (var store in stores)
+        {
+            var ownerScope = CreateScope("shared-caller-key");
+            var otherCallerScope = ownerScope with
+            {
+                OriginScopeKey = new WorkflowLaunchOriginScopeKey(new string('B', 64))
+            };
+            var fingerprint = CreateFingerprint("same-request");
+            var ownerToken = WorkflowLaunchIdempotencyClaimToken.New();
+            var runId = WorkflowRunId.New();
+
+            var claim = await store.TryClaimAsync(
+                ownerScope,
+                fingerprint,
+                ownerToken,
+                runId,
+                ClaimedAtUtc,
+                ClaimedAtUtc.AddMinutes(5));
+            Assert.Equal(WorkflowLaunchIdempotencyClaimOutcome.Acquired, claim.Outcome);
+            await Assert.ThrowsAsync<WorkflowLaunchIdempotencyConflictException>(() => store.TryClaimAsync(
+                otherCallerScope,
+                fingerprint,
+                WorkflowLaunchIdempotencyClaimToken.New(),
+                WorkflowRunId.New(),
+                ClaimedAtUtc.AddSeconds(1),
+                ClaimedAtUtc.AddMinutes(5)));
+
+            Assert.True(await store.TryCompleteClaimAsync(ownerScope, ownerToken, CreateCompletion(ownerScope, runId)));
+            await Assert.ThrowsAsync<WorkflowLaunchIdempotencyConflictException>(() => store.TryClaimAsync(
+                otherCallerScope,
+                fingerprint,
+                WorkflowLaunchIdempotencyClaimToken.New(),
+                WorkflowRunId.New(),
+                ClaimedAtUtc.AddSeconds(2),
+                ClaimedAtUtc.AddMinutes(5)));
+
+            var replay = await store.TryClaimAsync(
+                ownerScope,
+                fingerprint,
+                WorkflowLaunchIdempotencyClaimToken.New(),
+                WorkflowRunId.New(),
+                ClaimedAtUtc.AddSeconds(3),
+                ClaimedAtUtc.AddMinutes(5));
+            Assert.Equal(WorkflowLaunchIdempotencyClaimOutcome.Completed, replay.Outcome);
+            Assert.Equal(runId, replay.ReservedRunId);
+        }
+    }
+
     private static PersistentWorkflowLaunchIdempotencyStore CreateStore()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies([
-            typeof(PersistentWorkflowLaunchIdempotencyStore).Assembly
-        ]);
-        var options = AppDbContextTestOptionsBuilder.Create()
+
+        var options = new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseInMemoryDatabase($"workflow-launch-idempotency-{Guid.NewGuid():N}")
             .Options;
         return new PersistentWorkflowLaunchIdempotencyStore(

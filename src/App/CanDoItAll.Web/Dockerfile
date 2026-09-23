@@ -10,8 +10,8 @@ FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_SDK_VERSION} AS build
 WORKDIR /source
 
 COPY . .
-COPY --from=components . /CanDoItAll.Components
-COPY --from=filetools . /CanDoItAll.FileTools
+COPY --from=components --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.Components
+COPY --from=filetools --exclude=**/[Bb]in --exclude=**/[Oo]bj . /CanDoItAll.FileTools
 RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages \
     dotnet restore "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" \
     /p:UseLocalCanDoItAllLibraries=true
@@ -27,6 +27,7 @@ RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages \
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS runtime
 ARG BUILD_DATE
 ARG BUILD_REVISION
+ARG BUILD_SOURCE_FINGERPRINT
 ARG BUILD_VERSION=dev
 
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
@@ -37,7 +38,8 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.source="https://github.com/fyziktom/CanDoItAll" \
       org.opencontainers.image.title="CanDoItAll.Web" \
       org.opencontainers.image.vendor="CanDoItAll" \
-      org.opencontainers.image.version="${BUILD_VERSION}"
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      io.candoitall.source-fingerprint="${BUILD_SOURCE_FINGERPRINT}"
 
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080

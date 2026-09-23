@@ -34,6 +34,11 @@ public sealed record ApplicationPurposeRoots(
     string LogsRoot,
     string RuntimeTemporaryRoot);
 
+/// <summary>
+/// Application purpose root, as a string token: <c>Workspace</c> (workspace data), <c>ControlPlane</c> (host
+/// control-plane settings), <c>DatabaseProfiles</c> (database profile catalog), <c>DataProtectionKeys</c> (ASP.NET Core
+/// Data Protection keys), <c>State</c>, <c>Logs</c> or <c>RuntimeTemporary</c> (temporary runtime data).
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ApplicationPurposeRootKind
 {
@@ -46,6 +51,13 @@ public enum ApplicationPurposeRootKind
     RuntimeTemporary
 }
 
+/// <summary>
+/// Where the location of an application purpose root comes from, as a string token: <c>PlatformDefault</c> (the
+/// default location for the operating system), <c>ExplicitConfiguration</c> (a configured path),
+/// <c>ActiveDatabaseProfile</c> (the workspace root stored with the active database profile),
+/// <c>DerivedFromControlPlaneRoot</c> (a location under the configured control-plane root) or <c>OwnerResolved</c>
+/// (resolved by its owning component without a reported source).
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ApplicationPurposeRootConfigurationSource
 {

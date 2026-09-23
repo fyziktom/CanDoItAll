@@ -453,7 +453,7 @@ public sealed class HomePageTests
             }
 
             renderedHomes.Clear();
-            await Context.DisposeComponentsAsync();
+            await Context.DisposeRenderedComponentsAsync();
             await Context.Services.DisposeAsync();
             Context.Dispose();
         }

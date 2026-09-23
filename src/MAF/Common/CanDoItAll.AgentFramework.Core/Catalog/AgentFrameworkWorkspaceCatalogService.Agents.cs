@@ -67,14 +67,19 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                         .Append(selectedProvider)
                         .ToList()
                 };
-            var definition = AgentDefinitionFactory.Create(
-                validationCatalog,
-                model,
-                id,
-                existingAgent,
-                now,
-                providerProfileService,
-                "Agent save");
+            AgentDefinition definition;
+            try {
+                definition = AgentDefinitionFactory.Create(
+                    validationCatalog,
+                    model,
+                    id,
+                    existingAgent,
+                    now,
+                    providerProfileService,
+                    "Agent save");
+            } catch (InvalidOperationException exception) {
+                throw new AgentEditorValidationException(exception.Message, exception);
+            }
 
             return validationCatalog with
             {
@@ -117,51 +122,13 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             static (access, id) => access.AllowedProjectIds.Remove(id),
             cancellationToken);
 
-    public async Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
-        Guid projectId,
-        CancellationToken cancellationToken = default)
-    {
-        if (projectId == Guid.Empty)
-        {
+    public Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
+        Guid projectId, CancellationToken cancellationToken = default) {
+        if (projectId == Guid.Empty) {
             throw new ArgumentException("A project id is required.", nameof(projectId));
         }
-
-        var changedAgentCount = 0;
-        var now = DateTimeOffset.UtcNow;
-        await UpdateCatalogAsync(catalog =>
-        {
-            changedAgentCount = 0;
-            var updatedAgents = new List<AgentDefinition>(catalog.Agents.Count);
-            foreach (var agent in catalog.Agents)
-            {
-                var revocation = AgentProjectStructureAccessMetadata.RevokeProject(
-                    agent.ConfigurationJson,
-                    projectId);
-                if (!revocation.Changed)
-                {
-                    updatedAgents.Add(agent);
-                    continue;
-                }
-
-                changedAgentCount++;
-                updatedAgents.Add(agent with
-                {
-                    ConfigurationJson = revocation.ConfigurationJson,
-                    UpdatedAtUtc = now
-                });
-            }
-
-            return changedAgentCount == 0
-                ? catalog
-                : catalog with
-                {
-                    Agents = updatedAgents
-                        .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                        .ToList()
-                };
-        }, cancellationToken);
-
-        return changedAgentCount;
+        return RevokeProjectStructureAccessCoreAsync(
+            configuration => AgentProjectStructureAccessMetadata.RevokeProject(configuration, projectId), cancellationToken);
     }
 
     private async Task UpdateAgentProjectStructureAccessAsync(
@@ -189,7 +156,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             var updated = agent with
             {
                 ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, access),
-                UpdatedAtUtc = now
+                UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
             };
 
             return catalog with
@@ -323,6 +290,11 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             var providerIdMap = BuildProviderIdMap(document.Providers, normalizedImportedProviders);
             var capabilityIdMap = BuildCapabilityIdMap(document.Capabilities, normalizedImportedCapabilities);
             var importedAgent = RemapImportedAgent(normalizedImportedAgent, providerIdMap, capabilityIdMap, document.Capabilities, normalizedImportedCapabilities);
+            if (document.Agents.FirstOrDefault(agent => agent.Id == importedAgent.Id) is { } previousAgent) {
+                importedAgent = importedAgent with {
+                    UpdatedAtUtc = AgentConfigurationVersion.NextRevision(previousAgent.UpdatedAtUtc, DateTimeOffset.UtcNow)
+                };
+            }
             var importedProviders = normalizedImportedProviders
                 .Where(provider => providerIdMap[provider.Id] == provider.Id)
                 .ToList();

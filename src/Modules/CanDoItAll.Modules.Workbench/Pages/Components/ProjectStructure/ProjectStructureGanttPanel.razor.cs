@@ -87,6 +87,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     public EventCallback<ProjectStructureGanttObservation?> ObservationChanged { get; set; }
 
     private string? lastPublishedObservationFingerprint;
+    private bool disposed;
 
     private ErrorBoundary? dragSourceErrorBoundary;
 
@@ -94,7 +95,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     private Task PublishObservationAsync()
     {
-        if (!ObservationChanged.HasDelegate || ProjectId == Guid.Empty)
+        if (disposed || !ObservationChanged.HasDelegate || ProjectId == Guid.Empty)
         {
             return Task.CompletedTask;
         }
@@ -105,7 +106,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             isLoading,
             loadError,
             selectedTaskNodeId: null,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            loadedSurface?.ExpectedProjectAdmission is { } admission && admission.ProjectId == ProjectId
+                ? new(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId)
+                : null);
         if (string.Equals(
                 lastPublishedObservationFingerprint,
                 observation.ContentFingerprint,
@@ -178,13 +182,15 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return;
         }
 
-        loadedSurface = Surface;
+        var capturedSurface = Surface;
+        var previousAdmission = loadedSurface?.ExpectedProjectAdmission;
+        loadedSurface = capturedSurface;
         mermaidSource = null;
-        if (projectionProjectId != ProjectId)
+        if (projectionProjectId != ProjectId || previousAdmission != capturedSurface.ExpectedProjectAdmission)
         {
             projectionProjectId = ProjectId;
             projection = null;
-            projectionOriginUtc = ResolveProjectionOriginUtc(Surface);
+            projectionOriginUtc = ResolveProjectionOriginUtc(capturedSurface);
             insertionCandidate = CreateInsertionCandidate(projectionOriginUtc);
         }
 
@@ -194,6 +200,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         // built so a turn admitted mid-load sees partial facts, never stale
         // Canvas or Gantt content.
         await PublishObservationAsync();
+        if (disposed || !ReferenceEquals(loadedSurface, capturedSurface) || !ReferenceEquals(Surface, capturedSurface)) {
+            return;
+        }
         try
         {
             var assignmentsTask = ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(
@@ -203,11 +212,15 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 ProjectId,
                 lifetimeCancellation.Token);
             await Task.WhenAll(assignmentsTask, viewStateTask);
+            if (disposed || !ReferenceEquals(loadedSurface, capturedSurface) || !ReferenceEquals(Surface, capturedSurface) ||
+                    ProjectId != capturedSurface.ProjectId) {
+                return;
+            }
             var assignments = await assignmentsTask;
             loadedAssignments = assignments;
             var viewState = await viewStateTask;
             projection = ProjectionAdapter.Build(
-                Surface,
+                capturedSurface,
                 assignments,
                 new ProjectStructureGanttProjectionOptions(
                     projectionOriginUtc,
@@ -219,6 +232,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         catch (Exception exception)
         {
+            if (disposed || !ReferenceEquals(loadedSurface, capturedSurface) || !ReferenceEquals(Surface, capturedSurface)) {
+                return;
+            }
             projection = null;
             loadError = "The project schedule could not be loaded. The project structure remains unchanged.";
             Logger.LogError(
@@ -228,7 +244,13 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         finally
         {
-            isLoading = false;
+            if (!disposed && ReferenceEquals(loadedSurface, capturedSurface) && ReferenceEquals(Surface, capturedSurface)) {
+                isLoading = false;
+            }
+        }
+
+        if (disposed || !ReferenceEquals(loadedSurface, capturedSurface) || !ReferenceEquals(Surface, capturedSurface)) {
+            return;
         }
 
         // The interactive Gantt components come from a packaged library whose JS-interop
@@ -259,14 +281,22 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     private async Task ApplyTitleAsync(GanttTaskTitleChangeRequest request)
     {
+        var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
+        if (owner is null) {
+            return;
+        }
         await ExecuteMutationAsync(
             "title",
-            cancellationToken => MutationService.ApplyTitleAsync(ProjectId, request, cancellationToken));
+            cancellationToken => MutationService.ApplyTitleAsync(owner.ExpectedProjectAdmission!.ProjectId, request, cancellationToken, owner));
     }
 
     private async Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
     {
         var renderedSurface = loadedSurface ?? Surface;
+        var owner = CaptureRenderedMutationOwner(renderedSurface);
+        if (owner is null) {
+            return;
+        }
         var renderedProjection = projection
             ?? throw new InvalidOperationException("The Gantt projection is unavailable.");
         var pendingProjection = renderedProjection.WithScheduleChanges(request.AffectedTasks);
@@ -275,12 +305,12 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         var committed = await ExecuteMutationAsync(
             "schedule",
             cancellationToken => MutationService.ApplyScheduleAsync(
-                ProjectId,
+                owner.ExpectedProjectAdmission!.ProjectId,
                 ProjectStructureGanttScheduleMutationFactory.Create(
                     request,
                     renderedSurface,
                     renderedProjection.Tasks),
-                cancellationToken));
+                cancellationToken, owner));
         if (!committed && ReferenceEquals(projection, pendingProjection))
         {
             projection = renderedProjection;
@@ -289,16 +319,24 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     private async Task ApplyDependencyAsync(GanttDependencyMutationRequest request)
     {
+        var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
+        if (owner is null) {
+            return;
+        }
         await ExecuteMutationAsync(
             "dependency",
-            cancellationToken => MutationService.ApplyDependencyAsync(ProjectId, request, cancellationToken));
+            cancellationToken => MutationService.ApplyDependencyAsync(owner.ExpectedProjectAdmission!.ProjectId, request, cancellationToken, owner));
     }
 
     private async Task ApplyInsertionAsync(GanttTaskInsertionRequest request)
     {
+        var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
+        if (owner is null) {
+            return;
+        }
         await ExecuteMutationAsync(
             "insertion",
-            cancellationToken => MutationService.ApplyInsertionAsync(ProjectId, request, cancellationToken),
+            cancellationToken => MutationService.ApplyInsertionAsync(owner.ExpectedProjectAdmission!.ProjectId, request, cancellationToken, owner),
             renewInsertionCandidate: true);
     }
 
@@ -329,7 +367,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                     loadedSurface,
                     projection,
                     loadedAssignments,
-                    uiMutationOwner),
+                    uiMutationOwner with { ExpectedProjectAdmission = loadedSurface.ExpectedProjectAdmission }),
                 taskId,
                 () => MutationCommitted.InvokeAsync(),
                 lifetimeCancellation.Token);
@@ -353,11 +391,15 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return;
         }
 
+        var openedProjectId = ProjectId;
+        var openedAdmission = loadedSurface?.ExpectedProjectAdmission
+            ?? throw new InvalidOperationException("Reload the project structure before creating a task.");
+        var openedOwner = uiMutationOwner with { ExpectedProjectAdmission = openedAdmission };
         IReadOnlyList<ProjectStructureTaskResourceOption> resourceOptions = [];
         IReadOnlyList<string> resourceWarnings = [];
         try
         {
-            resourceOptions = await TaskResourceService.ListOptionsAsync(ProjectId, lifetimeCancellation.Token);
+            resourceOptions = await TaskResourceService.ListOptionsAsync(openedProjectId, lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
         {
@@ -377,7 +419,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             "Add project task",
             new Dictionary<string, object?>
             {
-                [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = ProjectId,
+                [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = openedProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = normalizedStart,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = normalizedStart + DefaultTaskDuration,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEstimate)] = new ProjectTaskEstimate(
@@ -409,11 +451,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         if (result is ProjectStructureTaskCreateRequest request)
         {
-            await CreateTaskAsync(request);
+            await CreateTaskAsync(openedProjectId, request with { ExpectedProjectAdmission = openedAdmission }, openedOwner);
         }
     }
 
-    private async Task CreateTaskAsync(ProjectStructureTaskCreateRequest request)
+    private async Task CreateTaskAsync(Guid openedProjectId, ProjectStructureTaskCreateRequest request, ProjectStructureAgentContext openedOwner)
     {
         if (!EnsureMutationHostAvailable())
         {
@@ -426,9 +468,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         try
         {
             var result = await TaskCreationService.CreateAsync(
-                ProjectId,
+                openedProjectId,
                 request,
-                uiMutationOwner,
+                openedOwner,
                 lifetimeCancellation.Token);
             committedPricingFeedback =
                 ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(result.Pricing);
@@ -484,6 +526,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return;
         }
 
+        var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
+        if (owner is null) {
+            return;
+        }
+
         var placement = request.Placement switch
         {
             GanttTaskOrderPlacement.Before => ProjectStructureGanttRowPlacement.Before,
@@ -496,12 +543,12 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         try
         {
             await RowOrderService.MoveAsync(
-                ProjectId,
+                owner.ExpectedProjectAdmission!.ProjectId,
                 new ProjectStructureGanttRowMoveRequest(
                     request.TaskId.Value,
                     request.AnchorTaskId.Value,
                     placement),
-                uiMutationOwner,
+                owner,
                 lifetimeCancellation.Token);
             mutationCommitted = true;
             await MutationCommitted.InvokeAsync();
@@ -595,6 +642,14 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         {
             mutationInFlight = false;
         }
+    }
+
+    private ProjectStructureAgentContext? CaptureRenderedMutationOwner(ProjectStructureSurface surface) {
+        if (surface.ExpectedProjectAdmission is not { } expected || surface.ProjectId != ProjectId || expected.ProjectId != surface.ProjectId) {
+            NotificationService.Error("Refresh project schedule", "The displayed project scope is no longer available. Reload it before editing.");
+            return null;
+        }
+        return uiMutationOwner with { ExpectedProjectAdmission = expected };
     }
 
     private bool EnsureMutationHostAvailable()
@@ -722,6 +777,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     public ValueTask DisposeAsync()
     {
+        if (disposed) {
+            return ValueTask.CompletedTask;
+        }
+        disposed = true;
         lifetimeCancellation.Cancel();
         lifetimeCancellation.Dispose();
         GC.SuppressFinalize(this);

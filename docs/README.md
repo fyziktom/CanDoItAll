@@ -25,6 +25,7 @@ authoritative.
 - [Testing](testing.md)
 - [Secure configuration](secure-configuration.md)
 - [Container operations](operations/containers.md)
+- [Podman on macOS source development](operations/podman-macos-development.md)
 - [Development PostgreSQL backup and restore](operations/backup-and-restore.md)
 - [Process agent operator runbook](process-agent-operator-runbook.md)
 
@@ -35,6 +36,8 @@ authoritative.
 - [CRM/HR API](crm-hr-api.md)
 - [OAuth email plugins](oauth-email-plugins.md)
 - [Provider capability and pricing](provider-capability-and-pricing.md)
+- [Shared providers](shared-providers.md)
+- [Provider request history](provider-request-history.md)
 - [Memory providers](memory-providers/README.md)
 - [Shared UI component boundary](ui-shared-components/README.md)
 - [UI support scope](ui-support-scope.md)

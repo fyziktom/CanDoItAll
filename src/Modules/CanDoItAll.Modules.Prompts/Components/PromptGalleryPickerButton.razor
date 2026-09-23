@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject DialogService DialogService
 @inject NotificationService Notifications
 
@@ -7,12 +8,20 @@
         Variant="@Variant"
         Size="@Size"
         Disabled="@Disabled"
-        Click="OpenAsync"
+        Click="Open"
         aria-label="@EffectiveAriaLabel"
         title="@EffectiveAriaLabel"
         data-testid="prompt-gallery-picker-button" />
 
 @code {
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? interaction;
+    private PickerContext observedContext;
+    private (string Provider, string Model)? knownPair;
+    private long contextGeneration;
+    private bool observed;
+    private bool disposed;
+
     [Parameter]
     public string Text { get; set; } = "Browse prompt gallery";
 
@@ -46,6 +55,11 @@
     [Parameter]
     public string? Model { get; set; }
 
+    // Identity of the target the selection is inserted into; a change makes an open picker obsolete even when
+    // provider and model stay the same.
+    [Parameter]
+    public object? TargetKey { get; set; }
+
     [Parameter]
     public bool ShowActualChatModelFilter { get; set; }
 
@@ -58,10 +72,111 @@
     [Parameter]
     public EventCallback<Guid> EditRequested { get; set; }
 
+    // True while a picker interaction started by this button is still open.
+    public bool HasOpenInteraction => interaction is not null;
+
     private string EffectiveAriaLabel => string.IsNullOrWhiteSpace(AriaLabel) ? Text : AriaLabel;
 
-    private async Task OpenAsync()
+    protected override void OnParametersSet()
     {
+        var next = ResolveContext();
+        if (observed && next.Equals(observedContext))
+        {
+            return;
+        }
+
+        // An owner that named its target may still be configuring the provider and model for it: the workflow canvas
+        // shows a fallback model until its provider options load and then replaces both, a chat resolves its provider
+        // after the first render. Until the target has a configured pair (provider and model both present) there is
+        // no compatibility context to invalidate, and the first configured pair completes the initial configuration;
+        // both keep the open interaction, its generation and its dialog. A configured pair that differs from the pair
+        // the interaction last knew is a genuine change of the active compatibility and filter context, as is another
+        // consumer or target: the interaction started under the previous context is retired, its dialog closes and
+        // its result is dropped. A value going absent again is unknown, not a change; it neither retires the
+        // interaction nor forgets the known pair, so a later different pair is still recognized. A same-context
+        // rerender changes nothing.
+        var transition = !observed || IsTransition(observedContext, next);
+        observed = true;
+        observedContext = next;
+        if (transition)
+        {
+            knownPair = null;
+        }
+
+        if (next is { Provider: { } provider, Model: { } model })
+        {
+            knownPair = (provider, model);
+        }
+
+        if (!transition)
+        {
+            return;
+        }
+
+        contextGeneration++;
+        RetireInteraction();
+    }
+
+    // The observed context: consumer, provider, model and the owner's target key. A blank provider or model is
+    // absent, so an owner that renders an empty string before it knows the model names the same context as one that
+    // renders null. Without a TargetKey the provider and model are the only identity the owner offers, and any change
+    // of them is a transition.
+    private PickerContext ResolveContext()
+        => new(Consumer, Normalize(Provider), Normalize(Model), TargetKey);
+
+    private bool IsTransition(PickerContext previous, PickerContext next)
+    {
+        if (previous.Consumer != next.Consumer || !Equals(previous.TargetKey, next.TargetKey))
+        {
+            return true;
+        }
+
+        if (next.TargetKey is null)
+        {
+            return true;
+        }
+
+        if (next.Provider is null || next.Model is null)
+        {
+            return false;
+        }
+
+        return knownPair is { } known &&
+               (!string.Equals(known.Provider, next.Provider, StringComparison.Ordinal) ||
+                !string.Equals(known.Model, next.Model, StringComparison.Ordinal));
+    }
+
+    private static string? Normalize(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    // Cancels the current interaction and releases its ownership slot, so the next context can start its own
+    // interaction while the retired one is still unwinding. The retired operation keeps its own token source and
+    // clears the slot only if it still owns it, so it can neither block nor clear a newer interaction.
+    private void RetireInteraction()
+    {
+        var retired = interaction;
+        interaction = null;
+        retired?.Cancel();
+    }
+
+    // The click handler returns at once. The button component disables itself while its click task is in flight, and
+    // an interaction spans a modal dialog plus the owner's selection chain, which a retired target may keep pending;
+    // admission is therefore guarded by the interaction slot, not by the button.
+    private void Open()
+    {
+        if (disposed || interaction is not null)
+        {
+            return;
+        }
+
+        _ = RunInteractionAsync();
+    }
+
+    private async Task RunInteractionAsync()
+    {
+        var generation = contextGeneration;
+        using var current = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        interaction = current;
         try
         {
             var result = await DialogService.OpenAsync<PromptGalleryPickerDialog>(
@@ -83,15 +198,52 @@
                     DenseChrome = true,
                     TestId = "prompt-gallery-picker-dialog",
                     AriaLabel = "Browse prompt gallery"
-                });
+                },
+                current.Token);
+            if (!IsCurrent(generation))
+            {
+                return;
+            }
+
             if (result is PromptGallerySelection selection)
             {
                 await Selected.InvokeAsync(selection);
             }
         }
+        catch (OperationCanceledException) when (current.IsCancellationRequested)
+        {
+        }
         catch (Exception exception)
         {
-            Notifications.Error("Prompt gallery could not be opened", exception.Message);
+            if (IsCurrent(generation))
+            {
+                Notifications.Error("Prompt gallery could not be opened", exception.Message);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(interaction, current))
+            {
+                interaction = null;
+            }
         }
     }
+
+    private bool IsCurrent(long generation)
+        => !disposed && generation == contextGeneration;
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        interaction?.Cancel();
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
+
+    private readonly record struct PickerContext(PromptGalleryConsumer Consumer, string? Provider, string? Model, object? TargetKey);
 }

@@ -3,35 +3,55 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-using WorkspaceProviderConnectorFieldKeys = CanDoItAll.Modules.Workspace.ProviderConnectorFieldKeys;
-using WorkspaceProviderPricingRefreshResult = CanDoItAll.Modules.Workspace.ProviderModelPricingRefreshResult;
-using WorkspaceProviderService = CanDoItAll.Modules.Workspace.WorkspaceService;
+using ProviderConnectorKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys;
+using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 
-public partial class AgentProviderProfilesPanel
-{
+public partial class AgentProviderProfilesPanel : IDisposable {
     [Inject]
-    public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+    public IProviderEditorCommands Commands { get; set; } = default!;
 
-    [Inject]
-    public WorkspaceProviderService WorkspaceProviderService { get; set; } = default!;
+    [Inject] public ProviderEditorRecovery Recovery { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     private readonly HashSet<string> expandedProviderTreeNodeIds = [];
     private readonly HashSet<string> knownProviderTagNodeIds = [];
-    private IReadOnlyList<ProviderProfile> providers = [];
-    private IReadOnlyList<SecretListItem> secrets = [];
-    private ProviderProfileEditorModel providerModel = CreateNewProviderEditor();
+    [Inject]
+    public IProviderProfilesReads Reads { get; set; } = default!;
+
+    private ProviderProfilesSession session = default!;
+    private IReadOnlyList<ProviderProfile> providers => session.Catalog.Providers;
+    private IReadOnlyList<SecretListItem> secrets => session.Catalog.Secrets.Items;
+    private ProviderProfileEditorModel providerModel => session.Draft;
+    private EditContext providerEditContext => session.EditContext;
     private IReadOnlyList<string> providerTagValues = [];
     private string providerSearch = string.Empty;
-    private string suggestedModelsText = string.Empty;
-    private int providerEditorTabIndex;
-    private bool isLoading;
-    private bool isBusy;
+    private string rawSuggestedModels = string.Empty;
+    private string suggestedModelsText {
+        get => rawSuggestedModels;
+        set {
+            rawSuggestedModels = value;
+            if (!SelectedProviderIsSourceManaged) {
+                providerModel.SuggestedModels = ParseLines(value).ToList();
+            }
+        }
+    }
+    private int providerEditorTabIndex {
+        get => ProviderEditorSections.IndexOf(session.State.Section);
+        set => session.SelectSection(ProviderEditorSections.At(value).Section);
+    }
+    private bool isLoading => session.CatalogLoadState == ProviderProfilesLoadState.Loading;
+    private ProviderEditorOperations operations = default!;
+    private bool isBusy => operations.IsBusy;
+    private bool sharedConnectionsOpen {
+        get => session.State.SharedConnectionsOpen;
+        set => session.SetSharedConnectionsOpen(value);
+    }
 
     private IReadOnlyList<ProviderProfile> FilteredProviders => providers
         .Where(MatchesProviderSearch)
@@ -39,7 +59,7 @@ public partial class AgentProviderProfilesPanel
         .ToList();
 
     private IReadOnlyList<TreeViewNode> ProviderTreeNodes
-        => ProviderProfileTreeNodeBuilder.Build(FilteredProviders, providerModel.Id, expandedProviderTreeNodeIds);
+        => ProviderProfileTreeNodeBuilder.Build(FilteredProviders, session.State.ProviderId, expandedProviderTreeNodeIds);
 
     private IReadOnlyList<string> AvailableProviderTags => providers
         .SelectMany(provider => provider.Tags)
@@ -51,44 +71,39 @@ public partial class AgentProviderProfilesPanel
     private bool HasUnavailableSecretReference =>
         !string.IsNullOrWhiteSpace(providerModel.ApiKeyEnvironmentVariable) &&
         !secrets.Any(secret => string.Equals(
-            AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id),
+            ProviderMetadata.CreateSecretReference(secret.Id),
             providerModel.ApiKeyEnvironmentVariable,
             StringComparison.OrdinalIgnoreCase));
 
-    protected override async Task OnInitializedAsync()
-    {
+    private bool SelectedProviderIsSourceManaged => session.IsSourceManaged;
+    private ProviderProfile? SelectedProvider => session.SelectedProvider;
+
+    private string ProviderDefaultModelText {
+        get => SelectedProviderIsSourceManaged
+            ? SelectedProvider!.GetModelDisplayName(providerModel.DefaultModel)
+            : providerModel.DefaultModel;
+        set => providerModel.DefaultModel = value;
+    }
+
+    public void Dispose() => session?.Dispose();
+
+    protected override async Task OnInitializedAsync() {
+        session = new(Reads, Recovery);
+        operations = new(session, Commands);
         await LoadAsync();
     }
 
-    private async Task LoadAsync()
-    {
-        isLoading = true;
-        try
-        {
-            var providersTask = WorkspaceService.ListProvidersAsync();
-            var secretsTask = WorkspaceProviderService.ListSecretsAsync();
-            await Task.WhenAll(providersTask, secretsTask);
-            providers = await providersTask;
-            secrets = await secretsTask;
+    private async Task LoadAsync() {
+        if (operations.HasPendingReconciliation) {
+            await RetryReconciliationAsync();
+            return;
+        }
+        var applied = await session.RefreshAsync();
+        if (session.CanEdit) {
             RefreshProviderTreeExpansionDefaults();
-
-            if (providerModel.Id.HasValue &&
-                providers.Any(item => item.Id == providerModel.Id.Value))
-            {
-                await EditProviderAsync(providerModel.Id.Value);
+            if (applied) {
+                SyncProviderEditorText();
             }
-            else if (providers.Count > 0)
-            {
-                await EditProviderAsync(providers[0].Id);
-            }
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Provider catalog failed", exception.Message);
-        }
-        finally
-        {
-            isLoading = false;
         }
     }
 
@@ -113,155 +128,120 @@ public partial class AgentProviderProfilesPanel
         return Task.CompletedTask;
     }
 
-    private async Task EditProviderAsync(Guid providerId)
-    {
-        providerModel = await WorkspaceService.GetProviderEditorAsync(providerId);
+    private async Task<bool> EditProviderAsync(Guid providerId) {
+        if (!await session.SelectAsync(providerId)) {
+            return false;
+        }
+        RefreshProviderTreeExpansionDefaults();
+        SyncProviderEditorText();
+        return true;
+    }
+
+    private long sharingRevision;
+
+    private Task RefreshProvidersAfterSharedChangeAsync(SharedProviderChangeDelivery delivery) =>
+        delivery.ReconcileAsync(async () => {
+            var change = delivery.Change;
+            var selectedId = session.State.ProviderId;
+            var result = await session.ReconcileSharedAsync(change);
+            if (!result.Completed) {
+                throw new InvalidOperationException("The provider workspace reconciliation did not complete.");
+            }
+            if (result.EditorReplaced) {
+                SyncProviderEditorText();
+            }
+            if (selectedId.HasValue && session.State.ProviderId == selectedId &&
+                change.AffectedProviderProfileIds.Contains(selectedId.Value) &&
+                change.Kind is not (ProviderManagement.SharedProviderChangeKind.Publication or
+                    ProviderManagement.SharedProviderChangeKind.ImportedSettings or
+                    ProviderManagement.SharedProviderChangeKind.ImportRetirement)) {
+                sharingRevision++;
+            }
+            RefreshProviderTreeExpansionDefaults();
+        });
+
+    private async Task SaveProviderAsync() {
+        providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();
+        providerModel.Tags = providerTagValues.ToList();
+        PublishFeedback(await operations.SaveAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private async Task TestProviderAsync(Guid providerId) {
+        PublishFeedback(await operations.CheckHealthAsync());
+    }
+
+    private async Task DeleteProviderAsync(Guid providerId) {
+        PublishFeedback(await operations.DeleteAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private async Task RetryReconciliationAsync() {
+        PublishFeedback(await operations.RetryReconciliationAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private async Task VerifyUnconfirmedAsync() {
+        PublishFeedback(await operations.VerifyUnconfirmedAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private async Task RetryVerifiedAsync() {
+        PublishFeedback(await operations.RetryVerifiedAsync());
+        RefreshProviderTreeExpansionDefaults();
+    }
+
+    private void PublishFeedback(ProviderEditorFeedback? feedback) {
+        if (feedback is null) {
+            return;
+        }
+        switch (feedback.Kind) {
+            case ProviderFeedbackKind.Success:
+                NotificationService.Success(feedback.Title, feedback.Message);
+                break;
+            case ProviderFeedbackKind.Warning:
+                NotificationService.Warning(feedback.Title, feedback.Message);
+                break;
+            case ProviderFeedbackKind.Error:
+                NotificationService.Error(feedback.Title, feedback.Message);
+                break;
+        }
+    }
+
+    private async Task ResetProviderAsync() {
+        await session.NewAsync();
         SyncProviderEditorText();
     }
 
-    private async Task SaveProviderAsync()
-    {
-        isBusy = true;
-        try
-        {
-            providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();
-            providerModel.Tags = providerTagValues.ToList();
-            var providerId = await WorkspaceService.SaveProviderAsync(providerModel);
-            providers = await WorkspaceService.ListProvidersAsync();
-            RefreshProviderTreeExpansionDefaults();
-            await EditProviderAsync(providerId);
-            NotificationService.Success("Provider saved", "Provider profile saved.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Provider save failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private async Task TestProviderAsync(Guid providerId)
-    {
-        isBusy = true;
-        try
-        {
-            var result = await WorkspaceService.TestProviderAsync(providerId);
-            providers = await WorkspaceService.ListProvidersAsync();
-            await EditProviderAsync(providerId);
-            if (result.Success)
-            {
-                NotificationService.Success("Provider health check passed", result.Summary);
-            }
-            else
-            {
-                NotificationService.Warning("Provider health check failed", result.Summary);
-            }
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Provider health check failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private async Task DeleteProviderAsync(Guid providerId)
-    {
-        isBusy = true;
-        try
-        {
-            await WorkspaceService.DeleteProviderAsync(providerId);
-            providers = await WorkspaceService.ListProvidersAsync();
-            RefreshProviderTreeExpansionDefaults();
-            if (providers.Count > 0)
-            {
-                await EditProviderAsync(providers[0].Id);
-            }
-            else
-            {
-                await ResetProviderAsync();
-            }
-
-            NotificationService.Success("Provider deleted", "Provider profile deleted.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Provider delete failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private Task ResetProviderAsync()
-    {
-        providerModel = CreateNewProviderEditor();
-        providerEditorTabIndex = 0;
-        SyncProviderEditorText();
-        return Task.CompletedTask;
-    }
-
-    private async Task RefreshProviderModelPricesAsync()
-    {
-        if (!providerModel.Id.HasValue)
-        {
-            NotificationService.Warning(
-                "Provider pricing was not loaded",
-                "Save the provider before loading prices from its API.");
+    private void ChangeProviderKind(ProviderKind kind) {
+        if (SelectedProviderIsSourceManaged || providerModel.Kind == kind) {
             return;
         }
 
-        isBusy = true;
-        try
-        {
-            var workspaceProviders = await WorkspaceProviderService.ListProviderProfilesAsync();
-            if (!workspaceProviders.Any(provider => provider.Id == providerModel.Id.Value))
-            {
-                NotificationService.Warning(
-                    "Provider pricing was not loaded",
-                    "Pricing refresh is available only for saved workspace-backed providers. Add model prices manually.");
-                return;
-            }
+        providerModel.Kind = kind;
+        providerModel.BaseUrl = string.Empty;
+        providerModel.ApiKeyEnvironmentVariable = string.Empty;
+        providerModel.DefaultModel = string.Empty;
+        providerModel.ConfigurationJson = "{}";
+        providerModel.SuggestedModels = [];
+        providerModel.ModelPrices = [];
+        providerModel.ModelThinkingEffortCapabilities = [];
+        providerModel.Tags = [];
+        providerModel.IsPrivateProvider = ProviderPricingDefaults.IsPrivateProvider(kind);
+        providerModel.Transport = kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
+            ? ProviderTransportKind.Responses : ProviderTransportKind.ChatCompletions;
+        providerModel.SupportsBackgroundResponses = false;
+        SyncProviderEditorText();
+        NotificationService.Info("Provider kind changed",
+            "Connection, models, prices and provider metadata were cleared. Configure the endpoint and load its models before saving.");
+    }
 
-            var workspaceModel = await WorkspaceProviderService.GetProviderAsync(providerModel.Id.Value);
-            if (workspaceModel.Id != providerModel.Id)
-            {
-                NotificationService.Warning(
-                    "Provider pricing was not loaded",
-                    "The selected provider is not a saved workspace-backed provider. Add model prices manually.");
-                return;
-            }
-
-            workspaceModel.Configuration.SetText(WorkspaceProviderConnectorFieldKeys.BaseUrl, providerModel.BaseUrl);
-            workspaceModel.Configuration.SetText(WorkspaceProviderConnectorFieldKeys.DefaultModel, providerModel.DefaultModel);
-            workspaceModel.IsPrivateProvider = providerModel.IsPrivateProvider;
-            workspaceModel.ModelPrices = CloneModelPrices(providerModel.ModelPrices);
-
-            var result = await WorkspaceProviderService.RefreshProviderModelPricesAsync(workspaceModel);
-            if (!result.IsSuccess)
-            {
-                NotificationService.Warning(
-                    "Provider pricing was not loaded",
-                    string.Join(" ", result.Errors.Select(error => error.Message)));
-                return;
-            }
-
-            providerModel.ModelPrices = result.Value!.ModelPrices;
-            NotifyPricingRefresh(result.Value);
+    private async Task RefreshProviderModelPricesAsync() {
+        var feedback = await operations.DiscoverModelsAsync();
+        if (feedback?.Kind == ProviderFeedbackKind.Success) {
+            SyncProviderEditorText();
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Provider pricing load failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
+        PublishFeedback(feedback);
     }
 
     private Task HandleProviderTagsChangedAsync(IReadOnlyList<string> value)
@@ -300,29 +280,30 @@ public partial class AgentProviderProfilesPanel
         return provider.Name.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.Kind.ToString().Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.Transport.ToString().Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-               provider.DefaultModel.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
+               provider.GetModelDisplayName(provider.DefaultModel).Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.BaseUrl.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.Tags.Any(tag => tag.Contains(providerSearch, StringComparison.OrdinalIgnoreCase));
     }
 
-    private void SyncProviderEditorText()
-    {
+    private void SyncProviderEditorText() {
         providerTagValues = providerModel.Tags
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        suggestedModelsText = string.Join(Environment.NewLine, providerModel.SuggestedModels);
+        suggestedModelsText = string.Join(Environment.NewLine, SelectedProviderIsSourceManaged
+            ? providerModel.SuggestedModels.Select(SelectedProvider!.GetModelDisplayName)
+            : providerModel.SuggestedModels);
     }
 
     private string ResolveSelectedProviderStatus()
     {
-        if (!providerModel.Id.HasValue)
+        if (!session.State.ProviderId.HasValue)
         {
             return "Draft provider profile.";
         }
 
-        var provider = providers.FirstOrDefault(item => item.Id == providerModel.Id.Value);
+        var provider = SelectedProvider;
         if (provider is null)
         {
             return "Provider is not loaded in the current catalog snapshot.";
@@ -340,60 +321,4 @@ public partial class AgentProviderProfilesPanel
             .ToList();
     }
 
-    private static List<ProviderModelTokenPriceEditorModel> CloneModelPrices(
-        IEnumerable<ProviderModelTokenPriceEditorModel> prices)
-    {
-        return prices
-            .Select(price => new ProviderModelTokenPriceEditorModel
-            {
-                Model = price.Model,
-                InputPerMillionTokensUsd = price.InputPerMillionTokensUsd,
-                CachedInputPerMillionTokensUsd = price.CachedInputPerMillionTokensUsd,
-                OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd,
-                CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd,
-                LongContextThresholdTokens = price.LongContextThresholdTokens,
-                LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd,
-                LongContextCachedInputPerMillionTokensUsd = price.LongContextCachedInputPerMillionTokensUsd,
-                LongContextCacheWritePerMillionTokensUsd = price.LongContextCacheWritePerMillionTokensUsd,
-                LongContextOutputPerMillionTokensUsd = price.LongContextOutputPerMillionTokensUsd
-            })
-            .ToList();
-    }
-
-    private void NotifyPricingRefresh(WorkspaceProviderPricingRefreshResult result)
-    {
-        if (result.ExplicitPriceCount > 0)
-        {
-            NotificationService.Success("Provider pricing loaded", result.Message);
-            return;
-        }
-
-        NotificationService.Info("Provider models loaded", result.Message);
-    }
-
-    private static ProviderProfileEditorModel CreateNewProviderEditor()
-    {
-        return new ProviderProfileEditorModel
-        {
-            Name = "New OpenAI provider",
-            Kind = ProviderKind.OpenAi,
-            BaseUrl = ManagedSeedProviderFallbacks.OpenAiBaseUrl,
-            ApiKeyEnvironmentVariable = string.Empty,
-            DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-            Transport = ProviderTransportKind.Responses,
-            Purpose = ProviderProfilePurpose.Chat,
-            IsEnabled = true,
-            SupportsStreaming = true,
-            SupportsTools = true,
-            SupportsBackgroundResponses = true,
-            PreferFrameworkManagedChatHistory = false,
-            ConfigurationJson = "{}",
-            SuggestedModels = ManagedSeedProviderFallbacks.OpenAiSuggestedModels.ToList(),
-            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(ProviderKind.OpenAi, null),
-            ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(
-                ProviderKind.OpenAi,
-                ManagedSeedProviderFallbacks.OpenAiDefaultModel),
-            Tags = ["openai", "cloud", "chat", "responses"]
-        };
-    }
 }

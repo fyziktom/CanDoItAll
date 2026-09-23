@@ -1,9 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using CanDoItAll.Memory.SourceGateway;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AppComponents.FileTools;
@@ -30,11 +32,19 @@ public static class WorkbenchModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkbenchModule(
         this IServiceCollection services,
-        IConfiguration? configuration = null)
-    {
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+        IConfiguration? configuration = null) {
+        services.AddPooledDbContextFactory<WorkbenchDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             ProjectStructureExecutionAuthorityProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAgentChatContextAttachmentCodec,
+            ProjectStructure.ProjectStructureInvocationSnapshotCodec>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAgentChatContextAttachmentCodec,
+            AgentContext.ProjectStructureGanttObservationCodec>());
+        services.TryAddSingleton<ContextualAgentWorkspacePolicyCatalog>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IContextualAgentWorkspacePolicy, ProjectStructure.ProjectStructureContextualWorkspacePolicy>());
         services.AddFileInteractionComponents(builder => builder
             .AddBuiltIns()
             .AddZoomPanRenderers()
@@ -53,6 +63,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectCrossModuleMutationCoordinator>();
         services.AddScoped<ProjectManagedStoragePhysicalIdentityPolicy>();
+        services.AddScoped<IStorageTransferProvenancePolicy, ProjectStorageTransferProvenancePolicy>();
         services.AddScoped<ProjectManagedStorageDeletionPlanner>();
         services.AddScoped<ProjectManagedStorageDeletionService>();
         services.TryAddSingleton(TimeProvider.System);
@@ -61,6 +72,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectDeletionParticipant,
             ProjectWorkbenchDeletionParticipant>());
+        services.AddScoped<ProjectStructureMutationScopeFactory>();
+        services.AddScoped<IProjectWorkAssignmentCommands, ProjectWorkAssignmentService>();
+        services.AddScoped<IProjectWorkAssignmentQueries, ProjectWorkAssignmentQueryService>();
         services.AddScoped<ProjectWorkbenchCommandService>();
         services.AddScoped<ProjectWorkbenchCrossModuleMutationService>();
         services.AddScoped<ProjectWorkbenchLifecycleService>();
@@ -68,6 +82,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAssemblyService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentContextContributor,
+            AgentContext.ProjectStructureRuntimeGuidanceContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolInvocationPolicyContextContributor,
             AgentContext.ProjectStructureRuntimeGuidanceContributor>());
         services.AddScoped<ProjectStructureGanttMutationService>();
         services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
@@ -79,21 +95,27 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureProcessRunRecordProjector>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectStructureProcessProjectionContributor>();
         services.AddScoped<ProjectAssetStorageService>();
+        services.AddScoped<ProjectStoragePlacementRecoveryQuery>();
+        services.AddScoped<ProjectProcessAssetReceiptRecoveryQuery>();
         services.AddScoped(serviceProvider =>
             ActivatorUtilities.CreateInstance<ProjectWorkbenchService>(
                 serviceProvider,
                 serviceProvider.GetRequiredService<ProjectAssetStorageService>()));
-        services.AddScoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>();
-        services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
+        services.Replace(ServiceDescriptor.Scoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>());
+        services.Replace(ServiceDescriptor.Scoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>());
         services.Replace(ServiceDescriptor.Scoped<IProjectNodeDetailsBridge, ProjectNodeDetailsBridge>());
         services.AddScoped<ProjectStructureLeaseService>();
         services.AddScoped<ProjectStructureAnalyticsService>();
+        services.AddScoped<IProjectStructureAnalyticsService>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureAnalyticsService>());
         services.AddSingleton<ProjectPlanSummaryCalculator>();
         services.AddScoped<ProjectPlanAnalyticsQueryService>();
         services.AddScoped<ProjectManagerSummaryScopeResolver>();
         services.AddScoped<ProjectManagerSummaryQueryService>();
         services.AddScoped<ProjectManagerSummaryStateStore>();
         services.AddScoped<ProjectStructureAgentAuthorizationService>();
+        services.AddScoped<ProjectStructureAgentAdmissionService>();
+        services.AddScoped<ProjectStructureResultDisclosureService>();
         services.AddScoped<ProjectStructureAgentProjectCreationCoordinator>();
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();
@@ -139,11 +161,23 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddSingleton<ProjectStructureDeferredNodeCompletionWorker>();
         services.AddHostedService(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionWorker>());
-        services.TryAddScoped<ProcessLaunchVariablePreparationService>();
+        services.TryAddScoped<IProcessLaunchVariablePreparer, ProcessLaunchVariablePreparationService>();
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessSubprocessLaunchCoordinator, ProjectStructureProcessSubprocessLaunchCoordinator>());
         services.TryAddSingleton<ProjectStructureWorkflowLaunchIntentFactory>();
+        services.AddScoped<ProjectStructureWorkflowAuthorityService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowProviderDisclosurePolicy, WorkflowStructureProviderDisclosurePolicy>());
+        services.AddScoped<IWorkflowStructureAuthorityFactory>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureWorkflowAuthorityService>());
+        services.AddScoped<IWorkflowStructureLaunchPreparation>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureWorkflowAuthorityService>());
+        services.AddScoped<IWorkflowStructureSourceAuthorityPolicy>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureWorkflowAuthorityService>());
+        services.AddScoped<IWorkflowProcessToolSourceAuthority>(provider => provider.GetRequiredService<ProjectStructureWorkflowAuthorityService>());
+        services.AddScoped<IWorkflowMappedProcessSourceAuthority>(provider => provider.GetRequiredService<ProjectStructureWorkflowAuthorityService>());
+        services.AddScoped<ProjectWorkflowMutationService>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
+        services.AddHostedService<ProjectStructureWorkflowDeliveryWorker>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {
             var workspaceRoot = serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
@@ -161,8 +195,16 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAssetContentReader>();
         services.AddScoped<ProjectStructureAgentService>();
         services.AddScoped<ProjectStructureAgentNodeCopyCoordinator>();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in ProjectStructureToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectStructureAgentRuntimeToolProvider>());
-        services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
+        services.AddScoped<WorkbenchProjectStructureRuntimeGateway>();
+        services.AddScoped<IProjectStructureRuntimeGateway>(serviceProvider =>
+            serviceProvider.GetRequiredService<WorkbenchProjectStructureRuntimeGateway>());
         services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, WorkbenchProjectStructureMemorySourceGatewayAdapter>());
         services.AddScoped<ProjectMemoryIngestionService>();

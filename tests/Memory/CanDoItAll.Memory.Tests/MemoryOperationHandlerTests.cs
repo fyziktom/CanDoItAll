@@ -1,4 +1,3 @@
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Mock;
@@ -337,7 +336,7 @@ public sealed class MemoryOperationHandlerTests
         bool useThrowingProfileStore = false)
     {
         var services = new ServiceCollection();
-        services.AddDbContextFactory<AppDbContext>(options =>
+        services.AddDbContextFactory<MemoryDbContext>(options =>
             options.UseInMemoryDatabase($"memory-operation-handler-{Guid.NewGuid():N}"));
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
         services.AddGenericMemoryModule();

@@ -1,14 +1,20 @@
+using System.Data.Common;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
-public sealed class WorkflowUsagePersistenceIntegrationTests
+public sealed partial class WorkflowUsagePersistenceIntegrationTests
 {
     private static readonly DateTimeOffset RecordedAtUtc = new(2026, 7, 12, 20, 0, 0, TimeSpan.Zero);
 
@@ -24,8 +30,13 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         }
 
         var factory = new WorkflowUsagePostgresDbContextFactory(options);
-        var runStore = new PersistentWorkflowRunStore(factory);
-        var usageStore = new PersistentWorkflowUsageObservationStore(factory);
+        var runStore = new PersistentWorkflowRunStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory));
+        var history = new HistoryTargetWriteSession(new(new DatabaseProfileRecord {
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection
+        }, DatabaseProfileResolutionSource.ExplicitOverride, database.ConnectionString), TimeProvider.System);
+        var usageStore = new PersistentWorkflowUsageObservationStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
+            new(history.Partitions, history.Outbox), history.Transactions);
         var runId = WorkflowRunId.New();
         var workflowId = WorkflowId.New();
         var versionId = WorkflowVersionId.New();
@@ -75,7 +86,10 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
             Origin = origin
         };
 
-        await runStore.SaveRunAsync(run);
+        await using (var legacy = await WorkflowOwnerPersistenceTestFactory.FromCanonical(factory).CreateDbContextAsync()) {
+            legacy.Add(WorkflowRunRecordEntity.FromSnapshot(run));
+            await legacy.SaveChangesAsync();
+        }
         await usageStore.AppendRangeAsync([known, unknown, known]);
         await usageStore.AppendAsync(known);
 
@@ -105,6 +119,104 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
             known with { Id = WorkflowUsageObservationId.New(), RunId = null }));
         await Assert.ThrowsAsync<WorkflowUsageObservationConflictException>(() => usageStore.AppendAsync(
             known with { ProviderRequestId = "conflicting-request" }));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Actual_workflow_append_commits_or_rolls_back_exact_attempt_outbox(bool rollback) {
+        await using var history = await HistoryPersistenceTestDatabase.CreateAsync();
+        var interceptor = new FailAfterWorkflowHistorySave(rollback);
+        var factory = history.Factory.WithInterceptor(interceptor);
+        var historyFactory = history.HistoryFactory.WithInterceptor(interceptor);
+        var outbox = new HistoryOutboxWriter(historyFactory.Options, history.Transactions, history.Clock);
+        var store = new PersistentWorkflowUsageObservationStore(WorkflowOwnerPersistenceTestFactory.FromCanonical(factory),
+            new(history.Partitions, outbox), history.Transactions);
+        var start = history.Start();
+        var exact = HistoryAttemptEvidence.Create(start, history.Completion());
+        var runId = WorkflowRunId.New();
+        var observation = CreateObservation(WorkflowUsageObservationId.New(), runId, WorkflowId.New(),
+            WorkflowVersionId.New(), "model", WorkflowPricingStatus.Unknown, null, 1000) with {
+                HistoryEvidence = new(start.RequestId, true, [exact])
+            };
+
+        if (rollback) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => store.AppendAsync(observation));
+            Assert.True(interceptor.Failed);
+            await using var rolledBack = history.Factory.CreateDbContext();
+            Assert.Empty(await rolledBack.Set<WorkflowUsageObservationRecordEntity>().ToListAsync());
+            Assert.Empty(await rolledBack.Set<HistoryOutboxRow>().ToListAsync());
+            return;
+        }
+
+        await store.AppendAsync(observation);
+        await store.AppendAsync(observation);
+        Assert.Equal(1, await history.Processor.ProcessAsync(history.Partition, 20, default));
+        await using var db = history.Factory.CreateDbContext();
+        var entry = await db.Set<HistoryEntryRow>().SingleAsync();
+        Assert.Equal(start.EntryId.Value, entry.Id);
+        Assert.Equal(10, entry.InputTokens);
+        Assert.Equal(0.01m, entry.Amount);
+        Assert.Equal(HistoryRetentionAuthority.CanonicalOwner, entry.RetentionAuthority);
+        Assert.Empty(await db.Set<HistoryDetailRow>().ToListAsync());
+        var restored = Assert.Single(await store.ListAsync(new() { RunIds = [runId] }));
+        Assert.Equal(observation.HistoryEvidence, restored.HistoryEvidence);
+        var adapter = new WorkflowHistorySource(WorkflowOwnerPersistenceTestFactory.FromCanonical(history.Factory), history.Partitions, history.Transactions, history.Outbox);
+        var source = new CanonicalEvidenceReference(history.Partition, HistorySourceKind.Workflow,
+            new(runId.Value.ToString("N")), new(observation.Id.Value.ToString("N")));
+        var linked = await adapter.ReadAsync(source, default);
+        Assert.Equal(exact.Id, Assert.Single(linked!.Attempts).Id);
+        var progress = await adapter.ProcessAsync(history.Maintenance, null, 1, default);
+        Assert.False(progress.BackfillComplete);
+        var resumed = await new WorkflowHistorySource(WorkflowOwnerPersistenceTestFactory.FromCanonical(history.Factory), history.Partitions, history.Transactions, history.Outbox)
+            .ProcessAsync(history.Maintenance, progress.Cursor, 1, default);
+        Assert.True(resumed.BackfillComplete);
+        Assert.Equal(1, await history.Processor.ProcessAsync(history.Partition, 10, default));
+        Assert.Single(await db.Set<HistoryEntryRow>().ToArrayAsync());
+        Assert.Null(await adapter.ReadAsync(source with { Owner = new(Guid.NewGuid().ToString("N")) }, default));
+        Assert.Equal(1000, restored.InputTokens);
+        Assert.Equal(HistoryDetailState.Unavailable, (await adapter.ReadDetailAsync(source, exact.Id, default)).State);
+        db.Add(new WorkflowRunRecordEntity {
+            RunId = runId.Value, WorkflowId = observation.WorkflowId.Value, VersionId = observation.VersionId.Value,
+            State = WorkflowRunState.Completed, Summary = "Canonical workflow result",
+            CreatedAtUtc = RecordedAtUtc, UpdatedAtUtc = RecordedAtUtc
+        });
+        db.Add(new WorkflowEventRecordEntity {
+            Id = Guid.NewGuid(), RunId = runId.Value, NodeId = observation.NodeId.Value,
+            Message = "Stored node output", CreatedAtUtc = RecordedAtUtc
+        });
+        db.Add(new WorkflowEventRecordEntity {
+            Id = Guid.NewGuid(), RunId = runId.Value, NodeId = "unrelated-node",
+            Message = "Must not be disclosed as this node", CreatedAtUtc = RecordedAtUtc
+        });
+        await db.SaveChangesAsync();
+        var detail = await adapter.ReadDetailAsync(source, exact.Id, default);
+        Assert.Equal(HistoryDetailState.Canonical, detail.State);
+        Assert.Contains("Canonical workflow result", detail.Sections[0].Content.Text);
+        Assert.Contains("Stored node output", detail.Sections[1].Content.Text);
+        Assert.DoesNotContain("unrelated", detail.Sections[1].Content.Text);
+        Assert.Equal(HistoryDetailState.Unavailable, (await adapter.ReadDetailAsync(source, HistoryEntryId.New(), default)).State);
+    }
+
+    private sealed class FailAfterWorkflowHistorySave(bool enabled) : SaveChangesInterceptor {
+        private DbTransaction? outboxTransaction;
+        public bool Failed { get; private set; }
+
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData,
+            int result, CancellationToken cancellationToken = default) {
+            if (eventData.Context is ProviderHistoryDbContext history &&
+                history.ChangeTracker.Entries<HistoryOutboxRow>().Any()) {
+                outboxTransaction = history.Database.CurrentTransaction?.GetDbTransaction();
+            }
+            if (enabled && eventData.Context is WorkflowDbContext db &&
+                db.ChangeTracker.Entries<WorkflowUsageObservationRecordEntity>().Any() &&
+                db.Database.CurrentTransaction is { } transaction && outboxTransaction is not null &&
+                ReferenceEquals(transaction.GetDbTransaction(), outboxTransaction)) {
+                Failed = true;
+                throw new InvalidOperationException("Injected failure after workflow source and outbox flush.");
+            }
+            return ValueTask.FromResult(result);
+        }
     }
 
     private static WorkflowUsageObservation CreateObservation(

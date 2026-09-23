@@ -106,7 +106,7 @@ internal sealed class MafLegacyWorkflowExecutionDriver
         }
 
         var eventBindings = MafWorkflowEventBindingIndex.FromDefinition(definition);
-        using var auditScope = WorkflowExecutorExecutionAuditScope.Push(runId);
+        using var auditScope = WorkflowExecutorExecutionAuditScope.Push(runId, request.Origin);
         var externalRequestCapture = new WorkflowBackendExternalRequestCapture();
         using var externalRequestScope = WorkflowExternalRequestCaptureScope.Push(externalRequestCapture);
         var progressObserver = new WorkflowBackendProgressEventObserver(
@@ -400,7 +400,9 @@ internal sealed class MafLegacyWorkflowExecutionDriver
         using var progressScope = WorkflowNodeExecutionProgressScope.Push(progressObserver);
         return await InProcessExecution.RunAsync(
             workflow,
-            new WorkflowNodeInput(request.InputJson),
+            new WorkflowNodeInput(request.InputJson) {
+                ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId)
+            },
             runId.ToString(),
             cancellationToken);
     }

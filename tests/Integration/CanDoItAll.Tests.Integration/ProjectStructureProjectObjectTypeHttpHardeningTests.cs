@@ -505,13 +505,18 @@ public sealed class ProjectStructureProjectObjectTypeHttpHardeningTests
             await AssertCanonicalObjectTypesAsync(type);
         }
 
+        using var read = await host.Client.PostAsJsonAsync(StructureReadPath(fixture), new ProjectStructureReadRequest());
+        read.EnsureSuccessStatusCode();
+        var displayed = Assert.IsType<ProjectStructureReadResponse>(await read.Content.ReadFromJsonAsync<ProjectStructureReadResponse>(
+            ProjectStructureHttpContractTestJson.SerializerOptions));
+        var admission = Assert.IsType<ProjectWriteAdmission>(displayed.ExpectedProjectAdmission);
         var start = DateTimeOffset.UtcNow.AddHours(1);
         using (var task = await host.Client.PostAsJsonAsync(
                    $"/api/project-structure/projects/{fixture.ProjectId:D}/tasks",
                    new ProjectStructureTaskCreateRequest(
                        "Response family task",
                        start,
-                       start.AddHours(1))))
+                       start.AddHours(1)) { ExpectedProjectAdmission = admission }))
         {
             task.EnsureSuccessStatusCode();
         }

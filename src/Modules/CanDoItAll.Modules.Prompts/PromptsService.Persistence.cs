@@ -132,7 +132,7 @@ internal static class PromptGalleryPersistence
     }
 
     internal static async Task<PromptGalleryItemDetails?> LoadItemDetailsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         Guid promptArtifactId,
         CancellationToken cancellationToken)
     {
@@ -226,7 +226,7 @@ internal static class PromptGalleryPersistence
     }
 
     internal static async Task SyncTagsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         Guid promptArtifactId,
         IReadOnlyList<string> tags,
         bool isNewArtifact,
@@ -291,7 +291,7 @@ internal static class PromptGalleryPersistence
     }
 
     internal static async Task SyncSupportedModelsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         Guid promptArtifactId,
         IReadOnlyList<PromptProviderModel> supportedModels,
         bool isNewArtifact,
@@ -339,7 +339,7 @@ internal static class PromptGalleryPersistence
     }
 
     internal static async Task SyncSupportedConsumersAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         Guid promptArtifactId,
         IReadOnlyList<PromptGalleryConsumer> supportedConsumers,
         bool isNewArtifact,

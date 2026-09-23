@@ -62,6 +62,12 @@ internal static class OpenAiThinkingEffortModelRegistry
         AgentReasoningEffortLevel.ExtraHigh
     ];
 
+    private static readonly IReadOnlyList<AgentReasoningEffortLevel> LowThroughMax =
+    [
+        .. LowThroughExtraHigh,
+        AgentReasoningEffortLevel.Max
+    ];
+
     private static readonly IReadOnlyList<AgentReasoningEffortLevel> MediumThroughExtraHigh =
     [
         AgentReasoningEffortLevel.Medium,
@@ -76,10 +82,11 @@ internal static class OpenAiThinkingEffortModelRegistry
 
     private static readonly OpenAiThinkingEffortModelDefinition[] Definitions =
     [
-        Supported(OpenAiModelIds.Gpt56Sol, NoneThroughMax),
-        Supported(OpenAiModelIds.Gpt56Terra, NoneThroughMax),
-        Supported(OpenAiModelIds.Gpt56Luna, NoneThroughMax),
-        Supported(OpenAiModelIds.Gpt56, NoneThroughMax),
+        Supported(OpenAiModelIds.Gpt6Astra, LowThroughMax),
+        Supported(OpenAiModelIds.Gpt56Sol, NoneThroughMax, ResponsesOnly),
+        Supported(OpenAiModelIds.Gpt56Terra, NoneThroughMax, ResponsesOnly),
+        Supported(OpenAiModelIds.Gpt56Luna, NoneThroughMax, ResponsesOnly),
+        Supported(OpenAiModelIds.Gpt56, NoneThroughMax, ResponsesOnly),
         Supported("gpt-5.5-pro", MediumThroughExtraHigh, ResponsesOnly),
         Supported("gpt-5.5", NoneThroughExtraHigh),
         Supported("gpt-5.4-pro", MediumThroughExtraHigh, ResponsesOnly),
@@ -137,7 +144,7 @@ internal static class OpenAiThinkingEffortModelRegistry
             BothTransports);
     }
 
-    private static bool MatchesModelOrSnapshot(string model, string definedModel)
+    internal static bool MatchesModelOrSnapshot(string model, string definedModel)
     {
         if (string.Equals(model, definedModel, StringComparison.OrdinalIgnoreCase))
         {

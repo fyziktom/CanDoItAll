@@ -188,7 +188,7 @@ public sealed class ManagedFilesStorageIntegrationTests
             });
             Assert.True(projectResult.IsSuccess);
             Guid projectId = projectResult.Value;
-            StorageCatalogRecord storage = await catalog.EnsureBootstrapFileSystemStorageAsync();
+            StorageCatalogSnapshot storage = await catalog.EnsureBootstrapFileSystemStorageAsync();
             string category = $"project-media/files/{projectId:N}";
             string relativePath = artifactStore.GetRelativePath(category, "alpha.txt").Replace('\\', '/');
             await artifactStore.SaveTextAsync(category, "alpha.txt", "authorized-alpha");
@@ -237,7 +237,7 @@ public sealed class ManagedFilesStorageIntegrationTests
         await using var scope = host.App.Services.CreateAsyncScope();
         var catalogService = scope.ServiceProvider.GetRequiredService<IStorageCatalogService>();
         var connectionTestService = scope.ServiceProvider.GetRequiredService<IStorageConnectionTestService>();
-        var storage = await catalogService.SaveAsync(new StorageCatalogRecord
+        var storage = await catalogService.SaveAsync(new StorageCatalogSaveRequest
         {
             Name = "IPFS integration test",
             ProviderKind = StorageProviderKind.Ipfs,
@@ -251,10 +251,10 @@ public sealed class ManagedFilesStorageIntegrationTests
                              StorageCapability.BatchFolderUpload |
                              StorageCapability.BatchTransfer |
                              StorageCapability.ConnectionTest,
-            ConfigJson = StorageJson.SerializeProviderConfiguration(new StorageProviderConfiguration
+            Configuration = new StorageProviderConfiguration
             {
                 GatewayBaseUrl = server.GatewayBaseUri.ToString()
-            })
+            }
         });
 
         var result = await connectionTestService.TestAsync(storage.Id);
@@ -270,7 +270,7 @@ public sealed class ManagedFilesStorageIntegrationTests
     private static async Task<FileReference> GrantAsync(
         IServiceProvider services,
         Guid projectId,
-        StorageCatalogRecord storage,
+        StorageCatalogSnapshot storage,
         StorageObjectReference reference,
         FileAccessOperation operations)
     {

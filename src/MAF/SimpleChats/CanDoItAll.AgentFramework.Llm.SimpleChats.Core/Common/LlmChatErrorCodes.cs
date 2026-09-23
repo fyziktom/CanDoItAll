@@ -5,6 +5,7 @@ public static class LlmChatErrorCodes
     public const string Prefix = "llm-chat.";
     public const string InvalidRequest = Prefix + "invalid-request";
     public const string DefinitionNotFound = Prefix + "definition-not-found";
+    public const string DefinitionCreateIntentConflict = Prefix + "definition-create-intent-conflict";
     public const string DefinitionConcurrencyConflict = Prefix + "definition-concurrency-conflict";
     public const string DefinitionNotActive = Prefix + "definition-not-active";
     public const string ConversationNotFound = Prefix + "conversation-not-found";

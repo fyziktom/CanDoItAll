@@ -178,10 +178,15 @@ public static class StorageJson
 
     private static StorageObjectReference NormalizeReference(StorageObjectReference reference)
     {
-        if (reference.FormatVersion > StorageObjectReference.CurrentFormatVersion || reference.FormatVersion < 1)
+        if (reference.FormatVersion > StorageObjectReference.MaximumSupportedFormatVersion || reference.FormatVersion < 1)
         {
             throw new InvalidOperationException(
                 $"Unsupported storage reference format version '{reference.FormatVersion}'.");
+        }
+
+        if (reference.PlacementIntentId == Guid.Empty ||
+            reference.FormatVersion == StorageObjectReference.StablePlacementFormatVersion && !reference.PlacementIntentId.HasValue) {
+            throw new InvalidOperationException("A stable storage reference requires its retained placement intent identity.");
         }
 
         string locator = reference.LocatorKind switch
@@ -192,7 +197,8 @@ public static class StorageJson
         return reference with
         {
             Locator = locator,
-            FormatVersion = StorageObjectReference.CurrentFormatVersion
+            FormatVersion = reference.PlacementIntentId.HasValue
+                ? StorageObjectReference.StablePlacementFormatVersion : StorageObjectReference.CurrentFormatVersion
         };
     }
 

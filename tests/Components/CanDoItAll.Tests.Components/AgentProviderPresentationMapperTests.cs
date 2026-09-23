@@ -17,7 +17,8 @@ public sealed class AgentProviderPresentationMapperTests
         Assert.Equal(provider.Name, presentation.Name);
         Assert.Equal(provider.IsEnabled, presentation.IsEnabled);
         Assert.Equal(provider.DefaultModel, presentation.DefaultModel);
-        Assert.Equal(provider.SuggestedModels, presentation.SuggestedModels);
+        Assert.Equal(["gpt-5.4"], presentation.SuggestedModels);
+        Assert.Equal("gpt-5-mini", presentation.ModelDisplayNames["gpt-5-mini"]);
         Assert.Equal(provider.Id, AgentProviderPresentationMapper.ToProviderId(presentation.Key));
         Assert.Null(AgentProviderPresentationMapper.ToProviderId(null));
     }

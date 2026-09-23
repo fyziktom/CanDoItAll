@@ -56,7 +56,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 ProcessRuntimeProjectionProjector.ProjectorName,
                 ProcessRuntimeProjectionKeys.LivePrefix,
                 ResolveLiveSnapshotReadLimit(query.Take),
-                cancellationToken)
+                cancellationToken,
+                query.ProjectBinding)
             .ConfigureAwait(false);
         var runs = new List<ProcessLiveProcessSnapshot>(snapshots.Count);
 
@@ -83,6 +84,12 @@ public sealed class ProcessRuntimeProjectionQueryService(
         RuntimeRunEnrichmentCache? enrichmentCache,
         CancellationToken cancellationToken)
     {
+        if (query.ProjectBinding is { } project) {
+            enrichmentCache ??= new(runtimeStateStore, assignmentStore, project);
+            var eligible = await FilterProjectRunIdsAsync(sourceRuns.Select(run => run.RunId).ToArray(), project,
+                enrichmentCache, cancellationToken);
+            sourceRuns = sourceRuns.Where(run => eligible.Contains(run.RunId)).ToArray();
+        }
         var runs = sourceRuns
             .Where(run => run.LastEventAtUtc >= windowStartUtc)
             .Select(FreezeLiveRun)
@@ -185,7 +192,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
                     query.FromUtc,
                     query.ToUtc,
                     query.Take,
-                    Skip: query.Skip),
+                    Skip: query.Skip,
+                    ProjectBinding: query.ProjectBinding),
                 cancellationToken)
             .ConfigureAwait(false);
         var events = new List<ProcessTimelineEventProjection>(records.Count);
@@ -226,10 +234,16 @@ public sealed class ProcessRuntimeProjectionQueryService(
             nowUtc,
             query.Window,
             query.TakeRuns,
-            loadOptions.LiveProcesses);
+            loadOptions.LiveProcesses,
+            query.ProjectBinding);
         var enrichmentCache = new RuntimeRunEnrichmentCache(
             runtimeStateStore,
-            assignmentStore);
+            assignmentStore,
+            query.ProjectBinding);
+        if (query.ProjectBinding is { } project && query.SelectedRunId is { } requestedRun &&
+                !(await FilterProjectRunIdsAsync([requestedRun], project, enrichmentCache, cancellationToken)).Contains(requestedRun)) {
+            throw new InvalidOperationException("The selected Process run does not belong to this exact project lifetime.");
+        }
         var liveProcesses = query.PreviouslyLoadedRuns is null
             ? await GetLiveProcessesCoreAsync(
                     liveQuery,
@@ -298,7 +312,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
                         selectedRunId,
                         nowUtc - query.Window,
                         nowUtc,
-                        Take: RuntimeMetricEventReadLimit),
+                        Take: RuntimeMetricEventReadLimit,
+                        ProjectBinding: query.ProjectBinding),
                     enrichmentCache,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -313,7 +328,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
                             nowUtc - query.Window,
                             nowUtc,
                             Take: query.EventPageSize + 1,
-                            Skip: historySkip),
+                            Skip: historySkip,
+                            ProjectBinding: query.ProjectBinding),
                         enrichmentCache,
                         cancellationToken)
                     .ConfigureAwait(false)
@@ -324,7 +340,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
                             selectedRunId,
                             nowUtc - query.Window,
                             nowUtc,
-                            Take: RuntimeMetricEventReadLimit),
+                            Take: RuntimeMetricEventReadLimit,
+                            ProjectBinding: query.ProjectBinding),
                         enrichmentCache,
                         cancellationToken)
                     .ConfigureAwait(false)
@@ -370,9 +387,31 @@ public sealed class ProcessRuntimeProjectionQueryService(
             freshness)
         {
             SelectedRunRecord = selectedRunRecord,
+            ProjectRunIds = query.ProjectBinding is null ? null : await FilterProjectRunIdsAsync(
+                runs.SelectMany(run => new[] { run.RunId, run.RootRunId })
+                    .Concat(selectedRunId is null ? [] : new[] { selectedRunId.Value })
+                    .Concat(selectedRun is null ? [] : new[] { selectedRun.RootRunId }).ToArray(),
+                query.ProjectBinding, enrichmentCache, cancellationToken),
             ReusableRuns = liveProcesses.ReusableRuns?.ToImmutableArray(),
             Provenance = provenance
         };
+    }
+
+    private static async Task<HashSet<ProcessRunId>> FilterProjectRunIdsAsync(IReadOnlyList<ProcessRunId> runIds,
+        ProcessProjectionProjectBinding project, RuntimeRunEnrichmentCache cache, CancellationToken cancellationToken) {
+        if (!cache.CanLoadStates) {
+            throw new InvalidOperationException("Project-scoped Process reads require the original runtime admission store.");
+        }
+        await cache.PrimeAsync(runIds, loadStates: true, loadAssignments: false, cancellationToken);
+        var eligible = new HashSet<ProcessRunId>();
+        foreach (var runId in runIds.Distinct()) {
+            if ((await cache.LoadStateAsync(runId, cancellationToken))?.ProjectAdmission is { } admission &&
+                    admission.DatabaseProfileId == project.DatabaseProfileId && admission.ProjectId == project.ProjectId &&
+                    admission.LifetimeId == project.LifetimeId) {
+                eligible.Add(runId);
+            }
+        }
+        return eligible;
     }
 
     private static ImmutableArray<ProcessLiveProcessSnapshot> FreezeLiveRuns(
@@ -1511,7 +1550,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
     private sealed class RuntimeRunEnrichmentCache(
         IProcessRuntimeStateStore? runtimeStateStore,
-        IProcessRuntimeStepAssignmentStore? assignmentStore)
+        IProcessRuntimeStepAssignmentStore? assignmentStore,
+        ProcessProjectionProjectBinding? projectBinding = null)
     {
         private readonly Dictionary<ProcessRunId, ProcessRuntimeStateSnapshot?> stateByRunId = [];
         private readonly Dictionary<ProcessRunId, IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>> assignmentsByRunId = [];
@@ -1519,6 +1559,12 @@ public sealed class ProcessRuntimeProjectionQueryService(
         public bool CanLoadStates => runtimeStateStore is not null;
 
         public bool CanLoadAssignments => assignmentStore is not null;
+
+        public ProcessProjectionProjectBinding? ProjectBinding => projectBinding;
+
+        private bool AllowsState(ProcessRuntimeStateSnapshot? state) => projectBinding is null ||
+            state?.ProjectAdmission is { } admission && admission.DatabaseProfileId == projectBinding.DatabaseProfileId &&
+            admission.ProjectId == projectBinding.ProjectId && admission.LifetimeId == projectBinding.LifetimeId;
 
         public async Task PrimeAsync(
             IReadOnlyList<ProcessRunId> runIds,
@@ -1536,7 +1582,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 return;
             }
 
-            if (loadStates && runtimeStateStore is not null)
+            if ((loadStates || projectBinding is not null) && runtimeStateStore is not null)
             {
                 var missingStateRunIds = distinctRunIds
                     .Where(runId => !stateByRunId.ContainsKey(runId))
@@ -1549,7 +1595,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                             cancellationToken)
                         .ConfigureAwait(false);
                     var loadedByRunId =
-                        states.ToDictionary(state => state.RunId);
+                        states.Where(AllowsState).ToDictionary(state => state.RunId);
                     foreach (var runId in missingStateRunIds)
                     {
                         stateByRunId[runId] =
@@ -1561,7 +1607,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
             if (loadAssignments && assignmentStore is not null)
             {
                 var missingAssignmentRunIds = distinctRunIds
-                    .Where(runId => !assignmentsByRunId.ContainsKey(runId))
+                    .Where(runId => !assignmentsByRunId.ContainsKey(runId) &&
+                        (projectBinding is null || stateByRunId.GetValueOrDefault(runId) is not null))
                     .ToArray();
                 if (missingAssignmentRunIds.Length == 0)
                 {
@@ -1610,6 +1657,9 @@ public sealed class ProcessRuntimeProjectionQueryService(
             }
 
             var loaded = await runtimeStateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+            if (!AllowsState(loaded)) {
+                loaded = null;
+            }
             stateByRunId[runId] = loaded;
             return loaded;
         }
@@ -1618,6 +1668,9 @@ public sealed class ProcessRuntimeProjectionQueryService(
             ProcessRunId runId,
             CancellationToken cancellationToken)
         {
+            if (projectBinding is not null && await LoadStateAsync(runId, cancellationToken) is null) {
+                return new Dictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>();
+            }
             if (assignmentStore is null)
             {
                 return new Dictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>();
@@ -2189,6 +2242,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
                     var childState = await enrichmentCache.LoadStateAsync(childGroup.Key, cancellationToken).ConfigureAwait(false);
                     if (childState is null ||
+                        enrichmentCache.ProjectBinding is not null && childState.RootRunId != parentState.RootRunId ||
                         ProcessRuntimeTerminalStates.IsRunTerminal(childState.Status) ||
                         childState.Status == ProcessRuntimeStatus.Blocked)
                     {

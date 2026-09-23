@@ -4,6 +4,10 @@ using System.Runtime.CompilerServices;
 
 namespace CanDoItAll.Modules.Prompts;
 
+/// <summary>
+/// Health of the Prompt Gallery search projection, as a JSON integer: 0 Disabled (no projection is configured),
+/// 1 Ready, 2 RebuildRequired, 3 Failed. The projection drivers of this product report only Disabled or Ready.
+/// </summary>
 public enum PromptGalleryProjectionHealth
 {
     Disabled,
@@ -12,18 +16,38 @@ public enum PromptGalleryProjectionHealth
     Failed
 }
 
+/// <summary>
+/// Outcome of a Prompt Gallery projection operation, as a JSON integer: 0 Disabled (nothing was done because the
+/// projection is disabled), 1 Applied (the operation ran).
+/// </summary>
 public enum PromptGalleryProjectionOperationState
 {
     Disabled,
     Applied
 }
 
+/// <summary>
+/// State of the Prompt Gallery search projection, the derived copy of Final, not archived items in the application's
+/// search index.
+/// </summary>
+/// <param name="DriverName">Name of the projection driver in use, for diagnostics.</param>
+/// <param name="Enabled">True when a projection driver is configured and active.</param>
+/// <param name="Health">
+/// Health of the projection, as a JSON integer: 0 Disabled, 1 Ready, 2 RebuildRequired, 3 Failed.
+/// </param>
+/// <param name="Detail">English description of the state, for display.</param>
 public sealed record PromptGalleryProjectionStatus(
     string DriverName,
     bool Enabled,
     PromptGalleryProjectionHealth Health,
     string Detail);
 
+/// <summary>
+/// Result of a Prompt Gallery search projection rebuild.
+/// </summary>
+/// <param name="State">Outcome, as a JSON integer: 0 Disabled (nothing was done), 1 Applied (the rebuild ran).</param>
+/// <param name="ProcessedCount">Number of items written to the search index; 0 when the projection is disabled.</param>
+/// <param name="Status">State of the projection after the operation.</param>
 public sealed record PromptGalleryProjectionOperationResult(
     PromptGalleryProjectionOperationState State,
     int ProcessedCount,
@@ -110,7 +134,7 @@ public sealed class DisabledPromptGalleryProjectionDriver : IPromptGalleryProjec
 }
 
 public sealed class PromptGalleryProjectionCoordinator(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PromptsDbContext> dbContextFactory,
     IPromptGalleryProjectionDriver driver) : IPromptGalleryProjectionCoordinator
 {
     public Task<PromptGalleryProjectionStatus> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -279,7 +303,7 @@ public sealed class PromptGalleryProjectionCoordinator(
     }
 
     private static async Task<Dictionary<Guid, IReadOnlyList<string>>> LoadTagsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         IReadOnlyCollection<Guid> promptArtifactIds,
         CancellationToken cancellationToken)
     {

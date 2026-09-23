@@ -33,7 +33,7 @@ public sealed record PromptGallerySeedImportResult(
 }
 
 public sealed class PromptGallerySeedImporter(
-    IDbContextFactory<AppDbContext> dbContextFactory,
+    IDbContextFactory<PromptsDbContext> dbContextFactory,
     PromptGallerySeedLoader loader,
     IClock clock,
     IPromptGalleryProjectionCoordinator projectionCoordinator,
@@ -194,7 +194,7 @@ public sealed class PromptGallerySeedImporter(
     }
 
     private static async Task<Dictionary<string, PromptTag>> LoadTagsAsync(
-        AppDbContext dbContext,
+        PromptsDbContext dbContext,
         PromptGallerySeedPack pack,
         CancellationToken cancellationToken)
     {

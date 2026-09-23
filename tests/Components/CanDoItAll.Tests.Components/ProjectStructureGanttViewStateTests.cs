@@ -45,6 +45,7 @@ public sealed class ProjectStructureGanttViewStateTests
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var rowOrderService = harness.Context.Services.GetRequiredService<ProjectStructureGanttRowOrderService>();
         var projectId = await CreateProjectAsync(projectsService, "Gantt row order mutations");
+        var owner = await CaptureOwnerAsync(harness.Context.Services, projectId);
         var first = await CreateTaskAsync(workbenchService, projectId, "First", 100);
         var second = await CreateTaskAsync(workbenchService, projectId, "Second", 200);
         var third = await CreateTaskAsync(workbenchService, projectId, "Third", 300);
@@ -57,19 +58,19 @@ public sealed class ProjectStructureGanttViewStateTests
             projectId,
             inserted.Id,
             null,
-            CreateAgent("append"));
+            owner with { SessionId = "append" });
         var afterInsert = await rowOrderService.InsertAsync(
             projectId,
             inserted.Id,
             second.Id,
-            CreateAgent("insert"));
+            owner with { SessionId = "insert" });
         var afterMove = await rowOrderService.MoveAsync(
             projectId,
             new ProjectStructureGanttRowMoveRequest(
                 inserted.Id,
                 second.Id,
                 ProjectStructureGanttRowPlacement.Before),
-            CreateAgent("move"));
+            owner with { SessionId = "move" });
         var reloaded = await workbenchService.LoadGanttViewStateAsync(projectId);
 
         Assert.Equal([first.Id, second.Id, third.Id, inserted.Id], afterAppend.OrderedTaskNodeIds);
@@ -86,6 +87,7 @@ public sealed class ProjectStructureGanttViewStateTests
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var rowOrderService = harness.Context.Services.GetRequiredService<ProjectStructureGanttRowOrderService>();
         var projectId = await CreateProjectAsync(projectsService, "Gantt row order validation");
+        var owner = await CaptureOwnerAsync(harness.Context.Services, projectId);
         var first = await CreateTaskAsync(workbenchService, projectId, "First", 100);
         var second = await CreateTaskAsync(workbenchService, projectId, "Second", 200);
 
@@ -94,7 +96,7 @@ public sealed class ProjectStructureGanttViewStateTests
                 projectId,
                 second.Id,
                 "missing-anchor",
-                CreateAgent("missing-anchor")));
+                owner with { SessionId = "missing-anchor" }));
         var reloaded = await workbenchService.LoadGanttViewStateAsync(projectId);
 
         Assert.Contains("missing-anchor", exception.Message, StringComparison.Ordinal);
@@ -109,6 +111,7 @@ public sealed class ProjectStructureGanttViewStateTests
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var rowOrderService = harness.Context.Services.GetRequiredService<ProjectStructureGanttRowOrderService>();
         var projectId = await CreateProjectAsync(projectsService, "Concurrent Gantt row moves");
+        var owner = await CaptureOwnerAsync(harness.Context.Services, projectId);
         var first = await CreateTaskAsync(workbenchService, projectId, "First", 100);
         var second = await CreateTaskAsync(workbenchService, projectId, "Second", 200);
         var third = await CreateTaskAsync(workbenchService, projectId, "Third", 300);
@@ -123,14 +126,14 @@ public sealed class ProjectStructureGanttViewStateTests
                 first.Id,
                 second.Id,
                 ProjectStructureGanttRowPlacement.After),
-            CreateAgent("first-down"));
+            owner with { SessionId = "first-down" });
         var moveFourthUp = rowOrderService.MoveAsync(
             projectId,
             new ProjectStructureGanttRowMoveRequest(
                 fourth.Id,
                 third.Id,
                 ProjectStructureGanttRowPlacement.Before),
-            CreateAgent("fourth-up"));
+            owner with { SessionId = "fourth-up" });
 
         await Task.WhenAll(moveFirstDown, moveFourthUp);
         var reloaded = await workbenchService.LoadGanttViewStateAsync(projectId);
@@ -146,6 +149,7 @@ public sealed class ProjectStructureGanttViewStateTests
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var rowOrderService = harness.Context.Services.GetRequiredService<ProjectStructureGanttRowOrderService>();
         var projectId = await CreateProjectAsync(projectsService, "Stale Gantt row intent");
+        var owner = await CaptureOwnerAsync(harness.Context.Services, projectId);
         var first = await CreateTaskAsync(workbenchService, projectId, "First", 100);
         var second = await CreateTaskAsync(workbenchService, projectId, "Second", 200);
         var third = await CreateTaskAsync(workbenchService, projectId, "Third", 300);
@@ -159,7 +163,7 @@ public sealed class ProjectStructureGanttViewStateTests
                 second.Id,
                 third.Id,
                 ProjectStructureGanttRowPlacement.After),
-            CreateAgent("first-circuit"));
+            owner with { SessionId = "first-circuit" });
         var staleRequest = new ProjectStructureGanttRowMoveRequest(
             second.Id,
             first.Id,
@@ -169,7 +173,7 @@ public sealed class ProjectStructureGanttViewStateTests
             rowOrderService.MoveAsync(
                 projectId,
                 staleRequest,
-                CreateAgent("second-circuit")));
+                owner with { SessionId = "second-circuit" }));
         var reloaded = await workbenchService.LoadGanttViewStateAsync(projectId);
 
         Assert.Equal(second.Id, exception.TaskNodeId);
@@ -209,6 +213,11 @@ public sealed class ProjectStructureGanttViewStateTests
                 100,
                 y,
                 ObjectSubtype: "task"));
+    }
+
+    private static async Task<ProjectStructureAgentContext> CaptureOwnerAsync(IServiceProvider services, Guid projectId) {
+        var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        return CreateAgent("captured") with { ExpectedProjectAdmission = admission };
     }
 
     private static ProjectStructureAgentContext CreateAgent(string owner)

@@ -8,6 +8,14 @@ public enum LlmChatOperationKind
     SendTurn = 0
 }
 
+/// <summary>
+/// Status of an LLM Chat turn operation, written in HTTP responses and events as a camel-case JSON string:
+/// <c>pending</c> (admitted, waiting for a dispatcher), <c>running</c> (claimed by a dispatcher; the provider call may
+/// be in progress), <c>succeeded</c> (final: the assistant reply is committed to the transcript), <c>failed</c> (final:
+/// the turn ended without a reply), <c>cancellationRequested</c> (cancellation was requested and is being applied),
+/// <c>cancelled</c> (final: cancelled without a reply) or <c>recoveryRequired</c> (not final: execution was interrupted
+/// after the provider may have been called, so the outcome is unknown until the operation is reconciled or abandoned).
+/// </summary>
 public enum LlmChatOperationStatus
 {
     Pending,
@@ -30,6 +38,8 @@ public enum LlmChatDispatchPhase
 public sealed record LlmChatOperation
 {
     public const int MaximumAttributionScopeKeyLength = 200;
+
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; init; }
 
     private long lastEventSequence;
 

@@ -5,6 +5,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.SchedulerPlanner;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentApiFailureContractIntegrationTests
@@ -27,6 +34,66 @@ public sealed class AgentApiFailureContractIntegrationTests
                 allowIntegerValues: false)
         }
     };
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Eager_workspace_and_workbench_resolve_the_same_owner_receipt_graph(bool workbenchFirst, bool useProductionWorkspace) {
+        Assert.DoesNotContain(typeof(ProjectStructureWorkflowAuthorityService).GetConstructors()
+            .SelectMany(constructor => constructor.GetParameters()),
+            parameter => parameter.ParameterType == typeof(IAgentFrameworkWorkspaceService));
+        var runtime = useProductionWorkspace ? null : new FailingAgentRuntime();
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            useInMemoryDatabase: true,
+            agentRuntimeOverride: runtime);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var firstOwner = workbenchFirst ? services.GetRequiredService<ProjectWorkbenchService>() : null;
+
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        if (useProductionWorkspace) {
+            Assert.IsType<CurrentProfileAgentFrameworkWorkspaceService>(workspace);
+        } else {
+            Assert.IsType<AgentFrameworkWorkspaceService>(workspace);
+        }
+        var agents = await workspace.ListAgentsAsync(false);
+        Assert.NotEmpty(agents);
+        var owner = services.GetRequiredService<ProjectWorkbenchService>();
+        if (workbenchFirst) {
+            Assert.Same(firstOwner, owner);
+        }
+        Assert.Same(workspace, services.GetRequiredService<IAgentFrameworkWorkspaceService>());
+        var receipts = services.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray();
+        Assert.Same(services.GetRequiredService<ProjectProcessAssetToolAdmission>(),
+            Assert.Single(receipts, receipt => receipt is ProjectProcessAssetToolAdmission));
+        Assert.Same(services.GetRequiredService<ProjectStructureProcessToolAdmission>(),
+            Assert.Single(receipts, receipt => receipt is ProjectStructureProcessToolAdmission));
+        Assert.Same(services.GetRequiredService<WorkflowProcessToolAdmission>(),
+            Assert.Single(receipts, receipt => receipt is WorkflowProcessToolAdmission));
+        var authority = services.GetRequiredService<ProjectStructureWorkflowAuthorityService>();
+        Assert.Same(authority, services.GetRequiredService<IWorkflowStructureAuthorityFactory>());
+        Assert.Same(authority, services.GetRequiredService<IWorkflowStructureSourceAuthorityPolicy>());
+        var sourceOwners = services.GetServices<IAgentExecutionSourceAuthorityProvider>().ToArray();
+        var schedulerSource = SchedulerAgentChatContextBuilder.Build(SchedulerAgentChatView.Calendar, null, null, null).Source.Kind.Value;
+        foreach (var sourceKind in new[] { PromptGalleryAgentChatContextBuilder.SourceKind, AgentFrameworkWorkflowsChatContextBuilder.SourceKind, schedulerSource }) {
+            var sourceOwner = Assert.Single(sourceOwners, candidate => candidate.SourceKind == sourceKind);
+            var dependencies = sourceOwner.GetType().GetConstructors().SelectMany(constructor => constructor.GetParameters()).ToArray();
+            Assert.Contains(dependencies, parameter => parameter.ParameterType == typeof(IAgentCatalogReadLeaseStore));
+            Assert.DoesNotContain(dependencies, parameter => parameter.ParameterType == typeof(IAgentFrameworkWorkspaceService));
+            Assert.Same(sourceOwner, Assert.Single(services.GetServices<IAgentExecutionSourceAuthorityProvider>(), candidate => candidate.SourceKind == sourceKind));
+        }
+        var agent = agents.First();
+        var catalog = Assert.IsType<CanonicalAgentCatalogLeaseSource>(services.GetRequiredService<IAgentCatalogReadLeaseStore>());
+        await using var held = await catalog.AcquireAgentReadLeaseAsync(agent.Id);
+        Assert.Equal(WorkspaceScopeDescriptor.Organization(services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id.ToString("N")), held.Scope);
+        Assert.Equal(agent.Id, Assert.IsType<AgentDefinition>(held.Agent).Id);
+        if (runtime is not null) {
+            Assert.Equal(0, runtime.RunInvocationCount);
+        }
+    }
 
     [Fact]
     public async Task Chat_runtime_failure_returns_typed_identity_and_persists_the_exact_failed_run()
@@ -335,8 +402,23 @@ public sealed class AgentApiFailureContractIntegrationTests
             jwtEnabled: false,
             useInMemoryDatabase: true);
 
-        var retainedSecretId = Guid.NewGuid();
-        var retainedSecretProvider = CreateOtherwiseValidProviderEditor();
+        Guid retainedSecretId;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var secretResult = await scope.ServiceProvider
+                .GetRequiredService<SecretService>()
+                .SaveAsync(new SecretEditorModel
+                {
+                    Name = "Provider validation probe key",
+                    Kind = SecretKind.ApiKey,
+                    SecretValue = "provider-validation-probe",
+                    Scope = "workspace"
+                });
+            Assert.True(secretResult.IsSuccess);
+            retainedSecretId = secretResult.Value;
+        }
+
+        var retainedSecretProvider = CreateOtherwiseValidProviderEditor(retainedSecretId);
         retainedSecretProvider.ApiKeyEnvironmentVariable =
             $"secret:{retainedSecretId:D}";
         retainedSecretProvider.ConfigurationJson =
@@ -464,7 +546,7 @@ public sealed class AgentApiFailureContractIntegrationTests
 
         foreach (var scenario in scenarios)
         {
-            var editor = CreateOtherwiseValidProviderEditor();
+            var editor = CreateOtherwiseValidProviderEditor(retainedSecretId);
             scenario.Configure(editor);
 
             using var response = await host.Client.PostAsJsonAsync(
@@ -499,15 +581,15 @@ public sealed class AgentApiFailureContractIntegrationTests
     [Fact]
     public async Task Provider_save_storage_failure_is_not_misclassified_as_request_validation()
     {
-        var workspaceService = DispatchProxy.Create<
-            IAgentFrameworkWorkspaceService,
+        var providerAdministration = DispatchProxy.Create<
+            IProviderRuntimeAdministrationService,
             ProviderSaveStorageFailureProxy>();
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentFrameworkWorkspaceService>();
-                services.AddSingleton(workspaceService);
+                services.RemoveAll<IProviderRuntimeAdministrationService>();
+                services.AddSingleton(providerAdministration);
             },
             useInMemoryDatabase: true,
             environmentName: Environments.Production);
@@ -520,6 +602,7 @@ public sealed class AgentApiFailureContractIntegrationTests
             });
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
         var raw = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain(
             ProviderSaveStorageFailureProxy.Secret,
@@ -665,15 +748,18 @@ public sealed class AgentApiFailureContractIntegrationTests
         };
     }
 
-    private static ProviderProfileEditorModel CreateOtherwiseValidProviderEditor()
+    private static ProviderProfileEditorModel CreateOtherwiseValidProviderEditor(
+        Guid? secretRecordId = null)
     {
+        var resolvedSecretRecordId = secretRecordId ??
+            new Guid("970f8eb8-3596-4113-9c4b-5fd921dd4389");
+
         return new ProviderProfileEditorModel
         {
             Name = "Provider validation probe",
             Kind = ProviderKind.OpenAi,
             BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable =
-                "secret:970f8eb8-3596-4113-9c4b-5fd921dd4389",
+            ApiKeyEnvironmentVariable = $"secret:{resolvedSecretRecordId:D}",
             DefaultModel = "gpt-5",
             ConfigurationJson = "{}"
         };
@@ -793,14 +879,14 @@ public sealed class AgentApiFailureContractIntegrationTests
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
-            if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.SaveProviderAsync))
+            if (targetMethod?.Name == nameof(IProviderRuntimeAdministrationService.SaveProviderAsync))
             {
                 return Task.FromException<Guid>(
                     new InvalidOperationException(Secret));
             }
 
             throw new InvalidOperationException(
-                $"Workspace service member '{targetMethod?.Name}' was not expected in this API test.");
+                $"Provider administration member '{targetMethod?.Name}' was not expected in this API test.");
         }
     }
 }

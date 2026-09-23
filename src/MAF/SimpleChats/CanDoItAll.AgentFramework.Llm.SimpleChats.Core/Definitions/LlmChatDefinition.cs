@@ -2,6 +2,12 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 
+/// <summary>
+/// Lifecycle status of an LLM Chat definition, written in HTTP responses as a camel-case JSON string: <c>draft</c>
+/// (created, cannot start conversations yet), <c>active</c> (starts conversations and turns), <c>suspended</c>
+/// (temporarily starts neither; can be reactivated) or <c>archived</c> (final and read-only). Draft can become active
+/// or archived, active can become suspended or archived, and suspended can become active or archived.
+/// </summary>
 public enum LlmChatDefinitionStatus
 {
     Draft,

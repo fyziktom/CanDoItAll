@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
@@ -89,7 +90,18 @@ public sealed record WorkflowUsageObservation(
     DateTimeOffset? StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     DateTimeOffset RecordedAtUtc,
-    WorkflowLaunchOrigin? Origin);
+    WorkflowLaunchOrigin? Origin) {
+    private static readonly JsonSerializerOptions ContentJsonOptions = new(JsonSerializerDefaults.Web);
+
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation? HistoryEvidence { get; init; }
+
+    public bool HasSameContent(WorkflowUsageObservation other) {
+        ArgumentNullException.ThrowIfNull(other);
+        return (this with { Origin = null }) == (other with { Origin = null }) &&
+            string.Equals(JsonSerializer.Serialize(Origin, ContentJsonOptions),
+                JsonSerializer.Serialize(other.Origin, ContentJsonOptions), StringComparison.Ordinal);
+    }
+}
 
 public sealed record WorkflowUsageObservationContext(
     WorkflowRunId? RunId,
@@ -191,7 +203,7 @@ public static class WorkflowUsageObservationFactory
             context.StartedAtUtc,
             context.CompletedAtUtc,
             observation.CreatedAtUtc,
-            context.Origin);
+            context.Origin) { HistoryEvidence = observation.HistoryEvidence };
 
         WorkflowUsageObservationValidator.ThrowIfInvalid(fact);
         return fact;

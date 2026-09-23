@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.SourceGateway;
@@ -94,8 +95,10 @@ public interface ICrmHrAgentQueryService
 }
 
 public sealed class CrmHrAgentQueryService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock) : ICrmHrAgentQueryService
+    IDbContextFactory<CrmHrDbContext> dbContextFactory,
+    IClock clock,
+    IProjectWorkAssignmentQueries workAssignments,
+    ProjectRecordQueryService projectRecordQueryService) : ICrmHrAgentQueryService
 {
     private static readonly IReadOnlyList<CrmHrAgentRecordKind> SupportedRecordKinds =
     [
@@ -221,7 +224,7 @@ public sealed class CrmHrAgentQueryService(
             CrmHrAgentRecordKind.AiAgent;
 
     private static async Task<IReadOnlyList<Candidate>> SearchAllKindsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -241,7 +244,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchKindAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         CrmHrAgentRecordKind recordKind,
         string normalizedSearchText,
         int take,
@@ -278,7 +281,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchPartiesAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -312,7 +315,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchWorkforceAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -355,7 +358,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchAccountsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -393,7 +396,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static Task<List<Candidate>> SearchAiAgentsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string normalizedSearchText,
         int take,
         CancellationToken cancellationToken)
@@ -432,7 +435,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> CandidateQuery(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         CrmHrAgentRecordKind recordKind,
         Guid? recordId = null)
     {
@@ -448,7 +451,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> PartyCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return dbContext.Set<Party>()
@@ -470,7 +473,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> WorkforceCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -495,7 +498,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> AccountCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -520,7 +523,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> OpportunityCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -545,7 +548,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private static IQueryable<Candidate> AiAgentCandidates(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid? recordId)
     {
         return
@@ -571,7 +574,7 @@ public sealed class CrmHrAgentQueryService(
     }
 
     private async Task<IReadOnlyDictionary<Guid, CrmHrAgentAvailability>> LoadAvailabilityAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         IReadOnlyList<Candidate> candidates,
         CancellationToken cancellationToken)
     {
@@ -585,7 +588,9 @@ public sealed class CrmHrAgentQueryService(
             return new Dictionary<Guid, CrmHrAgentAvailability>();
         }
 
-        var allocations = await dbContext.Set<ProjectPartyAssignment>()
+        var assignmentRows = (await ProjectAssignmentReporting.ForPartiesAsync(dbContext, workAssignments, projectRecordQueryService, workforcePartyIds, cancellationToken))
+            .Where(item => item.ProjectLifetimeId != null && item.ProjectLifetimeId == item.CurrentProjectLifetimeId);
+        var allocations = await assignmentRows
             .AsNoTracking()
             .Where(item =>
                 workforcePartyIds.Contains(item.PartyId) &&
@@ -597,7 +602,7 @@ public sealed class CrmHrAgentQueryService(
                 item.StartsAtUtc,
                 item.EndsAtUtc
             })
-            .ToListAsync(cancellationToken);
+            .ToAssignmentReportListAsync(cancellationToken);
         var capacityBlocks = await dbContext.Set<CapacityBlock>()
             .AsNoTracking()
             .Where(item => workforcePartyIds.Contains(item.PartyId))
@@ -608,7 +613,7 @@ public sealed class CrmHrAgentQueryService(
                 item.StartDateUtc,
                 item.EndDateUtc
             })
-            .ToListAsync(cancellationToken);
+            .ToAssignmentReportListAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var today = DateOnly.FromDateTime(now.UtcDateTime);
 

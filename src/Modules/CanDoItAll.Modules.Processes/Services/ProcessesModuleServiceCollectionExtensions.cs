@@ -36,12 +36,21 @@ public static class ProcessesModuleServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         services.AddDataProtection();
+        services.TryAddSingleton<AgentToolPolicyCatalog>();
+        foreach (var policy in ProcessCompatibilityToolPolicy.Capabilities) {
+            if (!services.Any(descriptor => ReferenceEquals(descriptor.ImplementationInstance, policy))) {
+                services.AddSingleton(policy);
+            }
+        }
+        services.TryAddSingleton<ContextualAgentWorkspacePolicyCatalog>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAgentRuntimeCapabilityPolicyContributor, ProcessRuntimeCapabilityPolicyContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IContextualAgentWorkspacePolicy, ProcessContextualWorkspacePolicy>());
         services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             ProcessesExecutionAuthorityProvider>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             LiveProcessesExecutionAuthorityProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
@@ -92,6 +101,18 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
         services.TryAddSingleton<ProcessTemplatePackLoader>();
+        services.TryAddScoped<EfProcessExecutionAuthorityQuery>();
+        services.TryAddScoped<ProcessExecutionProjectAuthorityReader>();
+        services.TryAddScoped<IProcessExecutionProjectAuthorityReader>(provider => provider.GetRequiredService<ProcessExecutionProjectAuthorityReader>());
+        services.TryAddScoped<IProcessExecutionDispatchAuthorityReader>(provider => provider.GetRequiredService<ProcessExecutionProjectAuthorityReader>());
+        services.TryAddScoped<IProcessExecutionMutationGuard, EfProcessExecutionMutationGuard>();
+        services.TryAddScoped<EfProcessWorkflowDispatchAuthority>();
+        services.TryAddScoped<IProcessWorkflowDispatchAuthorityReader>(provider => provider.GetRequiredService<EfProcessWorkflowDispatchAuthority>());
+        services.TryAddScoped<IProcessWorkflowDispatchMutationGuard>(provider => provider.GetRequiredService<EfProcessWorkflowDispatchAuthority>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentToolBackgroundSourcePolicy, ProcessToolBackgroundSourcePolicy>());
+        services.TryAddScoped<EfProcessPreparedLaunchStore>();
+        services.TryAddScoped<IProcessPreparedLaunchStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
+        services.TryAddScoped<IProcessLaunchLinkReceiptStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
         services.TryAddScoped<EfProcessRuntimeUnitOfWork>();
         services.TryAddScoped<IProcessRuntimeUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeStateStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
@@ -106,6 +127,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessProjectionStore, EfProcessProjectionStore>();
         services.TryAddScoped<IProcessRunRecordStore, EfProcessRunRecordStore>();
         services.TryAddScoped<IProcessRunRecordReader, ProcessRunRecordReader>();
+        services.TryAddScoped<IProcessStructureProjectionQueryService, ProcessStructureProjectionQueryService>();
         services.TryAddScoped<IProcessRunRecordBackfillSource, EfProcessRunRecordBackfillSource>();
         services.TryAddScoped<IProcessInstancePlanStore, EfProcessInstancePlanStore>();
         services.TryAddScoped<IProcessRuntimeStepAssignmentStore, EfProcessRuntimeStepAssignmentStore>();
@@ -131,7 +153,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, ProcessAcceptanceCriteriaLaunchVariableContributor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, DotNetProductBaselineLaunchVariableContributor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, DotNetProcessLaunchVariableContributor>());
-        services.TryAddScoped<ProcessLaunchVariablePreparationService>();
+        services.TryAddScoped<IProcessLaunchVariablePreparer, ProcessLaunchVariablePreparationService>();
         services.TryAddScoped<DotNetExistingSolutionVerifier>();
         services.TryAddScoped<WorkspaceManagedScriptPlanExecutor>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeOwnedStepExecutor, DotNetSolutionSetupRuntimeExecutor>());
@@ -233,6 +255,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AgentFrameworkProcessExecutionClaimRecoveryWorker>());
         if (backgroundWorkersEnabled)
         {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessLaunchContinuationWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeProjectionReplayBackgroundWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRunRecordBackgroundWorker>());
         }

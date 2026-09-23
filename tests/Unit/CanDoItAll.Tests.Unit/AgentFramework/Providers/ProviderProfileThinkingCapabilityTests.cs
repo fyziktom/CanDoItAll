@@ -1,7 +1,8 @@
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework.Providers;
+
+using ProviderProfileService = CanDoItAll.AgentFramework.Core.ProviderProfileService;
 
 public sealed class ProviderProfileThinkingCapabilityTests
 {

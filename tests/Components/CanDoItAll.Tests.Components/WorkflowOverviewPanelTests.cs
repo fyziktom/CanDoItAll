@@ -129,7 +129,7 @@ public sealed class WorkflowOverviewPanelTests
             "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "WorkflowsPage.razor.cs"));
-        var dashboardTab = Slice(pageMarkup, "<TabsItem Text=\"Dashboard\"", "</TabsItem>");
+        var dashboardTab = Slice(pageMarkup, "<Dashboard>", "</Dashboard>");
 
         Assert.Contains("WorkflowOverviewPanel", dashboardTab, StringComparison.Ordinal);
         Assert.Contains("QueryService=\"OverviewQueryService\"", dashboardTab, StringComparison.Ordinal);
@@ -144,7 +144,7 @@ public sealed class WorkflowOverviewPanelTests
     public async Task Workflows_page_dashboard_executes_persistent_bounded_projection()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("workflow-overview-dashboard");
-        var profile = environment.CreateInMemoryProfile("primary");
+        var profile = environment.CreateInMemoryProfile("primary", databaseName: Guid.NewGuid().ToString("N"));
         await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
         {
             TestEnvironment = environment,
@@ -169,6 +169,33 @@ public sealed class WorkflowOverviewPanelTests
                 StringComparison.Ordinal);
             Assert.Equal(2, cut.FindAll("[data-testid='workflow-overview-recent-run-row']").Count);
         });
+    }
+
+    [Fact]
+    public void Hidden_dashboard_cancels_pending_read_and_reentry_accepts_only_the_new_snapshot() {
+        using var context = CreateContext();
+        var service = new DelayedOverviewQueryService();
+        var cut = context.Render<WorkflowOverviewPanel>(parameters => parameters
+            .Add(component => component.QueryService, service).Add(component => component.IsActive, true));
+        cut.WaitForAssertion(() => Assert.Single(service.Requests));
+        cut.Render(parameters => parameters.Add(component => component.IsActive, false));
+        Assert.True(service.Requests[0].Token.IsCancellationRequested);
+        cut.Render(parameters => parameters.Add(component => component.IsActive, true));
+        cut.WaitForAssertion(() => Assert.Equal(2, service.Requests.Count));
+        service.Requests[1].Completion.SetResult(CreateSnapshot(CreateWorkflows()) with { RunCount = 42 });
+        cut.WaitForAssertion(() => Assert.Contains("42", cut.Find("[data-testid='workflow-overview-run-count']").TextContent, StringComparison.Ordinal));
+        service.Requests[0].Completion.SetException(new InvalidOperationException("PRIVATE_OVERVIEW"));
+        cut.WaitForAssertion(() => Assert.Contains("42", cut.Find("[data-testid='workflow-overview-run-count']").TextContent, StringComparison.Ordinal));
+        Assert.DoesNotContain("PRIVATE_OVERVIEW", cut.Markup, StringComparison.Ordinal);
+    }
+
+    private sealed class DelayedOverviewQueryService : IWorkflowOverviewQueryService {
+        public List<(CancellationToken Token, TaskCompletionSource<WorkflowOverviewSnapshot> Completion)> Requests { get; } = [];
+        public Task<WorkflowOverviewSnapshot> QueryAsync(WorkflowOverviewQuery query, CancellationToken cancellationToken = default) {
+            var completion = new TaskCompletionSource<WorkflowOverviewSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Requests.Add((cancellationToken, completion));
+            return completion.Task;
+        }
     }
 
     private static BunitContext CreateContext()

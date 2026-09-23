@@ -5,6 +5,7 @@
 *.suo
 *.user
 *.userosscache
+.idea/
 
 # Build and package output
 [Bb]in/
@@ -17,6 +18,10 @@ output/
 outputs/
 evidence/
 proof/
+!codex/bundles/shared-providers/evidence/
+!codex/bundles/shared-providers/evidence/**
+!codex/bundles/shared-providers/subbundles/**/proof/
+!codex/bundles/shared-providers/subbundles/**/proof/**
 !codex/bundles/Agent-Chat-UI-Reuse-Refactor/proof/
 !codex/bundles/Agent-Chat-UI-Reuse-Refactor/proof/**
 !codex/bundles/Simple-Llm-Chats-UI-Integration/proof/
@@ -25,6 +30,26 @@ proof/
 !codex/bundles/unix-merge-readiness-followup/proof/**
 !codex/bundles/Simple-Llm-Chats-Hardening-Sse/proof/
 !codex/bundles/Simple-Llm-Chats-Hardening-Sse/proof/**
+!codex/bundles/shared-provider-real-catalogs/proof/
+codex/bundles/shared-provider-real-catalogs/proof/*
+!codex/bundles/shared-provider-real-catalogs/proof/SB03/
+!codex/bundles/shared-provider-real-catalogs/proof/SB03/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB04/
+!codex/bundles/shared-provider-real-catalogs/proof/SB04/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB05/
+!codex/bundles/shared-provider-real-catalogs/proof/SB05/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB06/
+!codex/bundles/shared-provider-real-catalogs/proof/SB06/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB07/
+!codex/bundles/shared-provider-real-catalogs/proof/SB07/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB08/
+!codex/bundles/shared-provider-real-catalogs/proof/SB08/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB09/
+!codex/bundles/shared-provider-real-catalogs/proof/SB09/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB10/
+!codex/bundles/shared-provider-real-catalogs/proof/SB10/**
+!codex/bundles/shared-provider-real-catalogs/proof/SB11/
+!codex/bundles/shared-provider-real-catalogs/proof/SB11/**
 *.nupkg
 *.snupkg
 *.binlog
@@ -67,6 +92,7 @@ CanDoItAll.Mcp.*.settings.json
 .env
 .env.*
 !.env.example
+!.env.shared-providers.e2e.example
 compose.override.yaml
 compose.override.yml
 docker-compose.override.yaml
@@ -80,3 +106,37 @@ docker-compose.override.yml
 .DS_Store
 Thumbs.db
 .dotnet_cli_home
+
+# Generated Fast sandbox theme
+src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css
+src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css
+src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css
+
+# Retained, manifest-checked evidence for the current component seam children.
+!codex/bundles/UI_Providers_02E_Verification_Delivery_Hardening_Bundle/proof/
+!codex/bundles/UI_Providers_02E_Verification_Delivery_Hardening_Bundle/proof/**
+!codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle/proof/
+!codex/bundles/UI_AgentCatalog_Harden_01_Development_Loop_Bundle/proof/**
+!codex/bundles/UI_Providers_02F_Explicit_Acknowledgement_Bundle/evidence/
+!codex/bundles/UI_Providers_02F_Explicit_Acknowledgement_Bundle/evidence/**
+!codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle/proof/
+!codex/bundles/UI_AgentCatalog_Harden_02_Reload_Evidence_Bundle/proof/**
+
+# Compact capabilities seam proof.
+!codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_01_State_Read_Seams_Bundle/proof/**
+
+!codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/**
+
+!codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_02G_PreExtraction_Correctness_Bundle/proof/**
+
+!codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/
+!codex/bundles/UI_AgentCapabilities_03_Extraction_Sandbox_Bundle/proof/**
+
+# Exact historical Overview and Governance proof, delivery reviewed by Overview-01D.
+!codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/**
+!codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/proof/
+!codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/proof/**

@@ -15,6 +15,59 @@ namespace CanDoItAll.Tests.Unit.LlmChats;
 public sealed class LlmChatWholeUseCaseProfileScopeTests
 {
     [Fact]
+    public async Task Concurrent_use_cases_do_not_share_database_work_at_the_same_time() {
+        var lease = new MutableLlmChatRuntimeLease();
+        using var runner = new LlmChatProfileScopeRunner(new TestLlmChatRuntimeLeaseFactory(lease), new LlmChatOperationScopeAccessor());
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = runner.ExecuteAsync(LlmChatOperationId.New(), async token => {
+            await release.Task.WaitAsync(token);
+            return Result<int>.Success(1);
+        });
+        var secondEntered = false;
+        var second = runner.ExecuteAsync(LlmChatOperationId.New(), _ => {
+            secondEntered = true;
+            return Task.FromResult(Result<int>.Success(2));
+        });
+        try {
+            Assert.False(secondEntered);
+        } finally {
+            release.SetResult();
+            await Task.WhenAll(first, second);
+        }
+        Assert.True(secondEntered);
+        Assert.Equal(2, lease.DisposeCount);
+    }
+
+    [Fact]
+    public async Task Cancelled_waiter_and_failed_operation_do_not_block_later_use_cases() {
+        var lease = new MutableLlmChatRuntimeLease();
+        using var runner = new LlmChatProfileScopeRunner(new TestLlmChatRuntimeLeaseFactory(lease), new LlmChatOperationScopeAccessor());
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = runner.ExecuteAsync(LlmChatOperationId.New(), async token => {
+            await release.Task.WaitAsync(token);
+            return Result<int>.Success(1);
+        });
+        using var cancellation = new CancellationTokenSource();
+        var entered = false;
+        var waiting = runner.ExecuteAsync(LlmChatOperationId.New(), _ => {
+            entered = true;
+            return Task.FromResult(Result<int>.Success(2));
+        }, cancellation.Token);
+        cancellation.Cancel();
+        try {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiting);
+            Assert.False(entered);
+        } finally {
+            release.SetResult();
+            await first;
+        }
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.ExecuteAsync<int>(
+            LlmChatOperationId.New(), _ => throw new InvalidOperationException("Expected test failure.")));
+        Assert.True((await runner.ExecuteAsync(LlmChatOperationId.New(), _ => Task.FromResult(Result<int>.Success(3)))).IsSuccess);
+        Assert.Equal(3, lease.DisposeCount);
+    }
+
+    [Fact]
     public async Task Profile_switch_after_first_read_rejects_active_operation_projection()
     {
         var definitionId = LlmChatDefinitionId.New();

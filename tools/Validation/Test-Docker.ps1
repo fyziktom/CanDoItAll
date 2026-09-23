@@ -142,7 +142,7 @@ function Test-ComposePolicy {
             Add-Finding -Findings $Findings -Message "The db service must consume POSTGRES_PASSWORD_FILE through the Compose secret."
         }
 
-        if ($dbBlock -notmatch "(?m)^      - db-data:/var/lib/postgresql/data\s*$") {
+        if ($dbBlock -notmatch "(?m)^      - db-data:/var/lib/postgresql\s*$") {
             Add-Finding -Findings $Findings -Message "The db service must persist data through db-data."
         }
 
@@ -249,10 +249,10 @@ if (Test-Path -LiteralPath $dockerfilePath -PathType Leaf) {
         Add-Finding -Findings $findings -Message "The application Dockerfile must use the JSON-form web entry point."
     }
 
-    if ($dockerfileContent -notmatch '(?m)^COPY --from=components \. /CanDoItAll\.Components\s*$' -or
-        $dockerfileContent -notmatch '(?m)^COPY --from=filetools \. /CanDoItAll\.FileTools\s*$' -or
+    if ($dockerfileContent -notmatch '(?m)^COPY --from=components --exclude=\*\*/\[Bb\]in --exclude=\*\*/\[Oo\]bj \. /CanDoItAll\.Components\s*$' -or
+        $dockerfileContent -notmatch '(?m)^COPY --from=filetools --exclude=\*\*/\[Bb\]in --exclude=\*\*/\[Oo\]bj \. /CanDoItAll\.FileTools\s*$' -or
         $dockerfileContent -match 'UseLocalCanDoItAllLibraries=false') {
-        Add-Finding -Findings $findings -Message "The application Dockerfile must build against the sibling Components and FileTools project graph."
+        Add-Finding -Findings $findings -Message "The application Dockerfile must build against sibling Components and FileTools sources without copying host bin/obj artifacts."
     }
 }
 

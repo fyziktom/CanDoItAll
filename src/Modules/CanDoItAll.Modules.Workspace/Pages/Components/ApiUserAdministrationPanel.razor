@@ -1,0 +1,233 @@
+@using CanDoItAll.Modules.Workspace.ApiAccess
+@using CanDoItAll.Infrastructure.ControlPlane
+@using Microsoft.Extensions.Options
+@using Microsoft.Extensions.Logging
+@inject ApiUserAdministrationService Administration
+@inject IOptions<ApiAccessOptions> Options
+@inject ILogger<ApiUserAdministrationPanel> Logger
+
+@if (loading) {
+    <EmptyState Title="Loading API users" Description="Checking administration access." />
+} else if (!canManage) {
+    <Alert AlertStyle="AlertStyle.Warning">API user administration requires trusted local administration.</Alert>
+} else {
+    <Stack GapScale="LayoutGap.Medium" data-testid="api-users-panel">
+        <Alert AlertStyle="AlertStyle.Info">
+            Configured administrator: @Options.Value.BootstrapAdmin.UserName. Its credentials are deployment-owned.
+            Change Api:BootstrapAdmin:PasswordHash and restart to reset it.
+        </Alert>
+        <Cluster Gap="LayoutGap.Small">
+            <TextBox @bind-Value="search" Placeholder="Search API users" aria-label="Search API users" data-testid="api-users-search" />
+            <Button Text="Search" Click="SearchAsync" Disabled="busy" ButtonStyle="ButtonStyle.Light" />
+            <Button Text="Create user" Icon="person_add" Click="@(() => OpenEditor(UserAction.Create, null))" Disabled="busy" data-testid="api-user-create" />
+            <Button Text="Refresh" Icon="refresh" Click="LoadAsync" Disabled="busy" ButtonStyle="ButtonStyle.Light" data-testid="api-users-refresh" />
+        </Cluster>
+        @if (!string.IsNullOrEmpty(message)) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="api-users-message">@message</Alert>
+        }
+        @if (!string.IsNullOrEmpty(error)) {
+            <Alert AlertStyle="AlertStyle.Danger" data-testid="api-users-error">@error</Alert>
+        }
+        <DataGrid TItem="ApiUserDetails" Data="page.Items" Loading="busy" Caption="API users" EmptyText="No API users match this search." data-testid="api-users-table">
+            <Columns>
+                <DataGridColumn TItem="ApiUserDetails" Title="User">
+                    <Template Context="user"><strong>@user.UserName</strong><TextBlock Value="@user.DisplayName" /></Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="ApiUserDetails" Title="Status">
+                    <Template Context="user"><StatusBadge Text="@(user.Enabled ? "Enabled" : "Disabled")" Tone="@(user.Enabled ? "success" : "warning")" /></Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="ApiUserDetails" Title="Capabilities">
+                    <Template Context="user">@(user.Scopes.Count == 0 ? "No business permissions" : string.Join(", ", user.Scopes))</Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="ApiUserDetails" Title="Actions">
+                    <Template Context="user">
+                        <Cluster Gap="LayoutGap.Tiny">
+                            <Button Text="Edit" Size="ButtonSize.Small" Click="@(() => OpenEditor(UserAction.Edit, user))" Disabled="busy" data-testid="api-user-edit" />
+                            <Button Text="Reset password" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => OpenEditor(UserAction.ResetPassword, user))" Disabled="busy" data-testid="api-user-reset" />
+                            <Button Text="Delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(() => OpenEditor(UserAction.Delete, user))" Disabled="busy" data-testid="api-user-delete" />
+                        </Cluster>
+                    </Template>
+                </DataGridColumn>
+            </Columns>
+        </DataGrid>
+        <Cluster JustifyContent="JustifyContent.SpaceBetween">
+            <StatusBadge Text="@($"{page.TotalCount} users · Page {offset / PageSize + 1}")" Tone="info" />
+            <Cluster Gap="LayoutGap.Tiny">
+                <Button Text="Previous" Disabled="@(busy || offset == 0)" Click="PreviousAsync" ButtonStyle="ButtonStyle.Light" />
+                <Button Text="Next" Disabled="@(busy || offset + PageSize >= page.TotalCount)" Click="NextAsync" ButtonStyle="ButtonStyle.Light" />
+            </Cluster>
+        </Cluster>
+    </Stack>
+}
+
+@if (action is not null) {
+    <Dialog IsOpen="true" Title="@EditorTitle" Size="ModalSize.Medium" OnClose="CloseEditor" TestId="api-user-dialog">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <Alert AlertStyle="AlertStyle.Warning">Saving changes, resetting a password or deleting this user invalidates its existing sessions.</Alert>
+                @if (action is UserAction.Create or UserAction.Edit) {
+                    <FormField Text="Username"><TextBox @bind-Value="userName" Disabled="busy" maxlength="64" data-testid="api-user-name" /></FormField>
+                    <FormField Text="Display name"><TextBox @bind-Value="displayName" Disabled="busy" maxlength="128" data-testid="api-user-display-name" /></FormField>
+                    <FormField Text="Enabled"><CheckBox TValue="bool" @bind-Value="enabled" Disabled="busy" data-testid="api-user-enabled" /></FormField>
+                    <FormField Text="Business capabilities">
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock Value="@(string.IsNullOrEmpty(scopes) ? "No business permissions" : scopes)" />
+                            <Button Text="Choose capabilities" Icon="checklist" Click="@(() => scopePickerOpen = true)" Disabled="busy" data-testid="api-user-scopes" />
+                        </Stack>
+                    </FormField>
+                }
+                @if (action is UserAction.Create or UserAction.ResetPassword) {
+                    <FormField Text="New password (12–256 characters)"><Password @bind-Value="password" Disabled="busy" maxlength="256" autocomplete="new-password" data-testid="api-user-password" /></FormField>
+                }
+                @if (action == UserAction.Delete) {
+                    <TextBlock Value="@($"Delete {selected!.UserName}? This cannot be undone.")" />
+                }
+                @if (!string.IsNullOrEmpty(editorError)) {
+                    <Alert AlertStyle="AlertStyle.Danger" data-testid="api-user-editor-error">@editorError</Alert>
+                }
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                <Button Text="Cancel" Click="CloseEditor" Disabled="busy" ButtonStyle="ButtonStyle.Light" />
+                <Button Text="@(action == UserAction.Delete ? "Delete user" : action == UserAction.ResetPassword ? "Reset password" : "Save user")"
+                    Click="SaveAsync" Disabled="busy" IsBusy="busy" data-testid="api-user-save" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+@if (scopePickerOpen) {
+    <ApiScopePickerDialog Value="@scopes" ForUser="true" Confirmed="ApplyScopes" OnClose="@(() => scopePickerOpen = false)" />
+}
+
+@code {
+    private const int PageSize = 25;
+    private enum UserAction { Create, Edit, ResetPassword, Delete }
+    private ApiUserPage page = new([], 0);
+    private ApiUserDetails? selected;
+    private UserAction? action;
+    private bool loading = true;
+    private bool canManage;
+    private bool busy;
+    private bool enabled = true;
+    private bool scopePickerOpen;
+    private int offset;
+    private long readGeneration;
+    private string? search;
+    private string? userName;
+    private string? displayName;
+    private string? password;
+    private string scopes = string.Empty;
+    private string error = string.Empty;
+    private string editorError = string.Empty;
+    private string message = string.Empty;
+    private string EditorTitle => action switch {
+        UserAction.Create => "Create API user",
+        UserAction.Edit => "Edit API user",
+        UserAction.ResetPassword => "Reset API user password",
+        _ => "Delete API user"
+    };
+
+    protected override async Task OnInitializedAsync() {
+        canManage = await Administration.CanManageAsync();
+        if (canManage) {
+            await LoadAsync();
+        }
+        loading = false;
+    }
+
+    private async Task LoadAsync() {
+        var generation = ++readGeneration;
+        error = string.Empty;
+        try {
+            var loaded = await Administration.SearchAsync(search, offset, PageSize);
+            if (generation == readGeneration) {
+                page = loaded;
+            }
+        } catch (Exception exception) {
+            Logger.LogError("Cannot refresh API user list: {ErrorType}.", exception.GetType().Name);
+            if (generation == readGeneration) {
+                error = "The user list could not be refreshed. Use Refresh to retry the read.";
+            }
+        }
+    }
+
+    private async Task SearchAsync() {
+        offset = 0;
+        await LoadAsync();
+    }
+
+    private async Task PreviousAsync() {
+        offset = Math.Max(0, offset - PageSize);
+        await LoadAsync();
+    }
+
+    private async Task NextAsync() {
+        offset += PageSize;
+        await LoadAsync();
+    }
+
+    private void OpenEditor(UserAction requested, ApiUserDetails? user) {
+        if (busy) {
+            return;
+        }
+        selected = user;
+        userName = user?.UserName ?? string.Empty;
+        displayName = user?.DisplayName ?? string.Empty;
+        enabled = user?.Enabled ?? true;
+        scopes = string.Join(' ', user?.Scopes ?? []);
+        password = string.Empty;
+        editorError = string.Empty;
+        action = requested;
+    }
+
+    private void CloseEditor() {
+        if (busy) {
+            return;
+        }
+        password = string.Empty;
+        selected = null;
+        action = null;
+        scopePickerOpen = false;
+    }
+
+    private void ApplyScopes(string value) {
+        scopes = value;
+        scopePickerOpen = false;
+    }
+
+    private async Task SaveAsync() {
+        if (busy || action is null) {
+            return;
+        }
+        busy = true;
+        editorError = string.Empty;
+        try {
+            switch (action) {
+                case UserAction.Create:
+                    await Administration.CreateAsync(new(userName!, displayName!, password!, enabled, ApiScopeCatalog.Parse(scopes)));
+                    break;
+                case UserAction.Edit:
+                    await Administration.UpdateAsync(selected!.Id, new(userName!, displayName!, enabled, ApiScopeCatalog.Parse(scopes), selected.Version));
+                    break;
+                case UserAction.ResetPassword:
+                    await Administration.ResetPasswordAsync(selected!.Id, new(password!, selected.Version));
+                    break;
+                case UserAction.Delete:
+                    await Administration.DeleteAsync(selected!.Id, selected.Version);
+                    break;
+            }
+            password = string.Empty;
+            action = null;
+            message = "The account change was saved. Existing sessions for that user are no longer valid.";
+            await LoadAsync();
+        } catch (Exception exception) when (exception is ArgumentException or ApiUserConflictException) {
+            editorError = exception.Message;
+        } catch (Exception exception) {
+            Logger.LogError("API user mutation failed: {ErrorType}.", exception.GetType().Name);
+            editorError = "The account change could not be confirmed. Refresh the user before retrying.";
+        } finally {
+            busy = false;
+        }
+    }
+}

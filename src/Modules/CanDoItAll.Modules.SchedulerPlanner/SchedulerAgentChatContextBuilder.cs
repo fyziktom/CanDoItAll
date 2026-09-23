@@ -11,9 +11,12 @@ public enum SchedulerAgentChatView
 
 public static class SchedulerAgentChatContextBuilder
 {
+    internal const string SourceKind = "scheduler";
+    internal const string SourceId = "scheduler";
+
     private static readonly AgentChatContextSource Source = new(
-        new AgentChatContextSourceKind("scheduler"),
-        new AgentChatContextSourceId("scheduler"));
+        new AgentChatContextSourceKind(SourceKind),
+        new AgentChatContextSourceId(SourceId));
 
     public static AgentChatContextSurface Build(
         SchedulerAgentChatView view,

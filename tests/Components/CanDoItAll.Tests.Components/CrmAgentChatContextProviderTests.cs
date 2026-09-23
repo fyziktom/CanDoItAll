@@ -186,6 +186,43 @@ public sealed class CrmAgentChatContextProviderTests
     }
 
     [Fact]
+    public void Provider_stands_down_when_a_newer_scope_supersedes_its_selection()
+    {
+        using var context = new BunitContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
+        var account = CreateAccount();
+        var cut = context.Render<CrmAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.Account, account)
+            .Add(component => component.Opportunity, CreateOpportunity(account.AccountId, "Expansion", OpportunityStage.Qualified)));
+        cut.WaitForAssertion(() => Assert.Equal(
+            account.AccountId.ToString("D"),
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Source.Id.Value));
+
+        // Another surface takes over the circuit's agent chat context; the CRM provider is still rendered.
+        var newerScope = new AgentChatContextScope(
+            AgentChatContextScopeId.Create(),
+            new AgentChatContextSource(
+                new AgentChatContextSourceKind("project-structure"),
+                new AgentChatContextSourceId(Guid.NewGuid().ToString("D"))),
+            "Newer project structure");
+        using var newerLease = registry.ActivateScope(newerScope);
+
+        // A selection change re-renders the superseded provider: parameters set, fragment updates, after-render.
+        cut.Render(parameters => parameters
+            .Add(component => component.Account, account)
+            .Add(component => component.Opportunity, CreateOpportunity(account.AccountId, "Renewal", OpportunityStage.Negotiation)));
+
+        var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.Equal(newerScope.Id, snapshot.Scope.Id);
+        Assert.True(newerLease.IsActive);
+
+        cut.Instance.Dispose();
+        Assert.Equal(newerScope.Id, Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id);
+    }
+
+    [Fact]
     public void Provider_blocks_transition_context_and_recovers_without_replacing_the_selection_scope()
     {
         using var context = new BunitContext();

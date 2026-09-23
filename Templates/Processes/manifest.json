@@ -125,6 +125,10 @@
     {
       "Key": "ai-assisted-change-delivery",
       "RelativePath": "processes/ai-assisted-change-delivery"
+    },
+    {
+      "Key": "project-structure-note-writeback",
+      "RelativePath": "processes/project-structure-note-writeback"
     }
   ]
 }

@@ -5,7 +5,6 @@
     <ProjectReference Include="..\..\..\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\..\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />
     <ProjectReference Include="..\..\..\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
-    <ProjectReference Include="..\..\..\..\Foundation\CanDoItAll.Security.Abstractions\CanDoItAll.Security.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
 

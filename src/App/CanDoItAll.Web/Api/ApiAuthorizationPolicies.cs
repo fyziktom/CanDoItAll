@@ -5,6 +5,10 @@ namespace CanDoItAll.Web.Api;
 
 internal static class ApiAuthorizationPolicies
 {
+    public const string GeneralApi = "Api.General";
+    public const string ManageAccess = "Api.Access.Manage";
+    public const string UserSession = "Api.Access.Session";
+
     public const string IssueTokens = "Api.IssueTokens";
 
     public const string ReadMemoryProviders = "Api.MemoryProviders.Read";
@@ -22,6 +26,21 @@ internal static class ApiAuthorizationPolicies
     public const string ExecuteLlmChats = "Api.LlmChats.Execute";
 
     public const string RespondWorkflows = "Api.Workflows.Respond";
+
+    public const string ReadSharedProviderCatalog = "Api.SharedProviders.Catalog.Read";
+
+    public const string InvokeSharedProviders = "Api.SharedProviders.Invoke";
+
+    public const string ReadProviderHistory = "Api.ProviderHistory.Read";
+    public const string ReadProviderHistoryContent = "Api.ProviderHistory.Content.Read";
+    public const string ManageProviderHistory = "Api.ProviderHistory.Manage";
+
+    public const string ReadStoragePlacementRecovery = "Api.StoragePlacementRecovery.Read";
+    public const string ReconcileStoragePlacement = "Api.StoragePlacementRecovery.Reconcile";
+    public const string VerifyStorageExternalTermination = "Api.StoragePlacementRecovery.VerifyExternalTermination";
+
+    public static IEnumerable<string> ScopeValues(ClaimsPrincipal principal) =>
+        principal.Claims.Where(claim => IsScopeClaimType(claim.Type)).Select(claim => claim.Value);
 
     public static bool HasScope(ClaimsPrincipal principal, string requiredScope)
     {

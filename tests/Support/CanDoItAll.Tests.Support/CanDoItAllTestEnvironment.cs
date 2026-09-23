@@ -62,7 +62,7 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
             RootPath,
             profileRootPath,
             TestDatabaseProviderKind.InMemory,
-            string.IsNullOrWhiteSpace(databaseName) ? $"{SanitizeSegment(profileKey)}-inmemory" : databaseName,
+            string.IsNullOrWhiteSpace(databaseName) ? $"{SanitizeSegment(profileKey)}-inmemory-{Path.GetFileName(RootPath)}" : databaseName,
             workspaceRootPath,
             managerArtifactsRootPath);
     }
@@ -134,6 +134,11 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
 
 public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 {
+    private const int DatabaseMaintenanceCommandTimeoutSeconds = 60;
+    private const string CreateStrategyEnvironmentVariable = "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY";
+    private const string WalLogCreateStrategyValue = "WAL_LOG";
+    private const string FileCopyCreateStrategyValue = "FILE_COPY";
+
     private PostgresTestDatabaseLease(string databaseName, string connectionString, string adminConnectionString)
     {
         DatabaseName = databaseName;
@@ -158,6 +163,7 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
     public static PostgresTestDatabaseLease Create(string profileKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(profileKey);
+        PostgresTestDatabaseCreateStrategy createStrategy = ResolveCreateStrategy();
 
         var availability = PostgresTestAvailability.EnsureAvailableAsync(FindRepositoryRoot())
             .GetAwaiter()
@@ -170,12 +176,21 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
         var databaseName = CreateDatabaseName(profileKey);
         var connectionString = BuildDatabaseConnectionString(availability.ConnectionString, databaseName);
         var adminConnectionString = BuildAdminConnectionString(availability.ConnectionString);
-        CreateDatabase(adminConnectionString, databaseName);
+        CreateDatabase(adminConnectionString, databaseName, createStrategy);
         return new PostgresTestDatabaseLease(databaseName, connectionString, adminConnectionString);
     }
 
     public async ValueTask DisposeAsync()
     {
+        // Return this lease's pooled connections before the database is dropped. A long test class leases one
+        // database per fixture, and every lease keeps its own client pool; without this a run of a few dozen
+        // fixtures holds more server connections than the server allows and the next fixture waits instead of
+        // working.
+        await using (var pooled = new NpgsqlConnection(ConnectionString))
+        {
+            NpgsqlConnection.ClearPool(pooled);
+        }
+
         await using var connection = new NpgsqlConnection(AdminConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
@@ -185,13 +200,34 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
     private string AdminConnectionString { get; }
 
-    private static void CreateDatabase(string adminConnectionString, string databaseName)
+    private static void CreateDatabase(
+        string adminConnectionString,
+        string databaseName,
+        PostgresTestDatabaseCreateStrategy createStrategy)
     {
         using var connection = new NpgsqlConnection(adminConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = $"""create database "{EscapeIdentifier(databaseName)}";""";
+        string strategy = createStrategy switch
+        {
+            PostgresTestDatabaseCreateStrategy.WalLog => WalLogCreateStrategyValue,
+            PostgresTestDatabaseCreateStrategy.FileCopy => FileCopyCreateStrategyValue,
+            _ => throw new ArgumentOutOfRangeException(nameof(createStrategy), createStrategy, null)
+        };
+        command.CommandText = $"""create database "{EscapeIdentifier(databaseName)}" strategy = {strategy};""";
         command.ExecuteNonQuery();
+    }
+
+    private static PostgresTestDatabaseCreateStrategy ResolveCreateStrategy()
+    {
+        string? configuredStrategy = Environment.GetEnvironmentVariable(CreateStrategyEnvironmentVariable);
+        return configuredStrategy?.Trim().ToUpperInvariant() switch
+        {
+            null or "" or WalLogCreateStrategyValue => PostgresTestDatabaseCreateStrategy.WalLog,
+            FileCopyCreateStrategyValue => PostgresTestDatabaseCreateStrategy.FileCopy,
+            _ => throw new InvalidOperationException(
+                $"{CreateStrategyEnvironmentVariable} must be {WalLogCreateStrategyValue} or {FileCopyCreateStrategyValue}.")
+        };
     }
 
     private static string BuildDatabaseConnectionString(string connectionString, string databaseName)
@@ -217,7 +253,7 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
         builder.IncludeErrorDetail = true;
         builder.Timeout = 5;
-        builder.CommandTimeout = 15;
+        builder.CommandTimeout = DatabaseMaintenanceCommandTimeoutSeconds;
         return builder.ConnectionString;
     }
 
@@ -246,33 +282,12 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
     private static string EscapeIdentifier(string value)
         => value.Replace("\"", "\"\"", StringComparison.Ordinal);
 
-    private static string FindRepositoryRoot()
+    private enum PostgresTestDatabaseCreateStrategy
     {
-        const string repositoryRootEnvironmentVariable = "CANDOITALL_TEST_REPOSITORY_ROOT";
-        string? configuredRoot = Environment.GetEnvironmentVariable(repositoryRootEnvironmentVariable);
-        if (!string.IsNullOrWhiteSpace(configuredRoot))
-        {
-            string resolvedRoot = Path.GetFullPath(configuredRoot);
-            if (!File.Exists(Path.Combine(resolvedRoot, "CanDoItAll.slnx")))
-            {
-                throw new InvalidOperationException(
-                    $"{repositoryRootEnvironmentVariable} does not identify the CanDoItAll repository root.");
-            }
-
-            return resolvedRoot;
-        }
-
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the CanDoItAll repository root from the test output directory.");
+        WalLog,
+        FileCopy
     }
+
+    private static string FindRepositoryRoot()
+        => TestRepositoryRoot.Find();
 }

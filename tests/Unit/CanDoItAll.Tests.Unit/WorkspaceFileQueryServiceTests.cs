@@ -340,6 +340,62 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
     }
 
     [Fact]
+    public void SearchText_missing_absolute_path_reports_the_missing_path_instead_of_throwing()
+    {
+        var service = CreateService();
+
+        var result = service.SearchText("needle", Path.Combine(workspaceRoot, "missing-folder"));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Failed", result.Receipt.Outcome);
+        Assert.Contains("does not exist", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchText_absolute_path_searches_the_exact_native_file()
+    {
+        // A backslash is an ordinary file name character on Linux and macOS, so there the exact file and the decoy are
+        // two different files; on Windows the exact file has a plain name.
+        var sources = CreateDirectory("sources");
+        var exact = Path.Combine(sources, OperatingSystem.IsWindows() ? "literal-name.txt" : "literal\\name.txt");
+        File.WriteAllText(exact, "needle in the exact file");
+        WriteFile(sources, "literal", "name.txt", "needle in the decoy file");
+        var service = CreateService();
+
+        var result = service.SearchText("needle", exact);
+
+        Assert.True(result.Succeeded, result.Message);
+        var match = Assert.Single(result.Matches);
+        Assert.Contains("exact file", match.Snippet, StringComparison.Ordinal);
+        Assert.DoesNotContain("decoy", match.Snippet, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Absolute_path_with_a_backslash_name_under_a_scoped_managed_root_is_rejected_instead_of_remapped()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            // A backslash is a separator on Windows, so the path below is an ordinary nested path there.
+            return;
+        }
+
+        Directory.CreateDirectory(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N")));
+
+        var path = Path.Combine(workspaceRoot, "artifacts", "report\\draft.txt");
+
+        var resolved = policy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out _, out var message);
+        var exception = Assert.Throws<WorkspacePathResolutionException>(() => policy.ResolveAccessiblePath(path));
+
+        Assert.False(resolved);
+        Assert.Equal("The requested workspace path is invalid.", message);
+        Assert.Equal(WorkspacePathResolutionFailureKind.InvalidPath, exception.Kind);
+        Assert.Contains("cannot be mapped into the current managed scope", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StatPath_existing_file_and_directory_remain_successful()
     {
         var directory = CreateDirectory("apps", "ExistingProject");

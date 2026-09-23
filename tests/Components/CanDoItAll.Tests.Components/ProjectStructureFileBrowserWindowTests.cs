@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileBrowser.Components;
@@ -19,6 +20,57 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureFileBrowserWindowTests
 {
+    [Fact]
+    public void Node_collection_window_shows_loading_state_while_authorization_is_pending()
+    {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        Guid projectId = Guid.NewGuid();
+        var scope = new FileToolsSemanticScope(
+            FileToolsSemanticScopeKind.ProjectNode,
+            new FileToolsSemanticScopeId("node:v2:collection:11111111111111111111111111111111:Zm9sZGVy"),
+            "Run artifacts");
+        var nodeScopeProvider = new DeferredNodeFileScopeProvider();
+        RegisterServices(
+            context,
+            new ProjectFileScopeSet(
+                projectId,
+                [
+                    new FileToolsSemanticScope(
+                        FileToolsSemanticScopeKind.Project,
+                        new FileToolsSemanticScopeId(projectId.ToString("N")),
+                        "Delivery")
+                ],
+                new string('a', 64)),
+            nodeScopeProvider);
+
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
+            .Add(component => component.WindowId, "project-structure.fileBrowser")
+            .Add(
+                component => component.Request,
+                new ProjectStructureNodeFileCollectionRequest(projectId, "run-output", "Run artifacts"))
+            .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='project-structure-file-browser-window']"));
+            Assert.NotNull(cut.Find("[data-testid='project-structure-file-browser-loading'][aria-busy='true']"));
+            Assert.Single(cut.FindComponents<LoadingState>());
+            Assert.Empty(cut.FindComponents<FileBrowser>());
+            Assert.Contains("animate-spin", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Resolving authorized sources", cut.Markup, StringComparison.Ordinal);
+        });
+
+        nodeScopeProvider.Complete(scope);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='project-structure-file-browser-loading']"));
+            Assert.Empty(cut.FindComponents<LoadingState>());
+            Assert.Single(cut.FindComponents<FileBrowser>());
+        });
+    }
+
     [Fact]
     public void Project_collection_window_uses_compact_browser_and_host_owned_subproject_control()
     {
@@ -427,5 +479,27 @@ public sealed class ProjectStructureFileBrowserWindowTests
             string nodeId,
             CancellationToken cancellationToken = default)
             => ValueTask.FromResult(scope);
+    }
+
+    private sealed class DeferredNodeFileScopeProvider : IProjectStructureNodeFileScopeProvider
+    {
+        private readonly TaskCompletionSource<FileToolsSemanticScope> completion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void Complete(FileToolsSemanticScope scope)
+            => completion.SetResult(scope);
+
+        public ValueTask<FileToolsKnownFileScope> ResolveKnownFileAsync(
+            Guid projectId,
+            string nodeId,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromException<FileToolsKnownFileScope>(
+                new InvalidOperationException("Unexpected known-file scope."));
+
+        public ValueTask<FileToolsSemanticScope> ResolveNodeCollectionAsync(
+            Guid projectId,
+            string nodeId,
+            CancellationToken cancellationToken = default)
+            => new(completion.Task.WaitAsync(cancellationToken));
     }
 }

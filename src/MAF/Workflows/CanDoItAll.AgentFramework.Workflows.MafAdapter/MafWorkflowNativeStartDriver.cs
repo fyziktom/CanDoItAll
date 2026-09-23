@@ -35,12 +35,14 @@ internal sealed class MafWorkflowNativeStartDriver(
             request.PreviewSimulationPlan,
             request.Origin);
         MafWorkflowStreamTurn turn;
-        using (WorkflowExecutorExecutionAuditScope.Push(runId))
+        using (WorkflowExecutorExecutionAuditScope.Push(runId, request.Origin))
         using (WorkflowNodeExecutionProgressScope.Push(progressObserver))
         {
             turn = await runDriver.StartAsync(
                 build.Workflow!,
-                new WorkflowNodeInput(request.InputJson),
+                new WorkflowNodeInput(request.InputJson) {
+                    ExecutionOccurrence = WorkflowExecutionOccurrence.Start(runId)
+                },
                 checkpointManager,
                 session.Id.Value,
                 cancellationToken);

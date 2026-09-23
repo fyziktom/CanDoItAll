@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <CrmHrAssetMode Condition="'$(CrmHrAssetMode)' == ''">Parity</CrmHrAssetMode>
+    <OutputPath>bin/$(CrmHrAssetMode)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>obj/$(CrmHrAssetMode)/$(Configuration)/</IntermediateOutputPath>
+    <DefineConstants Condition="'$(CrmHrAssetMode)' == 'Fast'">$(DefineConstants);CRMHR_FAST_ASSETS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.CrmHr.UI/CanDoItAll.CrmHr.UI.csproj" />
+    <Content Remove="wwwroot/css/crmhr-fast.css" Condition="'$(CrmHrAssetMode)' != 'Fast'" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="'$(CrmHrAssetMode)' == 'Parity'" />
+  </ItemGroup>
+  <Target Name="RequireCrmHrTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(CrmHrAssetMode)' != 'Parity' and '$(CrmHrAssetMode)' != 'Fast'"
+           Text="CrmHrAssetMode must be Parity or Fast." />
+    <Error Condition="'$(CrmHrAssetMode)' == 'Parity' and !Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run tailwind:build." />
+    <Error Condition="'$(CrmHrAssetMode)' == 'Fast' and !Exists('$(MSBuildProjectDirectory)/wwwroot/css/crmhr-fast.css')"
+           Text="Fast CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run crmhr:css:build." />
+  </Target>
+</Project>

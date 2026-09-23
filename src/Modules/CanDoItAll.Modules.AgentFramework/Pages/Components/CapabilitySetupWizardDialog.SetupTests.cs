@@ -7,7 +7,11 @@ public partial class CapabilitySetupWizardDialog
 {
     private async Task TestSetupAsync()
     {
-        if (isBusy || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
+        if (!IsCurrent) {
+            return;
+        }
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        if (!IsCurrent || isBusy || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
         {
             return;
         }
@@ -24,29 +28,41 @@ public partial class CapabilitySetupWizardDialog
 
             if (editorModel.Kind == CapabilityKind.Tool)
             {
-                toolSetupResult = await CapabilitySetupFlowService.TestToolSetupAsync(new CapabilityToolSetupTestRequest
+                var result = await CapabilitySetupFlowService.TestToolSetupAsync(new CapabilityToolSetupTestRequest
                 {
                     Capability = editorModel,
                     JsonInput = string.IsNullOrWhiteSpace(toolState.TestInputJson) ? "{}" : toolState.TestInputJson
-                });
+                }, request.Token);
+                if (!IsCurrent) {
+                    return;
+                }
+                toolSetupResult = result;
                 NotifySetupResult(toolSetupResult.IsSuccess, "Tool setup test");
             }
             else
             {
-                mcpSetupResult = await CapabilitySetupFlowService.TestMcpSetupAsync(new CapabilityMcpSetupTestRequest
+                var result = await CapabilitySetupFlowService.TestMcpSetupAsync(new CapabilityMcpSetupTestRequest
                 {
                     Capability = editorModel
-                });
+                }, request.Token);
+                if (!IsCurrent) {
+                    return;
+                }
+                mcpSetupResult = result;
                 NotifySetupResult(mcpSetupResult.IsSuccess, "MCP setup test");
             }
         }
-        catch (Exception exception)
+        catch (Exception) when (!IsCurrent) {
+        }
+        catch (Exception)
         {
-            NotificationService.Error("Setup test failed", exception.Message);
+            NotificationService.Error("Setup test failed", "The setup test could not be completed. Your draft is preserved.");
         }
         finally
         {
-            isBusy = false;
+            if (IsCurrent) {
+                isBusy = false;
+            }
         }
     }
 

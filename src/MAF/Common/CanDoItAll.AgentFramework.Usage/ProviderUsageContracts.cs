@@ -6,7 +6,8 @@ public enum ProviderUsageWorkloadKind
 {
     Unknown = 0,
     Agent = 1,
-    SimpleChat = 2
+    SimpleChat = 2,
+    SharedProviderRelay = 3
 }
 
 [Flags]
@@ -15,7 +16,9 @@ public enum ProviderUsageWorkloadSelection
     None = 0,
     Agents = 1,
     SimpleChats = 2,
-    Both = Agents | SimpleChats
+    SharedProviderRelays = 4,
+    Both = Agents | SimpleChats,
+    All = Agents | SimpleChats | SharedProviderRelays
 }
 
 public enum ProviderUsageCompleteness
@@ -37,7 +40,8 @@ public enum ProviderUsageConsumerKind
 {
     Unattributed = 0,
     Agent = 1,
-    SimpleChatDefinition = 2
+    SimpleChatDefinition = 2,
+    SharedProviderRelay = 3
 }
 
 public enum ProviderUsageExecutionOutcome
@@ -93,7 +97,10 @@ public sealed record ProviderUsageContribution(
     ProviderUsagePricingCompleteness PricingCompleteness,
     ProviderUsageTokenCounts Tokens,
     decimal? CostUsd,
-    DateTimeOffset OccurredAtUtc);
+    DateTimeOffset OccurredAtUtc)
+{
+    public int? ImageCount { get; init; }
+}
 
 public sealed record ProviderUsageSourceError(string Code, string Message);
 
@@ -143,7 +150,19 @@ public sealed record ProviderUsageTotals(
     ProviderUsageTokenCounts Tokens,
     decimal KnownCostUsd)
 {
-    public static ProviderUsageTotals Empty { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, ProviderUsageTokenCounts.Empty, 0m);
+    public int ImageCount { get; init; }
+
+    public static ProviderUsageTotals Empty { get; } = new(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        ProviderUsageTokenCounts.Empty,
+        0m);
 }
 
 public sealed record ProviderUsageConsumerRow(
@@ -202,13 +221,16 @@ public sealed record ProviderUsageSnapshot(
 
 public static class ProviderUsageWorkloadSelectionExtensions
 {
-    private const ProviderUsageWorkloadSelection KnownValues = ProviderUsageWorkloadSelection.Both;
+    private const ProviderUsageWorkloadSelection KnownValues = ProviderUsageWorkloadSelection.All;
 
     public static ProviderUsageWorkloadSelection Validate(this ProviderUsageWorkloadSelection selection)
     {
         if (selection == ProviderUsageWorkloadSelection.None || (selection & ~KnownValues) != 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(selection), selection, "Select Agents, Simple Chats, or Both.");
+            throw new ArgumentOutOfRangeException(
+                nameof(selection),
+                selection,
+                "Select at least one known provider usage workload.");
         }
 
         return selection;
@@ -221,7 +243,10 @@ public static class ProviderUsageWorkloadSelectionExtensions
         {
             ProviderUsageWorkloadKind.Agent => selection.HasFlag(ProviderUsageWorkloadSelection.Agents),
             ProviderUsageWorkloadKind.SimpleChat => selection.HasFlag(ProviderUsageWorkloadSelection.SimpleChats),
-            ProviderUsageWorkloadKind.Unknown => selection == ProviderUsageWorkloadSelection.Both,
+            ProviderUsageWorkloadKind.SharedProviderRelay =>
+                selection.HasFlag(ProviderUsageWorkloadSelection.SharedProviderRelays),
+            ProviderUsageWorkloadKind.Unknown =>
+                selection is ProviderUsageWorkloadSelection.Both or ProviderUsageWorkloadSelection.All,
             _ => false
         };
     }

@@ -49,7 +49,7 @@ Use this matrix together with provider health and the selected model. A capabili
 
 OpenAI-like providers are OpenAI and Azure OpenAI.
 
-- GPT-5, o1, o3, and o4 model families omit temperature unless explicitly overridden by policy.
+- GPT-5, GPT-6 Astra, o1, o3, and o4 model families omit temperature unless explicitly overridden by policy.
 - Reasoning effort generally applies to those model families over Responses or
   Chat Completions transport. Request-shape compatibility can narrow it: OpenAI
   Chat Completions requests for `gpt-5.6-terra` that include function tools use
@@ -57,10 +57,10 @@ OpenAI-like providers are OpenAI and Azure OpenAI.
   reasoning with those tools.
 - Agent configuration takes precedence over provider configuration.
 - Accepted values are `none`, `low`, `medium`, `high`, `xhigh` (including the documented aliases), and `max`.
-- `max` is restricted to GPT-5.6 models.
+- `max` is supported by GPT-5.6 and GPT-6 Astra. Astra supports `low`, `medium`, `high`, `xhigh`, and `max`; `none` and `minimal` are rejected.
 - Invalid JSON or unsupported values fail explicitly.
 
-`maxOutputTokens` is read from agent configuration first, then provider configuration. The allowed maximum is 128,000 for OpenAI-like GPT-5 models and 8,192 otherwise.
+`maxOutputTokens` is read from agent configuration first, then provider configuration. The allowed maximum is 128,000 for known OpenAI-like reasoning models and 8,192 otherwise.
 
 Ollama additionally accepts `numPredict` or `num_predict` and `think`. Its defaults are 2,048 output tokens and thinking disabled. These settings remain subject to the selected Ollama model and server.
 
@@ -69,6 +69,7 @@ Ollama additionally accepts `numPredict` or `num_predict` and `think`. Its defau
 Each `ProviderModelTokenPrice` can include:
 
 - input, cached-input, and output USD per million tokens
+- image-input and cached image-input USD per million tokens when the model has distinct image rates
 - cache-write USD per million tokens
 - a long-context threshold
 - long-context input, cached-input, cache-write, and output rates
@@ -92,6 +93,22 @@ Private/local provider defaults are estimates for comparative planning. They can
 | Local Ollama | `llama3.1`, `http://127.0.0.1:11434` |
 
 OpenAI uses `OPENAI_API_KEY` or the runtime secret store. Managed local profiles may be seeded even when their external service or model is not installed; health checks make that state explicit.
+
+## Shared provider and history evidence
+
+A shared provider advertises only its published model/capability subset, including
+thinking support and allowed efforts. Synchronization preserves publication identity,
+routing IDs and upstream availability. Imported defaults and overrides must stay within
+that subset; a missing or invalid upstream target fails explicitly.
+
+Each invocation freezes its tariff and provenance. Later profile/catalog changes do not
+rewrite [historical request evidence](provider-request-history.md). Missing usage is
+unavailable or partial, not zero; missing price is unpriced, while an explicit zero tariff
+is free. Cached and reasoning token categories are recorded only when observed.
+History represents application-visible attempts, not every physical SDK retry.
+
+See [shared providers](shared-providers.md) for publication, synchronization, network
+policy, stateless Responses and failure handling.
 
 ## Security And Operations
 
@@ -117,3 +134,17 @@ dotnet test tests\Solutions\CanDoItAll.Tests.Unit.slnx --configuration Release -
 State the expected discovery count before the first command and reject zero or drifted
 discovery. Run the [broad stable gate](testing.md#broad-stable-gate) only for CI,
 release/merge closure, a frozen checkpoint, or a named invalidation trigger.
+
+## September 2026 OpenAI catalog refresh
+
+The defaults include `gpt-6-astra`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5-flare`. Model discovery preserves dated model IDs while applying the matching known rates. Existing default selections remain unchanged.
+
+| Model | Text input | Cached text input | Cache write | Output | Image input | Cached image input |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| GPT-6 Astra, up to 272,000 input tokens | 10 | 1 | 12.5 | 50 | Uses input rate | Uses cached rate |
+| GPT-6 Astra, above 272,000 input tokens | 20 | 2 | 25 | 75 | Uses input rate | Uses cached rate |
+| GPT Image 2 / 2.5 Sunburst / 2.5 Flare | 5 | 1.25 | — | 30 (image output) | 8 | 2 |
+
+Rates are standard USD per million tokens, verified on 2026-09-20 against the official [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra), [Sunburst model](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst), and [Flare model](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare) pages. Astra's long-context rates apply to the entire request above the threshold. Different image models and quality settings can consume different token counts despite equal rates. Image execution history currently records image counts, so a token-based image cost remains unavailable rather than an invented estimate.
+
+GPT Image 2.5 accepts `auto`, `low`, `medium`, `high`, `xhigh`, and `max` quality. The driver rejects the last two for older image models before dispatch. Shared-provider requests and responses preserve these new values.

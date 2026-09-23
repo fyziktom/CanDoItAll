@@ -66,6 +66,16 @@ definition revisions, pinned PostgreSQL conversations, and retry-safe operations
 provider credentials, endpoints, EF entities, or agent execution. See
 [`docs/llm-chats-api.md`](../../../docs/llm-chats-api.md).
 
+## Shared providers and request history
+
+The host maps exactly five shared-provider operations under `/api/shared-providers`:
+catalog, compatible models, Chat Completions, Responses, and image generation.
+The HTTP/OpenAPI adapter validates and documents the supported subset; provider
+administration and history policy, capture, persistence, and projection remain in their
+owning application boundaries. There is no generic remote history or shared-source
+administration API. See [shared providers](../../../docs/shared-providers.md) and
+[request history](../../../docs/provider-request-history.md).
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

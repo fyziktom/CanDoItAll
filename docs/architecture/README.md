@@ -12,6 +12,8 @@ The architecture documentation is intentionally small:
 - [Modules](modules.md) maps product modules to their responsibilities and entry points.
 - [LLM Chats boundary and integration ownership](llm-chats-boundary-and-handoffs.md) defines asynchronous
   execution, SSE ownership, delivered UI adapters, forbidden coupling, and remaining context/deployment handoffs.
+- [Conversation components boundary](conversation-components-boundary.md) defines the backend-neutral
+  presentation owner shared by agent, ordinary-chat, and floating conversation surfaces.
 - [Process outcome authority with MAF 1.15](process-maf-1.15-outcome-authority.md)
   records the finalizer, managed-artifact, and branch-aware preflight boundary.
 - [Provider model-parameter negotiation](provider-model-parameter-negotiation.md)
@@ -20,6 +22,10 @@ The architecture documentation is intentionally small:
   separates shared transfer recovery from agent transport failures.
 - [Agent tool failure recovery boundary](agent-tool-failure-recovery-boundary.md)
   defines safe, retryable tool failures without exposing arbitrary exceptions.
+- [Prompt Gallery UI boundary](prompt-gallery-ui-boundary.md) records the rendering/effect
+  split of the Prompt Gallery, its behavior matrix, contracts decision and validation.
+- [HTTP API documentation](api-documentation.md) explains how XML documentation becomes the
+  OpenAPI document and Swagger UI text, the conventions that pipeline requires, and its gates.
 
 Detailed operational contracts live beside their subject in the parent documentation
 directory. Project READMEs describe the local project boundary and validation command.

@@ -1,0 +1,33 @@
+// Editorial example only: merge comments into the existing type, not a duplicate declaration.
+// Verify final XML/property propagation with the actual generator before adopting this pattern.
+
+/// <summary>
+/// The expected effort and monetary cost of a canonical project task.
+/// </summary>
+/// <remarks>
+/// Effort is stored in hours independently of the selected input/display unit.
+/// A missing amount is not a confirmed zero. The task owner validates and normalizes this estimate.
+/// </remarks>
+/// <param name="ExpectedEffortHours">
+/// Expected effort in hours, or null when no effort estimate is recorded.
+/// A supplied value must be greater than zero. This property remains in hours when
+/// ExpectedEffortUnit is ManDays; do not send an unconverted man-day quantity here.
+/// </param>
+/// <param name="ExpectedEffortUnit">
+/// The unit selected for entering or displaying effort. It does not change the stored unit
+/// of ExpectedEffortHours. Conversion is performed by the owner's effort policy.
+/// </param>
+/// <param name="ExpectedCostAmount">
+/// The expected monetary cost, or null when no cost is recorded. A supplied amount must be
+/// nonnegative and within the owner's supported limit; it is a total estimate, not a rate.
+/// </param>
+/// <param name="ExpectedCostCurrencyCode">
+/// The currency of ExpectedCostAmount. When an amount is supplied, the owner requires a
+/// code that normalizes to three ASCII letters. When the amount is null, normalization
+/// clears this value. This format check does not guarantee membership in a currency registry.
+/// </param>
+public sealed record ProjectTaskEstimate(
+    decimal? ExpectedEffortHours,
+    ProjectWorkItemEffortUnit ExpectedEffortUnit,
+    decimal? ExpectedCostAmount,
+    string ExpectedCostCurrencyCode);

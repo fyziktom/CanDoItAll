@@ -23,7 +23,7 @@ internal sealed class AgentProviderUsageObservationAssembler
                 CreateObservationFromMetric(metric, provider, ProviderUsageObservationStatus.ObservedFromMetric, ProviderUsageSourcePhases.AgentRuntime));
         }
 
-        return sourceObservations
+        return ProviderUsageHistory.Attach(sourceObservations, runtimeResponse.HistoryEvidence)
             .Select(observation => EnrichUsageObservation(run, agent, provider, observation, resolvedModel))
             .Select(observation => AttachRuntimeContextDiagnostics(observation, runtimeResponse))
             .Select(observation => PriceUsageObservation(observation, provider))
@@ -44,7 +44,7 @@ internal sealed class AgentProviderUsageObservationAssembler
             sourceObservations.Insert(0, CreateObservationFromRuntimeResponse(metric, provider, runtimeResponse));
         }
 
-        return sourceObservations
+        return ProviderUsageHistory.Attach(sourceObservations, runtimeResponse.HistoryEvidence)
             .Select(observation => EnrichUsageObservation(run, agent, provider, observation, resolvedModel))
             .Select(observation => AttachRuntimeContextDiagnostics(observation, runtimeResponse))
             .Select(observation => PriceUsageObservation(observation, provider))
@@ -78,10 +78,15 @@ internal sealed class AgentProviderUsageObservationAssembler
                     usageException.ProviderFailureIdentity));
             }
 
-            return observations;
+            return ProviderUsageHistory.Attach(observations, usageException.HistoryEvidence);
         }
 
-        return
+        var historyEvidence = exception switch {
+            AgentHistoryCancellationException cancelled => cancelled.HistoryEvidence,
+            AgentRuntimeUsageException failed => failed.HistoryEvidence,
+            _ => null
+        };
+        return ProviderUsageHistory.Attach(
         [
             PriceUsageObservation(
                 EnrichUsageObservation(
@@ -95,7 +100,7 @@ internal sealed class AgentProviderUsageObservationAssembler
                         ProviderUsageSourcePhases.LegacyAgentRunMetric),
                     resolvedModel),
                 provider)
-        ];
+        ], historyEvidence);
     }
 
     private static bool IsSupersededSyntheticFailureObservation(

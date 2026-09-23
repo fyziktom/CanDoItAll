@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -89,11 +90,14 @@ public static class ProjectStructureCanonicalTaskMutationPolicy
                 StringComparison.Ordinal);
     }
 
+    // The guard runs before the generic mutation writes anything, so the model can switch to the typed task tools.
     private static void ThrowTypedPathRequired()
     {
-        throw new ProjectStructureAgentException(
+        throw ProjectStructureAgentException.CreateAgentVisible(
             409,
             ErrorCode,
-            "Canonical task creation and task estimate or metadata changes must use the typed task create/update path so lifecycle, assignment, and authoritative resource pricing remain consistent.");
+            "Canonical task creation and task estimate or metadata changes must use the typed task create/update path so lifecycle, assignment, and authoritative resource pricing remain consistent. Use project_task_create or project_task_update instead.",
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 }

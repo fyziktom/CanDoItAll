@@ -1,0 +1,16 @@
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="provider-request-history">
+    <FormSection Title="Request history" Description="Current instance and database profile. Choose an interval, then Search. Opening this tab does not read history.">
+        <EditForm EditContext="editContext" OnSubmit="SearchAsync" data-testid="history-search-form">
+            <DataAnnotationsValidator />
+            <ProviderHistoryFilters Draft="draft" AllowProvider="@(Scope is HistoryProviderScope.AllAuthorized)" Changed="DraftChanged" />
+            <ValidationSummary />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Search" Type="submit" Icon="search" Disabled="@state.IsLoading" IsBusy="@state.IsLoading" data-testid="history-search" />
+            </Cluster>
+        </EditForm>
+    </FormSection>
+    <ProviderHistoryResultsSurface Presentation="state.Presentation(draftChanged)" OnIntent="DispatchAsync" />
+</Stack>
+@if (selectedEntry is { } entryId) {
+    <ProviderHistoryDetailsDialog @key="entryId" EntryId="entryId" OnClose="@(() => selectedEntry = null)" />
+}

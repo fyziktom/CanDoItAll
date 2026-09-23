@@ -1,0 +1,8 @@
+.governance-surface {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.governance-surface ::deep .cda-input {
+    max-width: 100%;
+}

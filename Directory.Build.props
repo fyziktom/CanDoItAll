@@ -6,10 +6,11 @@
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <IsPackable>false</IsPackable>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <CanDoItAllComponentsPackageVersion>0.1.18</CanDoItAllComponentsPackageVersion>
-    <CanDoItAllFileToolsPackageVersion>0.1.18</CanDoItAllFileToolsPackageVersion>
+    <CanDoItAllComponentsPackageVersion>0.3.0</CanDoItAllComponentsPackageVersion>
+    <CanDoItAllFileToolsPackageVersion>0.3.0</CanDoItAllFileToolsPackageVersion>
     <MicrosoftAspNetCoreComponentsVersion>10.0.10</MicrosoftAspNetCoreComponentsVersion>
-    <MicrosoftExtensionsPackageVersion>10.0.10</MicrosoftExtensionsPackageVersion>
+    <MicrosoftExtensionsPackageVersion>10.0.11</MicrosoftExtensionsPackageVersion>
+    <MicrosoftExtensionsAIPackageVersion>10.9.0</MicrosoftExtensionsAIPackageVersion>
     <DefaultItemExcludes>
       $(DefaultItemExcludes);
       .mcp-state/**;

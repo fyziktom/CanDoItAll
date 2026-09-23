@@ -84,7 +84,8 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
         var credentialService = new MafProviderCredentialService(credentialResolver);
         var factory = new MafProviderAgentFactory(
             credentialService,
-            NoOpMafProviderStreamingDispatchGate.Instance);
+            NoOpMafProviderStreamingDispatchGate.Instance,
+            new RecordingProviderHistory());
         var options = new ChatClientAgentOptions
         {
             Id = Guid.NewGuid().ToString("D"),

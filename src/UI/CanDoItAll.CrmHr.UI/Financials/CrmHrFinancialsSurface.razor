@@ -1,0 +1,161 @@
+@* The CRM Financials projection: one presentation record in, typed intents out. The read, its retry admission, the
+   account and the query owner stay with the host; the surface renders what was accepted, says "Unavailable" for
+   figures whose source does not exist, and plots the recognized sold buckets with the real chart. *@
+<Stack GapScale="LayoutGap.Large"
+       data-testid="crmhr-financials-panel"
+       data-phase="@Presentation.Phase.ToString().ToLowerInvariant()"
+       data-account-id="@(Presentation.Snapshot?.AccountPartyId.ToString("D") ?? "none")"
+       data-period="@CrmHrFinancialsText.PeriodToken(Presentation.Period)">
+    @if (Presentation.Phase == CrmHrFinancialsPhase.Loading)
+    {
+        <div data-testid="crmhr-financials-loading">
+            <LoadingState Eyebrow="Financials"
+                          Title="Loading commercial results"
+                          Description="Reading closed-won opportunity history for this account." />
+        </div>
+    }
+    else if (Presentation.Phase == CrmHrFinancialsPhase.Failed)
+    {
+        <div data-testid="crmhr-financials-failed">
+            <EmptyState Eyebrow="Financials unavailable"
+                        Title="Commercial results could not be loaded"
+                        Description="@(Presentation.FailureMessage ?? "The financial projection is unavailable.")">
+                <Actions>
+                    <Button Text="Retry"
+                            Icon="refresh"
+                            Disabled="@Presentation.IsRetrying"
+                            IsBusy="@Presentation.IsRetrying"
+                            Click="RetryAsync"
+                            data-testid="crmhr-financials-retry" />
+                </Actions>
+            </EmptyState>
+        </div>
+    }
+    else if (Presentation.Snapshot is { } snapshot)
+    {
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fit,minmax(11rem,1fr))"
+              data-testid="crmhr-financials-metrics">
+            @if (snapshot.SoldTotals.Count == 0)
+            {
+                <MetricCard Label="Sold"
+                            Value="@CrmHrFinancialsText.NoRecognizedSalesValue" />
+            }
+            else
+            {
+                @foreach (var total in snapshot.SoldTotals)
+                {
+                    <MetricCard Label="@($"Sold · {total.CurrencyCode}")"
+                                Value="@CrmHrFinancialsText.FormatAmount(total)" />
+                }
+            }
+
+            <MetricCard Label="Bought"
+                        Value="@FormatAvailability(snapshot.BoughtAvailability)" />
+            <MetricCard Label="Overdue invoices"
+                        Value="@FormatAvailability(snapshot.OverdueInvoiceAvailability)" />
+            <MetricCard Label="Incomplete won records"
+                        Value="@CrmHrFinancialsText.FormatCount(snapshot.IncompleteWonCount)" />
+        </Grid>
+
+        @if (snapshot.IncompleteWonCount > 0)
+        {
+            <SurfaceCard Soft="true"
+                         data-testid="crmhr-financials-incomplete">
+                <Cluster Gap="LayoutGap.Small"
+                         AlignItems="AlignItems.Center">
+                    <StatusBadge Tone="warning"
+                                 Text="@($"{CrmHrFinancialsText.FormatCount(snapshot.IncompleteWonCount)} incomplete")" />
+                    <TextBlock Value="Closed-won opportunities without a valid recognition amount, currency, and Won timestamp are excluded from totals." />
+                </Cluster>
+            </SurfaceCard>
+        }
+
+        <Split Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween">
+            <div>
+                <TextBlock TextStyle="TextStyle.Eyebrow"
+                           Value="Recognized sold value" />
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="Closed-won opportunity history" />
+            </div>
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Monthly"
+                        ButtonStyle="@(Presentation.Period == CrmHrFinancialPeriod.Month ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Variant="Variant.Outlined"
+                        Size="ButtonSize.Small"
+                        Click="@(() => SetPeriodAsync(CrmHrFinancialPeriod.Month))"
+                        data-testid="crmhr-financials-month" />
+                <Button Text="Yearly"
+                        ButtonStyle="@(Presentation.Period == CrmHrFinancialPeriod.Year ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Variant="Variant.Outlined"
+                        Size="ButtonSize.Small"
+                        Click="@(() => SetPeriodAsync(CrmHrFinancialPeriod.Year))"
+                        data-testid="crmhr-financials-year" />
+            </Cluster>
+        </Split>
+
+        @if (snapshot.SoldAvailability == CrmHrFinancialAvailability.Available)
+        {
+            <CdaChart Title="@CrmHrFinancialsText.ChartTitle(Presentation.Period)"
+                      Description="Amounts are grouped by currency and dated by the first UTC transition to Won."
+                      Series="@CrmHrFinancialsChart.BuildSoldSeries(snapshot, Presentation.Period)"
+                      Options="@chartOptions"
+                      Height="340"
+                      EmptyText="No defensible sold values are available."
+                      data-testid="crmhr-financials-sold-chart" />
+        }
+        else
+        {
+            <div data-testid="crmhr-financials-sold-empty">
+                <EmptyState Eyebrow="No recognized sales"
+                            Title="No closed-won values are available"
+                            Description="Sales appear after an opportunity has an amount, currency, and recorded transition to Won." />
+            </div>
+        }
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsLg="2">
+            <SurfaceCard data-testid="crmhr-financials-distribution-unavailable">
+                <EmptyState Eyebrow="Sold versus bought"
+                            Title="Distribution unavailable"
+                            Description="Purchase-side opportunity data does not exist yet, so a sold-versus-bought ratio would be misleading." />
+            </SurfaceCard>
+            <SurfaceCard data-testid="crmhr-financials-invoices-unavailable">
+                <EmptyState Eyebrow="Invoices"
+                            Title="Overdue status unavailable"
+                            Description="Invoice due dates and payment status will appear here when invoice persistence is introduced." />
+            </SurfaceCard>
+        </Grid>
+    }
+</Stack>
+
+@code {
+    // One options instance per surface instance: two panels never share mutable chart options.
+    private readonly CdaChartOptions chartOptions = CrmHrFinancialsChart.CreateSoldChartOptions();
+
+    [Parameter, EditorRequired]
+    public CrmHrFinancialsPresentation Presentation { get; set; } = CrmHrFinancialsPresentation.CreateLoading(0, CrmHrFinancialPeriod.Month);
+
+    [Parameter]
+    public EventCallback<CrmHrFinancialsIntent> Intent { get; set; }
+
+    private static string FormatAvailability(CrmHrFinancialAvailability availability)
+        => availability switch
+        {
+            CrmHrFinancialAvailability.Unavailable => CrmHrFinancialsText.UnavailableValue,
+            CrmHrFinancialAvailability.Empty => CrmHrFinancialsText.NoRecognizedSalesValue,
+            _ => CrmHrFinancialsText.UnavailableValue
+        };
+
+    private Task RetryAsync()
+        => Presentation.IsRetrying
+            ? Task.CompletedTask
+            : Intent.InvokeAsync(new CrmHrFinancialsIntent.Retry(Presentation.Generation));
+
+    private Task SetPeriodAsync(CrmHrFinancialPeriod period)
+        => Presentation.Period == period
+            ? Task.CompletedTask
+            : Intent.InvokeAsync(new CrmHrFinancialsIntent.SetPeriod(period));
+}

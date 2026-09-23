@@ -838,6 +838,7 @@ workflows:
           y: 220
           executor:
             id: http.fetch
+            policy: fast
             settings:
               method: Get
               urlJsonPath: "$.url"

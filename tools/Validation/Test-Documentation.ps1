@@ -35,7 +35,8 @@ function Test-MaintainedMarkdownPath {
         return $false
     }
 
-    return $normalized -eq "README.md" -or
+    return $normalized -eq "AGENTS.md" -or
+        $normalized -eq "README.md" -or
         $normalized -eq "CONTRIBUTING.md" -or
         $normalized -eq "SECURITY.md" -or
         $normalized -eq ".github/copilot-instructions.md" -or
@@ -69,6 +70,33 @@ function Get-LinkTargetPath {
     return [System.Uri]::UnescapeDataString($target)
 }
 
+function Test-SealedBundleLog {
+    param(
+        [string]$Root,
+        [string]$RelativePath,
+        [System.Collections.Generic.HashSet[string]]$TrackedPaths
+    )
+
+    if ($RelativePath -cnotmatch '^(?<bundle>codex/bundles/[^/]+)/(?<entry>.+\.log)$') {
+        return $false
+    }
+    $manifestPath = "$($Matches.bundle)/MANIFEST.sha256"
+    $entry = $Matches.entry
+    if (-not $TrackedPaths.Contains($manifestPath)) {
+        return $false
+    }
+    $entryPattern = '^[0-9a-fA-F]{64}\s+\*?' + [regex]::Escape($entry) + '$'
+    $sealedEntries = @(
+        Get-Content -LiteralPath (Join-Path $Root $manifestPath) |
+            Where-Object { $_ -cmatch $entryPattern }
+    )
+    if ($sealedEntries.Count -ne 1) {
+        return $false
+    }
+    $actualHash = (Get-FileHash -LiteralPath (Join-Path $Root $RelativePath) -Algorithm SHA256).Hash
+    return $actualHash -eq $sealedEntries[0].Substring(0, 64)
+}
+
 $repositoryRoot = Resolve-RepositoryPath -RequestedPath $RepositoryPath
 $requiredFiles = @(
     ".editorconfig",
@@ -76,6 +104,7 @@ $requiredFiles = @(
     ".gitignore",
     ".env.example",
     ".github\workflows\ci.yml",
+    "AGENTS.md",
     "README.md",
     "LICENSE",
     "CONTRIBUTING.md",
@@ -202,7 +231,7 @@ $forbiddenTrackedPatterns = @(
     '^\.vscode/mcp\.json$',
     '\.csproj\.user$',
     '(?:^|/)(?:__pycache__|TestResults)/',
-    '\.(?:log|pyc|pid)$',
+    '\.(?:pyc|pid)$',
     '^(?:gantt-.*|.*infographic.*)\.(?:png|jpg|jpeg|webp)$'
 )
 $presentTrackedFiles = @(
@@ -213,6 +242,19 @@ $presentTrackedFiles = @(
 )
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to enumerate tracked files."
+}
+
+$trackedPaths = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+foreach ($path in $presentTrackedFiles) {
+    [void]$trackedPaths.Add($path.Replace("\", "/"))
+}
+$unsealedLogs = @(
+    $presentTrackedFiles | Where-Object {
+        $_ -match '\.log$' -and -not (Test-SealedBundleLog -Root $repositoryRoot -RelativePath $_ -TrackedPaths $trackedPaths)
+    }
+)
+if ($unsealedLogs.Count -gt 0) {
+    $errors.Add("Tracked logs must be sealed durable bundle evidence: $($unsealedLogs.Count) file(s); first is $($unsealedLogs[0])")
 }
 
 foreach ($pattern in $forbiddenTrackedPatterns) {

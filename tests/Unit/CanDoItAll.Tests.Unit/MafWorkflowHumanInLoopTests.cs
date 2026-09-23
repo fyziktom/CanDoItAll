@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class MafWorkflowHumanInLoopTests
+public sealed partial class MafWorkflowHumanInLoopTests
 {
     private static readonly WorkflowValueShape JsonObjectShape = new(
         WorkflowValueShapeKind.Json,
@@ -142,21 +142,23 @@ public sealed class MafWorkflowHumanInLoopTests
         };
 
         var wrongSessionFailure = await Assert.ThrowsAsync<WorkflowBackendResumeException>(
-            () => ResumeAsync(backend, first.Run, wrongSession, responseDocument.RootElement));
+            () => ResumeAsync(backend, runStore, first.Run, wrongSession, responseDocument.RootElement));
         var wrongPortFailure = await Assert.ThrowsAsync<WorkflowBackendResumeException>(() => ResumeAsync(
             CreateNativeBackend(definition, component, marker, new ForwardingCheckpointStore(retainedCheckpointState)),
+            runStore,
             first.Run,
             wrongPort,
             responseDocument.RootElement));
         var wrongRequestFailure = await Assert.ThrowsAsync<WorkflowBackendResumeException>(() => ResumeAsync(
             CreateNativeBackend(definition, component, marker, new ForwardingCheckpointStore(retainedCheckpointState)),
+            runStore,
             first.Run,
             wrongRequest,
             responseDocument.RootElement));
         var wrongTopologyFailure = await Assert.ThrowsAsync<WorkflowBackendResumeException>(
-            () => ResumeAsync(backend, first.Run, wrongTopology, responseDocument.RootElement));
+            () => ResumeAsync(backend, runStore, first.Run, wrongTopology, responseDocument.RootElement));
         var missingPayloadFailure = await Assert.ThrowsAsync<WorkflowBackendResumeException>(
-            () => ResumeAsync(backend, first.Run, missingPayload, responseDocument.RootElement));
+            () => ResumeAsync(backend, runStore, first.Run, missingPayload, responseDocument.RootElement));
 
         Assert.Equal(WorkflowBackendResumeFailureKind.CheckpointIncompatible, wrongSessionFailure.Kind);
         Assert.Equal(WorkflowBackendResumeFailureKind.PortMismatch, wrongPortFailure.Kind);
@@ -357,7 +359,9 @@ public sealed class MafWorkflowHumanInLoopTests
         var resume = CreateAuthorizedResumeRequest(
             started.Run,
             firstRequest,
-            response.RootElement);
+            response.RootElement,
+            new(started.Run.RunId, definition.Id, definition.VersionId, WorkflowProviderDisclosureContent.Definition(definition),
+                WorkflowProviderDisclosureContent.Source(started.Run.Origin), WorkflowProviderDisclosureProtocol.Current));
 
         var verified = await verifier.VerifyAsync(
             resume,
@@ -576,13 +580,15 @@ public sealed class MafWorkflowHumanInLoopTests
             new WorkflowDefinitionValidator(),
             llmComponentInvoker: marker);
 
-    private static Task<WorkflowBackendStartResult> ResumeAsync(
+    private static async Task<WorkflowBackendStartResult> ResumeAsync(
         MafInProcessWorkflowExecutionBackend backend,
+        IWorkflowRunStore runStore,
         WorkflowRunSnapshot run,
         WorkflowExternalRequestRecord request,
         JsonElement response)
     {
-        return backend.ResumeAsync(CreateAuthorizedResumeRequest(run, request, response));
+        var declaration = (await runStore.ReadProviderDisclosureAsync(run.RunId)).Declaration;
+        return await backend.ResumeAsync(CreateAuthorizedResumeRequest(run, request, response, declaration));
     }
 
     private static WorkflowRunStartRequest CreateStartRequest(WorkflowDefinition definition)
@@ -611,7 +617,8 @@ public sealed class MafWorkflowHumanInLoopTests
     private static WorkflowBackendResumeRequest CreateAuthorizedResumeRequest(
         WorkflowRunSnapshot run,
         WorkflowExternalRequestRecord request,
-        JsonElement response)
+        JsonElement response,
+        WorkflowRunDisclosureDeclaration? declaration = null)
     {
         var policy = Assert.IsType<WorkflowExternalRequestAuthorizationPolicySnapshot>(
             request.AuthorizationPolicy);
@@ -650,7 +657,7 @@ public sealed class MafWorkflowHumanInLoopTests
             response.Clone(),
             operationId,
             request.Version.Value,
-            authorization);
+            authorization) { DisclosureDeclaration = declaration };
     }
 
     private static WorkflowDefinition CreateHumanInputDefinition(LlmCallComponent component)

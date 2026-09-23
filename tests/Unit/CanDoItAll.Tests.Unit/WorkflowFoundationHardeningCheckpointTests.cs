@@ -53,6 +53,7 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
                     "CanDoItAll.AgentFramework.Llm.Abstractions",
                     "CanDoItAll.AgentFramework.Llm.ProviderRuntime",
                     "CanDoItAll.AgentFramework.Models",
+                    "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
                     "CanDoItAll.AgentFramework.WorkflowExecutors.Core",
                     "CanDoItAll.AgentFramework.Workflows.Abstractions",
                     "CanDoItAll.AgentFramework.Workflows.Core",

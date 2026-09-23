@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -42,7 +43,8 @@ public sealed record ProjectStructureGanttObservation
         IReadOnlyList<string>? topIssueSummaries,
         string rowOrderFingerprint,
         string? selectedTaskNodeId,
-        DateTimeOffset capturedAtUtc)
+        DateTimeOffset capturedAtUtc,
+        AgentProjectStructureLifetime? observedProjectLifetime = null)
     {
         if (projectId == Guid.Empty)
         {
@@ -78,6 +80,10 @@ public sealed record ProjectStructureGanttObservation
             ? null
             : selectedTaskNodeId.Trim();
         CapturedAtUtc = capturedAtUtc;
+        if (observedProjectLifetime is not null && observedProjectLifetime.ProjectId != projectId) {
+            throw new ArgumentException("The Gantt observation lifetime belongs to a different project.", nameof(observedProjectLifetime));
+        }
+        ObservedProjectLifetime = observedProjectLifetime;
         ContentFingerprint = ComputeContentFingerprint();
     }
 
@@ -109,6 +115,9 @@ public sealed record ProjectStructureGanttObservation
 
     public string ContentFingerprint { get; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentProjectStructureLifetime? ObservedProjectLifetime { get; }
+
     private string ComputeContentFingerprint()
     {
         var payload = string.Join(
@@ -125,6 +134,10 @@ public sealed record ProjectStructureGanttObservation
             string.Join('', TopIssueSummaries),
             RowOrderFingerprint,
             SelectedTaskNodeId ?? string.Empty);
+        if (ObservedProjectLifetime is { } lifetime) {
+            payload = string.Join('\u001f', payload, lifetime.DatabaseProfileId.ToString("N"),
+                lifetime.ProjectId.ToString("N"), lifetime.LifetimeId.ToString("N"));
+        }
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)))
             .ToLowerInvariant();
     }
@@ -149,7 +162,8 @@ public static class ProjectStructureGanttObservationFactory
         bool isLoading,
         string? loadError,
         string? selectedTaskNodeId,
-        DateTimeOffset capturedAtUtc)
+        DateTimeOffset capturedAtUtc,
+        AgentProjectStructureLifetime? observedProjectLifetime = null)
     {
         if (isLoading || (projection is null && string.IsNullOrWhiteSpace(loadError)))
         {
@@ -166,7 +180,8 @@ public static class ProjectStructureGanttObservationFactory
                 topIssueSummaries: null,
                 rowOrderFingerprint: string.Empty,
                 selectedTaskNodeId: selectedTaskNodeId,
-                capturedAtUtc);
+                capturedAtUtc,
+                observedProjectLifetime);
         }
 
         if (projection is null)
@@ -184,7 +199,8 @@ public static class ProjectStructureGanttObservationFactory
                 topIssueSummaries: string.IsNullOrWhiteSpace(loadError) ? null : [loadError],
                 rowOrderFingerprint: string.Empty,
                 selectedTaskNodeId: selectedTaskNodeId,
-                capturedAtUtc);
+                capturedAtUtc,
+                observedProjectLifetime);
         }
 
         var warningCount = projection.Issues.Count(static issue =>
@@ -214,7 +230,8 @@ public static class ProjectStructureGanttObservationFactory
             topIssueSummaries: topIssues,
             rowOrderFingerprint: ComputeRowOrderFingerprint(projection.Tasks),
             selectedTaskNodeId: selectedTaskNodeId,
-            capturedAtUtc: capturedAtUtc);
+            capturedAtUtc: capturedAtUtc,
+            observedProjectLifetime: observedProjectLifetime);
     }
 
     private static string ComputeRowOrderFingerprint(IReadOnlyList<GanttTask> tasks)

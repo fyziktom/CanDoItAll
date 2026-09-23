@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 namespace CanDoItAll.Modules.AgentFramework;
 
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
+using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 
 internal sealed class SecretStoreAgentProviderCredentialResolver(
     ISecretRuntimeResolver secretResolver,
@@ -97,8 +98,17 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         AgentFrameworkProviderProfile provider,
         CancellationToken cancellationToken)
     {
+        if (provider.CredentialBinding is { } credentialBinding)
+        {
+            return await ResolveBoundCredentialAsync(
+                    provider,
+                    credentialBinding,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         var secretRecordId =
-            AgentFrameworkProviderMetadata.ResolveSecretRecordId(provider);
+            ProviderMetadata.ResolveSecretRecordId(provider);
         if (secretRecordId.HasValue)
         {
             try
@@ -132,7 +142,7 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
                 return new ProviderCredentialResolution(
                     string.Empty,
                     $"secret record '{secretRecordId.Value:D}'",
-                    $"Secret record '{secretRecordId.Value:D}' could not be resolved: {exception.Message}");
+                    $"Secret record '{secretRecordId.Value:D}' could not be resolved ({exception.GetType().Name}).");
             }
         }
 
@@ -169,6 +179,105 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
             string.Empty,
             $"environment variable '{variableName}'",
             $"Environment variable '{variableName}' is not set and application configuration key '{variableName}' is empty. {AgentProviderEnvironmentCredential.DescribePresence(variableName)}");
+    }
+
+    private async ValueTask<ProviderCredentialResolution>
+        ResolveBoundCredentialAsync(
+        AgentFrameworkProviderProfile provider,
+        ProviderCredentialBinding binding,
+        CancellationToken cancellationToken)
+    {
+        if (binding.SecretId == Guid.Empty ||
+            binding.ConsumerId == Guid.Empty ||
+            !Enum.IsDefined(binding.Purpose) ||
+            !Enum.IsDefined(binding.ConsumerKind))
+        {
+            return new ProviderCredentialResolution(
+                string.Empty,
+                "invalid provider credential binding",
+                "The provider credential binding is invalid.");
+        }
+
+        SecretRuntimeRequest request;
+        try
+        {
+            request = CreateSecretRuntimeRequest(provider, binding);
+        }
+        catch (InvalidOperationException)
+        {
+            return new ProviderCredentialResolution(
+                string.Empty,
+                "invalid provider credential binding",
+                "The provider credential binding is incompatible with the provider profile.");
+        }
+
+        var protectsSecretReference = binding.Purpose ==
+            ProviderCredentialPurpose.SourceAccessToken;
+        var resolutionSource = protectsSecretReference
+            ? "source access credential"
+            : $"secret record '{binding.SecretId:D}'";
+        try
+        {
+            var secretValue = await secretResolver.ResolveValueAsync(
+                    request,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(secretValue)
+                ? new ProviderCredentialResolution(
+                    string.Empty,
+                    resolutionSource,
+                    protectsSecretReference
+                        ? "The source access credential was unavailable."
+                        : $"Secret record '{binding.SecretId:D}' was not found or did not contain a usable value.")
+                : new ProviderCredentialResolution(
+                    secretValue,
+                    resolutionSource,
+                    string.Empty);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return new ProviderCredentialResolution(
+                string.Empty,
+                resolutionSource,
+                protectsSecretReference
+                    ? "The source access credential could not be resolved."
+                    : $"Secret record '{binding.SecretId:D}' could not be resolved ({exception.GetType().Name}).");
+        }
+    }
+
+    private static SecretRuntimeRequest CreateSecretRuntimeRequest(
+        AgentFrameworkProviderProfile provider,
+        ProviderCredentialBinding binding)
+    {
+        return (binding.Purpose, binding.ConsumerKind) switch
+        {
+            (ProviderCredentialPurpose.ProviderApiKey,
+                ProviderCredentialConsumerKind.ProviderProfile)
+                when binding.ConsumerId == provider.Id =>
+                new SecretRuntimeRequest(
+                    binding.SecretId,
+                    SecretRuntimePurposes.AgentProviderApiKey,
+                    AllowedSecretIds: [binding.SecretId],
+                    ConsumerType: SecretRuntimeConsumerTypes.ProviderProfile,
+                    ConsumerId: SecretRuntimeConsumerIds.ProviderProfile(
+                        binding.ConsumerId)),
+            (ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source) =>
+                new SecretRuntimeRequest(
+                    binding.SecretId,
+                    SecretRuntimePurposes.SharedProviderSourceToken,
+                    AllowedSecretIds: [binding.SecretId],
+                    ConsumerType: SecretRuntimeConsumerTypes.SharedProviderSource,
+                    ConsumerId: SecretRuntimeConsumerIds.SharedProviderSource(
+                        binding.ConsumerId)),
+            _ => throw new InvalidOperationException(
+                "The provider credential binding is incompatible with the provider profile.")
+        };
     }
 
     private IAgentProviderCredentialDispatchScope BeginScope(

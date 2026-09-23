@@ -4,7 +4,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisionedContentDriver
+public sealed partial class FileSystemStorageDriver : IStorageDriver, IStorageRevisionedContentDriver
 {
     private readonly FileSystemStoragePathPolicy pathPolicy;
     private readonly DurableFileWriter durableFileWriter;
@@ -39,7 +39,7 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
         StorageCapability.ConnectionTest;
 
     public Task<StorageConnectionTestResult> TestConnectionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
@@ -70,7 +70,7 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
     }
 
     public async Task<StorageWriteResult> SaveAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageWriteRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -119,7 +119,7 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
     }
 
     public Task<Stream> OpenReadAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
     {
@@ -137,7 +137,7 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
     }
 
     public async Task DeleteAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
     {
@@ -151,7 +151,7 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
     }
 
     public Task<StorageContentRevision?> GetRevisionAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
     {
@@ -163,7 +163,7 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
     }
 
     public async Task<StorageRevisionedWriteResult> ReplaceAsync(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         StorageRevisionedWriteRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -214,13 +214,13 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
         return new StorageRevisionedWriteResult(result, persistedRevision);
     }
 
-    internal string ResolveFullPath(StorageCatalogRecord storage, string relativePath)
+    internal string ResolveFullPath(StorageDriverInput storage, string relativePath)
         => pathPolicy.ResolveFullPath(storage, relativePath);
 
-    internal string ResolveRootPath(StorageCatalogRecord storage)
+    internal string ResolveRootPath(StorageDriverInput storage)
         => pathPolicy.ResolveRootPath(storage);
 
-    internal bool IsTrustedForLocalOpen(StorageCatalogRecord storage)
+    internal bool IsTrustedForLocalOpen(StorageDriverInput storage)
         => pathPolicy.IsTrustedForLocalOpen(storage);
 
     private static StorageContentRevision? CreateRevision(string fullPath)
@@ -251,7 +251,7 @@ public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisioned
     }
 
     private string ResolveRelativePath(
-        StorageCatalogRecord storage,
+        StorageDriverInput storage,
         string? relativePathHint,
         string fileName)
     {

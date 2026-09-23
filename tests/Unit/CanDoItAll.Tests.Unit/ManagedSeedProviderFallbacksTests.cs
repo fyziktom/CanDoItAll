@@ -36,11 +36,12 @@ public sealed class ManagedSeedProviderFallbacksTests
     }
 
     [Fact]
-    public void Managed_seed_openai_suggestions_include_all_gpt_5_6_models()
+    public void Managed_seed_openai_suggestions_include_real_gpt_5_6_variants_without_a_family_alias()
     {
         Assert.All(
-            OpenAiModelIds.Gpt56Models,
+            new[] { OpenAiModelIds.Gpt56Sol, OpenAiModelIds.Gpt56Terra, OpenAiModelIds.Gpt56Luna },
             model => Assert.Contains(model, ManagedSeedProviderFallbacks.OpenAiSuggestedModels, StringComparer.OrdinalIgnoreCase));
+        Assert.DoesNotContain(OpenAiModelIds.Gpt56, ManagedSeedProviderFallbacks.OpenAiSuggestedModels);
     }
 
     [Fact]

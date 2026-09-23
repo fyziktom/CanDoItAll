@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -7,6 +8,70 @@ namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureSourceWorkspacePathResolverTests
 {
+    private static readonly WorkspaceScopeDescriptor HostScope = WorkspaceScopeDescriptor.Organization("active-organization");
+
+    [Fact]
+    public void ResolveExistingFile_registers_the_relative_path_an_agent_wrote_in_its_active_scope()
+    {
+        using var temp = new ProjectStructureSourceWorkspaceTempDirectory();
+        var projectId = Guid.NewGuid();
+        var activeScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+        var externalTargets = TestExternalTargetPathRegistry.Create();
+        const string sourcePath = "artifacts/project-structure/ui-proposal.svg";
+        var written = TestWorkspaceServices
+            .CreateFileService(temp.Path, activeScope, externalTargets)
+            .WriteTextFile(sourcePath, "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
+        var resolver = CreateResolver(temp.Path, externalTargets);
+
+        var resolution = resolver.ResolveExistingFile(projectId, sourcePath, activeScope);
+
+        Assert.True(written.Succeeded);
+        Assert.Equal(activeScope.CombineArtifactPath("project-structure", "ui-proposal.svg"), written.Path);
+        Assert.Equal(written.Path, resolution.RelativePath);
+        Assert.True(File.Exists(resolution.FullPath));
+    }
+
+    [Fact]
+    public void ResolveExistingFile_reports_a_missing_source_as_a_correctable_no_effect_rejection()
+    {
+        using var temp = new ProjectStructureSourceWorkspaceTempDirectory();
+        var resolver = CreateResolver(temp.Path, TestExternalTargetPathRegistry.Create());
+
+        var exception = Assert.Throws<ProjectStructureAgentException>(() =>
+            resolver.ResolveExistingFile(Guid.NewGuid(), "artifacts/project-structure/missing.svg"));
+
+        Assert.Equal("SourceWorkspaceFileNotFound", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
+        Assert.Contains(
+            HostScope.CombineArtifactPath("project-structure", "missing.svg"),
+            exception.SafeMessage,
+            StringComparison.Ordinal);
+        Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
+        Assert.Equal(AgentToolEffectState.NotCommitted, failure.EffectState);
+    }
+
+    [Fact]
+    public void ResolveExistingFile_keeps_an_explicit_host_scope_path_while_a_project_scope_is_active()
+    {
+        using var temp = new ProjectStructureSourceWorkspaceTempDirectory();
+        var externalTargets = TestExternalTargetPathRegistry.Create();
+        var hostScopedPath = HostScope.CombineArtifactPath("business", "brief.md");
+        Assert.True(TestWorkspaceServices
+            .CreateFileService(temp.Path, HostScope, externalTargets)
+            .WriteTextFile(hostScopedPath, "# Brief")
+            .Succeeded);
+        var resolver = CreateResolver(temp.Path, externalTargets);
+
+        var resolution = resolver.ResolveExistingFile(
+            Guid.NewGuid(),
+            hostScopedPath,
+            WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")));
+
+        Assert.Equal(hostScopedPath, resolution.RelativePath);
+    }
+
     [Theory]
     [InlineData(WorkspaceScopeDescriptor.ArtifactManagedRootName)]
     [InlineData(WorkspaceScopeDescriptor.OutputManagedRootName)]
@@ -38,6 +103,7 @@ public sealed class ProjectStructureSourceWorkspacePathResolverTests
         Assert.Equal("SourceWorkspacePathInvalid", exception.ErrorCode);
         Assert.True(exception.IsSafeToExpose);
         Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
         Assert.Contains("canonical", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("'..'", exception.Message, StringComparison.Ordinal);
     }
@@ -64,6 +130,7 @@ public sealed class ProjectStructureSourceWorkspacePathResolverTests
         Assert.Equal("SourceWorkspacePathInvalid", exception.ErrorCode);
         Assert.True(exception.IsSafeToExpose);
         Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
         Assert.DoesNotContain(temp.Path, exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -96,6 +163,15 @@ public sealed class ProjectStructureSourceWorkspacePathResolverTests
 
         Assert.Same(expected, exception);
     }
+
+    private static ProjectStructureSourceWorkspacePathResolver CreateResolver(
+        string workspaceRoot,
+        IExternalTargetPathRegistry externalTargets)
+        => new(
+            TestWorkspaceServices.CreatePathResolutionService(workspaceRoot, HostScope, externalTargets),
+            new StaticWorkspacePathResolver(workspaceRoot),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
+            externalTargets);
 
     private static string ResolveManagedRoot(
         WorkspaceScopeDescriptor scope,

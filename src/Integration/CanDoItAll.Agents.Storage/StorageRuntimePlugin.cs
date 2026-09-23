@@ -1,0 +1,577 @@
+using System.Text;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Storage;
+
+namespace CanDoItAll.Agents.Storage;
+
+internal sealed class StorageRuntimePlugin(
+    IStorageCatalogService catalogService,
+    IStorageDriverRegistry driverRegistry,
+    IStorageBrowseDriverRegistry? browseDriverRegistry,
+    AgentWorkspaceToolAccessSettings accessSettings)
+{
+    internal const string StorageObjectSourceKind = "storage-object";
+
+    private readonly IStorageCatalogService catalogService = catalogService;
+    private readonly IStorageDriverRegistry driverRegistry = driverRegistry;
+    private readonly IStorageBrowseDriverRegistry? browseDriverRegistry = browseDriverRegistry;
+    private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
+
+    internal void AuthorizeResultDisclosure(string toolName, AgentToolResultDisclosure disclosure,
+        IReadOnlyList<StorageCatalogPlanningFact> facts) {
+        if (disclosure.Payload.ToolName != toolName) {
+            throw new AgentToolAdmissionException("storage.result-disclosure-denied", "The saved result belongs to another Storage tool.");
+        }
+        EnsureStorageReadAllowed();
+        if (disclosure.IsNoEffectTypedFailure) {
+            // A rejected request carries only its correction text, never catalog content, so the current Storage grant
+            // is the whole disclosure authority; the rejected catalog may still be missing, disabled or read-only.
+            return;
+        }
+        using var arguments = JsonDocument.Parse(disclosure.Payload.ArgumentsJson);
+        if (toolName == StorageToolPolicy.StorageCatalogList) {
+            var includeDisabled = arguments.RootElement.TryGetProperty("includeDisabled", out var include) && include.GetBoolean();
+            if (disclosure.Result.TryGetProperty("storages", out var storages)) {
+                foreach (var entry in storages.EnumerateArray()) {
+                    RequireAllowed(entry.GetProperty("id").GetGuid(), requireEnabled: !includeDisabled);
+                }
+            }
+            return;
+        }
+
+        var storageId = arguments.RootElement.GetProperty("storageId").GetGuid();
+        var storage = RequireAllowed(storageId, requireEnabled: true);
+        ResolveDriver(storage.ProviderKind, storage.CapabilityMask, storage.Name, StorageCapability.Read);
+        if (toolName == StorageToolPolicy.StorageBrowse) {
+            var browser = browseDriverRegistry?.Resolve(storage.ProviderKind)
+                ?? throw new InvalidOperationException("Storage browsing is not available because no browse-driver registry is configured.");
+            if (arguments.RootElement.TryGetProperty("includeMetadata", out var includeMetadata) && includeMetadata.GetBoolean()) {
+                ResolveBrowseMetadata(browser);
+            }
+        }
+        return;
+
+        StorageCatalogPlanningFact RequireAllowed(Guid id, bool requireEnabled) {
+            var fact = facts.SingleOrDefault(candidate => candidate.Id == id);
+            if (id == Guid.Empty || fact is null || requireEnabled && !fact.IsEnabled || !IsStorageCatalogAllowed(id)) {
+                throw new AgentToolAdmissionException("storage.result-disclosure-denied",
+                    "A catalog represented by the saved Storage result is no longer available to this agent.");
+            }
+            return fact;
+        }
+    }
+
+    public async Task<AgentStorageCatalogListResult> ListStorageCatalogs(
+        bool includeDisabled = false,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureStorageReadAllowed();
+        var storages = await catalogService.ListAsync(cancellationToken).ConfigureAwait(false);
+        var accessibleStorages = storages
+            .Where(storage => includeDisabled || storage.IsEnabled)
+            .Where(IsStorageCatalogAllowed)
+            .OrderBy(storage => storage.DisplayOrder)
+            .ThenBy(storage => storage.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(storage => new AgentStorageCatalogToolEntry(
+                storage.Id,
+                storage.Name,
+                storage.ProviderKind.ToString(),
+                storage.IsEnabled,
+                storage.IsReadOnly,
+                storage.CapabilityMask.ToString(),
+                storage.HealthStatus.ToString(),
+                storage.EndpointOrRoot))
+            .ToList();
+
+        var warnings = accessSettings.AllowAllStorageCatalogs
+            ? Array.Empty<string>()
+            : ["Only storage catalogs explicitly allowed in this agent's settings are returned."];
+
+        return new AgentStorageCatalogListResult(accessibleStorages, warnings);
+    }
+
+    public async Task<AgentStorageBrowseResult> BrowseStorage(
+        Guid storageId,
+        string? containerKey = null,
+        int pageSize = 50,
+        string? cursor = null,
+        bool includeMetadata = false,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureStorageReadAllowed();
+        var storage = await ResolveStorageAsync(storageId, requireWrite: false, cancellationToken).ConfigureAwait(false);
+        var contentDriver = ResolveDriver(storage, StorageCapability.Read);
+        var registry = browseDriverRegistry
+            ?? throw new InvalidOperationException("Storage browsing is not available because no browse-driver registry is configured.");
+        var driver = registry.Resolve(storage.ProviderKind);
+        var metadata = includeMetadata
+            ? ResolveBrowseMetadata(driver)
+            : StorageBrowseMetadataField.None;
+        StorageBrowseRequest request;
+        try {
+            request = new StorageBrowseRequest(
+                new StorageBrowseContainer(containerKey ?? string.Empty),
+                pageSize,
+                cursor is null ? null : new StorageBrowseCursor(cursor),
+                metadata: metadata);
+        } catch (StorageBrowseException exception) when (exception.Error.Code == StorageBrowseErrorCode.InvalidRequest) {
+            throw new InvalidBrowseRequestFailure(exception);
+        } catch (StorageBrowseException exception) when (exception.Error.Code == StorageBrowseErrorCode.InvalidCursor) {
+            throw new StorageToolRequestFailure(
+                "StorageBrowseCursorInvalid",
+                "The storage browse cursor is invalid. Pass nextCursor exactly as returned, or omit cursor to start from the first page, then retry.",
+                canRetryWithCorrectedInput: true,
+                AgentToolEffectState.None,
+                exception);
+        }
+        // A failure reported by the storage driver itself stays the driver's uncertain outcome.
+        var page = await driver.BrowseAsync(storage, request, cancellationToken).ConfigureAwait(false);
+
+        return new AgentStorageBrowseResult(
+            storage.Id,
+            storage.Name,
+            page.Container.Key,
+            page.Path
+                .Select(segment => new AgentStorageBrowsePathSegment(
+                    segment.DisplayName,
+                    segment.Container.Key))
+                .ToArray(),
+            page.Entries
+                .Select(entry => new AgentStorageBrowseEntry(
+                    entry.Id.Value,
+                    entry.Parent.Key,
+                    entry.Name,
+                    entry.DisplayPath,
+                    MapBrowseEntryKind(entry.Kind),
+                    MapBrowseEntryCapabilities(entry.Capabilities, storage, contentDriver),
+                    entry.Size,
+                    entry.CreatedAtUtc,
+                    entry.ModifiedAtUtc,
+                    entry.MediaType))
+                .ToArray(),
+            MapBrowseCompleteness(page.Completeness),
+            page.NextCursor?.Token,
+            page.Metrics.InspectedItems,
+            page.Metrics.MetadataProbes);
+    }
+
+    private sealed class InvalidBrowseRequestFailure(StorageBrowseException innerException)
+        : InvalidOperationException(
+            $"The storage browse request is invalid. Use pageSize between 1 and {StorageBrowseWorkBudget.Default.MaximumReturnedItems} and a containerKey no longer than {StorageBrowseContainer.MaximumKeyLength} characters.",
+            innerException), IAgentToolFailureEffectEvidence {
+        public string ErrorCode => AgentToolInputValidationException.FailureCode;
+        public string SafeMessage => Message;
+        public bool IsSafeToExpose => true;
+        public bool CanRetryWithCorrectedInput => true;
+        public AgentToolEffectState EffectState => AgentToolEffectState.None;
+    }
+
+    // Storage request rejections are raised while resolving the catalog, driver or locator, before any driver call, so
+    // each is a proven no-effect failure the model may correct: none for reads and validation, not committed for a
+    // rejected write or delete. Authorization denials and failures reported by a driver stay opaque.
+    private sealed class StorageToolRequestFailure(
+        string errorCode,
+        string message,
+        bool canRetryWithCorrectedInput,
+        AgentToolEffectState effectState,
+        Exception? innerException = null)
+        : InvalidOperationException(message, innerException), IAgentToolFailureEffectEvidence {
+        public string ErrorCode { get; } = errorCode;
+        public string SafeMessage => Message;
+        public bool IsSafeToExpose => true;
+        public bool CanRetryWithCorrectedInput { get; } = canRetryWithCorrectedInput;
+        public AgentToolEffectState EffectState { get; } = effectState;
+    }
+
+
+    public async Task<AgentStorageTextReadResult> ReadStorageTextFile(
+        Guid storageId,
+        string locator,
+        int maxCharacters = 12000,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureStorageReadAllowed();
+        var storage = await ResolveStorageAsync(storageId, requireWrite: false, cancellationToken).ConfigureAwait(false);
+        var driver = ResolveDriver(storage, StorageCapability.Read);
+        var reference = BuildReference(storage, locator);
+
+        await using var stream = await driver.OpenReadAsync(storage, reference, cancellationToken).ConfigureAwait(false);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
+        var buffer = new char[Math.Clamp(maxCharacters, 1, 100_000) + 1];
+        var read = await reader.ReadBlockAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+        var truncated = read == buffer.Length;
+        var content = new string(buffer, 0, truncated ? buffer.Length - 1 : read);
+
+        return new AgentStorageTextReadResult(
+            storage.Id,
+            storage.Name,
+            reference.Locator,
+            reference.DisplayName,
+            reference.ContentType,
+            reference.ContentLength,
+            content,
+            truncated);
+    }
+
+    public async Task<AgentStorageWriteToolResult> WriteStorageTextFile(
+        Guid storageId,
+        string path,
+        string content,
+        string contentType = "text/plain",
+        CancellationToken cancellationToken = default)
+    {
+        EnsureStorageWriteAllowed();
+        var storage = await ResolveStorageAsync(storageId, requireWrite: true, cancellationToken).ConfigureAwait(false);
+        var driver = ResolveDriver(storage, StorageCapability.Write);
+        var normalizedPath = NormalizeStoragePath(path);
+        var bytes = Encoding.UTF8.GetBytes(content ?? string.Empty);
+        var result = await driver.SaveAsync(
+                storage,
+                new StorageWriteRequest(
+                    Path.GetFileName(normalizedPath),
+                    string.IsNullOrWhiteSpace(contentType) ? "text/plain" : contentType.Trim(),
+                    bytes,
+                    StorageUsagePurpose.PromptExport,
+                    ResolveContentKind(normalizedPath, contentType),
+                    RelativePathHint: normalizedPath),
+                cancellationToken)
+            .ConfigureAwait(false);
+        AgentToolInvocationEffectScope.RecordCommitted(
+            StorageObjectSourceKind,
+            $"{storage.Id:D}/{result.Reference.Locator}");
+
+        return new AgentStorageWriteToolResult(
+            storage.Id,
+            storage.Name,
+            result.Reference.Locator,
+            result.Reference.DisplayName,
+            result.Reference.ContentType,
+            result.Reference.ContentLength,
+            result.AccessDescriptor.PreviewUrl,
+            result.AccessDescriptor.DownloadUrl);
+    }
+
+    public async Task<AgentStorageDeleteToolResult> DeleteStorageObject(
+        Guid storageId,
+        string locator,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureStorageWriteAllowed();
+        var storage = await ResolveStorageAsync(storageId, requireWrite: true, cancellationToken).ConfigureAwait(false);
+        var driver = ResolveDriver(storage, StorageCapability.Delete);
+        var reference = BuildReference(storage, locator);
+        await driver.DeleteAsync(storage, reference, cancellationToken).ConfigureAwait(false);
+        AgentToolInvocationEffectScope.RecordCommitted(
+            StorageObjectSourceKind,
+            $"{storage.Id:D}/{reference.Locator}");
+        return new AgentStorageDeleteToolResult(storage.Id, storage.Name, reference.Locator, true);
+    }
+
+    private async Task<StorageDriverInput> ResolveStorageAsync(
+        Guid storageId,
+        bool requireWrite,
+        CancellationToken cancellationToken)
+    {
+        var rejectedEffect = requireWrite ? AgentToolEffectState.NotCommitted : AgentToolEffectState.None;
+        const string chooseCatalog = " Call storage_catalog_list and retry with an allowed, enabled catalog id.";
+        if (storageId == Guid.Empty)
+        {
+            throw new StorageToolRequestFailure(
+                "StorageCatalogRequired", "A storage catalog id is required." + chooseCatalog, true, rejectedEffect);
+        }
+
+        var storage = await catalogService.GetDriverAsync(storageId, cancellationToken).ConfigureAwait(false)
+            ?? throw new StorageToolRequestFailure(
+                "StorageCatalogNotFound", $"Storage catalog '{storageId:D}' was not found." + chooseCatalog, true, rejectedEffect);
+
+        if (!storage.IsEnabled)
+        {
+            throw new StorageToolRequestFailure(
+                "StorageCatalogDisabled", $"Storage catalog '{storage.Name}' is disabled." + chooseCatalog, true, rejectedEffect);
+        }
+
+        // A catalog outside the agent's grants is an authorization denial, not a correctable request.
+        if (!IsStorageCatalogAllowed(storage))
+        {
+            throw new InvalidOperationException($"Storage catalog '{storage.Name}' is not allowed for this agent.");
+        }
+
+        if (requireWrite && storage.IsReadOnly)
+        {
+            throw new StorageToolRequestFailure(
+                "StorageCatalogReadOnly", $"Storage catalog '{storage.Name}' is read-only." + chooseCatalog, true, rejectedEffect);
+        }
+
+        return storage;
+    }
+
+    private IStorageDriver ResolveDriver(StorageDriverInput storage, StorageCapability requiredCapability)
+        => ResolveDriver(storage.ProviderKind, storage.CapabilityMask, storage.Name, requiredCapability);
+
+    private IStorageDriver ResolveDriver(StorageProviderKind providerKind, StorageCapability capabilityMask,
+        string storageName, StorageCapability requiredCapability) {
+        var driver = driverRegistry.Resolve(providerKind);
+        var effectiveCapabilities = capabilityMask & driver.SupportedCapabilities;
+        if ((effectiveCapabilities & requiredCapability) != requiredCapability)
+        {
+            throw new StorageToolRequestFailure(
+                "StorageCapabilityUnsupported",
+                $"Storage catalog '{storageName}' does not support required capability '{requiredCapability}'. Choose another catalog and retry.",
+                canRetryWithCorrectedInput: true,
+                requiredCapability == StorageCapability.Read ? AgentToolEffectState.None : AgentToolEffectState.NotCommitted);
+        }
+
+        return driver;
+    }
+
+    private bool IsStorageCatalogAllowed(StorageCatalogSnapshot storage)
+        => IsStorageCatalogAllowed(storage.Id);
+
+    private bool IsStorageCatalogAllowed(Guid storageId) {
+        return accessSettings.AllowAllStorageCatalogs ||
+               accessSettings.AllowedStorageCatalogIds.Contains(storageId);
+    }
+
+    private void EnsureStorageReadAllowed()
+    {
+        if (!accessSettings.CanReadStorage && !accessSettings.CanWriteStorage)
+        {
+            throw new InvalidOperationException("This agent is not allowed to read storage catalogs.");
+        }
+    }
+
+    private void EnsureStorageWriteAllowed()
+    {
+        if (!accessSettings.CanWriteStorage)
+        {
+            throw new InvalidOperationException("This agent is not allowed to write storage catalogs.");
+        }
+    }
+
+    private static StorageObjectReference BuildReference(StorageDriverInput storage, string locator)
+    {
+        string entryId;
+        try {
+            entryId = new StorageBrowseEntryId(locator ?? string.Empty).Value;
+        } catch (StorageBrowseException exception) {
+            throw new StorageToolRequestFailure(
+                "StorageLocatorInvalid",
+                "The storage locator is empty or too long. Use an entryId returned by storage_browse and retry.",
+                canRetryWithCorrectedInput: true,
+                AgentToolEffectState.None,
+                exception);
+        }
+        var (locatorKind, normalizedLocator) = ResolveStorageLocator(storage.ProviderKind, entryId);
+        return new StorageObjectReference(
+            storage.Id,
+            storage.ProviderKind,
+            locatorKind,
+            normalizedLocator,
+            Path.GetFileName(normalizedLocator),
+            ResolveContentType(normalizedLocator));
+    }
+
+    private static (StorageLocatorKind Kind, string Locator) ResolveStorageLocator(
+        StorageProviderKind providerKind,
+        string entryId)
+    {
+        return providerKind switch
+        {
+            StorageProviderKind.FileSystem => (StorageLocatorKind.RelativePath, NormalizeStoragePath(entryId)),
+            StorageProviderKind.Ftp => (StorageLocatorKind.RemotePath, NormalizeStoragePath(entryId)),
+            StorageProviderKind.Ipfs => ResolveIpfsLocator(entryId),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(providerKind),
+                providerKind,
+                "Unsupported storage provider kind.")
+        };
+    }
+
+    private static (StorageLocatorKind Kind, string Locator) ResolveIpfsLocator(string entryId)
+    {
+        if (entryId.StartsWith("cid:", StringComparison.Ordinal))
+        {
+            var contentAddress = entryId["cid:".Length..];
+            if (string.IsNullOrWhiteSpace(contentAddress))
+            {
+                throw InvalidLocator("An IPFS content address is required after 'cid:'.");
+            }
+
+            return (StorageLocatorKind.ContentAddress, contentAddress);
+        }
+
+        if (entryId.StartsWith("mfs:", StringComparison.Ordinal))
+        {
+            var mutablePath = NormalizeStoragePath(entryId);
+            if (mutablePath.Length == "mfs:".Length)
+            {
+                throw InvalidLocator("An IPFS mutable-file path is required after 'mfs:'.");
+            }
+
+            return (StorageLocatorKind.RemotePath, mutablePath);
+        }
+
+        return (StorageLocatorKind.ContentAddress, entryId);
+    }
+
+    private static string NormalizeStoragePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw InvalidLocator("A storage object path is required.");
+        }
+
+        var normalized = path.Trim().Replace('\\', '/').TrimStart('/');
+        if (normalized.Length == 0)
+        {
+            throw InvalidLocator("A storage object path is required.");
+        }
+
+        if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+        {
+            throw InvalidLocator("Storage object paths cannot contain '.' or '..' segments.");
+        }
+
+        return normalized;
+    }
+
+    private static StorageToolRequestFailure InvalidLocator(string reason)
+        => new("StorageLocatorInvalid", $"{reason} Correct the storage path or locator and retry.",
+            canRetryWithCorrectedInput: true, AgentToolEffectState.None);
+
+    private static string ResolveContentType(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".json" => "application/json",
+            ".md" or ".markdown" => "text/markdown",
+            ".mmd" or ".mermaid" => "text/vnd.mermaid",
+            ".log" or ".txt" or ".cs" or ".razor" or ".css" or ".js" or ".ts" => "text/plain",
+            _ => "application/octet-stream"
+        };
+    }
+
+    private static StorageContentKind ResolveContentKind(string path, string? contentType)
+    {
+        var normalizedContentType = contentType?.Trim() ?? string.Empty;
+        if (normalizedContentType.Contains("json", StringComparison.OrdinalIgnoreCase))
+        {
+            return StorageContentKind.Json;
+        }
+
+        if (normalizedContentType.Contains("markdown", StringComparison.OrdinalIgnoreCase))
+        {
+            return StorageContentKind.Markdown;
+        }
+
+        if (normalizedContentType.Contains("mermaid", StringComparison.OrdinalIgnoreCase))
+        {
+            return StorageContentKind.Mermaid;
+        }
+
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".json" => StorageContentKind.Json,
+            ".md" or ".markdown" => StorageContentKind.Markdown,
+            ".mmd" or ".mermaid" => StorageContentKind.Mermaid,
+            ".log" => StorageContentKind.Log,
+            _ => StorageContentKind.Text
+        };
+    }
+
+    private static StorageBrowseMetadataField ResolveBrowseMetadata(IStorageBrowseDriver driver)
+    {
+        if (!driver.Capabilities.HasFlag(StorageBrowseCapability.Metadata))
+        {
+            throw new StorageToolRequestFailure(
+                "StorageBrowseMetadataUnsupported",
+                $"Storage provider '{driver.ProviderKind}' does not support browse metadata. Retry with includeMetadata=false.",
+                canRetryWithCorrectedInput: true,
+                AgentToolEffectState.None);
+        }
+
+        return StorageBrowseMetadataField.Size |
+               StorageBrowseMetadataField.CreatedAtUtc |
+               StorageBrowseMetadataField.ModifiedAtUtc |
+               StorageBrowseMetadataField.MediaType;
+    }
+
+    private static AgentStorageBrowseEntryKind MapBrowseEntryKind(StorageBrowseEntryKind kind)
+    {
+        return kind switch
+        {
+            StorageBrowseEntryKind.File => AgentStorageBrowseEntryKind.File,
+            StorageBrowseEntryKind.Container => AgentStorageBrowseEntryKind.Container,
+            StorageBrowseEntryKind.Link => AgentStorageBrowseEntryKind.Link,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported storage browse entry kind.")
+        };
+    }
+
+    private AgentStorageBrowseEntryCapability MapBrowseEntryCapabilities(
+        StorageBrowseEntryCapability capabilities,
+        StorageDriverInput storage,
+        IStorageDriver contentDriver)
+    {
+        var result = AgentStorageBrowseEntryCapability.None;
+        if (capabilities.HasFlag(StorageBrowseEntryCapability.Browse))
+        {
+            result |= AgentStorageBrowseEntryCapability.Browse;
+        }
+
+        var effectiveCapabilities = storage.CapabilityMask & contentDriver.SupportedCapabilities;
+        if (capabilities.HasFlag(StorageBrowseEntryCapability.Read) &&
+            effectiveCapabilities.HasFlag(StorageCapability.Read))
+        {
+            result |= AgentStorageBrowseEntryCapability.Read;
+        }
+
+        if (accessSettings.CanWriteStorage &&
+            !storage.IsReadOnly &&
+            capabilities.HasFlag(StorageBrowseEntryCapability.Write) &&
+            effectiveCapabilities.HasFlag(StorageCapability.Write))
+        {
+            result |= AgentStorageBrowseEntryCapability.Write;
+        }
+
+        if (accessSettings.CanWriteStorage &&
+            !storage.IsReadOnly &&
+            capabilities.HasFlag(StorageBrowseEntryCapability.Delete) &&
+            effectiveCapabilities.HasFlag(StorageCapability.Delete))
+        {
+            result |= AgentStorageBrowseEntryCapability.Delete;
+        }
+
+        const StorageBrowseEntryCapability supported =
+            StorageBrowseEntryCapability.Browse |
+            StorageBrowseEntryCapability.Read |
+            StorageBrowseEntryCapability.Write |
+            StorageBrowseEntryCapability.Delete;
+        if ((capabilities & ~supported) != StorageBrowseEntryCapability.None)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(capabilities),
+                capabilities,
+                "Unsupported storage browse entry capabilities.");
+        }
+
+        return result;
+    }
+
+    private static AgentStorageBrowseCompleteness MapBrowseCompleteness(StorageBrowseCompleteness completeness)
+    {
+        return completeness switch
+        {
+            StorageBrowseCompleteness.Complete => AgentStorageBrowseCompleteness.Complete,
+            StorageBrowseCompleteness.PartialInspectionLimit => AgentStorageBrowseCompleteness.PartialInspectionLimit,
+            StorageBrowseCompleteness.PartialMetadataLimit => AgentStorageBrowseCompleteness.PartialMetadataLimit,
+            StorageBrowseCompleteness.PartialTimeLimit => AgentStorageBrowseCompleteness.PartialTimeLimit,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(completeness),
+                completeness,
+                "Unsupported storage browse completeness value.")
+        };
+    }
+}

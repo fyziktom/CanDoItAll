@@ -5,6 +5,10 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 
 namespace CanDoItAll.Processes.Runtime;
 
+/// <summary>
+/// Runtime status of a process run, as a JSON integer: 0 Created, 1 Active, 2 Waiting, 3 Blocked, 4 Completed, 5
+/// Failed, 6 CancelRequested, 7 Cancelled, 8 Escalated, 9 WaitingForUser.
+/// </summary>
 public enum ProcessRuntimeStatus
 {
     Created,
@@ -65,6 +69,10 @@ public sealed record ProcessRuntimeStateSnapshot(
     IReadOnlySet<ArtifactSlotId> AvailableArtifactSlots,
     DateTimeOffset UpdatedAtUtc)
 {
+    public ProcessProjectAdmission? ProjectAdmission { get; init; }
+
+    public ProcessLaunchAdmissionId? LaunchAdmissionId { get; init; }
+
     public IReadOnlyList<ProcessRuntimeInputArtifactReceipt> ConnectedInputArtifacts { get; init; } = [];
 
     public IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> BlockedRecoveryActions { get; init; } = [];
@@ -332,6 +340,8 @@ public sealed record ProcessRuntimeCommitRequest(
     public ProcessRuntimeBlockedRecoveryAuthorization? BlockedRecoveryAuthorization { get; init; }
 
     public IReadOnlyList<ProcessRuntimeStepAssignment>? InitialAssignments { get; init; }
+
+    public ProcessLaunchAdmissionReference? InitialLaunchAdmission { get; init; }
 }
 
 public sealed record ProcessRuntimeCommitResult(

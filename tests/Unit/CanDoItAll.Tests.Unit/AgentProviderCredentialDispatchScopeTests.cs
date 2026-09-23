@@ -83,12 +83,14 @@ public sealed class AgentProviderCredentialDispatchScopeTests {
 
     [Fact]
     public async Task Unresolved_secret_is_cached_for_the_dispatch() {
+        var personalSecretId = Guid.Parse(
+            "8a7882a2-8a54-47c1-a3c3-c1c53ce441bd");
         var secretResolver = new CountingSecretRuntimeResolver(
             (_, _) => Task.FromResult<string?>(null));
         var resolver = CreateResolver(secretResolver);
         var factory =
             (IAgentProviderCredentialDispatchScopeFactory)resolver;
-        var provider = CreateProvider();
+        var provider = CreateProvider(secretRecordId: personalSecretId);
 
         using var preparation =
             await factory.PrepareAsync([provider]);
@@ -106,6 +108,42 @@ public sealed class AgentProviderCredentialDispatchScopeTests {
                 "was not found",
                 resolution.FailureMessage,
                 StringComparison.Ordinal));
+        Assert.All(
+            resolutions,
+            resolution => Assert.Contains(
+                personalSecretId.ToString("D"),
+                resolution.FailureMessage,
+                StringComparison.OrdinalIgnoreCase));
+
+        var sourceSecretId = Guid.Parse(
+            "4eac7a36-75fe-4076-810e-f81718f901c2");
+        var sourceProvider = CreateProvider(
+            providerId: Guid.Parse("88689731-b12b-438e-a812-5f7808a22a28"),
+            secretRecordId: sourceSecretId) with {
+            CredentialBinding = new ProviderCredentialBinding(
+                sourceSecretId,
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.Parse("434e5b3a-01fe-497b-af6c-1eb21a3e11f9"))
+        };
+        var sourceCredentialResolver = CreateResolver(secretResolver);
+        var sourceResolution = sourceCredentialResolver.Resolve(sourceProvider);
+
+        Assert.False(sourceResolution.IsResolved);
+        Assert.Equal(
+            "source access credential",
+            sourceResolution.ResolutionSource);
+        Assert.Equal(
+            "The source access credential was unavailable.",
+            sourceResolution.FailureMessage);
+        Assert.DoesNotContain(
+            sourceSecretId.ToString("D"),
+            sourceResolution.ResolutionSource,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            sourceSecretId.ToString("D"),
+            sourceResolution.FailureMessage,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

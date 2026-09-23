@@ -3449,11 +3449,11 @@ public sealed class ProcessProjectionPipelineTests
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,
             int take,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, ProcessProjectionProjectBinding? projectBinding = null)
         {
             ReadSnapshotsCallCount++;
             LastReadSnapshotsTake = take;
-            return inner.ReadSnapshotsAsync(projectorName, projectionKeyPrefix, take, cancellationToken);
+            return inner.ReadSnapshotsAsync(projectorName, projectionKeyPrefix, take, cancellationToken, projectBinding);
         }
 
         public Task AppendHistoryAsync(
@@ -3563,7 +3563,7 @@ public sealed class ProcessProjectionPipelineTests
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,
             int take,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, ProcessProjectionProjectBinding? projectBinding = null)
         {
             ReadSnapshotsCallCount++;
             return Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>(

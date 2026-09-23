@@ -33,7 +33,15 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
 {
     public void Configure(EntityTypeBuilder<ProcessRuntimeStateEntity> builder)
     {
-        builder.ToTable("process_runtime_states");
+        builder.ToTable("process_runtime_states", table => table.HasCheckConstraint(
+            "CK_process_runtime_states_project_admission",
+            """
+            ("ProjectAdmissionDatabaseProfileId" IS NULL AND "ProjectAdmissionProjectId" IS NULL AND "ProjectAdmissionLifetimeId" IS NULL)
+            OR ("ProjectAdmissionDatabaseProfileId" IS NOT NULL AND "ProjectAdmissionProjectId" IS NOT NULL AND "ProjectAdmissionLifetimeId" IS NOT NULL
+                AND "ProjectAdmissionDatabaseProfileId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "ProjectAdmissionProjectId" <> '00000000-0000-0000-0000-000000000000'::uuid
+                AND "ProjectAdmissionLifetimeId" <> '00000000-0000-0000-0000-000000000000'::uuid)
+            """));
         builder.HasKey(state => state.RunId);
         builder.Property(state => state.PlanHash).HasMaxLength(128).IsRequired();
         builder.Property(state => state.Status).HasConversion<string>().HasMaxLength(64).IsRequired();

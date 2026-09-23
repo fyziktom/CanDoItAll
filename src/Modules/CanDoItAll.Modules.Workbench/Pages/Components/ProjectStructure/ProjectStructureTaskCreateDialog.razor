@@ -11,19 +11,21 @@
        AlignItems="AlignItems.Stretch"
        Class="project-structure-task-create-dialog"
        data-testid="project-structure-task-create-content">
-    @if (AssigneeWarnings.Count > 0)
+    @if (ResourceWarnings.Count > 0)
     {
         <Alert AlertStyle="AlertStyle.Warning"
                data-testid="project-structure-task-create-assignee-warning">
-            @string.Join(" ", AssigneeWarnings)
+            @string.Join(" ", ResourceWarnings)
         </Alert>
     }
 
-    @if (IsEditMode && !CanChangeDirectAssignee)
+    @if (IsEditMode &&
+        !CanChangeDirectAssignee &&
+        ResourceWarnings.Count == 0)
     {
         <Alert AlertStyle="AlertStyle.Warning"
                data-testid="project-structure-task-edit-assignee-readonly">
-            This task has a direct-assignment set that cannot be safely changed as one assignee. Person and agent changes are disabled here so every assignment remains intact. Other task fields can still be saved.
+            This task has a direct-assignment set that cannot be safely changed as one assignee. Person and agent changes are disabled here so every assignment remains intact. Other task fields can still be saved, and workflow or process definitions can be attached when available.
         </Alert>
     }
 
@@ -102,11 +104,13 @@
                  Wrap="FlexWrap.Wrap">
             <Stack GapScale="LayoutGap.XSmall">
                 <TextBlock TextStyle="TextStyle.Subtitle2"
-                           Value="Optional person or agent" />
+                           Value="@(IsEditMode ? "Optional task resource" : "Optional person or agent")" />
                 <TextBlock TextStyle="TextStyle.Note"
-                           Value="The selected CRM person or synchronized AI agent is assigned directly to this task. No child node is created." />
+                           Value="@(IsEditMode
+                               ? "Choose a person or agent as the direct assignee, or attach a workflow or process definition. Definition resources are additive and do not replace the assignee."
+                               : "The selected CRM person or synchronized AI agent is assigned directly to this task. No child node is created.")" />
             </Stack>
-            @if (selectedAssignee is not null && CanChangeDirectAssignee)
+            @if (CanClearSelectedResource)
             {
                 <Button Text="Clear selection"
                         Icon="close"
@@ -114,32 +118,33 @@
                         Variant="Variant.Text"
                         ButtonStyle="ButtonStyle.Base"
                         data-testid="project-structure-task-create-assignee-clear"
-                        Click="ClearAssignee" />
+                        Click="ClearResourceAsync" />
             }
         </Cluster>
 
-        @if (CanChangeDirectAssignee)
-        {
-            <ProjectStructureTaskResourcePicker Options="@AssigneeOptions"
-                                                SelectedResource="@selectedAssignee"
-                                                SelectionChanged="SelectAssigneeAsync"
-                                                AllowedKinds="@DirectAssigneeKinds"
-                                                SearchPlaceholder="Search CRM people and synchronized agents"
-                                                EmptyEyebrow="No assignees"
-                                                EmptyTitle="No people or agents match the current filters"
-                                                EmptyDescription="Change the resource-type filters, clear the search, or save without an assignee."
-                                                OptionTestIdPrefix="project-structure-task-create-assignee"
-                                                DataTestId="project-structure-task-create-assignee-picker" />
+        <ProjectStructureTaskResourcePicker Options="@ResourceOptions"
+                                            SelectedResource="@selectedResource"
+                                            SelectionChanged="SelectResourceAsync"
+                                            AllowedKinds="@SelectableResourceKinds"
+                                            SearchPlaceholder="@(IsEditMode
+                                                ? "Search people, agents, workflows, and processes"
+                                                : "Search CRM people and synchronized agents")"
+                                            EmptyEyebrow="@(IsEditMode ? "No resources" : "No assignees")"
+                                            EmptyTitle="@(IsEditMode
+                                                ? "No task resources match the current filters"
+                                                : "No people or agents match the current filters")"
+                                            EmptyDescription="Change the resource-type filters, clear the search, or save without selecting a resource."
+                                            OptionTestIdPrefix="project-structure-task-create-assignee"
+                                            DataTestId="project-structure-task-create-assignee-picker" />
 
-            <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
-                                                       ProjectId="@ProjectId"
-                                                       SelectedResource="@selectedAssignee"
-                                                       Estimate="@estimate"
-                                                       EstimateChanged="HandleEstimateChangedAsync"
-                                                       ExecutionState="@execution.State"
-                                                       QuoteResolver="@QuoteResolver"
-                                                       DataTestId="project-structure-task-create-resource-cost" />
-        }
+        <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
+                                                   ProjectId="@ProjectId"
+                                                   SelectedResource="@selectedResource"
+                                                   Estimate="@estimate"
+                                                   EstimateChanged="HandleEstimateChangedAsync"
+                                                   ExecutionState="@execution.State"
+                                                   QuoteResolver="@QuoteResolver"
+                                                   DataTestId="project-structure-task-create-resource-cost" />
     </Stack>
 
     @if (!string.IsNullOrWhiteSpace(validationError))
@@ -174,6 +179,14 @@
             ProjectStructureTaskResourceKind.Person,
             ProjectStructureTaskResourceKind.Agent
         };
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> AllResourceKinds =
+        Enum.GetValues<ProjectStructureTaskResourceKind>().ToHashSet();
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> DefinitionResourceKinds =
+        new HashSet<ProjectStructureTaskResourceKind>
+        {
+            ProjectStructureTaskResourceKind.Workflow,
+            ProjectStructureTaskResourceKind.Process
+        };
     private static readonly HashSet<string> ControlledInputKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "workItemKind",
@@ -192,9 +205,12 @@
     private string notes = string.Empty;
     private DateTimeOffset? dueUtc;
     private string? repositoryNodeId;
-    private ProjectStructureTaskResourceSelection? selectedAssignee;
+    private ProjectStructureTaskResourceSelection? proposedAssignee;
+    private ProjectStructureTaskResourceSelection? resourceToAttach;
+    private ProjectStructureTaskResourceSelection? selectedResource;
     private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
-    private ProjectTaskEstimate? estimateBeforeAssigneeSelection;
+    private ProjectTaskEstimate? estimateBeforeDefinitionSelection;
+    private ProjectTaskEstimate? estimateBeforeDirectAssigneeSelection;
     private ProjectTaskExecutionSnapshot execution = ProjectTaskExecutionSnapshot.NotStarted;
     private ProjectStructureTaskEstimateEditor? estimateEditor;
     private ProjectStructureTaskExecutionEditor? executionEditor;
@@ -227,13 +243,24 @@
     public IReadOnlyList<CanvasWorkbenchInputOption> RepositoryOptions { get; set; } = [];
 
     [Parameter]
-    public IReadOnlyList<ProjectStructureTaskResourceOption> AssigneeOptions { get; set; } = [];
+    public IReadOnlyList<ProjectStructureTaskResourceOption> ResourceOptions { get; set; } = [];
 
     [Parameter]
-    public IReadOnlyList<string> AssigneeWarnings { get; set; } = [];
+    public IReadOnlyList<string> ResourceWarnings { get; set; } = [];
 
     [Parameter]
     public Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? QuoteResolver { get; set; }
+
+    private bool CanClearSelectedResource =>
+        selectedResource is not null &&
+        (resourceToAttach is not null || CanChangeDirectAssignee);
+
+    private IReadOnlySet<ProjectStructureTaskResourceKind> SelectableResourceKinds =>
+        !IsEditMode
+            ? DirectAssigneeKinds
+            : CanChangeDirectAssignee
+                ? AllResourceKinds
+                : DefinitionResourceKinds;
 
     protected override void OnParametersSet()
     {
@@ -246,7 +273,10 @@
         title = CreateRequest.Title ?? string.Empty;
         subtitle = CreateRequest.Subtitle ?? string.Empty;
         notes = CreateRequest.Notes ?? string.Empty;
-        selectedAssignee = InitialAssignee;
+        proposedAssignee = InitialAssignee;
+        selectedResource = CanChangeDirectAssignee
+            ? InitialAssignee
+            : null;
         execution = IsEditMode ? InitialExecution : ProjectTaskExecutionSnapshot.NotStarted;
         var inputValues = CreateRequest.InputValues ?? [];
         estimate = ResolveEstimate(inputValues);
@@ -307,42 +337,106 @@
         validationError = string.Empty;
     }
 
-    private async Task SelectAssigneeAsync(ProjectStructureTaskResourceSelection selection)
+    private async Task SelectResourceAsync(ProjectStructureTaskResourceSelection selection)
     {
-        if (!CanChangeDirectAssignee)
+        if (!IsEditMode &&
+            selection.Kind is not (ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent))
         {
             return;
         }
 
-        if (selectedAssignee != selection)
+        if (!CanChangeDirectAssignee &&
+            selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
         {
-            estimateBeforeAssigneeSelection ??= estimate;
+            return;
         }
 
-        selectedAssignee = selection;
+        if (selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
+        {
+            selectedResource = selection;
+            RestoreEstimateBeforeDefinitionSelection();
+            if (proposedAssignee != selection)
+            {
+                estimateBeforeDirectAssigneeSelection ??= estimate;
+            }
+
+            proposedAssignee = selection;
+            resourceToAttach = null;
+        }
+        else if (selection.Kind is ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process)
+        {
+            selectedResource = selection;
+            estimateBeforeDefinitionSelection ??= estimate;
+            resourceToAttach = selection;
+        }
+        else
+        {
+            return;
+        }
+
         if (costEstimator is not null)
         {
             await costEstimator.EstimateSelectedAsync(selection, estimate);
         }
     }
 
-    private void ClearAssignee()
+    private async Task ClearResourceAsync()
     {
+        if (resourceToAttach is not null)
+        {
+            resourceToAttach = null;
+            selectedResource = CanChangeDirectAssignee
+                ? proposedAssignee
+                : null;
+            RestoreEstimateBeforeDefinitionSelection();
+            if (CanChangeDirectAssignee &&
+                proposedAssignee is not null &&
+                costEstimator is not null)
+            {
+                await costEstimator.EstimateSelectedAsync(proposedAssignee, estimate);
+            }
+
+            return;
+        }
+
         if (!CanChangeDirectAssignee)
         {
             return;
         }
 
-        selectedAssignee = null;
-        if (estimateBeforeAssigneeSelection is { } previousEstimate)
+        proposedAssignee = null;
+        selectedResource = null;
+        RestoreEstimateBeforeDirectAssigneeSelection();
+    }
+
+    private void RestoreEstimateBeforeDefinitionSelection()
+    {
+        if (estimateBeforeDefinitionSelection is not { } previousEstimate)
         {
-            estimate = estimate with
-            {
-                ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
-                ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
-            };
-            estimateBeforeAssigneeSelection = null;
+            return;
         }
+
+        estimate = estimate with
+        {
+            ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+            ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+        };
+        estimateBeforeDefinitionSelection = null;
+    }
+
+    private void RestoreEstimateBeforeDirectAssigneeSelection()
+    {
+        if (estimateBeforeDirectAssigneeSelection is not { } previousEstimate)
+        {
+            return;
+        }
+
+        estimate = estimate with
+        {
+            ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+            ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+        };
+        estimateBeforeDirectAssigneeSelection = null;
     }
 
     private Task HandleEstimateChangedAsync(ProjectTaskEstimate value)
@@ -426,11 +520,10 @@
                 ObjectSubtype = TaskSubtype,
                 InputValues = inputValues
             },
-            IsEditMode && !CanChangeDirectAssignee
-                ? InitialAssignee
-                : selectedAssignee,
+            proposedAssignee,
             execution,
-            estimate);
+            estimate,
+            IsEditMode ? resourceToAttach : null);
         if (DialogReference is null)
         {
             await DialogService.CloseAsync(result);

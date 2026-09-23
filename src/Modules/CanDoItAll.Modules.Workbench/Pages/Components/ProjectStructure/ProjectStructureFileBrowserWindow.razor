@@ -71,6 +71,17 @@
 
         @if (isLoading)
         {
+            <Cluster Gap="LayoutGap.XSmall"
+                     AlignItems="AlignItems.Center"
+                     JustifyContent="JustifyContent.Center"
+                     data-testid="project-structure-file-browser-loading"
+                     aria-live="polite"
+                     aria-busy="true">
+                <Icon Name="progress_activity"
+                      Class="animate-spin text-xl" />
+                <TextBlock TextStyle="TextStyle.Caption"
+                           Value="Loading files" />
+            </Cluster>
             <LoadingState Eyebrow="Project Structure files"
                           Title="Resolving authorized sources"
                           Description="Building a bounded file collection from the current semantic scope." />

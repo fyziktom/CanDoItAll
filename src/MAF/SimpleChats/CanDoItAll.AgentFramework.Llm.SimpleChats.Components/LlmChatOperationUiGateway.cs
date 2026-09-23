@@ -82,9 +82,9 @@ public sealed class LlmChatOperationUiGateway(
         {
             attributionScope = await workspaceScopeAccessor.CaptureAsync(cancellationToken);
         }
-        catch (AgentWorkspaceScopeUnavailableException exception)
+        catch (AgentWorkspaceScopeUnavailableException)
         {
-            return LlmChatUiResultMapper.Invalid<LlmChatOperationView>(exception.Message);
+            return LlmChatUiResultMapper.Invalid<LlmChatOperationView>("Workspace context is unavailable. Wait for the current page context to finish updating and retry.");
         }
 
         var result = await operations.SendAsync(

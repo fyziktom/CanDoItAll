@@ -1,0 +1,92 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using Microsoft.Extensions.Logging;
+
+namespace CanDoItAll.Modules.AgentFramework;
+
+using IProviderProfileCommitObserver =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderProfileCommitObserver;
+using IProviderRuntimeProfileSnapshotLoader =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeProfileSnapshotLoader;
+using ProviderCatalogProjectionException =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderCatalogProjectionException;
+using ProviderCatalogProjectionOperationKind =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderCatalogProjectionOperationKind;
+using SharedProviderProfileOwnershipPolicy =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderProfileOwnershipPolicy;
+
+internal sealed class SharedProviderCatalogProjectionCommitObserver(
+    SharedProviderProfileOwnershipQuery ownership,
+    IProviderRuntimeProfileSnapshotLoader runtimeProfileLoader,
+    ISandboxWorkspaceCatalogStore catalogStore,
+    ILogger<SharedProviderCatalogProjectionCommitObserver> logger) :
+    IProviderProfileCommitObserver
+{
+    public async Task ProviderSavedAsync(
+        Guid providerId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await ownership.IsSourceManagedAsync(providerId, cancellationToken))
+        {
+            return;
+        }
+
+        try
+        {
+            var canonical = await runtimeProfileLoader.LoadAsync(
+                providerId,
+                cancellationToken);
+            await catalogStore.UpdateCatalogAsync(catalog => catalog with
+            {
+                Providers = canonical is null
+                    ? catalog.Providers
+                        .Where(provider => provider.Id != providerId)
+                        .ToList()
+                    : catalog.Providers
+                        .Where(provider => provider.Id != providerId)
+                        .Append(canonical.Profile)
+                        .OrderBy(provider => provider.Name,
+                            StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+            }, cancellationToken);
+        }
+        catch (Exception exception)
+            when (exception is not OperationCanceledException)
+        {
+            var projectionException = new ProviderCatalogProjectionException(
+                providerId,
+                ProviderCatalogProjectionOperationKind.Upsert,
+                "Reconcile the committed provider catalog projection without repeating the shared write.",
+                exception);
+            logger.LogError(
+                "Shared-provider catalog projection failed after the canonical database commit. ProviderId={ProviderId} RepairAction={RepairAction}",
+                providerId,
+                projectionException.RepairAction);
+            throw projectionException;
+        }
+    }
+
+    public async Task ProviderDeletedAsync(
+        Guid providerId,
+        CancellationToken cancellationToken = default)
+    {
+        var currentCatalog = await catalogStore.LoadCatalogAsync(
+            cancellationToken);
+        var currentProvider = currentCatalog.Providers
+            .SingleOrDefault(provider => provider.Id == providerId);
+        if (currentProvider is null ||
+            !SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
+                currentProvider.ConnectorPluginKey))
+        {
+            return;
+        }
+
+        await catalogStore.UpdateCatalogAsync(catalog => catalog with
+        {
+            Providers = catalog.Providers
+                .Where(provider => provider.Id != providerId)
+                .ToList()
+        }, cancellationToken);
+    }
+
+}

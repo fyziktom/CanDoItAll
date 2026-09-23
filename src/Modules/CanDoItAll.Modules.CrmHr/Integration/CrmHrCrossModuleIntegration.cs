@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
@@ -19,7 +20,7 @@ internal static class CrmHrSearchSourceTypes
 internal static class CrmHrAuditWriter
 {
     public static void AddEntry(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         string entityType,
         Guid entityId,
         string action,
@@ -41,44 +42,6 @@ internal static class CrmHrAuditWriter
             CreatedAtUtc = createdAtUtc
         });
     }
-}
-
-public sealed record PartyProjectAssignmentItemModel(
-    Guid Id,
-    Guid ProjectId,
-    string ProjectName,
-    ProjectPartyAssignmentKind AssignmentKind,
-    string NodeKey,
-    decimal? AllocationPercent,
-    DateOnly? StartsOn,
-    DateOnly? EndsOn,
-    bool IsPrimary,
-    string Notes);
-
-public static class PartyProjectAssignmentQueryLimits
-{
-    public const int DefaultPageSize = 8;
-    public const int MaximumPageSize = 50;
-}
-
-public sealed record PartyProjectAssignmentQuery(
-    Guid PartyId,
-    int PageIndex = 0,
-    int PageSize = PartyProjectAssignmentQueryLimits.DefaultPageSize);
-
-public sealed record PartyProjectAssignmentPage(
-    IReadOnlyList<PartyProjectAssignmentItemModel> Items,
-    int PageIndex,
-    int PageSize,
-    int TotalCount)
-{
-    public int TotalPages => TotalCount == 0
-        ? 0
-        : (int)Math.Ceiling(TotalCount / (double)PageSize);
-
-    public static PartyProjectAssignmentPage Empty(
-        int pageSize = PartyProjectAssignmentQueryLimits.DefaultPageSize)
-        => new([], 0, pageSize, 0);
 }
 
 public sealed partial class PartyDirectoryService
@@ -136,57 +99,29 @@ public sealed partial class PartyDirectoryService
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var assignments =
-            from assignment in dbContext.Set<ProjectPartyAssignment>().AsNoTracking()
-            where assignment.PartyId == query.PartyId
-            join project in dbContext.Set<Projects.Project>().AsNoTracking()
-                on assignment.ProjectId equals project.Id into projects
-            from project in projects.DefaultIfEmpty()
-            select new
-            {
-                Assignment = assignment,
-                ProjectName = project == null ? "Unknown project" : project.Name
-            };
-
-        var totalCount = await assignments.CountAsync(cancellationToken);
-        var projectedItems = await assignments
+        var totalCount = await ProjectAssignmentReporting.Relational(dbContext)
+            .CountAsync(assignment => assignment.PartyId == query.PartyId, cancellationToken);
+        const string unknownProject = "Unknown project";
+        var items = await dbContext.Database.SqlQueryRaw<PartyProjectAssignmentItemModel>("""
+                SELECT assignment."Id", assignment."ProjectId",
+                    COALESCE(project."Name", {0}) AS "ProjectName",
+                    assignment."AssignmentKind", assignment."NodeKey", assignment."AllocationPercent",
+                    (assignment."StartsAtUtc" AT TIME ZONE 'UTC')::date AS "StartsOn",
+                    (assignment."EndsAtUtc" AT TIME ZONE 'UTC')::date AS "EndsOn",
+                    assignment."IsPrimary", assignment."Notes"
+                FROM (
+                """ + ProjectAssignmentReporting.AllAssignmentsSql + """
+                ) AS assignment
+                LEFT JOIN "Projects_Projects" AS project ON assignment."ProjectId" = project."Id"
+                    AND assignment."ProjectLifetimeId" = project."LifetimeId"
+                WHERE assignment."PartyId" = {1}
+                """, unknownProject, query.PartyId)
             .OrderBy(item => item.ProjectName)
-            .ThenBy(item => item.Assignment.AssignmentKind)
-            .ThenBy(item => item.Assignment.Id)
+            .ThenBy(item => item.AssignmentKind)
+            .ThenBy(item => item.Id)
             .Skip(query.PageIndex * query.PageSize)
             .Take(query.PageSize)
-            .Select(item => new
-            {
-                item.Assignment.Id,
-                item.Assignment.ProjectId,
-                item.ProjectName,
-                item.Assignment.AssignmentKind,
-                item.Assignment.NodeKey,
-                item.Assignment.AllocationPercent,
-                item.Assignment.StartsAtUtc,
-                item.Assignment.EndsAtUtc,
-                item.Assignment.IsPrimary,
-                item.Assignment.Notes
-            })
-            .ToListAsync(cancellationToken);
-
-        var items = projectedItems
-            .Select(item => new PartyProjectAssignmentItemModel(
-                item.Id,
-                item.ProjectId,
-                item.ProjectName,
-                item.AssignmentKind,
-                item.NodeKey,
-                item.AllocationPercent,
-                item.StartsAtUtc.HasValue
-                    ? DateOnly.FromDateTime(item.StartsAtUtc.Value.UtcDateTime)
-                    : null,
-                item.EndsAtUtc.HasValue
-                    ? DateOnly.FromDateTime(item.EndsAtUtc.Value.UtcDateTime)
-                    : null,
-                item.IsPrimary,
-                item.Notes))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
 
         return new PartyProjectAssignmentPage(
             items,
@@ -261,7 +196,7 @@ public sealed partial class PartyDirectoryService
     }
 
     private async Task DeleteRelatedSearchDocumentsAsync(
-        AppDbContext dbContext,
+        CrmHrDbContext dbContext,
         Guid partyId,
         CancellationToken cancellationToken)
     {

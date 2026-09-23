@@ -400,13 +400,17 @@ public sealed class ManagerProcessOwnershipTests
     [Fact]
     public void Mac_parser_is_invariant_and_rejects_non_rooted_executable_evidence()
     {
-        const string valid = "321 42 501 Tue Aug 11 12:34:56 2026 /usr/local/bin/dotnet /usr/local/bin/dotnet watch --project sample.csproj";
-        const string ambiguous = "321 42 501 Tue Aug 11 12:34:56 2026 dotnet dotnet watch --project sample.csproj";
+        const string valid = "321 42 501 Tue Sep  1 12:34:56 2026 /usr/local/bin/dotnet watch --project sample.csproj";
+        var executablePath = ExecutablePath();
 
-        Assert.True(MacOsManagerProcessDiscovery.TryParse(321, valid, out var evidence));
+        Assert.True(MacOsManagerProcessDiscovery.TryParse(321, valid, executablePath, out var evidence));
         Assert.Equal("uid:501", evidence!.OwnerIdentity);
-        Assert.False(MacOsManagerProcessDiscovery.TryParse(321, ambiguous, out _));
-        Assert.False(MacOsManagerProcessDiscovery.TryParse(321, valid.Replace("Aug", "ago", StringComparison.Ordinal), out _));
+        Assert.False(MacOsManagerProcessDiscovery.TryParse(321, valid, "dotnet", out _));
+        Assert.False(MacOsManagerProcessDiscovery.TryParse(
+            321,
+            valid.Replace("Sep", "ago", StringComparison.Ordinal),
+            executablePath,
+            out _));
     }
 
     [Fact]
@@ -418,19 +422,25 @@ public sealed class ManagerProcessOwnershipTests
         BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(20), 501);
         BinaryPrimitives.WriteUInt64LittleEndian(buffer.AsSpan(120), 1_786_450_496);
         BinaryPrimitives.WriteUInt64LittleEndian(buffer.AsSpan(128), 123_456);
+        var executablePath = ExecutablePath();
 
-        var parsed = LibProcMacProcessIdentityReader.TryParseBuffer(321, buffer, out var identity);
+        var parsed = LibProcMacProcessIdentityReader.TryParseBuffer(
+            321,
+            buffer,
+            executablePath,
+            out var identity);
 
         Assert.True(parsed);
         Assert.Equal("macos-kernel-start:1786450496:123456", identity!.StartIdentity);
         Assert.Equal(42, identity.ParentProcessId);
         Assert.Equal((uint)501, identity.UserId);
+        Assert.Equal(Path.GetFullPath(executablePath), identity.ExecutablePath);
     }
 
     [Fact]
     public async Task Mac_probe_combines_kernel_start_and_parent_with_strict_command_evidence()
     {
-        const string output = "321 42 501 Tue Aug 11 12:34:56 2026 /usr/local/bin/dotnet /usr/local/bin/dotnet watch --project sample.csproj";
+        const string output = "321 42 501 Tue Sep  1 12:34:56 2026 /usr/local/bin/dotnet watch --project sample.csproj";
         var discovery = new MacOsManagerProcessDiscovery(
             new FixedMacCommandRunner(new MacProcessCommandResult(0, output, "")),
             new FixedMacIdentityReader(AvailableMacIdentity()));
@@ -581,7 +591,7 @@ public sealed class ManagerProcessOwnershipTests
 
     private static MacProcessIdentityReadResult AvailableMacIdentity()
         => MacProcessIdentityReadResult.Available(
-            new MacProcessNativeIdentity(321, 42, 501, 1_786_450_496, 123_456));
+            new MacProcessNativeIdentity(321, 42, 501, 1_786_450_496, 123_456, ExecutablePath()));
 
     private static ManagerProcessEvidence CreateEvidence()
         => new(

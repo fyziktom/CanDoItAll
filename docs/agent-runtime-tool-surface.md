@@ -21,6 +21,12 @@ Registration is only the first gate. Actual attachment depends on:
 - project, process, HR, scheduler, memory, or curator authorization scope
 - tool invocation policy and approval requirements
 
+Prompt Gallery, Workflow and Scheduler surfaces resolve execution authority through their
+own source policies. An active ordinary non-template agent retains the supported read-only
+sandbox; mutation requires the exact managed identity and current owner capability. Saved
+read-only authority cannot be upgraded during recovery. These policies read the canonical
+Agent catalog without depending on the workspace service they help authorize.
+
 ## Tool Call Scheduling Policy
 
 CanDoItAll permits a provider to return multiple tool calls in one model response, but the
@@ -46,9 +52,30 @@ current runtime policy.
 | Workflow Curator | [`WorkflowCuratorAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/WorkflowCurator/WorkflowCuratorAgentRuntimeToolProvider.cs) | Authorized workflow definition and component curation. |
 | Capability Curator | [`CapabilityCuratorAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/CapabilityCurator/CapabilityCuratorAgentRuntimeToolProvider.cs) | Authorized capability catalog curation and validation. |
 | HR | [`HrAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/Hr/HrAgentRuntimeToolProvider.cs) | Identity-bound agent governance, usage analysis, process review, avatar generation, and privacy-safe CRM/HR queries. |
+| HR Simple Chat definitions | [`HrSimpleChatRuntimeToolProvider.cs`](../src/Integration/CanDoItAll.Agents.SimpleChats/HrSimpleChatRuntimeToolProvider.cs) | Owner-backed definition search, options, approved settings disclosure and mutations, with scoped create-receipt reconciliation. Requires the managed HR identity and a durable admitted interactive run. |
 | Scheduler | [`SchedulerAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs) | Identity-bound workflow target/schedule discovery and workflow schedule creation. |
 
 Do not publish a copied count or complete tool-name inventory here. Provider code and runtime metadata are the source of truth, and attachment varies by invocation.
+
+The [HR definition adapter](../src/Integration/CanDoItAll.Agents.SimpleChats/README.md) persists exact proposals and server-issued business intents before approval or serial dispatch. Recovery retains the original run, input, scope and provider segment and rechecks current authority. An uncertain create resolves through the owner's atomic receipt; update/status uncertainty requires reconciliation. Ordinary Simple Chats gain no tools, implicit context or transcript disclosure. Portable Agent history excludes the executable admission journal and its private runtime checkpoint.
+
+## Saved results and governed background invocation
+
+A completed tool result is restored only after its owner rechecks current disclosure
+permission for the original admitted scope and target. Read permission is distinct from
+permission to perform a new mutation. Unsupported or revoked disclosure fails explicitly;
+recovery retains the exact result and business intent. Configured Storage and Memory tools
+also check the canonical Agent's current grants when their original callbacks remain
+attached to a long-lived runtime.
+
+Governed Process invocations retain the original source actor, actual executor, Process
+run/step and current dispatch claim. Dynamic provider batches reserve their exact tool
+proposals and distinct intents before dispatch. Structure node-start proposals use the
+Process owner's prepared launch and receipt; observation or retry does not create a new
+child. The background run does not inherit an interactive HR or Scheduler identity.
+
+See [Tool failure and recovery](architecture/agent-tool-failure-recovery-boundary.md)
+for pre-dispatch denial, cancellation and owner uncertainty semantics.
 
 ## Process Boundary
 

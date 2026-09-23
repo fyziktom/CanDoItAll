@@ -36,6 +36,8 @@ public sealed record ProviderUsageObservation(
     int TotalTokens,
     int ToolCallCount)
 {
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCanonicalInvocation? HistoryEvidence { get; init; }
+
     public int CacheWriteTokens { get; init; }
 
     public Guid? ProviderProfileId { get; init; }

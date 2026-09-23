@@ -38,8 +38,8 @@ public sealed class AgentCompactListTests
         Assert.Equal("Open chat history for Selected agent", history.GetAttribute("aria-label"));
         Assert.Null(newChat.QuerySelector(".rz-button-text"));
         Assert.Null(history.QuerySelector(".rz-button-text"));
-        Assert.Equal("add_comment", newChat.QuerySelector(".material-icons")?.TextContent.Trim());
-        Assert.Equal("history", history.QuerySelector(".material-icons")?.TextContent.Trim());
+        Assert.Equal("add_comment", newChat.QuerySelector(".cda-material-icon")?.TextContent.Trim());
+        Assert.Equal("history", history.QuerySelector(".cda-material-icon")?.TextContent.Trim());
 
         var selectionButton = cut.Find($"[data-testid='test-agent-list-select-{selectedAgent.Id:N}']");
         Assert.Null(selectionButton.QuerySelector("[data-testid^='test-agent-list-new-chat-']"));

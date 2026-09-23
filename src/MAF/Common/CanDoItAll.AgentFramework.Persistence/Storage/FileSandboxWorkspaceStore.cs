@@ -15,6 +15,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceExecutionRunStore,
     ISandboxWorkspaceChatRunStartStore,
     ISandboxWorkspaceExecutionRunMutationStore,
+    ISandboxWorkspaceExecutionRunLeaseStore,
     ISandboxWorkspaceExecutionRunReservationStore,
     IAgentRecruitingEvidenceStore
 {
@@ -27,18 +28,23 @@ public sealed partial class FileSandboxWorkspaceStore :
     private readonly FileSandboxWorkspaceExecutionSliceStore executionSliceStore;
     private readonly FileSandboxWorkspaceChatProjectionStore chatProjectionStore;
     private readonly FileSandboxWorkspaceCrossProcessLock crossProcessLock;
+    private readonly DurableFileWriter runLeaseWriter;
     private readonly Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary;
     private readonly Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary;
     private readonly Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary;
     private readonly Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary;
+    private readonly IAgentCatalogMutationPolicy? catalogMutationPolicy;
 
-    public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null)
+    public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null,
+        IAgentCatalogMutationPolicy? catalogMutationPolicy = null)
         : this(
             workspaceRoot,
             workspaceScope,
             chatBackedRunCommitBoundary: null,
-            existingRunDetailCommitBoundary: null)
-    {
+            existingRunDetailCommitBoundary: null,
+            genericNewRunCommitBoundary: null,
+            jsonReadDiagnostics: null,
+            catalogMutationPolicy: catalogMutationPolicy) {
     }
 
     internal FileSandboxWorkspaceStore(
@@ -90,16 +96,19 @@ public sealed partial class FileSandboxWorkspaceStore :
         Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary,
         Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary,
         FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics,
-        Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null)
-    {
+        Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null,
+        Action<FileHistoryCommitStage>? historyCommitBoundary = null,
+        IAgentCatalogMutationPolicy? catalogMutationPolicy = null) {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
         var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
         var durableFileWriter = new DurableFileWriter(physicalPathPolicyFactory);
+        runLeaseWriter = durableFileWriter;
         jsonStore = new FileSandboxWorkspaceJsonStore(
             jsonReadDiagnostics,
             physicalPathPolicyFactory,
             durableFileWriter,
-            layout.RootPath);
+            layout.RootPath,
+            new FileProviderHistoryJournal(layout, historyCommitBoundary));
         executionSliceStore = new FileSandboxWorkspaceExecutionSliceStore(layout, jsonStore);
         chatProjectionStore = new FileSandboxWorkspaceChatProjectionStore(layout, jsonStore);
         crossProcessLock = new FileSandboxWorkspaceCrossProcessLock(
@@ -110,6 +119,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         this.genericNewRunCommitBoundary = genericNewRunCommitBoundary;
         this.existingRunDetailCommitBoundary = existingRunDetailCommitBoundary;
         this.agentDeletionCommitBoundary = agentDeletionCommitBoundary;
+        this.catalogMutationPolicy = catalogMutationPolicy;
     }
 
     public async Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default)
@@ -132,7 +142,7 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     public async Task<SandboxWorkspaceCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadCatalogWithoutWorkspaceLock())
+        if (catalogMutationPolicy is null && CanReadCatalogWithoutWorkspaceLock())
         {
             return await LoadCatalogWithoutWorkspaceLockAsync(cancellationToken);
         }
@@ -569,6 +579,9 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(candidate);
+        if (source.RequiresBackgroundAdmission) {
+            throw new InvalidOperationException("Use the explicitly admitted background reservation operation.");
+        }
         if (!source.Matches(candidate.Run))
         {
             throw new InvalidOperationException(
@@ -619,6 +632,14 @@ public sealed partial class FileSandboxWorkspaceStore :
         {
             gate.Release();
         }
+    }
+
+    public ValueTask<IAsyncDisposable> AcquireToolDispatchLeaseAsync(
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentOutOfRangeException.ThrowIfEqual(executionRunId, Guid.Empty);
+        return runLeaseWriter.AcquireCoordinationAsync(layout.RootPath,
+            Path.Combine(layout.RunRoot(executionRunId), "tool-dispatch.lock"),
+            TimeSpan.FromMinutes(1), requirePrivateUnixMode: false, cancellationToken);
     }
 
     public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
@@ -998,6 +1019,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                 ExistingRunDetailCommitStage.JournalPersisted);
             return await CommitExistingRunDetailJournalAsync(
                 journal,
+                ExistingRunDetailCommitOrigin.Prepared,
                 CancellationToken.None);
         }
 
@@ -1040,8 +1062,8 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private async Task<ExecutionRunDetail> CommitExistingRunDetailJournalAsync(
         ExistingRunDetailCommitJournal journal,
-        CancellationToken cancellationToken)
-    {
+        ExistingRunDetailCommitOrigin origin,
+        CancellationToken cancellationToken) {
         ValidateExistingRunDetailCommitJournal(journal);
 
         var currentWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
@@ -1059,12 +1081,14 @@ public sealed partial class FileSandboxWorkspaceStore :
 
         await executionSliceStore.PersistExistingRunSessionAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.SessionPersisted);
 
         await executionSliceStore.PersistExistingRunRecordAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.RunPersisted);
@@ -1083,12 +1107,14 @@ public sealed partial class FileSandboxWorkspaceStore :
 
         await executionSliceStore.PersistExistingRunExecutionIndexAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.ExecutionIndexPersisted);
 
         await executionSliceStore.PersistExistingRunUsageIndexAsync(
             journal.PersistencePlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.UsageIndexPersisted);
@@ -1102,6 +1128,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         await chatProjectionStore.PersistExistingRunUpdateAsync(
             journal.PersistencePlan,
             journal.ChatProjectionPlan,
+            origin,
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.ChatIndexPersisted);
@@ -1125,6 +1152,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                 $"Pending execution-run update journal '{PendingExistingRunDetailCommitJournalPath}' is empty.");
         await CommitExistingRunDetailJournalAsync(
             journal,
+            ExistingRunDetailCommitOrigin.RecoveredJournal,
             CancellationToken.None);
     }
 
@@ -1526,6 +1554,11 @@ public sealed partial class FileSandboxWorkspaceStore :
         CancellationToken cancellationToken)
     {
         var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        if (catalogMutationPolicy is not null) {
+            normalizedCatalog = await catalogMutationPolicy.ApplyAsync(currentCatalog, normalizedCatalog, cancellationToken);
+            SandboxWorkspaceDocumentInvariantValidator.Validate(
+                SandboxWorkspaceDocument.Combine(normalizedCatalog, SandboxWorkspaceExecutionState.Empty));
+        }
         var payloadChanged = !catalogExists ||
                              CatalogPayloadRequiresSave(currentCatalog, normalizedCatalog);
         var revision = currentCatalog.CatalogDataRevision.IsAssigned
@@ -2246,6 +2279,11 @@ internal sealed record GenericNewRunCommitJournal(
     GenericNewExecutionRunChatProjectionPlan ChatProjectionPlan,
     WorkspaceStorageIndex PreviousWorkspaceIndex,
     WorkspaceStorageIndex TargetWorkspaceIndex);
+
+internal enum ExistingRunDetailCommitOrigin {
+    Prepared,
+    RecoveredJournal
+}
 
 internal enum ExistingRunDetailCommitStage
 {

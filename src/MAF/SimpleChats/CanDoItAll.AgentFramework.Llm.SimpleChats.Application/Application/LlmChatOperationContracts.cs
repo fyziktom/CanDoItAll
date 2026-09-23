@@ -11,7 +11,10 @@ public sealed record SendLlmChatTurnCommand(
     LlmChatConversationId ConversationId,
     long ExpectedTranscriptRevision,
     string Message,
-    WorkspaceScopeDescriptor? AttributionScope = null);
+    WorkspaceScopeDescriptor? AttributionScope = null) {
+    [System.Text.Json.Serialization.JsonIgnore]
+    public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; init; }
+}
 
 public sealed record AbandonLlmChatActiveTurnCommand(
     LlmChatConversationId ConversationId,

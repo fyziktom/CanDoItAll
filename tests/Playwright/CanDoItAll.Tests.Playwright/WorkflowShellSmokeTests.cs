@@ -2,27 +2,17 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
 
-[Collection(PlaywrightCollection.Name)]
-public sealed class WorkflowShellSmokeTests
-{
-    private readonly PlaywrightAppFixture fixture;
+public sealed class WorkflowShellSmokeTests : IAsyncLifetime {
+    private readonly PlaywrightAppFixture fixture = new();
 
-    public WorkflowShellSmokeTests(PlaywrightAppFixture fixture)
-    {
-        this.fixture = fixture;
-    }
+    public Task InitializeAsync() => fixture.InitializeAsync();
+
+    public Task DisposeAsync() => fixture.DisposeAsync();
 
     [Fact]
     public async Task Workflow_shell_creates_and_runs_starter_preview_on_large_screen()
     {
-        var artifactDirectory = Path.Combine(
-            PlaywrightTestHostPaths.RepositoryRoot,
-            "codex",
-            "bundles",
-            "skill-tool-mcp-isolation-template-migration",
-            "proof",
-            "regression",
-            "screenshots");
+        var artifactDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, ".artifacts", "agent-independent", "browser-captures");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -38,10 +28,11 @@ public sealed class WorkflowShellSmokeTests
         var response = await page.GotoAsync($"{fixture.BaseUrl}/agents/workflows");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /agents/workflows to return 2xx, got {(int)response.Status}.");
-        await DismissStartupModalIfPresentAsync(page);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("workflows-tabs").WaitForAsync();
         await page.GetByTestId("workflows-create-starter").WaitForAsync();
         await page.GetByTestId("workflows-create-starter").ClickAsync();
+        await ExpectTextContainsAsync(page.Locator("body"), "Starter workflow and LLM component were created.", timeoutMs: 30_000);
 
         await page.GetByTestId("workflows-tab-workflows").ClickAsync();
         await page.GetByTestId("workflows-catalog").WaitForAsync();
@@ -52,35 +43,15 @@ public sealed class WorkflowShellSmokeTests
         await page.GetByTestId("workflows-run-test").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("workflows-test-result"), "Succeeded", timeoutMs: 30_000);
         await page.GetByTestId("workflows-run-event").First.WaitForAsync();
-        await page.ScreenshotAsync(new PageScreenshotOptions
+        if (Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_CAPTURE_EVIDENCE") == "true") {
+            await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "workflow-shell-runtime-large.png"),
             FullPage = true
         });
+        }
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
-    }
-
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
     }
 
     private static async Task ExpectTextContainsAsync(ILocator locator, string expectedValue, int timeoutMs)

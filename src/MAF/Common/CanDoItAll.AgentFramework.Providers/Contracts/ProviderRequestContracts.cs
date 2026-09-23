@@ -1,11 +1,16 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Providers;
 
 public sealed record ProviderModelCatalogRequest(
     ProviderProfile Provider,
     AgentProviderCapabilityKind Capability,
-    string? ModelFilter = null);
+    string? ModelFilter = null) {
+    [JsonIgnore]
+    public HistoryInvocationContext History { get; init; } = HistoryInvocationContext.Create(HistoryWorkload.Diagnostic);
+}
 
 public sealed record ProviderModelDescriptor(
     string Model,
@@ -36,7 +41,10 @@ public sealed record ProviderChatCompletionRequest(
     IReadOnlyList<ProviderChatAttachment>? Attachments = null,
     string ModelParameterConfigurationJson = "",
     double? Temperature = null,
-    ProviderChatResponseFormat? ResponseFormat = null);
+    ProviderChatResponseFormat? ResponseFormat = null) {
+    [JsonIgnore]
+    public HistoryInvocationContext History { get; init; } = HistoryInvocationContext.Create(currentTurn: new(Prompt, 0));
+}
 
 public sealed record ProviderChatCompletionResult(
     string Model,
@@ -45,6 +53,8 @@ public sealed record ProviderChatCompletionResult(
     int OutputTokens)
 {
     public int CachedInputTokens { get; init; }
+    public HistoryUsage? ObservedUsage { get; init; }
+    public RemoteRequestReference? RemoteRequest { get; init; }
 }
 
 public enum ProviderChatStreamingMode
@@ -55,6 +65,8 @@ public enum ProviderChatStreamingMode
 }
 
 public abstract record ProviderChatStreamingUpdate;
+public sealed record ProviderChatUsageObserved(HistoryUsage Usage) : ProviderChatStreamingUpdate;
+public sealed record ProviderChatCorrelationObserved(RemoteRequestReference Reference) : ProviderChatStreamingUpdate;
 
 public sealed record ProviderChatTextDelta : ProviderChatStreamingUpdate
 {
@@ -92,6 +104,8 @@ public sealed record ProviderChatCompleted : ProviderChatStreamingUpdate
     public int OutputTokens { get; }
 
     public string FinishReason { get; }
+    public HistoryUsage? ObservedUsage { get; init; }
+    public RemoteRequestReference? RemoteRequest { get; init; }
 
     public int CachedInputTokens
     {
@@ -117,6 +131,8 @@ public sealed record ProviderImageGenerationRequest(
     IReadOnlyList<ProviderImageSource> Sources)
 {
     public int? OutputCompression { get; init; }
+    [JsonIgnore]
+    public HistoryInvocationContext History { get; init; } = HistoryInvocationContext.Create(currentTurn: new(Prompt, 0));
 }
 
 public sealed record ProviderGeneratedImage(
@@ -139,7 +155,10 @@ public sealed record ProviderSpeechToTextRequest(
     string Model,
     IReadOnlyList<ProviderSpeechToTextAudio> Audio,
     string Language,
-    string Prompt);
+    string Prompt) {
+    [JsonIgnore]
+    public HistoryInvocationContext History { get; init; } = HistoryInvocationContext.Create();
+}
 
 public sealed record ProviderSpeechToTextResult(
     string Model,
@@ -151,7 +170,10 @@ public sealed record ProviderTextToSpeechRequest(
     string Text,
     string VoiceId,
     string ResponseFormat,
-    string Instructions);
+    string Instructions) {
+    [JsonIgnore]
+    public HistoryInvocationContext History { get; init; } = HistoryInvocationContext.Create(currentTurn: new(Text, 0));
+}
 
 public sealed record ProviderTextToSpeechResult(
     string Model,
@@ -165,7 +187,10 @@ public sealed record ProviderModelMaintenanceRequest(
     string Model,
     string BaseModel,
     string SystemPrompt,
-    int ContextLength);
+    int ContextLength) {
+    [JsonIgnore]
+    public HistoryInvocationContext History { get; init; } = HistoryInvocationContext.Create(HistoryWorkload.Diagnostic);
+}
 
 public sealed record ProviderModelMaintenanceResult(
     string Model,

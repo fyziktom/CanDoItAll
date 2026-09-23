@@ -33,7 +33,19 @@ public sealed class ProviderUsageAggregationTests
     [Fact]
     public async Task Selected_sources_are_read_concurrently_and_reported_deterministically()
     {
-        var probe = new ConcurrentReadProbe(expectedReaders: 2);
+        var probe = new ConcurrentReadProbe(expectedReaders: 3);
+        var imageContribution = Contribution(
+            "relay-image",
+            ProviderUsageWorkloadKind.SharedProviderRelay,
+            ProviderUsageConsumerKind.SharedProviderRelay,
+            "publication-1",
+            "Shared image provider",
+            "relay-run",
+            costUsd: null) with
+        {
+            Tokens = ProviderUsageTokenCounts.Empty,
+            ImageCount = 2
+        };
         var service = new ProviderUsageQueryService(
         [
             new ConcurrentSource(
@@ -59,14 +71,52 @@ public sealed class ProviderUsageAggregationTests
                     "Agent",
                     "agent-run",
                     1m)],
+                probe),
+            new ConcurrentSource(
+                "m-relay",
+                ProviderUsageWorkloadKind.SharedProviderRelay,
+                [imageContribution],
                 probe)
         ]);
 
-        var snapshot = await service.QueryAsync(ProviderUsageWorkloadSelection.Both);
+        var snapshot = await service.QueryAsync(ProviderUsageWorkloadSelection.All);
 
-        Assert.Equal(2, probe.StartedReaders);
-        Assert.Equal(["a-agent", "z-chat"], snapshot.Sources.Select(source => source.SourceName));
+        Assert.Equal(3, probe.StartedReaders);
+        Assert.Equal(["a-agent", "m-relay", "z-chat"], snapshot.Sources.Select(source => source.SourceName));
         Assert.Equal(3m, snapshot.Totals.KnownCostUsd);
+        Assert.Equal(200, snapshot.Totals.Tokens.TotalTokens);
+        Assert.Equal(2, snapshot.Totals.ImageCount);
+        Assert.Contains(
+            typeof(ProviderUsageContribution).GetConstructors(),
+            constructor => constructor.GetParameters().Length == 16);
+        Assert.Equal(
+            16,
+            typeof(ProviderUsageContribution).GetMethod("Deconstruct")!.GetParameters().Length);
+        Assert.Contains(
+            typeof(ProviderUsageTotals).GetConstructors(),
+            constructor => constructor.GetParameters().Length == 10);
+        Assert.Equal(
+            10,
+            typeof(ProviderUsageTotals).GetMethod("Deconstruct")!.GetParameters().Length);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await new ProviderUsageQueryService(
+            [
+                new FakeSource(
+                    "invalid-relay",
+                    ProviderUsageWorkloadKind.SharedProviderRelay,
+                    [imageContribution with { ImageCount = 0 }])
+            ]).QueryAsync(ProviderUsageWorkloadSelection.SharedProviderRelays));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await new ProviderUsageQueryService(
+            [
+                new FakeSource(
+                    "mixed-relay",
+                    ProviderUsageWorkloadKind.SharedProviderRelay,
+                    [imageContribution with
+                    {
+                        Tokens = new ProviderUsageTokenCounts(1, 0, 0, 0, 0, 1)
+                    }])
+            ]).QueryAsync(ProviderUsageWorkloadSelection.SharedProviderRelays));
     }
 
     [Fact]

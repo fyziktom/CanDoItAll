@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -15,6 +16,16 @@ internal static class MafFinalizerDriver
         AgentFinalizerMode finalizerMode,
         bool hasApprovalTools)
         => finalizerMode != AgentFinalizerMode.Required && !hasApprovalTools;
+
+    public static bool? ResolveAllowMultipleToolCalls(
+        bool hasTools,
+        bool supportsParallelFunctionTools,
+        AgentFinalizerMode finalizerMode,
+        bool hasApprovalTools)
+        => hasTools
+            ? supportsParallelFunctionTools &&
+                ShouldAllowMultipleToolCalls(finalizerMode, hasApprovalTools)
+            : null;
 
     public static bool ShouldRequestMissingRequiredFinalizerRepair(
         AgentStructuredOutputContract? structuredOutput,
@@ -90,8 +101,10 @@ internal static class MafFinalizerDriver
 
     public static ChatClientAgentRunOptions CreateRequiredFinalizerRepairRunOptions(
         AgentFinalizerPolicy policy,
-        AITool finalizerTool)
+        AITool finalizerTool,
+        HistoryInvocationContext history)
     {
+        ArgumentNullException.ThrowIfNull(history);
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(finalizerTool);
 
@@ -103,7 +116,7 @@ internal static class MafFinalizerDriver
             ToolMode = ChatToolMode.RequireSpecific(policy.ToolName)
         };
 
-        return new ChatClientAgentRunOptions(chatOptions)
+        return new ChatClientAgentRunOptions(ProviderHistoryChatContext.WithContext(chatOptions, history))
         {
             AllowBackgroundResponses = false,
             ContinuationToken = null
@@ -133,14 +146,13 @@ internal static class MafFinalizerDriver
             BuildRequiredFinalizerArgumentInstructions(policy);
     }
 
-    public static ChatClientAgentRunOptions CreateRequiredFinalizerJsonRepairRunOptions()
-    {
-        return new ChatClientAgentRunOptions(new ChatOptions
-        {
+    public static ChatClientAgentRunOptions CreateRequiredFinalizerJsonRepairRunOptions(HistoryInvocationContext history) {
+        ArgumentNullException.ThrowIfNull(history);
+        return new ChatClientAgentRunOptions(ProviderHistoryChatContext.WithContext(new ChatOptions {
             AllowMultipleToolCalls = false,
             ToolMode = null,
             Tools = []
-        })
+        }, history))
         {
             AllowBackgroundResponses = false,
             ContinuationToken = null
@@ -261,14 +273,14 @@ internal static class MafFinalizerDriver
     public static string BuildRequiredFinalizerRepairContext(
         AgentResponse previousResponse,
         IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces,
-        IEnumerable<ChatMessage> originalInputMessages)
-    {
+        IEnumerable<ChatMessage> originalInputMessages,
+        AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(previousResponse);
         ArgumentNullException.ThrowIfNull(toolInvocationTraces);
         ArgumentNullException.ThrowIfNull(originalInputMessages);
 
         var builder = new StringBuilder();
-        var toolCallSummaries = BuildPreviousTurnToolCallSummaries(previousResponse);
+        var toolCallSummaries = BuildPreviousTurnToolCallSummaries(previousResponse, toolPolicies);
         if (toolCallSummaries.Count > 0)
         {
             builder.AppendLine("Previous turn tool calls observed by the provider:");
@@ -378,8 +390,13 @@ internal static class MafFinalizerDriver
         IReadOnlyList<AgentFinalizerInvocation> capturedInvocations,
         IReadOnlyList<AgentToolInvocationTrace> capturedToolInvocationTraces,
         IReadOnlyList<AgentFinalizerInvocation> streamedInvocations,
-        IReadOnlyList<AgentFinalizerInvocation> synthesizedInvocations)
+        IReadOnlyList<AgentFinalizerInvocation> synthesizedInvocations,
+        bool requireCapturedInvocation = false)
     {
+        if (requireCapturedInvocation) {
+            streamedInvocations = [];
+        }
+
         if (finalizerMode != AgentFinalizerMode.Required ||
             !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
         {
@@ -490,19 +507,18 @@ internal static class MafFinalizerDriver
             .ToList();
     }
 
-    private static IReadOnlyList<string> BuildPreviousTurnToolCallSummaries(AgentResponse previousResponse)
-    {
+    private static IReadOnlyList<string> BuildPreviousTurnToolCallSummaries(AgentResponse previousResponse, AgentToolPolicyCatalog? toolPolicies) {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var summaries = new List<string>();
         foreach (var toolCall in previousResponse.Messages.SelectMany(message => message.Contents).OfType<ToolCallContent>())
         {
-            var key = MafToolInvocationArgumentFormatter.ResolveToolCallKey(toolCall);
+            var key = MafToolInvocationArgumentFormatter.ResolveToolCallKey(toolCall, toolPolicies);
             if (!seen.Add(key))
             {
                 continue;
             }
 
-            summaries.Add(MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall));
+            summaries.Add(MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall, toolPolicies));
             if (summaries.Count >= 20)
             {
                 break;

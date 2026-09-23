@@ -18,7 +18,7 @@ public sealed class CrmHrWorkforceFlowTests
     [Fact]
     public async Task Workforce_workspace_supports_delivery_units_and_worker_profiles()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b06";
+        var evidenceDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "evidence", "crm-hr", "b06");
         Directory.CreateDirectory(evidenceDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -37,7 +37,7 @@ public sealed class CrmHrWorkforceFlowTests
         var seededParties = await SeedWorkforcePartiesAsync(managerName, workerName, unitName);
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/workforce");
-        await DismissStartupModalIfPresentAsync(page);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("crmhr-workforce-search").WaitForAsync();
 
         Assert.Equal(0, await page.GetByTestId("crmhr-workforce-delivery-unit-dialog").CountAsync());
@@ -52,8 +52,8 @@ public sealed class CrmHrWorkforceFlowTests
         });
 
         await page.GetByTestId("crmhr-workforce-scope-filter").WaitForAsync();
-        await page.GetByTestId("party-scope-people").WaitForAsync();
-        await page.GetByTestId("party-scope-units").WaitForAsync();
+        await page.GetByTestId("crmhr-workforce-scope-filter").GetByTestId("crmhr-workforce-filter-employee").WaitForAsync();
+        await page.GetByTestId("crmhr-workforce-scope-filter").GetByTestId("crmhr-workforce-filter-delivery-unit").WaitForAsync();
 
         await page.GetByTestId("crmhr-workforce-search").FillAsync(workerName);
         await page.GetByTestId("crmhr-workforce-item")
@@ -243,27 +243,6 @@ public sealed class CrmHrWorkforceFlowTests
             : string.Empty;
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
-    }
 
     private static async Task WaitForUrlContainsAsync(IPage page, string fragment, int timeoutMs = 10_000)
     {

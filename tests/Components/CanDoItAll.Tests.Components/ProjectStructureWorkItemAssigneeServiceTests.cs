@@ -18,6 +18,8 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
         var assigneeService = harness.Context.Services.GetRequiredService<ProjectStructureWorkItemAssigneeService>();
         var bridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await harness.Context.Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var joeId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Joe Doe");
         var organizationId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Not an assignee");
         var task = await workbenchService.CreateObjectAsync(
@@ -37,7 +39,7 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
                     {
                         WorkItemKind = ProjectWorkItemKind.Task
                     }
-                })));
+                })) { ExpectedProjectAdmission = admission });
 
         var options = await assigneeService.ListOptionsAsync(projectId);
         Assert.Contains(options, option => option.ResourceId == joeId && option.Kind == ProjectStructureTaskResourceKind.Person);
@@ -47,7 +49,8 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
             projectId,
             task.Id,
             new ProjectStructureTaskResourceSelection(ProjectStructureTaskResourceKind.Person, joeId),
-            "component-tests");
+            "component-tests",
+            mutationOwner: CreateMutationOwner(admission));
 
         var assignment = Assert.Single(await bridge.ListAssignmentsDetailedAsync(projectId), item =>
             item.NodeKey == task.Id &&
@@ -76,6 +79,8 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
         var assigneeService = harness.Context.Services.GetRequiredService<ProjectStructureWorkItemAssigneeService>();
         var bridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await harness.Context.Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var assigneeId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Issue owner");
         var dueUtc = new DateTimeOffset(2026, 7, 18, 15, 0, 0, TimeSpan.Zero);
         var issue = await workbenchService.CreateObjectAsync(
@@ -97,13 +102,14 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
                         Description = "Preserve this issue detail.",
                         DueUtc = dueUtc
                     }
-                })));
+                })) { ExpectedProjectAdmission = admission });
 
         await assigneeService.ReplaceAsync(
             projectId,
             issue.Id,
             new ProjectStructureTaskResourceSelection(ProjectStructureTaskResourceKind.Person, assigneeId),
-            "component-tests");
+            "component-tests",
+            mutationOwner: CreateMutationOwner(admission));
 
         var assignment = Assert.Single(await bridge.ListAssignmentsDetailedAsync(projectId), item =>
             item.NodeKey == issue.Id &&
@@ -126,6 +132,8 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var bridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await harness.Context.Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var organizationId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Architecture Guild");
         var task = await workbenchService.CreateObjectAsync(
             projectId,
@@ -137,7 +145,7 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
                 $"project:{projectId}",
                 420,
                 260,
-                ObjectSubtype: "task"));
+                ObjectSubtype: "task") { ExpectedProjectAdmission = admission });
 
         var result = await bridge.ReplaceNodeAssignmentsAsync(
             projectId,
@@ -146,6 +154,7 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
                 new ProjectPartyAssignmentUpsertRequest
                 {
                     ProjectId = projectId,
+                    ExpectedProjectAdmission = admission,
                     PartyId = organizationId,
                     Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                     NodeKey = task.Id,
@@ -153,10 +162,12 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
                     Source = "component-tests"
                 }
             ],
-            [ProjectPartyAssignmentRole.WorkItemAssignee]);
+            [ProjectPartyAssignmentRole.WorkItemAssignee],
+            expectedProjectAdmission: admission);
         var saveResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
+            ExpectedProjectAdmission = admission,
             PartyId = organizationId,
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = task.Id,
@@ -170,6 +181,15 @@ public sealed class ProjectStructureWorkItemAssigneeServiceTests
         Assert.Contains(saveResult.Errors, error => error.Code == "crmhr.project-assignment.work-item-assignee-party-type-invalid");
         Assert.DoesNotContain(await bridge.ListAssignmentsDetailedAsync(projectId), assignment => assignment.NodeKey == task.Id);
     }
+
+    private static ProjectStructureAgentContext CreateMutationOwner(ProjectWriteAdmission admission)
+        => new(
+            "component-tests-work-item-assignee",
+            "Component tests",
+            Environment.MachineName,
+            string.Empty,
+            string.Empty,
+            $"{admission.ProjectId:D}-work-item-assignee") { ExpectedProjectAdmission = admission };
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService)
     {

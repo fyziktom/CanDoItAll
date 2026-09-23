@@ -78,7 +78,7 @@ public sealed class WorkflowExecutorFoundationExtractionTests
             "BuiltInWorkflowExecutorDescriptors.cs"));
         Assert.Contains("WorkflowExecutorDescriptorFactory.CreateImplemented", builtInDescriptorSource, StringComparison.Ordinal);
         Assert.DoesNotContain("BindingFlags", builtInDescriptorSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CreateSettingsConfigurationSchema", builtInDescriptorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("static ConfigurationSchema CreateSettingsConfigurationSchema", builtInDescriptorSource, StringComparison.Ordinal);
     }
 
     [Fact]

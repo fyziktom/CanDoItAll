@@ -27,6 +27,8 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             physicalPathPolicyFactory,
             workspaceScope,
             externalTargetRegistry);
+        ExecutionScope = new WorkspaceExecutionScope(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope,
+            rootCaseSensitivity: physicalPathPolicyFactory.Create(pathPolicy.WorkspaceRoot).CaseSensitivity);
         receiptWriter = new WorkspaceFileReceiptWriter(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope);
         var textContentGuard = new WorkspaceTextContentGuard();
 
@@ -34,6 +36,8 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         destinationContentPlacementPolicy = new WorkspaceDestinationContentPlacementPolicy(pathPolicy);
         mutationService = new WorkspaceFileMutationService(pathPolicy, receiptWriter, destinationContentPlacementPolicy);
     }
+
+    public WorkspaceExecutionScope ExecutionScope { get; }
 
     public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100)
         => queryService.ListDirectory(relativePath, maxResults);
@@ -367,7 +371,17 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         }
 
         pathPolicy.ValidatePathForUse(source.FullPath);
-        using var archive = ZipFile.OpenRead(source.FullPath);
+        ZipArchive opened;
+        try
+        {
+            opened = ZipFile.OpenRead(source.FullPath);
+        }
+        catch (InvalidDataException)
+        {
+            return CreateArchiveFailure(operationName, $"Source '{source.RelativePath}' is not a readable zip archive.", source.RelativePath, destination.RelativePath, startedAtUtc);
+        }
+
+        using var archive = opened;
         var entries = archive.Entries
             .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
             .OrderBy(entry => NormalizeArchiveEntryPath(entry.FullName), StringComparer.Ordinal)
@@ -520,13 +534,16 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             FileCount: 0,
             IsTruncated: false);
 
+    // Zip and unzip return this failure only for a rejection decided before staging the archive or its entries.
     private WorkspaceArchiveMutationResult CreateArchiveFailure(
         string operationName,
         string message,
         string sourcePath,
         string destinationPath,
         DateTimeOffset startedAtUtc)
-        => new(
+    {
+        AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+        return new(
             Succeeded: false,
             Message: message,
             Receipt: receiptWriter.CreateReceipt(operationName, true, "Failed", message, string.Empty, BuildTargetPathList(sourcePath, destinationPath), [], startedAtUtc),
@@ -535,6 +552,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             FileCount: 0,
             TotalBytes: 0,
             IsTruncated: false);
+    }
 
     private static IReadOnlyList<string> ResolveArchiveSourceFiles(
         WorkspacePathResolution source,

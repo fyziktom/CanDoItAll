@@ -9,6 +9,81 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class ProviderModelSelectorTests
 {
     [Fact]
+    public void SharedThinkingEffort_Model_suggestions_are_curated_but_legacy_selection_survives() {
+        using var context = new BunitContext();
+        var provider = CreateProvider("gpt-5.4-mini",
+            ["gpt-3.5-turbo", "gpt-5.6-sol", "gpt-5.4-mini", "gpt-4.1", "gpt-5.4-2026-03-05"]);
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.Provider, provider));
+        Assert.Equal(["Provider default (gpt-5.4-mini)", "gpt-4.1", "gpt-5.6-sol"],
+            cut.FindAll("option").Select(option => option.TextContent));
+
+        cut.Render(parameters => parameters.Add(component => component.Value, "gpt-3.5-turbo"));
+        Assert.Contains(cut.FindAll("option"), option => option.TextContent == "gpt-3.5-turbo");
+        Assert.Empty(cut.FindAll("input[type='text']"));
+    }
+
+    [Fact]
+    public void SharedThinkingEffort_Shared_models_sort_by_real_name_numerically_and_keep_published_legacy_selection() {
+        using var context = new BunitContext();
+        var provider = CreateProvider("route-default", ["route-z", "route-ten", "route-two"]) with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new("route-default", "default"), new("route-z", "zeta"),
+                new("route-ten", "model10"), new("route-two", "model2"), new("route-old", "legacy")]
+        };
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.Provider, provider)
+            .Add(component => component.Value, "route-old"));
+        Assert.Equal(["Provider default (default)", "legacy", "model2", "model10", "zeta"],
+            cut.FindAll("option").Select(option => option.TextContent));
+        Assert.DoesNotContain("Unavailable", cut.Markup);
+    }
+    [Fact]
+    public void Shared_model_labels_emit_routing_ids_and_disable_custom_overrides() {
+        using var context = new BunitContext();
+        var provider = CreateProvider("route-alpha", ["route-alpha", "route-beta"]) with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new("route-alpha", "model-alpha"), new("route-beta", "model-beta")]
+        };
+        string? selected = "route-alpha";
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.Provider, provider)
+            .Add(component => component.Value, selected)
+            .Add(component => component.ValueChanged, EventCallback.Factory.Create<string?>(this, value => selected = value))
+            .Add(component => component.ChoiceTestId, "model-choice")
+            .Add(component => component.OverrideTestId, "model-override"));
+
+        Assert.Equal(["Provider default (model-alpha)", "model-beta"],
+            cut.FindAll("option").Select(option => option.TextContent));
+        Assert.Empty(cut.FindAll("[data-testid='model-override']"));
+        cut.Find("[data-testid='model-choice']").Change("1");
+        Assert.Equal("route-beta", selected);
+        cut.Find("[data-testid='model-choice']").Change("0");
+        Assert.Equal(string.Empty, selected);
+    }
+
+    [Fact]
+    public void Removed_shared_model_is_explicitly_unavailable_and_does_not_show_its_routing_id() {
+        using var context = new BunitContext();
+        var provider = CreateProvider("route-alpha", ["route-alpha"]) with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new("route-alpha", "model-alpha")]
+        };
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.Provider, provider)
+            .Add(component => component.Value, "removed-route"));
+
+        Assert.Contains("Unavailable shared model", cut.Markup);
+        Assert.DoesNotContain("removed-route", cut.Markup);
+        cut.Render(parameters => parameters.Add(component => component.Disabled, true));
+        Assert.Contains("Unavailable shared model", cut.Markup);
+        Assert.DoesNotContain("removed-route", cut.Markup);
+    }
+
+    [Fact]
     public void ProviderModelSelector_lists_provider_default_and_suggested_models()
     {
         using var context = new BunitContext();

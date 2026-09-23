@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -7,12 +8,15 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -155,6 +159,16 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
         Assert.Equal(WorkflowRunState.Completed, result.RunState);
         Assert.Equal(expectedEffectCount, fixture.Probe.ApprovalExecutorInvocationCount);
         Assert.Equal(expectedEffectCount, fixture.Probe.AppliedEffectCount);
+
+        using var detailResponse = await secondHost.Client.GetAsync(
+            $"/api/workflows/runs/{started.Run.RunId:D}/detail");
+        var detail = await ReadSuccessAsync<WorkflowRunDetailApiResponse>(detailResponse);
+        Assert.Equal(expectedEffectCount, detail.Events.Count(workflowEvent =>
+            workflowEvent.NodeId == "approval-effect" &&
+            workflowEvent.Kind == WorkflowEventKind.ExecutorInvoked));
+        Assert.Equal(expectedEffectCount, detail.Events.Count(workflowEvent =>
+            workflowEvent.NodeId == "approval-effect" &&
+            workflowEvent.Kind == WorkflowEventKind.ExecutorCompleted));
 
         using var replayResponse = await SubmitAsync(
             secondHost.Client,
@@ -433,8 +447,8 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
     [Fact]
     public async Task RestartableResponsesAndLogs_DoNotExposeCheckpointOrSecrets()
     {
-        const string inputSentinel = "input-secret-SB06-f47aa920";
-        const string responseSentinel = "response-secret-SB06-9fb8b2c1";
+        const string inputSentinel = "input-secret-hitl-f47aa920";
+        const string responseSentinel = "response-secret-hitl-9fb8b2c1";
         await using var fixture = RestartableHitlFixture.Create(
             "safe-projections",
             captureLogs: true);
@@ -605,6 +619,135 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
             $"{guard.Category}/{guard.Classification} on {surface}.");
     }
 
+    [Fact]
+    public async Task HttpSearches_AfterHumanAndApprovalResume_RecordOneEventPairPerRequestAndReplaySse() {
+        var httpCount = 0;
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.Logging.ClearProviders();
+        await using var httpServer = builder.Build();
+        httpServer.Urls.Add("http://127.0.0.1:0");
+        httpServer.MapGet("/search", () => {
+            Interlocked.Increment(ref httpCount);
+            return Results.Json(new { found = false });
+        });
+        await httpServer.StartAsync();
+        await using var fixture = RestartableHitlFixture.Create("canonical-http-progress");
+        await using var host = await fixture.CreateHostAsync(apiConfiguration: new Dictionary<string, string?> {
+            ["Api:ServerSentEvents:ReplayCapacity"] = "1024"
+        });
+        Authorize(host, "canonical-http-progress");
+        var started = await StartAsync(host, CreateHttpSearchGraph($"{httpServer.Urls.Single()}/search"),
+            "canonical-http-progress");
+        Assert.Equal(1, fixture.Probe.PrefixInvocationCount);
+        Assert.Equal(0, Volatile.Read(ref httpCount));
+        var human = Assert.Single(started.PendingExternalRequests);
+        using var humanResponse = await SubmitAsync(host.Client, human.Id, human.Version,
+            "canonical-human", """{"answer":"imaginary hobby"}""");
+        var resumed = await ReadSuccessAsync<WorkflowExternalResponseApiResponse>(humanResponse);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.WaitingAgain, resumed.Outcome);
+        var pending = Assert.IsType<WorkflowPendingExternalRequestApiResponse>(resumed.NextPendingRequest);
+
+        for (var index = 1; index <= 3; index++) {
+            Assert.Equal($"search-{index}", pending.NodeId);
+            Assert.Equal(index - 1, Volatile.Read(ref httpCount));
+            var idempotencyKey = $"canonical-search-{index}";
+            const string decision = """{"approved":true,"message":"test approval"}""";
+            using var response = await SubmitAsync(host.Client, pending.Id, pending.Version, idempotencyKey, decision);
+            var result = await ReadSuccessAsync<WorkflowExternalResponseApiResponse>(response);
+            Assert.Equal(index == 3 ? WorkflowRunState.Completed : WorkflowRunState.WaitingForInput, result.RunState);
+            Assert.Equal(index, Volatile.Read(ref httpCount));
+            using var replayResponse = await SubmitAsync(host.Client, pending.Id, pending.Version, idempotencyKey, decision);
+            var replay = await ReadSuccessAsync<WorkflowExternalResponseApiResponse>(replayResponse);
+            Assert.True(replay.Replayed);
+            Assert.Equal(result.OperationId, replay.OperationId);
+            Assert.Equal(index, Volatile.Read(ref httpCount));
+            if (index < 3) {
+                pending = Assert.IsType<WorkflowPendingExternalRequestApiResponse>(result.NextPendingRequest);
+            }
+        }
+
+        using var detailResponse = await host.Client.GetAsync($"/api/workflows/runs/{started.Run.RunId:D}/detail");
+        var detail = await ReadSuccessAsync<WorkflowRunDetailApiResponse>(detailResponse);
+        Assert.Equal(WorkflowRunState.Completed, detail.Run.State);
+        foreach (var nodeId in new[] { "prefix", "search-1", "search-2", "search-3" }) {
+            Assert.Single(detail.Events, value => value.NodeId == nodeId && value.Kind == WorkflowEventKind.ExecutorInvoked);
+            Assert.Single(detail.Events, value => value.NodeId == nodeId && value.Kind == WorkflowEventKind.ExecutorCompleted);
+            Assert.Single(detail.Artifacts, value => value.NodeId == nodeId);
+        }
+
+        var notifications = await ReadWorkflowNotificationsAsync(host.Client, started.Run.RunId);
+        Assert.Equal(detail.Events.Select(value => value.Id).Order(), notifications.Select(value => value.EventId).Order());
+        var firstSearchCompletion = Assert.Single(detail.Events,
+            value => value.NodeId == "search-1" && value.Kind == WorkflowEventKind.ExecutorCompleted);
+        var cursor = Assert.Single(notifications, value => value.EventId == firstSearchCompletion.Id).Sequence;
+        var reconnected = await ReadWorkflowNotificationsAsync(host.Client, started.Run.RunId, cursor);
+        Assert.Equal(notifications.Where(value => value.Sequence > cursor), reconnected);
+        Assert.Equal(3, Volatile.Read(ref httpCount));
+        Assert.Equal(1, fixture.Probe.PrefixInvocationCount);
+    }
+
+    private static WorkflowGraph CreateHttpSearchGraph(string url) {
+        var nodes = new List<WorkflowNode> {
+            CreateNode("start", WorkflowNodeKind.Start, resultShape: JsonObjectShape),
+            CreateExecutorNode("prefix", PrefixMarkerExecutor.TestDescriptor),
+            CreateNode("human", WorkflowNodeKind.HumanInput, JsonObjectShape, JsonObjectShape)
+        };
+        for (var index = 1; index <= 3; index++) {
+            var node = CreateExecutorNode($"search-{index}", HttpFetchWorkflowExecutor.CredentialAwareDescriptor);
+            nodes.Add(node with { Settings = node.Settings with {
+                InputShape = JsonObjectShape,
+                ResultShape = JsonObjectShape,
+                ExecutorSettingsJson = WorkflowExecutorJson.Serialize(new WorkflowHttpExecutorSettings {
+                    Url = url,
+                    AllowPrivateNetworkTargets = true,
+                    IncludeInputPayload = true
+                }),
+                ExecutionPolicy = new WorkflowExecutorExecutionPolicy(20, 0, 0, true)
+            } });
+        }
+        nodes.Add(CreateNode("end", WorkflowNodeKind.End, inputShape: JsonObjectShape));
+        var edges = nodes.Zip(nodes.Skip(1), (source, target) =>
+            CreateEdge($"{source.Id.Value}-{target.Id.Value}", source.Id.Value, target.Id.Value)).ToArray();
+        return new WorkflowGraph(nodes[0].Id, nodes, edges);
+    }
+
+    private static async Task<IReadOnlyList<(long Sequence, Guid EventId)>> ReadWorkflowNotificationsAsync(
+        HttpClient client, Guid runId, long? after = null) {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/workflows/runs/{runId:D}/events/stream");
+        if (after.HasValue) {
+            request.Headers.Add("Last-Event-ID", after.Value.ToString(CultureInfo.InvariantCulture));
+        }
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(deadline.Token);
+        using var reader = new StreamReader(stream);
+        var notifications = new List<(long Sequence, Guid EventId)>();
+        long? sequence = null;
+        string? data = null;
+        string? eventName = null;
+        while (await reader.ReadLineAsync(deadline.Token) is { } line) {
+            if (line.StartsWith("id: ", StringComparison.Ordinal)) {
+                sequence = long.Parse(line.AsSpan(4), CultureInfo.InvariantCulture);
+            } else if (line.StartsWith("event: ", StringComparison.Ordinal)) {
+                eventName = line[7..];
+            } else if (line.StartsWith("data: ", StringComparison.Ordinal)) {
+                data = line[6..];
+            } else if (line.Length == 0 && data is not null) {
+                Assert.Equal(WorkflowRunEventsApi.EventName, eventName);
+                using var json = JsonDocument.Parse(data);
+                Assert.NotNull(sequence);
+                notifications.Add((sequence.Value, json.RootElement.GetProperty("eventId").GetGuid()));
+                if (json.RootElement.GetProperty("isTerminal").GetBoolean()) {
+                    return notifications;
+                }
+                sequence = null;
+                data = null;
+            }
+        }
+        throw new InvalidOperationException("Workflow SSE ended without its terminal event.");
+    }
+
     private static string Authorize(ApiTestHost host, string subject)
     {
         var token = host.App.Services.GetRequiredService<IApiTokenService>().IssueToken(
@@ -612,7 +755,12 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
             {
                 Subject = subject,
                 DisplayName = subject,
-                Scopes = [ApiAccessScopeNames.RespondWorkflows]
+                Scopes = [
+                    ApiAccessScopeNames.ReadWorkflows,
+                    ApiAccessScopeNames.WriteWorkflows,
+                    ApiAccessScopeNames.ExecuteWorkflows,
+                    ApiAccessScopeNames.RespondWorkflows
+                ]
             });
         host.Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(token.TokenType, token.Token);
@@ -1056,7 +1204,8 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
             => new(scenario, clock, captureLogs);
 
         public Task<ApiTestHost> CreateHostAsync(
-            WorkflowExternalResponseRecoveryHook? recoveryHook = null)
+            WorkflowExternalResponseRecoveryHook? recoveryHook = null,
+            IReadOnlyDictionary<string, string?>? apiConfiguration = null)
             => ApiTestHost.CreateAsync(
                 jwtEnabled: true,
                 configureServices: services =>
@@ -1089,7 +1238,8 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
                 },
                 useInMemoryDatabase: false,
                 sharedTestEnvironment: testEnvironment,
-                sharedActiveProfile: activeProfile);
+                sharedActiveProfile: activeProfile,
+                apiConfiguration: apiConfiguration);
 
         public ValueTask DisposeAsync() => testEnvironment.DisposeAsync();
     }
@@ -1207,7 +1357,7 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
             cancellationToken.ThrowIfCancellationRequested();
             if (point == target && Interlocked.Exchange(ref armed, 0) == 1)
             {
-                throw new InvalidOperationException($"Injected SB06 crash at {point}.");
+                throw new InvalidOperationException($"Injected workflow HITL crash at {point}.");
             }
 
             return ValueTask.CompletedTask;

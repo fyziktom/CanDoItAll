@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
 
-internal static class WorkflowHttpRequestUriResolver
+public static class WorkflowHttpRequestUriResolver
 {
     public static Uri Resolve(
         WorkflowHttpExecutorSettings settings,

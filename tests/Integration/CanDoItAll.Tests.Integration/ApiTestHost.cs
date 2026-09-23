@@ -13,6 +13,7 @@ using CanDoItAll.Tests.Support;
 using CanDoItAll.Web;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Composition;
+using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -62,7 +63,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
         string? environmentName = null,
         IFakeAgentRuntime? agentRuntimeOverride = null,
         CanDoItAllTestEnvironment? sharedTestEnvironment = null,
-        TestDatabaseProfile? sharedActiveProfile = null)
+        TestDatabaseProfile? sharedActiveProfile = null,
+        Action<WebApplication>? configureApplication = null,
+        IReadOnlyDictionary<string, string?>? apiConfiguration = null)
     {
         if ((sharedTestEnvironment is null) != (sharedActiveProfile is null))
         {
@@ -105,6 +108,11 @@ internal sealed class ApiTestHost : IAsyncDisposable
             ["Api:Authorization:MaxTokenLifetimeMinutes"] = "120"
         };
         string resolvedEnvironmentName = environmentName ?? Environments.Development;
+        if (apiConfiguration is not null) {
+            foreach (var entry in apiConfiguration) {
+                configurationOverrides[entry.Key] = entry.Value;
+            }
+        }
         if (!string.Equals(resolvedEnvironmentName, Environments.Development, StringComparison.OrdinalIgnoreCase))
         {
             string certificatePath = CreateDataProtectionCertificate(testEnvironment.RootPath);
@@ -129,6 +137,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
             registerTestHostApplicationLifetime: false);
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole();
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
         builder.Services.AddCanDoItAllApi(builder.Configuration);
         configureServices?.Invoke(builder.Services);
         if (agentRuntimeOverride is not null)
@@ -151,14 +160,19 @@ internal sealed class ApiTestHost : IAsyncDisposable
         app.Urls.Add("http://127.0.0.1:0");
 
         var options = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
+        app.UseMiddleware<ApiTransportMiddleware>();
         if (options.Authorization.Enabled)
         {
             app.UseAuthentication();
             app.UseAuthorization();
         }
 
+        configureApplication?.Invoke(app);
+        app.UseMiddleware<AccessContextReferenceMiddleware>();
+
         app.MapCanDoItAllApiDocumentation();
 
+        app.MapCanDoItAllManagedFiles();
         app.MapProjectStructureAgentApi();
         app.MapCanDoItAllApi();
 
@@ -274,7 +288,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         var server = app.Services.GetRequiredService<IServer>();
         var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses
             ?? throw new InvalidOperationException("The API test host did not expose any server addresses.");
-        return new HttpClient
+        return new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
         {
             BaseAddress = new Uri(addresses.Single()),
             Timeout = TimeSpan.FromSeconds(30)

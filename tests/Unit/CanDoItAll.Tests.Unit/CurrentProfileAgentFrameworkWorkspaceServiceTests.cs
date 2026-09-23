@@ -58,6 +58,83 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
     }
 
     [Theory]
+    [InlineData(DirectoryProjectionMutation.SaveAgent)]
+    [InlineData(DirectoryProjectionMutation.CloneAgent)]
+    [InlineData(DirectoryProjectionMutation.ConvertToTemplate)]
+    [InlineData(DirectoryProjectionMutation.ImportAgent)]
+    public async Task Committed_agent_identity_survives_projection_failure(DirectoryProjectionMutation mutation) {
+        var calls = new List<ProjectionRefreshCall>();
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
+        var writer = (RecordingWorkspaceServiceProxy)(object)workspace;
+        writer.Calls = calls;
+        var bridge = DispatchProxy.Create<IAiTechnicalAgentBridge, RecordingTechnicalAgentBridgeProxy>();
+        var projection = (RecordingTechnicalAgentBridgeProxy)(object)bridge;
+        projection.Calls = calls;
+        projection.Failure = new InvalidOperationException("CRM projection unavailable after catalog commit.");
+        var services = new ServiceCollection();
+        services.AddLogging();
+        using var provider = services.BuildServiceProvider();
+        var service = CreateCurrentProfileService(new StubWorkspaceFactory(workspace), bridge,
+            new RecordingReferenceDataCacheInvalidator(calls), provider);
+
+        var failure = await Assert.ThrowsAsync<AgentDirectoryProjectionSynchronizationException>(() =>
+            ExecuteDirectoryProjectionMutationAsync(service, mutation));
+
+        Assert.Equal(writer.CommittedId, failure.AgentId);
+        Assert.Same(projection.Failure, failure.InnerException);
+        Assert.Equal(1, calls.Count(call => call == ProjectionRefreshCall.WorkspaceMutation));
+    }
+
+    [Theory]
+    [InlineData(ReceiptMutation.ImportPackage)]
+    [InlineData(ReceiptMutation.Provision)]
+    [InlineData(ReceiptMutation.Archive)]
+    public async Task Committed_receipt_survives_projection_failure(ReceiptMutation mutation) {
+        var calls = new List<ProjectionRefreshCall>();
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
+        var writer = (RecordingWorkspaceServiceProxy)(object)workspace;
+        writer.Calls = calls;
+        var bridge = DispatchProxy.Create<IAiTechnicalAgentBridge, RecordingTechnicalAgentBridgeProxy>();
+        var projection = (RecordingTechnicalAgentBridgeProxy)(object)bridge;
+        projection.Calls = calls;
+        projection.Failure = new IOException("Secondary projection unavailable.");
+        var services = new ServiceCollection();
+        services.AddLogging();
+        using var provider = services.BuildServiceProvider();
+        var service = CreateCurrentProfileService(new StubWorkspaceFactory(workspace), bridge,
+            new RecordingReferenceDataCacheInvalidator(calls), provider);
+        using var stream = new MemoryStream();
+
+        var failure = await Assert.ThrowsAsync<AgentDirectoryProjectionSynchronizationException>(async () => {
+            switch (mutation) {
+                case ReceiptMutation.ImportPackage:
+                    await service.ImportAgentPackageAsync(stream, new(AgentPackageImportMode.Create, "intent", "external-key"));
+                    break;
+                case ReceiptMutation.Provision:
+                    await service.ProvisionAgentByExternalKeyAsync(new("namespace", "key", "intent", null, new()));
+                    break;
+                case ReceiptMutation.Archive:
+                    await service.ArchiveAgentByExternalKeyAsync(new("namespace", "key", "intent", null));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mutation));
+            }
+        });
+
+        Assert.Equal(writer.CommittedId, failure.AgentId);
+        Assert.Same(projection.Failure, failure.InnerException);
+        if (mutation == ReceiptMutation.ImportPackage) {
+            Assert.Same(writer.ImportReceipt, failure.ImportReceipt);
+        } else {
+            Assert.Same(writer.ProvisioningReceipt, failure.ProvisioningReceipt);
+        }
+
+        Assert.Equal(1, calls.Count(call => call == ProjectionRefreshCall.WorkspaceMutation));
+    }
+
+    public enum ReceiptMutation { ImportPackage, Provision, Archive }
+
+    [Theory]
     [InlineData(ProjectAccessMutation.Grant)]
     [InlineData(ProjectAccessMutation.Revoke)]
     public async Task Project_access_mutation_succeeds_after_catalog_commit_when_secondary_projections_fail(
@@ -263,6 +340,9 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
 
     private class RecordingWorkspaceServiceProxy : DispatchProxy
     {
+        public Guid CommittedId { get; } = Guid.NewGuid();
+        public AgentPackageImportReceipt? ImportReceipt { get; private set; }
+        public AgentExternalProvisioningReceipt? ProvisioningReceipt { get; private set; }
         public List<ProjectionRefreshCall> Calls { get; set; } = null!;
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
@@ -277,7 +357,14 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
                 nameof(IAgentFrameworkWorkspaceService.ConvertToTemplateAsync) or
                 nameof(IAgentFrameworkWorkspaceService.ImportAgentAsync) or
                 nameof(IAgentFrameworkWorkspaceService.SaveProviderAsync)
-                    => Task.FromResult(Guid.NewGuid()),
+                    => Task.FromResult(CommittedId),
+                nameof(IAgentFrameworkWorkspaceService.ImportAgentPackageAsync)
+                    => Task.FromResult(ImportReceipt = new(CommittedId, AgentPackageImportMode.Create, "external-key", "package-hash",
+                        "schema", "version", "configuration-hash", [], ["Owner import warning"], false)),
+                nameof(IAgentFrameworkWorkspaceService.ProvisionAgentByExternalKeyAsync) or
+                nameof(IAgentFrameworkWorkspaceService.ArchiveAgentByExternalKeyAsync)
+                    => Task.FromResult(ProvisioningReceipt = new("namespace", "key", CommittedId, "configuration-version", true, false,
+                        targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.ArchiveAgentByExternalKeyAsync), ["Owner provisioning warning"])),
                 nameof(IAgentFrameworkWorkspaceService.DeleteAgentAsync) or
                 nameof(IAgentFrameworkWorkspaceService.DeleteProviderAsync) or
                 nameof(IAgentFrameworkWorkspaceService.GrantAgentProjectStructureAccessAsync) or
@@ -332,6 +419,7 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
 
     private class RecordingTechnicalAgentBridgeProxy : DispatchProxy
     {
+        public Exception? Failure { get; set; }
         public List<ProjectionRefreshCall> Calls { get; set; } = null!;
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
@@ -341,7 +429,7 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
             if (targetMethod.Name == nameof(IAiTechnicalAgentBridge.SynchronizeDirectoryProjectionAsync))
             {
                 Calls.Add(ProjectionRefreshCall.DirectoryProjectionSynchronization);
-                return Task.CompletedTask;
+                return Failure is null ? Task.CompletedTask : Task.FromException(Failure);
             }
 
             throw new NotSupportedException($"Unexpected bridge call '{targetMethod.Name}'.");

@@ -25,6 +25,28 @@ flowchart TB
     Infrastructure --> PostgreSQL[("PostgreSQL")]
 ```
 
+## Shared provider and request history boundaries
+
+`SharedProviders.Abstractions` owns framework-neutral protocol values and ports;
+`SharedProviders.Http` owns HTTP adapters, bounded JSON/SSE parsing and network policy.
+ProviderManagement owns publication, source/import reconciliation and catalog/routing
+projection. Web owns HTTP authorization, correlation and generated schemas; Composition
+selects transports and registers the production implementations.
+
+ProviderHistory Abstractions separates attempt/caller/owner/policy contracts from the
+Application recorder, capture lifecycle and projections, and the PostgreSQL Persistence
+stores. The MAF/provider and lightweight LLM adapters observe application-visible calls.
+Canonical source content is linked rather than copied into standalone details. UI
+components explicitly search and load authorized details; they do not own persistence.
+
+Catalog cache hits check persisted publication/profile versions and required-secret
+existence before reuse. Input retention freezes the deadline per logical request/input
+revision; deleting an expired orphan tombstone cannot renew a late retry's capture.
+These responsibilities stay in existing owners without new project references.
+
+See [shared providers](../shared-providers.md) and
+[request history](../provider-request-history.md) for operating behavior.
+
 ## Layer Responsibilities
 
 | Layer | Responsibility |
@@ -38,7 +60,8 @@ flowchart TB
 | `src/Foundation` | Shared primitives, PostgreSQL infrastructure, migrations, and Git integration |
 | `src/Integration` | Adapters for file tools and other separately owned systems |
 | `src/plugins` | Plugin contracts and bundled plugin implementations |
-| `src/UI` | Application-owned reusable UI facades and focused UI integrations |
+| `src/UI` | Application-owned reusable UI facades, the shared record-browsing family, and the feature rendering libraries a module's routed hosts bind to |
+| `src/Sandboxes` | Small hosts that render a feature's real components from deterministic scenarios, without the module implementations or a database |
 
 ## Dependency Direction
 
@@ -48,6 +71,11 @@ flowchart TB
 - Infrastructure implements persistence and external boundaries selected by composition.
 - MAF, provider, plugin, MCP, and Memory drivers adapt external behavior to provider-neutral contracts.
 - Cross-module behavior uses typed services, commands, events, projections, or runtime-tool contracts.
+- A feature rendering library depends on contracts assemblies and shared UI, never on a module
+  implementation. A module's routed host keeps the state, the reads and the writes and implements
+  the rendering library's contract; a lightweight contracts assembly
+  (`CanDoItAll.Modules.<Feature>.Contracts`) is what a renderer or another module may name instead
+  of the implementation. [UI component seams](ui-component-seams.md) is the guidance for that seam.
 
 Direct calls from persistence into UI, module-to-module access through Razor components,
 and provider-specific types in domain contracts violate this direction.

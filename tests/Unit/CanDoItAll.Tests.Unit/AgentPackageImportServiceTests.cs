@@ -93,6 +93,25 @@ public sealed class AgentPackageImportServiceTests
         Assert.Empty(store.Document.AgentPackageImportOperations);
     }
 
+    [Fact]
+    public async Task ImportAsync_alternate_package_reader_cannot_install_executable_admission_state() {
+        var agent = CreateAgent();
+        var original = SandboxWorkspaceDocument.Empty;
+        var store = new InMemoryWorkspaceStore(original);
+        var package = CreateImportResult(agent) with { Runs = [AgentPackageAdmittedRunFixture.Create(agent.Id)] };
+        var service = CreateService(store, new StubAgentPackageService(package));
+        var command = new AgentPackageImportCommand(AgentPackageImportMode.Create, "admitted-history-import", "admitted-history");
+
+        var exception = await Assert.ThrowsAsync<AgentPackageImportException>(() => service.ImportAsync(Stream.Null, command));
+
+        Assert.Equal(AgentPackageImportFailureKind.InvalidRequest, exception.Kind);
+        Assert.Equal("agent-package.runtime-admission-not-portable", exception.Code);
+        Assert.Same(original, store.Document);
+        Assert.Empty(store.Document.Agents);
+        Assert.Empty(store.Document.AgentPackageImportOperations);
+        Assert.Empty(store.Document.ExecutionRuns);
+    }
+
     private static AgentPackageImportService CreateService(
         ISandboxWorkspaceStore store,
         IAgentPackageService packageService)

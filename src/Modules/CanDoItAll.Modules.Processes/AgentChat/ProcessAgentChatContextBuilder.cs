@@ -45,7 +45,8 @@ internal sealed record ProcessWorkspaceAgentChatContext(
     ProcessWorkspaceShellProjection? Shell,
     ProcessLiveProcessSnapshot? FocusedRun,
     ProcessTimelineEventProjection? FocusedEvent,
-    AgentChatContextAccessState AccessState);
+    AgentChatContextAccessState AccessState,
+    AgentProjectStructureLifetime? ObservedProjectLifetime = null);
 
 internal sealed record LiveProcessesAgentChatContext(
     string NavigationUri,
@@ -58,7 +59,8 @@ internal sealed record LiveProcessesAgentChatContext(
     ProcessLiveProcessSnapshot? FocusedRun,
     Guid? FilesRunId,
     ProcessRuntimeActiveAgentProjection? FocusedAgent,
-    AgentChatContextAccessState AccessState);
+    AgentChatContextAccessState AccessState,
+    AgentProjectStructureLifetime? ObservedProjectLifetime = null);
 
 internal static class ProcessAgentChatContextBuilder
 {
@@ -122,11 +124,6 @@ internal static class ProcessAgentChatContextBuilder
             definitionReference,
             runReference);
         var facts = BuildWorkspaceFacts(context, selectedDefinition, selectedRun, provenance);
-        var scopeRunId = focusedEvent?.RunId.Value ??
-            focusedRun?.RunId.Value ??
-            selectedRun?.RunId.Value ??
-            (hasSelection ? context.SelectedRunId : null);
-
         return new AgentChatContextSurface(
             BuildSource(WorkspaceSourceKind, WorkspaceSurface, context.ProjectId),
             context.ProjectId.HasValue ? "Project processes" : "Processes",
@@ -142,9 +139,10 @@ internal static class ProcessAgentChatContextBuilder
                 primarySelection,
                 selectedEntities,
                 facts),
-            ResolveWorkspaceScope(context.ProjectId, scopeRunId),
+            ResolveWorkspaceScope(context.ProjectId),
             accessMode: AgentChatContextScopeAccessMode.Unrestricted,
-            accessState: context.AccessState);
+            accessState: ResolveAccessState(context.ProjectId, context.ObservedProjectLifetime, context.AccessState),
+            observedProjectLifetime: context.ObservedProjectLifetime);
     }
 
     public static AgentChatContextSurface BuildLiveSurface(
@@ -208,10 +206,18 @@ internal static class ProcessAgentChatContextBuilder
                 primarySelection,
                 selectedEntities,
                 facts),
-            ResolveWorkspaceScope(context.ProjectId, selectedRunId),
+            ResolveWorkspaceScope(context.ProjectId),
             accessMode: AgentChatContextScopeAccessMode.Unrestricted,
-            accessState: context.AccessState);
+            accessState: ResolveAccessState(context.ProjectId, context.ObservedProjectLifetime, context.AccessState),
+            observedProjectLifetime: context.ObservedProjectLifetime);
     }
+
+    private static AgentChatContextAccessState ResolveAccessState(Guid? projectId, AgentProjectStructureLifetime? lifetime,
+        AgentChatContextAccessState state)
+        => state == AgentChatContextAccessState.Ready && projectId.HasValue &&
+            (lifetime is null || lifetime.ProjectId != projectId)
+                ? AgentChatContextAccessState.Loading
+                : state;
 
     private static AgentChatContextSource BuildSource(
         string sourceKind,
@@ -224,19 +230,10 @@ internal static class ProcessAgentChatContextBuilder
                     ? $"{surface}:project:{projectId.Value:D}"
                     : $"{surface}:global"));
 
-    private static WorkspaceScopeDescriptor? ResolveWorkspaceScope(
-        Guid? projectId,
-        Guid? runId)
-    {
-        if (runId is { } processRunId && processRunId != Guid.Empty)
-        {
-            return WorkspaceScopeDescriptor.Process(processRunId.ToString("D"));
-        }
-
-        return projectId.HasValue
+    private static WorkspaceScopeDescriptor? ResolveWorkspaceScope(Guid? projectId)
+        => projectId.HasValue
             ? WorkspaceScopeDescriptor.Project(projectId.Value.ToString("D"))
             : null;
-    }
 
     private static ProcessLiveProcessSnapshot? ResolveRun(
         ProcessWorkspaceShellProjection? shell,

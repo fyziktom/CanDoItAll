@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Mcp;
 
@@ -16,6 +17,8 @@ public sealed class McpSetupTestService(IMcpClientFactory clientFactory) : IMcpS
             correlationId);
         if (validationFailure is not null)
         {
+            // The descriptor was rejected before any MCP server was created or started.
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
             return validationFailure;
         }
 

@@ -10,6 +10,20 @@ public static class WorkspaceExecutionAuditContext
 
     public static WorkspaceExecutionAuditScopeState? Current => CurrentState.Value;
 
+    public static WorkspaceScopeDescriptor? RequireMatchingExecutionWorkspaceScope(Guid executionRunId, Guid agentId,
+        WorkspaceScopeDescriptor contextWorkspaceScope) {
+        var current = Current;
+        if (current is null) {
+            return null;
+        }
+        if (current.ExecutionRunId != executionRunId || current.AgentId != agentId ||
+                current.ContextWorkspaceScope is { } original && original != contextWorkspaceScope) {
+            throw new AgentToolAdmissionException("workspace.execution-scope-mismatch",
+                "The active execution workspace does not belong to the admitted run and source.");
+        }
+        return current.ExecutionWorkspaceScope;
+    }
+
     public static IDisposable BeginScope(
         ExecutionRunRecord run,
         WorkspaceScopeDescriptor? contextWorkspaceScope = null,
@@ -47,7 +61,11 @@ public static class WorkspaceExecutionAuditContext
             contextWorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
             ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run),
             ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run),
-            executionWorkspaceScope);
+            executionWorkspaceScope)
+        {
+            InvocationExternalTargetScopeIsAuthoritative =
+                ExecutionInvocationMetadata.IsTrustedGovernedProcessRun(run)
+        };
         return new Scope(previous);
     }
 
@@ -80,7 +98,10 @@ public static class WorkspaceExecutionAuditContext
         WorkspaceScopeDescriptor? ContextWorkspaceScope,
         ProjectStructureAgentIdentityDescriptor? ProjectStructureLaunchAgent,
         ProjectStructureProcessNodeContextDescriptor? ProjectStructureProcessNodeContext,
-        WorkspaceScopeDescriptor? ExecutionWorkspaceScope = null);
+        WorkspaceScopeDescriptor? ExecutionWorkspaceScope = null)
+    {
+        public bool InvocationExternalTargetScopeIsAuthoritative { get; init; }
+    }
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

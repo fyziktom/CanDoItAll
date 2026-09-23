@@ -38,6 +38,8 @@ This repository does not own:
 | [`src/Processes`](src/Processes/README.md) | Durable process model, execution, projections, and persistence |
 | [`src/Memory`](src/Memory/README.md) | Provider-neutral Memory contracts, drivers, and persistence |
 | [`src/MAF`](src/MAF/README.md) | AgentFramework and Microsoft Agent Framework integration |
+| [`src/UI`](src/UI/README.md) | Application-wide shell components and the feature rendering libraries |
+| [`src/Sandboxes`](src/Sandboxes) | Small hosts that render a feature's real components from deterministic scenarios, without a database |
 | [`Templates`](Templates/README.md) | Repository-owned runtime seed and template packs |
 
 `CanDoItAll.slnx` is the canonical product solution. Test projects are intentionally
@@ -51,6 +53,11 @@ contract remains available to remote clients: turn admission returns a durable o
 dispatcher owns provider execution, and clients follow status or replayable SSE. See
 [LLM Chats product and API](docs/llm-chats-api.md).
 
+> **Existing PostgreSQL installations: migrate before updating.** Give your coding agent
+> [the PostgreSQL 16-to-18 preservation runbook](tools/dev/Migrate-PostgreSql16To18.md)
+> before running an installer or changing an image. Preserve and restore existing data
+> into a separate PostgreSQL 18 cluster. Changing the tag or `PG_VERSION` is not a migration.
+
 ## Requirements
 
 - the .NET SDK selected by [`global.json`](global.json)
@@ -58,7 +65,7 @@ dispatcher owns provider execution, and clients follow status or replayable SSE.
   described in [Installing instances](docs/operations/installing-instances.md#choose-a-deployment-model)
 - sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` source repositories for the
   default local-development dependency mode, or an explicit package-mode build
-- PostgreSQL 16 or a compatible supported server
+- PostgreSQL 18 (the provisioned and tested baseline), or a compatible externally managed server
 - Docker Desktop or another Compose v2 runtime when using the development application stack
 - Node.js and npm when rebuilding application Tailwind output
 - PowerShell 7 on Windows, Linux, or macOS for repository automation; the dedicated
@@ -222,11 +229,41 @@ The main dependency direction is:
 Start with:
 
 - [Architecture overview](docs/architecture/overview.md)
+- [UI component seams](docs/architecture/ui-component-seams.md)
 - [Storage, paths, and host portability](docs/architecture/storage-and-path-portability.md)
 - [Runtime execution and shell portability](docs/architecture/runtime-execution-portability.md)
 - [Internal communication](docs/architecture/internal-communication.md)
 - [Module map](docs/architecture/modules.md)
 - [Documentation index](docs/README.md)
+- [Shared providers](docs/shared-providers.md)
+- [Provider request history](docs/provider-request-history.md)
+
+### Feature rendering libraries and their sandboxes
+
+Several modules keep their rendering in a feature UI library while the routed host keeps the state,
+the reads and the writes. Each has a small sandbox host that renders those same components from
+deterministic scenarios, with no module implementation, no production runtime registration and no
+database, so a rendering change can be seen without starting the application:
+
+| Library | Sandbox | Started with |
+|---|---|---|
+| [`CanDoItAll.CrmHr.UI`](src/UI/CanDoItAll.CrmHr.UI/README.md) | [CRM / HR UI sandbox](src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile "CrmHr sandbox"` |
+| [`CanDoItAll.Prompts.UI`](src/UI/CanDoItAll.Prompts.UI/README.md) | [Prompt Gallery UI sandbox](src/Sandboxes/CanDoItAll.Prompts.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.Prompts.UiSandbox --launch-profile "Prompts sandbox"` |
+| [`CanDoItAll.AgentFramework.UI`](src/UI/CanDoItAll.AgentFramework.UI) | [Agent catalog sandbox](src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile "Catalog sandbox"` |
+
+Each sandbox has two asset modes. The default profile links the real production stylesheet, so what
+the sandbox shows is what the application shows; the `... Fast` profile generates a small stylesheet
+that scans only the sandbox and its rendering library, which starts faster while iterating on markup.
+Each sandbox README describes its own modes and ports.
+
+The shared record browser, picker and selection family lives in
+[`CanDoItAll.AppComponents.RecordBrowsing`](src/UI/CanDoItAll.AppComponents.RecordBrowsing/README.md)
+and the application-wide shell in [`CanDoItAll.AppComponents`](src/UI/CanDoItAll.AppComponents/README.md).
+
+This separation is being applied module by module. CRM / HR and the Prompt Gallery are done; the
+other modules keep their rendering in the module itself, which is a supported state and not a defect.
+[UI component seams](docs/architecture/ui-component-seams.md) is the guidance, and each completed
+slice has its own record under [`docs/architecture`](docs/architecture).
 
 ## Styling
 

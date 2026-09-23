@@ -384,7 +384,7 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
-    public async Task ComponentLibraryRejectsStructuredOutputWhenProviderDoesNotSupportIt()
+    public async Task ComponentLibraryAcceptsStructuredOutputForOllama()
     {
         var ollamaProvider = CreateProvider(
             "Ollama chat",
@@ -392,10 +392,14 @@ public sealed class WorkflowCatalogTests
             ProviderTransportKind.ChatCompletions,
             ProviderProfilePurpose.Chat,
             "llama3.2",
-            ["llama3.2"]);
+            ["llama3.2"]) with {
+                ModelPrices = [new ProviderModelTokenPrice("llama3.2", 0m, 0m, 0m) {
+                    TariffKind = ProviderTariffKind.ExplicitFree
+                }]
+            };
         var catalog = CreateCatalog([ollamaProvider]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => catalog.SaveComponentAsync(
+        var component = await catalog.SaveComponentAsync(
             CreateComponentRequest() with
             {
                 ProviderProfileId = ollamaProvider.Id,
@@ -405,9 +409,11 @@ public sealed class WorkflowCatalogTests
                     MaxOutputTokens: 800,
                     RequireJsonOutput: true,
                     ResponseFormatJsonSchema: "{}")
-            }));
+            });
 
-        Assert.Contains("structured JSON output", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ollamaProvider.Id, component.ProviderProfileId);
+        Assert.True(component.ModelSettings.RequireJsonOutput);
+        Assert.Equal("{}", component.ModelSettings.ResponseFormatJsonSchema);
     }
 
     [Fact]

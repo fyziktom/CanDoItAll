@@ -1,3 +1,5 @@
+using CanDoItAll.SharedKernel.Configuration;
+
 namespace CanDoItAll.Modules.Workspace;
 
 public sealed class ConnectorPluginRegistry(IEnumerable<IConnectorManifestSource> sources)

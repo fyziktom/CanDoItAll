@@ -1,181 +1,78 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal static class MafToolInvocationArgumentFormatter
-{
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-
-    public static string ResolveToolName(ToolCallContent toolCall)
-    {
+internal static class MafToolInvocationArgumentFormatter {
+    public static string ResolveToolName(ToolCallContent toolCall) {
         ArgumentNullException.ThrowIfNull(toolCall);
 
-        return toolCall switch
-        {
+        return toolCall switch {
             FunctionCallContent functionCall when !string.IsNullOrWhiteSpace(functionCall.Name) => functionCall.Name,
             McpServerToolCallContent mcpToolCall when !string.IsNullOrWhiteSpace(mcpToolCall.Name) => mcpToolCall.Name,
             _ => "Unnamed tool"
         };
     }
 
-    public static string ResolveToolCallKey(ToolCallContent toolCall)
-    {
+    public static string ResolveToolCallKey(ToolCallContent toolCall, AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(toolCall);
 
         return toolCall.CallId
-            ?? $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall)}";
+            ?? $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall, toolPolicies)}";
     }
 
-    public static string ResolveToolInvocationSignature(ToolCallContent toolCall)
-    {
+    public static string ResolveToolInvocationSignature(ToolCallContent toolCall, AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(toolCall);
 
-        return $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall)}";
+        return $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall, toolPolicies)}";
     }
 
-    public static string DescribeToolInvocation(ToolCallContent toolCall)
-    {
+    public static string DescribeToolInvocation(ToolCallContent toolCall, AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(toolCall);
 
         var toolName = ResolveToolName(toolCall);
-        var arguments = DescribeToolCallArguments(toolCall);
+        var arguments = DescribeToolCallArguments(toolCall, toolPolicies);
         return string.IsNullOrWhiteSpace(arguments)
             ? $"Invoking tool '{toolName}'."
             : $"Invoking tool '{toolName}' with {arguments}.";
     }
 
-    public static string DescribeToolCallArguments(ToolCallContent toolCall)
-    {
+    public static string DescribeToolCallArguments(ToolCallContent toolCall, AgentToolPolicyCatalog? toolPolicies = null) {
         ArgumentNullException.ThrowIfNull(toolCall);
 
         var toolName = ResolveToolName(toolCall);
-        return toolCall switch
-        {
-            FunctionCallContent functionCall => SummarizeArguments(toolName, functionCall.Arguments),
-            McpServerToolCallContent mcpToolCall => SummarizeArguments(toolName, mcpToolCall.Arguments),
+        return toolCall switch {
+            FunctionCallContent functionCall => SummarizeArguments(toolName, functionCall.Arguments, toolPolicies),
+            McpServerToolCallContent mcpToolCall => SummarizeArguments(toolName, mcpToolCall.Arguments, toolPolicies),
             _ => string.Empty
         };
     }
 
-    public static string DescribeArguments(string? argumentsJson, string? toolName = null)
-    {
-        return string.IsNullOrWhiteSpace(argumentsJson)
-            ? string.Empty
-            : FormatArgumentSummary(toolName, DeserializeArguments(argumentsJson));
-    }
+    public static string DescribeArguments(string? argumentsJson, string? toolName = null, AgentToolPolicyCatalog? toolPolicies = null)
+        => AgentToolArgumentDisplayFormatter.DescribeArguments(argumentsJson, toolName, toolPolicies);
 
     public static string FormatInlineArgumentSummary(string argumentSummary)
-    {
-        return string.IsNullOrWhiteSpace(argumentSummary)
-            ? string.Empty
-            : $" with {argumentSummary}";
-    }
+        => AgentToolArgumentDisplayFormatter.FormatInlineArgumentSummary(argumentSummary);
 
     public static string SummarizeArguments(IDictionary<string, object?>? arguments)
-        => SummarizeArguments(string.Empty, arguments);
+        => AgentToolArgumentDisplayFormatter.SummarizeArguments(arguments);
 
-    public static string SummarizeArguments(
-        string? toolName,
-        IDictionary<string, object?>? arguments)
-    {
-        if (arguments is null || arguments.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        return FormatArgumentSummary(toolName, arguments);
-    }
+    public static string SummarizeArguments(string? toolName, IDictionary<string, object?>? arguments, AgentToolPolicyCatalog? toolPolicies = null)
+        => AgentToolArgumentDisplayFormatter.SummarizeArguments(toolName, arguments, toolPolicies);
 
     public static string FormatArgumentSummary(IEnumerable<KeyValuePair<string, object?>> arguments)
-        => FormatArgumentSummary(string.Empty, arguments);
+        => AgentToolArgumentDisplayFormatter.FormatArgumentSummary(arguments);
 
-    public static string FormatArgumentSummary(
-        string? toolName,
-        IEnumerable<KeyValuePair<string, object?>> arguments)
-    {
-        ArgumentNullException.ThrowIfNull(arguments);
-
-        var sanitizedArguments = AgentToolInvocationPolicyMetadata.SanitizeArgumentsForDisplay(
-            toolName,
-            arguments);
-        var parts = sanitizedArguments
-            .Where(item => item.Value is not null)
-            .Select(item => $"{item.Key}={FormatArgumentValue(item.Value)}")
-            .ToList();
-
-        return parts.Count == 0
-            ? string.Empty
-            : string.Join(", ", parts);
-    }
+    public static string FormatArgumentSummary(string? toolName, IEnumerable<KeyValuePair<string, object?>> arguments, AgentToolPolicyCatalog? toolPolicies = null)
+        => AgentToolArgumentDisplayFormatter.FormatArgumentSummary(toolName, arguments, toolPolicies);
 
     public static string FormatArgumentValue(object? value)
-    {
-        if (value is null)
-        {
-            return "<null>";
-        }
-
-        var text = value switch
-        {
-            string stringValue => stringValue,
-            JsonElement jsonValue => jsonValue.ToString(),
-            _ => JsonSerializer.Serialize(value, SerializerOptions)
-        };
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "\"\"";
-        }
-
-        text = text.ReplaceLineEndings(" ").Trim();
-        if (text.Length > 120)
-        {
-            text = text[..120] + $"...#{StableContentHash.ComputeShortSha256Hex(text)}";
-        }
-
-        return $"\"{text}\"";
-    }
+        => AgentToolArgumentDisplayFormatter.FormatArgumentValue(value);
 
     public static Dictionary<string, object?> DeserializeArguments(string? argumentsJson)
-    {
-        if (string.IsNullOrWhiteSpace(argumentsJson))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return [];
-            }
-
-            return document.RootElement.EnumerateObject()
-                .ToDictionary(property => property.Name, property => ConvertJsonValue(property.Value));
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
+        => AgentToolArgumentDisplayFormatter.DeserializeArguments(argumentsJson);
 
     public static object? ConvertJsonValue(JsonElement value)
-    {
-        return value.ValueKind switch
-        {
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            JsonValueKind.String => value.GetString(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Number when value.TryGetInt64(out var longValue) => longValue,
-            JsonValueKind.Number when value.TryGetDouble(out var doubleValue) => doubleValue,
-            JsonValueKind.Array => value.EnumerateArray().Select(ConvertJsonValue).ToList(),
-            JsonValueKind.Object => value.EnumerateObject().ToDictionary(property => property.Name, property => ConvertJsonValue(property.Value)),
-            _ => value.ToString()
-        };
-    }
+        => AgentToolArgumentDisplayFormatter.ConvertJsonValue(value);
 }
