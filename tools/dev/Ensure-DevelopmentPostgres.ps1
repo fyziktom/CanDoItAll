@@ -1,3 +1,4 @@
+[CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [string]$DatabaseName = "candoitall_development",
     [string]$AppUsername = "candoitall",
@@ -7,55 +8,24 @@ param(
     [string]$AdminUsername = "postgres",
     [string]$AdminPassword = "postgres",
     [string]$AdminDatabase = "postgres",
-    [string]$PsqlPath = ""
+    [Parameter(Mandatory = $true)]
+    [string]$PsqlPath
 )
 
 $ErrorActionPreference = "Stop"
 
 function Resolve-PsqlPath {
-    param([string]$ConfiguredPath)
+    param([Parameter(Mandatory = $true)][string]$ConfiguredPath)
 
-    if (![string]::IsNullOrWhiteSpace($ConfiguredPath)) {
-        if (!(Test-Path -LiteralPath $ConfiguredPath)) {
-            throw "Configured psql path was not found: $ConfiguredPath"
-        }
-
-        return (Resolve-Path -LiteralPath $ConfiguredPath).Path
+    if (-not (Test-Path -LiteralPath $ConfiguredPath -PathType Leaf)) {
+        throw "Configured psql path was not found: $ConfiguredPath"
     }
-
-    $fromPath = Get-Command psql -ErrorAction SilentlyContinue
-    if ($fromPath) {
-        return $fromPath.Source
+    $resolvedPath = (Resolve-Path -LiteralPath $ConfiguredPath).Path
+    $version = @(& $resolvedPath --version 2>&1)
+    if ($LASTEXITCODE -ne 0 -or ($version -join " ") -notmatch 'PostgreSQL\)\s+18\.') {
+        throw "Select a verified PostgreSQL 18 psql executable with -PsqlPath."
     }
-
-    $commonRoots = @(
-        "C:\Program Files\PostgreSQL",
-        "C:\Program Files (x86)\PostgreSQL"
-    )
-
-    foreach ($root in $commonRoots) {
-        if (!(Test-Path -LiteralPath $root)) {
-            continue
-        }
-
-        $candidates = Get-ChildItem -LiteralPath $root -Recurse -Filter psql.exe -ErrorAction SilentlyContinue
-        $candidate = $candidates |
-            Where-Object { $_.FullName -match '\\bin\\psql\.exe$' } |
-            Sort-Object FullName -Descending |
-            Select-Object -First 1
-        if ($candidate) {
-            return $candidate.FullName
-        }
-
-        $candidate = $candidates |
-            Sort-Object FullName -Descending |
-            Select-Object -First 1
-        if ($candidate) {
-            return $candidate.FullName
-        }
-    }
-
-    throw "psql was not found. Add PostgreSQL bin to PATH or pass -PsqlPath."
+    return $resolvedPath
 }
 
 function Quote-PostgreSqlIdentifier {
@@ -71,27 +41,39 @@ function Quote-PostgreSqlLiteral {
 function Invoke-PostgreSql {
     param(
         [Parameter(Mandatory = $true)][string]$Database,
-        [Parameter(Mandatory = $true)][string[]]$Arguments
+        [Parameter(Mandatory = $true)][string[]]$Arguments,
+        [string]$InputSql = ""
     )
 
     $previousPassword = $env:PGPASSWORD
+    $previousClientEncoding = $env:PGCLIENTENCODING
+    $previousOutputEncoding = $OutputEncoding
+    $previousErrorPreference = $ErrorActionPreference
     try {
         $env:PGPASSWORD = $AdminPassword
-        $output = & $script:PsqlExe `
+        $env:PGCLIENTENCODING = "UTF8"
+        $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        $ErrorActionPreference = "Continue"
+        $output = $InputSql | & $script:PsqlExe `
+            -X -w `
             -h $AdminHost `
             -p $AdminPort `
             -U $AdminUsername `
             -d $Database `
             -v ON_ERROR_STOP=1 `
             @Arguments 2>&1
+        $ErrorActionPreference = $previousErrorPreference
         if ($LASTEXITCODE -ne 0) {
-            throw "psql failed with exit code ${LASTEXITCODE}: $($output -join [Environment]::NewLine)"
+            throw "psql failed on ${AdminHost}:${AdminPort}/$Database with exit code ${LASTEXITCODE}. SQL and server detail are suppressed to protect credentials."
         }
 
         return $output
     }
     finally {
         $env:PGPASSWORD = $previousPassword
+        $env:PGCLIENTENCODING = $previousClientEncoding
+        $OutputEncoding = $previousOutputEncoding
+        $ErrorActionPreference = $previousErrorPreference
     }
 }
 
@@ -124,23 +106,32 @@ $databaseNameIdentifier = Quote-PostgreSqlIdentifier $DatabaseName
 Write-Host "Using psql at $script:PsqlExe"
 Write-Host "Ensuring PostgreSQL role '$AppUsername' and database '$DatabaseName' on ${AdminHost}:${AdminPort}."
 
+$serverVersion = Invoke-PostgreSqlScalar -Database $AdminDatabase -Sql "show server_version_num;"
+if ($serverVersion -notmatch '^18[0-9]{4}$') {
+    throw "Expected a PostgreSQL 18 target; observed server_version_num=$serverVersion. Existing clusters must follow tools/dev/Migrate-PostgreSql16To18.md."
+}
+Write-Host "Verified target server_version_num=$serverVersion."
+
 $roleExists = Invoke-PostgreSqlScalar -Database $AdminDatabase -Sql "select 1 from pg_roles where rolname = $roleNameLiteral;"
 if ($roleExists -eq "1") {
-    Invoke-PostgreSql -Database $AdminDatabase -Arguments @("-c", "alter role $roleNameIdentifier with login createdb password $rolePasswordLiteral;") | Out-Null
+    $roleReady = Invoke-PostgreSqlScalar -Database $AdminDatabase -Sql "select rolcanlogin and rolcreatedb from pg_roles where rolname = $roleNameLiteral;"
+    if ($roleReady -ne "t") {
+        throw "Existing role '$AppUsername' needs LOGIN and CREATEDB. Review its grants explicitly; this helper does not modify existing roles or passwords."
+    }
+    Write-Host "Retaining the existing role and its credentials."
 }
-else {
-    Invoke-PostgreSql -Database $AdminDatabase -Arguments @("-c", "create role $roleNameIdentifier with login createdb password $rolePasswordLiteral;") | Out-Null
+elseif ($PSCmdlet.ShouldProcess("${AdminHost}:${AdminPort}/$AppUsername", "Create development login role")) {
+    Invoke-PostgreSql -Database $AdminDatabase -Arguments @("-f", "-") -InputSql "create role $roleNameIdentifier with login createdb password $rolePasswordLiteral;" | Out-Null
 }
 
-$databaseExists = Invoke-PostgreSqlScalar -Database $AdminDatabase -Sql "select 1 from pg_database where datname = $databaseNameLiteral;"
-if ($databaseExists -eq "1") {
-    Invoke-PostgreSql -Database $AdminDatabase -Arguments @("-c", "alter database $databaseNameIdentifier owner to $roleNameIdentifier;") | Out-Null
+$databaseOwner = Invoke-PostgreSqlScalar -Database $AdminDatabase -Sql "select pg_get_userbyid(datdba) from pg_database where datname = $databaseNameLiteral;"
+if (-not [string]::IsNullOrWhiteSpace($databaseOwner)) {
+    if ($databaseOwner -ne $AppUsername) {
+        throw "Existing database '$DatabaseName' belongs to '$databaseOwner'. Refusing an implicit ownership change."
+    }
 }
-else {
+elseif ($PSCmdlet.ShouldProcess("${AdminHost}:${AdminPort}/$DatabaseName", "Create development database")) {
     Invoke-PostgreSql -Database $AdminDatabase -Arguments @("-c", "create database $databaseNameIdentifier owner $roleNameIdentifier;") | Out-Null
 }
 
-Invoke-PostgreSql -Database $DatabaseName -Arguments @("-c", "alter schema public owner to $roleNameIdentifier; grant all on schema public to $roleNameIdentifier;") | Out-Null
-
-Write-Host "Development PostgreSQL database is ready."
-Write-Host "Connection string: Host=127.0.0.1;Port=5432;Database=$DatabaseName;Username=$AppUsername;Password=$AppPassword;Include Error Detail=true"
+Write-Host "Development PostgreSQL target: ${AdminHost}:${AdminPort}/$DatabaseName; role=$AppUsername. Credentials are not displayed or reset."

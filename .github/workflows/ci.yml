@@ -133,7 +133,18 @@ jobs:
           username: candoitall
           password: candoitall
           database: candoitall_development
-          postgres-version: "16"
+          postgres-version: "18"
+
+      - name: Verify PostgreSQL 18 server provenance
+        shell: pwsh
+        env:
+          PGSERVICE: candoitall
+        run: |
+          $version = & psql -X -w -At -v ON_ERROR_STOP=1 -c "show server_version_num"
+          if ($LASTEXITCODE -ne 0 -or [int]$version -lt 180000 -or [int]$version -ge 190000) {
+            throw "The integration gate requires PostgreSQL 18; observed server_version_num=$version."
+          }
+          Write-Host "PostgreSQL server_version_num=$version"
 
       - name: Capture host provenance
         shell: pwsh
@@ -205,6 +216,18 @@ jobs:
           --logger "trx;LogFileName=portability-postgres-${{ matrix.name }}.trx"
           --results-directory "${{ runner.temp }}/test-results"
           -p:UseLocalCanDoItAllLibraries=true
+
+      - name: Run PostgreSQL 18 protocol logical-restore gate
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          --configuration Release --no-build --no-restore
+          --filter "FullyQualifiedName~PostgreSqlProtocolRestoreTests"
+          --logger "trx;LogFileName=postgresql-protocol-restore-${{ matrix.name }}.trx"
+          --results-directory "${{ runner.temp }}/test-results"
+          -p:UseLocalCanDoItAllLibraries=true /m:1
 
       - name: Install Chromium for portability browser gates
         shell: pwsh

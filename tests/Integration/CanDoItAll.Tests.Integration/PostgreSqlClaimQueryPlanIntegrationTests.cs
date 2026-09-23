@@ -155,6 +155,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
         FROM generate_series(1, 20000) AS series(value);
         """;
 
+    // Completed history keeps runnable steps selective within each run.
     private const string SeedProcessStepDispatchSql =
         """
         INSERT INTO "process_runtime_states" (
@@ -197,7 +198,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             ('40000000-0000-0000-0000-' || lpad((run.value * 10000 + step.value)::text, 12, '0'))::uuid,
             ('50000000-0000-0000-0000-' || lpad(step.value::text, 12, '0'))::uuid,
             CASE
-                WHEN step.value % 7 = 0 THEN 'Completed'
+                WHEN step.value > 50 OR step.value % 7 = 0 THEN 'Completed'
                 WHEN step.value % 5 = 0 THEN 'Running'
                 WHEN step.value % 3 = 0 THEN 'WaitingApproval'
                 ELSE 'Ready'
@@ -213,7 +214,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             NULL,
             NULL
         FROM generate_series(1, 200) AS run(value)
-        CROSS JOIN generate_series(1, 50) AS step(value);
+        CROSS JOIN generate_series(1, 500) AS step(value);
         """;
 
     private const string SeedConnectorCommandsSql =

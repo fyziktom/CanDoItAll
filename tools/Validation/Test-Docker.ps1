@@ -142,7 +142,7 @@ function Test-ComposePolicy {
             Add-Finding -Findings $Findings -Message "The db service must consume POSTGRES_PASSWORD_FILE through the Compose secret."
         }
 
-        if ($dbBlock -notmatch "(?m)^      - db-data:/var/lib/postgresql/data\s*$") {
+        if ($dbBlock -notmatch "(?m)^      - db-data:/var/lib/postgresql\s*$") {
             Add-Finding -Findings $Findings -Message "The db service must persist data through db-data."
         }
 
