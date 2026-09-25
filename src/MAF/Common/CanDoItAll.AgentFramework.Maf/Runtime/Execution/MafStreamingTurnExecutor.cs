@@ -420,7 +420,7 @@ internal sealed class MafStreamingTurnExecutor
                     failureOrigin,
                     MafRuntimeFailureOriginClassifier.ResolveProviderFailureIdentity(
                         exception,
-                        failureOrigin));
+                        failureOrigin)) { ProviderStatusCode = MafRuntimeFailureOriginClassifier.ResolveProviderStatusCode(exception) };
             }
         }
 
@@ -736,7 +736,7 @@ internal sealed class MafStreamingTurnExecutor
                         failureOrigin,
                         MafRuntimeFailureOriginClassifier.ResolveProviderFailureIdentity(
                             exception,
-                            failureOrigin));
+                            failureOrigin)) { ProviderStatusCode = MafRuntimeFailureOriginClassifier.ResolveProviderStatusCode(exception) };
                 }
             }
 

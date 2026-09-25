@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-23T13:01:33.428129+00:00",
+  "generated_utc": "2026-09-23T19:59:20.341447+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -25576,7 +25576,7 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/README.md",
       "category": "mcp",
-      "source_fingerprint": "14269a8b3419a747f0d4d0120d2051b89de2841ce1381110582961493c209136",
+      "source_fingerprint": "5b6ed9af6a727cd9863bc3a131345b681bba08c4bd2c82767df90268a086f3ae",
       "count": 1
     },
     {

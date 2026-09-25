@@ -470,8 +470,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
     {
         var assignment = await assignmentStore.LoadAsync(command.RunId, command.StepInstanceId, cancellationToken)
             .ConfigureAwait(false);
-        if (assignment is null)
-        {
+        if (assignment is null || ProcessLaunchExecutorKinds.IsWorkflow(assignment.ExecutorKind)) {
             return;
         }
 

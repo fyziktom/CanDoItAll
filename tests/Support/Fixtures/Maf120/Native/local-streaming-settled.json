@@ -1,0 +1,127 @@
+{
+  "mafVersion": "1.20.0.0",
+  "aiVersion": "10.9.0.0",
+  "serviceManaged": false,
+  "streaming": true,
+  "stage": "settled",
+  "invocationCount": 1,
+  "state": {
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": [
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "fixture completed"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "write"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "toolApprovalRequest",
+                "toolCall": {
+                  "$type": "functionCall",
+                  "name": "write_artifact",
+                  "arguments": {
+                    "path": "approved.txt"
+                  },
+                  "informationalOnly": true,
+                  "callId": "fixture-write-call"
+                },
+                "requiresConfirmation": true,
+                "requestId": "ficc_fixture-write-call"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "toolApprovalResponse",
+                "approved": true,
+                "toolCall": {
+                  "$type": "functionCall",
+                  "name": "write_artifact",
+                  "arguments": {
+                    "path": "approved.txt"
+                  },
+                  "informationalOnly": true,
+                  "callId": "fixture-write-call"
+                },
+                "requestId": "ficc_fixture-write-call"
+              }
+            ]
+          },
+          {
+            "createdAt": "2026-09-23T18:47:53.9590143\u002B00:00",
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "functionCall",
+                "name": "write_artifact",
+                "arguments": {
+                  "path": "approved.txt"
+                },
+                "informationalOnly": true,
+                "callId": "fixture-write-call"
+              }
+            ],
+            "messageId": "5bb2b51c58e7409ab47ddd3479bc9e73",
+            "additionalProperties": {
+              "_attribution": {
+                "sourceType": {
+                  "value": "ChatHistory"
+                },
+                "sourceId": "Microsoft.Agents.AI.InMemoryChatHistoryProvider"
+              }
+            }
+          },
+          {
+            "createdAt": "2026-09-23T18:47:53.9597643\u002B00:00",
+            "role": "tool",
+            "contents": [
+              {
+                "$type": "functionResult",
+                "result": "written",
+                "callId": "fixture-write-call"
+              }
+            ],
+            "messageId": "29cba006b0a64c68aad68f4ebfa348e8"
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "fixture completed"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "approvals": []
+}

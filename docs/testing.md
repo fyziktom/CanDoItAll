@@ -407,6 +407,17 @@ Linux and macOS now use the same bounded 300-minute job budget as Windows. Appli
 SQL and HTTP deadlines and test exclusions are unchanged. macOS still needs a remote
 rerun to verify its failures and duration.
 
+The supplied CI logs from 2026-09-23 (`logs_97185037017.zip`) subsequently show PostgreSQL
+18 (`server_version_num=180006`) starting successfully on all three platforms. Each
+platform passed all 3,131 integration cases and failed the same two workflow unit tests:
+executor failure events omitted the sanitized cause, and a payload test incorrectly
+expected an oversized result to remain entirely inline. The MAF 1.22 change restores the
+policy-filtered failure detail and asserts truncation plus the stored artifact reference.
+Both exact regressions passed at the [2026-09-25 CI-readiness checkpoint](architecture/maf-1.22-validation.md).
+Those logs do not establish a PostgreSQL failure; the later dedicated migration/restart
+and logical-restore steps were not reached after the unit failures. Keep those CI gates
+and the existing platform budgets in place.
+
 The filter intentionally excludes:
 
 - browser automation

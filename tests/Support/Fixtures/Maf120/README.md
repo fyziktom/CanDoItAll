@@ -1,0 +1,13 @@
+# Genuine MAF 1.20 retained state
+
+These fixtures were produced by Microsoft.Agents.AI 1.20.0, not by editing internal SDK state. `manifest.json` records the SHA-256 of each fixture. They contain deterministic test content and synthetic provider identifiers; no live credentials or customer data are present.
+
+`Native` contains framework-created local and service-managed sessions, using blocking and streaming calls. Each sequence captures ordinary history, a surfaced pending approval, and settled history after exactly one approved invocation. The producer checks the loaded MAF assembly version and invocation counts before serializing through `AIAgent.SerializeSessionAsync`.
+
+`Durable/journal-*` comes from `MafToolAdmissionNativeLoopIntegrationTests.Native_sdk_approval_and_completed_effects_replay_across_independent_stores_without_another_provider_call`, captured before the package upgrade. It uses the real application journal and a disposable PostgreSQL 18 environment, with controlled Responses, Chat Completions and Ollama HTTP responses. Each provider/streaming combination records pending approval, approved but unfinished work, and settled effects. The property named `detail` is the returned `ExecutionRunRecord`; its native checkpoints, journal, identities and receipts remain unchanged.
+
+`Durable/workflow-external-input.json` is an actual 1.20 paused workflow. Its private `continuation` and `authorizationPolicy` are serialized explicitly beside the public request because the public request intentionally ignores those fields. The first capture omitted them and was replaced by a complete capture using separately built 1.20 runtime assemblies. The workflow adapter source was unchanged. That isolated recapture used AI 10.9.0; its unrelated OpenAI 2.13 reference emitted NU1608 and was not exercised by this workflow. The target 1.22 dependency graph is restored independently and must be warning-free for package compatibility acceptance.
+
+The 1.22 tests load these files without changing writer-version labels or injecting native pending state. Native continuation tests count effects and test repeated responses; journal tests restore through the real store; the workflow test restores the recorded private continuation and verifies that the completed marker does not run again. Compatibility policy tests are separate from genuine serialized-state tests.
+
+Capture source and execution transcripts are retained in the local ignored `output/maf-1.22/capture` and `output/maf-1.22` evidence directories. Replacing a fixture requires a real old-runtime capture, an updated manifest, and rerunning its current-runtime compatibility tests.

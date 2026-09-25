@@ -1,0 +1,91 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Processes.Abstractions
+@using CanDoItAll.Processes.Runtime
+@implements IDisposable
+@inject IProcessWorkspaceProjectionClient Client
+@inject ILogger<ProcessRunCancellationAction> Logger
+
+@if (message is not null) {
+    <Alert AlertStyle="@tone" data-testid="process-run-cancellation-result">@message</Alert>
+}
+@if (Status is ProcessProjectedRunStatus.Active or ProcessProjectedRunStatus.NeedsAttention) {
+    <Button Text="Cancel run" Icon="cancel" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+            Disabled="@(busy || commandFinished)" IsBusy="@busy" Click="CancelAsync"
+            data-testid="process-run-cancel" />
+}
+
+@code {
+    [Parameter, EditorRequired] public ProcessRunId RunId { get; set; }
+    [Parameter] public ProcessProjectedRunStatus Status { get; set; }
+    [Parameter] public EventCallback<ProcessRunId> CancellationCommitted { get; set; }
+
+    private ProcessRunId selection;
+    private long generation;
+    private bool busy;
+    private bool commandFinished;
+    private bool disposed;
+    private string? message;
+    private AlertStyle tone = AlertStyle.Info;
+
+    protected override void OnParametersSet() {
+        if (selection == RunId) {
+            return;
+        }
+        selection = RunId;
+        generation++;
+        busy = false;
+        commandFinished = false;
+        message = null;
+    }
+
+    private async Task CancelAsync() {
+        if (disposed || busy || commandFinished || RunId.Value == Guid.Empty ||
+            Status is not (ProcessProjectedRunStatus.Active or ProcessProjectedRunStatus.NeedsAttention)) {
+            return;
+        }
+        var runId = RunId;
+        var owner = generation;
+        busy = true;
+        ProcessRuntimeRunCancellationResult result;
+        try {
+            result = await Client.RequestRunCancellationAsync(new(runId, "process-live-ui", "Operator requested cancellation from process details."));
+            if (result.RunId != runId) {
+                throw new InvalidOperationException("The cancellation receipt names a different process run.");
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning("Process cancellation outcome unavailable for run {RunId}; error type {ErrorType}.", runId, exception.GetType().Name);
+            if (Owns(owner)) {
+                busy = false;
+                commandFinished = true;
+                tone = AlertStyle.Warning;
+                message = "Cancellation outcome could not be confirmed. Refresh the process before taking another action.";
+            }
+            return;
+        }
+        if (!Owns(owner)) {
+            return;
+        }
+        busy = false;
+        commandFinished = true;
+        tone = result.Succeeded ? AlertStyle.Success : AlertStyle.Warning;
+        message = result.Succeeded
+            ? result.Status == ProcessRuntimeStatus.Cancelled ? "Run cancelled." : "Cancellation requested."
+            : "Cancellation was rejected. " + string.Join(" ", result.Diagnostics);
+        if (!result.Succeeded) {
+            return;
+        }
+        try {
+            await CancellationCommitted.InvokeAsync(runId);
+        } catch (Exception exception) {
+            Logger.LogWarning("Process cancellation committed for run {RunId}, but projection refresh failed; error type {ErrorType}.", runId, exception.GetType().Name);
+            if (Owns(owner)) {
+                tone = AlertStyle.Warning;
+                message += " Refresh failed; reopen process details to read the current state.";
+            }
+        }
+    }
+
+    private bool Owns(long owner) => !disposed && generation == owner;
+
+    public void Dispose() => disposed = true;
+}

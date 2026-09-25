@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -13,23 +14,27 @@ public sealed class SkillScriptExecutionBoundaryTests
     {
         var skillRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.SkillScriptExecutionBoundaryTests.{Guid.NewGuid():N}");
+            $"sample-skill-{Guid.NewGuid():N}");
         var scriptPath = Path.Combine(skillRoot, "scripts", "missing-private-script.ps1");
-        var (skill, script) = CreateSkill(skillRoot, scriptPath);
-        var service = DispatchProxy.Create<IWorkspaceCommandExecutionService, ThrowingCommandExecutionProxy>();
+        try {
+            var (skill, script) = await CreateSkillAsync(skillRoot, scriptPath);
+            File.Delete(scriptPath);
+            var service = DispatchProxy.Create<IWorkspaceCommandExecutionService, ThrowingCommandExecutionProxy>();
+            var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
+                SkillScriptExecutionBoundary.ExecuteAsync(
+                    skill,
+                    script,
+                    [],
+                    new FileSkillExecutionPolicy(skillRoot, ApprovalRequired: true, TrustLevel: "FileSkill"),
+                    service));
 
-        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
-            SkillScriptExecutionBoundary.ExecuteAsync(
-                skill,
-                script,
-                [],
-                new FileSkillExecutionPolicy(skillRoot, ApprovalRequired: true, TrustLevel: "FileSkill"),
-                service));
-
-        Assert.DoesNotContain(scriptPath, exception.SafeMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Reload the skill resources", exception.SafeMessage, StringComparison.Ordinal);
-        Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
-        Assert.Equal(AgentToolInputValidationException.FailureCode, failure.ErrorCode);
+            Assert.DoesNotContain(scriptPath, exception.SafeMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Reload the skill resources", exception.SafeMessage, StringComparison.Ordinal);
+            Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var failure));
+            Assert.Equal(AgentToolInputValidationException.FailureCode, failure.ErrorCode);
+        } finally {
+            Directory.Delete(skillRoot, recursive: true);
+        }
     }
 
     [Fact]
@@ -37,18 +42,15 @@ public sealed class SkillScriptExecutionBoundaryTests
     {
         var skillRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.SkillScriptExecutionBoundaryTests.{Guid.NewGuid():N}");
+            $"sample-skill-{Guid.NewGuid():N}");
         var scriptPath = Path.Combine(skillRoot, "scripts", "run.ps1");
-        Directory.CreateDirectory(Path.GetDirectoryName(scriptPath)!);
-        await File.WriteAllTextAsync(scriptPath, "Write-Output 'ok'");
-        var (skill, script) = CreateSkill(skillRoot, scriptPath);
         var sentinel = new IOException(
             @"Skill provider failed while reading C:\private\skill-provider-secret.txt");
         var service = DispatchProxy.Create<IWorkspaceCommandExecutionService, ThrowingCommandExecutionProxy>();
         ((ThrowingCommandExecutionProxy)(object)service).Failure = sentinel;
 
-        try
-        {
+        try {
+            var (skill, script) = await CreateSkillAsync(skillRoot, scriptPath);
             var exception = await Assert.ThrowsAsync<IOException>(() =>
                 SkillScriptExecutionBoundary.ExecuteAsync(
                     skill,
@@ -66,30 +68,35 @@ public sealed class SkillScriptExecutionBoundaryTests
         }
     }
 
-    private static (AgentFileSkill Skill, AgentFileSkillScript Script) CreateSkill(
+    private static async Task<(AgentFileSkill Skill, AgentFileSkillScript Script)> CreateSkillAsync(
         string skillRoot,
-        string scriptPath)
-    {
-        var script = (AgentFileSkillScript)Activator.CreateInstance(
-            typeof(AgentFileSkillScript),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args: ["scripts/run.ps1", scriptPath, null],
-            culture: null)!;
-        var skill = (AgentFileSkill)Activator.CreateInstance(
-            typeof(AgentFileSkill),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args:
-            [
-                new AgentSkillFrontmatter("sample-skill", "Sample skill", "MIT"),
-                "# Sample skill",
-                skillRoot,
-                Array.Empty<AgentSkillResource>(),
-                new AgentSkillScript[] { script }
-            ],
-            culture: null)!;
+        string scriptPath) {
+        Directory.CreateDirectory(Path.GetDirectoryName(scriptPath)!);
+        await File.WriteAllTextAsync(scriptPath, "Write-Output 'ok'");
+        await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), $$"""
+            ---
+            name: {{Path.GetFileName(skillRoot)}}
+            description: Sample skill
+            ---
+            # Sample skill
+            """);
+        using var client = new UnusedChatClient();
+        var agent = new ChatClientAgent(client);
+        var source = new AgentFileSkillsSource(skillRoot);
+        var skill = Assert.IsType<AgentFileSkill>(Assert.Single(
+            await source.GetSkillsAsync(new AgentSkillsSourceContext(agent, null))));
+        var relativePath = Path.GetRelativePath(skillRoot, scriptPath).Replace(Path.DirectorySeparatorChar, '/');
+        var script = Assert.IsType<AgentFileSkillScript>(await skill.GetScriptAsync(relativePath));
         return (skill, script);
+    }
+
+    private sealed class UnusedChatClient : IChatClient {
+        public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+            CancellationToken cancellationToken = default) => throw new InvalidOperationException("File-skill discovery must not call a model.");
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+            CancellationToken cancellationToken = default) => throw new InvalidOperationException("File-skill discovery must not call a model.");
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+        public void Dispose() { }
     }
 
     private class ThrowingCommandExecutionProxy : DispatchProxy

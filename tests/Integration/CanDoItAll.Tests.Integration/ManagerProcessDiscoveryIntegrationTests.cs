@@ -115,6 +115,8 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
             childProcessId = int.Parse(parentOutput.Trim(), System.Globalization.CultureInfo.InvariantCulture);
 
             var discovery = new LinuxManagerProcessDiscovery();
+            var expectedChildCommand = ManagerProcessFingerprint.ComputeObservedCommand(
+                Encoding.UTF8.GetBytes("sleep\0" + "30\0"));
             ManagerProcessDiscoveryResult discovered = ManagerProcessDiscoveryResult.Unavailable(
                 ManagerProcessDiscoveryStatus.Incomplete,
                 "not-observed");
@@ -123,8 +125,9 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
             {
                 discovered = await discovery.ProbeAsync(childProcessId);
                 if (discovered is { Status: ManagerProcessDiscoveryStatus.Available, Evidence: not null } &&
-                    discovered.Evidence.ParentProcessId != originalParentProcessId)
-                {
+                    discovered.Evidence.ParentProcessId != originalParentProcessId &&
+                    Path.GetFileName(discovered.Evidence.ExecutablePath) == "sleep" &&
+                    discovered.Evidence.ObservedCommandFingerprint == expectedChildCommand) {
                     break;
                 }
 
@@ -134,6 +137,8 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
             Assert.Equal(ManagerProcessDiscoveryStatus.Available, discovered.Status);
             Assert.NotNull(discovered.Evidence);
             Assert.NotEqual(originalParentProcessId, discovered.Evidence.ParentProcessId);
+            Assert.Equal("sleep", Path.GetFileName(discovered.Evidence.ExecutablePath));
+            Assert.Equal(expectedChildCommand, discovered.Evidence.ObservedCommandFingerprint);
 
             using var child = Process.GetProcessById(childProcessId);
             var executablePath = child.MainModule!.FileName;

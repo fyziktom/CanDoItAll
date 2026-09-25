@@ -1,0 +1,35 @@
+{
+  "mafVersion": "1.20.0.0",
+  "aiVersion": "10.9.0.0",
+  "serviceManaged": false,
+  "streaming": true,
+  "stage": "ordinary",
+  "invocationCount": 0,
+  "state": {
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": [
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "fixture completed"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "approvals": []
+}

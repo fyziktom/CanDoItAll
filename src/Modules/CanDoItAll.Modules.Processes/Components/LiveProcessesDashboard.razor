@@ -228,6 +228,11 @@
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                @if (!IsMockProjection) {
+                    <ProcessRunCancellationAction @key="(runDetailSnapshot.RunId, shell?.ProjectBinding)"
+                                                  RunId="@runDetailSnapshot.RunId" Status="@runDetailSnapshot.Status"
+                                                  CancellationCommitted="RefreshCancelledRunAsync" />
+                }
                 <Button Icon="folder"
                         Text="Files"
                         ButtonStyle="ButtonStyle.Light"
@@ -615,6 +620,13 @@
 
     private Task ForceRefreshAsync()
         => LoadAsync(forceRefresh: true);
+
+    private async Task RefreshCancelledRunAsync(ProcessRunId runId) {
+        await ForceRefreshAsync();
+        if (runDetailDialogOpen && runDetailSnapshot?.RunId == runId) {
+            runDetailSnapshot = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId == runId);
+        }
+    }
 
     private Task OpenDefinitionsAsync()
     {

@@ -105,4 +105,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/CanDoItAll.AgentFramework.ProviderHistory.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="../../Support/Fixtures/Maf120/**/*.json" Link="Fixtures/Maf120/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

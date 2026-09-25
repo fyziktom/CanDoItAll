@@ -46,6 +46,11 @@
                                                  ContentSelected="@(content => InsertPromptGalleryContentAsync(content, composerOwner))" />
             </ComposerActions>
             <HeaderActions>
+                @if (workspace?.SelectedRun is { PendingApprovals.Count: > 0, CompletedAtUtc: null }) {
+                    <Button Icon="cancel" Text="Cancel pending run" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                            Disabled="@IsChatInteractionBusy" Click="CancelPendingApprovalsAsync"
+                            data-testid="agents-chat-cancel-pending-run" />
+                }
                 @if (IsFocusedFloating) {
                     <Button Icon="add_comment"
                             Text="New thread"

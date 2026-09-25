@@ -1,0 +1,13 @@
+platform,gate,status,source_head,dependency_graph_id,sibling_revisions,exact_command,expected_discovered,observed_discovered,passed,failed,skipped,duration_seconds,evidence_path,notes
+Windows,Targeted standard regressions,NOT_RUN,,,,,,,,,,,,
+Windows,Unfiltered Stable,NOT_RUN,,,,,,,,,,,,
+Windows,Additional non-browser lanes,NOT_RUN,,,,,,,,,,,,
+Windows,Unfiltered Playwright,NOT_RUN,,,,,,,,,,,,
+Windows,Live-provider UI,NOT_RUN,,,,,,,,,,,,
+Windows,Static/documentation/secrets,NOT_RUN,,,,,,,,,,,,
+Linux,Targeted standard regressions,NOT_RUN,,,,,,,,,,,,
+Linux,Unfiltered Stable,NOT_RUN,,,,,,,,,,,,
+Linux,Additional non-browser lanes,NOT_RUN,,,,,,,,,,,,
+Linux,Unfiltered Playwright,NOT_RUN,,,,,,,,,,,,
+Linux,Live-provider UI,NOT_RUN,,,,,,,,,,,,
+Linux,Static/documentation/secrets,NOT_RUN,,,,,,,,,,,,

@@ -42,7 +42,7 @@ internal sealed class MafApprovalContinuationDriver(AgentToolPolicyCatalog? tool
     private readonly ConcurrentDictionary<Guid, CachedApprovals> pendingApprovalCache = new();
 
     private sealed record CachedApprovals(
-        IReadOnlyList<ToolApprovalRequestContent> Requests,
+        IReadOnlyList<PendingToolApprovalRecord> Requests,
         DateTimeOffset StoredAtUtc);
 
     public IEnumerable<ChatMessage> CreateApprovalInputMessages(
@@ -81,7 +81,7 @@ internal sealed class MafApprovalContinuationDriver(AgentToolPolicyCatalog? tool
     {
         ArgumentNullException.ThrowIfNull(approvalRequests);
         EvictStaleOrOverflowingEntries();
-        pendingApprovalCache[sessionId] = new CachedApprovals(approvalRequests, DateTimeOffset.UtcNow);
+        pendingApprovalCache[sessionId] = new CachedApprovals(approvalRequests.Select(MapPendingApproval).ToArray(), DateTimeOffset.UtcNow);
     }
 
     public void ClearPendingApprovals(Guid sessionId)
@@ -191,51 +191,39 @@ internal sealed class MafApprovalContinuationDriver(AgentToolPolicyCatalog? tool
         return $"Approval is required before the run can continue.{Environment.NewLine}{summary}";
     }
 
-    private IReadOnlyList<ToolApprovalRequestContent> GetCachedOrRehydratedApprovals(ChatSessionRecord session)
-    {
+    private IReadOnlyList<ToolApprovalRequestContent> GetCachedOrRehydratedApprovals(ChatSessionRecord session) {
         ArgumentNullException.ThrowIfNull(session);
-
         var durableApprovals = session.Compatibility?.PendingApprovals;
-        if (durableApprovals is { Count: > 0 })
-        {
-            if (pendingApprovalCache.TryGetValue(session.Id, out var cached) &&
-                CacheMatchesDurableApprovals(cached.Requests, durableApprovals))
-            {
-                return cached.Requests;
+        if (durableApprovals is not { Count: > 0 }) {
+            ClearPendingApprovals(session.Id);
+            throw new InvalidOperationException("This session does not have any pending approval requests to continue.");
+        }
+
+        if (pendingApprovalCache.TryGetValue(session.Id, out var cached)) {
+            var durableById = durableApprovals.ToDictionary(item => item.ApprovalId, StringComparer.Ordinal);
+            var overlaps = cached.Requests.Any(item => durableById.ContainsKey(item.ApprovalId));
+            if (overlaps && (cached.Requests.Count != durableApprovals.Count ||
+                cached.Requests.Any(item => !durableById.TryGetValue(item.ApprovalId, out var durable) ||
+                    !HasSameIntent(item, durable)))) {
+                throw new InvalidOperationException(
+                    "The durable pending approval batch contradicts the originally surfaced tool intent. Reconcile the saved execution before continuing.");
             }
-
-            var rehydrated = durableApprovals
-                .Select(RehydratePendingApproval)
-                .ToList();
-
-            StorePendingApprovals(session.Id, rehydrated);
-            return rehydrated;
         }
 
-        if (pendingApprovalCache.TryGetValue(session.Id, out var cachedWithoutDurableState))
-        {
-            return cachedWithoutDurableState.Requests;
-        }
-
-        throw new InvalidOperationException("This session does not have any pending approval requests to continue.");
+        var rehydrated = durableApprovals.Select(RehydratePendingApproval).ToArray();
+        StorePendingApprovals(session.Id, rehydrated);
+        return rehydrated;
     }
 
-    private static bool CacheMatchesDurableApprovals(
-        IReadOnlyList<ToolApprovalRequestContent> cached,
-        IReadOnlyList<PendingToolApprovalRecord> durable)
-    {
-        if (cached.Count != durable.Count)
-        {
+    private static bool HasSameIntent(PendingToolApprovalRecord original, PendingToolApprovalRecord durable) {
+        if (original.CallId != durable.CallId || original.ToolName != durable.ToolName ||
+            original.ToolKind != durable.ToolKind || original.Details != durable.Details) {
             return false;
         }
 
-        var durableByApprovalId = durable.ToDictionary(
-            item => item.ApprovalId,
-            StringComparer.Ordinal);
-
-        return cached.All(item =>
-            durableByApprovalId.TryGetValue(item.RequestId, out var persisted) &&
-            string.Equals(item.ToolCall.CallId, persisted.CallId, StringComparison.Ordinal));
+        using var originalArguments = JsonDocument.Parse(original.ArgumentsJson);
+        using var durableArguments = JsonDocument.Parse(durable.ArgumentsJson);
+        return JsonElement.DeepEquals(originalArguments.RootElement, durableArguments.RootElement);
     }
 
     private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)

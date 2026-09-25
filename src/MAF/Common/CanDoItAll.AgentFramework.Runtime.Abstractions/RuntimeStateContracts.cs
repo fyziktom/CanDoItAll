@@ -157,6 +157,8 @@ public sealed record RuntimeStateCompatibilityRequest(
 
     /// <summary>The current adapter package version for the explicit compatibility range.</summary>
     public string CurrentAdapterPackageVersion { get; init; } = string.Empty;
+
+    public bool RequiresVerifiedNativeAuthority { get; init; }
 }
 
 /// <summary>

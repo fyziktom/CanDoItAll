@@ -542,6 +542,7 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
         Assert.NotNull(reopened.Run.CompletedAtUtc);
         Assert.Equal(operationId, reopened.Run.InitialActivityOperationId);
         Assert.Equal(persistedFailureLog, failedLog);
+        Assert.Equal(reopened.Run.CompletedAtUtc, failedLog.CreatedAtUtc);
         Assert.Equal(executionRunId, failedLog.ExecutionRunId);
         Assert.Equal(ExecutionState.Failed, failedLog.State);
         Assert.Equal(!failDuringStartup, reopened.ExecutionLog.Any(entry => entry.Phase == "Implementation"));
@@ -1221,6 +1222,59 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
         Assert.Equal(ExecutionState.Failed, failedDetail.Run.State);
         Assert.Equal(RunOutcome.Failed, failedDetail.Run.Outcome);
         Assert.Contains("failed validation", failedDetail.Run.ResultSummary, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ContinueExecutionRunAsync_reports_known_checkpoint_incompatibility_without_exposing_exception_payload(bool incompatibleProtocol) {
+        const string privatePayload = "private-checkpoint-payload-sentinel";
+        const string unknownCode = "test.unknown-admission-failure";
+        await using var environment = CanDoItAllTestEnvironment.Create("integration-agentframework-checkpoint-diagnostic");
+        var profile = environment.CreatePostgreSqlProfile("primary");
+        var runtime = new StructuredOutputApprovalRuntime {
+            ContinuationException = new AgentToolAdmissionException(
+                incompatibleProtocol ? AgentToolAdmissionException.UnsupportedProtocolCode : unknownCode, privatePayload)
+        };
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(profile, "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full, configureServices: services => {
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
+                services.AddSingleton<IFakeAgentRuntime>(runtime);
+                UseDirectWorkspaceService(services);
+            });
+        await using var scope = provider.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var store = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspace.ListAgentsAsync(includeTemplates: false)).First(item => item.ProviderProfileId.HasValue);
+        var session = await workspace.GetOrCreateChatSessionAsync(agent.Id);
+        var initial = await workspace.ExecuteRunAsync(new(agent.Id, "Request approval before checking saved protocol compatibility.",
+            AgentExecutionOperationId.New(), session.Id, CreateProcessStepContext(),
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
+        var pending = await store.GetExecutionRunDetailAsync(initial.ExecutionRunId);
+        Assert.NotNull(pending);
+        var approval = Assert.Single(pending.Run.PendingApprovals);
+        var failure = await Assert.ThrowsAsync<AgentChatRunFailedException>(() => workspace.ContinueExecutionRunAsync(
+            initial.ExecutionRunId, AgentExecutionOperationId.New(), [new(approval.ApprovalId, true)]));
+        var saved = await store.GetExecutionRunDetailAsync(initial.ExecutionRunId);
+        Assert.NotNull(saved);
+        Assert.Equal(initial.ExecutionRunId, failure.ExecutionRunId);
+        Assert.Equal(RunOutcome.Failed, saved.Run.Outcome);
+        Assert.Null(failure.FailureCategory);
+        Assert.Contains(saved.ExecutionLog, entry => entry.State == ExecutionState.Failed &&
+            entry.Message.Contains(failure.SanitizedDisplayMessage, StringComparison.Ordinal));
+        Assert.DoesNotContain(privatePayload, failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(privatePayload, saved.Run.ResultSummary, StringComparison.Ordinal);
+        Assert.Single(runtime.ContinuationExecutionOptions);
+        if (incompatibleProtocol) {
+            Assert.Contains("incompatible", saved.Run.ResultSummary, StringComparison.Ordinal);
+            Assert.Contains("Reconcile saved approvals and effects", saved.Run.ResultSummary, StringComparison.Ordinal);
+            Assert.Contains("new thread", failure.SanitizedDisplayMessage, StringComparison.Ordinal);
+            Assert.Contains("do not retry the saved approval", failure.SanitizedDisplayMessage, StringComparison.Ordinal);
+        } else {
+            Assert.Contains("outside a confirmed provider failure", saved.Run.ResultSummary, StringComparison.Ordinal);
+            Assert.DoesNotContain("incompatible", saved.Run.ResultSummary, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

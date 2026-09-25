@@ -7,5 +7,7 @@ public interface ISandboxWorkspaceExecutionRunLeaseStore {
 }
 
 public sealed class AgentToolAdmissionException(string code, string message) : InvalidOperationException(message) {
+    public const string UnsupportedProtocolCode = "tool-admission.unsupported-protocol";
+
     public string Code { get; } = code;
 }

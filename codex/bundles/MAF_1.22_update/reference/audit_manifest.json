@@ -1,0 +1,436 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "preparation_package_not_execution_evidence",
+  "prepared_on": "2026-09-23",
+  "repository": "fyziktom/CanDoItAll",
+  "branch_reviewed": "development",
+  "audit_head": "ffa83cf903c305a7490a674f41a0d08498156db6",
+  "audit_tree": "9659ba21653ee3a46a6fb444e887b689454da078",
+  "branch_rechecked_before_pack_review": true,
+  "branch_recheck_head": "ffa83cf903c305a7490a674f41a0d08498156db6",
+  "audit_head_is_execution_pin": false,
+  "baseline_maf": "1.20.0",
+  "target_maf": "1.22.0",
+  "target_a2a": "1.22.0-preview.260918.1",
+  "target_release_date": "2026-09-18",
+  "methods": [
+    "GitHub source reads at audit SHA",
+    "Selected repository tree inventory",
+    "Official upstream release/PR/tagged-code review",
+    "Official NuGet metadata review"
+  ],
+  "preparation_did_not_execute": [
+    "CanDoItAll restore/build",
+    "CodeAnalytics MCP",
+    "application regressions",
+    "Windows full suite",
+    "Linux full suite",
+    "UI/browser journeys",
+    "real-provider process experiments"
+  ],
+  "limitations": [
+    "Selected high-risk source review, not every repository file",
+    "Several large responses were read only in relevant ranges",
+    "CodeAnalytics impact selectors must be generated on the actual implementation checkout",
+    "Production escalation root cause has not been reproduced"
+  ],
+  "sources": [
+    {
+      "id": "R01",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "AGENTS.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/AGENTS.md",
+      "review_scope": "Full returned file",
+      "observation": "Repository and shared-standards routing; mandatory static portability and current testing guide."
+    },
+    {
+      "id": "R02",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "docs/testing.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/docs/testing.md",
+      "review_scope": "Beginning plus relevant later sections; logical ranges 310-425 and 420-end explicitly read",
+      "observation": "Test solutions, narrow discovery, PostgreSQL 18, final broad/full gates, browser ordering prerequisites and portability commands.",
+      "blob_sha": "9413ad89ea982fdc1aebce48a0d428a54ef863ee"
+    },
+    {
+      "id": "R03",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": ".github/workflows/ci.yml",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/.github/workflows/ci.yml",
+      "review_scope": "Logical lines 1-230",
+      "observation": "Current platform matrix, source dependency pinning, PostgreSQL 18 and separate gate commands."
+    },
+    {
+      "id": "R04",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/MicrosoftAgentFramework.Packages.props",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/MicrosoftAgentFramework.Packages.props",
+      "review_scope": "Full file",
+      "observation": "Stable 1.20.0 and preview 1.20.0-preview.260831.1.",
+      "blob_sha": "f03054e6b07a9122b6bb72193705abac30b327e0"
+    },
+    {
+      "id": "R05",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "Directory.Build.props",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/Directory.Build.props",
+      "review_scope": "Full file",
+      "observation": "AI 10.9.0, general Extensions 10.0.11; source/package property ownership.",
+      "blob_sha": "2a0494d5c0df42ab4485184fe13800f30391c24a"
+    },
+    {
+      "id": "R06",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj",
+      "review_scope": "Full returned file",
+      "observation": "MAF stable/preview imports; OpenAI 2.12.0, OTel.Api 1.15.3, MCP 1.1.0, OllamaSharp 5.4.25."
+    },
+    {
+      "id": "R07",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "global.json",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/global.json",
+      "review_scope": "Full file",
+      "observation": "SDK 10.0.302, latestPatch, no prerelease.",
+      "blob_sha": "6d5813f02d3a0627270a72166b8b84c45bc97a35"
+    },
+    {
+      "id": "R08",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/README.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/README.md",
+      "review_scope": "Full returned file",
+      "observation": "Narrow runtime ports, composition root, current product-tool ownership and stale 1.15 statements.",
+      "blob_sha": "106e2865c2c9c1ca1c83b4a0378b4621bcafd2eb"
+    },
+    {
+      "id": "R09",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafApprovalContinuationDriver.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafApprovalContinuationDriver.cs",
+      "review_scope": "Full returned file",
+      "observation": "ID-only cache equivalence, cache fallback with missing durable approvals, reconstruction and continuation messages."
+    },
+    {
+      "id": "R10",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeSessionBuilder.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeSessionBuilder.cs",
+      "review_scope": "Relevant returned prefix; output truncated later",
+      "observation": "Native DeserializeSessionAsync, restore eligibility, compatibility, governed process and input/run-options branches."
+    },
+    {
+      "id": "R11",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeStateAdapter.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeStateAdapter.cs",
+      "review_scope": "Full file",
+      "observation": "Captures native runtime informational/package version in envelope.",
+      "blob_sha": "9e3751922af55e89cab715be44062800602f40b6"
+    },
+    {
+      "id": "R12",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeStateCompatibilityPolicy.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeStateCompatibilityPolicy.cs",
+      "review_scope": "Full file via lines 1-170 and 170-end",
+      "observation": "Same-major and unknown-version allowance plus independent schema/provider/history/fingerprint checks.",
+      "blob_sha": "86887883f4094656980890f691812c34c99f804f"
+    },
+    {
+      "id": "R13",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolRunContext.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolRunContext.cs",
+      "review_scope": "Logical lines 1-230",
+      "observation": "Approval/restart checkpoints, admitted journal segments and dynamic context tool registration.",
+      "blob_sha": "2613b23667fa231367184f0c57d58a6b88144140"
+    },
+    {
+      "id": "R14",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/McpCapabilityBuilder.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/McpCapabilityBuilder.cs",
+      "review_scope": "Logical lines 1-180",
+      "observation": "Application client factory and hosted/local branches, approval wrapping and disposal ownership.",
+      "blob_sha": "450bb226cba9d6e811470a31bc38d29a034c9720"
+    },
+    {
+      "id": "R15",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/A2ARemoteAgentToolFactory.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/A2ARemoteAgentToolFactory.cs",
+      "review_scope": "Full file",
+      "observation": "Endpoint-local HttpClient allocation and incomplete ownership transfer on failures.",
+      "blob_sha": "6d6f8800d8ada7ac724f75aadecd210fcb49a51c"
+    },
+    {
+      "id": "R16",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs",
+      "review_scope": "Logical lines 1-190",
+      "observation": "Imperative WorkflowBuilder, typed routing, terminal outputs and topology metadata.",
+      "blob_sha": "49e6b6952da4c7421d99ca9f730a88efd7bd7ef6"
+    },
+    {
+      "id": "R17",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessStepExecutor.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessStepExecutor.cs",
+      "review_scope": "Relevant returned body plus logical lines 400-580",
+      "observation": "Claim, tool contract, workflow/agent/subprocess dispatch, finalizer, completion and catch classification.",
+      "blob_sha": "f2bee09d180f2e155a4ede3c53b9c2fad829ae22"
+    },
+    {
+      "id": "R18",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessAgentExecutionRecoveryPolicy.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessAgentExecutionRecoveryPolicy.cs",
+      "review_scope": "Relevant returned methods; response truncated later",
+      "observation": "Transient/output issues and strong durable no-side-effect attestation."
+    },
+    {
+      "id": "R19",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessRuntimeFailureClassifier.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessRuntimeFailureClassifier.cs",
+      "review_scope": "Full file",
+      "observation": "Generic service-failure transient marker and provider/rights bypass."
+    },
+    {
+      "id": "R20",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Recovery.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/Processes/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Recovery.cs",
+      "review_scope": "Full returned file",
+      "observation": "Recovery policy, idempotency, loop budgets and escalation event handling."
+    },
+    {
+      "id": "R21",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatHost.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatHost.razor",
+      "review_scope": "Full file",
+      "observation": "Compatibility wrapper renders ConversationShellHost.",
+      "blob_sha": "11f4bb8f4838a3f98f2f9d7c3735c174930a3e3d"
+    },
+    {
+      "id": "R22",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/tests/Playwright/CanDoItAll.Tests.Playwright/AiAgentFlowTests.cs",
+      "review_scope": "Logical lines 1-170",
+      "observation": "Catalog/CRM projection and interactivity/readiness tests; not a live project chat proof.",
+      "blob_sha": "452e47384761fdc29f8f9634b1b97e89b5501fce"
+    },
+    {
+      "id": "R23",
+      "kind": "shared_skill",
+      "repository": "fyziktom/CanDoItAll.SharedInfo",
+      "ref": "main (default branch at audit; blob recorded)",
+      "path": "codex/skills/candoitall-codeanalytics-mcp/SKILL.md",
+      "url": "https://github.com/fyziktom/CanDoItAll.SharedInfo/blob/main/codex/skills/candoitall-codeanalytics-mcp/SKILL.md",
+      "blob_sha": "17de6cb87473abac8c432c162ef0b14f66802f0b",
+      "review_scope": "Full returned skill",
+      "observation": "Actual CodeAnalytics snapshot and live impacted-test tools; field names, intent and broadening semantics."
+    },
+    {
+      "id": "R24",
+      "kind": "repository_tree",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "tests/Playwright",
+      "url": "https://github.com/fyziktom/CanDoItAll/tree/ffa83cf903c305a7490a674f41a0d08498156db6/tests/Playwright",
+      "tree_sha": "d94cb07a7652c25413d6a3fc9ede60a3db839711",
+      "review_scope": "Relevant visible tree entries; large response truncated",
+      "observation": "Existence of browser test locators used in this pack; their uninspected bodies are not claimed as proof."
+    },
+    {
+      "id": "R25",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "tests/Components/CanDoItAll.Tests.Components/FloatingAgentChatHostLifecycleTests.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/tests/Components/CanDoItAll.Tests.Components/FloatingAgentChatHostLifecycleTests.cs",
+      "review_scope": "Full file",
+      "observation": "Shell initialization/disposal, component ownership and current test idioms.",
+      "blob_sha": "473b4b51e6e4b1bd095ac36c59b4d691a47c14d7"
+    },
+    {
+      "id": "R26",
+      "kind": "repository_source",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": ".github/copilot-instructions.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ffa83cf903c305a7490a674f41a0d08498156db6/.github/copilot-instructions.md",
+      "review_scope": "Full returned file",
+      "observation": "Architecture, English C# style, UI, tool, data and testing conventions."
+    },
+    {
+      "id": "R27",
+      "kind": "repository_tree",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit",
+      "url": "https://github.com/fyziktom/CanDoItAll/tree/ffa83cf903c305a7490a674f41a0d08498156db6/tests/Unit/CanDoItAll.Tests.Unit",
+      "tree_sha": "7ce4c299e0bd445a3e35db0473310101bcc6eca6",
+      "review_scope": "Relevant visible entries; large response truncated",
+      "observation": "Existing unit test locators; no claim that bodies or coverage were all reviewed."
+    },
+    {
+      "id": "R28",
+      "kind": "repository_tree",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ffa83cf903c305a7490a674f41a0d08498156db6",
+      "path": "tests/MAF",
+      "url": "https://github.com/fyziktom/CanDoItAll/tree/ffa83cf903c305a7490a674f41a0d08498156db6/tests/MAF",
+      "tree_sha": "83eccd16f897a04fb11da8dcd61baf6595945cc3",
+      "review_scope": "Returned tree inventory",
+      "observation": "MAF Memory test project exists separately from production solution."
+    },
+    {
+      "id": "U01",
+      "kind": "official_release",
+      "url": "https://github.com/microsoft/agent-framework/releases/tag/dotnet-1.22.0",
+      "review_scope": "Release notes",
+      "observation": "Released 2026-09-18; tag commit shown as 0c9944c; includes multiple explicit breaking changes, not only the session-store move."
+    },
+    {
+      "id": "U02",
+      "kind": "official_release",
+      "url": "https://github.com/microsoft/agent-framework/releases/tag/dotnet-1.21.0",
+      "review_scope": "Release notes",
+      "observation": "Released 2026-09-11; cumulative scope includes file lines, A2A, LocalCodeAct and ZIP-only MCP skills."
+    },
+    {
+      "id": "U03",
+      "kind": "official_package",
+      "url": "https://www.nuget.org/packages/Microsoft.Agents.AI.OpenAI/1.22.0",
+      "review_scope": "Version and dependency metadata, including net10.0",
+      "observation": "Published 1.22.0; AI/OpenAI/System.ClientModel and related dependency floors."
+    },
+    {
+      "id": "U04",
+      "kind": "official_package",
+      "url": "https://www.nuget.org/packages/Microsoft.Agents.AI.Workflows/1.22.0",
+      "review_scope": "Version and dependency metadata, including net10.0",
+      "observation": "Published 1.22.0; AI-family and OpenTelemetry.Api 1.18.0 floor."
+    },
+    {
+      "id": "U05",
+      "kind": "official_package",
+      "url": "https://www.nuget.org/packages/Microsoft.Agents.AI.A2A/1.22.0-preview.260918.1",
+      "review_scope": "Official indexed NuGet listing and dependencies",
+      "observation": "Published matching preview confirmed; some direct fetch attempts failed but official search returned its full listing. A2A SDK >=1.0.0-preview2."
+    },
+    {
+      "id": "U06",
+      "kind": "upstream_pr",
+      "url": "https://github.com/microsoft/agent-framework/pull/8375",
+      "review_scope": "PR description and tagged implementation",
+      "observation": "Breaking approval replay/binding support. The tag, not later main, defines the target."
+    },
+    {
+      "id": "U07",
+      "kind": "upstream_pr",
+      "url": "https://github.com/microsoft/agent-framework/pull/8432",
+      "review_scope": "Release membership plus tagged implementation",
+      "observation": "Binding to surfaced approval requests; interpretation grounded in U08."
+    },
+    {
+      "id": "U08",
+      "kind": "upstream_code",
+      "url": "https://github.com/microsoft/agent-framework/blob/dotnet-1.22.0/dotnet/src/Microsoft.Agents.AI/ChatClient/ApprovalResponseBindingChatClient.cs",
+      "review_scope": "Relevant returned code; large response truncated later",
+      "observation": "Native session pending request authority, binding/replay and streamed recording; internal state is not an application extension point."
+    },
+    {
+      "id": "U09",
+      "kind": "upstream_pr",
+      "url": "https://github.com/microsoft/agent-framework/pull/7991",
+      "review_scope": "PR description",
+      "observation": "Shared AgentSessionStore and partitioned key, nullable lookup and explicit creation, independent returned instances."
+    },
+    {
+      "id": "U10",
+      "kind": "upstream_pr",
+      "url": "https://github.com/microsoft/agent-framework/pull/8425",
+      "review_scope": "PR description",
+      "observation": "Declarative provider-backed MCP per-invocation sessions and HTTP-client ownership; not a blanket change to all application MCP clients."
+    },
+    {
+      "id": "U11",
+      "kind": "upstream_pr",
+      "url": "https://github.com/microsoft/agent-framework/pull/8434",
+      "review_scope": "PR description",
+      "observation": "Sticky Foundry delegated user identity on AgentSession; old per-call option removed."
+    },
+    {
+      "id": "U12",
+      "kind": "upstream_pr",
+      "url": "https://github.com/microsoft/agent-framework/pull/8032",
+      "review_scope": "Full returned PR description",
+      "observation": "Exact A2A hosting mode rename and response-shape meaning."
+    },
+    {
+      "id": "U13",
+      "kind": "upstream_pr",
+      "url": "https://github.com/microsoft/agent-framework/pull/7671",
+      "review_scope": "Full returned PR description",
+      "observation": "Exact .NET line-numbering/terminator/search/edit contract; no universal runtime conformance check."
+    },
+    {
+      "id": "U14",
+      "kind": "official_package_owner",
+      "url": "https://www.nuget.org/profiles/MicrosoftAgentFramework",
+      "review_scope": "Relevant official package-owner listing",
+      "observation": "Confirms stable versus prerelease package families; not every MAF package uses the same suffix."
+    }
+  ]
+}

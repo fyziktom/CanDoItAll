@@ -8304,6 +8304,51 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.True(workspace.ExecuteRunCalled);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ExecuteAsync_preserves_provider_rejection_and_cancellation_before_finalizer_validation(
+        bool throws, bool cancelled) {
+        var agent = NewAgent("Fixture worker", "Solution architect", AgentWorkloadKind.Programming,
+            ["solution-architect", "dotnet", "architecture"], AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("architecture-handoff", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        const string privateDetail = "fixture-private-provider-detail";
+        var response = $"Service request failed. Status: 401. submit_process_step_outcome. {privateDetail}";
+        Exception cause = cancelled
+            ? new OperationCanceledException("Provider timeout during cancellation", new CancellationToken(true))
+            : new CanDoItAll.AgentFramework.Runtime.Abstractions.AgentRuntimeUsageException(response,
+                new HttpRequestException(privateDetail, null, System.Net.HttpStatusCode.Unauthorized),
+                [], failureOrigin: CanDoItAll.AgentFramework.Runtime.Abstractions.AgentRuntimeFailureOrigin.Provider);
+        var failure = new AgentRunFailedException(agent.Id, executionRunId, null, "Fixture provider", "fixture-model", cause, response);
+        var workspace = new ThrowingWorkspaceService(agent,
+            executeException: throws ? failure : null,
+            executeResult: throws ? null : CreateExecutionRunResult(agent.Id, executionRunId, response,
+                cancelled ? RunOutcome.Cancelled : RunOutcome.Failed));
+        var files = CreateWorkspaceFileService(out var root);
+        try {
+            var adapter = CreateAdapter(new FakeWorkspaceFactory(workspace), CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)), files);
+            var result = await adapter.ExecuteAsync(CreateAdapterRequest(assignment, ProcessExecutionAdapterKind.Workflow,
+                new ProcessExecutionAdapterOperationKey("execute"), Binding, [], []));
+
+            Assert.Equal(cancelled ? StrategyOutcome.Canceled : StrategyOutcome.Failed, result.Outcome);
+            Assert.Equal(cancelled ? ProcessExecutionAdapterDiagnosticCodes.AgentExecutionCancelled :
+                ProcessExecutionAdapterDiagnosticCodes.AgentProviderRejected, Assert.Single(result.Diagnostics).Code.Value);
+            Assert.Equal(executionRunId, result.ExecutionRunId?.Value);
+            Assert.Empty(result.ManagerSignals);
+            Assert.Empty(result.ProducedArtifacts);
+            Assert.Empty(workspace.ExecutionDetailRequestIds);
+            Assert.True(workspace.ExecuteRunCalled);
+            AssertPublicAndPersistedReceiptExclude(assignment, result, privateDetail);
+        } finally {
+            DeleteDirectory(root);
+        }
+    }
+
     [Fact]
     public async Task ExecuteAsync_retries_transient_provider_failure_result()
     {
@@ -8649,7 +8694,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 []));
 
             Assert.Equal(StrategyOutcome.Failed, result.Outcome);
-            Assert.Contains("Host diagnostics", result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Contains("Review restricted execution logs using the evidence hash", result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Contains("Reconcile any unconfirmed tool effects", result.UserSafeSummary, StringComparison.Ordinal);
             Assert.True(result.UserSafeSummary.Length < 800);
             Assert.All(result.Diagnostics, diagnostic => Assert.True(diagnostic.SafeSummary.Length < 800));
             AssertPublicAndPersistedReceiptExclude(

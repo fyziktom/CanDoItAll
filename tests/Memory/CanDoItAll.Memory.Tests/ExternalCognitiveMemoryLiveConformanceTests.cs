@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -42,6 +43,11 @@ public sealed class ExternalCognitiveMemoryLiveConformanceTests
         {
             Context = MemoryRequestContext.Default with
             {
+                Budget = new MemoryBudget(
+                    profile.Manifest.Limits.MaxContextSections,
+                    MemoryBudget.Default.MaxSourceBytes,
+                    MemoryBudget.Default.MaxProviderTokens,
+                    MemoryBudget.Default.Timeout),
                 Execution = new MemoryExecutionContext(
                     projectId.ToString("D"),
                     "External memory conformance",
@@ -66,7 +72,7 @@ public sealed class ExternalCognitiveMemoryLiveConformanceTests
                 query,
                 CreateRetention()));
 
-        Assert.Equal(MemoryOperationHandlerStatus.Completed, result.Status);
+        Assert.True(result.Status == MemoryOperationHandlerStatus.Completed, $"{result.Status}: {result.Diagnostic}");
         Assert.True(result.DriverDispatchAttempted);
         Assert.Equal(ProviderId, result.Selection.SelectedProvider?.InstanceId);
         Assert.Contains(result.Output!.Sections, section =>
@@ -118,9 +124,23 @@ public sealed class ExternalCognitiveMemoryLiveConformanceTests
                 [MemoryCapabilityIds.IngestionSnapshot]));
 
         using var response = await client.PostAsJsonAsync("/memory/ingest", ingestion);
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<MemoryOperationResult>();
-        Assert.Equal(MemoryOperationStatus.Succeeded, result?.Status);
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        var accepted = await response.Content.ReadFromJsonAsync<MemoryOperationAccepted>();
+        Assert.NotNull(accepted);
+        Assert.Equal($"/memory/operations/{accepted.OperationId.Value:D}?projectId={projectId:D}", accepted.StatusPath);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        MemoryOperationResult? result;
+        do {
+            result = await client.GetFromJsonAsync<MemoryOperationResult>(accepted.StatusPath, timeout.Token);
+            Assert.NotNull(result);
+            Assert.Equal(accepted.OperationId, result.OperationId);
+            if (result.Status is MemoryOperationStatus.Accepted or MemoryOperationStatus.Running) {
+                await Task.Delay(accepted.PollAfter, timeout.Token);
+            }
+        } while (result.Status is MemoryOperationStatus.Accepted or MemoryOperationStatus.Running);
+
+        Assert.Equal(MemoryOperationStatus.Succeeded, result.Status);
     }
 
     private static ServiceProvider CreateServiceProvider()

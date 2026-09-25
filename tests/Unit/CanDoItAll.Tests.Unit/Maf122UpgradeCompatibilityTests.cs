@@ -10,14 +10,14 @@ using OpenAI.Chat;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-public sealed class Maf120UpgradeCompatibilityTests
+public sealed class Maf122UpgradeCompatibilityTests
 {
     [Fact]
-    public void Resolved_runtime_uses_the_coherent_Maf_120_and_Meai_109_family()
+    public void Resolved_runtime_uses_the_coherent_Maf_122_and_Meai_1010_family()
     {
-        Assert.Equal(new Version(1, 20, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
-        Assert.Equal(new Version(1, 20, 0, 0), typeof(RunStatus).Assembly.GetName().Version);
-        Assert.Equal(new Version(10, 9, 0, 0), typeof(AIFunction).Assembly.GetName().Version);
+        Assert.Equal(new Version(1, 22, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
+        Assert.Equal(new Version(1, 22, 0, 0), typeof(RunStatus).Assembly.GetName().Version);
+        Assert.Equal(new Version(10, 10, 0, 0), typeof(AIFunction).Assembly.GetName().Version);
     }
 
     [Fact]

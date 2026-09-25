@@ -3451,6 +3451,11 @@ public sealed partial class ProcessWorkspaceShellTests
                 Diagnostics: []));
         }
 
+        public Task<ProcessRuntimeRunCancellationResult> RequestRunCancellationAsync(
+            ProcessRuntimeRunCancellationCommand command,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("This projection fixture does not execute process cancellation.");
+
         private static ProcessWorkspaceShellProjection CreateShell(
             ProcessWorkspaceShellRequest request,
             ProcessDefinitionCatalogCommandReceipt? lastReceipt)
