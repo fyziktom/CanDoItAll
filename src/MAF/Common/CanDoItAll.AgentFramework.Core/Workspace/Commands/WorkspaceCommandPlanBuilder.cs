@@ -1088,7 +1088,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         };
     }
 
-    private WorkspaceCommandPlan CreatePlan(
+    internal WorkspaceCommandPlan CreatePlan(
         string toolName,
         string recipeId,
         string riskClass,
@@ -1293,7 +1293,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             TargetPaths: [projectResolution.RelativePath]);
     }
 
-    private DotnetRunArtifactPaths BuildDotnetRunArtifactPaths()
+    internal DotnetRunArtifactPaths BuildDotnetRunArtifactPaths()
     {
         var stamp = $"{DateTimeOffset.UtcNow.UtcDateTime:yyyyMMdd-HHmmssfff}-{Guid.NewGuid():N}";
         var relativeDirectory = pathPolicy.WorkspaceScope.CombineArtifactPath("process-runs", "dotnet-run", stamp);
@@ -1341,7 +1341,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             ]);
     }
 
-    private static DotnetRunUrls ResolveDotnetRunUrls(string? url)
+    internal static DotnetRunUrls ResolveDotnetRunUrls(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -1369,7 +1369,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             ProbeUrl: trimmed);
     }
 
-    private static DotnetRunUrls ResolveManagedDotnetRunUrls(DotnetRunUrls requested)
+    internal static DotnetRunUrls ResolveManagedDotnetRunUrls(DotnetRunUrls requested)
     {
         if (string.IsNullOrWhiteSpace(requested.ListenUrl))
         {
@@ -1626,7 +1626,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         string WorkingDirectoryRelative,
         IReadOnlyList<string> TargetPaths);
 
-    private sealed record DotnetRunArtifactPaths(
+    internal sealed record DotnetRunArtifactPaths(
         string StdoutLogFullPath,
         string StdoutLogRelativePath,
         string StderrLogFullPath,
@@ -1648,7 +1648,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         string Template,
         IReadOnlyList<string> Options);
 
-    private sealed record DotnetRunUrls(string? ListenUrl, string? ProbeUrl);
+    internal sealed record DotnetRunUrls(string? ListenUrl, string? ProbeUrl);
 
     private sealed record GitPathTarget(
         GitRepositoryCommandBuilder CommandBuilder,

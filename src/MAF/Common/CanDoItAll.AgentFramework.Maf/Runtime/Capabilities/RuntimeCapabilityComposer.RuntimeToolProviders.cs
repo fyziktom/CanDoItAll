@@ -64,6 +64,7 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
                 : composition.WorkspaceToolAccess,
             AdmittedToolSession = admittedToolSession,
             ToolAdmissionSupport = toolAdmissionSupport,
+            PublishedOutputCommands = composition.PublishedOutputCommands,
             Governance = governance
         };
         var result = await runtimeToolProviderComposer.AttachAsync(

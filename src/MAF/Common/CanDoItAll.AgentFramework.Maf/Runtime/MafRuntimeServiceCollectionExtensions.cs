@@ -20,6 +20,7 @@ public static class MafRuntimeServiceCollectionExtensions
         services.TryAddSingleton<AgentToolPolicyCatalog>();
         services.TryAddSingleton<IRuntimeToolProviderAccessFilter, RuntimeToolProviderAccessFilter>();
         services.TryAddSingleton<IRuntimeToolProviderComposer, RuntimeToolProviderComposer>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<CanDoItAll.AgentFramework.Tooling.IAgentRuntimeToolProvider, WorkspaceValidationToolProvider>());
         services.TryAddSingleton<IMafRuntimeCompositionMetrics, NoOpMafRuntimeCompositionMetrics>();
         services.TryAddTransient<IMafApprovalContinuationDriver, MafApprovalContinuationDriver>();
         services.TryAddSingleton<IMafRuntimeSessionPersistenceDriver, MafRuntimeSessionPersistenceDriver>();

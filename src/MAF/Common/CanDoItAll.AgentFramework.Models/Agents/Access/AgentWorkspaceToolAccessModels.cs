@@ -694,6 +694,8 @@ public static class AgentWorkspaceToolAccessMetadata
                 return true;
             case "workspace_dotnet_restore":
             case "workspace_dotnet_build":
+            case "workspace_dotnet_publish":
+            case "workspace_static_serve":
             case "workspace_dotnet_test":
             case "workspace_dotnet_run":
             case "workspace_dotnet_stop":

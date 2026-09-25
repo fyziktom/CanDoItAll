@@ -12,7 +12,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
     public void Every_installed_metadata_field_matches_the_independent_pre_cut_catalog() {
         var expected = Rows(ExpectedMetadata);
         var actual = ProductToolPolicies.Capabilities.OrderBy(policy => policy.Name, StringComparer.Ordinal).Select(Describe).ToArray();
-        Assert.Equal(213, actual.Length);
+        Assert.Equal(215, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -22,7 +22,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             .Select(policy => RuntimeToolCapabilityDescriptorFactory.CreateRuntimeToolCapabilityDescriptor(
                 policy.Name, policy.Name, "Descriptor parity", [], toolPolicies: ProductToolPolicies))
             .Select(Describe).ToArray();
-        Assert.Equal(213, actual.Length);
+        Assert.Equal(215, actual.Length);
         Assert.Equal(Rows(ExpectedDescriptors), actual);
     }
 
@@ -40,7 +40,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             values[2] = "maf.tool." + values[1];
             return string.Join('|', values);
         }).ToArray();
-        Assert.Equal(213, actual.Length);
+        Assert.Equal(215, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -302,6 +302,7 @@ workspace_delete_path|Mutation|true|true|WorkspaceWrite|WorkspaceFileMutation||E
 workspace_diff_text|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
 workspace_dotnet_build|Validation|false|false|LocalProcessExecution|Static|RunValidation|ExternalProductTargetReadOnly|false|false|true|false|None|ExternalSideEffect||false|Validation,ScriptExecution
 workspace_dotnet_new|Mutation|true|true|WorkspaceWrite|WorkspaceFileMutation||ExternalArtifactDestination,ExternalProductTargetMutable,ManagedOutputProduct,ManagedProcessArtifactsOnly|true|false|true|true|None|StateChanging||false|
+workspace_dotnet_publish|Validation|false|false|LocalProcessExecution|Static|RunValidation|ExternalProductTargetReadOnly|false|false|true|false|None|ExternalSideEffect||false|Validation,ScriptExecution
 workspace_dotnet_restore|Validation|false|false|LocalProcessExecution|Static|RunValidation|ExternalProductTargetReadOnly|false|false|true|false|None|ExternalSideEffect||false|Validation,ScriptExecution
 workspace_dotnet_run|Validation|false|false|RuntimeLaunch|DotNetRun||ExternalProductTargetReadOnly|false|false|true|false|None|RuntimeStateDependent||false|
 workspace_dotnet_stop|Validation|false|false|RuntimeLaunch|Static|LaunchRuntime,CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|None|RuntimeStateDependent||false|Validation,RuntimeLaunch,ResourceCleanup,ScriptExecution,BrowserAccess
@@ -331,6 +332,7 @@ workspace_search|Read|false|false|WorkspaceRead|None|||false|false|true|false|No
 workspace_spreadsheet_function_catalog|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
 workspace_spreadsheet_summary|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
 workspace_stat_path|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
+workspace_static_serve|Validation|false|false|RuntimeLaunch|Static|LaunchRuntime|ExternalProductTargetReadOnly|false|false|true|false|None|RuntimeStateDependent||false|Validation,RuntimeLaunch,ScriptExecution
 workspace_unzip_archive|Mutation|true|true|WorkspaceWrite|WorkspaceFileMutation||ExternalArtifactDestination,ExternalProductTargetMutable,ManagedOutputProduct,ManagedProcessArtifactsOnly|true|false|true|true|None|StateChanging||false|
 workspace_write_file|Mutation|true|true|WorkspaceWrite|WorkspaceFileMutation||ExternalArtifactDestination,ExternalProductTargetMutable,ManagedOutputProduct,ManagedProcessArtifactsOnly|true|false|true|true|None|StateChanging||false|
 workspace_write_spreadsheet|Mutation|true|true|WorkspaceWrite|WorkspaceFileMutation||ExternalArtifactDestination,ExternalProductTargetMutable,ManagedOutputProduct,ManagedProcessArtifactsOnly|true|false|true|true|None|StateChanging||false|
@@ -518,6 +520,7 @@ workspace_delete_path|workspace-delete-path|maf.workspace_delete_path|Mutation,W
 workspace_diff_text|workspace-diff-text|maf.workspace_diff_text|Read|WorkspaceRead|false|false
 workspace_dotnet_build|workspace-dotnet-build|maf.workspace_dotnet_build|ScriptExecution,Validation|LocalProcessExecution|false|false
 workspace_dotnet_new|workspace-dotnet-new|maf.workspace_dotnet_new|Mutation,Write|WorkspaceWrite|true|true
+workspace_dotnet_publish|workspace-dotnet-publish|maf.workspace_dotnet_publish|ScriptExecution,Validation|LocalProcessExecution|false|false
 workspace_dotnet_restore|workspace-dotnet-restore|maf.workspace_dotnet_restore|ScriptExecution,Validation|LocalProcessExecution|false|false
 workspace_dotnet_run|workspace-dotnet-run|maf.workspace_dotnet_run|Validation|RuntimeLaunch|false|false
 workspace_dotnet_stop|workspace-dotnet-stop|maf.workspace_dotnet_stop|BrowserAccess,ResourceCleanup,RuntimeLaunch,ScriptExecution,Validation|RuntimeLaunch|false|false
@@ -547,6 +550,7 @@ workspace_search|workspace-search|maf.workspace_search|Read|WorkspaceRead|false|
 workspace_spreadsheet_function_catalog|workspace-spreadsheet-function-catalog|maf.workspace_spreadsheet_function_catalog|Read|WorkspaceRead|false|false
 workspace_spreadsheet_summary|workspace-spreadsheet-summary|maf.workspace_spreadsheet_summary|Read|WorkspaceRead|false|false
 workspace_stat_path|workspace-stat-path|maf.workspace_stat_path|Read|WorkspaceRead|false|false
+workspace_static_serve|workspace-static-serve|maf.workspace_static_serve|RuntimeLaunch,ScriptExecution,Validation|RuntimeLaunch|false|false
 workspace_unzip_archive|workspace-unzip-archive|maf.workspace_unzip_archive|Mutation,Write|WorkspaceWrite|true|true
 workspace_write_file|workspace-write-file|maf.workspace_write_file|Write|WorkspaceWrite|true|true
 workspace_write_spreadsheet|workspace-write-spreadsheet|maf.workspace_write_spreadsheet|Write|WorkspaceWrite|true|true

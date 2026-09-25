@@ -35,6 +35,27 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class MafAgentRuntimeToolProviderCompositionTests
 {
     [Fact]
+    public async Task MafAgentRuntimePublishedOutput_tools_use_the_current_workspace_service() {
+        var directory = Directory.CreateTempSubdirectory("cdia-provider-publish-");
+        try {
+            using var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider();
+            var runtime = RuntimeCapabilityComposer.CreateDefault(directory.FullName, services);
+            var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(new AgentWorkspaceToolAccessSettings {
+                CanRunValidationCommands = true
+            }));
+            var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+            var publish = Assert.IsAssignableFrom<AIFunction>(Assert.Single(ReadTools(state), tool => tool.Name == ToolContractCatalog.WorkspaceDotNetPublish));
+            Assert.Contains(ReadTools(state), tool => tool.Name == ToolContractCatalog.WorkspaceStaticServe);
+            var result = await publish.InvokeAsync(new AIFunctionArguments { ["targetPath"] = "missing.csproj" });
+            var serialized = JsonSerializer.SerializeToElement(result);
+            Assert.Contains("Denied", serialized.GetRawText(), StringComparison.Ordinal);
+            Assert.Equal(ToolContractCatalog.WorkspaceDotNetPublish, serialized.GetProperty("toolName").GetString());
+        } finally {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_zero_registered_providers_does_not_attach_process_tools()
     {
         var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();

@@ -21,6 +21,8 @@ public static class ToolContractCatalog
     public const string WorkspaceDotNetRestore = "workspace_dotnet_restore";
     public const string WorkspaceDotNetBuild = "workspace_dotnet_build";
     public const string WorkspaceDotNetTest = "workspace_dotnet_test";
+    public const string WorkspaceDotNetPublish = "workspace_dotnet_publish";
+    public const string WorkspaceStaticServe = "workspace_static_serve";
     public const string WorkspaceDotNetRun = "workspace_dotnet_run";
     public const string WorkspaceDotNetStop = "workspace_dotnet_stop";
     public const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";

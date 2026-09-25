@@ -17,6 +17,55 @@ public sealed class ProcessProjectionPipelineTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 0, 0, TimeSpan.Zero);
 
+    [Theory]
+    [InlineData(ProcessProjectedRunStatus.Active, true)]
+    [InlineData(ProcessProjectedRunStatus.NeedsAttention, true)]
+    [InlineData(ProcessProjectedRunStatus.Completed, false)]
+    public async Task Live_window_keeps_unfinished_runs_visible(ProcessProjectedRunStatus status, bool expectedVisible) {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var eventType = status switch {
+            ProcessProjectedRunStatus.Active => ProcessRuntimeEventTypes.ProcessRunActivated,
+            ProcessProjectedRunStatus.NeedsAttention => ProcessRuntimeEventTypes.ProcessRunBlocked,
+            _ => ProcessRuntimeEventTypes.ProcessRunCompleted
+        };
+        await ProjectAsync(store, StoredEvent(1, ProcessRunId.New(), eventType, Now.AddDays(-2)), 1);
+        var service = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now));
+
+        var result = await service.GetLiveProcessesAsync(new(Now, TimeSpan.FromHours(1), 10,
+            ProcessLiveProcessesLoadOptions.SnapshotOnly));
+
+        Assert.Equal(expectedVisible ? 1 : 0, result.Runs.Count);
+        Assert.All(result.Runs, run => Assert.Equal(status, run.Status));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Runtime_workspace_keeps_explicit_run_outside_window_and_list_limit(bool reuseList) {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var selectedRunId = ProcessRunId.New();
+        var recentRunId = ProcessRunId.New();
+        await ProjectAsync(store, StoredEvent(1, selectedRunId, ProcessRuntimeEventTypes.ProcessRunCompleted, Now.AddDays(-2)), 1);
+        await ProjectAsync(store, StoredEvent(2, recentRunId, ProcessRuntimeEventTypes.ProcessRunCompleted, Now.AddMinutes(-1)), 2);
+        var service = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now));
+        var recent = await service.GetLiveProcessesAsync(new(Now, TimeSpan.FromHours(1), 1,
+            ProcessLiveProcessesLoadOptions.SnapshotOnly));
+
+        var result = await service.GetRuntimeWorkspaceAsync(new(Now, TimeSpan.FromHours(1), 0, 10, 1,
+            selectedRunId, LoadOptions: ProcessRuntimeWorkspaceLoadOptions.ListOnly) {
+            PreviouslyLoadedRuns = reuseList ? recent.ReusableRuns : null
+        });
+
+        Assert.Equal(2, result.Runs.Count);
+        Assert.Contains(result.Runs, run => run.RunId == recentRunId);
+        Assert.Contains(result.Runs, run => run.RunId == selectedRunId && run.Status == ProcessProjectedRunStatus.Completed);
+        Assert.Equal(2, result.ReusableRuns?.Count);
+    }
+
     [Fact]
     public async Task Replay_worker_projects_live_history_run_detail_and_offsets()
     {
@@ -234,7 +283,7 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
-    public async Task Live_last_hour_query_excludes_stale_active_runs()
+    public async Task Live_last_hour_query_keeps_quiet_active_runs_visible()
     {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessProjectionStore(dbContext);
@@ -247,7 +296,7 @@ public sealed class ProcessProjectionPipelineTests
 
         var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
 
-        Assert.Empty(live.Runs);
+        Assert.Equal(runId, Assert.Single(live.Runs).RunId);
     }
 
     [Fact]
@@ -1215,9 +1264,10 @@ public sealed class ProcessProjectionPipelineTests
             });
     }
 
-    [Fact]
-    public async Task Runtime_workspace_operator_actions_include_execution_result_summary_for_blocked_repair_branch()
-    {
+    [Theory]
+    [InlineData(-60)]
+    [InlineData(1)]
+    public async Task Runtime_workspace_operator_actions_include_execution_result_summary_for_blocked_repair_branch(int updateOffsetSeconds) {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessProjectionStore(dbContext);
         var runId = ProcessRunId.New();
@@ -1275,7 +1325,7 @@ public sealed class ProcessProjectionPipelineTests
                     blockedStepId,
                     "Delivery QA Observer",
                     "Completed",
-                    Now.AddMinutes(-1),
+                    Now.AddSeconds(updateOffsetSeconds),
                     resultSummary: resultSummary)));
 
         var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
@@ -1895,9 +1945,10 @@ public sealed class ProcessProjectionPipelineTests
         Assert.Empty(run.OperatorActions);
     }
 
-    [Fact]
-    public async Task Runtime_workspace_active_agents_include_only_live_nonstale_execution_observations()
-    {
+    [Theory]
+    [InlineData(-60)]
+    [InlineData(1)]
+    public async Task Runtime_workspace_active_agents_include_only_live_nonstale_execution_observations(int updateOffsetSeconds) {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessProjectionStore(dbContext);
         var runId = ProcessRunId.New();
@@ -1939,7 +1990,7 @@ public sealed class ProcessProjectionPipelineTests
             new InMemoryRuntimeStateStore(state),
             new InMemoryAssignmentStore(assignments),
             new InMemoryObservationReader(
-                CreateObservation(runId, runningStepId, ".NET Developer", "Running", Now.AddMinutes(-1), avatarImageUrl),
+                CreateObservation(runId, runningStepId, ".NET Developer", "Running", Now.AddSeconds(updateOffsetSeconds), avatarImageUrl),
                 CreateObservation(runId, completedStepId, ".NET QA Review Lead", "Completed", Now.AddMinutes(-1)),
                 CreateObservation(runId, staleStepId, "Delivery QA Observer", "Running", Now.AddMinutes(-31))));
 
@@ -2487,7 +2538,7 @@ public sealed class ProcessProjectionPipelineTests
             runId,
             AutoSelectRun: true));
 
-        Assert.Empty(result.Runs);
+        Assert.Equal(runId, Assert.Single(result.Runs).RunId);
         Assert.Equal(runId, result.SelectedRun?.RunId);
         Assert.Equal(runId, result.SelectedRunRecord?.Summary.Identity.RunId);
         Assert.Equal(ProcessProjectionComponentState.Present, result.Provenance.SelectedRunDetail.State);

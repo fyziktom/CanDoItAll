@@ -33,8 +33,11 @@ public sealed partial class ProcessWorkspaceShellTests {
         Assert.DoesNotContain(context.JSInterop.Invocations, invocation => invocation.Identifier == "sessionStorage.setItem");
     }
 
-    [Fact]
-    public async Task Launch_restores_the_accepted_browser_intent_without_recapturing_a_new_project_lifetime() {
+    [Theory]
+    [InlineData(ProcessLaunchContinuationState.Started, true)]
+    [InlineData(ProcessLaunchContinuationState.Accepted, false)]
+    public async Task Launch_restores_the_accepted_browser_intent_without_recapturing_a_new_project_lifetime(
+        ProcessLaunchContinuationState continuation, bool acknowledged) {
         using var context = CreateLaunchContext();
         var profile = Guid.NewGuid();
         var project = Guid.NewGuid();
@@ -43,7 +46,7 @@ public sealed partial class ProcessWorkspaceShellTests {
         var request = preparation.Request with { DefinitionKey = "blazor-app-delivery", Execute = true };
         preparation = preparation with { Request = request, RequestFingerprint = ProcessLaunchIntentFingerprint.Compute(request) };
         var retained = new ProcessPreparedLaunchSnapshot(preparation, "retained-component-evidence", 9,
-            ProcessLaunchContinuationState.Started, ProcessProjectAdmissionFixture.Now, true,
+            continuation, ProcessProjectAdmissionFixture.Now, true,
             ProcessLaunchLinkDeliveryState.NotRequested, null, null);
         var store = new RetainedLaunchStore(retained);
         var authorities = new LaunchOperatorSource(originalAuthority with { ProjectAdmission = null });
@@ -60,7 +63,7 @@ public sealed partial class ProcessWorkspaceShellTests {
         Assert.Null(authorities.ProjectCaptures[0]);
         Assert.Equal(1, store.ContinuationCalls);
         Assert.Contains(context.JSInterop.Invocations, invocation => invocation.Identifier == "sessionStorage.setItem");
-        Assert.DoesNotContain(context.JSInterop.Invocations, invocation => invocation.Identifier == "sessionStorage.removeItem");
+        Assert.Equal(acknowledged, context.JSInterop.Invocations.Any(invocation => invocation.Identifier == "sessionStorage.removeItem"));
     }
 
     private static BunitContext CreateLaunchContext() {

@@ -126,13 +126,13 @@
                     <span>Mock projection scenario is active. Runtime actions are simulated for UX tuning.</span>
                 </div>
             }
-            else if (LaunchStarted)
+            else if (LaunchStarted && (shell is null || !shell.Runtime.Runs.Any(run => run.RunId.Value == RunIdQuery)))
             {
                 <div class="live-processes-alert live-processes-alert--success"
                      role="status"
                      data-testid="live-processes-started-notification">
                     <Icon Name="check_circle" />
-                    <span>Process started. Live run projection is loading.</span>
+                    <span>Launch accepted. Waiting for the run projection.</span>
                 </div>
             }
 
@@ -574,7 +574,7 @@
     protected override async Task OnParametersSetAsync()
     {
         SynchronizeRouteSelections();
-        await LoadAsync(forceRefresh: false);
+        await LoadAsync(forceRefresh: LaunchStarted);
     }
 
     private void SynchronizeRouteSelections(bool force = false)

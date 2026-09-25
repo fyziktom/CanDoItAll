@@ -83,6 +83,7 @@
   </Folder>
   <Folder Name="/src/MAF/Tools/">
     <Project Path="src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj" />
+    <Project Path="src/MAF/Tools/CanDoItAll.Tools.StaticHost/CanDoItAll.Tools.StaticHost.csproj" />
     <Project Path="src/MAF/Tools/CanDoItAll.AgentFramework.Tools.Abstractions/CanDoItAll.AgentFramework.Tools.Abstractions.csproj" />
     <Project Path="src/MAF/Tools/CanDoItAll.AgentFramework.Tools/CanDoItAll.AgentFramework.Tools.csproj" />
     <Project Path="src/MAF/Tools/CanDoItAll.Tools.Documents/CanDoItAll.Tools.Documents.csproj" />

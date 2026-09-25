@@ -51,7 +51,7 @@
                     Disabled="@Dialog.IsBusy"
                     data-testid="project-structure-process-assignment-save-close"
                     Click="Close" />
-            <Button Text="@(Dialog.IsAccepted ? "Resume accepted run" : Dialog.PreparedRequest?.PreparedAdmissionId is null ? "Prepare reviewed launch" : "Start reviewed run")"
+            <Button Text="@(Dialog.IsAccepted ? "Open accepted run" : Dialog.PreparedRequest?.PreparedAdmissionId is null ? "Prepare reviewed launch" : "Start reviewed run")"
                     ButtonStyle="ButtonStyle.Info"
                     Disabled="@((Dialog.RequiredGapCount > 0 && !Dialog.IsAccepted) || Dialog.IsBusy)"
                     IsBusy="@Dialog.IsBusy"

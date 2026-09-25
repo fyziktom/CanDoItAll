@@ -3,6 +3,7 @@
   <Import Project="..\..\MicrosoftAgentFramework.Packages.props" />
 
   <ItemGroup>
+    <ProjectReference Include="../../Tools/CanDoItAll.Tools.StaticHost/CanDoItAll.Tools.StaticHost.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Runtime.Abstractions\CanDoItAll.AgentFramework.Runtime.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />

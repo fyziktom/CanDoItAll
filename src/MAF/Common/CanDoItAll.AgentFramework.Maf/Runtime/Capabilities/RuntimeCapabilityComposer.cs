@@ -533,7 +533,11 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             toolBuilder,
             capabilityAccessPlan,
             workspaceToolAccess,
-            configuredWorkspaceToolAccess);
+            configuredWorkspaceToolAccess) {
+            PublishedOutputCommands = workspaceRuntimeServices.CommandExecutionService is CanDoItAll.AgentFramework.Runtime.Abstractions.IWorkspacePublishedOutputCommands commands
+                ? new WorkspacePublishedOutputRuntime(commands, new WorkspaceRuntimeFileAccessGuard(workspaceRoot, physicalPathPolicyFactory, effectiveWorkspaceScope, workspaceToolAccess), workspaceToolAccess)
+                : null
+        };
     }
 
     private IReadOnlyList<RuntimeToolProviderRegistration> PrepareRuntimeToolProviders(
@@ -589,12 +593,15 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
                 var plan = capabilityAccessPlanner.CreateRuntimeCapabilityAccessPlan(held.Agent, currentCapabilities,
                     currentAccess, context.ContextIntent, PrepareRuntimeToolProviders(configured, context.ContextIntent));
+                if (WorkspaceValidationToolProvider.Owns(toolName)) {
+                    return currentAccess.CanRunValidationCommands && plan.InitialAllowedCapabilities.Any(capability => capability.RuntimeToolName?.Value == toolName) ? currentAccess : null;
+                }
                 return composition.ToolBuilder.CreateWorkspaceToolsForDisclosure(currentAccess, plan, currentCapabilities)
                     .Any(tool => tool.Name == toolName) ? currentAccess : null;
             });
         for (var index = 0; index < composition.State.Tools.Count; index++) {
             if (composition.State.Tools[index] is not AIFunction function ||
-                    !ToolContractCatalog.WorkspaceToolNames.Contains(function.Name)) {
+                    !(ToolContractCatalog.WorkspaceToolNames.Contains(function.Name) || WorkspaceValidationToolProvider.Owns(function.Name))) {
                 continue;
             }
             var metadataIndex = composition.State.RuntimeToolMetadata.FindIndex(item => item.ToolName == function.Name);

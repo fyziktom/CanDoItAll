@@ -45,6 +45,8 @@ public sealed record AgentRuntimeToolProviderContext
 
     public AgentWorkspaceToolAccessSettings? WorkspaceToolAccess { get; init; }
 
+    public CanDoItAll.AgentFramework.Runtime.Abstractions.IWorkspacePublishedOutputCommands? PublishedOutputCommands { get; init; }
+
     public IReadOnlyDictionary<string, string> Tags { get; init; }
 
     public ImmutableArray<AgentChatContextAttachmentEnvelope> Attachments { get; init; }

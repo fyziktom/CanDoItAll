@@ -8,6 +8,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -417,6 +418,12 @@ public partial class ProjectStructurePage
             var deliveryMessage = await ObserveProcessLinkDeliveryAsync(dialog, result);
             if (!IsCurrentProcessStart(dialog)) {
                 return;
+            }
+
+            if (result.Observation is { ContinuationState: ProcessLaunchContinuationState.Started } &&
+                string.IsNullOrEmpty(deliveryMessage) &&
+                dialog.IntentStorageKey is { } completedIntentStorageKey) {
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", completedIntentStorageKey);
             }
 
             await InvokeAsync(() => {

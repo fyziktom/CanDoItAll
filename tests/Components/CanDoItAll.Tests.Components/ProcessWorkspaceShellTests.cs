@@ -308,6 +308,22 @@ public sealed partial class ProcessWorkspaceShellTests
     }
 
     [Theory]
+    [InlineData("88888888-8888-8888-8888-888888888888", false)]
+    [InlineData("66666666-6666-6666-6666-666666666666", true)]
+    public void Live_processes_launch_notice_waits_only_for_an_unprojected_run(string runId, bool expectedNotice) {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.RunIdQuery, Guid.Parse(runId))
+            .Add(component => component.LaunchStarted, true));
+
+        cut.WaitForAssertion(() => {
+            Assert.Equal(expectedNotice ? 1 : 0, cut.FindAll("[data-testid='live-processes-started-notification']").Count);
+            Assert.DoesNotContain("Process started. Live run projection is loading.", cut.Markup, StringComparison.Ordinal);
+            Assert.True(client.Requests[0].ForceRefresh);
+        });
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void Live_processes_fails_closed_for_an_unresolved_non_run_route(bool useProcessId)

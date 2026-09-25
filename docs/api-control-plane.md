@@ -194,6 +194,8 @@ redacted `500`. The workflow response boundary never uses `502`.
 
 `launch/check` persists a reviewable preparation but does not create or dispatch a run. Retain its `callerIntentId` and returned admission identity for the subsequent launch and retry. The optional `callerIntentId` and `preparedAdmissionId` fields reuse the original plan and source; changed input conflicts. Callers omitting these identities retain intentional-repeat behavior and cannot safely infer whether an unacknowledged call created a run. `launch` persists the run when readiness permits; `execute: false` prevents immediate queueing but still accepts the run. Its `observation` distinguishes acceptance, continuation and Structure delivery. See the [operator runbook](process-agent-operator-runbook.md) for recovery and configuration.
 
+The live list's `windowMinutes` limits finished runs. Active runs and runs needing attention remain eligible regardless of age, subject to `take`. Timeline history keeps its requested time range. The Live Processes UI also pins an explicitly selected run outside the recent list or its size limit, while enforcing its project lifetime. A launch URL shows the selected run's current status; `processStarted=1` is only a pending projection hint.
+
 ## Agent Approval And Usage Contract
 
 Approval continuation accepts an additive `decisions` array whose entries contain `approvalId` and

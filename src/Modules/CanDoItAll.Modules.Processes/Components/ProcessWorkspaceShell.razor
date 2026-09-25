@@ -1061,7 +1061,18 @@
                 : result.Warnings.Count == 0 ? $"Launch {result.Stage}." : string.Join(" ", result.Warnings);
             await LoadAsync(forceRefresh: true);
             if (ProjectId == projectId && AgentChatNavigationFence == navigation && result.RunId is not null && !string.IsNullOrWhiteSpace(result.Route)) {
-                Navigation.NavigateTo(result.Route);
+                if (result.Observation is { ContinuationState: ProcessLaunchContinuationState.Started,
+                        LinkDeliveryState: ProcessLaunchLinkDeliveryState.NotRequested or ProcessLaunchLinkDeliveryState.Delivered }) {
+                    await JsRuntime.InvokeVoidAsync("sessionStorage.removeItem", storageKey);
+                    if (pendingLaunchStorageKey == storageKey) {
+                        pendingLaunchRequest = null;
+                        pendingLaunchStorageKey = null;
+                        pendingLaunchAccepted = false;
+                    }
+                }
+                if (ProjectId == projectId && AgentChatNavigationFence == navigation) {
+                    Navigation.NavigateTo(result.Route);
+                }
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
             if (ProjectId == projectId && AgentChatNavigationFence == navigation) {

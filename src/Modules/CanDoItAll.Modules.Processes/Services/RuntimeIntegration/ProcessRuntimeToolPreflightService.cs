@@ -766,6 +766,8 @@ internal static class ProcessRuntimeToolHostCapabilityPolicy
             ToolContractCatalog.WorkspaceDotNetNew or
             ToolContractCatalog.WorkspaceDotNetRestore or
             ToolContractCatalog.WorkspaceDotNetBuild or
+            ToolContractCatalog.WorkspaceDotNetPublish or
+            ToolContractCatalog.WorkspaceStaticServe or
             ToolContractCatalog.WorkspaceDotNetTest or
             ToolContractCatalog.WorkspaceDotNetRun => ProcessHostCapabilityIds.DotNetRuntime,
             ToolContractCatalog.WorkspaceDotNetStop => ProcessHostCapabilityIds.DirectExecution,

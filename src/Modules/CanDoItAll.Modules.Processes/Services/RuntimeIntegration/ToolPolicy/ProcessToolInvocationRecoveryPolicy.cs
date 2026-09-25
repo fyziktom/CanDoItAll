@@ -43,6 +43,8 @@ internal static class ProcessToolInvocationRecoveryPolicy {
         ToolContractCatalog.WorkspaceDotNetBuild,
         ToolContractCatalog.WorkspaceDotNetTest,
         ToolContractCatalog.WorkspaceDotNetRun,
+        ToolContractCatalog.WorkspaceDotNetPublish,
+        ToolContractCatalog.WorkspaceStaticServe,
         ToolContractCatalog.WorkspacePowerShellRunScript,
         ToolContractCatalog.WorkspacePythonRunFile,
         ToolContractCatalog.WorkspaceCommandRun

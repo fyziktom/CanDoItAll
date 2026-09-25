@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.Storage;
@@ -7,10 +8,12 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class WorkspaceCommandExecutionService :
     IWorkspaceCommandExecutionService,
+    IWorkspacePublishedOutputCommands,
     IWorkspaceExecutionRunProcessLeaseCleanupExecutor
 {
     private readonly WorkspaceCommandEnvironmentPolicy environmentPolicy;
     private readonly WorkspaceCommandPlanBuilder planBuilder;
+    private readonly WorkspacePublishedOutputPlanBuilder publishedOutputPlans;
     private readonly WorkspaceCommandProcessRunner processRunner;
     private readonly WorkspaceCommandReceiptWriter receiptWriter;
     private readonly WorkspaceExecutionRunProcessLeaseStore processLeaseStore;
@@ -39,6 +42,7 @@ public sealed class WorkspaceCommandExecutionService :
             pathPolicy.WorkspaceScope,
             lifecycleFactExtractors);
         planBuilder = new WorkspaceCommandPlanBuilder(pathPolicy);
+        publishedOutputPlans = new WorkspacePublishedOutputPlanBuilder(pathPolicy, planBuilder);
         processRunner = new WorkspaceCommandProcessRunner(
             processHost,
             environmentPolicy,
@@ -196,12 +200,34 @@ public sealed class WorkspaceCommandExecutionService :
                 GetSafeFailureMessage(exception));
         }
 
+        return await RunManagedPlanAsync(plan).ConfigureAwait(false);
+    }
+
+    public async Task<WorkspaceCommandExecutionResult> DotnetPublish(string targetPath, string configuration = "Release", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600) {
+        WorkspaceCommandPlan? plan = null;
+        var result = await ExecutePlanAsync(
+            () => plan = publishedOutputPlans.Publish(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceDotNetPublish, "dotnet_publish", "LocalExecution", false);
+        return result.Succeeded ? result with { Message = $"{result.Message} Published output directory: {plan!.TargetPaths[^1]}." } : result;
+    }
+
+    public async Task<WorkspaceCommandExecutionResult> ServeStaticFiles(string hostAssemblyPath, string directoryPath, string? url = null, bool spaFallback = true, int startupTimeoutSeconds = 45) {
+        WorkspaceCommandPlan plan;
+        try {
+            plan = publishedOutputPlans.Serve(hostAssemblyPath, directoryPath, url, spaFallback, startupTimeoutSeconds);
+        } catch (Exception exception) when (WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _)) {
+            return processRunner.CreateDeniedResult(ToolContractCatalog.WorkspaceStaticServe, "static_serve", "LocalExecution", false, GetSafeFailureMessage(exception), rejectedBeforeLaunch: true);
+        }
+        return await RunManagedPlanAsync(plan).ConfigureAwait(false);
+    }
+
+    private async Task<WorkspaceCommandExecutionResult> RunManagedPlanAsync(WorkspaceCommandPlan plan) {
         if (plan.DotnetRunLifecycle is null)
         {
             return await ExecutePlanAsync(
                 () => plan,
-                "workspace_dotnet_run",
-                recipeId,
+                plan.Decision.ToolName,
+                plan.Decision.RecipeId,
                 "LocalExecution",
                 approvalRequired: false);
         }
@@ -209,15 +235,21 @@ public sealed class WorkspaceCommandExecutionService :
         if (dotnetProcessLifecycle is null)
         {
             return processRunner.CreateDeniedResult(
-                "workspace_dotnet_run",
-                recipeId,
+                plan.Decision.ToolName,
+                plan.Decision.RecipeId,
                 "LocalExecution",
                 approvalRequired: false,
                 "The configured workspace process host does not support managed long-running process sessions.");
         }
 
-        if (!keepAlive ||
-            lifetimeScope != WorkspaceProcessLifetimeScope.ExecutionRun)
+        var lifecycle = plan.DotnetRunLifecycle;
+        var auditScope = WorkspaceExecutionAuditContext.Current;
+        if (lifecycle.KeepAlive && lifecycle.LifetimeScope == WorkspaceProcessLifetimeScope.ExecutionRun && auditScope is null) {
+            return processRunner.CreateDeniedResult(plan.Decision.ToolName, plan.Decision.RecipeId, "LocalExecution", false,
+                "A kept-alive workspace process requires an active execution-run audit context.");
+        }
+        if (!lifecycle.KeepAlive ||
+            lifecycle.LifetimeScope != WorkspaceProcessLifetimeScope.ExecutionRun)
         {
             return await dotnetProcessLifecycle
                 .RunAsync(plan)
@@ -237,7 +269,7 @@ public sealed class WorkspaceCommandExecutionService :
                 auditScope!.ExecutionRunId,
                 startupReceiptPath,
                 registeredAtUtc,
-                registeredAtUtc.AddSeconds(Math.Clamp(startupTimeoutSeconds, 1, 600)));
+                registeredAtUtc.AddSeconds(lifecycle.StartupTimeoutSeconds));
         }
         catch (Exception exception)
         {

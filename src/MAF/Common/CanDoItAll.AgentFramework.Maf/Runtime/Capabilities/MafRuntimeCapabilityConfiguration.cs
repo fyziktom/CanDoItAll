@@ -67,7 +67,9 @@ internal sealed record RuntimeCapabilityComposition(
     ToolCapabilityBuilder ToolBuilder,
     RuntimeCapabilityAccessPlan CapabilityAccessPlan,
     AgentWorkspaceToolAccessSettings WorkspaceToolAccess,
-    AgentWorkspaceToolAccessSettings ConfiguredWorkspaceToolAccess);
+    AgentWorkspaceToolAccessSettings ConfiguredWorkspaceToolAccess) {
+    public CanDoItAll.AgentFramework.Runtime.Abstractions.IWorkspacePublishedOutputCommands? PublishedOutputCommands { get; init; }
+}
 
 internal sealed class SkillCapabilityConfiguration
 {

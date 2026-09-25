@@ -245,6 +245,8 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
         Assert.Equal(planId, saved.Preparation.Review.PlanId.Value);
         Assert.Equal(request.CallerIntentId, saved.Preparation.CallerIntentId);
         Assert.Equal(saved.Preparation.InitialCommit.Mutation.State.RunId, probe.QueuedRunId);
+        Assert.Contains(harness.Context.JSInterop.Invocations["sessionStorage.removeItem"],
+            invocation => Equals(invocation.Arguments[0], $"candoitall.process-launch.structure:{request.Authority!.DatabaseProfileId:D}:{target.ProjectId:D}:{target.TargetNodeId}:{DefinitionId:D}"));
     }
 
     [Fact]
@@ -264,6 +266,7 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
         Assert.NotNull(saved.AcceptedAtUtc);
         Assert.Equal(runId, saved.Preparation.InitialCommit.Mutation.State.RunId);
         Assert.Equal(ProcessLaunchLinkDeliveryState.Delivered, saved.LinkDeliveryState);
+        Assert.Empty(harness.Context.JSInterop.Invocations["sessionStorage.removeItem"]);
         Assert.Contains(runId.Value.ToString("D"), harness.Context.Services.GetRequiredService<NavigationManager>().Uri, StringComparison.Ordinal);
         var graph = await harness.Context.Services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(target.ProjectId);
         Assert.Single(graph.Links, link => link.SourceId == target.TargetNodeId &&

@@ -32,7 +32,7 @@ public partial class ProjectStructurePage {
         processStartAgentMetadataById = metadata;
         var accepted = saved.AcceptedAtUtc is not null;
         processStartDialog = MapProcessStartDialogState(dialog, saved.Preparation.Review,
-            accepted ? $"Process {saved.Preparation.InitialCommit.Mutation.State.RunId.Value:D} was already accepted. Its retained launch can be observed or resumed."
+            accepted ? $"Process {saved.Preparation.InitialCommit.Mutation.State.RunId.Value:D} was already accepted. Open it to inspect its current state, or prepare another launch for a new run."
                 : "The saved launch plan was restored. Review these exact assignments before starting.", string.Empty) with {
             LaunchIntentId = new(intentId),
             LaunchAuthority = request.Authority,

@@ -36,6 +36,14 @@ MAF runtime regression proof is tracked by named slices so process automation an
 
 ## Architecture Notes
 
+`WorkspaceValidationToolProvider` registers `workspace_dotnet_publish` and
+`workspace_static_serve` through the configured workspace provider seam. Both use
+the current execution's typed workspace service, validation permissions and saved
+result authority. Static serving additionally requires the LaunchRuntime operation.
+The provider owns tool schemas; Core owns command/lease orchestration; the standalone
+StaticHost executable owns HTTP serving. See the
+[published-output decision](../../../../docs/architecture/workspace-published-output-validation.md).
+
 Keep AgentFramework model contracts, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly. MAF must not reference `CanDoItAll.Modules.*` projects or the `Workflows.MafAdapter` project; secret-runtime contracts arrive through the dependency-free `CanDoItAll.Security.Abstractions` foundation project and storage contracts through `CanDoItAll.Infrastructure`. First-party product tool ownership belongs in registered `IAgentRuntimeToolProvider` implementations.
 
 ### Runtime ports and the MAF adapter
