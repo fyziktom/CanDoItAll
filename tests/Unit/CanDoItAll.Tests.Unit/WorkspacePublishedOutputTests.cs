@@ -178,6 +178,28 @@ public sealed class WorkspacePublishedOutputTests {
         Assert.Throws<ArgumentException>(() => StaticFileHost.Create(Path.GetTempPath(), url, true));
     }
 
+    // macOS temp directories live below the /var -> /private/var link; only the root and its contents are guarded.
+    [Fact]
+    public async Task Static_host_serves_a_root_below_a_linked_ancestor_but_rejects_a_linked_root() {
+        var directory = Directory.CreateTempSubdirectory("cdia-static-linked-");
+        try {
+            var real = Directory.CreateDirectory(Path.Combine(directory.FullName, "real", "site")).Parent!.FullName;
+            await File.WriteAllTextAsync(Path.Combine(real, "site", "index.html"), "<h1>Linked ancestor</h1>");
+            var linked = Path.Combine(directory.FullName, "linked");
+            Directory.CreateSymbolicLink(linked, real);
+
+            Assert.Throws<ArgumentException>(() => StaticFileHost.Create(linked, "http://127.0.0.1:0", true));
+            await using var app = StaticFileHost.Create(Path.Combine(linked, "site"), "http://127.0.0.1:0", true);
+            await app.StartAsync();
+            using var client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()), Timeout = TimeSpan.FromSeconds(5) };
+            Assert.Equal("<h1>Linked ancestor</h1>", await client.GetStringAsync("/"));
+            Assert.Equal("<h1>Linked ancestor</h1>", await client.GetStringAsync("/route/nested"));
+            await app.StopAsync();
+        } finally {
+            directory.Delete(recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData(false, true, 0)]
     [InlineData(true, false, 0)]

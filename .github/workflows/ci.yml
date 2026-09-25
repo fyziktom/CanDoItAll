@@ -199,6 +199,8 @@ jobs:
 
       - name: Run stable Unit and Memory gate
         shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: |
           dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true" --logger "trx;LogFilePrefix=stable-unit-${{ matrix.name }}" --results-directory "${{ runner.temp }}/test-results" -p:UseLocalCanDoItAllLibraries=true /m:1
           $unitExitCode = $LASTEXITCODE

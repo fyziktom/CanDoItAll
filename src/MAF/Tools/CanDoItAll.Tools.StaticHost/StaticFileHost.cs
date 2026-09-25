@@ -68,16 +68,29 @@ public static class StaticFileHost {
         return app;
     }
 
+    // Links are rejected at the served root and below it. The root's own ancestors belong to whoever chose the root
+    // (macOS temp directories live under the /var -> /private/var link), so they cannot widen what is served.
     private static bool IsSafePath(string root, string path) {
         var relative = Path.GetRelativePath(root, path);
         if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)) {
             return false;
         }
-        for (var current = path; current is not null; current = Path.GetDirectoryName(current)) {
-            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) {
+        if (IsLink(root)) {
+            return false;
+        }
+        var current = root;
+        foreach (var segment in relative.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)) {
+            if (segment == ".") {
+                continue;
+            }
+            current = Path.Combine(current, segment);
+            if (IsLink(current)) {
                 return false;
             }
         }
         return true;
     }
+
+    private static bool IsLink(string path) =>
+        (File.Exists(path) || Directory.Exists(path)) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
 }

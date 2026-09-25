@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-25T20:47:24.223130+00:00",
+  "generated_utc": "2026-09-25T22:12:11.712161+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15003,
+  "allowance_count": 15005,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -38278,13 +38278,19 @@
     {
       "path": "src/MAF/Tools/CanDoItAll.Tools.StaticHost/StaticFileHost.cs",
       "category": "link-reparse",
-      "source_fingerprint": "5e6b7211730b70e1c3ce4ce94a3a46451837c55958b447a4d538c10a242cc5a1",
+      "source_fingerprint": "778d0143d5e9bccb6e715ce27087981237d4088e1ca9f9107f0c57df60611d32",
       "count": 1
     },
     {
       "path": "src/MAF/Tools/CanDoItAll.Tools.StaticHost/StaticFileHost.cs",
       "category": "path-api",
       "source_fingerprint": "123ca8180e810d84be028311fd21edf708a7c703ccca703f2708645d5e369cdd",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.StaticHost/StaticFileHost.cs",
+      "category": "path-api",
+      "source_fingerprint": "39629bbdb755bb9f25d07e4439292ac5a60b03f4e10ef04900e3f6c862a41fc4",
       "count": 1
     },
     {
@@ -38303,6 +38309,12 @@
       "path": "src/MAF/Tools/CanDoItAll.Tools.StaticHost/StaticFileHost.cs",
       "category": "path-api",
       "source_fingerprint": "5c10cd1af38e085e8ec98f3e58ab4f403ce1852c43c24398a76da98287c95190",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.StaticHost/StaticFileHost.cs",
+      "category": "path-api",
+      "source_fingerprint": "d42886c2385cebf65a3fa65a053c331f35f0a9e25a09d390cd7b80c564c44db5",
       "count": 1
     },
     {

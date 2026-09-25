@@ -48,6 +48,7 @@ public sealed class CrossPlatformCiWorkflowTests
     [InlineData("host-lane-without-windows")]
     [InlineData("full-scope-never-runs")]
     [InlineData("main-runs-split-scope")]
+    [InlineData("stable-lane-without-postgres")]
     public void Weakened_workflow_is_rejected(string weakening)
     {
         string workflow = ReadActiveWorkflow();
@@ -84,6 +85,10 @@ public sealed class CrossPlatformCiWorkflowTests
             "host-lane-without-windows" => ReplaceFirst(workflow, "            os: windows-latest\n          - name: macos-arm64\n            os: macos-15\n    runs-on", "            os: macos-15\n          - name: macos-arm64\n            os: macos-15\n    runs-on"),
             "full-scope-never-runs" => ReplaceFirst(workflow, "if: needs.dependencies.outputs.platform-scope == 'full'", "if: false"),
             "main-runs-split-scope" => ReplaceFirst(workflow, "$env:GITHUB_REF -eq 'refs/heads/main'", "$env:GITHUB_REF -eq 'refs/heads/release'"),
+            "stable-lane-without-postgres" => ReplaceFirst(
+                workflow,
+                "      - name: Run stable Unit and Memory gate\n        shell: pwsh\n        env:\n          CANDOITALL_TESTS_POSTGRES_CONNECTION:",
+                "      - name: Run stable Unit and Memory gate\n        shell: pwsh\n        env:\n          CANDOITALL_TESTS_POSTGRES_UNUSED:"),
             _ => throw new ArgumentOutOfRangeException(nameof(weakening))
         };
 
@@ -387,6 +392,13 @@ public sealed class CrossPlatformCiWorkflowTests
                     !step.Contains("UseLocalCanDoItAllLibraries=true", StringComparison.Ordinal))
                 {
                     violations.Add($"Job {jobName} step '{StepName(step)}' builds without the pinned sibling sources.");
+                }
+
+                // PostgreSQL-backed tests fail rather than skip without the connection, so every stable lane needs it.
+                if (Regex.IsMatch(step, "(?:--filter|-Filter) \"[^\"]*Category!=Playwright") &&
+                    !Regex.IsMatch(step, @"(?m)^\s+env:\s*\n(?:\s{10,}\S.*\n)*?\s{10,}CANDOITALL_TESTS_POSTGRES_CONNECTION: Host="))
+                {
+                    violations.Add($"Job {jobName} step '{StepName(step)}' runs a stable test lane without CANDOITALL_TESTS_POSTGRES_CONNECTION.");
                 }
             }
 
