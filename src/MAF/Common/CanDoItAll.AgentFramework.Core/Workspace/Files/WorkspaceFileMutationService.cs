@@ -836,7 +836,8 @@ internal sealed class WorkspaceFileMutationService
                     resolution.RelativePath,
                     null,
                     "file",
-                    startedAtUtc);
+                    startedAtUtc,
+                    prohibited: true);
             }
 
             pathPolicy.ValidateMutationTarget(resolution.FullPath);
@@ -866,7 +867,8 @@ internal sealed class WorkspaceFileMutationService
                     resolution.RelativePath,
                     null,
                     "directory",
-                    startedAtUtc);
+                    startedAtUtc,
+                    prohibited: true);
             }
 
             if (!recursive && Directory.EnumerateFileSystemEntries(resolution.FullPath).Any())
@@ -956,10 +958,18 @@ internal sealed class WorkspaceFileMutationService
         string path,
         string? destinationPath,
         string pathKind,
-        DateTimeOffset startedAtUtc)
+        DateTimeOffset startedAtUtc,
+        bool prohibited = false)
     {
         // Every mutation returns this failure only for a rejection decided before it staged or committed any content.
-        AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+        if (prohibited)
+        {
+            AgentToolInvocationEffectScope.RecordProhibitedBeforeEffect();
+        }
+        else
+        {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+        }
         return new WorkspaceFileMutationResult(
             Succeeded: false,
             Message: message,

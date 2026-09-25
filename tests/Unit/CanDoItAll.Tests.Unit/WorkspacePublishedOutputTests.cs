@@ -99,6 +99,61 @@ public sealed class WorkspacePublishedOutputTests {
         }
     }
 
+    [Fact]
+    public async Task Reported_web_root_serves_from_the_run_managed_root_when_context_and_execution_scopes_differ() {
+        var directory = Directory.CreateTempSubdirectory("cdia-published-scopes-");
+        var root = directory.FullName;
+        var project = new WorkspaceScopeDescriptor(WorkspaceScopeKind.Project, Guid.NewGuid().ToString("D"));
+        var organization = new WorkspaceScopeDescriptor(WorkspaceScopeKind.Organization, Guid.NewGuid().ToString("N"));
+        var commands = new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory, project);
+        var now = DateTimeOffset.UtcNow;
+        var run = new ExecutionRunRecord(Guid.NewGuid(), Guid.NewGuid(), null, "Static proof", "process-step", "qa",
+            Guid.NewGuid().ToString("N"), string.Empty, "unit-test", "system", "{}", string.Empty, string.Empty,
+            "test", "test", ExecutionState.Running, null, now, now, now, null, string.Empty, null, [],
+            ProcessRunId: Guid.NewGuid().ToString(), ProcessStepId: "qa");
+        using var audit = WorkspaceExecutionAuditContext.BeginScope(run, project, organization);
+        try {
+            Directory.CreateDirectory(Path.Combine(root, "site"));
+            await File.WriteAllTextAsync(Path.Combine(root, "Sample.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+                  <ItemGroup><Content Include="site/**" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="Always" /></ItemGroup>
+                </Project>
+                """);
+            await File.WriteAllTextAsync(Path.Combine(root, "site", "index.html"), "<h1>Scoped fixture</h1>");
+
+            var publish = await commands.DotnetPublish("Sample.csproj");
+
+            Assert.True(publish.Succeeded, publish.StderrPreview + publish.StdoutPreview + publish.Message);
+            const string webRootLabel = "Static web root: ";
+            var webRoot = publish.Message[(publish.Message.IndexOf(webRootLabel, StringComparison.Ordinal) + webRootLabel.Length)..].TrimEnd('.');
+            var output = webRoot[..^"/wwwroot".Length];
+            var prefix = $"artifacts/process-runs/{run.ProcessRunId}/published-output/";
+            Assert.StartsWith(prefix, output, StringComparison.Ordinal);
+            Assert.True(File.Exists(Path.Combine(root, organization.CombineArtifactPath(
+                "process-runs", run.ProcessRunId, "published-output", output[prefix.Length..], "wwwroot", "index.html"))));
+
+            using (var capture = AgentToolInvocationEffectScope.Begin()) {
+                var outputRoot = await commands.ServeStaticFiles(typeof(StaticFileHost).Assembly.Location, output);
+                Assert.False(outputRoot.Succeeded);
+                Assert.Contains($"'{webRoot}'", outputRoot.Message, StringComparison.Ordinal);
+                Assert.True(capture.RejectedBeforeEffect);
+            }
+
+            var served = await commands.ServeStaticFiles(typeof(StaticFileHost).Assembly.Location, webRoot);
+            Assert.True(served.Succeeded, served.Message + served.StdoutPreview + served.StderrPreview);
+            var startupPath = Assert.Single(served.Receipt.TargetPaths, path => path.EndsWith("/startup.json", StringComparison.Ordinal));
+            using var startup = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, startupPath)));
+            using var client = new HttpClient { BaseAddress = new Uri(startup.RootElement.GetProperty("probeUrl").GetString()!) };
+            Assert.Equal("<h1>Scoped fixture</h1>", await client.GetStringAsync("/"));
+        } finally {
+            var cleanup = await ((IWorkspaceExecutionRunProcessLeaseCleanupExecutor)commands).CleanupAsync(run.Id);
+            Assert.Empty(cleanup.Failures);
+            directory.Delete(recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("../outside.csproj")]
     [InlineData("Sample.sln")]

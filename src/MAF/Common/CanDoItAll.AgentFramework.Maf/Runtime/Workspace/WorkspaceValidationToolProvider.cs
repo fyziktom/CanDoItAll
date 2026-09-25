@@ -46,7 +46,7 @@ public sealed class WorkspaceValidationToolProvider : IAgentRuntimeToolProvider 
             => RequireCommands(commands).ServeStaticFiles(typeof(StaticFileHost).Assembly.Location, directoryPath, url, spaFallback, startupTimeoutSeconds);
         return ValueTask.FromResult<IReadOnlyList<AITool>>([
             AIFunctionFactory.Create(Publish, ToolContractCatalog.WorkspaceDotNetPublish,
-                "Publishes one .NET project to a fresh managed artifact directory and returns its path plus command receipts. Use the generated static web root for published-output validation; this does not deploy to an external service."),
+                "Publishes one .NET project to a fresh managed artifact directory and returns its managed reference, its static web root when the output has one, and command receipts. Serve that static web root for published-output validation; this does not deploy to an external service."),
             AIFunctionFactory.Create(Serve, ToolContractCatalog.WorkspaceStaticServe,
                 "Serves an authorized directory read-only over loopback HTTP for validation. For a published web app, pass its generated wwwroot directory. Returns a startup.json receipt and URL; stop it with workspace_dotnet_stop. The owned host is also cleaned up when this execution ends. Uses no-cache, max-age=0, must-revalidate headers; optional SPA fallback applies only to extensionless routes. This is disposable test infrastructure, not production deployment.")
         ]);

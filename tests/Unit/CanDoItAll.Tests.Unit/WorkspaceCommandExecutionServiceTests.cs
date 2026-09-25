@@ -2279,6 +2279,41 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task DotnetNew_inside_an_existing_project_is_a_prohibited_refusal_before_launch()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps", "App"));
+        File.WriteAllText(Path.Combine(workspaceRoot, "apps", "App", "App.csproj"), "<Project />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            using (var capture = AgentToolInvocationEffectScope.Begin())
+            {
+                var result = await service.DotnetNew("xunit", "App.Tests", "apps/App");
+
+                Assert.False(result.Succeeded);
+                Assert.Equal("Denied", result.Receipt.Outcome);
+                Assert.True(capture.ProhibitedBeforeEffect);
+            }
+
+            using (var capture = AgentToolInvocationEffectScope.Begin())
+            {
+                Assert.False((await service.DotnetNew("xunit", "nested/App.Tests", "apps")).Succeeded);
+                Assert.True(capture.RejectedBeforeEffect);
+                Assert.False(capture.ProhibitedBeforeEffect);
+            }
+
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetNew_accepts_blazor_webassembly_template()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");

@@ -204,11 +204,11 @@ public sealed class WorkspaceCommandExecutionService :
     }
 
     public async Task<WorkspaceCommandExecutionResult> DotnetPublish(string targetPath, string configuration = "Release", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600) {
-        WorkspaceCommandPlan? plan = null;
+        WorkspacePublishedOutputPlan? published = null;
         var result = await ExecutePlanAsync(
-            () => plan = publishedOutputPlans.Publish(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds),
+            () => (published = publishedOutputPlans.Publish(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds)).Command,
             ToolContractCatalog.WorkspaceDotNetPublish, "dotnet_publish", "LocalExecution", false);
-        return result.Succeeded ? result with { Message = $"{result.Message} Published output directory: {plan!.TargetPaths[^1]}." } : result;
+        return result.Succeeded ? result with { Message = $"{result.Message} {published!.Describe()}" } : result;
     }
 
     public async Task<WorkspaceCommandExecutionResult> ServeStaticFiles(string hostAssemblyPath, string directoryPath, string? url = null, bool spaFallback = true, int startupTimeoutSeconds = 45) {
@@ -696,7 +696,8 @@ public sealed class WorkspaceCommandExecutionService :
                 riskClass,
                 approvalRequired,
                 GetSafeFailureMessage(exception),
-                rejectedBeforeLaunch: true);
+                rejectedBeforeLaunch: true,
+                prohibited: exception is WorkspaceCommandInputException { Prohibited: true });
         }
 
         try

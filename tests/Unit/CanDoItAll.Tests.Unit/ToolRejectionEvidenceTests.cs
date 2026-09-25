@@ -30,6 +30,33 @@ public sealed class ToolRejectionEvidenceTests
     }
 
     [Fact]
+    public void An_owner_refusing_an_operation_it_never_permits_records_a_prohibited_no_effect_failure()
+    {
+        var failed = JsonSerializer.SerializeToElement(new { succeeded = false, message = "Deleting project file 'App.csproj' is not allowed." });
+        using (var correctable = AgentToolInvocationEffectScope.Begin())
+        {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+            Assert.False(correctable.ProhibitedBeforeEffect);
+            Assert.Empty(MafRuntimeToolInvocationResultClassifier.Assess(ToolContractCatalog.WorkspaceDeletePath,
+                ToolInvocationClassification.Mutation, failed, rejectedBeforeEffect: true).FailureCode);
+        }
+
+        using var capture = AgentToolInvocationEffectScope.Begin();
+        AgentToolInvocationEffectScope.RecordProhibitedBeforeEffect();
+        var prohibited = MafRuntimeToolInvocationResultClassifier.Assess(ToolContractCatalog.WorkspaceDeletePath,
+            ToolInvocationClassification.Mutation, failed, rejectedBeforeEffect: capture.RejectedBeforeEffect,
+            prohibitedBeforeEffect: capture.ProhibitedBeforeEffect);
+
+        Assert.True(capture.RejectedBeforeEffect);
+        Assert.True(capture.ProhibitedBeforeEffect);
+        Assert.Equal(AgentToolEffectState.NotCommitted, prohibited.EffectState);
+        Assert.Equal(AgentToolInvocationEffectScope.OperationProhibitedFailureCode, prohibited.FailureCode);
+
+        AgentToolInvocationEffectScope.RecordCommitted("owner", "saved-id");
+        Assert.False(capture.ProhibitedBeforeEffect);
+    }
+
+    [Fact]
     public void A_committed_effect_outranks_an_earlier_rejection_and_no_scope_records_nothing()
     {
         AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();

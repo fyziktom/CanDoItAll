@@ -22,7 +22,8 @@ internal static class MafRuntimeToolInvocationResultClassifier
         ToolInvocationClassification classification,
         object? result,
         AgentToolPreDispatchFailure? preDispatchFailure = null,
-        bool rejectedBeforeEffect = false)
+        bool rejectedBeforeEffect = false,
+        bool prohibitedBeforeEffect = false)
     {
         if (preDispatchFailure is not null) {
             return new(AgentToolInvocationOutcome.Failed, AgentToolEffectState.NotCommitted,
@@ -58,10 +59,11 @@ internal static class MafRuntimeToolInvocationResultClassifier
                 ToolInvocationClassification.Mutation => AgentToolEffectState.Unknown,
                 _ => AgentToolEffectState.None
             };
+            var prohibited = effectState == AgentToolEffectState.NotCommitted && prohibitedBeforeEffect;
             return new MafToolInvocationResultAssessment(
                 outcome,
                 effectState,
-                FailureCode: string.Empty,
+                FailureCode: prohibited ? AgentToolInvocationEffectScope.OperationProhibitedFailureCode : string.Empty,
                 FailureMessage: succeeded ? string.Empty : ResolveFailureMessage(result),
                 CanRetryWithCorrectedInput: false,
                 directReceiptExecutionRunId);

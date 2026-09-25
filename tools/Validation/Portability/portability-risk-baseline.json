@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-25T13:06:10.519139+00:00",
+  "generated_utc": "2026-09-25T15:51:39.646709+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14978,
+  "allowance_count": 14981,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -20152,6 +20152,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandExecutionService.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "67182dd3ff0ef4e253c50a138a18d3631b0eb95bd5474698b50698ba441ca99f",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandExecutionService.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "6c14335d85e3e3f48b4c1bd75669c5c5337d35b42732e02e138033ad6498ab13",
       "count": 1
     },
@@ -20261,12 +20267,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandExecutionService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "eca7ea5d9c55f8cfc880bbcfb34d43fa08ba28048baf1883c21d3b0d2add3898",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandExecutionService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "f400258a4990b481e0bad54bc1185d8796bfd02b75e2c383f501ee50a46e243d",
       "count": 1
     },
     {
@@ -22150,19 +22150,37 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspacePublishedOutputPlanBuilder.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "4f2caf70953eedb8d7c9f2c601205f35c8164c51a314302f5eeacd31c55e0fad",
+      "source_fingerprint": "a7e3dda2ab80cbf718dcdc17808e0be97530482f8be584dcd74d3493d8084ba8",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspacePublishedOutputPlanBuilder.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "a7e3dda2ab80cbf718dcdc17808e0be97530482f8be584dcd74d3493d8084ba8",
+      "source_fingerprint": "f372332e6c09aaf9ff0315e4d5f42a2b1135d2b4e9fc1ed0c6fda71b27adebc6",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspacePublishedOutputPlanBuilder.cs",
       "category": "case-policy",
       "source_fingerprint": "0c975fde5079c2784a356a88f8c086a5a4727441b29acdaebeb3e679cefde25f",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspacePublishedOutputPlanBuilder.cs",
+      "category": "path-api",
+      "source_fingerprint": "065fc90c699d077ae81fd1ce6868cd7136a83b0bbc3f345c33174e01703ec24f",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspacePublishedOutputPlanBuilder.cs",
+      "category": "path-api",
+      "source_fingerprint": "1b17aab6371ab3d2df2557ef0d34e3b3276b2f3309d15b98d2e714ed1a0fdbce",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspacePublishedOutputPlanBuilder.cs",
+      "category": "path-api",
+      "source_fingerprint": "fac39672d3ccee4c27f6537340d2fa56f81ae2f32e74b638bdea87882d680600",
       "count": 1
     },
     {

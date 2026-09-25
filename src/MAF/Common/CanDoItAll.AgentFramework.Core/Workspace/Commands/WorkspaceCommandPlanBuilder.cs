@@ -578,7 +578,7 @@ internal sealed class WorkspaceCommandPlanBuilder
                 workingDirectoryRelative,
                 includeSolutionFiles: !isSolutionTemplate))
         {
-            throw WorkspaceCommandInputException.Create(
+            throw WorkspaceCommandInputException.CreateProhibited(
                 $"workspace_dotnet_new is not allowed inside existing .NET project directory '{workingDirectoryRelative}'.",
                 "workspace_dotnet_new cannot scaffold inside an existing .NET project directory. Repair that project in place or choose its parent directory for a sibling project.");
         }
@@ -591,7 +591,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         if (targetDirectoryExists &&
             InspectProjectTree(targetFullPath, targetRelativePath))
         {
-            throw WorkspaceCommandInputException.Create(
+            throw WorkspaceCommandInputException.CreateProhibited(
                 $"workspace_dotnet_new target '{targetRelativePath}' already contains a .NET project or solution file.",
                 "The requested target already contains a .NET project or solution. Inspect and repair the existing scaffold instead of re-scaffolding it.");
         }
@@ -600,7 +600,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetDirectoryExists &&
             DirectoryHasEntries(targetFullPath, targetRelativePath))
         {
-            throw WorkspaceCommandInputException.Create(
+            throw WorkspaceCommandInputException.CreateProhibited(
                 $"workspace_dotnet_new --force is not allowed over existing non-empty target '{targetRelativePath}'.",
                 "workspace_dotnet_new --force cannot replace a non-empty target. Repair it in place or explicitly remove the intended target before retrying.");
         }

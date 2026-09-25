@@ -72,9 +72,13 @@ internal sealed class WorkspaceCommandProcessRunner
     }
 
     public WorkspaceCommandExecutionResult CreateDeniedResult(string toolName, string recipeId, string riskClass, bool approvalRequired, string message,
-        bool rejectedBeforeLaunch = false)
+        bool rejectedBeforeLaunch = false, bool prohibited = false)
     {
-        if (rejectedBeforeLaunch)
+        if (rejectedBeforeLaunch && prohibited)
+        {
+            AgentToolInvocationEffectScope.RecordProhibitedBeforeEffect();
+        }
+        else if (rejectedBeforeLaunch)
         {
             AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
         }
