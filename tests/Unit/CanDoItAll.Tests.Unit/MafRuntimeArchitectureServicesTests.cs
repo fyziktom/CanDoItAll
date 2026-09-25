@@ -531,7 +531,10 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.Equal("function", pending.ToolKind);
         Assert.Contains("artifacts/result.md", pending.ArgumentsJson, StringComparison.Ordinal);
 
-        var session = CreateSession();
+        var session = CreateSession(new ChatSessionRuntimeCompatibilityRecord(
+            runtimeSessionKey: "conversation-001",
+            serializedSessionStateJson: "{}",
+            pendingApprovals: [pending]));
         driver.StorePendingApprovals(session.Id, [request]);
 
         var messages = driver.CreateApprovalInputMessages(

@@ -81,5 +81,7 @@ public sealed class AgentRuntimeUsageException : Exception
 
     public AgentRuntimeFailureOrigin FailureOrigin { get; }
 
+    public System.Net.HttpStatusCode? ProviderStatusCode { get; init; }
+
     public AgentRuntimeProviderFailureIdentity? ProviderFailureIdentity { get; }
 }

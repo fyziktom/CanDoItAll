@@ -17,13 +17,19 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 18, 12, 0, 0, TimeSpan.Zero);
 
-    [Fact]
-    public async Task Request_rework_appends_operator_reason_to_assignment_prompt_and_enqueues_dispatch()
-    {
+    [Theory]
+    [InlineData(ProcessLaunchExecutorKinds.Agent)]
+    [InlineData(ProcessLaunchExecutorKinds.Workflow)]
+    public async Task Request_rework_preserves_workflow_input_and_updates_agent_instructions(string executorKind) {
         var runId = ProcessRunId.New();
         var stepId = ProcessStepInstanceId.New();
         var planId = ProcessInstancePlanId.New();
-        var assignmentStore = new RecordingAssignmentStore(CreateAssignment(runId, planId, stepId));
+        var assignment = CreateAssignment(runId, planId, stepId) with {
+            ExecutorKind = executorKind,
+            WorkflowBinding = ProcessLaunchExecutorKinds.IsWorkflow(executorKind)
+                ? new(new(Guid.NewGuid()), new(Guid.NewGuid())) : null
+        };
+        var assignmentStore = new RecordingAssignmentStore(assignment);
         var dispatchQueue = new RecordingDispatchQueue();
         await using var dbContext = CreateDbContext();
         var projectionStore = new EfProcessProjectionStore(dbContext);
@@ -55,9 +61,14 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             "Add the standard CSS rule that hides #blazor-error-ui before browser validation."));
 
         Assert.True(result.Succeeded);
-        var saved = Assert.Single(assignmentStore.SavedAssignments);
-        Assert.Contains("Operator rework instruction:", saved.Prompt, StringComparison.Ordinal);
-        Assert.Contains("hides #blazor-error-ui", saved.Prompt, StringComparison.Ordinal);
+        if (ProcessLaunchExecutorKinds.IsWorkflow(executorKind)) {
+            Assert.Empty(assignmentStore.SavedAssignments);
+            Assert.Same(assignment, await assignmentStore.LoadAsync(runId, stepId));
+        } else {
+            var saved = Assert.Single(assignmentStore.SavedAssignments);
+            Assert.Contains("Operator rework instruction:", saved.Prompt, StringComparison.Ordinal);
+            Assert.Contains("hides #blazor-error-ui", saved.Prompt, StringComparison.Ordinal);
+        }
         var queued = Assert.Single(dispatchQueue.Requests);
         Assert.Equal(runId, queued.RunId);
     }

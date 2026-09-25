@@ -16,7 +16,7 @@ dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramew
 
 ## Dependencies
 
-The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Maf.csproj](CanDoItAll.AgentFramework.Maf.csproj). This README focuses on the project's purpose, boundaries, and validation.
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Maf.csproj](CanDoItAll.AgentFramework.Maf.csproj). This README focuses on the project's purpose, boundaries, and validation. The current target is MAF 1.22.0 with the matching A2A preview. See [upgrade and retained-state behavior](../../../../docs/architecture/maf-1.22-upgrade.md).
 
 ## Runtime Proof Slices
 
@@ -30,8 +30,8 @@ MAF runtime regression proof is tracked by named slices so process automation an
 | Errors | `Runtime/MafAgentRuntime.cs`, `Runtime/MafRuntimeSessionBuilder.cs`, `Runtime/MafModelParametersBuilder.cs`, and `Runtime/MafRuntimeToolInvocationResultClassifier.cs` | Timeout clamping, bounded finalizer session serialization, incompatible approval continuation rejection, and nested tool failure parsing tests. |
 | Approvals | `Runtime/MafRuntimeAgentFactory.cs` and capability policy code | Approval-required function wrapping, unusable approval-tool filtering, and policy-block static tests. |
 | MCP | `Runtime/Capabilities/McpCapabilityBuilder.cs` | Browser MCP result bounding tests that remove image payloads and cap snapshot text. |
-| A2A | `Runtime/Capabilities/A2ARemoteAgentToolFactory.cs` | Disabled endpoint, missing bearer secret, and invalid endpoint tests. |
-| Workflow mapping | `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs` and `Runtime/Handoffs/MafHandoffWorkflowFactory.cs` | MAF 1.15 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
+| A2A | `Runtime/Capabilities/A2ARemoteAgentToolFactory.cs` | Endpoint validation, partial-construction cleanup, cancellation, and remote task-state tests. |
+| Workflow mapping | `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs` and `Runtime/Handoffs/MafHandoffWorkflowFactory.cs` | Workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
 | Trace correlation | `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs` and execution response models | Tool invocation traces, finalizer invocation traces, workflow audit scope, and OpenTelemetry package presence source assertions. |
 
 ## Architecture Notes
@@ -62,7 +62,7 @@ execute another.
   PromptsCurator, WorkflowCurator, CapabilityCurator, HR, and Scheduler. Do not
   reintroduce hard-coded product-tool attachment methods into MAF.
 - MAF process agents should use explicit process context, structured output/finalizer contracts, and approved project-structure/process API paths for run state. They should not infer process state from prompt text, template files, or database rows.
-- Adopted MAF 1.15 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
+- Current runtime surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
 - Deferred or guarded surfaces must fail predictably. A2A endpoints require valid configuration and bearer secrets, browser MCP payloads are bounded, incompatible approval continuations are rejected, and workflow handoff depth is guarded.
 - Process automation that records final delivery must produce current-run evidence and let Processes validate the artifact and transition. MAF finalizers should not mark process steps complete by prose-only conclusion text.
 

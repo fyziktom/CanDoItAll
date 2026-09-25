@@ -38,6 +38,10 @@ public interface IProcessWorkspaceProjectionClient
     Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(
         ProcessRuntimeOperatorActionCommand command,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessRuntimeRunCancellationResult> RequestRunCancellationAsync(
+        ProcessRuntimeRunCancellationCommand command,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ProcessWorkspaceProjectionClient(
@@ -155,6 +159,16 @@ public sealed class ProcessWorkspaceProjectionClient(
         return await scope.ServiceProvider
             .GetRequiredService<ProcessRuntimeOperatorApplicationService>()
             .ExecuteAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<ProcessRuntimeRunCancellationResult> RequestRunCancellationAsync(
+        ProcessRuntimeRunCancellationCommand command,
+        CancellationToken cancellationToken = default) {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessRuntimeOperatorApplicationService>()
+            .RequestCancellationAsync(command, cancellationToken)
             .ConfigureAwait(false);
     }
 }

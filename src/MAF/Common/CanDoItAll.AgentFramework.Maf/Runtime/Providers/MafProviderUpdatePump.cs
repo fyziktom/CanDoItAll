@@ -120,7 +120,7 @@ internal sealed class MafProviderUpdatePump
                 failureOrigin,
                 MafRuntimeFailureOriginClassifier.ResolveProviderFailureIdentity(
                     exception,
-                    failureOrigin));
+                    failureOrigin)) { ProviderStatusCode = MafRuntimeFailureOriginClassifier.ResolveProviderStatusCode(exception) };
         }
     }
 

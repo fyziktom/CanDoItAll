@@ -24,6 +24,13 @@ internal sealed class MafRuntimeStateCompatibilityPolicy : IRuntimeStateCompatib
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.RequiresVerifiedNativeAuthority &&
+            (request.Envelope is null || !IsVerifiedAuthorityVersion(request.Envelope.AdapterPackageVersion,
+                request.CurrentAdapterPackageVersion))) {
+            return new RuntimeStateCompatibilityDecision(RuntimeStateCompatibilityOutcome.Incompatible,
+                "Pending or admitted tool work requires a verified native checkpoint version. Keep its history and artifacts, reconcile outstanding effects, and request fresh approval before starting replacement work.");
+        }
+
         if (request.Envelope is null)
         {
             if (request.IsLegacyUnversionedState)
@@ -194,6 +201,14 @@ internal sealed class MafRuntimeStateCompatibilityPolicy : IRuntimeStateCompatib
         incompatibleReason =
             $"The Microsoft Agent Framework adapter package major version changed since this state was captured (captured '{capturedVersion}', current '{currentVersion}').";
         return false;
+    }
+
+    private static bool IsVerifiedAuthorityVersion(string capturedVersion, string currentVersion) {
+        static Version? Parse(string version) => Version.TryParse(version.Split('+')[0], out var parsed) ? parsed : null;
+        var captured = Parse(capturedVersion);
+        var current = Parse(currentVersion);
+        return current is { Major: 1, Minor: 22, Build: 0 } &&
+            captured is { Major: 1, Minor: 20 or 22, Build: 0 };
     }
 
     private static bool TryParseMajor(string version, out int major)

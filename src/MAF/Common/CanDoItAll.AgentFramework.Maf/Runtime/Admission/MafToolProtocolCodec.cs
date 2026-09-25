@@ -61,7 +61,7 @@ internal static class MafToolProtocolCodec {
         var saved = JsonSerializer.Deserialize<SavedProtocol>(json)
             ?? throw Unsupported("The saved protocol envelope is empty.");
         if (saved.Packages != PackageFingerprint || saved.Shape != typeof(T).FullName) {
-            throw Unsupported("The saved protocol requires a different installed SDK or shape; it cannot be replayed implicitly.");
+            throw Unsupported("The saved protocol requires a different installed SDK or shape; it cannot be replayed implicitly. Reconcile saved approvals and effects using the original runtime or a verified migration before starting replacement work. Keep the history, journal and artifacts together.");
         }
 
         return saved.Value.Deserialize<T>(Options) ?? throw Unsupported("The saved protocol value is empty.");
@@ -201,7 +201,7 @@ internal static class MafToolProtocolCodec {
             .ToDictionary(type => type.FullName!, StringComparer.Ordinal);
 
     private static AgentToolAdmissionException Unsupported(string message)
-        => new("tool-admission.unsupported-protocol", message);
+        => new(AgentToolAdmissionException.UnsupportedProtocolCode, message);
 
     private enum NativeProtocolKind { OpenAi, Ollama }
     private sealed record SavedRawModel(NativeProtocolKind Kind, string Model, string Json);

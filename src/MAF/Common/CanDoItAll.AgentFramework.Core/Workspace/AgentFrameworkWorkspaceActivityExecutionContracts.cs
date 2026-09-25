@@ -22,6 +22,10 @@ public interface IAgentFrameworkWorkspaceActivityExecutionService
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 
+    Task<ExecutionRunDetail> CancelPendingExecutionApprovalsWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support pending-approval cancellation.");
+
     Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not support durable cancelled-run reconciliation.");

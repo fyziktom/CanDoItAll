@@ -138,9 +138,17 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
             return null;
         }
 
-        var payload = await LoadPayloadAsync(checkpoint, cancellationToken);
-        EnsurePayloadMatchesRun(run, checkpoint, payload);
-        return checkpoint;
+        try {
+            var payload = await LoadPayloadAsync(checkpoint, cancellationToken);
+            EnsurePayloadMatchesRun(run, checkpoint, payload);
+            return checkpoint;
+        } catch (Exception exception) when (exception is KeyNotFoundException or FileNotFoundException or DirectoryNotFoundException) {
+            throw new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Missing, exception);
+        } catch (Exception exception) when (exception is JsonException or InvalidDataException) {
+            throw new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Corrupt, exception);
+        } catch (IOException exception) {
+            throw new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Unavailable, exception);
+        }
     }
 
     public async Task MarkCheckpointResumedAsync(
@@ -231,7 +239,7 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
 
             await using var stream = File.OpenRead(payloadPath);
             return await JsonSerializer.DeserializeAsync<StoredExecutionCheckpointPayload>(stream, SerializerOptions, cancellationToken)
-                ?? throw new InvalidOperationException($"Workflow checkpoint '{checkpoint.WorkflowCheckpointId}' could not be deserialized.");
+                ?? throw new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Corrupt);
         }
         finally
         {
@@ -269,6 +277,9 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
         ExecutionWorkflowCheckpointRecord checkpoint,
         StoredExecutionCheckpointPayload payload)
     {
+        if (payload.PendingApprovals is null || payload.PendingApprovals.Any(item => item is null)) {
+            throw new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Corrupt);
+        }
         var persistedApprovalIds = payload.PendingApprovals
             .Select(item => item.ApprovalId)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -297,8 +308,7 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
             return;
         }
 
-        throw new InvalidOperationException(
-            $"Workflow checkpoint '{checkpoint.WorkflowCheckpointId}' for execution run '{run.Id:N}' no longer matches the durable pending-approval state.");
+        throw new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Incompatible);
     }
 
     private static string GetWorkflowSessionId(Guid executionRunId)

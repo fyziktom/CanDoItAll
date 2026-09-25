@@ -17,6 +17,11 @@ codex/bundles/UI_AgentCapabilities_02_Mutation_Effect_Hardening_Bundle/proof/** 
 codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/proof/** -text
 codex/bundles/UI_AgentGovernance_01_State_Read_Seams_Bundle/proof/** -text
 
+# Preserve the sealed MAF preparation package and genuine retained-state fixtures.
+codex/bundles/MAF_1.22_update/** -text whitespace=cr-at-eol
+codex/bundles/MAF_1.22_update/**/*.md whitespace=-blank-at-eol,cr-at-eol
+tests/Support/Fixtures/Maf120/** -text whitespace=cr-at-eol
+
 # Preserve fresh retained evidence through Git clean filters.
 codex/bundles/UI_AgentsOverview_01D_PostPush_Delivery_Closure_Bundle/retained/** -text
 

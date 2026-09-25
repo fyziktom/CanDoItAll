@@ -46,6 +46,10 @@ internal sealed class WorkflowBackendProgressEventObserver(
             ? $"Workflow node '{progress.NodeId}' {progress.State.ToString().ToLowerInvariant()}."
             : $"Workflow node '{progress.NodeId}' {progress.State.ToString().ToLowerInvariant()} for executor '{progress.ExecutorId}'.";
         var payloadResult = await ApplyPayloadPolicyAsync(progress, cancellationToken);
+        if (progress.State == WorkflowNodeExecutionProgressState.Failed &&
+            !string.IsNullOrWhiteSpace(payloadResult.InlinePayload)) {
+            message = $"{message} {payloadResult.InlinePayload}";
+        }
         var workflowEvent = new WorkflowEventRecord(
             Guid.NewGuid(),
             runId,

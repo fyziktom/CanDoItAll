@@ -713,6 +713,11 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 exception,
                 executionHandleId,
                 "approval");
+        } catch (AgentApprovalCheckpointUnavailableException exception) {
+            LogOperationFailure(exception, executionAgentId, executionSessionId, executionHandleId, "approval", false);
+            if (IsOperationTargetCurrent(executionAgentId, executionSessionId, executionHandleId, owner)) {
+                SetMessage("Attention", "warning", exception.Message);
+            }
         } catch (Exception exception) {
             LogOperationFailure(
                 exception,
@@ -737,6 +742,52 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 isBusy = false;
             }
             await FinishChatOperationAsync(executionHandleId, executionAgentId, executionSessionId, "approval", owner);
+        }
+    }
+
+    private Task CancelPendingApprovalsAsync() {
+        if (workspace?.SelectedRun is not { PendingApprovals.Count: > 0, CompletedAtUtc: null } run ||
+            selectedAgentId is not { } agentId || selectedSessionId is not { } sessionId ||
+            !TryBeginChatOperation(ActiveChatHandleId)) {
+            return Task.CompletedTask;
+        }
+        trackedChatOperation = CancelPendingApprovalsCoreAsync(run.Id, agentId, sessionId,
+            ActiveChatHandleId, effectOwner, ProfileGenerationSource.GetGeneration());
+        return trackedChatOperation;
+    }
+
+    private async Task CancelPendingApprovalsCoreAsync(Guid runId, Guid agentId, Guid sessionId,
+        AgentChatHandleId? handleId, long owner, DatabaseProfileGeneration profileGeneration) {
+        var committed = false;
+        try {
+            var result = await WorkspaceService.CancelPendingExecutionApprovalsAsync(runId, AgentExecutionOperationId.New());
+            if (result.Run.Id != runId || result.Run.AgentId != agentId || result.Run.ChatSessionId != sessionId ||
+                result.Run.Outcome != RunOutcome.Cancelled) {
+                throw new InvalidOperationException("Cancellation returned an unexpected execution receipt.");
+            }
+            committed = true;
+            if (!IsOperationTargetCurrent(agentId, sessionId, handleId, owner) ||
+                ProfileGenerationSource.GetGeneration() != profileGeneration) {
+                return;
+            }
+            await LoadWorkspaceAsync(agentId, sessionId);
+            if (IsOperationTargetCurrent(agentId, sessionId, handleId, owner) &&
+                ProfileGenerationSource.GetGeneration() == profileGeneration) {
+                SetMessage("Cancelled", "warning", "The pending run was cancelled. Undispatched tools will not execute.");
+            }
+        } catch (Exception exception) {
+            LogOperationFailure(exception, agentId, sessionId, handleId, "approval-cancellation", committed);
+            if (IsOperationTargetCurrent(agentId, sessionId, handleId, owner) &&
+                ProfileGenerationSource.GetGeneration() == profileGeneration) {
+                SetMessage(committed ? "Refresh needed" : "Attention", "warning", committed
+                    ? "The run was cancelled, but the thread could not be refreshed. Reopen it to read the persisted result."
+                    : "Cancellation could not be confirmed. Refresh the thread before taking another action.");
+            }
+        } finally {
+            if (owner == effectOwner && !isDisposed) {
+                isBusy = false;
+            }
+            await FinishChatOperationAsync(handleId, agentId, sessionId, "approval-cancellation", owner, profileGeneration);
         }
     }
 

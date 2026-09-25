@@ -101,6 +101,7 @@ public sealed class MafToolAdmissionNativeLoopIntegrationTests {
         Assert.Equal(2, persisted.ToolAdmission.Batches.Length);
         Assert.All(persisted.ToolAdmission.Batches[0].Proposals, proposal => Assert.Equal(AgentToolProposalState.Completed, proposal.State));
         Assert.Equal(pending.Select(item => item.ApprovalId), persisted.ToolAdmission.Segments[0].PendingApprovals.Select(item => item.ApprovalId));
+
     }
 
     [Theory]
@@ -163,6 +164,61 @@ public sealed class MafToolAdmissionNativeLoopIntegrationTests {
         var failure = Assert.Throws<AgentToolAdmissionException>(() => MafToolProtocolCodec.Encode(response));
         Assert.Equal("tool-admission.unsupported-protocol", failure.Code);
     }
+
+    public static IEnumerable<object[]> RetainedJournalCases() {
+        foreach (var provider in Enum.GetValues<WireProvider>()) {
+            foreach (var streaming in new[] { false, true }) {
+                foreach (var stage in new[] { "pending", "approved-unfinished", "settled" }) {
+                    yield return [provider, streaming, stage];
+                }
+            }
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(RetainedJournalCases))]
+    public async Task Genuine_120_journal_requires_reconciliation_without_provider_calls_or_new_effects(
+        WireProvider wireProvider, bool streaming, string stage) {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Maf120", "Durable",
+            $"journal-{wireProvider}-{streaming}-{stage}.json");
+        var saved = JsonSerializer.Deserialize<RetainedJournalFixture>(await File.ReadAllTextAsync(path), JsonSerializerOptions.Web)!;
+        Assert.Equal("1.20.0.0", saved.MafVersion);
+        Assert.Equal(new Version(1, 22, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
+        await using var fixture = await AgentToolAdmissionJournalFixture.RestoreRetainedAsync(saved.Agent, saved.Provider,
+            saved.Profile, saved.Detail);
+        var probe = new EffectProbe();
+        if (stage == "pending") {
+            await fixture.ApproveAsync(saved.Detail.PendingApprovals);
+        }
+        var before = (await fixture.NewStore().GetExecutionRunAsync(fixture.Session.ExecutionRunId))!;
+        var wire = new NativeWireHandler(wireProvider, complete: true, denyRequests: true);
+        var journal = fixture.NewJournal(fixture.NewStore());
+        Guid acquiredLeaseId;
+        await using (var lease = await journal.AcquireRunAsync(fixture.Session, default)) {
+            acquiredLeaseId = lease.Id;
+            using var bound = lease.Bind();
+            using var client = CreateClient(wireProvider, wire);
+            var runtime = CreateRuntime(client, journal, fixture, probe);
+            var session = await runtime.Agent.CreateSessionAsync();
+            var failure = await Assert.ThrowsAsync<AgentToolAdmissionException>(() =>
+                OpenAsync(fixture, journal, lease, runtime, session, wireProvider));
+            Assert.Equal("tool-admission.unsupported-protocol", failure.Code);
+            Assert.Contains("Reconcile saved approvals and effects", failure.Message, StringComparison.Ordinal);
+        }
+        Assert.Empty(probe.Intents);
+        Assert.Empty(wire.Requests);
+        var after = (await fixture.NewStore().GetExecutionRunAsync(fixture.Session.ExecutionRunId))!;
+        var expectedJournal = before.ToolAdmission! with {
+            Revision = checked(before.ToolAdmission.Revision + 1),
+            ActiveDispatchLeaseId = acquiredLeaseId
+        };
+        Assert.Equal(JsonSerializer.Serialize(expectedJournal), JsonSerializer.Serialize(after.ToolAdmission));
+        Assert.Equal(before.SerializedSessionStateJson, after.SerializedSessionStateJson);
+        Assert.Equal(before.PendingApprovals, after.PendingApprovals);
+    }
+
+    private sealed record RetainedJournalFixture(string MafVersion, AgentDefinition Agent, ProviderProfile Provider,
+        AgentToolProfileBinding Profile, ExecutionRunRecord Detail);
 
     private static async Task<(MafToolRunContext Context, AgentSession Session, List<ChatMessage> Input)> OpenAsync(
         AgentToolAdmissionJournalFixture fixture, AgentToolAdmissionJournal journal, AgentToolRunLease lease,

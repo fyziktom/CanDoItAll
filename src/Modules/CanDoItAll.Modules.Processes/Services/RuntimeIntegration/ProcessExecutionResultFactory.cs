@@ -65,6 +65,26 @@ internal static class ProcessExecutionResultFactory
         ProcessHostCapabilityEvaluationEvidence? evidence)
         => evidence is null ? result : result with { HostCapabilityEvidence = evidence };
 
+    internal static ProcessExecutionAdapterResult TerminalAgentFailure(
+        ProcessAgentFailureKind kind, Guid? executionRunId, string evidence) {
+        var result = kind switch {
+            ProcessAgentFailureKind.Canceled => Canceled(
+                ProcessExecutionAdapterDiagnosticCodes.AgentExecutionCancelled,
+                "Agent execution was cancelled. No automatic retry was requested.", evidence),
+            ProcessAgentFailureKind.PermanentProvider => Failed(
+                ProcessExecutionAdapterDiagnosticCodes.AgentProviderRejected,
+                "The provider rejected the request. Review provider credentials, model/request configuration and account limits before retrying. Restricted execution logs retain the specific cause.", evidence),
+            ProcessAgentFailureKind.RightsBoundary => Failed(
+                ProcessExecutionAdapterDiagnosticCodes.AgentToolPermissionDenied,
+                "A tool operation was denied by the execution permission or workspace boundary. Review the requested target and the original grants before taking another action; do not repeat the denied operation.", evidence),
+            _ => Failed(ProcessExecutionAdapterDiagnosticCodes.AgentExecutionFailed,
+                "Agent execution failed before a valid process outcome was produced. Reconcile any unconfirmed tool effects before starting replacement work. Review restricted execution logs using the evidence hash; automatic replay is not authorized.", evidence)
+        };
+        return result with {
+            ExecutionRunId = executionRunId is { } id && id != Guid.Empty ? new ProcessExecutionRunId(id) : null
+        };
+    }
+
     internal static ProcessExecutionAdapterResult Failed(
         string code,
         string summary,

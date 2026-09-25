@@ -1399,7 +1399,9 @@ public sealed class ProjectStructureAgentIntegrationTests
             scope.ServiceProvider,
             new ProcessRunId(parent.RunId.Value),
             parentAssignment.StepInstanceId);
-        var retry = await agentService.StartProcessSubprocessAsync(
+        await using var resumedScope = application.Services.CreateAsyncScope();
+        var resumedAgentService = resumedScope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var retry = await resumedAgentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
             parentAssignment.StepInstanceId.ToString(),

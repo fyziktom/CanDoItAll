@@ -24,7 +24,7 @@ public sealed class WorkflowProgressEventIdentityTests {
         var observer = new WorkflowBackendProgressEventObserver(run.RunId, definition,
             WorkflowPreviewSimulationPlan.Empty, new WorkflowPayloadPolicyService(), null,
             new StoreBackedWorkflowNodeExecutionProgressObserver(run, store, null, sink));
-        var payload = new string('x', 100_000);
+        var payload = JsonSerializer.Serialize(new { token = "raw-error-token", detail = new string('x', 100_000) });
         var progress = CreateProgress(definition, run.RunId, state) with {
             PayloadJson = payload,
             ErrorMessage = payload
@@ -44,6 +44,12 @@ public sealed class WorkflowProgressEventIdentityTests {
             Assert.Equal(artifact.StoragePath, envelope.Reference);
             Assert.True(envelope.InlineTruncated);
             Assert.Equal(payload.Length, envelope.InlineCharacters);
+            Assert.DoesNotContain("raw-error-token", canonical.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("raw-error-token", envelope.InlineJson, StringComparison.Ordinal);
+            if (state == WorkflowNodeExecutionProgressState.Failed) {
+                Assert.Contains("[REDACTED]", canonical.Message, StringComparison.Ordinal);
+                Assert.InRange(canonical.Message.Length, 1, payload.Length - 1);
+            }
         }
     }
 
