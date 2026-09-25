@@ -2,5 +2,10 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <!-- Hosts launch this helper as `dotnet CanDoItAll.Tools.StaticHost.dll` from their own output. It is referenced
+         through a library, so a RID-specific host publish would otherwise build it twice (with and without the RID)
+         and fail with NETSDK1152. One portable framework-dependent build serves every host. -->
+    <IsRidAgnostic>true</IsRidAgnostic>
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 </Project>
