@@ -14,6 +14,7 @@ using OpenAI;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "LiveProcess")]
+[Trait("Category", "HostPlatform")]
 public sealed class PostgreSqlProtocolRestoreTests {
     [Fact]
     public async Task Logical_restore_preserves_legacy_and_compressed_protocol_and_a_256_batch_journal() {

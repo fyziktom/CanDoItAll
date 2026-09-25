@@ -17,6 +17,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
 {
     private const string RecoveryMigrationId = "20260821021747_AddWorkflowHitlRecovery";

@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class MafConfiguredWorkspaceImageAdmissionIntegrationTests {
     [Theory]
     [InlineData(ToolContractCatalog.WorkspaceAnalyzeImage, false)]

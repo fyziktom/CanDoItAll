@@ -24,6 +24,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.External;
 
+[Trait("Category", "HostPlatform")]
 public sealed class PluginCatalogIntegrationTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

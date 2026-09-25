@@ -21,6 +21,7 @@ namespace CanDoItAll.Tests.Integration.AgentFramework;
 /// page publishes and is proven through the shipped UI in <c>CrmHrLiveAgentToolUiSmokeTests</c>. Deterministic
 /// fake-model coverage lives in <c>CrmPlanningRuntimeIntegrationTests</c> and <c>MafHrResultDisclosureIntegrationTests</c>.
 /// </summary>
+[Trait("Category", "HostPlatform")]
 public sealed partial class CrmHrLiveAgentToolSmokeIntegrationTests
 {
     private const string LiveValidationVariable = "CANDOITALL_RUN_LIVE_AGENT_VALIDATION";

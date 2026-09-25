@@ -26,6 +26,7 @@ using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManag
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SharedProviderPremergeUpgradeTests {
     private const string DevelopmentMigration = "20260822013043_AddWorkflowNativeCheckpointRequestUniqueness";
     private const string HistoricalReviewedMigration = "20260911010404_AddSourceBoundExecutionAdmissions";

@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowOwnershipTests {
     public enum DelayedReadOutcome { Success, Failure, Cancellation }
 

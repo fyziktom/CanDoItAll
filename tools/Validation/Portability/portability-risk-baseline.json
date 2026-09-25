@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-25T15:51:39.646709+00:00",
+  "generated_utc": "2026-09-25T20:47:24.223130+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 14981,
+  "allowance_count": 15003,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -83,25 +83,25 @@
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
       "source_fingerprint": "14bb0f86ad625b44236cffb8426f91f48d410a427849e17e323509f5a9979401",
-      "count": 2
+      "count": 4
     },
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
       "source_fingerprint": "2200a17aeead26a1d4bc5a54c2072051d10f5aa15a6fe7167c361dbbfd2d68d7",
-      "count": 2
+      "count": 4
     },
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
       "source_fingerprint": "aa5eef6d100d93ca1884ee807c8aec5a8928a08f58b2fd08999b628f4b2262d5",
-      "count": 2
+      "count": 4
     },
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
       "source_fingerprint": "bb148e3833dc2d70f4b60877c9c086fdb9593121a86ce76bfba7544a65e78e11",
-      "count": 2
+      "count": 4
     },
     {
       "path": ".github/workflows/ci.yml",
@@ -113,7 +113,7 @@
       "path": ".github/workflows/ci.yml",
       "category": "shell-elevation",
       "source_fingerprint": "169474ed3ed740281cc4bb3d19b54beeaaef4f70b989caddbbb49e292d447a78",
-      "count": 22
+      "count": 34
     },
     {
       "path": ".github/workflows/ci.yml",
@@ -79199,6 +79199,18 @@
       "path": "tools/Validation/Test-RuntimePortability.ps1",
       "category": "path-normalization",
       "source_fingerprint": "837a48591a6d62a66a0687e964dfaa2d928a8b2021f7a8cb064fd3204d3b9410",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/TestShardWeights.json",
+      "category": "absolute-path-field",
+      "source_fingerprint": "bb1ceae993c22814b6db9678db932c71f022f2df20b73b036a9dffe08831d8f1",
+      "count": 1
+    },
+    {
+      "path": "tools/Validation/TestShardWeights.json",
+      "category": "external-tool",
+      "source_fingerprint": "e5df5dca6e51acb96f5b2e4bd532c4fb328de94793780d2e16bd9768a943e227",
       "count": 1
     },
     {

@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ApiAccessAuthorizationIntegrationTests
 {
     [Fact]

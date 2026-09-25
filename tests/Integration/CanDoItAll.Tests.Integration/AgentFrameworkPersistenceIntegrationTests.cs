@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Persistence;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentFrameworkPersistenceIntegrationTests
 {
     [Fact]

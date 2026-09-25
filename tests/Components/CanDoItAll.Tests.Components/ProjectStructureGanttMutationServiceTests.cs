@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureGanttMutationServiceTests
 {
     private static readonly DateTimeOffset Baseline = new(2026, 7, 14, 8, 0, 0, TimeSpan.Zero);

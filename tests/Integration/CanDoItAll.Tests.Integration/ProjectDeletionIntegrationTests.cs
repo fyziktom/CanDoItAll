@@ -16,6 +16,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class ProjectDeletionIntegrationTests
 {
     private const string ProjectDeletionScopeNodeKey = "project";

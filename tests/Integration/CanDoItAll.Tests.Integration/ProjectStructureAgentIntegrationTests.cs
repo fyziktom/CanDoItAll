@@ -36,6 +36,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureAgentIntegrationTests
 {
     private static readonly ProjectStructureAgentContext DefaultAgent = new(

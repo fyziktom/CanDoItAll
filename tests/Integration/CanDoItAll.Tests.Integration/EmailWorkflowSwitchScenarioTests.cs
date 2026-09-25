@@ -13,6 +13,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class EmailWorkflowSwitchScenarioTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)

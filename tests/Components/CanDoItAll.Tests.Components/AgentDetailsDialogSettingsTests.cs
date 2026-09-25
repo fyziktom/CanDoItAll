@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentDetailsDialogSettingsTests
 {
     [Theory]

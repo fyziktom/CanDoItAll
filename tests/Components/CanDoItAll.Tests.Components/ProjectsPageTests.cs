@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectsPageTests
 {
     [Fact]

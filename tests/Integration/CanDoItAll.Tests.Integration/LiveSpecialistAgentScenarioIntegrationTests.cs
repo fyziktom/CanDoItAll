@@ -7,6 +7,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class LiveSpecialistAgentScenarioIntegrationTests
 {
     private const string RepositoryRoot = @"C:\repositories\CanDoItAll";

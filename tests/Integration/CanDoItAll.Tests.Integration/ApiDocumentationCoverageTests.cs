@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ApiDocumentationCoverageTests(ApiDocumentationDocumentFixture fixture)
     : IClassFixture<ApiDocumentationDocumentFixture>
 {

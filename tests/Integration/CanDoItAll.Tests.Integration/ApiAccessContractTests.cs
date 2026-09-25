@@ -12,6 +12,7 @@ using static CanDoItAll.Tests.Integration.Api.ApiUserSessionIntegrationTests;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ApiAccessContractTests {
     [Fact]
     public async Task OpenApi_uses_actual_route_gates_unique_operations_and_bearer_metadata_without_hashes() {

@@ -14,6 +14,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureWorkflowScenarioHarnessTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)

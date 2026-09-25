@@ -20,6 +20,7 @@ using Xunit.Abstractions;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutputHelper output)
 {
     private static readonly TimeSpan AsyncObservationTimeout = TimeSpan.FromSeconds(30);

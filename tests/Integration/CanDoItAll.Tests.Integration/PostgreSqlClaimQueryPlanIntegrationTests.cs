@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Persistence;
 
+[Trait("Category", "HostPlatform")]
 public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
     private const string ProcessOutboxClaimIndex = "IX_process_outbox_messages_Status_AvailableAtUtc_LockedAtUtc";
     private const string ProcessStepDispatchHeaderIndex = "IX_process_runtime_steps_RunId_Status";

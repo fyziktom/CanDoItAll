@@ -27,6 +27,7 @@ using ProviderEditor = CanDoItAll.AgentFramework.Models.ProviderProfileEditorMod
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
+[Trait("Category", "HostPlatform")]
 public sealed class Maf122ProcessExecutionIntegrationTests(ITestOutputHelper output) {
     private const string DefinitionKey = "maf122-note";
     private const string StepKey = "write-note";

@@ -16,6 +16,7 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
+[Trait("Category", "HostPlatform")]
 public sealed class Maf122WorkflowProcessIntegrationTests(ITestOutputHelper output) {
     private const string DefinitionKey = "maf122-workflow-outcome";
     private const string StepKey = "workflow-outcome";

@@ -14,6 +14,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.Persistence;
 
+[Trait("Category", "HostPlatform")]
 public sealed class DatabaseSwitchIntegrationTests
 {
     [Fact]

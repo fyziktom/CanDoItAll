@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.External;
 
+[Trait("Category", "HostPlatform")]
 public sealed class PluginSecretBrokerIntegrationTests
 {
     [Fact]

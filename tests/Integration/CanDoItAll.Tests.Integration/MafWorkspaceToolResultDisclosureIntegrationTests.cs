@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
     [Theory]
     [InlineData(ToolContractCatalog.WorkspaceReadFile)]

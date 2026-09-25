@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
 {
     [Fact]

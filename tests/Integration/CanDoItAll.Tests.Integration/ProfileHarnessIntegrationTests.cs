@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Runtime;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProfileHarnessIntegrationTests
 {
     [Fact]

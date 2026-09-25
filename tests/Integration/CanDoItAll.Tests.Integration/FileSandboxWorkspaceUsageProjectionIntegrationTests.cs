@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
 {
     [Fact]

@@ -29,6 +29,7 @@ using AgentFrameworkProviderProfileEditorModel =
 using PersistedProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
 using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SharedProviderBackendCheckpointIntegrationTests
 {
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(5);

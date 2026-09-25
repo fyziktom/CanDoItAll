@@ -183,9 +183,19 @@ public static class ToolContractCatalog
         WorkspaceDotNetTest
     ];
 
+    /// <summary>
+    /// Workspace tools supplied by the published-output validation provider rather than the configured workspace tools.
+    /// </summary>
+    public static IReadOnlyList<string> PublishedOutputValidationToolNames { get; } =
+    [
+        WorkspaceDotNetPublish,
+        WorkspaceStaticServe
+    ];
+
     public static IReadOnlyList<string> KnownToolNames { get; } =
     [
         .. WorkspaceToolNames,
+        .. PublishedOutputValidationToolNames,
         .. BrowserToolNames,
         .. RuntimeUtilityToolNames,
         .. FinalizerToolNames,

@@ -360,7 +360,11 @@ close to, and above, that budget, and a runner that is slower than the budget fa
 a test failing. Neither reducing the filter nor raising the timeout without a measurement is an
 acceptable answer to that.
 
-The CI workflow gives each platform its own budget in the stable job's matrix. They come from the
+Since 2026-09-25 CI no longer runs this gate as one command per platform; see
+[Platform Split](#platform-split). The measurements in the rest of this section describe the
+former single-job gate and remain the baseline for the full scope.
+
+The CI workflow gave each platform its own budget in the stable job's matrix. They came from the
 first CI run of this gate on all three platforms (commit `d0f3c41a4`, 2026-09-19), whose logs time
 every phase:
 
@@ -428,6 +432,63 @@ The filter intentionally excludes:
 - tests with an explicit `Quarantined` trait
 
 Quarantine is not a passing result. Remove a quarantine only with focused replacement evidence and a passing owning gate.
+
+## Platform Split
+
+CI does not run the broad stable gate as one command per platform. Linux runs every stable test;
+Windows and macOS run the tests whose behavior depends on the host operating system.
+
+| Job | Platforms | Runs |
+|---|---|---|
+| `stable` | Windows, Linux, macOS | Unit and Memory with the stable filter, then the actual-host portability, PostgreSQL, runtime-portability, headless-host, documentation and installer gates |
+| `tests-linux` | Linux, 5 shards | every stable Components and Integration test |
+| `tests-host` | Windows and macOS, 3 shards each | Components and Integration classes in `Category=HostPlatform`; in the full scope, every stable Components and Integration test |
+
+The full scope runs for pushes to and pull requests into `main`, the weekly schedule, and a manual
+run with `platform-scope: full`. Every other run uses the split scope. Both scopes use the stable
+filter and its exclusions; the split scope only removes platform-neutral classes from the Windows
+and macOS shards.
+
+A Components or Integration test class is host-platform when its own source reaches the operating
+system: processes, real files and directories, temporary roots, links and file modes, data
+protection or secret stores, environment variables and special folders, native path literals, or
+operating-system checks. Mark it at class level with `[Trait("Category", "HostPlatform")]`. A
+class-level `UnixPortabilityCore` or `UnixRuntimePortability` category also qualifies, because
+those classes run in the per-platform portability gates. `HostPlatformTestClassificationTests`
+fails for any class whose source matches those patterns without such a category. It cannot see
+indirect dependence, where a fixture or production code reaches the host but the class does not;
+tag such a class by hand when its assertions depend on platform behavior. Unit and Memory run
+completely on every platform and need no classification.
+
+`tools/Validation/Invoke-TestShard.ps1` lists the filtered tests, groups them by class and packs
+whole classes into shards by their weight in `tools/Validation/TestShardWeights.json` (measured
+seconds; a class without a weight counts its cases at the recorded mean case duration). Every
+shard computes the same partition in ordinal order, and discovery fails when a listed test would
+be claimed by no class selector or by two. Inside a shard, tests keep their assembly's execution
+policy: shards add processes on separate runners, each with its own PostgreSQL server, never
+concurrency within one test process. The workflow policy test requires each sharded step's
+`-ShardCount` to match its matrix, so removing a matrix entry cannot silently drop classes.
+
+Inspect a shard locally with `-ListOnly`, or run it with the same filter and shard arguments as
+CI. Refresh the weights from complete Linux runs of both assemblies when shard durations drift
+apart:
+
+```powershell
+./tools/Validation/Update-TestShardWeights.ps1 -TrxPath <components.trx>,<integration.trx> -Source "<commit and host>"
+```
+
+The shard counts and budgets come from a 2026-09-25 Linux Docker run of application `95abfbae9`
+(8 CPUs, PostgreSQL 18.6) that also produced the committed weights. It passed Unit (9,061 cases)
+in 1.5 minutes, Components (2,331) in 18.1 minutes and Integration (3,170) in 106 minutes.
+Host-platform classes accounted for 25% of the Components time and 38% of the Integration time;
+the largest class, `ProcessCatalogAuthorityPersistenceTests`, took 13.3 minutes and bounds the
+shortest possible shard. The earlier single-job gates took 84–104 minutes on Linux, 138–181 on
+macOS and 219–273 on Windows. Scaling those gates by the measured shares projects about 17
+minutes of tests per Linux shard and about 27 per Windows host-platform shard, each after roughly
+7 (Linux) or 17 (Windows) minutes of setup and build; a Windows full-scope shard projects to about
+75 minutes. The budgets (`stable` 90–120, `tests-linux` 90, `tests-host` 180 minutes) leave room
+for the full scope. These are projections: compare the first CI run's step durations with them and
+record the result here before changing a shard count or budget.
 
 ## Documentation
 

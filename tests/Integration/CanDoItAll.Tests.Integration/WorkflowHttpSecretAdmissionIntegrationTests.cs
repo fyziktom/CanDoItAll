@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class WorkflowHttpSecretAdmissionIntegrationTests {
     [Theory]
     [InlineData(false)]

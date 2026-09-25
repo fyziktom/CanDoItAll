@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentCapabilityMutationBoundaryTests {
     [Fact]
     public async Task Catalog_commit_then_index_failure_is_verified_without_second_save() {

@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class ProcessPreparedLaunchPersistenceTests {
     [Fact]
     public Task Target_inspection_rejects_terminal_runtime_pointing_to_another_runs_valid_preparation()

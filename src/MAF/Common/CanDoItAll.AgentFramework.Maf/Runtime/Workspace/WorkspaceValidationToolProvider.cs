@@ -10,7 +10,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed class WorkspaceValidationToolProvider : IAgentRuntimeToolProvider {
     private const string ProviderKey = "workspace-published-output";
-    private static readonly string[] ToolNames = [ToolContractCatalog.WorkspaceDotNetPublish, ToolContractCatalog.WorkspaceStaticServe];
+    private static readonly IReadOnlyList<string> ToolNames = ToolContractCatalog.PublishedOutputValidationToolNames;
 
     public int Order => 0;
 

@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class AgentApprovalCheckpointRecoveryTests {
     public enum Damage { None, Missing, InvalidJson, NullPayload, MissingApprovals, ChangedSession }
 

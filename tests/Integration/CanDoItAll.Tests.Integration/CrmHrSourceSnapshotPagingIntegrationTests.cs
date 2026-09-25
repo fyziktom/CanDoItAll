@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace CanDoItAll.Tests.Integration.CrmHr;
 
+[Trait("Category", "HostPlatform")]
 public sealed class CrmHrSourceSnapshotPagingIntegrationTests
 {
     [Fact]

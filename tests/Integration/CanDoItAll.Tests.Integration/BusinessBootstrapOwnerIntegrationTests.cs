@@ -15,6 +15,7 @@ using ProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.Pro
 
 namespace CanDoItAll.Tests.Integration.Persistence;
 
+[Trait("Category", "HostPlatform")]
 public sealed class BusinessBootstrapOwnerIntegrationTests {
     private static readonly Guid OpenAiId = Guid.Parse("C1C103DB-707E-3F52-8809-8D804FC171D1");
     private static readonly Guid ChatCompletionsId = Guid.Parse("036B360A-E3F4-8350-97CA-F88DE60BA2BB");

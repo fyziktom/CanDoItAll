@@ -19,6 +19,7 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 
 #pragma warning disable OPENAI001, MAAI001
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class MafToolAdmissionNativeLoopIntegrationTests {
     [Theory]
     [InlineData(WireProvider.Responses, false)]

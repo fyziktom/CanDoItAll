@@ -25,6 +25,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructurePageSimpleMutationTests
 {
     [Fact]

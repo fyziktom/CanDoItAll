@@ -4,6 +4,7 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureAgentAcceptanceOracleTests(ITestOutputHelper output)
 {
     private const string NodeCreateToolName = "project_structure_node_create";

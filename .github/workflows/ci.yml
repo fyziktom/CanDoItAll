@@ -9,7 +9,18 @@ on:
     branches:
       - main
       - development
+  schedule:
+    # Weekly full-platform verification; see "Platform Split" in docs/testing.md.
+    - cron: '0 2 * * 0'
   workflow_dispatch:
+    inputs:
+      platform-scope:
+        description: 'split: platform-neutral tests run on Linux only; full: every stable test runs on every platform'
+        type: choice
+        options:
+          - split
+          - full
+        default: split
 
 permissions:
   contents: read
@@ -31,6 +42,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       components-commit: ${{ steps.components.outputs.commit }}
+      platform-scope: ${{ steps.scope.outputs.scope }}
     steps:
       - name: Check out matching Components branch
         uses: actions/checkout@v4
@@ -50,6 +62,19 @@ jobs:
           Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "commit=$commit"
           Write-Host "Components commit: $commit"
 
+      - name: Resolve platform test scope
+        id: scope
+        shell: pwsh
+        env:
+          REQUESTED_SCOPE: ${{ inputs.platform-scope }}
+        run: |
+          # main, the weekly schedule and an explicit request run every stable test on every platform.
+          $full = $env:REQUESTED_SCOPE -eq 'full' -or $env:GITHUB_EVENT_NAME -eq 'schedule' -or
+            $env:GITHUB_REF -eq 'refs/heads/main' -or $env:GITHUB_BASE_REF -eq 'main'
+          $scope = if ($full) { 'full' } else { 'split' }
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "scope=$scope"
+          Write-Host "Platform test scope: $scope"
+
   stable:
     needs: dependencies
     name: stable-${{ matrix.name }}
@@ -57,25 +82,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Budgets come from measured runs; see "Broad Stable Gate" in docs/testing.md before changing one.
+          # Unit, Memory and the actual-host portability gates run on every platform; Components and
+          # Integration run in the tests-linux and tests-host shards. See "Platform Split" in docs/testing.md.
           - name: windows-x64
             os: windows-latest
             rid: win-x64
             profile: WindowsHeadless
             postgres-create-strategy: WAL_LOG
-            timeout-minutes: 300
+            timeout-minutes: 120
           - name: ubuntu-x64
             os: ubuntu-24.04
             rid: linux-x64
             profile: LinuxHeadless
             postgres-create-strategy: WAL_LOG
-            timeout-minutes: 300
+            timeout-minutes: 90
           - name: macos-arm64
             os: macos-15
             rid: osx-arm64
             profile: MacOsHeadless
             postgres-create-strategy: FILE_COPY
-            timeout-minutes: 300
+            timeout-minutes: 120
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ matrix.timeout-minutes }}
     env:
@@ -171,16 +197,15 @@ jobs:
             -UseLocalCanDoItAllLibraries $true `
             -BuildOnly
 
-      - name: Run stable test gate
+      - name: Run stable Unit and Memory gate
         shell: pwsh
-        env:
-          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
-        run: >-
-          dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore
-          --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
-          --logger "trx;LogFilePrefix=stable-${{ matrix.name }}"
-          --results-directory "${{ runner.temp }}/test-results"
-          -p:UseLocalCanDoItAllLibraries=true /m:1
+        run: |
+          dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true" --logger "trx;LogFilePrefix=stable-unit-${{ matrix.name }}" --results-directory "${{ runner.temp }}/test-results" -p:UseLocalCanDoItAllLibraries=true /m:1
+          $unitExitCode = $LASTEXITCODE
+          dotnet test ./tests/Solutions/CanDoItAll.Tests.Memory.slnx --configuration Release --no-build --no-restore --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true" --logger "trx;LogFilePrefix=stable-memory-${{ matrix.name }}" --results-directory "${{ runner.temp }}/test-results" -p:UseLocalCanDoItAllLibraries=true /m:1
+          if ($unitExitCode -ne 0 -or $LASTEXITCODE -ne 0) {
+            exit 1
+          }
 
       - name: Run actual-host core portability unit gate
         shell: pwsh
@@ -275,6 +300,245 @@ jobs:
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/startup-*.log
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/browser-smoke.*
             CanDoItAll/output/playwright/b07-runtime-capabilities-*.png
+          if-no-files-found: warn
+          retention-days: 14
+
+  tests-linux:
+    needs: dependencies
+    name: tests-linux-${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux is the reference platform: its shards run every stable Components and Integration test.
+        shard: [1, 2, 3, 4, 5]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG
+    defaults:
+      run:
+        working-directory: CanDoItAll
+
+    steps:
+      - name: Check out application source
+        uses: actions/checkout@v4
+        with:
+          path: CanDoItAll
+
+      - name: Check out Components source
+        uses: actions/checkout@v4
+        with:
+          repository: fyziktom/CanDoItAll.Components
+          ref: ${{ needs.dependencies.outputs.components-commit }}
+          path: CanDoItAll.Components
+
+      - name: Check out FileTools source
+        uses: actions/checkout@v4
+        with:
+          repository: fyziktom/CanDoItAll.FileTools
+          ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
+          path: CanDoItAll.FileTools
+
+      - name: Verify committed BaseLib source assets
+        shell: pwsh
+        run: |
+          foreach ($asset in @(
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/material-symbols.css',
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css'
+          )) {
+            $assetPath = Join-Path ../CanDoItAll.Components $asset
+            if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf) -or (Get-Item -LiteralPath $assetPath).Length -eq 0) {
+              throw "Required Components source asset is missing or empty: $asset"
+            }
+            git -C ../CanDoItAll.Components ls-files --error-unmatch -- $asset
+            if ($LASTEXITCODE -ne 0) {
+              throw "Required Components source asset is not committed: $asset"
+            }
+          }
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: CanDoItAll/global.json
+
+      - name: Start PostgreSQL for the stable integration gate
+        uses: ikalnytskyi/action-setup-postgres@v8
+        with:
+          username: candoitall
+          password: candoitall
+          database: candoitall_development
+          postgres-version: "18"
+
+      - name: Verify PostgreSQL 18 server provenance
+        shell: pwsh
+        env:
+          PGSERVICE: candoitall
+        run: |
+          $version = & psql -X -w -At -v ON_ERROR_STOP=1 -c "show server_version_num"
+          if ($LASTEXITCODE -ne 0 -or [int]$version -lt 180000 -or [int]$version -ge 190000) {
+            throw "The integration gate requires PostgreSQL 18; observed server_version_num=$version."
+          }
+          Write-Host "PostgreSQL server_version_num=$version"
+
+      - name: Restore with sibling source dependencies
+        shell: pwsh
+        run: dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx -p:UseLocalCanDoItAllLibraries=true
+
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+
+      - name: Run stable Components and Integration shard
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          ./tools/Validation/Invoke-TestShard.ps1
+          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+          -ShardIndex ${{ matrix.shard }} -ShardCount 5
+          -WeightsPath ./tools/Validation/TestShardWeights.json
+          -ResultsDirectory "${{ runner.temp }}/test-results"
+          -LogPrefix "stable-linux-${{ matrix.shard }}"
+
+      - name: Upload shard evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-linux-${{ matrix.shard }}
+          path: ${{ runner.temp }}/test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  tests-host:
+    needs: dependencies
+    name: tests-host-${{ matrix.name }}-${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The split scope runs only host-platform classes here; the full scope runs every stable test.
+        name: [windows-x64, macos-arm64]
+        shard: [1, 2, 3]
+        include:
+          - name: windows-x64
+            os: windows-latest
+          - name: macos-arm64
+            os: macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    env:
+      CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG
+    defaults:
+      run:
+        working-directory: CanDoItAll
+
+    steps:
+      - name: Check out application source
+        uses: actions/checkout@v4
+        with:
+          path: CanDoItAll
+
+      - name: Check out Components source
+        uses: actions/checkout@v4
+        with:
+          repository: fyziktom/CanDoItAll.Components
+          ref: ${{ needs.dependencies.outputs.components-commit }}
+          path: CanDoItAll.Components
+
+      - name: Check out FileTools source
+        uses: actions/checkout@v4
+        with:
+          repository: fyziktom/CanDoItAll.FileTools
+          ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
+          path: CanDoItAll.FileTools
+
+      - name: Verify committed BaseLib source assets
+        shell: pwsh
+        run: |
+          foreach ($asset in @(
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/material-symbols.css',
+            'src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css'
+          )) {
+            $assetPath = Join-Path ../CanDoItAll.Components $asset
+            if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf) -or (Get-Item -LiteralPath $assetPath).Length -eq 0) {
+              throw "Required Components source asset is missing or empty: $asset"
+            }
+            git -C ../CanDoItAll.Components ls-files --error-unmatch -- $asset
+            if ($LASTEXITCODE -ne 0) {
+              throw "Required Components source asset is not committed: $asset"
+            }
+          }
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: CanDoItAll/global.json
+
+      - name: Start PostgreSQL for the stable integration gate
+        uses: ikalnytskyi/action-setup-postgres@v8
+        with:
+          username: candoitall
+          password: candoitall
+          database: candoitall_development
+          postgres-version: "18"
+
+      - name: Verify PostgreSQL 18 server provenance
+        shell: pwsh
+        env:
+          PGSERVICE: candoitall
+        run: |
+          $version = & psql -X -w -At -v ON_ERROR_STOP=1 -c "show server_version_num"
+          if ($LASTEXITCODE -ne 0 -or [int]$version -lt 180000 -or [int]$version -ge 190000) {
+            throw "The integration gate requires PostgreSQL 18; observed server_version_num=$version."
+          }
+          Write-Host "PostgreSQL server_version_num=$version"
+
+      - name: Restore with sibling source dependencies
+        shell: pwsh
+        run: dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx -p:UseLocalCanDoItAllLibraries=true
+
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+
+      - name: Run host-platform Components and Integration shard
+        if: needs.dependencies.outputs.platform-scope != 'full'
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          ./tools/Validation/Invoke-TestShard.ps1
+          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform"
+          -ShardIndex ${{ matrix.shard }} -ShardCount 3
+          -WeightsPath ./tools/Validation/TestShardWeights.json
+          -ResultsDirectory "${{ runner.temp }}/test-results"
+          -LogPrefix "host-${{ matrix.name }}-${{ matrix.shard }}"
+
+      - name: Run full-platform Components and Integration shard
+        if: needs.dependencies.outputs.platform-scope == 'full'
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          ./tools/Validation/Invoke-TestShard.ps1
+          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+          -ShardIndex ${{ matrix.shard }} -ShardCount 3
+          -WeightsPath ./tools/Validation/TestShardWeights.json
+          -ResultsDirectory "${{ runner.temp }}/test-results"
+          -LogPrefix "full-${{ matrix.name }}-${{ matrix.shard }}"
+
+      - name: Upload shard evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-host-${{ matrix.name }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/test-results
           if-no-files-found: warn
           retention-days: 14
 

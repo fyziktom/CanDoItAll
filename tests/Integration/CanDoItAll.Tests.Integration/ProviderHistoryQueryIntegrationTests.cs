@@ -12,6 +12,7 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProviderHistoryQueryIntegrationTests(ITestOutputHelper output) {
     private static readonly TimeSpan ColdQueryBudget = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan WarmQueryP95Budget = TimeSpan.FromSeconds(5);

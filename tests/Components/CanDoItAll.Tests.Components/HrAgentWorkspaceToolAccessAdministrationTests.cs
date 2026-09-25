@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
 
+[Trait("Category", "HostPlatform")]
 public sealed class HrAgentWorkspaceToolAccessAdministrationTests
 {
     [Fact]

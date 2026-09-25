@@ -7,6 +7,7 @@ using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class CapabilityVerificationRaceIntegrationTests {
     [Fact]
     public Task Detached_capability_during_diagnostic_does_not_persist_stale_proof()

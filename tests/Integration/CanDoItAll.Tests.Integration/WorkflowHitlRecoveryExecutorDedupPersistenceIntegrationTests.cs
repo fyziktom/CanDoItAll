@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowHitlRecoveryExecutorDedupPersistenceIntegrationTests
 {
     private static readonly DateTimeOffset TestTime =

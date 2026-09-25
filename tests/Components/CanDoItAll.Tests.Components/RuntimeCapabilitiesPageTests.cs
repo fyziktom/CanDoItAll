@@ -6,6 +6,7 @@ using RuntimeCapabilitiesPage = CanDoItAll.Web.Components.Pages.RuntimeCapabilit
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class RuntimeCapabilitiesPageTests
 {
     [Fact]

@@ -21,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructurePageActionLifetimeTests {
     public enum SummaryAction { Status, Workbook, Gantt }
 

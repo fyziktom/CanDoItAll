@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class StorageStablePlacementPersistenceTests {
     [Theory]
     [InlineData(false)]
