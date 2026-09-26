@@ -92,6 +92,23 @@ Implemented as `WorkspaceReadOnlyBuildOutputTests` (Unit: T-C1…T-C3 plus the p
 
 ---
 
+## CI-parity gate (added after CI run 36270125343)
+
+The impact search for the behaviour ledger covered `tests/Unit`, `tests/Components` and
+`tests/Integration` but **not `tests/Playwright`**. The local lanes also never ran the stable
+job's runtime portability gate, which includes a Playwright smoke test. BC-A12 therefore
+broke `ProjectStructureRuntimeNodePlaywrightTests` on all three OSes. Before closing any
+change to user-visible text or runtime behaviour:
+
+- search `tests/Playwright` (and `tests/Playwright/GovernanceBrowserFixture`) for every changed
+  string and test id;
+- run the stable job locally in CI order: build (both slnx plus `Test-RuntimePortability.ps1
+  -BuildOnly`), steps 12–16, Chromium install, `Test-RuntimePortability.ps1 -SkipBuild`, then
+  `Test-CorePortabilityHeadless.ps1`, the documentation check and the install-script tests (steps
+  CI skips when an earlier stable step fails);
+- run it on Windows and in the Linux container (siblings at the CI commits; the runtime gate
+  needs Git checkouts).
+
 ## UI and API procedures (Windows, 5032)
 
 **Preparation (once per stage):**
