@@ -15,8 +15,12 @@ select {
     font: inherit;
 }
 
-a {
-    color: inherit;
+/* Unlayered rules outrank every Tailwind layer, so an unlayered link reset would override component and
+   utility colors on links, such as a filled Button rendered with Href. Keep the reset in the base layer. */
+@layer base {
+    a {
+        color: inherit;
+    }
 }
 
 #blazor-error-ui {

@@ -103,6 +103,40 @@ public sealed class ProjectStructureNodeActionCapabilityResolverTests
         Assert.DoesNotContain(privateRoot, string.Join(' ', result.Guidance), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(ProjectStructureRuntimePathAuthorityMode.OperatorSelected, true)]
+    [InlineData(ProjectStructureRuntimePathAuthorityMode.AgentExecution, false)]
+    public void Resolve_reports_the_last_failed_run_and_keeps_its_output_out_of_agent_projections(
+        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode,
+        bool expectOutput)
+    {
+        const string output = "Access to the path 'C:\\private\\MSBuildTemp' is denied.";
+        var launcher = new ResolvedRuntimeLauncher(
+            new ProjectStructureRuntimeLaunchCapabilities(
+                ProjectStructureRuntimeCapability.Available("Direct execution is available."),
+                ProjectStructureRuntimeCapability.Available("Terminal presentation is available."),
+                ProjectStructureRuntimeCapability.Available("Elevation is available.")))
+        {
+            LastExit = new ProjectStructureRuntimeExitRecord(
+                56000,
+                1,
+                DateTimeOffset.Parse("2026-09-26T12:52:00Z"),
+                DateTimeOffset.Parse("2026-09-26T12:52:01Z"),
+                output)
+        };
+
+        var result = ProjectStructureNodeActionCapabilityResolver.Resolve(
+            CreateRuntimeNode(),
+            launcher,
+            new UnavailableLocalFileOpener(),
+            pathAuthorityMode);
+
+        Assert.NotNull(result);
+        var failure = Assert.Single(result.Guidance, item => item.StartsWith("The last Workbench run of this node failed.", StringComparison.Ordinal));
+        Assert.Contains("code 1", failure, StringComparison.Ordinal);
+        Assert.Equal(expectOutput, failure.Contains(output, StringComparison.Ordinal));
+    }
+
     private static ProjectStructureNode CreateRuntimeNode()
         => new(
             "runtime-node",
@@ -205,7 +239,11 @@ public sealed class ProjectStructureNodeActionCapabilityResolverTests
             "Runtime launch plan resolved.",
             capabilities);
 
+        public ProjectStructureRuntimeExitRecord? LastExit { get; init; }
+
         public bool IsAvailable => true;
+
+        public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => LastExit;
 
         public ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node) => resolution;
 

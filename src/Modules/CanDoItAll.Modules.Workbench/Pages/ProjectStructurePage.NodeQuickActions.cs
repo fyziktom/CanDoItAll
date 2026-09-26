@@ -22,11 +22,19 @@ public partial class ProjectStructurePage
     private ProjectStructureQuickActionDialogState BuildQuickActionDialog(ProjectStructureNode node)
     {
         var nodeLabel = ProjectStructureCanvasCatalog.ResolveNodeLabel(node);
+        var copy = $"Choose the next step for this {nodeLabel.ToLowerInvariant()} without leaving the canvas.";
+        if (ProjectStructureNodeActionCapabilityResolver.IsRuntimeCapable(node) &&
+            !RuntimeLauncher.IsRunning(node.Id) &&
+            RuntimeLauncher.GetLastExit(node.Id) is { ExitCode: not 0 } lastExit)
+        {
+            copy = $"{copy} The last run failed. {lastExit.Describe()}";
+        }
+
         return new ProjectStructureQuickActionDialogState(
             node.Id,
             node.Title,
             nodeLabel,
-            $"Choose the next step for this {nodeLabel.ToLowerInvariant()} without leaving the canvas.",
+            copy,
             node.Notes,
             BuildEditQuickAction(node),
             ResolvePrimaryQuickAction(node),
@@ -255,6 +263,16 @@ public partial class ProjectStructurePage
         if (capabilities.Elevation.IsAvailable && primaryMode != ProjectStructureRuntimeLaunchMode.Elevated)
         {
             actions.Add(BuildRuntimeQuickAction(ProjectStructureRuntimeLaunchMode.Elevated));
+        }
+
+        if (TryResolveRuntimePreviewLink(node, out var previewLink))
+        {
+            actions.Add(BuildInspectorQuickAction(
+                "Open preview",
+                $"Show {previewLink.Uri.AbsoluteUri} in the embedded preview. Run the node first when the application is not already listening there.",
+                "preview",
+                "sky",
+                RuntimePreviewActionId));
         }
 
         return actions;

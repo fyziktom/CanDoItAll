@@ -13,13 +13,56 @@ internal sealed record ProjectStructureRuntimeSessionStartResult(
     public bool IsSuccess => Identity is not null;
 }
 
+public sealed record ProjectStructureRuntimeExitRecord(
+    int ProcessId,
+    int ExitCode,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset CompletedAtUtc,
+    string OutputTail)
+{
+    private const int SummaryOutputCharacters = 600;
+
+    internal static ProjectStructureRuntimeExitRecord From(int processId, WorkspaceProcessExecutionResult result)
+    {
+        var output = !string.IsNullOrWhiteSpace(result.Stderr) ? result.Stderr : result.Stdout;
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            output = result.FailureMessage;
+        }
+
+        var collapsed = string.Join(
+            " ",
+            (output ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return new(
+            processId,
+            result.ExitCode,
+            result.StartedAtUtc,
+            result.CompletedAtUtc,
+            collapsed.Length <= SummaryOutputCharacters ? collapsed : collapsed[^SummaryOutputCharacters..]);
+    }
+
+    public string Describe(bool includeOutput = true)
+        => !includeOutput
+            ? $"Process {ProcessId} exited with code {ExitCode} at {CompletedAtUtc:u}."
+            : string.IsNullOrWhiteSpace(OutputTail)
+                ? $"Process {ProcessId} exited with code {ExitCode} at {CompletedAtUtc:u} and wrote no output."
+                : $"Process {ProcessId} exited with code {ExitCode} at {CompletedAtUtc:u}. Output: {OutputTail}";
+}
+
 internal interface IProjectStructureRuntimeSessionRegistry
 {
     bool IsRunning(string nodeId);
 
+    ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId);
+
     Task<ProjectStructureRuntimeSessionStartResult> StartSessionAsync(
         string nodeId,
         WorkspaceProcessSessionRequest request,
+        CancellationToken cancellationToken);
+
+    Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
+        string nodeId,
+        TimeSpan timeout,
         CancellationToken cancellationToken);
 
     Task<ProjectStructureRuntimeLaunchResult> StopSessionAsync(
@@ -34,6 +77,10 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
     private readonly IServiceScopeFactory? scopeFactory;
     private readonly ILogger<ProjectStructureRuntimeSessionRegistry> logger;
     private readonly ConcurrentDictionary<string, IWorkspaceProcessSession> sessions =
+        new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Task<ProjectStructureRuntimeExitRecord?>> completions =
+        new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ProjectStructureRuntimeExitRecord> lastExits =
         new(StringComparer.Ordinal);
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly object stopSync = new();
@@ -60,6 +107,34 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
 
     public bool IsRunning(string nodeId)
         => sessions.TryGetValue(nodeId, out var session) && !session.HasExited;
+
+    public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId)
+        => lastExits.TryGetValue(nodeId, out var exit) ? exit : null;
+
+    public async Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
+        string nodeId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        if (!completions.TryGetValue(nodeId, out var completion))
+        {
+            return GetLastExit(nodeId);
+        }
+
+        if (timeout <= TimeSpan.Zero)
+        {
+            return completion.IsCompleted ? await completion.ConfigureAwait(false) : null;
+        }
+
+        try
+        {
+            return await completion.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+    }
 
     public Task StartAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
@@ -97,7 +172,8 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
 
             var session = await ResolveProcessHost().StartSessionAsync(request, cancellationToken).ConfigureAwait(false);
             sessions[nodeId] = session;
-            _ = ObserveCompletionAsync(nodeId, session);
+            lastExits.TryRemove(nodeId, out _);
+            completions[nodeId] = ObserveCompletionAsync(nodeId, session);
             return new(session.Identity, "Workbench runtime session started.");
         }
         finally
@@ -235,13 +311,32 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
         await StopAsync(CancellationToken.None).ConfigureAwait(false);
     }
 
-    private async Task ObserveCompletionAsync(
+    private async Task<ProjectStructureRuntimeExitRecord?> ObserveCompletionAsync(
         string nodeId,
         IWorkspaceProcessSession session)
     {
+        ProjectStructureRuntimeExitRecord? exit = null;
+        var stoppedByOwner = false;
         try
         {
-            await session.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            var result = await session.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            exit = ProjectStructureRuntimeExitRecord.From(session.Identity.ProcessId, result);
+            stoppedByOwner = result.TerminationReason == WorkspaceProcessTerminationReason.CallerCanceled;
+            if (stoppedByOwner)
+            {
+                logger.LogInformation(
+                    "Workbench runtime node {NodeId} was stopped. ProcessId={ProcessId}.",
+                    nodeId,
+                    session.Identity.ProcessId);
+            }
+            else
+            {
+                logger.Log(
+                    result.ExitCode == 0 ? LogLevel.Information : LogLevel.Warning,
+                    "Workbench runtime node {NodeId} exited. {ExitDescription}",
+                    nodeId,
+                    exit.Describe());
+            }
         }
         catch (Exception exception)
         {
@@ -259,6 +354,10 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
                 if (sessions.TryGetValue(nodeId, out var current) && ReferenceEquals(current, session))
                 {
                     sessions.TryRemove(nodeId, out _);
+                    if (exit is not null && !stoppedByOwner)
+                    {
+                        lastExits[nodeId] = exit;
+                    }
                 }
             }
             finally
@@ -268,6 +367,8 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
 
             await session.DisposeAsync().ConfigureAwait(false);
         }
+
+        return exit;
     }
 
     private IWorkspaceLongRunningProcessHost ResolveProcessHost()

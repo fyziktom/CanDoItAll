@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-25T22:12:11.712161+00:00",
+  "generated_utc": "2026-09-26T13:25:20.260128+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15005,
+  "allowance_count": 15008,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -61286,6 +61286,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.RuntimeLaunch.cs",
+      "category": "permissions",
+      "source_fingerprint": "e264198e5c933bbad4e3b311e64d996e332db066e6a7a79fcf94fc5b6fee19da",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SelectionPanel.cs",
       "category": "case-policy",
       "source_fingerprint": "18ee12183edba01a0ad5dd2e0424845f3753100882d023170cfa450ff2a985f5",
@@ -65753,6 +65759,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs",
       "category": "shell-elevation",
       "source_fingerprint": "dbc39bf98cd20a65884f8ccb1b394fd171a1a21470fbb285dd442a06648f7645",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs",
+      "category": "shell-elevation",
+      "source_fingerprint": "ef90bf9b951589ab01253ed3676e17a8e629fae2be3428d0a2e5fcd3d67c5a4b",
       "count": 1
     },
     {
@@ -73535,6 +73547,12 @@
       "path": "src/UI/CanDoItAll.AppComponents/Components/EmbeddedBrowser.razor",
       "category": "case-policy",
       "source_fingerprint": "605e32689a9f005ebe83842a7d8798e4371959d74967e3cb2db320751b558119",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AppComponents/Components/EmbeddedBrowser.razor",
+      "category": "case-policy",
+      "source_fingerprint": "b1245e448f9e4d0dca7330ce9739f6595e9c6862749e21a65976b5b6d4accae0",
       "count": 1
     },
     {

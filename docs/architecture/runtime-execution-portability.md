@@ -47,6 +47,26 @@ Missing `dotnet`, Python, Conda, Docker, PowerShell, `sh`, Bash, Node, or a term
 adapter produces a typed unavailable/dependency-missing result. There is no implicit
 switch to another runtime and no command-string fallback.
 
+The process host starts from an empty environment. A direct launch therefore merges the
+node's variables through `WorkspaceCommandEnvironmentPolicy` with the matching toolchain
+profile (`workspace_dotnet_run`, `workspace_python_run_file`, `workspace_pwsh_run_script`,
+or `docker`), so the child still receives the inherited allowlist such as `PATH`, `TEMP`,
+`USERPROFILE`, and `SystemRoot`. Without it `dotnet run` fails before building, for
+example with MSB1025 because the temporary directory resolves to the Windows directory.
+
+A process that exits with a non-zero code inside the early observation window fails the
+launch with its exit code and a bounded stderr tail. A later exit is kept per node as the
+last exit record, unless the operator stopped the session, and is reported in the node's
+quick actions and action guidance. Agent-facing guidance reports the exit code without
+the process output.
+
+For a node whose web link is a loopback URL, the page waits for the application to answer
+HTTP before opening the web preview. It stops waiting when the process exits, when the
+operator stops the node or leaves the page, or after the readiness timeout. The embedded
+browser gives a loopback application on a different origin from the host its own origin
+(`allow-same-origin`) so that SPA and WebAssembly apps can render. Same-origin and remote
+pages keep the restricted sandbox.
+
 ## Path And Approval Boundary
 
 Runnable metadata is validated and canonicalized before launch:

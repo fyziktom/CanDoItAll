@@ -30,6 +30,18 @@ internal static class ProjectStructureNodeActionCapabilityResolver
         var canOpenInNewTab = IsIpfsBackedNode(node) && CanOpenNodeInNewTab(node);
         var canBrowseFiles = ProjectStructureFileActions.CanBrowseFiles(node);
         var storage = ResolveStorage(node);
+        if (isRuntimeCapable &&
+            !runtimeLauncher.IsRunning(node.Id) &&
+            runtimeLauncher.GetLastExit(node.Id) is { } lastExit)
+        {
+            // Process output can name resolved physical paths, which agent projections never disclose.
+            var exitDescription = lastExit.Describe(
+                includeOutput: pathAuthorityMode == ProjectStructureRuntimePathAuthorityMode.OperatorSelected);
+            guidance.Add(lastExit.ExitCode == 0
+                ? $"The last Workbench run of this node has ended. {exitDescription}"
+                : $"The last Workbench run of this node failed. {exitDescription}");
+        }
+
         if (canResolveRuntime && runtimeResolution.Plan is { } runtimePlan)
         {
             var capabilities = runtimeResolution.EffectiveCapabilities;

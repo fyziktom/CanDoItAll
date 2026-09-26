@@ -489,22 +489,38 @@ public sealed partial class ProjectStructureAgentService(
         CancellationToken cancellationToken = default)
     {
         var existingNode = await GetNodeAsync(projectId, nodeId, cancellationToken);
-        return await UpdateNodeAsync(
-            projectId,
-            nodeId,
-            new ProjectStructureNodeEditInput(
-                existingNode.Title,
-                existingNode.Subtitle,
-                existingNode.Notes,
-                request.ObjectType,
-                request.ObjectSubtype,
-                StartUtc: null,
-                EndUtc: null,
-                MetadataJson: existingNode.MetadataJson,
-                LeaseToken: request.LeaseToken,
-                DurationSeconds: null),
-            agent,
-            cancellationToken);
+        try
+        {
+            return await UpdateNodeAsync(
+                projectId,
+                nodeId,
+                new ProjectStructureNodeEditInput(
+                    existingNode.Title,
+                    existingNode.Subtitle,
+                    existingNode.Notes,
+                    request.ObjectType,
+                    request.ObjectSubtype,
+                    StartUtc: null,
+                    EndUtc: null,
+                    MetadataJson: existingNode.MetadataJson,
+                    LeaseToken: request.LeaseToken,
+                    DurationSeconds: null),
+                agent,
+                cancellationToken);
+        }
+        catch (ProjectStructureAgentException exception) when (
+            exception.ErrorCode == "InvalidRuntimeMetadata" &&
+            request.ObjectType != existingNode.ObjectType)
+        {
+            // A type-only update keeps the metadata of the current type, which a different runnable type rejects.
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                400,
+                "InvalidRuntimeMetadata",
+                $"{exception.Message} A type-only update keeps the node's existing {existingNode.ObjectType} metadata. " +
+                $"To make it a {request.ObjectType} node, call project_structure_node_update once with objectType, objectSubtype and metadataJson for the new type.",
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.NotCommitted);
+        }
     }
 
     public async Task<ProjectStructureNodeSummary> UpdateNodeMetadataAsync(

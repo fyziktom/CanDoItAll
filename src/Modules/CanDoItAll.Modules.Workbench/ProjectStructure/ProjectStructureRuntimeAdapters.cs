@@ -75,6 +75,13 @@ internal interface IProjectStructureRuntimeExecutionAdapter
 {
     bool IsRunning(string nodeId);
 
+    ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId);
+
+    Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
+        string nodeId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken);
+
     ProjectStructureRuntimeCapability Probe(ProjectStructureRuntimeLaunchPlan plan);
 
     Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
@@ -90,11 +97,22 @@ internal interface IProjectStructureRuntimeExecutionAdapter
 internal sealed class ProjectStructureRuntimeExecutionAdapter(
     IProjectStructureRuntimeSessionRegistry sessionRegistry,
     IProjectStructureExecutableResolver executableResolver,
-    ILogger<ProjectStructureRuntimeExecutionAdapter> logger) : IProjectStructureRuntimeExecutionAdapter
+    ILogger<ProjectStructureRuntimeExecutionAdapter> logger,
+    TimeSpan? earlyExitObservationWindow = null) : IProjectStructureRuntimeExecutionAdapter
 {
     private const int OutputLimitCharacters = 16 * 1024;
+    private static readonly TimeSpan DefaultEarlyExitObservationWindow = TimeSpan.FromSeconds(3);
+    private readonly WorkspaceCommandEnvironmentPolicy environmentPolicy = new();
 
     public bool IsRunning(string nodeId) => sessionRegistry.IsRunning(nodeId);
+
+    public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => sessionRegistry.GetLastExit(nodeId);
+
+    public Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
+        string nodeId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+        => sessionRegistry.WaitForExitAsync(nodeId, timeout, cancellationToken);
 
     public ProjectStructureRuntimeCapability Probe(ProjectStructureRuntimeLaunchPlan plan)
     {
@@ -126,6 +144,11 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
 
         try
         {
+            // The process host starts from an empty environment. Without the inherited allowlist (PATH, TEMP,
+            // USERPROFILE, SystemRoot, ...) toolchains such as dotnet run fail before the application starts.
+            var environment = environmentPolicy.MergeEnvironmentVariables(
+                plan.EnvironmentVariables,
+                ResolveEnvironmentProfile(plan.Kind));
             var start = await sessionRegistry.StartSessionAsync(
                 nodeId,
                 new WorkspaceProcessSessionRequest(
@@ -134,9 +157,10 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
                     resolution.ExecutablePath,
                     plan.Arguments,
                     plan.WorkingDirectory,
-                    plan.EnvironmentVariables,
+                    environment,
                     OutputLimitCharacters,
-                    OutputLimitCharacters),
+                    OutputLimitCharacters,
+                    StderrCaptureMode: WorkspaceProcessTextCaptureMode.Tail),
                 cancellationToken).ConfigureAwait(false);
             if (!start.IsSuccess || start.Identity is null)
             {
@@ -148,6 +172,15 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
                 nodeId,
                 start.Identity.ProcessId,
                 plan.Kind);
+            var earlyExit = await sessionRegistry.WaitForExitAsync(
+                nodeId,
+                earlyExitObservationWindow ?? DefaultEarlyExitObservationWindow,
+                cancellationToken).ConfigureAwait(false);
+            if (earlyExit is not null && earlyExit.ExitCode != 0)
+            {
+                return new(false, $"{plan.DisplayName} exited immediately. {earlyExit.Describe()}");
+            }
+
             return new(
                 true,
                 $"Started {plan.DisplayName} directly as process {start.Identity.ProcessId}. Workbench owns the session until it exits or is stopped.");
@@ -171,6 +204,16 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
         string nodeId,
         CancellationToken cancellationToken)
         => sessionRegistry.StopSessionAsync(nodeId, cancellationToken);
+
+    private static string? ResolveEnvironmentProfile(ProjectStructureRuntimePlanKind kind)
+        => kind switch
+        {
+            ProjectStructureRuntimePlanKind.DotNet => "workspace_dotnet_run",
+            ProjectStructureRuntimePlanKind.Python => "workspace_python_run_file",
+            ProjectStructureRuntimePlanKind.PowerShellScript => "workspace_pwsh_run_script",
+            ProjectStructureRuntimePlanKind.Docker => "docker",
+            _ => null
+        };
 }
 
 internal interface IProjectStructureTerminalPresenter

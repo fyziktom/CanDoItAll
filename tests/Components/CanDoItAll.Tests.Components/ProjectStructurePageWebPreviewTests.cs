@@ -1,6 +1,7 @@
 using System.Reflection;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
@@ -103,6 +104,53 @@ public sealed class ProjectStructurePageWebPreviewTests
             Assert.Contains("Node route", dialog.TextContent, StringComparison.Ordinal);
             Assert.DoesNotContain("Web link", dialog.TextContent, StringComparison.OrdinalIgnoreCase);
         });
+    }
+
+    [Fact]
+    public async Task Opening_a_runtime_node_that_is_not_running_offers_its_actions_instead_of_an_unreachable_preview()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService);
+        var projectFolder = $"apps/RuntimePreview{Guid.NewGuid():N}";
+        var workspaceRoot = harness.Context.Services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, projectFolder));
+        await File.WriteAllTextAsync(
+            Path.Combine(workspaceRoot, projectFolder, "RuntimePreview.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk.Web\"></Project>");
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Environment,
+                "Run app locally",
+                "Debug .NET runtime",
+                string.Empty,
+                $"project:{projectId}",
+                420,
+                240,
+                ObjectSubtype: "dotnet-runtime",
+                MetadataJson: ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Environment = new ProjectEnvironmentMetadata
+                    {
+                        EnvironmentKind = ProjectEnvironmentKind.DotNetRuntime,
+                        ProjectPath = $"{projectFolder}/RuntimePreview.csproj",
+                        LocalhostUrl = "http://localhost:5149"
+                    }
+                })));
+
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(page);
+
+        await page.InvokeAsync(() => canvasWorkbench.Instance.NodeOpened.InvokeAsync(runtimeNode.Id));
+
+        var quickActions = page.WaitForElement("[data-testid='project-structure-node-quick-actions']");
+        Assert.Contains("Run app locally", quickActions.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Run", quickActions.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Open preview", quickActions.TextContent, StringComparison.Ordinal);
+        Assert.Empty(page.FindAll("[data-testid='project-structure-web-preview-dialog']"));
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService)
