@@ -25,7 +25,8 @@ public sealed class WorkspaceGitCommandExecutor(
                 WorkingDirectory: spec.RepositoryPath.Value,
                 EnvironmentVariables: environmentPolicy.MergeEnvironmentVariables(
                     environmentVariables: null,
-                    toolName: "workspace_git"),
+                    toolName: "workspace_git",
+                    executable: "git"),
                 TimeoutSeconds: Math.Clamp((int)Math.Ceiling(spec.Timeout.TotalSeconds), 1, 3600),
                 StdoutLimitCharacters: 1024 * 1024,
                 StderrLimitCharacters: 1024 * 1024),

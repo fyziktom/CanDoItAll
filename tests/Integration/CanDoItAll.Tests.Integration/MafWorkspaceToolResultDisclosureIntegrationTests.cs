@@ -297,12 +297,13 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
             }
         }
 
-        internal async Task SaveActorAsync(bool toolAllowed = true, bool sourceRead = true) {
+        internal async Task SaveActorAsync(bool toolAllowed = true, bool sourceRead = true, bool scriptEnvironment = false) {
             var access = new AgentWorkspaceToolAccessSettings {
                 Profile = AgentWorkspaceToolProfileKind.Custom,
                 CanReadFiles = toolAllowed || toolName != ToolContractCatalog.WorkspaceReadFile,
                 CanTransformArtifacts = toolAllowed && toolName is ToolContractCatalog.WorkspaceConvertDocument or ToolContractCatalog.WorkspaceAnalyzeImage,
-                CanRunLocalScripts = toolAllowed && toolName == ToolContractCatalog.WorkspacePowerShellRunScript
+                CanRunLocalScripts = toolAllowed && toolName == ToolContractCatalog.WorkspacePowerShellRunScript,
+                CanScriptsReadEnvironment = scriptEnvironment
             };
             var catalog = Services.GetRequiredService<ISandboxWorkspaceCatalogStore>();
             var currentActor = (await catalog.LoadCatalogAsync()).Agents.Single(item => item.Id == agent.Id);
@@ -330,6 +331,11 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
             Assert.Equal(sourceRead, AgentProjectStructureAccessMetadata.Read(saved.ConfigurationJson).CanRead);
             Assert.Equal(sourceRead, AgentProjectStructureAccessMetadata.Read(saved.ConfigurationJson).AllowedProjectLifetimes
                 .Contains(new(Project.DatabaseProfileId, Project.ProjectId, Project.LifetimeId)));
+        }
+
+        internal async Task SaveActorAndReloadAsync(bool scriptEnvironment) {
+            await SaveActorAsync(scriptEnvironment: scriptEnvironment);
+            agent = (await Services.GetRequiredService<ISandboxWorkspaceCatalogStore>().LoadCatalogAsync()).Agents.Single(item => item.Id == agent.Id);
         }
 
         internal async Task<AgentExecutionAuthorityRecord> CurrentAuthorityAsync() {
@@ -462,11 +468,21 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
         internal int Analyses { get; private set; }
         internal (int Commands, int Conversions, int Analyses) Counts => (Commands, Conversions, Analyses);
         internal Func<Task>? AfterConversion { get; set; }
+        internal WorkspaceProcessStartFailureKind? FailStartWith { get; set; }
+        internal int AliasCommands { get; private set; }
         public ExecutionBoundaryDescriptor DescribeBoundary() => new("Test transport", "Workspace", "None", "None", "Recorded", false,
             "Command recipe and receipts are real; the process transport is recorded.");
         public Task<WorkspaceProcessExecutionResult> ExecuteAsync(WorkspaceProcessExecutionRequest request, CancellationToken cancellationToken = default) {
             Commands++;
+            if (request.ToolName == "workspace_path_alias") {
+                AliasCommands++;
+            }
             var now = DateTimeOffset.UtcNow;
+            // The temporary drive alias for the long test workspace root is infrastructure, not the tool's command.
+            if (FailStartWith is { } failure && request.ToolName != "workspace_path_alias") {
+                return Task.FromResult(WorkspaceLaunchExplanations.CreateStartFailedResult(
+                    failure, DescribeBoundary(), now, "operator-only start detail"));
+            }
             return Task.FromResult(new WorkspaceProcessExecutionResult(true, 0, "original reviewed command", string.Empty,
                 false, false, now, now, false, DescribeBoundary(), string.Empty));
         }

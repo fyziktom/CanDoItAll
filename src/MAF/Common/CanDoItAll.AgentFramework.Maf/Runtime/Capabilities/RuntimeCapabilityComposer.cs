@@ -635,6 +635,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 
         var processProfile = AgentWorkspaceToolAccessProfiles.CreateSettings(overrideProfile.Value);
         processProfile.AllowedExternalTargetAliases = configured.AllowedExternalTargetAliases.ToList();
+        // The environment permission is the agent's own trust decision, not part of a tool profile.
+        processProfile.CanScriptsReadEnvironment = configured.CanScriptsReadEnvironment;
 
         return AgentWorkspaceToolAccessMetadata.Normalize(processProfile);
     }

@@ -126,7 +126,7 @@ public static partial class PlaywrightMcpLaunchResolver
         try
         {
             var environment = new WorkspaceCommandEnvironmentPolicy()
-                .MergeEnvironmentVariables(environmentVariables: null, "playwright_mcp_npm_install");
+                .MergeEnvironmentVariables(environmentVariables: null, "playwright_mcp_npm_install", nodePath);
             var result = await processHost.ExecuteAsync(
                     new WorkspaceProcessExecutionRequest(
                         ToolName: "playwright_mcp_npm_install",

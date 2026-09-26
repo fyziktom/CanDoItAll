@@ -496,7 +496,7 @@ public sealed class DockerHostToolService(
             DockerExecutableCandidates,
             workspacePathResolver.ResolveWorkspaceRoot());
         IReadOnlyDictionary<string, string?> environmentVariables = environmentPolicy
-            .MergeEnvironmentVariables(environmentVariables: null, toolName: "docker");
+            .MergeEnvironmentVariables(environmentVariables: null, toolName: "docker", executable: executablePath);
         DockerEndpointKind endpointKind = ValidateDockerEnvironment(environmentVariables);
         return new DockerRuntimeContext(
             executablePath,

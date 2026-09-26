@@ -77,6 +77,9 @@ internal static class ProcessExecutionResultFactory
             ProcessAgentFailureKind.RightsBoundary => Failed(
                 ProcessExecutionAdapterDiagnosticCodes.AgentToolPermissionDenied,
                 "A tool operation was denied by the execution permission or workspace boundary. Review the requested target and the original grants before taking another action; do not repeat the denied operation.", evidence),
+            ProcessAgentFailureKind.HostLaunch => Failed(
+                ProcessExecutionAdapterDiagnosticCodes.AgentToolLaunchFailed,
+                "A tool program could not be started on this host (for example a missing program, a missing working folder or a working folder path that is too long), so the tool had no effect. Fix the host condition named in the step's tool receipt before retrying.", evidence),
             _ => Failed(ProcessExecutionAdapterDiagnosticCodes.AgentExecutionFailed,
                 "Agent execution failed before a valid process outcome was produced. Reconcile any unconfirmed tool effects before starting replacement work. Review restricted execution logs using the evidence hash; automatic replay is not authorized.", evidence)
         };

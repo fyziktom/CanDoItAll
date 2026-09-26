@@ -124,6 +124,23 @@ public sealed class ProcessProviderFailureRecoveryTests {
     }
 
     [Fact]
+    public void A_tool_program_that_could_not_start_is_a_host_launch_failure_with_its_own_guidance() {
+        const string responseText =
+            "Required mutation 'workspace_pwsh_run_script' did not complete: Recipe 'powershell_run_script' could not start: " +
+            "The program this command needs was not found on the host (pwsh or powershell). [ProcessStartFailed.ExecutableNotFound] PolicyDenied later text";
+        var kind = ProcessRuntimeFailureClassifier.Classify(responseText);
+        Assert.Equal(ProcessAgentFailureKind.HostLaunch, kind);
+        Assert.Equal(ProcessAgentFailureKind.HostLaunch, ProcessRuntimeFailureClassifier.Classify(
+            new AgentRuntimeUsageException("Tool execution failed", new InvalidOperationException(responseText), [])));
+        var result = ProcessExecutionResultFactory.TerminalAgentFailure(kind, Guid.NewGuid(), responseText);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ProcessExecutionAdapterDiagnosticCodes.AgentToolLaunchFailed, diagnostic.Code.Value);
+        Assert.Contains("could not be started on this host", result.UserSafeSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("pwsh", result.UserSafeSummary, StringComparison.Ordinal);
+        Assert.False(ProcessRuntimeFailureClassifier.LooksLikeTransientAgentExecutionFailure(responseText));
+    }
+
+    [Fact]
     public void Unconfirmed_tool_failure_requires_reconciliation_without_claiming_a_committed_or_safe_effect() {
         var result = ProcessExecutionResultFactory.TerminalAgentFailure(ProcessAgentFailureKind.Unknown, Guid.NewGuid(), "PRIVATE_ENDPOINT_RESPONSE");
         var diagnostic = Assert.Single(result.Diagnostics);

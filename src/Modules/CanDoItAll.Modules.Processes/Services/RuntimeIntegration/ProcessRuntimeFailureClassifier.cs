@@ -14,7 +14,8 @@ internal enum ProcessAgentFailureKind {
     PermanentProvider,
     RightsBoundary,
     Canceled,
-    OutputContract
+    OutputContract,
+    HostLaunch
 }
 
 internal static class ProcessRuntimeFailureClassifier {
@@ -54,6 +55,9 @@ internal static class ProcessRuntimeFailureClassifier {
         }
 
         var messageKinds = causes.Select(cause => Classify(cause.Message)).ToArray();
+        if (messageKinds.Contains(ProcessAgentFailureKind.HostLaunch)) {
+            return ProcessAgentFailureKind.HostLaunch;
+        }
         if (messageKinds.Contains(ProcessAgentFailureKind.RightsBoundary)) {
             return ProcessAgentFailureKind.RightsBoundary;
         }
@@ -89,6 +93,10 @@ internal static class ProcessRuntimeFailureClassifier {
             return ProcessAgentFailureKind.Unknown;
         }
         text = text[..Math.Min(text.Length, MaximumInspectedTextLength)];
+        // A tool program the host could not start: the root cause, even when later text mentions a policy.
+        if (text.Contains(WorkspaceLaunchExplanations.CodePrefix, StringComparison.Ordinal)) {
+            return ProcessAgentFailureKind.HostLaunch;
+        }
         if (ContainsAny(text, "PolicyDenied", "blocked by policy", "permission denied", "access denied",
             "not authorized to use tool", "missing tool", "workspace boundary", "outside the current run boundary")) {
             return ProcessAgentFailureKind.RightsBoundary;

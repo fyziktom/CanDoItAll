@@ -290,6 +290,33 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     }
 
     [Fact]
+    public void Script_environment_permission_round_trips_and_requires_local_scripts()
+    {
+        var withScripts = AgentWorkspaceToolAccessMetadata.Write(
+            "{}",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanRunLocalScripts = true,
+                CanScriptsReadEnvironment = true
+            });
+        var withoutScripts = AgentWorkspaceToolAccessMetadata.Read(AgentWorkspaceToolAccessMetadata.Write(
+            "{}",
+            new AgentWorkspaceToolAccessSettings { CanScriptsReadEnvironment = true }));
+        var preset = AgentWorkspaceToolAccessMetadata.Normalize(
+            AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment));
+
+        var settings = AgentWorkspaceToolAccessMetadata.Read(withScripts);
+
+        Assert.True(settings.CanRunLocalScripts);
+        Assert.True(settings.CanScriptsReadEnvironment);
+        Assert.Contains("\"canScriptsReadEnvironment\":true", withScripts, StringComparison.Ordinal);
+        Assert.False(withoutScripts.CanScriptsReadEnvironment);
+        Assert.True(preset.CanRunLocalScripts);
+        Assert.False(preset.CanScriptsReadEnvironment);
+        Assert.False(AgentWorkspaceToolAccessMetadata.Read("""{"workspaceTools":{"canRunLocalScripts":true}}""").CanScriptsReadEnvironment);
+    }
+
+    [Fact]
     public void Write_and_read_round_trip_typed_workspace_tool_profile()
     {
         var configurationJson = AgentWorkspaceToolAccessMetadata.Write(

@@ -266,11 +266,13 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 32 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildDotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600)
+    public WorkspaceCommandPlan BuildDotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null)
     {
         var target = BuildDotnetTarget(targetPath, workingDirectory);
+        var artifacts = ResolveDotnetArtifactsPath(artifactsPath);
         var arguments = new List<string> { "restore" };
         arguments.AddRange(target.TargetArguments);
+        AddDotnetArtifactsPath(arguments, artifacts);
         arguments.Add("--disable-build-servers");
         return CreatePlan(
             toolName: "workspace_dotnet_restore",
@@ -279,7 +281,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             approvalRequired: true,
             networkAllowed: true,
             mutatesWorkspace: false,
-            targetPaths: target.TargetPaths,
+            targetPaths: WithDotnetArtifactsPath(target.TargetPaths, artifacts),
             workingDirectory: target.WorkingDirectoryRelative,
             workingDirectoryPath: target.WorkingDirectoryPath,
             executableCandidates: ["dotnet"],
@@ -289,9 +291,10 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 64 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildDotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600)
+    public WorkspaceCommandPlan BuildDotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null)
     {
         var target = BuildDotnetTarget(targetPath, workingDirectory);
+        var artifacts = ResolveDotnetArtifactsPath(artifactsPath);
         var arguments = new List<string> { "build" };
         arguments.AddRange(target.TargetArguments);
         arguments.Add("-c");
@@ -301,6 +304,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             arguments.Add("--no-restore");
         }
 
+        AddDotnetArtifactsPath(arguments, artifacts);
         arguments.Add("--disable-build-servers");
         return CreatePlan(
             toolName: "workspace_dotnet_build",
@@ -309,7 +313,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             approvalRequired: false,
             networkAllowed: false,
             mutatesWorkspace: false,
-            targetPaths: target.TargetPaths,
+            targetPaths: WithDotnetArtifactsPath(target.TargetPaths, artifacts),
             workingDirectory: target.WorkingDirectoryRelative,
             workingDirectoryPath: target.WorkingDirectoryPath,
             executableCandidates: ["dotnet"],
@@ -319,9 +323,10 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 64 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildDotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildDotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300, string? artifactsPath = null)
     {
         var target = BuildDotnetTarget(targetPath, workingDirectory);
+        var artifacts = ResolveDotnetArtifactsPath(artifactsPath);
         var arguments = new List<string> { "test" };
         arguments.AddRange(target.TargetArguments);
         arguments.Add("-c");
@@ -336,6 +341,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             arguments.Add("--no-restore");
         }
 
+        AddDotnetArtifactsPath(arguments, artifacts);
         if (!string.IsNullOrWhiteSpace(filter))
         {
             arguments.Add("--filter");
@@ -349,7 +355,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             approvalRequired: false,
             networkAllowed: false,
             mutatesWorkspace: false,
-            targetPaths: target.TargetPaths,
+            targetPaths: WithDotnetArtifactsPath(target.TargetPaths, artifacts),
             workingDirectory: target.WorkingDirectoryRelative,
             workingDirectoryPath: target.WorkingDirectoryPath,
             executableCandidates: ["dotnet"],
@@ -369,9 +375,11 @@ internal sealed class WorkspaceCommandPlanBuilder
         int startupTimeoutSeconds = 45,
         int timeoutSeconds = 120,
         bool keepAlive = false,
-        WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun)
+        WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun,
+        string? artifactsPath = null)
     {
         var target = BuildDotnetRunnableTarget(targetPath, workingDirectory);
+        var artifacts = ResolveDotnetArtifactsPath(artifactsPath);
         var urls = ResolveDotnetRunUrls(url);
         var normalizedConfiguration = NormalizeConfiguration(configuration);
         var shouldWaitForHttp = waitForHttp;
@@ -391,6 +399,7 @@ internal sealed class WorkspaceCommandPlanBuilder
                 arguments.Add("--no-build");
             }
 
+            AddDotnetArtifactsPath(arguments, artifacts);
             if (!string.IsNullOrWhiteSpace(urls.ListenUrl))
             {
                 arguments.Add("--no-launch-profile");
@@ -406,7 +415,7 @@ internal sealed class WorkspaceCommandPlanBuilder
                 approvalRequired: false,
                 networkAllowed: !string.IsNullOrWhiteSpace(urls.ProbeUrl),
                 mutatesWorkspace: false,
-                targetPaths: target.TargetPaths,
+                targetPaths: WithDotnetArtifactsPath(target.TargetPaths, artifacts),
                 workingDirectory: target.WorkingDirectoryRelative,
                 workingDirectoryPath: target.WorkingDirectoryPath,
                 executableCandidates: ["dotnet"],
@@ -433,6 +442,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             managedArguments.Add("--no-build");
         }
 
+        AddDotnetArtifactsPath(managedArguments, artifacts);
         managedArguments.Add("--");
         managedArguments.Add("--urls");
         managedArguments.Add(managedUrls.ListenUrl!);
@@ -445,7 +455,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             approvalRequired: false,
             networkAllowed: true,
             mutatesWorkspace: true,
-            targetPaths: target.TargetPaths.Concat(artifactPaths.TargetPaths).ToArray(),
+            targetPaths: WithDotnetArtifactsPath(target.TargetPaths.Concat(artifactPaths.TargetPaths).ToArray(), artifacts),
             workingDirectory: target.WorkingDirectoryRelative,
             workingDirectoryPath: target.WorkingDirectoryPath,
             executableCandidates: ["dotnet"],
@@ -1257,6 +1267,39 @@ internal sealed class WorkspaceCommandPlanBuilder
             [targetArgument],
             [resolution.RelativePath]);
     }
+
+    // The redirected .NET output folder must stay inside the managed workspace; dotnet creates it on first use.
+    private WorkspacePathResolution? ResolveDotnetArtifactsPath(string? artifactsPath)
+    {
+        if (string.IsNullOrWhiteSpace(artifactsPath))
+        {
+            return null;
+        }
+
+        if (!pathPolicy.TryResolveWorkspacePath(artifactsPath, allowWorkspaceRoot: false, out var resolution, out var validationMessage) ||
+            !resolution.IsWorkspacePath)
+        {
+            throw WorkspaceCommandInputException.Create(
+                string.IsNullOrWhiteSpace(validationMessage)
+                    ? $"The .NET output folder '{artifactsPath}' is not inside the managed workspace."
+                    : validationMessage,
+                "The .NET output folder must be inside the managed workspace.");
+        }
+
+        return resolution;
+    }
+
+    private static void AddDotnetArtifactsPath(List<string> arguments, WorkspacePathResolution? artifacts)
+    {
+        if (artifacts is { } resolution)
+        {
+            arguments.Add("--artifacts-path");
+            arguments.Add(resolution.FullPath);
+        }
+    }
+
+    private static IReadOnlyList<string> WithDotnetArtifactsPath(IReadOnlyList<string> targetPaths, WorkspacePathResolution? artifacts)
+        => artifacts is { } resolution ? [.. targetPaths, resolution.RelativePath] : targetPaths;
 
     private DotnetRunnableTarget BuildDotnetRunnableTarget(string targetPath, string? workingDirectory)
     {

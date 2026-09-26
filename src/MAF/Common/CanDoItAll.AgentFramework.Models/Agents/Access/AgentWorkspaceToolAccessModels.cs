@@ -210,6 +210,13 @@ public sealed class AgentWorkspaceToolAccessSettings
     /// <summary>Allows running Python files and PowerShell scripts from the workspace.</summary>
     public bool CanRunLocalScripts { get; set; }
 
+    /// <summary>
+    /// Allows the agent's scripts to read environment variables beyond the basic set every process gets (such as
+    /// PATH and TEMP), to list all variables, and to receive the operator's proxy and extra variables. Without it,
+    /// scripts that do so are blocked before approval. It has an effect only with <c>canRunLocalScripts</c>.
+    /// </summary>
+    public bool CanScriptsReadEnvironment { get; set; }
+
     /// <summary>Allows creating projects from .NET templates in the workspace.</summary>
     public bool CanScaffoldProjects { get; set; }
 
@@ -371,6 +378,7 @@ public static class AgentWorkspaceToolAccessMetadata
     private const string CanWriteFilesPropertyName = "canWriteFiles";
     private const string CanRunValidationCommandsPropertyName = "canRunValidationCommands";
     private const string CanRunLocalScriptsPropertyName = "canRunLocalScripts";
+    private const string CanScriptsReadEnvironmentPropertyName = "canScriptsReadEnvironment";
     private const string CanScaffoldProjectsPropertyName = "canScaffoldProjects";
     private const string CanManageWorkspacePathsPropertyName = "canManageWorkspacePaths";
     private const string CanTransformArtifactsPropertyName = "canTransformArtifacts";
@@ -403,6 +411,7 @@ public static class AgentWorkspaceToolAccessMetadata
                 CanWriteFiles = TryReadBoolean(workspaceTools, CanWriteFilesPropertyName),
                 CanRunValidationCommands = TryReadBoolean(workspaceTools, CanRunValidationCommandsPropertyName),
                 CanRunLocalScripts = TryReadBoolean(workspaceTools, CanRunLocalScriptsPropertyName),
+                CanScriptsReadEnvironment = TryReadBoolean(workspaceTools, CanScriptsReadEnvironmentPropertyName),
                 CanScaffoldProjects = TryReadBoolean(workspaceTools, CanScaffoldProjectsPropertyName),
                 CanManageWorkspacePaths = TryReadBoolean(workspaceTools, CanManageWorkspacePathsPropertyName),
                 CanTransformArtifacts = TryReadBoolean(workspaceTools, CanTransformArtifactsPropertyName),
@@ -503,6 +512,7 @@ public static class AgentWorkspaceToolAccessMetadata
             [CanWriteFilesPropertyName] = normalized.CanWriteFiles,
             [CanRunValidationCommandsPropertyName] = normalized.CanRunValidationCommands,
             [CanRunLocalScriptsPropertyName] = normalized.CanRunLocalScripts,
+            [CanScriptsReadEnvironmentPropertyName] = normalized.CanScriptsReadEnvironment,
             [CanScaffoldProjectsPropertyName] = normalized.CanScaffoldProjects,
             [CanManageWorkspacePathsPropertyName] = normalized.CanManageWorkspacePaths,
             [CanTransformArtifactsPropertyName] = normalized.CanTransformArtifacts,
@@ -604,6 +614,7 @@ public static class AgentWorkspaceToolAccessMetadata
             CanWriteFiles = canWriteFiles,
             CanRunValidationCommands = canRunValidationCommands,
             CanRunLocalScripts = canRunLocalScripts,
+            CanScriptsReadEnvironment = canRunLocalScripts && settings.CanScriptsReadEnvironment,
             CanScaffoldProjects = canScaffoldProjects,
             CanManageWorkspacePaths = canManageWorkspacePaths,
             CanTransformArtifacts = canTransformArtifacts,
@@ -801,6 +812,7 @@ public static class AgentWorkspaceToolAccessMetadata
                !settings.CanWriteFiles &&
                !settings.CanRunValidationCommands &&
                !settings.CanRunLocalScripts &&
+               !settings.CanScriptsReadEnvironment &&
                !settings.CanScaffoldProjects &&
                !settings.CanManageWorkspacePaths &&
                !settings.CanTransformArtifacts &&

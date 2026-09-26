@@ -46,6 +46,13 @@ public sealed record WorkspaceCommandExecutionResult(
     bool StdoutTruncated,
     bool StderrTruncated)
 {
+    /// <summary>
+    /// Typed reason for a command that did not run, for example
+    /// <c>ProcessStartFailed.ExecutableNotFound</c>; null when the command started.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? FailureCode { get; init; }
+
     public IReadOnlyList<WorkspaceArtifactReference> ArtifactReferences => Receipt.ArtifactReferences;
 
     public string DiagnosticArtifactSummary => string.Join(

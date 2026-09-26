@@ -87,6 +87,8 @@ internal sealed class MafStreamingTurnExecutor
         AgentResponseUpdate? lastTerminalResponseUpdate = null;
         var announcedStreaming = false;
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var toolNamesByCallId = new Dictionary<string, string>(StringComparer.Ordinal);
+        var announcedToolFailures = new HashSet<string>(StringComparer.Ordinal);
         var synthesizedFinalizerInvocations = new List<AgentFinalizerInvocation>();
         var streamedFinalizerRecorder = new MafFinalizerDriver.StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
         var requiresDurableFinalizerInvocation = runtimeOptions.RequireDurableToolProtocol ||
@@ -135,12 +137,33 @@ internal sealed class MafStreamingTurnExecutor
             {
                 var toolKey = MafToolInvocationArgumentFormatter.ResolveToolCallKey(toolCall, toolPolicies);
                 streamedFinalizerRecorder.Record(toolCall);
+                if (!string.IsNullOrWhiteSpace(toolCall.CallId))
+                {
+                    toolNamesByCallId[toolCall.CallId] = MafToolInvocationArgumentFormatter.ResolveToolName(toolCall);
+                }
+
                 if (!announcedToolCalls.Add(toolKey))
                 {
                     continue;
                 }
 
                 await progressCallback(ExecutionState.WaitingOnTool, "Tool", MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall, toolPolicies));
+            }
+
+            foreach (var toolResult in snapshot.Contents.OfType<FunctionResultContent>())
+            {
+                if (string.IsNullOrWhiteSpace(toolResult.CallId) ||
+                    !announcedToolFailures.Add(toolResult.CallId) ||
+                    MafToolFailureProgress.Describe(
+                        toolNamesByCallId.GetValueOrDefault(toolResult.CallId),
+                        toolResult.Result) is not { } failure)
+                {
+                    continue;
+                }
+
+                // Running, not Failed: the run's state follows its log entries, and a failed tool is
+                // information for the user, not the end of the run.
+                await progressCallback(ExecutionState.Running, "Tool result", failure);
             }
 
             return await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(

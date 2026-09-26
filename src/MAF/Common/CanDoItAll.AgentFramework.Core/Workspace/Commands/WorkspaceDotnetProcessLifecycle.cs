@@ -65,13 +65,21 @@ internal sealed class WorkspaceDotnetProcessLifecycle
                 "Process launch was canceled.");
             return PersistRunResult(plan, lifecycle, canceled, environmentVariables.Keys);
         }
-        catch (WorkspaceProcessStartException)
+        catch (WorkspaceProcessStartException exception)
         {
-            var failed = CreateStartFailure(
-                plan,
+            var failed = WorkspaceLaunchExplanations.CreateStartFailedResult(
+                exception.FailureKind,
+                processHost.DescribeBoundary(),
                 startedAtUtc,
-                WorkspaceProcessTerminationReason.StartFailed,
-                "The configured workspace process could not be started.");
+                exception.OperatorDetail);
+            return PersistRunResult(plan, lifecycle, failed, environmentVariables.Keys);
+        }
+        catch (WorkspaceExecutableResolutionException exception)
+        {
+            var failed = processRunner.CreateResolutionFailureResult(plan, exception) with
+            {
+                StartedAtUtc = startedAtUtc
+            };
             return PersistRunResult(plan, lifecycle, failed, environmentVariables.Keys);
         }
 

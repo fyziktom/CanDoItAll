@@ -527,7 +527,8 @@ internal sealed class MafRuntimeAgentFactory
                 functionName,
                 invocationArguments,
                 auditScope,
-                scriptSideEffectManifestJson);
+                scriptSideEffectManifestJson,
+                externalTargetAccess);
             // Provider-neutral policy context: the adapter maps generic run,
             // tool, workspace, and governance facts only. Domain restrictions
             // (for example governed process rules) are contributed by the
@@ -562,6 +563,7 @@ internal sealed class MafRuntimeAgentFactory
                     : null,
                 SourceId = auditScope?.SourceId ?? string.Empty,
                 AllowedManagedArtifactReadRefs = auditScope?.AllowedManagedArtifactReadRefs ?? [],
+                ScriptEnvironmentAccessAllowed = configuredWorkspaceAccess.CanScriptsReadEnvironment,
                 ExecutionGovernance = executionGovernance,
                 PathArguments = pathArguments
             };

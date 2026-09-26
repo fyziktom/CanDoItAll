@@ -1,6 +1,7 @@
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -125,7 +126,8 @@ public sealed class WorkspaceRuntimeServicesFactory(
     IReadOnlyList<IWorkspaceCommandReceiptLifecycleFactExtractor> lifecycleFactExtractors,
     IWorkspaceDocumentMarkdownConverter documentMarkdownConverter,
     IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
-    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory)
+    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
+    ILoggerFactory? loggerFactory = null)
     : IWorkspaceRuntimeServicesFactory
 {
     public WorkspaceRuntimeServices Create(WorkspaceExecutionScope scope)
@@ -138,7 +140,7 @@ public sealed class WorkspaceRuntimeServicesFactory(
             physicalPathPolicyFactory,
             scope.Scope,
             externalTargetRegistry);
-        var processHost = new LocalWorkspaceProcessHost();
+        var processHost = new LocalWorkspaceProcessHost(loggerFactory?.CreateLogger<LocalWorkspaceProcessHost>());
         var commandExecutionService = new WorkspaceCommandExecutionService(
             scope.WorkspaceRoot,
             processHost,

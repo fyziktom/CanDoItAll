@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 
@@ -7,10 +8,17 @@ internal sealed class WorkspacePublishedOutputRuntime(
     IWorkspacePublishedOutputCommands commands,
     WorkspaceRuntimeFileAccessGuard fileAccess,
     AgentWorkspaceToolAccessSettings access) : IWorkspacePublishedOutputCommands {
-    public Task<WorkspaceCommandExecutionResult> DotnetPublish(string targetPath, string configuration = "Release", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600) {
+    // The redirect is decided here from the agent's access; a caller-supplied artifactsPath is ignored.
+    public Task<WorkspaceCommandExecutionResult> DotnetPublish(string targetPath, string configuration = "Release", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null) {
         RequireValidation();
-        return commands.DotnetPublish(fileAccess.PrepareFileReadPath(targetPath)!, configuration, noRestore,
-            fileAccess.PrepareFileReadPath(workingDirectory), timeoutSeconds);
+        var allowedTargetPath = fileAccess.PrepareFileReadPath(targetPath)!;
+        var allowedWorkingDirectory = fileAccess.PrepareFileReadPath(workingDirectory);
+        return commands.DotnetPublish(allowedTargetPath, configuration, noRestore, allowedWorkingDirectory, timeoutSeconds,
+            WorkspaceReadOnlyBuildOutput.ResolveRelativePath(
+                fileAccess.ResolveExternalTargetAccess(),
+                allowedTargetPath,
+                allowedWorkingDirectory,
+                WorkspaceProcessEnvironmentSettings.Current.RedirectReadOnlyDotnetOutput));
     }
 
     public Task<WorkspaceCommandExecutionResult> ServeStaticFiles(string hostAssemblyPath, string directoryPath, string? url = null, bool spaFallback = true, int startupTimeoutSeconds = 45) {

@@ -63,6 +63,17 @@ internal sealed class ProjectStructureExecutableResolver(
             var path = executableLocator.ResolveExecutablePath(candidates, workingDirectory);
             return new(path, "Executable dependency is available.");
         }
+        catch (WorkspaceExecutableResolutionException exception)
+        {
+            // Program names only (never folders): this message also reaches agents through node guidance.
+            var kind = exception.Failure == WorkspaceExecutableResolutionFailure.Missing
+                ? WorkspaceProcessStartFailureKind.ExecutableNotFound
+                : WorkspaceProcessStartFailureKind.ExecutableNotRunnable;
+            var explanation = WorkspaceLaunchExplanations.For(kind);
+            return new(
+                null,
+                $"{WorkspaceLaunchExplanations.WithProgramNames(explanation.AgentText, candidates)} {explanation.OperatorRemediation}");
+        }
         catch (Exception exception) when (
             exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or UnauthorizedAccessException)
         {
@@ -144,11 +155,10 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
 
         try
         {
-            // The process host starts from an empty environment. Without the inherited allowlist (PATH, TEMP,
-            // USERPROFILE, SystemRoot, ...) toolchains such as dotnet run fail before the application starts.
-            var environment = environmentPolicy.MergeEnvironmentVariables(
-                plan.EnvironmentVariables,
-                ResolveEnvironmentProfile(plan.Kind));
+            var environment = ProjectStructureRuntimeEnvironment.Compose(
+                environmentPolicy,
+                plan,
+                resolution.ExecutablePath);
             var start = await sessionRegistry.StartSessionAsync(
                 nodeId,
                 new WorkspaceProcessSessionRequest(
@@ -193,10 +203,19 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
         {
             logger.LogWarning(
                 exception,
-                "The Workbench runtime process for node {NodeId} could not be started using plan {PlanKind}.",
+                "The Workbench runtime process for node {NodeId} could not be started using plan {PlanKind} ({FailureKind}). {OperatorDetail}",
                 nodeId,
-                plan.Kind);
-            return new(false, "The runtime executable could not be started on this host.");
+                plan.Kind,
+                exception.FailureKind,
+                exception.OperatorDetail);
+            // Operator surface (the launch is always operator-initiated): the folder and program are named.
+            return new(
+                false,
+                $"{plan.DisplayName} could not start. " +
+                WorkspaceLaunchExplanations.DescribeForOperator(
+                    exception.FailureKind,
+                    Path.GetFileName(resolution.ExecutablePath),
+                    plan.WorkingDirectory));
         }
     }
 
@@ -204,6 +223,24 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
         string nodeId,
         CancellationToken cancellationToken)
         => sessionRegistry.StopSessionAsync(nodeId, cancellationToken);
+
+}
+
+/// <summary>
+/// The one environment composition for Workbench runtime launches, direct and terminal alike. The
+/// process host starts from an empty environment, so without the inherited allowlist (PATH, TEMP,
+/// USERPROFILE, SystemRoot, ...) toolchains such as dotnet run fail before the application starts.
+/// </summary>
+internal static class ProjectStructureRuntimeEnvironment
+{
+    public static IReadOnlyDictionary<string, string?> Compose(
+        WorkspaceCommandEnvironmentPolicy environmentPolicy,
+        ProjectStructureRuntimeLaunchPlan plan,
+        string? executablePath)
+        => environmentPolicy.MergeEnvironmentVariables(
+            plan.EnvironmentVariables,
+            ResolveEnvironmentProfile(plan.Kind),
+            executablePath);
 
     private static string? ResolveEnvironmentProfile(ProjectStructureRuntimePlanKind kind)
         => kind switch
@@ -322,6 +359,12 @@ internal sealed class ProjectStructureTerminalPresenter(
         }
     }
 
+    internal const string TerminalEnvironmentExplanation =
+        "CanDoItAll passed only its allowed environment variables to this terminal (host secrets are removed). " +
+        "If a tool needs another variable, the operator can add its name under AgentFramework:ProcessEnvironment:AdditionalInheritedNames.";
+
+    private readonly WorkspaceCommandEnvironmentPolicy environmentPolicy = new();
+
     private IReadOnlyList<string> ResolveTerminalCandidates()
         => hostContext.Platform switch
         {
@@ -335,7 +378,7 @@ internal sealed class ProjectStructureTerminalPresenter(
         };
 
     [UnsupportedOSPlatform("browser")]
-    private ProcessStartInfo BuildStartInfo(
+    internal ProcessStartInfo BuildStartInfo(
         ProjectStructureRuntimeLaunchPlan plan,
         string terminalPath,
         string runtimePath)
@@ -346,13 +389,16 @@ internal sealed class ProjectStructureTerminalPresenter(
             WorkingDirectory = plan.WorkingDirectory,
             UseShellExecute = false
         };
+        // The terminal gets the same composed environment as a direct launch; host secrets never reach it.
+        var environment = ProjectStructureRuntimeEnvironment.Compose(environmentPolicy, plan, runtimePath);
         if (hostContext.Platform == ProjectStructureRuntimeHostPlatform.Windows)
         {
+            // ShellExecute cannot pass an environment, so the PowerShell prelude replaces it.
             startInfo.UseShellExecute = true;
             startInfo.ArgumentList.Add("-NoLogo");
             startInfo.ArgumentList.Add("-NoExit");
             startInfo.ArgumentList.Add("-Command");
-            startInfo.ArgumentList.Add(BuildPowerShellPresentationCommand(plan, runtimePath));
+            startInfo.ArgumentList.Add(BuildPowerShellPresentationCommand(plan, runtimePath, environment));
             return startInfo;
         }
 
@@ -364,13 +410,13 @@ internal sealed class ProjectStructureTerminalPresenter(
             startInfo.ArgumentList.Add(argument);
         }
 
-        if (plan.EnvironmentVariables.Count > 0)
+        startInfo.ArgumentList.Add("env");
+        startInfo.ArgumentList.Add("-i");
+        foreach (var pair in environment
+                     .Where(pair => pair.Value is not null)
+                     .OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            startInfo.ArgumentList.Add("env");
-            foreach (var pair in plan.EnvironmentVariables.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-            {
-                startInfo.ArgumentList.Add($"{pair.Key}={pair.Value}");
-            }
+            startInfo.ArgumentList.Add($"{pair.Key}={pair.Value}");
         }
 
         startInfo.ArgumentList.Add(runtimePath);
@@ -382,13 +428,27 @@ internal sealed class ProjectStructureTerminalPresenter(
         return startInfo;
     }
 
-    private static string BuildPowerShellPresentationCommand(
+    internal static string BuildPowerShellPresentationCommand(
         ProjectStructureRuntimeLaunchPlan plan,
-        string runtimePath)
+        string runtimePath,
+        IReadOnlyDictionary<string, string?> environment)
     {
-        var commands = plan.EnvironmentVariables
+        var allowed = environment
+            .Where(pair => pair.Value is not null)
             .OrderBy(pair => pair.Key, StringComparer.Ordinal)
-            .Select(pair => $"$env:{pair.Key} = {QuotePowerShell(pair.Value ?? string.Empty)}")
+            .ToArray();
+        var keepList = string.Join(",", allowed.Select(pair => QuotePowerShell(pair.Key)));
+        var commands = new[]
+            {
+                // Remove every inherited variable outside the composed set (the terminal starts with the
+                // host's full environment), then apply the composed values. Remove-Item deletes the variable;
+                // SetEnvironmentVariable($name, $null) would leave it defined and empty, because PowerShell
+                // passes $null to a string parameter as "".
+                $"$cdiaKeep = @({keepList}); Get-ChildItem Env: | Where-Object {{ $cdiaKeep -notcontains $_.Name }} | ForEach-Object {{ Remove-Item -LiteralPath ('Env:' + $_.Name) -ErrorAction SilentlyContinue }}; Remove-Variable cdiaKeep"
+            }
+            .Concat(allowed.Select(pair =>
+                $"[System.Environment]::SetEnvironmentVariable({QuotePowerShell(pair.Key)}, {QuotePowerShell(pair.Value!)})"))
+            .Append($"Write-Host {QuotePowerShell(TerminalEnvironmentExplanation)}")
             .Append($"Set-Location -LiteralPath {QuotePowerShell(plan.WorkingDirectory)}")
             .Append(
                 string.Join(

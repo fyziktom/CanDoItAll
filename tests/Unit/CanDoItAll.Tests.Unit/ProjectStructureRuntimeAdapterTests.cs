@@ -137,6 +137,44 @@ public sealed class ProjectStructureRuntimeAdapterTests
     }
 
     [Fact]
+    public async Task Direct_adapter_explains_a_start_failure_to_the_operator_with_the_folder_and_remedy()
+    {
+        var host = new RecordingLongRunningProcessHost { FailStart = WorkspaceProcessStartFailureKind.WorkingDirectoryTooLong };
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(
+            registry,
+            new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
+        var longFolder = "/workspace/" + new string('w', 270);
+
+        var result = await adapter.LaunchAsync(CreatePlan(workingDirectory: longFolder), "node-1", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.StartsWith(".NET runtime could not start. The working folder path is", result.Message, StringComparison.Ordinal);
+        Assert.Contains(longFolder, result.Message, StringComparison.Ordinal);
+        Assert.Contains("Move the project to a shorter folder", result.Message, StringComparison.Ordinal);
+        Assert.False(adapter.IsRunning("node-1"));
+    }
+
+    [Fact]
+    public void Executable_resolver_names_the_missing_program_without_its_folder_and_gives_the_remedy()
+    {
+        var resolver = new ProjectStructureExecutableResolver(new WorkspaceExecutableLocator());
+
+        var resolution = resolver.Resolve(
+            [Path.Combine(Path.GetTempPath(), $"cdia-missing-{Guid.NewGuid():N}", "cdia-missing-runtime")],
+            Path.GetTempPath());
+
+        Assert.False(resolution.IsSuccess);
+        Assert.Equal(
+            "The program this command needs was not found on the host (cdia-missing-runtime). " +
+            WorkspaceLaunchExplanations.For(WorkspaceProcessStartFailureKind.ExecutableNotFound).OperatorRemediation,
+            resolution.Message);
+        Assert.DoesNotContain(Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar), resolution.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     [Trait("Category", "UnixPortabilityCore")]
     public async Task Direct_adapter_starts_a_real_cross_platform_executable_without_a_shell()
     {
@@ -296,6 +334,52 @@ public sealed class ProjectStructureRuntimeAdapterTests
     }
 
     [Fact]
+    public void Windows_terminal_prelude_removes_every_variable_outside_the_composed_environment()
+    {
+        var environment = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TEMP"] = @"C:\Users\operator\AppData\Local\Temp",
+            ["PATH"] = @"C:\Program Files\dotnet",
+            ["UNSET_BY_CALLER"] = null
+        };
+
+        var command = ProjectStructureTerminalPresenter.BuildPowerShellPresentationCommand(
+            CreatePlan(workingDirectory: @"C:\work\app"),
+            @"C:\Program Files\dotnet\dotnet.exe",
+            environment);
+
+        Assert.StartsWith("$cdiaKeep = @('PATH','TEMP'); Get-ChildItem Env: | Where-Object { $cdiaKeep -notcontains $_.Name } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name)", command, StringComparison.Ordinal);
+        Assert.Contains("[System.Environment]::SetEnvironmentVariable('PATH', 'C:\\Program Files\\dotnet')", command, StringComparison.Ordinal);
+        Assert.Contains(ProjectStructureTerminalPresenter.TerminalEnvironmentExplanation, command, StringComparison.Ordinal);
+        Assert.EndsWith("& 'C:\\Program Files\\dotnet\\dotnet.exe' 'run'", command, StringComparison.Ordinal);
+        Assert.DoesNotContain("UNSET_BY_CALLER", command, StringComparison.Ordinal);
+        Assert.DoesNotContain("OPENAI_API_KEY", command, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Unix_terminal_runs_the_runtime_through_env_i_with_only_the_composed_environment()
+    {
+        var presenter = new ProjectStructureTerminalPresenter(
+            new ProjectStructureRuntimeHostContext(ProjectStructureRuntimeHostPlatform.Linux),
+            new ProjectStructureRuntimePresentationOptions
+            {
+                LinuxTerminalExecutable = "x-terminal-emulator",
+                LinuxTerminalArgumentPrefix = ["-e"]
+            },
+            new StubExecutableResolver("/usr/bin/resolved"),
+            NullLogger<ProjectStructureTerminalPresenter>.Instance);
+
+        var startInfo = presenter.BuildStartInfo(CreatePlan(), "/usr/bin/x-terminal-emulator", "/usr/bin/dotnet");
+        var arguments = startInfo.ArgumentList.ToArray();
+
+        Assert.Equal(["-e", "env", "-i"], arguments[..3]);
+        Assert.Equal(["/usr/bin/dotnet", "run"], arguments[^2..]);
+        Assert.Contains(arguments, argument => argument.StartsWith("PATH=", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(arguments, argument => argument.StartsWith("OPENAI_API_KEY=", StringComparison.OrdinalIgnoreCase));
+        Assert.False(startInfo.UseShellExecute);
+    }
+
+    [Fact]
     public void Configured_Linux_terminal_is_reported_available_when_both_dependencies_resolve()
     {
         var presenter = new ProjectStructureTerminalPresenter(
@@ -382,6 +466,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
 
         public (int ExitCode, string Stderr)? ExitImmediately { get; init; }
 
+        public WorkspaceProcessStartFailureKind? FailStart { get; init; }
+
         public ExecutionBoundaryDescriptor DescribeBoundary() => ExecutionBoundaryDescriptor.Unknown;
 
         public Task<WorkspaceProcessExecutionResult> ExecuteAsync(
@@ -396,6 +482,14 @@ public sealed class ProjectStructureRuntimeAdapterTests
             if (CancelStart)
             {
                 throw new OperationCanceledException(cancellationToken);
+            }
+
+            if (FailStart is { } failureKind)
+            {
+                throw new WorkspaceProcessStartException(
+                    WorkspaceLaunchExplanations.For(failureKind).AgentText,
+                    failureKind,
+                    operatorDetail: "operator detail");
             }
 
             Request = request;

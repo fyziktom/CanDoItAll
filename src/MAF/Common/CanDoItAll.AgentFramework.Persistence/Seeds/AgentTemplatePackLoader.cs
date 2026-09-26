@@ -340,6 +340,8 @@ internal sealed class AgentTemplateWorkspaceToolAccess
 
     public bool? CanRunLocalScripts { get; set; }
 
+    public bool? CanScriptsReadEnvironment { get; set; }
+
     public bool? CanTransformArtifacts { get; set; }
 
     public bool CanReadStorage { get; set; }

@@ -48,6 +48,109 @@ public sealed class LocalWorkspaceProcessHostTests
     }
 
     [Fact]
+    public async Task Attachment_failure_is_reported_as_an_ownership_failure()
+    {
+        var childPidFilePath = CreateChildPidFilePath();
+        var ownershipStart = new ThrowingOwnershipStart(childPidFilePath);
+        var host = new LocalWorkspaceProcessHost((_, _, _) => ownershipStart);
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<WorkspaceProcessStartException>(() =>
+                host.StartSessionAsync(CreateSessionRequest(BuildChildAndWaitCommand(childPidFilePath))));
+
+            Assert.Equal(WorkspaceProcessStartFailureKind.ProcessOwnershipFailed, exception.FailureKind);
+            Assert.Equal(
+                WorkspaceLaunchExplanations.For(WorkspaceProcessStartFailureKind.ProcessOwnershipFailed).AgentText,
+                exception.Message);
+        }
+        finally
+        {
+            if (ownershipStart.ProcessId is { } processId)
+            {
+                TryKillProcess(processId);
+            }
+
+            TryKillProcessFromFile(childPidFilePath);
+            TryDeleteFile(childPidFilePath);
+        }
+    }
+
+    [Fact]
+    public async Task A_missing_program_is_reported_without_its_path()
+    {
+        var missingFolder = Path.Combine(Path.GetTempPath(), $"cdia-missing-program-{Guid.NewGuid():N}");
+        var missingProgram = Path.Combine(missingFolder, OperatingSystem.IsWindows() ? "missing-tool.exe" : "missing-tool");
+        var request = CreateProcessRequest("exit 0", timeoutSeconds: 10) with { ExecutablePath = missingProgram };
+
+        var result = await new LocalWorkspaceProcessHost().ExecuteAsync(request);
+
+        Assert.False(result.Started);
+        Assert.Equal(WorkspaceProcessTerminationReason.StartFailed, result.TerminationReason);
+        Assert.Equal(WorkspaceProcessStartFailureKind.ExecutableNotFound, result.StartFailureKind);
+        Assert.Equal(WorkspaceLaunchExplanations.For(WorkspaceProcessStartFailureKind.ExecutableNotFound).AgentText, result.FailureMessage);
+        Assert.DoesNotContain(missingFolder, result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("missing-tool", result.StartFailureDetail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_missing_working_folder_is_reported_as_missing()
+    {
+        var missingFolder = Path.Combine(Path.GetTempPath(), $"cdia-missing-folder-{Guid.NewGuid():N}");
+        var request = CreateProcessRequest("exit 0", timeoutSeconds: 10) with { WorkingDirectory = missingFolder };
+
+        var result = await new LocalWorkspaceProcessHost().ExecuteAsync(request);
+
+        Assert.False(result.Started);
+        Assert.Equal(WorkspaceProcessStartFailureKind.WorkingDirectoryMissing, result.StartFailureKind);
+        Assert.DoesNotContain(missingFolder, result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(missingFolder, result.StartFailureDetail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task A_working_folder_beyond_the_windows_limit_is_reported_as_too_long()
+    {
+        if (!OperatingSystem.IsWindows() || IsWindowsLongPathSupportEnabled())
+        {
+            return;
+        }
+
+        var root = Path.Combine(Path.GetTempPath(), $"cdia-long-{Guid.NewGuid():N}");
+        var longFolder = root;
+        while (longFolder.Length <= WorkspaceLaunchExplanations.WindowsWorkingDirectoryLimit + 8)
+        {
+            longFolder = Path.Combine(longFolder, new string('w', 40));
+        }
+
+        Directory.CreateDirectory(longFolder);
+        try
+        {
+            var request = CreateProcessRequest("exit 0", timeoutSeconds: 10) with { WorkingDirectory = longFolder };
+
+            var result = await new LocalWorkspaceProcessHost().ExecuteAsync(request);
+
+            Assert.False(result.Started);
+            Assert.Equal(WorkspaceProcessStartFailureKind.WorkingDirectoryTooLong, result.StartFailureKind);
+            Assert.Contains($"{longFolder.Length} characters long", result.StartFailureDetail, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static bool IsWindowsLongPathSupportEnabled()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\FileSystem");
+        return key?.GetValue("LongPathsEnabled") is int enabled && enabled != 0;
+    }
+
+    [Fact]
     public void Dotnet_run_lifecycle_uses_the_typed_host_without_generated_shell_launchers()
     {
         var repositoryRoot = FindRepositoryRoot();

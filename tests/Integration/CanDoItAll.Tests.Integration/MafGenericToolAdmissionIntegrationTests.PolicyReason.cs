@@ -9,7 +9,7 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 
 public sealed partial class MafGenericToolAdmissionIntegrationTests {
     private const string AgentFacingPolicyReason =
-        "Workspace tools must use grounded external-target aliases. Retry this structured workspace tool with 'external-target/v1/fixture/App' instead of 'C:\\fixture\\App'.";
+        "Workspace tools must use grounded external-target aliases. Retry this structured workspace tool with 'external-target/v1/fixture/App' instead of the raw folder path.";
 
     [Theory]
     [InlineData(false)]

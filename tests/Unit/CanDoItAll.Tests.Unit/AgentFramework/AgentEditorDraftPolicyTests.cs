@@ -61,6 +61,20 @@ public sealed class AgentEditorDraftPolicyTests {
     }
 
     [Fact]
+    public void Capture_keeps_the_script_environment_permission() {
+        var draft = new AgentEditorModel {
+            Name = "Script agent",
+            WorkspaceToolAccess = new() { CanRunLocalScripts = true, CanScriptsReadEnvironment = true }
+        };
+
+        var submission = AgentEditorDraftPolicy.Capture(draft, [], []);
+        draft.WorkspaceToolAccess.CanScriptsReadEnvironment = false;
+
+        Assert.True(submission.Request.WorkspaceToolAccess.CanRunLocalScripts);
+        Assert.True(submission.Request.WorkspaceToolAccess.CanScriptsReadEnvironment);
+    }
+
+    [Fact]
     public void Capture_normalizes_tags_and_defaults_without_changing_visible_draft() {
         var projectId = Guid.NewGuid();
         var draft = new AgentEditorModel {

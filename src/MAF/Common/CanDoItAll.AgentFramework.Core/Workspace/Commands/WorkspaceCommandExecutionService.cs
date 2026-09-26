@@ -134,31 +134,31 @@ public sealed class WorkspaceCommandExecutionService :
             "WorkspaceMutation:Git",
             approvalRequired: true);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600)
-        => ExecutePlanAsync(
-            () => planBuilder.BuildDotnetRestore(targetPath, workingDirectory, timeoutSeconds),
+    public async Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null)
+        => DescribeBuildOutput(await ExecutePlanAsync(
+            () => planBuilder.BuildDotnetRestore(targetPath, workingDirectory, timeoutSeconds, artifactsPath),
             "workspace_dotnet_restore",
             "dotnet_restore",
             "LocalExecution",
-            approvalRequired: true);
+            approvalRequired: true).ConfigureAwait(false), artifactsPath);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600)
-        => ExecutePlanAsync(
-            () => planBuilder.BuildDotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds),
+    public async Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null)
+        => DescribeBuildOutput(await ExecutePlanAsync(
+            () => planBuilder.BuildDotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds, artifactsPath),
             "workspace_dotnet_build",
             "dotnet_build",
             "LocalExecution",
-            approvalRequired: false);
+            approvalRequired: false).ConfigureAwait(false), artifactsPath);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300)
-        => ExecutePlanAsync(
-            () => planBuilder.BuildDotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds),
+    public async Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300, string? artifactsPath = null)
+        => DescribeBuildOutput(await ExecutePlanAsync(
+            () => planBuilder.BuildDotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds, artifactsPath),
             "workspace_dotnet_test",
             "dotnet_test",
             "LocalExecution",
-            approvalRequired: false);
+            approvalRequired: false).ConfigureAwait(false), artifactsPath);
 
-    public async Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun)
+    public async Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun, string? artifactsPath = null)
     {
         var auditScope = WorkspaceExecutionAuditContext.Current;
         if (keepAlive &&
@@ -187,7 +187,8 @@ public sealed class WorkspaceCommandExecutionService :
                 startupTimeoutSeconds,
                 timeoutSeconds,
                 keepAlive,
-                lifetimeScope);
+                lifetimeScope,
+                artifactsPath);
         }
         catch (Exception exception) when (
             WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
@@ -200,16 +201,25 @@ public sealed class WorkspaceCommandExecutionService :
                 GetSafeFailureMessage(exception));
         }
 
-        return await RunManagedPlanAsync(plan).ConfigureAwait(false);
+        return DescribeBuildOutput(await RunManagedPlanAsync(plan).ConfigureAwait(false), artifactsPath);
     }
 
-    public async Task<WorkspaceCommandExecutionResult> DotnetPublish(string targetPath, string configuration = "Release", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600) {
+    public async Task<WorkspaceCommandExecutionResult> DotnetPublish(string targetPath, string configuration = "Release", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null) {
         WorkspacePublishedOutputPlan? published = null;
         var result = await ExecutePlanAsync(
-            () => (published = publishedOutputPlans.Publish(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds)).Command,
+            () => (published = publishedOutputPlans.Publish(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds, artifactsPath)).Command,
             ToolContractCatalog.WorkspaceDotNetPublish, "dotnet_publish", "LocalExecution", false);
-        return result.Succeeded ? result with { Message = $"{result.Message} {published!.Describe()}" } : result;
+        return DescribeBuildOutput(result.Succeeded ? result with { Message = $"{result.Message} {published!.Describe()}" } : result, artifactsPath);
     }
+
+    // A redirected command says where its output went, so a later command can reuse it.
+    private static WorkspaceCommandExecutionResult DescribeBuildOutput(WorkspaceCommandExecutionResult result, string? artifactsPath)
+        => string.IsNullOrWhiteSpace(artifactsPath)
+            ? result
+            : result with
+            {
+                Message = $"{result.Message} {WorkspaceReadOnlyBuildOutput.DescribeRedirect(WorkspacePathPolicy.NormalizeRelativePath(artifactsPath))}".Trim()
+            };
 
     public async Task<WorkspaceCommandExecutionResult> ServeStaticFiles(string hostAssemblyPath, string directoryPath, string? url = null, bool spaFallback = true, int startupTimeoutSeconds = 45) {
         WorkspaceCommandPlan plan;
@@ -551,17 +561,23 @@ public sealed class WorkspaceCommandExecutionService :
             "WorkspaceMutation",
             approvalRequired: true);
 
-    public Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
+    public Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null, bool extendedEnvironmentAllowed = false)
         => ExecutePlanAsync(
-            () => planBuilder.BuildPythonRunFile(path, arguments, workingDirectory, timeoutSeconds, sideEffectManifest),
+            () => planBuilder.BuildPythonRunFile(path, arguments, workingDirectory, timeoutSeconds, sideEffectManifest) with
+            {
+                ExtendedEnvironmentAllowed = extendedEnvironmentAllowed
+            },
             "workspace_python_run_file",
             "python_run_file",
             "LocalExecution",
             approvalRequired: true);
 
-    public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
+    public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null, bool extendedEnvironmentAllowed = false)
         => ExecutePlanAsync(
-            () => planBuilder.BuildPowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds, sideEffectManifest),
+            () => planBuilder.BuildPowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds, sideEffectManifest) with
+            {
+                ExtendedEnvironmentAllowed = extendedEnvironmentAllowed
+            },
             "workspace_pwsh_run_script",
             "pwsh_run_script",
             "LocalExecution",
@@ -586,7 +602,7 @@ public sealed class WorkspaceCommandExecutionService :
     public WorkspaceLocalMcpLaunchDescriptor PrepareLocalMcpServerLaunch(string capabilityName, string command, string[]? arguments = null, string? workingDirectory = null, IReadOnlyDictionary<string, string?>? environmentVariables = null, bool approvalRequired = true, string? workingDirectoryDisplayPath = null, IReadOnlyCollection<string>? environmentVariableNames = null)
     {
         var normalizedArguments = NormalizeStructuredArguments(arguments);
-        var mergedEnvironmentVariables = environmentPolicy.MergeEnvironmentVariables(environmentVariables);
+        var mergedEnvironmentVariables = environmentPolicy.MergeEnvironmentVariables(environmentVariables, executable: command);
         var receiptWorkingDirectory = workingDirectoryDisplayPath ?? workingDirectory ?? ".";
 
         try

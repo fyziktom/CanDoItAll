@@ -29,8 +29,10 @@ capabilities; it does not change process outcomes or implement the example produ
 ## Contracts and alternatives
 
 Publish accepts a project, configuration and bounded timeout, with output in a
-fresh managed artifact directory. Build intermediates retain the existing validation
-command semantics. Serving accepts an authorized directory and loopback URL, reads
+fresh managed artifact directory. Build intermediates follow the validation build
+commands: for a read-only product target they go to the workspace's persistent
+`.build/<key>` folder instead of the product's `bin` and `obj` (see
+[Runtime execution and shell portability](runtime-execution-portability.md#read-only-targets-and-build-output)). Serving accepts an authorized directory and loopback URL, reads
 files only, and emits owned startup/cleanup receipts. It has an execution-run lease
 and uses the existing stop tool. The host provides explicit SPA fallback and
 revalidation headers as disposable test infrastructure, without claiming to prove

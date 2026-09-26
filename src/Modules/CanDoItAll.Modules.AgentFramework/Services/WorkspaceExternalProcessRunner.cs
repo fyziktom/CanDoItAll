@@ -58,7 +58,8 @@ public sealed class WorkspaceExternalProcessRunner(
                 WorkingDirectory: workingDirectory,
                 EnvironmentVariables: environmentPolicy.MergeEnvironmentVariables(
                     environmentVariables: null,
-                    toolName: "external_process"),
+                    toolName: "external_process",
+                    executable: executablePath),
                 TimeoutSeconds: timeoutSeconds,
                 StdoutLimitCharacters: Math.Max(outputLimit, 256),
                 StderrLimitCharacters: Math.Max(outputLimit, 256),

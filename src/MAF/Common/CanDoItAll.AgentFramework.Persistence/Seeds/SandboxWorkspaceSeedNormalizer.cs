@@ -809,6 +809,7 @@ internal static class SandboxWorkspaceSeedNormalizer
                existing.CanWriteFiles == seeded.CanWriteFiles &&
                existing.CanRunValidationCommands == seeded.CanRunValidationCommands &&
                existing.CanRunLocalScripts == seeded.CanRunLocalScripts &&
+               existing.CanScriptsReadEnvironment == seeded.CanScriptsReadEnvironment &&
                existing.CanScaffoldProjects == seeded.CanScaffoldProjects &&
                existing.CanManageWorkspacePaths == seeded.CanManageWorkspacePaths &&
                existing.CanTransformArtifacts == seeded.CanTransformArtifacts &&

@@ -36,11 +36,15 @@ internal sealed class MafScriptPolicyInspectionService
             throw new ArgumentNullException(nameof(externalTargetPathRegistry));
     }
 
+    // externalTargetAccess: the invocation's effective external-target access, the same one the workspace
+    // tools enforce. When given, a script in any readable root is inspected, including the agent's configured
+    // roots in a chat; without it only the run's own aliases are readable.
     public ScriptContentInspection ResolveScriptContentInspectionForPolicy(
         string functionName,
         IReadOnlyList<KeyValuePair<string, object?>> arguments,
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope,
-        string scriptSideEffectManifestJson)
+        string scriptSideEffectManifestJson,
+        EffectiveExternalTargetAccessScope? externalTargetAccess = null)
     {
         if (!IsWorkspaceScriptExecutionTool(functionName))
         {
@@ -55,7 +59,7 @@ internal sealed class MafScriptPolicyInspectionService
                 "script invocation did not provide a path argument.");
         }
 
-        if (!TryResolvePolicyReadableScriptPath(scriptPath, auditScope, out var fullPath, out var failureMessage))
+        if (!TryResolvePolicyReadableScriptPath(scriptPath, auditScope, externalTargetAccess, out var fullPath, out var failureMessage))
         {
             return new ScriptContentInspection(string.Empty, failureMessage);
         }
@@ -84,7 +88,7 @@ internal sealed class MafScriptPolicyInspectionService
                     out _) &&
                 manifest.DeclaredChildScripts.Length > 0)
             {
-                var childInspection = ResolveDeclaredChildScriptInspection(manifest, auditScope);
+                var childInspection = ResolveDeclaredChildScriptInspection(manifest, auditScope, externalTargetAccess);
                 if (!string.IsNullOrWhiteSpace(childInspection.FailureMessage))
                 {
                     return childInspection;
@@ -108,12 +112,13 @@ internal sealed class MafScriptPolicyInspectionService
 
     private ScriptContentInspection ResolveDeclaredChildScriptInspection(
         GovernedScriptSideEffectManifest manifest,
-        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)
+        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope,
+        EffectiveExternalTargetAccessScope? externalTargetAccess)
     {
         var inspectedChildScripts = new List<string>();
         foreach (var childScript in manifest.DeclaredChildScripts)
         {
-            if (!TryResolvePolicyReadableScriptPath(childScript, auditScope, out var childFullPath, out var failureMessage))
+            if (!TryResolvePolicyReadableScriptPath(childScript, auditScope, externalTargetAccess, out var childFullPath, out var failureMessage))
             {
                 return new ScriptContentInspection(
                     string.Empty,
@@ -156,6 +161,7 @@ internal sealed class MafScriptPolicyInspectionService
     private bool TryResolvePolicyReadableScriptPath(
         string scriptPath,
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope,
+        EffectiveExternalTargetAccessScope? externalTargetAccess,
         out string fullPath,
         out string failureMessage)
     {
@@ -166,7 +172,15 @@ internal sealed class MafScriptPolicyInspectionService
         if (!string.IsNullOrWhiteSpace(normalizedAlias) &&
             normalizedAlias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
         {
-            if (auditScope is not null)
+            if (externalTargetAccess is not null)
+            {
+                if (!externalTargetAccess.CanRead(normalizedAlias))
+                {
+                    failureMessage = $"script path '{normalizedAlias}' is outside the external targets this agent may read.";
+                    return false;
+                }
+            }
+            else if (auditScope is not null)
             {
                 var readableAliases = auditScope.AllowedExternalTargetAliases
                     .Concat(auditScope.ReadOnlyExternalTargetAliases)

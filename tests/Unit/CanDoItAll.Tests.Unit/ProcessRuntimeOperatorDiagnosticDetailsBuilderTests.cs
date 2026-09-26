@@ -19,4 +19,17 @@ public sealed class ProcessRuntimeOperatorDiagnosticDetailsBuilderTests
         Assert.DoesNotContain("browser", details.NextAction, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("current-execution lifecycle", details.NextAction, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Create_tells_the_operator_how_to_repair_a_tool_program_that_could_not_start()
+    {
+        var details = ProcessRuntimeOperatorDiagnosticDetailsBuilder.Create(
+            "process.adapter.agent_tool_launch_failed",
+            "A tool program could not be started on this host.");
+
+        Assert.NotNull(details);
+        Assert.Equal("agent-tool-launch-failed", details.GateId);
+        Assert.Contains("failed tool receipt", details.NextAction, StringComparison.Ordinal);
+        Assert.Contains("add it to PATH", details.NextAction, StringComparison.Ordinal);
+    }
 }

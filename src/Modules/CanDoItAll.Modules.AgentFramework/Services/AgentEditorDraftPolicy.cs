@@ -131,6 +131,7 @@ public static class AgentEditorDraftPolicy {
         CanWriteFiles = source.CanWriteFiles,
         CanRunValidationCommands = source.CanRunValidationCommands,
         CanRunLocalScripts = source.CanRunLocalScripts,
+        CanScriptsReadEnvironment = source.CanScriptsReadEnvironment,
         CanScaffoldProjects = source.CanScaffoldProjects,
         CanManageWorkspacePaths = source.CanManageWorkspacePaths,
         CanTransformArtifacts = source.CanTransformArtifacts,

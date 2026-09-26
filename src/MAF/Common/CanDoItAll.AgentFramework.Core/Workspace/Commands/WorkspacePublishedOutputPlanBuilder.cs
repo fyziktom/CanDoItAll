@@ -6,11 +6,11 @@ internal sealed class WorkspacePublishedOutputPlanBuilder(WorkspacePathPolicy pa
     internal const string EntryDocument = "index.html";
     internal const string WebRootName = "wwwroot";
 
-    public WorkspacePublishedOutputPlan Publish(string targetPath, string configuration, bool noRestore, string? workingDirectory, int timeoutSeconds) {
+    public WorkspacePublishedOutputPlan Publish(string targetPath, string configuration, bool noRestore, string? workingDirectory, int timeoutSeconds, string? artifactsPath = null) {
         if (string.IsNullOrWhiteSpace(targetPath) || Path.GetExtension(targetPath).ToLowerInvariant() is not (".csproj" or ".fsproj" or ".vbproj")) {
             throw WorkspaceCommandInputException.Create("Publish requires one project file.", "Publish requires one .csproj, .fsproj or .vbproj path.");
         }
-        var build = commands.BuildDotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds);
+        var build = commands.BuildDotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds, artifactsPath);
         // A process run addresses its evidence through the run's managed artifact reference. Resolving that reference
         // stores the output in the run's managed root, where the reported reference and later tools find it again.
         var output = Guid.TryParse(WorkspaceExecutionAuditContext.Current?.ProcessRunId, out var processRunId)
