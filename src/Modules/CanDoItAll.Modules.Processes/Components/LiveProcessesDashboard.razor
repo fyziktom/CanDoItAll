@@ -56,14 +56,21 @@
                     <CompactStat Tone="@ProjectionTone"
                                  Text="@ProjectionStatusText"
                                  TooltipText="@ProjectionTooltip" />
+                    @if (HiddenRelatedRunCount > 0)
+                    {
+                        <CompactStat Tone="neutral"
+                                     Text="@FormatCount(HiddenRelatedRunCount, "hidden", "hidden")"
+                                     TooltipText="Hidden runs stay hidden in this browser on every live process page until they need attention again. Use the eye button to show them."
+                                     data-testid="live-processes-hidden-count" />
+                    }
                 </CompactStatStrip>
 
                 <ToolbarActions Class="live-processes-command-strip__actions">
                     @if (HiddenRelatedRunCount > 0)
                     {
                         <PageHeaderActionButton Icon="visibility"
-                                                Label="@($"Show {HiddenRelatedRunCount}")"
-                                                TooltipText="Show hidden process cards in this dashboard."
+                                                Label="@($"Show {HiddenRelatedRunCount} hidden")"
+                                                TooltipText="Show all hidden runs again."
                                                 Disabled="@isLoading"
                                                 Click="ShowHiddenRunGroupsAsync"
                                                 data-testid="live-processes-show-hidden-runs" />
@@ -317,8 +324,12 @@
     private const int ProcessNameDisplayLength = 34;
     private const string ProcessManagerDisplayName = "Process manager";
     private const string UnassignedAgentDisplayName = "Unassigned";
-    private const string HiddenRunGroupsStorageKeyPrefix = "candoitall.live-processes.hidden-run-groups";
+    private const string HiddenRunGroupsStorageKey = "candoitall.live-processes.hidden-run-groups.v2";
+    private const string LegacyHiddenRunGroupsStorageKeyPrefix = "candoitall.live-processes.hidden-run-groups";
+    private static readonly TimeSpan HiddenRunGroupRetention = TimeSpan.FromDays(30);
     private static readonly JsonSerializerOptions HiddenRunGroupsJsonOptions = new(JsonSerializerDefaults.Web);
+
+    private sealed record HiddenRunGroupEntry(Guid RunGroupId, DateTimeOffset HiddenAtUtc);
 
     private sealed record RunDisplayModel(
         string ProcessName,
@@ -431,8 +442,8 @@
     private string? operatorActionError;
     private readonly Dictionary<Guid, string> operatorActionNotes = new();
     private readonly HashSet<Guid> mockResolvedOperatorActionStepIds = [];
-    private readonly HashSet<Guid> hiddenRunGroupIds = [];
-    private string? hiddenRunGroupsLoadedStorageKey;
+    private readonly Dictionary<Guid, DateTimeOffset> hiddenRunGroups = [];
+    private string? hiddenRunGroupsLoadedScopeKey;
     private ProcessAgentChatContextPublication? agentChatPublication;
     private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
     private bool isDisposed;
@@ -543,12 +554,12 @@
             : "No events";
 
     private int HiddenRelatedRunCount
-        => shell?.Runtime.Runs.Count(run => hiddenRunGroupIds.Contains(ResolveRunGroupId(run))) ?? 0;
+        => shell?.Runtime.Runs.Count(run => !IsRunGroupVisible(run)) ?? 0;
 
-    private string HiddenRunGroupsStorageKey
+    private string LegacyHiddenRunGroupsStorageKey
         => ProjectId.HasValue
-            ? $"{HiddenRunGroupsStorageKeyPrefix}:project:{ProjectId.Value:D}"
-            : $"{HiddenRunGroupsStorageKeyPrefix}:global";
+            ? $"{LegacyHiddenRunGroupsStorageKeyPrefix}:project:{ProjectId.Value:D}"
+            : $"{LegacyHiddenRunGroupsStorageKeyPrefix}:global";
 
     private string ProjectionStatusText
         => shell?.Refresh.Status switch
@@ -607,14 +618,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var storageKey = HiddenRunGroupsStorageKey;
-        if (string.Equals(hiddenRunGroupsLoadedStorageKey, storageKey, StringComparison.Ordinal))
+        var legacyStorageKey = LegacyHiddenRunGroupsStorageKey;
+        if (string.Equals(hiddenRunGroupsLoadedScopeKey, legacyStorageKey, StringComparison.Ordinal))
         {
             return;
         }
 
-        hiddenRunGroupsLoadedStorageKey = storageKey;
-        await LoadHiddenRunGroupsAsync(storageKey);
+        hiddenRunGroupsLoadedScopeKey = legacyStorageKey;
+        await LoadHiddenRunGroupsAsync(legacyStorageKey);
         StateHasChanged();
     }
 
@@ -1142,7 +1153,10 @@
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Needs attention" />
                     <h2 class="text-base font-semibold text-slate-900">@FormatCount(AttentionRuns.Count, "run needs operator action", "runs need operator action")</h2>
                 </Stack>
-                <StatusBadge Tone="warning" Text="@FormatHistoryWindow(shell!.Runtime.HistoryWindow)" />
+                <span title="Runs that need operator action stay listed until they are resolved, cancelled or hidden, even when they are older than the selected window."
+                      data-testid="live-processes-attention-window">
+                    <StatusBadge Tone="warning" Text="@FormatHistoryWindow(shell!.Runtime.HistoryWindow)" />
+                </span>
             </Split>
             <Grid Gap="LayoutGap.Medium"
                   ColumnsXl="2"
@@ -1218,7 +1232,7 @@
                                     Text="Hide run"
                                     ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Small"
-                                    title="Hide this run group"
+                                    title="Hide this run group until it needs attention again"
                                     aria-label="Hide this run group"
                                     Click="@(() => HideRunGroupAsync(run))"
                                     data-testid="live-processes-hide-run-group" />
@@ -1386,7 +1400,7 @@
                     Text="Hide run"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
-                    title="Hide this run group"
+                    title="Hide this run group until it needs attention again"
                     aria-label="Hide this run group"
                     Click="@(() => HideRunGroupAsync(run))"
                     data-testid="live-processes-hide-run-group" />
@@ -1449,7 +1463,7 @@
                                 ButtonStyle="ButtonStyle.Light"
                                 Size="ButtonSize.Small"
                                 Class="cda-button--quick live-processes-run-card__open"
-                                title="Hide this run group"
+                                title="Hide this run group until it needs attention again"
                                 aria-label="Hide this run group"
                                 Click="@(() => HideRunGroupAsync(run))"
                                 data-testid="live-processes-hide-run-group" />
@@ -2149,7 +2163,13 @@
     private async Task HideRunGroupAsync(ProcessLiveProcessSnapshot run)
     {
         var groupId = ResolveRunGroupId(run);
-        hiddenRunGroupIds.Add(groupId);
+        var groupLastEventAtUtc = shell?.Runtime.Runs
+            .Where(candidate => ResolveRunGroupId(candidate) == groupId)
+            .Select(candidate => candidate.LastEventAtUtc)
+            .DefaultIfEmpty(run.LastEventAtUtc)
+            .Max() ?? run.LastEventAtUtc;
+        var nowUtc = TimeProvider.GetUtcNow();
+        hiddenRunGroups[groupId] = groupLastEventAtUtc > nowUtc ? groupLastEventAtUtc : nowUtc;
         await SaveHiddenRunGroupsAsync();
 
         if (selectedRuntimeRunId.HasValue &&
@@ -2168,35 +2188,52 @@
 
     private async Task ShowHiddenRunGroupsAsync()
     {
-        hiddenRunGroupIds.Clear();
+        hiddenRunGroups.Clear();
         await SaveHiddenRunGroupsAsync();
     }
 
-    private async Task LoadHiddenRunGroupsAsync(string storageKey)
+    // Hidden run groups are shared by the global and project dashboards. Groups hidden by the earlier per-scope
+    // storage are merged once, as hidden now, and their scope key is removed.
+    private async Task LoadHiddenRunGroupsAsync(string legacyStorageKey)
     {
+        var readingStorageKey = HiddenRunGroupsStorageKey;
         try
         {
-            var json = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", storageKey);
-            hiddenRunGroupIds.Clear();
-            if (string.IsNullOrWhiteSpace(json))
+            hiddenRunGroups.Clear();
+            var json = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", readingStorageKey);
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                var entries = JsonSerializer.Deserialize<HiddenRunGroupEntry[]>(json, HiddenRunGroupsJsonOptions) ?? [];
+                foreach (var entry in entries.Where(entry => entry.RunGroupId != Guid.Empty))
+                {
+                    hiddenRunGroups[entry.RunGroupId] = entry.HiddenAtUtc;
+                }
+            }
+
+            readingStorageKey = legacyStorageKey;
+            var legacyJson = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", legacyStorageKey);
+            if (string.IsNullOrWhiteSpace(legacyJson))
             {
                 return;
             }
 
-            var values = JsonSerializer.Deserialize<string[]>(json, HiddenRunGroupsJsonOptions) ?? [];
-            foreach (var value in values)
+            var nowUtc = TimeProvider.GetUtcNow();
+            var legacyValues = JsonSerializer.Deserialize<string[]>(legacyJson, HiddenRunGroupsJsonOptions) ?? [];
+            foreach (var value in legacyValues)
             {
                 if (Guid.TryParse(value, out var runGroupId) && runGroupId != Guid.Empty)
                 {
-                    hiddenRunGroupIds.Add(runGroupId);
+                    hiddenRunGroups.TryAdd(runGroupId, nowUtc);
                 }
             }
+
+            await SaveHiddenRunGroupsAsync();
+            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", legacyStorageKey);
         }
         catch (JsonException exception)
         {
-            hiddenRunGroupIds.Clear();
             operatorActionError = $"Stored hidden process card preferences were invalid and were cleared: {exception.Message}";
-            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", storageKey);
+            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", readingStorageKey);
         }
         catch (Exception exception) when (exception is JSException or InvalidOperationException)
         {
@@ -2209,17 +2246,26 @@
         operatorActionError = null;
         try
         {
-            if (hiddenRunGroupIds.Count == 0)
+            var retainedAfterUtc = TimeProvider.GetUtcNow() - HiddenRunGroupRetention;
+            foreach (var expiredGroupId in hiddenRunGroups
+                .Where(entry => entry.Value < retainedAfterUtc)
+                .Select(entry => entry.Key)
+                .ToArray())
+            {
+                hiddenRunGroups.Remove(expiredGroupId);
+            }
+
+            if (hiddenRunGroups.Count == 0)
             {
                 await JsRuntime.InvokeVoidAsync("localStorage.removeItem", HiddenRunGroupsStorageKey);
                 return;
             }
 
-            var values = hiddenRunGroupIds
-                .OrderBy(id => id)
-                .Select(id => id.ToString("D"))
+            var entries = hiddenRunGroups
+                .OrderBy(entry => entry.Key)
+                .Select(entry => new HiddenRunGroupEntry(entry.Key, entry.Value))
                 .ToArray();
-            var json = JsonSerializer.Serialize(values, HiddenRunGroupsJsonOptions);
+            var json = JsonSerializer.Serialize(entries, HiddenRunGroupsJsonOptions);
             await JsRuntime.InvokeVoidAsync("localStorage.setItem", HiddenRunGroupsStorageKey, json);
         }
         catch (Exception exception) when (exception is JSException or InvalidOperationException)
@@ -2231,8 +2277,23 @@
     private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuntimeRuns(IReadOnlyList<ProcessLiveProcessSnapshot> runs)
         => runs.Where(IsRunGroupVisible).ToArray();
 
+    // A hidden group returns when one of its runs needs attention again after it was hidden, and a run requested
+    // by the route stays visible so a direct link never opens an empty dashboard.
     private bool IsRunGroupVisible(ProcessLiveProcessSnapshot run)
-        => !hiddenRunGroupIds.Contains(ResolveRunGroupId(run));
+    {
+        var groupId = ResolveRunGroupId(run);
+        if (!hiddenRunGroups.TryGetValue(groupId, out var hiddenAtUtc) ||
+            run.RunId.Value == requiredRouteRunId)
+        {
+            return true;
+        }
+
+        return shell?.Runtime.Runs.Any(candidate =>
+            ResolveRunGroupId(candidate) == groupId &&
+            candidate.LastEventAtUtc > hiddenAtUtc &&
+            (candidate.Status is ProcessProjectedRunStatus.NeedsAttention or ProcessProjectedRunStatus.Failed ||
+             RequiresOperatorAttention(candidate))) == true;
+    }
 
     private static Guid ResolveRunGroupId(ProcessLiveProcessSnapshot run)
         => run.RootRunId.Value == Guid.Empty ? run.RunId.Value : run.RootRunId.Value;

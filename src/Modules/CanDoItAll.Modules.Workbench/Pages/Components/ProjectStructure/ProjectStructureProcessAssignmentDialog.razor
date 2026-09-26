@@ -45,12 +45,14 @@
                 <Button Text="Prepare another launch" Variant="Variant.Text" Disabled="@Dialog.IsBusy"
                         Click="PrepareAnotherProcessLaunch" data-testid="project-structure-process-assignment-new-intent" />
             }
-            <Button Text="Save and close"
-                    Variant="Variant.Outlined"
-                    ButtonStyle="ButtonStyle.Info"
-                    Disabled="@Dialog.IsBusy"
-                    data-testid="project-structure-process-assignment-save-close"
-                    Click="Close" />
+            @if (Dialog.PreparedRequest?.PreparedAdmissionId is not null && !Dialog.IsAccepted) {
+                <Button Text="Save and close"
+                        Variant="Variant.Outlined"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@Dialog.IsBusy"
+                        data-testid="project-structure-process-assignment-save-close"
+                        Click="Close" />
+            }
             <Button Text="@(Dialog.IsAccepted ? "Open accepted run" : Dialog.PreparedRequest?.PreparedAdmissionId is null ? "Prepare reviewed launch" : "Start reviewed run")"
                     ButtonStyle="ButtonStyle.Info"
                     Disabled="@((Dialog.RequiredGapCount > 0 && !Dialog.IsAccepted) || Dialog.IsBusy)"
@@ -162,11 +164,28 @@
                     </div>
                 }
 
+                @if (!string.IsNullOrWhiteSpace(Dialog.PreviousLaunchNotice))
+                {
+                    <div class="project-structure-assignment-feedback"
+                         role="status"
+                         data-testid="project-structure-process-assignment-previous-launch">
+                        @Dialog.PreviousLaunchNotice
+                    </div>
+                }
+
                 @if (HasError)
                 {
                     <div class="@ResolveFeedbackClass()"
                          data-testid="project-structure-process-assignment-feedback">
                         @Dialog.Error
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(Dialog.StatusMessage))
+                {
+                    <div class="project-structure-assignment-feedback"
+                         role="status"
+                         data-testid="project-structure-process-assignment-status">
+                        @Dialog.StatusMessage
                     </div>
                 }
 

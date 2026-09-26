@@ -86,6 +86,7 @@ public sealed partial class ProcessWorkspaceShellTests
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 30, 0, TimeSpan.Zero);
     private static readonly Guid ProjectSubprocessRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
     private static readonly Guid ProjectSubprocessProjectId = Guid.Parse("12121212-3434-5656-7878-909090909090");
+    private const string HiddenRunGroupsStorageKey = "candoitall.live-processes.hidden-run-groups.v2";
 
     [Fact]
     public void Global_shell_renders_projection_tabs_and_command_strip()
@@ -2234,6 +2235,98 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.Contains(
                 cut.FindAll("[data-testid='live-processes-run-card']"),
                 card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void Live_processes_dashboard_keeps_hidden_runs_hidden_after_reload_on_every_live_page()
+    {
+        string hiddenRunGroupsJson;
+        using (var globalContext = CreateContext(out _))
+        {
+            var globalDashboard = globalContext.Render<LiveProcessesDashboard>();
+            globalDashboard.WaitForAssertion(() => Assert.NotNull(globalDashboard.Find("[data-testid='live-processes-activity-cards']")));
+            globalDashboard
+                .FindAll("[data-testid='live-processes-activity-card']")
+                .Single(card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal))
+                .QuerySelector("[data-testid='live-processes-hide-run-group']")!
+                .Click();
+
+            globalDashboard.WaitForAssertion(() => Assert.Contains(
+                globalContext.JSInterop.Invocations["localStorage.setItem"],
+                invocation => Equals(invocation.Arguments[0], HiddenRunGroupsStorageKey)));
+            var saved = globalContext.JSInterop.Invocations["localStorage.setItem"]
+                .Last(invocation => Equals(invocation.Arguments[0], HiddenRunGroupsStorageKey));
+            hiddenRunGroupsJson = Assert.IsType<string>(saved.Arguments[1]);
+            Assert.Contains(ProjectSubprocessRunId.ToString("D"), hiddenRunGroupsJson, StringComparison.Ordinal);
+        }
+
+        using var projectContext = CreateContext(out _);
+        projectContext.JSInterop
+            .Setup<string?>("localStorage.getItem", invocation => Equals(invocation.Arguments[0], HiddenRunGroupsStorageKey))
+            .SetResult(hiddenRunGroupsJson);
+        var projectDashboard = projectContext.Render<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.ProjectId, ProjectSubprocessProjectId));
+
+        projectDashboard.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain(
+                projectDashboard.FindAll("[data-testid='live-processes-activity-card']"),
+                card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+            Assert.Contains("1 hidden", projectDashboard.Find("[data-testid='live-processes-hidden-count']").TextContent, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void Live_processes_dashboard_shows_a_hidden_run_again_when_it_needs_attention_after_hiding()
+    {
+        using var context = CreateContext(out _, timeProvider: new ManualTimeProvider(Now));
+        var hiddenBeforeLatestEvents = JsonSerializer.Serialize(
+            new[]
+            {
+                new { RunGroupId = Guid.Parse("77777777-7777-7777-7777-777777777777"), HiddenAtUtc = Now.AddMinutes(-10) },
+                new { RunGroupId = ProjectSubprocessRunId, HiddenAtUtc = Now.AddMinutes(-10) }
+            },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        context.JSInterop
+            .Setup<string?>("localStorage.getItem", invocation => Equals(invocation.Arguments[0], HiddenRunGroupsStorageKey))
+            .SetResult(hiddenBeforeLatestEvents);
+
+        var cut = context.Render<LiveProcessesDashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                cut.FindAll("[data-testid='live-processes-attention-card']"),
+                card => card.TextContent.Contains("Run 77777777", StringComparison.Ordinal));
+            Assert.DoesNotContain(
+                cut.FindAll("[data-testid='live-processes-activity-card']"),
+                card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+            Assert.Contains("1 hidden", cut.Find("[data-testid='live-processes-hidden-count']").TextContent, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void Live_processes_dashboard_moves_scope_hidden_runs_into_the_shared_list()
+    {
+        const string legacyGlobalKey = "candoitall.live-processes.hidden-run-groups:global";
+        using var context = CreateContext(out _, timeProvider: new ManualTimeProvider(Now));
+        context.JSInterop
+            .Setup<string?>("localStorage.getItem", invocation => Equals(invocation.Arguments[0], legacyGlobalKey))
+            .SetResult(JsonSerializer.Serialize(new[] { ProjectSubprocessRunId.ToString("D") }));
+
+        var cut = context.Render<LiveProcessesDashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain(
+                cut.FindAll("[data-testid='live-processes-activity-card']"),
+                card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+            var saved = Assert.Single(
+                context.JSInterop.Invocations["localStorage.setItem"],
+                invocation => Equals(invocation.Arguments[0], HiddenRunGroupsStorageKey));
+            Assert.Contains(ProjectSubprocessRunId.ToString("D"), Assert.IsType<string>(saved.Arguments[1]), StringComparison.Ordinal);
+            Assert.Contains(context.JSInterop.Invocations["localStorage.removeItem"], invocation => Equals(invocation.Arguments[0], legacyGlobalKey));
         });
     }
 

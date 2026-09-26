@@ -1,25 +1,34 @@
 using System.Collections.Frozen;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage {
-    private async Task<bool> TryRestoreProcessStartAsync(ProjectStructureProcessStartDialogState dialog,
+    private readonly record struct ProcessStartRestoreOutcome(bool Restored, string PreviousLaunchNotice) {
+        public static ProcessStartRestoreOutcome NotRestored => new(false, string.Empty);
+        public static ProcessStartRestoreOutcome RestoredIntent => new(true, string.Empty);
+    }
+
+    private async Task<ProcessStartRestoreOutcome> TryRestoreProcessStartAsync(ProjectStructureProcessStartDialogState dialog,
         ProcessLaunchAuthority caller, string storageKey) {
         if (IsCurrentProcessStart(dialog)) {
             processStartDialog = dialog with { IntentStorageKey = storageKey };
         }
         var stored = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", storageKey);
         if (string.IsNullOrEmpty(stored)) {
-            return false;
+            return ProcessStartRestoreOutcome.NotRestored;
         }
         if (!Guid.TryParse(stored, out var intentId) || intentId == Guid.Empty) {
             throw new InvalidOperationException("The browser process launch identity is invalid and requires reconciliation.");
         }
         var saved = await ProcessLaunchPreparations.FindByIntentAsync(new(intentId))
             ?? throw new InvalidOperationException($"Process launch intent {intentId:D} has no observable preparation yet. Reopen this dialog after the original request completes.");
+        if (IsSpentProcessLaunch(saved)) {
+            return new(false, await RetireSpentProcessStartIntentAsync(saved, storageKey));
+        }
         var request = ProcessLaunchProducerRequests.Restore(saved, caller, execute: true);
         if (request.ProjectId != dialog.ProjectId || request.ProjectNodeId != dialog.TargetNodeId ||
                 request.ProcessDefinitionId?.Value != dialog.ProcessDefinitionId) {
@@ -27,12 +36,12 @@ public partial class ProjectStructurePage {
         }
         var metadata = await LoadProcessStartAgentMetadataAsync(CancellationToken.None);
         if (!IsCurrentProcessStart(dialog)) {
-            return true;
+            return ProcessStartRestoreOutcome.RestoredIntent;
         }
         processStartAgentMetadataById = metadata;
         var accepted = saved.AcceptedAtUtc is not null;
         processStartDialog = MapProcessStartDialogState(dialog, saved.Preparation.Review,
-            accepted ? $"Process {saved.Preparation.InitialCommit.Mutation.State.RunId.Value:D} was already accepted. Open it to inspect its current state, or prepare another launch for a new run."
+            accepted ? $"Process {saved.Preparation.InitialCommit.Mutation.State.RunId.Value:D} was already accepted and its start is still being completed. Open it to follow that run, or prepare another launch for a new run."
                 : "The saved launch plan was restored. Review these exact assignments before starting.", string.Empty) with {
             LaunchIntentId = new(intentId),
             LaunchAuthority = request.Authority,
@@ -46,7 +55,27 @@ public partial class ProjectStructurePage {
                 saved.State, saved.LinkDeliveryState, saved.PublicFailure)
         };
         await InvokeAsync(StateHasChanged);
-        return true;
+        return ProcessStartRestoreOutcome.RestoredIntent;
+    }
+
+    // The tab keeps its intent for as long as it stays open. Once the accepted launch has finished its continuation,
+    // restoring that intent could only replay the old run, so Start retires it and prepares a new launch instead.
+    private static bool IsSpentProcessLaunch(ProcessPreparedLaunchSnapshot saved)
+        => saved.AcceptedAtUtc is not null &&
+           saved.State is not (ProcessLaunchContinuationState.Accepted or ProcessLaunchContinuationState.Continuing);
+
+    private async Task<string> RetireSpentProcessStartIntentAsync(ProcessPreparedLaunchSnapshot saved, string storageKey) {
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", storageKey);
+        var runId = saved.Preparation.InitialCommit.Mutation.State.RunId;
+        if (saved.LinkDeliveryState == ProcessLaunchLinkDeliveryState.Pending) {
+            try {
+                await ProcessLaunchDelivery.DeliverAsync(saved.Preparation.AdmissionId);
+            } catch (Exception exception) when (exception is not OperationCanceledException) {
+                Logger.LogWarning(exception, "Pending Structure link of a retired process launch could not be delivered. AdmissionId={AdmissionId} RunId={RunId}",
+                    saved.Preparation.AdmissionId.Value, runId.Value);
+            }
+        }
+        return $"The previous launch from this node was already accepted as run {runId.Value:D}. This dialog prepares a new run.";
     }
 
     private async Task PrepareAnotherProcessLaunchAsync() {

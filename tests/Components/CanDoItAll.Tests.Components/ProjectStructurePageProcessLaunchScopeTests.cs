@@ -275,6 +275,88 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
     }
 
     [Fact]
+    public async Task Reopening_after_a_started_launch_prepares_a_new_run_instead_of_replaying_it() {
+        var probe = new ProcessLaunchProbe();
+        await using var harness = await CreateHarnessAsync(probe);
+        var target = await CreateTargetAsync(harness, "Repeated launch");
+        var original = RenderProject(harness, target);
+        await OpenStartDialogAsync(original, target);
+        await original.Find("[data-testid='project-structure-process-start-continue']").ClickAsync(new MouseEventArgs());
+        await PrepareReviewedAsync(original);
+        var first = GetStartDialog(original);
+        await original.Find("[data-testid='project-structure-process-assignment-review-start']").ClickAsync(new MouseEventArgs());
+        var firstRunId = Assert.IsType<ProcessRunId>(probe.QueuedRunId);
+        var store = harness.Context.Services.GetRequiredService<IProcessPreparedLaunchStore>();
+        var accepted = Assert.IsType<ProcessPreparedLaunchSnapshot>(await store.GetAsync(first.PreparedRequest!.PreparedAdmissionId!.Value));
+        Assert.Equal(ProcessLaunchContinuationState.Started, accepted.State);
+        original.Dispose();
+        var storageKey = $"candoitall.process-launch.structure:{first.LaunchAuthority!.DatabaseProfileId:D}:{target.ProjectId:D}:{target.TargetNodeId}:{DefinitionId:D}";
+        var removalsBefore = harness.Context.JSInterop.Invocations["sessionStorage.removeItem"].Count;
+        harness.Context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(first.LaunchIntentId.Value.ToString("D"));
+
+        var reopened = RenderProject(harness, target);
+        reopened.WaitForAssertion(() => Assert.Contains(reopened.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
+            node => node.Id == target.TargetNodeId));
+        await reopened.InvokeAsync(() => reopened.FindComponent<CanvasWorkbench>().Instance.OnContextAction(target.ProcessNodeId, "start-process", 0, 0));
+        reopened.WaitForAssertion(() => {
+            var fresh = GetStartDialog(reopened);
+            Assert.Equal(ProjectStructureProcessStartStage.Confirm, fresh.Stage);
+            Assert.NotNull(fresh.LaunchAuthority);
+            Assert.NotEqual(first.LaunchIntentId, fresh.LaunchIntentId);
+            Assert.Null(fresh.PreparedRequest);
+            Assert.Contains(firstRunId.Value.ToString("D"), fresh.PreviousLaunchNotice, StringComparison.Ordinal);
+            Assert.Contains(firstRunId.Value.ToString("D"),
+                reopened.Find("[data-testid='project-structure-process-start-previous-launch']").TextContent, StringComparison.Ordinal);
+        });
+        var removals = harness.Context.JSInterop.Invocations["sessionStorage.removeItem"];
+        Assert.Equal(removalsBefore + 1, removals.Count);
+        Assert.Equal(storageKey, removals[^1].Arguments[0]);
+
+        await reopened.Find("[data-testid='project-structure-process-start-continue']").ClickAsync(new MouseEventArgs());
+        await PrepareReviewedAsync(reopened);
+        Assert.Contains(firstRunId.Value.ToString("D"),
+            reopened.Find("[data-testid='project-structure-process-assignment-previous-launch']").TextContent, StringComparison.Ordinal);
+        await reopened.Find("[data-testid='project-structure-process-assignment-review-start']").ClickAsync(new MouseEventArgs());
+        var secondRunId = Assert.IsType<ProcessRunId>(probe.QueuedRunId);
+        Assert.NotEqual(firstRunId, secondRunId);
+        Assert.Contains(secondRunId.Value.ToString("D"), harness.Context.Services.GetRequiredService<NavigationManager>().Uri, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Reopening_a_launch_with_a_pending_continuation_restores_it_with_a_visible_status() {
+        var probe = new ProcessLaunchProbe { LaunchAckFailure = new ArgumentException("Injected queued process acknowledgement loss.") };
+        await using var harness = await CreateHarnessAsync(probe);
+        var target = await CreateTargetAsync(harness, "Pending continuation");
+        var original = RenderProject(harness, target);
+        await OpenStartDialogAsync(original, target);
+        await original.Find("[data-testid='project-structure-process-start-continue']").ClickAsync(new MouseEventArgs());
+        await PrepareReviewedAsync(original);
+        var first = GetStartDialog(original);
+        await original.Find("[data-testid='project-structure-process-assignment-review-start']").ClickAsync(new MouseEventArgs());
+        var runId = Assert.IsType<ProcessRunId>(probe.QueuedRunId);
+        var saved = Assert.IsType<ProcessPreparedLaunchSnapshot>(await harness.Context.Services
+            .GetRequiredService<IProcessPreparedLaunchStore>().GetAsync(first.PreparedRequest!.PreparedAdmissionId!.Value));
+        Assert.Equal(ProcessLaunchContinuationState.Continuing, saved.State);
+        original.Dispose();
+        harness.Context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(first.LaunchIntentId.Value.ToString("D"));
+
+        var reopened = RenderProject(harness, target);
+        reopened.WaitForAssertion(() => Assert.Contains(reopened.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
+            node => node.Id == target.TargetNodeId));
+        await reopened.InvokeAsync(() => reopened.FindComponent<CanvasWorkbench>().Instance.OnContextAction(target.ProcessNodeId, "start-process", 0, 0));
+        reopened.WaitForAssertion(() => {
+            var restored = GetStartDialog(reopened);
+            Assert.True(restored.IsAccepted);
+            Assert.Equal(first.LaunchIntentId, restored.LaunchIntentId);
+            Assert.Empty(restored.PreviousLaunchNotice);
+            Assert.Contains(runId.Value.ToString("D"),
+                reopened.Find("[data-testid='project-structure-process-assignment-status']").TextContent, StringComparison.Ordinal);
+            Assert.Contains("Open accepted run", reopened.Markup, StringComparison.Ordinal);
+        });
+        Assert.Empty(harness.Context.JSInterop.Invocations["sessionStorage.removeItem"]);
+    }
+
+    [Fact]
     public async Task Reloaded_dialog_restores_the_exact_saved_review_and_original_source_without_resolving_again() {
         var probe = new ProcessLaunchProbe();
         await using var harness = await CreateHarnessAsync(probe);

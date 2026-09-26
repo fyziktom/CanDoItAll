@@ -292,9 +292,11 @@ public partial class ProjectStructurePage
         try {
             var caller = await ProcessLaunchAuthorities.CaptureUserInterfaceAsync(null);
             var storageKey = $"candoitall.process-launch.structure:{caller.DatabaseProfileId:D}:{dialog.ProjectId:D}:{dialog.TargetNodeId}:{dialog.ProcessDefinitionId:D}";
-            if (await TryRestoreProcessStartAsync(dialog, caller, storageKey)) {
+            var restore = await TryRestoreProcessStartAsync(dialog, caller, storageKey);
+            if (restore.Restored) {
                 return;
             }
+            dialog = dialog with { PreviousLaunchNotice = restore.PreviousLaunchNotice };
             var authority = await ProcessLaunchAuthorities.CaptureUserInterfaceAsync(dialog.ProjectId);
             if (!IsCurrentProcessStart(dialog)) {
                 return;
