@@ -72,9 +72,13 @@ internal sealed class WorkspaceCommandProcessRunner
     }
 
     public WorkspaceCommandExecutionResult CreateDeniedResult(string toolName, string recipeId, string riskClass, bool approvalRequired, string message,
-        bool rejectedBeforeLaunch = false)
+        bool rejectedBeforeLaunch = false, bool prohibited = false)
     {
-        if (rejectedBeforeLaunch)
+        if (rejectedBeforeLaunch && prohibited)
+        {
+            AgentToolInvocationEffectScope.RecordProhibitedBeforeEffect();
+        }
+        else if (rejectedBeforeLaunch)
         {
             AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
         }
@@ -120,24 +124,53 @@ internal sealed class WorkspaceCommandProcessRunner
 
     public async Task<WorkspaceCommandExecutionResult> ExecuteAsync(WorkspaceCommandPlan plan, CancellationToken cancellationToken = default)
     {
-        var executablePath = executableLocator.ResolveExecutablePath(
-            plan.ExecutableCandidates,
-            plan.WorkingDirectoryPath);
-        var environmentVariables = environmentPolicy.MergeEnvironmentVariables(
-            plan.EnvironmentVariables,
-            plan.Decision.ToolName);
+        var environmentVariables = BuildEnvironmentVariables(plan);
+        string executablePath;
+        try
+        {
+            executablePath = executableLocator.ResolveExecutablePath(
+                plan.ExecutableCandidates,
+                plan.WorkingDirectoryPath);
+        }
+        catch (WorkspaceExecutableResolutionException exception)
+        {
+            return CreateExecutionResult(
+                plan,
+                CreateResolutionFailureResult(plan, exception),
+                environmentVariables.Keys);
+        }
+
         var productTargetAudit = ProductTargetMutationAudit.CaptureBefore(
             plan,
             WorkspaceExecutionAuditContext.Current,
             pathPolicy);
-        await using var pathAliasSession = await WorkspacePathAliasSession.TryCreateAsync(
-            plan.WorkspaceRootPath,
-            plan.WorkingDirectoryPath,
-            plan.Arguments,
-            pathPolicy,
-            processHost,
-            environmentVariables,
-            cancellationToken).ConfigureAwait(false);
+        WorkspacePathAliasSession? createdPathAlias;
+        try
+        {
+            createdPathAlias = await WorkspacePathAliasSession.TryCreateAsync(
+                plan.WorkspaceRootPath,
+                plan.WorkingDirectoryPath,
+                plan.Arguments,
+                pathPolicy,
+                processHost,
+                environmentVariables,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException exception)
+        {
+            // The alias exists only to fit a long workspace path under the Windows limit. Without it the
+            // command cannot start, and nothing ran yet, so this is a typed no-effect start failure.
+            return CreateExecutionResult(
+                plan,
+                WorkspaceLaunchExplanations.CreateStartFailedResult(
+                    WorkspaceProcessStartFailureKind.WorkingDirectoryTooLong,
+                    DescribeBoundary(),
+                    DateTimeOffset.UtcNow,
+                    $"A temporary drive alias for the long workspace path could not be created: {exception.Message}"),
+                environmentVariables.Keys);
+        }
+
+        await using var pathAliasSession = createdPathAlias;
         var effectiveWorkingDirectoryPath = pathAliasSession?.RewritePath(plan.WorkingDirectoryPath) ?? plan.WorkingDirectoryPath;
         var effectiveArguments = pathAliasSession?.RewriteArguments(plan.Arguments) ?? plan.Arguments;
         pathPolicy.ValidatePathForUse(plan.WorkingDirectoryPath);
@@ -165,10 +198,30 @@ internal sealed class WorkspaceCommandProcessRunner
             plan.ExecutableCandidates,
             plan.WorkingDirectoryPath);
 
+    internal WorkspaceProcessExecutionResult CreateResolutionFailureResult(
+        WorkspaceCommandPlan plan,
+        WorkspaceExecutableResolutionException exception)
+    {
+        var kind = WorkspaceProcessStartFailureClassifier.Classify(
+            exception,
+            plan.WorkingDirectoryPath,
+            processStarted: false);
+        var operatorDetail =
+            $"{WorkspaceLaunchExplanations.DescribeForOperator(kind, string.Join(" | ", plan.ExecutableCandidates), plan.WorkingDirectoryPath)} " +
+            $"({WorkspaceProcessStartFailureClassifier.DescribeCause(exception)})";
+        return WorkspaceLaunchExplanations.CreateStartFailedResult(
+            kind,
+            DescribeBoundary(),
+            DateTimeOffset.UtcNow,
+            operatorDetail);
+    }
+
     internal IReadOnlyDictionary<string, string?> BuildEnvironmentVariables(WorkspaceCommandPlan plan)
         => environmentPolicy.MergeEnvironmentVariables(
             plan.EnvironmentVariables,
-            plan.Decision.ToolName);
+            plan.Decision.ToolName,
+            plan.ExecutableCandidates.FirstOrDefault(),
+            plan.ExtendedEnvironmentAllowed);
 
     internal WorkspaceCommandExecutionResult CreateExecutionResult(
         WorkspaceCommandPlan plan,
@@ -183,8 +236,21 @@ internal sealed class WorkspaceCommandProcessRunner
             AgentFrameworkTelemetry.RecordCommandTimeout(plan.Decision.RecipeId, plan.Decision.RiskClass);
         }
 
+        var startExplanation = !effectiveProcessResult.Started &&
+                               effectiveProcessResult.StartFailureKind != WorkspaceProcessStartFailureKind.None
+            ? WorkspaceLaunchExplanations.For(effectiveProcessResult.StartFailureKind)
+            : null;
+        if (startExplanation is not null &&
+            effectiveProcessResult.StartFailureKind != WorkspaceProcessStartFailureKind.ProcessOwnershipFailed)
+        {
+            // The operating system refused the launch, so nothing ran; the tool had no effect.
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+        }
+
         var message = !effectiveProcessResult.Started
-            ? $"Recipe '{plan.Decision.RecipeId}' failed to start: {effectiveProcessResult.FailureMessage}"
+            ? startExplanation is null
+                ? $"Recipe '{plan.Decision.RecipeId}' failed to start: {effectiveProcessResult.FailureMessage}"
+                : $"Recipe '{plan.Decision.RecipeId}' could not start: {DescribeStartFailureForAgent(plan, startExplanation)} [{startExplanation.Code}]"
             : effectiveProcessResult.TimedOut
                 ? $"Recipe '{plan.Decision.RecipeId}' timed out after {plan.TimeoutSeconds} second(s)."
                 : succeeded
@@ -192,6 +258,7 @@ internal sealed class WorkspaceCommandProcessRunner
                     : string.IsNullOrWhiteSpace(effectiveProcessResult.FailureMessage)
                         ? $"Recipe '{plan.Decision.RecipeId}' failed with exit code {effectiveProcessResult.ExitCode}."
                         : $"Recipe '{plan.Decision.RecipeId}' failed with exit code {effectiveProcessResult.ExitCode}. {effectiveProcessResult.FailureMessage}";
+        message = AppendNetworkTrustHint(message, effectiveProcessResult, succeeded);
         var receipt = receiptWriter.PersistProcessReceipt(
             plan.Decision.ToolName,
             plan.Decision.RecipeId,
@@ -206,7 +273,11 @@ internal sealed class WorkspaceCommandProcessRunner
             environmentVariableNames
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray());
-        var resultMessage = AppendFailureDiagnosticHint(message, receipt, effectiveProcessResult, succeeded);
+        var resultMessage = startExplanation is not null &&
+                            string.IsNullOrWhiteSpace(effectiveProcessResult.Stdout) &&
+                            string.IsNullOrWhiteSpace(effectiveProcessResult.Stderr)
+            ? message
+            : AppendFailureDiagnosticHint(message, receipt, effectiveProcessResult, succeeded);
 
         return new WorkspaceCommandExecutionResult(
             Succeeded: succeeded,
@@ -223,7 +294,69 @@ internal sealed class WorkspaceCommandProcessRunner
             StdoutPreview: effectiveProcessResult.Stdout,
             StderrPreview: effectiveProcessResult.Stderr,
             StdoutTruncated: effectiveProcessResult.StdoutTruncated,
-            StderrTruncated: effectiveProcessResult.StderrTruncated);
+            StderrTruncated: effectiveProcessResult.StderrTruncated)
+        {
+            FailureCode = startExplanation?.Code
+        };
+    }
+
+    private static readonly string[] NetworkFailureSignals =
+    [
+        "NU1301",
+        "Unable to load the service index",
+        "proxy",
+        "SSL",
+        "certificate",
+        "CERTIFICATE_VERIFY_FAILED",
+        "Name or service not known",
+        "No such host is known",
+        "nodename nor servname",
+        "Temporary failure in name resolution",
+        "ECONNREFUSED",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "ENOTFOUND",
+        "ConnectionError",
+        "(407)"
+    ];
+
+    /// <summary>
+    /// When a started command failed with network-looking output while the host has proxy or
+    /// certificate settings that are withheld (network trust off), say so: otherwise the failure is
+    /// unexplained. Names only, never values.
+    /// </summary>
+    private string AppendNetworkTrustHint(string message, WorkspaceProcessExecutionResult result, bool succeeded)
+    {
+        if (succeeded || !result.Started)
+        {
+            return message;
+        }
+
+        var output = $"{result.Stdout} {result.Stderr}";
+        if (!NetworkFailureSignals.Any(signal => output.Contains(signal, StringComparison.OrdinalIgnoreCase)))
+        {
+            return message;
+        }
+
+        var withheld = environmentPolicy.DescribeWithheldNetworkTrustNames();
+        return withheld.Count == 0
+            ? message
+            : $"{message} Note: the host has proxy or certificate settings ({string.Join(", ", withheld)}) that CanDoItAll does not pass to processes. " +
+              $"If this command needs network access through that proxy, ask the operator to enable '{ProcessEnvironmentOptions.SectionName}:NetworkTrust'.";
+    }
+
+    private static string DescribeStartFailureForAgent(
+        WorkspaceCommandPlan plan,
+        WorkspaceLaunchExplanation explanation)
+    {
+        if (explanation.Kind is not (WorkspaceProcessStartFailureKind.ExecutableNotFound or
+            WorkspaceProcessStartFailureKind.ExecutableNotRunnable))
+        {
+            return explanation.AgentText;
+        }
+
+        // Program names (never their folders) tell the agent and operator what is missing.
+        return WorkspaceLaunchExplanations.WithProgramNames(explanation.AgentText, plan.ExecutableCandidates);
     }
 
     private static string AppendFailureDiagnosticHint(

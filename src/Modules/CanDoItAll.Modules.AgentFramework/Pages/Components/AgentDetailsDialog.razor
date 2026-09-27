@@ -483,11 +483,22 @@ else
                                             Can run build, test, and app commands
                                         </label>
                                         <label class="cda-inline-option">
-                                            <input type="checkbox"
+                                            <input @key="@($"scripts-{workspaceRiskInputVersion}")"
+                                                   type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanRunLocalScripts"
-                                                   @onchange="args => ToggleWorkspaceLocalScripts(args.Value)"
+                                                   disabled="@isConfirmingWorkspaceRisk"
+                                                   @onchange="args => HandleWorkspaceLocalScriptsChangedAsync(args.Value)"
                                                    data-testid="agents-catalog-workspace-scripts" />
                                             Can run local scripts
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input @key="@($"environment-{workspaceRiskInputVersion}")"
+                                                   type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment"
+                                                   disabled="@(isConfirmingWorkspaceRisk || !editorModel.WorkspaceToolAccess.CanRunLocalScripts)"
+                                                   @onchange="args => HandleScriptsReadEnvironmentChangedAsync(args.Value)"
+                                                   data-testid="agents-catalog-workspace-scripts-environment" />
+                                            Scripts may read environment variables
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
@@ -511,6 +522,21 @@ else
                                             Can transform artifacts
                                         </label>
                                     </Grid>
+                                    @if (editorModel.WorkspaceToolAccess.CanRunLocalScripts)
+                                    {
+                                        <Alert AlertStyle="AlertStyle.Warning" class="mt-3" data-testid="agents-catalog-workspace-scripts-warning">
+                                            <p class="font-semibold">Local scripts are enabled</p>
+                                            <p class="mt-1">Scripts run with your account's rights and are not sandboxed. They are inspected before they run, and runs need approval unless auto-approval is on.</p>
+                                            @if (editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment)
+                                            {
+                                                <p class="mt-1" data-testid="agents-catalog-workspace-scripts-environment-warning">Scripts may also read every environment variable passed to them, including operator proxy settings.</p>
+                                            }
+                                            else
+                                            {
+                                                <p class="mt-1">Scripts that read environment variables beyond PATH, TEMP and HOME, or list all variables, are blocked until "Scripts may read environment variables" is enabled.</p>
+                                            }
+                                        </Alert>
+                                    }
                                 </div>
                                 <div class="cda-admin-subpanel">
                                     <p class="cda-field-label mb-2">File access</p>

@@ -504,10 +504,14 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 
         await page.GetByTestId("providers-new").ClickAsync();
         await page.GetByRole(AriaRole.Heading, new() { Name = "New provider profile", Exact = true }).WaitForAsync();
+        var kindSelect = page.GetByTestId("providers-kind-select");
+        if (!string.Equals(await kindSelect.InputValueAsync(), kind, StringComparison.Ordinal)) {
+            await kindSelect.SelectOptionAsync(kind);
+            await page.GetByText("Provider kind changed", new() { Exact = true }).WaitForAsync();
+        }
+        await page.GetByTestId("providers-purpose-select").SelectOptionAsync(purpose);
         await page.GetByTestId("providers-name-input").FillAsync(name);
         await page.GetByTestId("providers-model-input").FillAsync(model);
-        await page.GetByTestId("providers-kind-select").SelectOptionAsync(kind);
-        await page.GetByTestId("providers-purpose-select").SelectOptionAsync(purpose);
         await page.GetByTestId("providers-base-url-input").FillAsync(baseUrl);
         await page.GetByTestId("providers-api-key-input").SelectOptionAsync(
             new SelectOptionValue { Label = secretName });

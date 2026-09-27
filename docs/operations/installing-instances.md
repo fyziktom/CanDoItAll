@@ -39,7 +39,7 @@ that deployment contract. Verify that the artifact contains `CanDoItAll.Web.dll`
 
 Every non-development instance also requires:
 
-- PostgreSQL 16 with a dedicated non-superuser application role;
+- PostgreSQL 18 with a dedicated non-superuser application role;
 - owned, writable workspace and control-plane purpose roots;
 - a stable `CANDOITALL_HOST_BINDING_ID` containing 8-128 ASCII letters, digits, hyphens,
   or underscores;
@@ -217,7 +217,8 @@ launchd, validation, restart, and rollback procedure.
 The repository Compose model always runs the Linux Web image, even when Docker Desktop is
 hosted on Windows or macOS. It uses sibling source-context restore and owns `app-data` and `db-data`
 named volumes. Application state is under `/data`; PostgreSQL state is under
-`/var/lib/postgresql/data` in the database volume.
+`/var/lib/postgresql/18/docker` inside the volume mounted at `/var/lib/postgresql`.
+Migrate retained older clusters using the [preservation runbook](../../tools/dev/Migrate-PostgreSql16To18.md).
 
 Normal teardown preserves both volumes:
 

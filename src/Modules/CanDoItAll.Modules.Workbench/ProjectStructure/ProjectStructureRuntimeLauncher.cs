@@ -9,6 +9,14 @@ public interface IProjectStructureRuntimeLauncher
 
     bool IsRunning(string nodeId) => false;
 
+    ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => null;
+
+    Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
+        string nodeId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<ProjectStructureRuntimeExitRecord?>(null);
+
     ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node);
 
     ProjectStructureRuntimeLaunchResolution Resolve(
@@ -92,6 +100,14 @@ internal sealed class ProjectStructureRuntimeLauncher(
     public bool IsAvailable => true;
 
     public bool IsRunning(string nodeId) => executionAdapter.IsRunning(nodeId);
+
+    public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => executionAdapter.GetLastExit(nodeId);
+
+    public Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
+        string nodeId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+        => executionAdapter.WaitForExitAsync(nodeId, timeout, cancellationToken);
 
     public ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node)
     {

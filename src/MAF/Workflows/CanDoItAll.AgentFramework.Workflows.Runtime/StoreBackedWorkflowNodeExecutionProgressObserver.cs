@@ -13,11 +13,23 @@ internal sealed class StoreBackedWorkflowNodeExecutionProgressObserver(
 
     public WorkflowReadEvidenceDurability ReadEvidenceDurability => WorkflowReadEvidenceDurability.Persisted;
 
-    public async ValueTask RecordAsync(
+    public ValueTask RecordAsync(
         WorkflowNodeExecutionProgress progress,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(progress);
+        return RecordEventAsync(progress, CreateEvent(progress), cancellationToken);
+    }
+
+    public async ValueTask RecordEventAsync(
+        WorkflowNodeExecutionProgress progress,
+        WorkflowEventRecord workflowEvent,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(progress);
+        ArgumentNullException.ThrowIfNull(workflowEvent);
+        if (workflowEvent.RunId != run.RunId || workflowEvent.NodeId != progress.NodeId) {
+            throw new InvalidOperationException("The canonical progress event must belong to the observed run and node.");
+        }
+
         if (progress.UsageObservations.Count > 0)
         {
             if (usageStore is null)
@@ -38,6 +50,11 @@ internal sealed class StoreBackedWorkflowNodeExecutionProgressObserver(
             await usageStore.AppendRangeAsync(correlatedObservations, cancellationToken);
         }
 
+        await store.SaveEventAsync(workflowEvent, cancellationToken);
+        await eventSink.PublishAsync(workflowEvent, cancellationToken);
+    }
+
+    private WorkflowEventRecord CreateEvent(WorkflowNodeExecutionProgress progress) {
         var eventKind = progress.State switch
         {
             WorkflowNodeExecutionProgressState.Started => WorkflowEventKind.ExecutorInvoked,
@@ -52,7 +69,7 @@ internal sealed class StoreBackedWorkflowNodeExecutionProgressObserver(
             WorkflowNodeExecutionProgressState.Failed => progress.ErrorMessage,
             _ => string.Empty
         };
-        var workflowEvent = new WorkflowEventRecord(
+        return new WorkflowEventRecord(
             Guid.NewGuid(),
             run.RunId,
             eventKind,
@@ -70,8 +87,6 @@ internal sealed class StoreBackedWorkflowNodeExecutionProgressObserver(
                 ProviderReadEvidence = progress.ProviderReadEvidence
             };
 
-        await store.SaveEventAsync(workflowEvent, cancellationToken);
-        await eventSink.PublishAsync(workflowEvent, cancellationToken);
     }
 
     private static string CreateSafeMessage(WorkflowNodeExecutionProgress progress)

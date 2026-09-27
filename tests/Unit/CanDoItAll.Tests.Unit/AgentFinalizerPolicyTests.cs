@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -1043,6 +1044,15 @@ public sealed class AgentFinalizerPolicyTests
         var provider = CreateProvider(
             ProviderTransportKind.Responses,
             preferFrameworkManagedHistory: false);
+        var checkpoint = new MafRuntimeStateAdapter().CreateEnvelope(new AgentRuntimeStateCaptureRequest(
+            provider.Id,
+            provider.Transport,
+            provider.DefaultModel,
+            string.Empty,
+            string.Empty,
+            """{"conversationId":"provider-conversation"}""",
+            DateTimeOffset.UtcNow,
+            AgentChatHistoryMode.ProviderManaged));
         var session = new ChatSessionRecord(
             Guid.NewGuid(),
             agent.Id,
@@ -1050,7 +1060,7 @@ public sealed class AgentFinalizerPolicyTests
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
             RuntimeSessionKey: "runtime-session",
-            SerializedSessionStateJson: """{"conversationId":"provider-conversation"}""",
+            SerializedSessionStateJson: checkpoint.ToJson(),
             Messages: [],
             PendingApprovals:
             [

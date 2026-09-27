@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = CreateFunctionResultJsonOptions();

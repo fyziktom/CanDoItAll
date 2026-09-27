@@ -116,6 +116,9 @@ internal sealed class WorkspaceCommandReceiptWriter
             processResult.StdoutTruncated,
             processResult.StderrTruncated,
             processResult.FailureMessage,
+            startFailureCode = processResult.StartFailureKind == WorkspaceProcessStartFailureKind.None
+                ? null
+                : WorkspaceLaunchExplanations.For(processResult.StartFailureKind).Code,
             processResult.StartedAtUtc,
             processResult.CompletedAtUtc,
             artifactReferences
@@ -157,7 +160,9 @@ internal sealed class WorkspaceCommandReceiptWriter
             workingDirectory: workingDirectory,
             exitSummary: processResult.Started
                 ? $"{outcome} (exit {processResult.ExitCode})"
-                : $"Failed ({processResult.FailureMessage})",
+                : processResult.StartFailureKind == WorkspaceProcessStartFailureKind.None
+                    ? $"Failed ({processResult.FailureMessage})"
+                    : $"Failed ({WorkspaceLaunchExplanations.For(processResult.StartFailureKind).Code}: {processResult.FailureMessage})",
             declaredSideEffectMode: declaredSideEffectMode);
     }
 

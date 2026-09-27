@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureAgentToolIntegrityEndToEndTests
 {
     internal const string RequestedAssetTitle = "Integrity architecture overview";

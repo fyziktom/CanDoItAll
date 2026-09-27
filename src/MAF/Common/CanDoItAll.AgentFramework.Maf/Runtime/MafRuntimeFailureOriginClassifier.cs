@@ -102,6 +102,22 @@ internal static class MafRuntimeFailureOriginClassifier
         return null;
     }
 
+    internal static System.Net.HttpStatusCode? ResolveProviderStatusCode(Exception exception) {
+        for (var current = exception; current is not null; current = current.InnerException) {
+            var status = current switch {
+                AgentRuntimeUsageException { ProviderStatusCode: { } value } => (int)value,
+                HttpRequestException { StatusCode: { } value } => (int)value,
+                System.ClientModel.ClientResultException result => result.Status,
+                CanDoItAll.AgentFramework.Providers.ProviderFailureBoundaryException boundary => boundary.DiagnosticStatusCode,
+                _ => null
+            };
+            if (status is >= 100 and <= 599) {
+                return (System.Net.HttpStatusCode)status.Value;
+            }
+        }
+        return null;
+    }
+
     private static bool IsCompletedFailure(AgentToolInvocationTrace trace)
         => trace.CompletedAtUtc.HasValue && !trace.Succeeded;
 

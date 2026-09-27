@@ -91,6 +91,7 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
 
             Assert.False(result.IsSuccess);
             Assert.Contains("not authorized for this agent execution", result.Message, StringComparison.Ordinal);
+            Assert.Contains("ask the user to select this node", result.Message, StringComparison.Ordinal);
         }
         finally
         {

@@ -13,6 +13,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class EmailWorkflowSwitchScenarioTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -521,7 +522,7 @@ public sealed class EmailWorkflowSwitchScenarioTests
         {
             Database = databaseName,
             IncludeErrorDetail = true,
-            Timeout = 5,
+            Timeout = PostgresTestDatabaseLease.ConnectTimeoutSeconds,
             CommandTimeout = 15
         };
 
@@ -555,7 +556,7 @@ public sealed class EmailWorkflowSwitchScenarioTests
         }
 
         builder.IncludeErrorDetail = true;
-        builder.Timeout = 5;
+        builder.Timeout = PostgresTestDatabaseLease.ConnectTimeoutSeconds;
         builder.CommandTimeout = 15;
         return builder.ConnectionString;
     }

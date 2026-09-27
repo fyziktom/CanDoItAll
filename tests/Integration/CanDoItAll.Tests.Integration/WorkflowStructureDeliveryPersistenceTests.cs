@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class WorkflowStructureDeliveryPersistenceTests {
     [Theory]
     [InlineData(false)]

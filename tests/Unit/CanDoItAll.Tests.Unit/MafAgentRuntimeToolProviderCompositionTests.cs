@@ -35,6 +35,27 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class MafAgentRuntimeToolProviderCompositionTests
 {
     [Fact]
+    public async Task MafAgentRuntimePublishedOutput_tools_use_the_current_workspace_service() {
+        var directory = Directory.CreateTempSubdirectory("cdia-provider-publish-");
+        try {
+            using var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider();
+            var runtime = RuntimeCapabilityComposer.CreateDefault(directory.FullName, services);
+            var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(new AgentWorkspaceToolAccessSettings {
+                CanRunValidationCommands = true
+            }));
+            var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+            var publish = Assert.IsAssignableFrom<AIFunction>(Assert.Single(ReadTools(state), tool => tool.Name == ToolContractCatalog.WorkspaceDotNetPublish));
+            Assert.Contains(ReadTools(state), tool => tool.Name == ToolContractCatalog.WorkspaceStaticServe);
+            var result = await publish.InvokeAsync(new AIFunctionArguments { ["targetPath"] = "missing.csproj" });
+            var serialized = JsonSerializer.SerializeToElement(result);
+            Assert.Contains("Denied", serialized.GetRawText(), StringComparison.Ordinal);
+            Assert.Equal(ToolContractCatalog.WorkspaceDotNetPublish, serialized.GetProperty("toolName").GetString());
+        } finally {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_zero_registered_providers_does_not_attach_process_tools()
     {
         var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
@@ -3276,21 +3297,21 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
 
         public Task<WorkspaceCommandExecutionResult> GitSwitch(string branchName, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitSwitch(branchName, workingDirectory, timeoutSeconds);
 
-        public Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600) => inner.DotnetRestore(targetPath, workingDirectory, timeoutSeconds);
+        public Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null) => inner.DotnetRestore(targetPath, workingDirectory, timeoutSeconds, artifactsPath);
 
-        public Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600) => inner.DotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds);
+        public Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null) => inner.DotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds, artifactsPath);
 
-        public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300) => inner.DotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds);
+        public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300, string? artifactsPath = null) => inner.DotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds, artifactsPath);
 
-        public Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun) => inner.DotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope);
+        public Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun, string? artifactsPath = null) => inner.DotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope, artifactsPath);
 
         public Task<WorkspaceCommandExecutionResult> DotnetStop(string startupReceiptPath, int timeoutSeconds = 30) => inner.DotnetStop(startupReceiptPath, timeoutSeconds);
 
         public Task<WorkspaceCommandExecutionResult> DotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300, string? targetFramework = null) => inner.DotnetNew(template, name, parentDirectory, force, timeoutSeconds, targetFramework);
 
-        public Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null) => inner.PythonRunFile(path, arguments, workingDirectory, timeoutSeconds, sideEffectManifest);
+        public Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null, bool extendedEnvironmentAllowed = false) => inner.PythonRunFile(path, arguments, workingDirectory, timeoutSeconds, sideEffectManifest, extendedEnvironmentAllowed);
 
-        public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null) => inner.PowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds, sideEffectManifest);
+        public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null, bool extendedEnvironmentAllowed = false) => inner.PowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds, sideEffectManifest, extendedEnvironmentAllowed);
 
         public Task<WorkspaceCommandExecutionResult> InspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300) => inner.InspectSpreadsheetPreview(path, maxRows, maxColumns, timeoutSeconds);
 

@@ -355,6 +355,11 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     cancellationToken, id => admittedExecutionRunId = id)
                 .ConfigureAwait(false);
             executionStage = ProcessAgentExecutionStage.AgentOutputValidation;
+            if (result.Metric.Outcome == RunOutcome.Cancelled) {
+                return CompleteWithDispatchHostEvidence(TerminalAgentFailure(
+                    ProcessAgentFailureKind.Canceled, result.ExecutionRunId, result.ExecutionRunId.ToString("D")));
+            }
+
 
             if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                     assignment,
@@ -386,6 +391,12 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 {
                     ExecutionRunId = new ProcessExecutionRunId(result.ExecutionRunId)
                 });
+            }
+
+            if (result.Metric.Outcome == RunOutcome.Failed) {
+                return CompleteWithDispatchHostEvidence(TerminalAgentFailure(
+                    ProcessRuntimeFailureClassifier.Classify(result.ResponseText), result.ExecutionRunId,
+                    $"{result.ExecutionRunId:D}:{result.Metric.Outcome}:{result.ResponseText}"));
             }
 
             var validation = AgentOutputJson.DeserializeAndValidate(
@@ -494,6 +505,11 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             if (exception is AgentRunFailedException admittedFailure && admittedFailure.ExecutionRunId != Guid.Empty) {
                 admittedExecutionRunId = new(admittedFailure.ExecutionRunId);
             }
+            var failureKind = ProcessRuntimeFailureClassifier.Classify(exception);
+            if (failureKind == ProcessAgentFailureKind.Canceled) {
+                return CompleteWithDispatchHostEvidence(TerminalAgentFailure(
+                    failureKind, admittedExecutionRunId?.Value, exception.GetType().FullName + ":" + exception.Message));
+            }
             if (await ParentSubprocessArtifactBridge.TryResolveExistingPendingChildRunAsync(
                     assignment,
                     assignmentStore,
@@ -552,10 +568,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 executionStage,
                 exception.GetType().FullName,
                 evidenceHash);
-            return CompleteWithDispatchHostEvidence(Failed(
-                "process.adapter.agent_execution_failed",
-                $"Agent execution failed for step '{assignment.StepKey}'. Host diagnostics record the failure stage and exception type under the evidence hash.",
-                evidenceHash));
+            return CompleteWithDispatchHostEvidence(TerminalAgentFailure(
+                failureKind, admittedExecutionRunId?.Value, evidenceHash));
         }
 
         async ValueTask<IReadOnlyList<CapabilityCatalogItem>> ResolveAttachedCapabilityCatalogAsync(

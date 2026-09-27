@@ -20,6 +20,7 @@ using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind
 using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 #pragma warning disable OPENAI001
+[Trait("Category", "HostPlatform")]
 public sealed class SharedProviderRuntimePathCharacterizationTests
 {
     [Fact]

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class CapabilityProofPublicationIntegrationTests {
     [Fact]
     public async Task Registered_database_runtime_revision_change_supersedes_inline_proof() {

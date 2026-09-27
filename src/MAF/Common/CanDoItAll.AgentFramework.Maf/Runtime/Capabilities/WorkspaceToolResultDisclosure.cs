@@ -336,7 +336,7 @@ internal sealed record WorkspaceToolResultEvidence(string ToolName, string Works
     }
 
     private static void Validate(WorkspaceToolResultEvidence evidence) {
-        if (string.IsNullOrWhiteSpace(evidence.ToolName) || !ToolContractCatalog.WorkspaceToolNames.Contains(evidence.ToolName) ||
+        if (string.IsNullOrWhiteSpace(evidence.ToolName) || !(ToolContractCatalog.WorkspaceToolNames.Contains(evidence.ToolName) || WorkspaceValidationToolProvider.Owns(evidence.ToolName)) ||
                 string.IsNullOrWhiteSpace(evidence.WorkspaceRoot) || !Path.IsPathFullyQualified(evidence.WorkspaceRoot) ||
                 evidence.Scope is null || evidence.Source is null || !Enum.IsDefined(evidence.State) || evidence.Paths.IsDefault ||
                 evidence.Paths.Length > MaximumPaths || evidence.Paths.Any(path => path is null ||

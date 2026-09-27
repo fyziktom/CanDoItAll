@@ -175,7 +175,8 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
             serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
-            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>(),
+            serviceProvider.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()));
         services.TryAddScoped<MafAgentRuntime>(serviceProvider => new MafAgentRuntime(normalizedWorkspaceRoot, serviceProvider, resolvedScope));
         // SB18: the four narrow runtime ports resolve directly to the native MAF adapters exposed
         // by the same MafAgentRuntime composition (one adapter set per runtime scope). No broad

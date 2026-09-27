@@ -104,6 +104,7 @@ internal static partial class ProcessRuntimeOperatorDiagnosticDetailsBuilder
             ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid => "Rewrite the declared schema-bound artifact from its template contract before completing this branch.",
             ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected => "Repair the rejected current-run tool evidence or route to the configured repair branch.",
             "process.adapter.branch_outcome_defect_evidence_missing" => "Provide deterministic defect evidence before using the configured repair route.",
+            "process.adapter.agent_tool_launch_failed" => "Open the failed tool receipt of this step, fix the named host condition (install the program or add it to PATH, create or shorten the working folder, or grant access), then retry the step.",
             _ => "Inspect the diagnostic and retry only after the stated gate is satisfied."
         };
     }

@@ -4,32 +4,35 @@ The application runs as a .NET 10 Blazor Web App backed by PostgreSQL.
 
 ## Database
 
-The canonical Compose file starts a loopback-only PostgreSQL 16 service. In PowerShell:
+PostgreSQL 18.6 is the provisioned baseline. For retained data, follow the
+[PostgreSQL 16-to-18 runbook](../tools/dev/Migrate-PostgreSql16To18.md) before changing
+an image or volume. An ignored `.env` can override the new image default.
+
+The base Compose service `db` is private to its network and reads its password from
+`.secrets/db-password`. To run the web host on the workstation, prepare ignored local
+configuration and the explicit loopback publication override. Copy examples only when
+the destination does not already exist, preserving existing settings and secrets:
 
 ```powershell
-Copy-Item .env.example .env
-docker compose up -d --wait db
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+if (-not (Test-Path compose.override.yaml)) { Copy-Item compose.override.yaml.example compose.override.yaml }
 ```
 
-In a POSIX shell:
+Create `.secrets/db-password` privately, then run `docker compose config --quiet` and
+`docker compose up -d --wait db`. Configure the host's database password to match that
+secret; `.env` supplies Compose interpolation and does not configure a source-launched
+.NET host. The checked-in development launch profiles contain local-only example
+credentials for `127.0.0.1:5432/candoitall_development`.
 
-```sh
-cp .env.example .env
-docker compose up -d --wait db
-```
-
-The default development connection is:
-
-```text
-Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall
-```
-
-The credential is for a local loopback-bound development database. Change it before
-using a shared host. Native PostgreSQL users can prepare the local role and database with:
+For an explicitly selected native PostgreSQL 18 target:
 
 ```powershell
-& .\tools\dev\Ensure-DevelopmentPostgres.ps1
+& ./tools/dev/Ensure-DevelopmentPostgres.ps1 -PsqlPath <verified-postgresql-18-bin/psql.exe> -AdminHost 127.0.0.1 -AdminPort 5432
 ```
+
+Supply administrative credentials privately. The helper verifies both client and server
+major versions, supports `-WhatIf`, and does not reset existing role passwords or change
+existing ownership. Test runs use a separate endpoint as described in [Testing](testing.md).
 
 ## Run The Application
 

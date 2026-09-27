@@ -13,6 +13,7 @@ using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManag
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 {
     private static readonly Guid ManagedOpenAiImageProviderId = Guid.Parse("8958FA61-4BD6-1451-8123-4E4E4FEA2E26");

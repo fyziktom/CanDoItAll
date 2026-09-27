@@ -940,6 +940,40 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task DotnetRun_start_failure_reports_the_typed_reason_in_the_result_and_startup_receipt()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost(onExecute: _ => throw new WorkspaceProcessStartException(
+            WorkspaceLaunchExplanations.For(WorkspaceProcessStartFailureKind.AccessDenied).AgentText,
+            WorkspaceProcessStartFailureKind.AccessDenied,
+            operatorDetail: @"The host denied starting 'C:\hidden\dotnet.exe'."));
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/SampleWeb/SampleWeb.csproj",
+                url: "http://127.0.0.1:5124/",
+                startupTimeoutSeconds: 5,
+                timeoutSeconds: 20);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("ProcessStartFailed.AccessDenied", result.FailureCode);
+            Assert.Contains("could not start: The host denied starting the program for this command.", result.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(@"C:\hidden", result.Message, StringComparison.Ordinal);
+            using var startup = await ReadStartupReceiptAsync(workspaceRoot, result);
+            Assert.False(startup.RootElement.GetProperty("succeeded").GetBoolean());
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetRun_http_smoke_uses_project_directory_and_returns_launch_evidence_targets()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
@@ -2271,6 +2305,41 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal(["new", "webapp", "-n", "TrailheadSnackBox.Web"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TrailheadSnackBox.Web", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_inside_an_existing_project_is_a_prohibited_refusal_before_launch()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps", "App"));
+        File.WriteAllText(Path.Combine(workspaceRoot, "apps", "App", "App.csproj"), "<Project />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            using (var capture = AgentToolInvocationEffectScope.Begin())
+            {
+                var result = await service.DotnetNew("xunit", "App.Tests", "apps/App");
+
+                Assert.False(result.Succeeded);
+                Assert.Equal("Denied", result.Receipt.Outcome);
+                Assert.True(capture.ProhibitedBeforeEffect);
+            }
+
+            using (var capture = AgentToolInvocationEffectScope.Begin())
+            {
+                Assert.False((await service.DotnetNew("xunit", "nested/App.Tests", "apps")).Succeeded);
+                Assert.True(capture.RejectedBeforeEffect);
+                Assert.False(capture.ProhibitedBeforeEffect);
+            }
+
+            Assert.Null(processHost.LastRequest);
         }
         finally
         {

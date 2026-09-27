@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class MafStorageResultDisclosureIntegrationTests {
     private const string CatalogCallId = "original-storage-catalog";
     private const string ReadCallId = "diagnostic-storage-read";

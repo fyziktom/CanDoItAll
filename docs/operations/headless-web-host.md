@@ -17,7 +17,7 @@ Every publish contains `runtime-support.json`. Treat it as the artifact's bounde
 | `osx-x64` | Framework-dependent | Embedded support manifest reports `ActualHostUnverified` |
 | `osx-arm64` | Framework-dependent | Embedded support manifest reports `ActualHostUnverified` |
 
-The host requires the matching .NET 10 ASP.NET Core runtime, PostgreSQL 16, writable purpose roots, and a stable `CANDOITALL_HOST_BINDING_ID`. Production Unix hosts also require an explicitly configured certificate-backed ASP.NET Core Data Protection key protector. A cross-RID publish is not actual-host evidence. macOS Keychain execution requires a genuine interactive user Keychain; headless `Auto` uses LocalUserFile/`BasicLocal`, not Keychain.
+The host requires the matching .NET 10 ASP.NET Core runtime, PostgreSQL 18, writable purpose roots, and a stable `CANDOITALL_HOST_BINDING_ID`. Production Unix hosts also require an explicitly configured certificate-backed ASP.NET Core Data Protection key protector. A cross-RID publish is not actual-host evidence. macOS Keychain execution requires a genuine interactive user Keychain; headless `Auto` uses LocalUserFile/`BasicLocal`, not Keychain.
 
 ## Publish
 

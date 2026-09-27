@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Memory;
 
+[Trait("Category", "HostPlatform")]
 public sealed class MemoryProvidersPageTests
 {
     [Fact]

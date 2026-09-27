@@ -36,6 +36,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureAgentIntegrationTests
 {
     private static readonly ProjectStructureAgentContext DefaultAgent = new(
@@ -1399,7 +1400,9 @@ public sealed class ProjectStructureAgentIntegrationTests
             scope.ServiceProvider,
             new ProcessRunId(parent.RunId.Value),
             parentAssignment.StepInstanceId);
-        var retry = await agentService.StartProcessSubprocessAsync(
+        await using var resumedScope = application.Services.CreateAsyncScope();
+        var resumedAgentService = resumedScope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var retry = await resumedAgentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
             parentAssignment.StepInstanceId.ToString(),
@@ -4283,6 +4286,47 @@ public sealed class ProjectStructureAgentIntegrationTests
         var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
         var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
         Assert.Equal(validProjectPath, persistedMetadata.Environment!.ProjectPath);
+    }
+
+    [Fact]
+    public async Task AgentService_UpdateNodeTypeAsync_explains_how_to_change_a_runtime_node_into_another_runnable_type()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var projectDirectory = Path.Combine(workspaceRoot, "runtime-reclassification", "Calculator");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "Calculator.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var projectId = await CreateProjectAsync(projects, "Runtime reclassification guidance");
+        var created = await agentService.CreateNodeAsync(
+            projectId,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Environment,
+                "Run Calculator",
+                "dotnet watch",
+                "Runs the Calculator project.",
+                $"project:{projectId}",
+                ObjectSubtype: "dotnet-watch",
+                MetadataJson: CreateDotNetRuntimeMetadata(projectDirectory)),
+            DefaultAgent);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.UpdateNodeTypeAsync(
+                projectId,
+                created.Id,
+                new ProjectStructureNodeTypeInput(ProjectObjectType.Script, "powershell"),
+                DefaultAgent));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
+        Assert.Contains("project_structure_node_update", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("metadataJson for the new type", exception.Message, StringComparison.Ordinal);
+        var persistedNode = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Id == created.Id);
+        Assert.Equal(ProjectObjectType.Environment, persistedNode.ObjectType);
     }
 
     [Fact]

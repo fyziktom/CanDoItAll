@@ -21,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
 
+[Trait("Category", "HostPlatform")]
 public sealed class LlmChatsApiPostgreSqlIntegrationTests
 {
     private const string FastModel = "model-fast";

@@ -19,6 +19,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowFileProviderDisclosureIntegrationTests {
     [Theory]
     [InlineData(false, FileReadKind.WorkspaceText, FileReadChange.None, false)]

@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Shell;
 
+[Trait("Category", "HostPlatform")]
 public sealed class PluginsPageTests
 {
     [Fact]

@@ -9,6 +9,7 @@ using CanDoItAll.AgentFramework.Persistence;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
 
+[Trait("Category", "HostPlatform")]
 public sealed class HrAgentToolPolicyTests
 {
     [Theory]

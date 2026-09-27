@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Persistence;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ResourceStorageObjectIntegrationTests
 {
     [Fact]

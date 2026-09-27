@@ -17,7 +17,14 @@ internal sealed record WorkspaceCommandPlan(
     IReadOnlyDictionary<string, string?>? EnvironmentVariables = null,
     ToolExecutionSideEffectMode DeclaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified,
     WorkspaceDotnetRunLifecyclePlan? DotnetRunLifecycle = null,
-    WorkspaceDotnetStopLifecyclePlan? DotnetStopLifecycle = null);
+    WorkspaceDotnetStopLifecyclePlan? DotnetStopLifecycle = null)
+{
+    /// <summary>
+    /// Whether the operator's network-trust and extra variable names reach this process. Agent script
+    /// tools get them only when the agent may read the process environment.
+    /// </summary>
+    public bool ExtendedEnvironmentAllowed { get; init; } = true;
+}
 
 internal sealed record WorkspaceDotnetRunLifecyclePlan(
     string ListenUrl,

@@ -22,6 +22,7 @@ using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentApiFailureContractIntegrationTests
 {
     private static readonly JsonSerializerOptions ApiJsonOptions = new(

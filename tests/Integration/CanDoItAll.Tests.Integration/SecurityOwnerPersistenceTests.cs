@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SecurityOwnerPersistenceTests {
     private const string PluginId = "security-owner-fixture";
     private const string ConnectionId = "primary";

@@ -329,7 +329,7 @@ public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
         Assert.Null((await service.FindReceiptAsync(orphanKey)).Value);
         var deletion = await Assert.ThrowsAsync<PostgresException>(() => owner.Set<LlmChatDefinitionRevisionRow>()
             .Where(row => row.DefinitionId == original.DefinitionId.Value && row.Revision == 1).ExecuteDeleteAsync());
-        Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, deletion.SqlState);
+        Assert.Equal(PostgresErrorCodes.RestrictViolation, deletion.SqlState);
         Assert.Equal("FK_LlmChats_CreateReceipt_OriginalRevision", deletion.ConstraintName);
         Assert.Equal(original, (await service.FindReceiptAsync(admission.Key)).Value);
         await AssertCountsAsync(application, 1, 1);

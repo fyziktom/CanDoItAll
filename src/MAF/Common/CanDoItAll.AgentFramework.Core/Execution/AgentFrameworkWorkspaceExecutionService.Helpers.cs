@@ -46,13 +46,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ExecutionState state,
         string phase,
         string message,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DateTimeOffset? occurredAtUtc = null)
     {
         var entry = new ExecutionLogEntry(
             Id: Guid.NewGuid(),
             AgentId: agentId,
             ChatSessionId: chatSessionId,
-            CreatedAtUtc: DateTimeOffset.UtcNow,
+            CreatedAtUtc: occurredAtUtc ?? DateTimeOffset.UtcNow,
             State: state,
             Phase: phase,
             Message: message)
@@ -333,7 +334,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ExecutionState.Failed,
                 phase,
                 logMessage,
-                cancellationToken);
+                cancellationToken,
+                occurredAtUtc: failedRun.CompletedAtUtc
+                    ?? throw new InvalidOperationException("A terminal failure must have a completion timestamp."));
             return new TerminalFailurePersistenceResult(
                 TerminalRunPersisted: true,
                 ExecutionLogFailure: null);

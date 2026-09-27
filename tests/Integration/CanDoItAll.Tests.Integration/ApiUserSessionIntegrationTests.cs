@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ApiUserSessionIntegrationTests {
     [Fact]
     public async Task Registered_administrator_manages_accounts_while_machine_and_user_credentials_cannot() {

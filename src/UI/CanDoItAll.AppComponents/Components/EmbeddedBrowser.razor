@@ -1,4 +1,5 @@
 @namespace CanDoItAll.AppComponents
+@inject NavigationManager Navigation
 
 <SurfaceCard Class="@Class"
              Style="flex:1 1 0;height:100%;min-height:0;width:100%;overflow:hidden;display:flex;padding:0;"
@@ -9,7 +10,7 @@
         <iframe src="@Source.AbsoluteUri"
                 title="@Title"
                 class="embedded-browser__frame"
-                sandbox="@RestrictedSandbox"
+                sandbox="@ResolvedSandbox"
                 referrerpolicy="no-referrer"
                 loading="lazy"></iframe>
     }
@@ -38,6 +39,7 @@
 
 @code {
     public const string RestrictedSandbox = "allow-forms allow-popups allow-scripts";
+    public const string LocalApplicationSandbox = RestrictedSandbox + " allow-same-origin";
 
     [Parameter, EditorRequired]
     public Uri Source { get; set; } = default!;
@@ -56,6 +58,22 @@
 
     [Parameter]
     public string DataTestId { get; set; } = "embedded-browser";
+
+    // Without its own origin a local single-page or WebAssembly application cannot load its framework files or
+    // use storage, so the frame stays blank. A loopback application on another origin keeps its own origin; the
+    // differing origin, not the sandbox, still keeps it away from this page. Same-origin content stays restricted.
+    private string ResolvedSandbox
+        => Source.IsLoopback && !IsSameOrigin(Source, new Uri(Navigation.BaseUri))
+            ? LocalApplicationSandbox
+            : RestrictedSandbox;
+
+    private static bool IsSameOrigin(Uri left, Uri right)
+        => Uri.Compare(
+            left,
+            right,
+            UriComponents.SchemeAndServer,
+            UriFormat.Unescaped,
+            StringComparison.OrdinalIgnoreCase) == 0;
 
     private string ResolvedEmbedUnavailableReason
         => string.IsNullOrWhiteSpace(EmbedUnavailableReason)

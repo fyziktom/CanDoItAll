@@ -11,6 +11,12 @@ For framework-dependent Windows/Linux/macOS headless deployments, use the separa
 [Headless Web Host Operations](headless-web-host.md) runbook. The Windows installer in
 this guide remains the owner of desktop shortcuts and its dedicated managed database.
 
+Existing major-version data must first follow the
+[PostgreSQL 16-to-18 preservation runbook](../../tools/dev/Migrate-PostgreSql16To18.md).
+PostgreSQL 18 mounts `/var/lib/postgresql` and initializes `/var/lib/postgresql/18/docker`.
+The installer and standalone launcher reject old, conflicting, empty-existing or partial
+clusters before starting the server or changing managed state.
+
 ## Install
 
 Run the canonical installer from the repository root:
@@ -109,9 +115,9 @@ repair, or remove this installed resource set.
 |---|---|
 | Container | `candoitall-webapp-db` |
 | Data volume | `candoitall-webapp-db-data` |
-| Readable image tag | `postgres:16.14-alpine` |
-| Immutable multi-platform digest | `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777` |
-| Managed image reference | `postgres:16.14-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777` |
+| Readable image tag | `postgres:18.6-alpine` |
+| Immutable multi-platform digest | `sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873` |
+| Managed image reference | `postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873` |
 | Published endpoint | `127.0.0.1:55432` |
 
 An existing container is reused or started only when its managed identity, immutable
@@ -135,12 +141,13 @@ Never remove `candoitall-webapp-db-data` as part of ordinary stop, reinstall, or
 
 ### Native mode
 
-Native mode pins the official EDB Windows x64 PostgreSQL 16.14-2 archive and verifies its
+Native mode pins the official EDB Windows x64 PostgreSQL 18.6-4 archive and verifies its
 expected byte length and SHA-256 before extraction:
 
 - source catalog: <https://www.enterprisedb.com/download-postgresql-binaries>
-- archive: <https://get.enterprisedb.com/postgresql/postgresql-16.14-2-windows-x64-binaries.zip>
-- SHA-256: `8A7F54C1968D5D49BDCD3F66B1291F736C74B8CB6A26E9874771FCC7837DBF38`
+- archive: <https://get.enterprisedb.com/postgresql/postgresql-18.6-4-windows-x64-binaries.zip>
+- byte length: `382815572`
+- SHA-256: `1DF55002AFE95B945D934C078B13E82C1603FA546731E511D068AA983B4EAD28`
 
 The full `pgsql` layout and its license/third-party notice files remain together under the
 install root. The cluster uses SCRAM authentication and listens only on `127.0.0.1`. The

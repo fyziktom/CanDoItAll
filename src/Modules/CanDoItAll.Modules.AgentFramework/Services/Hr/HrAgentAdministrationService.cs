@@ -531,7 +531,8 @@ public sealed class HrAgentAdministrationService(
             access.CanReadStorage,
             access.CanWriteStorage,
             access.AllowAllStorageCatalogs,
-            access.AllowedStorageCatalogIds.ToArray());
+            access.AllowedStorageCatalogIds.ToArray(),
+            access.CanScriptsReadEnvironment);
     }
 
     private static HrAgentAvatarMetadata MapAvatarMetadata(string? avatarImageUrl)
@@ -794,6 +795,7 @@ public sealed class HrAgentAdministrationService(
                 CanWriteFiles = input.CanWriteFiles,
                 CanRunValidationCommands = input.CanRunValidationCommands,
                 CanRunLocalScripts = input.CanRunLocalScripts,
+                CanScriptsReadEnvironment = input.CanScriptsReadEnvironment,
                 CanScaffoldProjects = input.CanScaffoldProjects,
                 CanManageWorkspacePaths = input.CanManageWorkspacePaths,
                 CanTransformArtifacts = input.CanTransformArtifacts,
@@ -846,6 +848,8 @@ public sealed class HrAgentAdministrationService(
                 CanRunValidationCommands =
                     patch.CanRunValidationCommands ?? normalizedCurrent.CanRunValidationCommands,
                 CanRunLocalScripts = patch.CanRunLocalScripts ?? normalizedCurrent.CanRunLocalScripts,
+                CanScriptsReadEnvironment =
+                    patch.CanScriptsReadEnvironment ?? normalizedCurrent.CanScriptsReadEnvironment,
                 CanScaffoldProjects = patch.CanScaffoldProjects ?? normalizedCurrent.CanScaffoldProjects,
                 CanManageWorkspacePaths =
                     patch.CanManageWorkspacePaths ?? normalizedCurrent.CanManageWorkspacePaths,

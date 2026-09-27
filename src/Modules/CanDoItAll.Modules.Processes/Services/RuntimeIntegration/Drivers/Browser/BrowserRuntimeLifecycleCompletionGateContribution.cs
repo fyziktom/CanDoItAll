@@ -44,13 +44,13 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
                 .Where(receipt => receipt.ExecutionRunId == context.CurrentExecutionRunId.Value)
                 .ToArray();
         var runReceipt = FindSuccessfulReceipt(currentReceipts, lifecycleToolNames.RunToolName);
-        var stopReceipt = FindSuccessfulReceipt(currentReceipts, lifecycleToolNames.StopToolName);
+        var stopReceipts = FindSuccessfulReceipts(currentReceipts, lifecycleToolNames.StopToolName);
         var browserReceipts = currentReceipts
             .Where(receipt => IsBrowserToolName(receipt.ToolName) && IsSuccessfulReceipt(receipt.ExitSummary))
             .ToArray();
 
         if (runReceipt is null ||
-            stopReceipt is null ||
+            stopReceipts.Count == 0 ||
             browserReceipts.Length == 0)
         {
             return CreateIssue(
@@ -60,14 +60,12 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
         }
 
         var runFacts = BrowserRuntimeLifecycleReceipt.From(runReceipt);
-        var stopFacts = BrowserRuntimeLifecycleReceipt.From(stopReceipt);
-        var browserFacts = browserReceipts
-            .Select(BrowserRuntimeLifecycleReceipt.From)
-            .ToArray();
-        if (runFacts.StartupReceiptPaths.Count == 0 ||
-            stopFacts.StartupReceiptPaths.Count == 0 ||
-            !runFacts.StartupReceiptPaths.Intersect(stopFacts.StartupReceiptPaths, StringComparer.OrdinalIgnoreCase).Any())
-        {
+        var stopReceipt = stopReceipts.FirstOrDefault(receipt =>
+            receipt.StartedAtUtc >= runReceipt.CompletedAtUtc &&
+            runFacts.StartupReceiptPaths.Intersect(
+                BrowserRuntimeLifecycleReceipt.From(receipt).StartupReceiptPaths,
+                StringComparer.OrdinalIgnoreCase).Any());
+        if (stopReceipt is null) {
             return CreateIssue(
                 context,
                 $"{lifecycleToolNames.RunToolName} and {lifecycleToolNames.StopToolName} receipts are not correlated by the same startup.json receipt. Retry QA using the startup.json path returned by the current {lifecycleToolNames.RunToolName} call when invoking {lifecycleToolNames.StopToolName}.",
@@ -75,7 +73,10 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
         }
 
         var runAuthorities = runFacts.LoopbackAuthorities;
-        var browserAuthorities = browserFacts
+        var browserAuthorities = browserReceipts
+            .Where(receipt => receipt.StartedAtUtc >= runReceipt.CompletedAtUtc &&
+                receipt.CompletedAtUtc <= stopReceipt.CompletedAtUtc)
+            .Select(BrowserRuntimeLifecycleReceipt.From)
             .SelectMany(facts => facts.LoopbackAuthorities)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -130,13 +131,18 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
     private static ToolExecutionReceiptRecord? FindSuccessfulReceipt(
         IReadOnlyList<ToolExecutionReceiptRecord> receipts,
         string toolName)
+        => FindSuccessfulReceipts(receipts, toolName).FirstOrDefault();
+
+    private static IReadOnlyList<ToolExecutionReceiptRecord> FindSuccessfulReceipts(
+        IReadOnlyList<ToolExecutionReceiptRecord> receipts,
+        string toolName)
         => receipts
             .Where(receipt => string.Equals(receipt.ToolName, toolName, StringComparison.OrdinalIgnoreCase) &&
                               !string.Equals(receipt.ToolFamily, RuntimeProviderReceiptFamily, StringComparison.OrdinalIgnoreCase) &&
                               !string.Equals(receipt.ToolFamily, AgentToolTraceReceiptFamily, StringComparison.OrdinalIgnoreCase) &&
                               IsSuccessfulReceipt(receipt.ExitSummary))
             .OrderByDescending(receipt => receipt.CompletedAtUtc)
-            .FirstOrDefault();
+            .ToArray();
 
     private static ProcessCompletionIssue CreateIssue(
         ProcessCompletionGateContext context,

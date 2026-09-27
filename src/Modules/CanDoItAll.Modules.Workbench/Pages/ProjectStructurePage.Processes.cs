@@ -8,6 +8,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -291,9 +292,11 @@ public partial class ProjectStructurePage
         try {
             var caller = await ProcessLaunchAuthorities.CaptureUserInterfaceAsync(null);
             var storageKey = $"candoitall.process-launch.structure:{caller.DatabaseProfileId:D}:{dialog.ProjectId:D}:{dialog.TargetNodeId}:{dialog.ProcessDefinitionId:D}";
-            if (await TryRestoreProcessStartAsync(dialog, caller, storageKey)) {
+            var restore = await TryRestoreProcessStartAsync(dialog, caller, storageKey);
+            if (restore.Restored) {
                 return;
             }
+            dialog = dialog with { PreviousLaunchNotice = restore.PreviousLaunchNotice };
             var authority = await ProcessLaunchAuthorities.CaptureUserInterfaceAsync(dialog.ProjectId);
             if (!IsCurrentProcessStart(dialog)) {
                 return;
@@ -417,6 +420,12 @@ public partial class ProjectStructurePage
             var deliveryMessage = await ObserveProcessLinkDeliveryAsync(dialog, result);
             if (!IsCurrentProcessStart(dialog)) {
                 return;
+            }
+
+            if (result.Observation is { ContinuationState: ProcessLaunchContinuationState.Started } &&
+                string.IsNullOrEmpty(deliveryMessage) &&
+                dialog.IntentStorageKey is { } completedIntentStorageKey) {
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", completedIntentStorageKey);
             }
 
             await InvokeAsync(() => {

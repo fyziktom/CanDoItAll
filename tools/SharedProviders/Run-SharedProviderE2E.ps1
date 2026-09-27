@@ -495,7 +495,7 @@ function Set-ChildEnvironmentAssignments {
         "DOCKER_CONTEXT=default",
         "DOTNET_SDK_VERSION=10.0.302",
         "DOTNET_RUNTIME_VERSION=10.0.10",
-        "POSTGRES_IMAGE_TAG=16-alpine",
+        "POSTGRES_IMAGE_TAG=18.6-alpine",
         "BUSYBOX_VERSION=1.37.0-musl"
     )
 }
@@ -756,7 +756,7 @@ function Write-AndValidateComposeConfig {
         "central" = $AppImage
         "client-a" = $AppImage
         "client-b" = $AppImage
-        "db" = "postgres:16-alpine"
+        "db" = "postgres:18.6-alpine"
         "deterministic-personal-upstream" = $UpstreamImage
         "deterministic-upstream" = $UpstreamImage
         "e2e-central" = "mcr.microsoft.com/dotnet/aspnet:10.0.10"
@@ -920,7 +920,7 @@ function Write-AndValidateComposeConfig {
     $initScript = Join-Path $RepositoryRoot "tools\SharedProviders\postgres\init-e2e-databases.sh"
     $expectedVolumeKeys = @(
         (Get-VolumeKey "artifact-permissions" "bind" $ArtifactRoot "/e2e" $false),
-        (Get-VolumeKey "db" "volume" "postgres-data" "/var/lib/postgresql/data" $false),
+        (Get-VolumeKey "db" "volume" "postgres-data" "/var/lib/postgresql" $false),
         (Get-VolumeKey "db" "bind" $initScript "/docker-entrypoint-initdb.d/10-shared-providers-e2e.sh" $true),
         (Get-VolumeKey "central" "bind" $centralDataRoot "/data" $false),
         (Get-VolumeKey "client-a" "bind" $clientADataRoot "/data" $false),

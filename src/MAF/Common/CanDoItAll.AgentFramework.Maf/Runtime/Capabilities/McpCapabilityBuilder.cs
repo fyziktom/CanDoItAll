@@ -599,7 +599,7 @@ internal sealed class McpCapabilityBuilder(
             launchDescriptor = launchDescriptor with
             {
                 EnvironmentVariables = new WorkspaceCommandEnvironmentPolicy()
-                    .MergeEnvironmentVariables(environmentVariables, "local_mcp")
+                    .MergeEnvironmentVariables(environmentVariables, "local_mcp", launchDescriptor.Command)
             };
 
             var classifications = resolveCatalogOperationClassifications(capability, null);

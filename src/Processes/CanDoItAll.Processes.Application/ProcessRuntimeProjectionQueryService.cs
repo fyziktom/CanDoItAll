@@ -91,7 +91,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
             sourceRuns = sourceRuns.Where(run => eligible.Contains(run.RunId)).ToArray();
         }
         var runs = sourceRuns
-            .Where(run => run.LastEventAtUtc >= windowStartUtc)
+            .Where(run => run.IsActive || run.Status == ProcessProjectedRunStatus.NeedsAttention ||
+                run.LastEventAtUtc >= windowStartUtc)
             .Select(FreezeLiveRun)
             .ToList();
         runs.Sort(static (left, right) =>
@@ -258,6 +259,22 @@ public sealed class ProcessRuntimeProjectionQueryService(
                     enrichmentCache,
                     cancellationToken)
                 .ConfigureAwait(false);
+        if (query.SelectedRunId is { } selected && !liveProcesses.Runs.Any(run => run.RunId == selected)) {
+            var snapshot = await projectionStore.LoadSnapshotAsync(
+                ProcessRuntimeProjectionProjector.ProjectorName,
+                ProcessRuntimeProjectionKeys.Live(selected), cancellationToken).ConfigureAwait(false);
+            if (snapshot is not null) {
+                var pinned = await PrepareLiveProcessesAsync(
+                    liveQuery with { Take = 1 },
+                    [jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(snapshot)],
+                    nowUtc, DateTimeOffset.MinValue, enrichmentCache, cancellationToken).ConfigureAwait(false);
+                var combined = liveProcesses.Runs.Concat(pinned.Runs).ToImmutableArray();
+                liveProcesses = new(combined, CombineFreshness(combined)) {
+                    ReusableRuns = (liveProcesses.ReusableRuns ?? liveProcesses.Runs)
+                        .Concat(pinned.ReusableRuns ?? pinned.Runs).ToImmutableArray()
+                };
+            }
+        }
         var runs = liveProcesses.Runs.ToImmutableArray();
         var selectedRunId = RequiresSelectedRunId(loadOptions)
             ? ResolveSelectedRunId(runs, query.SelectedRunId, query.AutoSelectRun)
@@ -1799,7 +1816,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 new ProcessExecutionObservationQuery(
                     observedCandidateRunIds.ToArray(),
                     windowStartUtc,
-                    nowUtc,
+                    DateTimeOffset.MaxValue,
                     TakePerRun: 25),
                 cancellationToken).ConfigureAwait(false);
 
@@ -2054,7 +2071,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
             new ProcessExecutionObservationQuery(
                 runIds,
                 windowStartUtc,
-                nowUtc,
+                DateTimeOffset.MaxValue,
                 OperatorActionObservationTakePerRun)
             {
                 StepInstanceIds = stepInstanceIds

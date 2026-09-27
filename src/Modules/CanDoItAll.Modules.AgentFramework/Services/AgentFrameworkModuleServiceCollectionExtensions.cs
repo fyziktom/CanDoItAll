@@ -75,6 +75,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
             configuration["LaneKind"]);
 
+        services.AddOptions<ProcessEnvironmentOptions>()
+            .Bind(configuration.GetSection(ProcessEnvironmentOptions.SectionName));
+        services.AddHostedService<ProcessEnvironmentSettingsInitializer>();
         services.AddOptions<ProcessMockAgentOptions>()
             .Bind(configuration.GetSection(ProcessMockAgentOptions.SectionName));
         services.AddOptions<WorkflowExampleCatalogSeedOptions>()
@@ -195,7 +198,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
             serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
-            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>(),
+            serviceProvider.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()));
         services.TryAddScoped<MafAgentRuntime>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);

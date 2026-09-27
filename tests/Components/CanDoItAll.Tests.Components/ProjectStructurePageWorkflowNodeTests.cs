@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructurePageWorkflowNodeTests
 {
     private const string ManualInputJson = "{\"reviewMode\":\"strict\"}";

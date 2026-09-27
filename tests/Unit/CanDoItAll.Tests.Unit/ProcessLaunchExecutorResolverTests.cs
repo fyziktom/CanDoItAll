@@ -1445,6 +1445,30 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Equal(developerAgent.Id.ToString("D"), binding.ExecutorId);
     }
 
+    [Theory]
+    [InlineData(ProcessLaunchExecutorKinds.Workflow)]
+    [InlineData(ProcessLaunchExecutorKinds.Person)]
+    [InlineData("")]
+    public async Task Runtime_assignment_repair_preserves_non_agent_executor_before_reference_data_lookup(string executorKind) {
+        var providerId = Guid.NewGuid();
+        var current = CreateAgent(providerId);
+        var workspace = new ResolverWorkspaceService([current], [CreateProvider(providerId)]);
+        var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+            new UnexpectedAgentReferenceDataProvider(), new ProviderProfileService(),
+            new SinglePlanStore(CreatePlan("architecture-review")), new ResolverWorkspaceFactory(workspace));
+        var assignment = CreateArchitectureReviewAssignment(current) with {
+            ExecutorKind = executorKind,
+            WorkflowBinding = ProcessLaunchExecutorKinds.IsWorkflow(executorKind)
+                ? new(new(Guid.NewGuid()), new(Guid.NewGuid())) : null
+        };
+
+        var result = await repairService.RepairAsync(assignment, "Observe the original executor after resume.");
+
+        Assert.False(result.Repaired);
+        Assert.Same(assignment, result.Assignment);
+        Assert.Empty(result.Summary);
+    }
+
     [Fact]
     public async Task Runtime_assignment_repair_rebinds_stale_qa_reviewer_to_dotnet_architect()
     {

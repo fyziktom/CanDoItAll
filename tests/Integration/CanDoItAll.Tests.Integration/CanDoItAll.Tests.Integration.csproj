@@ -61,4 +61,7 @@
     <ProjectReference Include="..\..\..\src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="../../Support/Fixtures/Maf120/Durable/*.json" Link="Fixtures/Maf120/Durable/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

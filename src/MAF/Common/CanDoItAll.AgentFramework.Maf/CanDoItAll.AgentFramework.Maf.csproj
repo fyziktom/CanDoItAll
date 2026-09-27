@@ -3,6 +3,7 @@
   <Import Project="..\..\MicrosoftAgentFramework.Packages.props" />
 
   <ItemGroup>
+    <ProjectReference Include="../../Tools/CanDoItAll.Tools.StaticHost/CanDoItAll.Tools.StaticHost.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Runtime.Abstractions\CanDoItAll.AgentFramework.Runtime.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
@@ -32,8 +33,8 @@
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="$(MicrosoftExtensionsAIPackageVersion)" />
     <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
-    <PackageReference Include="OpenAI" Version="2.12.0" />
-    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+    <PackageReference Include="OpenAI" Version="2.13.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.18.0" />
   </ItemGroup>
 
   <PropertyGroup>

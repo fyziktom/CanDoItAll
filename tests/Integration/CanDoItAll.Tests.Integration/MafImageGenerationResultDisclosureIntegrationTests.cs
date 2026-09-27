@@ -23,6 +23,7 @@ using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.Pr
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class MafImageGenerationResultDisclosureIntegrationTests {
     [Theory]
     [InlineData(0)]

@@ -96,28 +96,32 @@ internal sealed class WorkspaceRuntimePlugin(
         {
             var allowedTargetPath = PrepareValidationCommandPath(targetPath);
             var allowedWorkingDirectory = PrepareValidationCommandPath(workingDirectory);
-            return commandExecutionService.DotnetRestore(allowedTargetPath, allowedWorkingDirectory, timeoutSeconds);
+            return commandExecutionService.DotnetRestore(allowedTargetPath, allowedWorkingDirectory, timeoutSeconds,
+                ResolveReadOnlyBuildOutput(allowedTargetPath, allowedWorkingDirectory));
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600)
         {
             var allowedTargetPath = PrepareValidationCommandPath(targetPath);
             var allowedWorkingDirectory = PrepareValidationCommandPath(workingDirectory);
-            return commandExecutionService.DotnetBuild(allowedTargetPath, configuration, noRestore, allowedWorkingDirectory, timeoutSeconds);
+            return commandExecutionService.DotnetBuild(allowedTargetPath, configuration, noRestore, allowedWorkingDirectory, timeoutSeconds,
+                ResolveReadOnlyBuildOutput(allowedTargetPath, allowedWorkingDirectory));
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300)
         {
             var allowedTargetPath = PrepareValidationCommandPath(targetPath);
             var allowedWorkingDirectory = PrepareValidationCommandPath(workingDirectory);
-            return commandExecutionService.DotnetTest(allowedTargetPath, configuration, filter, noBuild, noRestore, allowedWorkingDirectory, timeoutSeconds);
+            return commandExecutionService.DotnetTest(allowedTargetPath, configuration, filter, noBuild, noRestore, allowedWorkingDirectory, timeoutSeconds,
+                ResolveReadOnlyBuildOutput(allowedTargetPath, allowedWorkingDirectory));
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun)
         {
             var allowedTargetPath = PrepareValidationCommandPath(targetPath) ?? targetPath;
             var allowedWorkingDirectory = PrepareValidationCommandPath(workingDirectory);
-            return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope);
+            return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope,
+                ResolveReadOnlyBuildOutput(allowedTargetPath, allowedWorkingDirectory));
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceStop(string startupReceiptPath, int timeoutSeconds = 30)
@@ -149,7 +153,7 @@ internal sealed class WorkspaceRuntimePlugin(
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
             var allowedArguments = PrepareLocalScriptArguments(arguments);
-            return commandExecutionService.PythonRunFile(allowedPath, allowedArguments, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
+            return commandExecutionService.PythonRunFile(allowedPath, allowedArguments, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest), accessSettings.CanScriptsReadEnvironment);
         }
 
         public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, object? sideEffectManifest = null)
@@ -161,7 +165,7 @@ internal sealed class WorkspaceRuntimePlugin(
                 .ToArray();
             var allowedArguments = PrepareLocalScriptArguments(arguments);
 
-            return commandExecutionService.PowerShellRunScript(allowedPath, allowedArguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
+            return commandExecutionService.PowerShellRunScript(allowedPath, allowedArguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest), accessSettings.CanScriptsReadEnvironment);
         }
 
         public Task<WorkspaceDocumentConversionResult> ConvertDocumentToMarkdown(string path, string? outputPath = null, int previewCharacters = 4000)
@@ -329,6 +333,13 @@ internal sealed class WorkspaceRuntimePlugin(
             EnsureValidationCommandAllowed(path);
             return fileAccess.NormalizeAllowedExternalPath(path);
         }
+
+        private string? ResolveReadOnlyBuildOutput(string? targetPath, string? workingDirectory)
+            => WorkspaceReadOnlyBuildOutput.ResolveRelativePath(
+                fileAccess.ResolveExternalTargetAccess(),
+                targetPath,
+                workingDirectory,
+                WorkspaceProcessEnvironmentSettings.Current.RedirectReadOnlyDotnetOutput);
 
         private string? PrepareScaffoldPath(string? path)
         {

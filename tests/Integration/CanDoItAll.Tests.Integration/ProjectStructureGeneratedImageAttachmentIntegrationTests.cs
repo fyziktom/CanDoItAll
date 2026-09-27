@@ -18,6 +18,7 @@ using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.Pr
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 {
     private static readonly byte[] GeneratedPngBytes =

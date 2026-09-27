@@ -41,6 +41,25 @@ public sealed class ProcessManagerControlLoopTests
     }
 
     [Fact]
+    public async Task Duplicate_recovery_preserves_dispatch_identity_and_charges_one_budget_attempt() {
+        var stores = new ManagerTestStores(new AllowingRecoveryPolicy());
+        var manager = new ProcessManagerControlLoop(stores.Dependencies);
+        var incident = await manager.RaiseIncidentAsync(MissingArtifactSignal("fixture"));
+        var request = NewRecoveryRequest(incident.Incident.IncidentId);
+        var first = await manager.EvaluateRecoveryAsync(request);
+        var persistedDecisionCount = stores.Decisions.Decisions.Count;
+
+        var replay = await manager.EvaluateRecoveryAsync(request);
+
+        Assert.True(replay.IsDuplicate);
+        Assert.Equal(first.RecoveryRequest, replay.RecoveryRequest);
+        Assert.Equal(first.DispatchHandoff, replay.DispatchHandoff);
+        Assert.Equal(ProcessManagerDecisionStatus.Duplicate, replay.Decision.Status);
+        Assert.Equal(persistedDecisionCount, stores.Decisions.Decisions.Count);
+        Assert.Equal(1, stores.LoopBudgets.ConsumptionCount(first.RecoveryRequest.LoopFingerprintId));
+    }
+
+    [Fact]
     public async Task Stale_artifact_incident_uses_stale_classification_and_restricted_reference()
     {
         var stores = new ManagerTestStores(new AllowingRecoveryPolicy());

@@ -11,6 +11,11 @@ public sealed record AgentToolPreDispatchFailure(string FailureCode, string Safe
 }
 
 public sealed class AgentToolInvocationEffectScope : IDisposable {
+    /// <summary>
+    /// The failure code of a refusal recorded through <see cref="RecordProhibitedBeforeEffect"/>.
+    /// </summary>
+    public const string OperationProhibitedFailureCode = "OperationProhibited";
+
     private static readonly AsyncLocal<EffectCapture?> CurrentCapture = new();
     private readonly EffectCapture? previousCapture;
     private readonly EffectCapture capture = new();
@@ -31,6 +36,11 @@ public sealed class AgentToolInvocationEffectScope : IDisposable {
     public bool RejectedBeforeEffect => capture.RejectedBeforeEffect && capture.CommittedEffect is null;
 
     /// <summary>
+    /// The owner refused the requested operation itself, not its input, before any effect.
+    /// </summary>
+    public bool ProhibitedBeforeEffect => capture.Prohibited && RejectedBeforeEffect;
+
+    /// <summary>
     /// Records that the owner rejected this invocation before any write, launch or other effect, so its returned
     /// failure is a proven no-effect rejection the model may correct. Without an active invocation scope nothing is
     /// recorded.
@@ -38,6 +48,19 @@ public sealed class AgentToolInvocationEffectScope : IDisposable {
     public static void RecordRejectedBeforeEffect() {
         if (CurrentCapture.Value is { } current) {
             current.RejectedBeforeEffect = true;
+        }
+    }
+
+    /// <summary>
+    /// Records a rejection before any effect because the owner never permits the requested operation in this
+    /// context, such as deleting a project file. No retry of that operation can succeed: the refusal directs the
+    /// agent to another approach, so the attempt is not work the run still owes. Without an active invocation scope
+    /// nothing is recorded.
+    /// </summary>
+    public static void RecordProhibitedBeforeEffect() {
+        if (CurrentCapture.Value is { } current) {
+            current.RejectedBeforeEffect = true;
+            current.Prohibited = true;
         }
     }
 
@@ -106,6 +129,7 @@ public sealed class AgentToolInvocationEffectScope : IDisposable {
         public AgentToolCommittedEffect? CommittedEffect { get; set; }
         public AgentToolPreDispatchFailure? PreDispatchFailure { get; set; }
         public bool RejectedBeforeEffect { get; set; }
+        public bool Prohibited { get; set; }
         public AgentToolProtocolEnvelope? DisclosureEvidence;
     }
 }

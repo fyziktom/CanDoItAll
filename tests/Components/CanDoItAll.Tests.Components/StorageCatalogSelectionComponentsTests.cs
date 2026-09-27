@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Workspace;
 
+[Trait("Category", "HostPlatform")]
 public sealed class StorageCatalogSelectionComponentsTests
 {
     private static readonly Guid AlphaId = Guid.Parse("11111111-1111-1111-1111-111111111111");

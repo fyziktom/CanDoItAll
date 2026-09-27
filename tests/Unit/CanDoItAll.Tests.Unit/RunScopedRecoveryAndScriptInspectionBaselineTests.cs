@@ -205,6 +205,59 @@ public sealed class RunScopedRecoveryAndScriptInspectionBaselineTests
         }
     }
 
+    // Found in UI validation of the script environment guard: in a chat, the agent's configured external
+    // root is usable by the workspace tools but was not readable for inspection, so every script there was
+    // refused as "could not be inspected". Inspection now follows the invocation's effective access.
+    [Fact]
+    public void Script_policy_inspection_reads_a_script_in_a_root_the_effective_access_allows()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("configured-root-script-inspection-workspace");
+        var externalRoot = TestFileSystem.CreateTemporaryRoot("configured-root-script-inspection-target");
+        var otherRoot = TestFileSystem.CreateTemporaryRoot("configured-root-script-inspection-other");
+        try
+        {
+            var scriptPath = Path.Combine(externalRoot, "probe.ps1");
+            var otherScriptPath = Path.Combine(otherRoot, "probe.ps1");
+            File.WriteAllText(scriptPath, "Write-Output $env:OPENAI_API_KEY");
+            File.WriteAllText(otherScriptPath, "Write-Output 'other'");
+            var registry = new ExternalTargetPathRegistry();
+            Assert.True(registry.TryCreateAlias(externalRoot, out var rootAlias));
+            Assert.True(registry.TryCreateAlias(otherRoot, out var otherAlias));
+            var inspectionService = new MafScriptPolicyInspectionService(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                registry);
+            // A chat run: the run itself carries no aliases; the agent's configured root is writable.
+            var chatAuditScope = CreateSandboxRunAuditScope();
+            var effectiveAccess = new EffectiveExternalTargetAccessScope([rootAlias], []);
+
+            var inspection = inspectionService.ResolveScriptContentInspectionForPolicy(
+                AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+                [new KeyValuePair<string, object?>("path", $"{rootAlias}/probe.ps1")],
+                chatAuditScope,
+                scriptSideEffectManifestJson: string.Empty,
+                effectiveAccess);
+            var outside = inspectionService.ResolveScriptContentInspectionForPolicy(
+                AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+                [new KeyValuePair<string, object?>("path", $"{otherAlias}/probe.ps1")],
+                chatAuditScope,
+                scriptSideEffectManifestJson: string.Empty,
+                effectiveAccess);
+
+            Assert.Equal(string.Empty, inspection.FailureMessage);
+            Assert.Equal("Write-Output $env:OPENAI_API_KEY", inspection.Content);
+            Assert.Equal(string.Empty, outside.Content);
+            Assert.Contains("outside the external targets this agent may read", outside.FailureMessage, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(otherRoot);
+            TestFileSystem.DeleteDirectoryWithRetry(externalRoot);
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     [Fact]
     public void Script_policy_inspection_rejects_foreign_host_absolute_syntax()
     {

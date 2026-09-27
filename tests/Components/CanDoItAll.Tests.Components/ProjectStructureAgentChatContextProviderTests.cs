@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class ProjectStructureAgentChatContextProviderTests
 {
     private readonly Guid databaseProfileId = Guid.NewGuid();

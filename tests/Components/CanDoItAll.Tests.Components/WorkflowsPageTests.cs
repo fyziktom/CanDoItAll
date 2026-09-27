@@ -32,6 +32,7 @@ using WorkflowFailureSourceContext = CanDoItAll.AgentFramework.Workflows.Abstrac
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowsPageTests
 {
     [Theory]

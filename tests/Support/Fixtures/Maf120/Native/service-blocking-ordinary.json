@@ -1,0 +1,17 @@
+{
+  "mafVersion": "1.20.0.0",
+  "aiVersion": "10.9.0.0",
+  "serviceManaged": true,
+  "streaming": false,
+  "stage": "ordinary",
+  "invocationCount": 0,
+  "state": {
+    "conversationId": "fixture-provider-conversation",
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": []
+      }
+    }
+  },
+  "approvals": []
+}

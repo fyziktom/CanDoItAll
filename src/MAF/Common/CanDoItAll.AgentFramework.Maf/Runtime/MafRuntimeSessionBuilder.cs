@@ -114,7 +114,8 @@ internal static class MafRuntimeSessionBuilder
         }
 
         var rawStateJson = compatibility.SerializedSessionStateJson!;
-        var decision = EvaluateStoredRuntimeState(rawStateJson, provider, model, runtimeOptions, out var envelope);
+        var decision = EvaluateStoredRuntimeState(rawStateJson, provider, model, runtimeOptions, out var envelope,
+            isApprovalContinuation || compatibility.PendingApprovals.Count > 0);
         string? payloadJson;
         string? failClosedReason = null;
         switch (decision.Outcome)
@@ -241,7 +242,8 @@ internal static class MafRuntimeSessionBuilder
         ProviderProfile provider,
         string model,
         AgentRuntimeExecutionOptions runtimeOptions,
-        out RuntimeStateEnvelope? envelope)
+        out RuntimeStateEnvelope? envelope,
+        bool requiresVerifiedNativeAuthority = false)
     {
         var isEnvelope = RuntimeStateEnvelope.TryParse(rawStateJson, out envelope);
         var hasStoredText = !string.IsNullOrWhiteSpace(rawStateJson);
@@ -260,7 +262,8 @@ internal static class MafRuntimeSessionBuilder
             CurrentAuthorityPolicyFingerprint = runtimeOptions.AuthorityPolicyFingerprint,
             CurrentCapabilityPolicyFingerprint = runtimeOptions.CapabilityPolicyFingerprint,
             CurrentLegacyToolsetNameFingerprint = runtimeOptions.LegacyToolsetNameFingerprint,
-            CurrentAdapterPackageVersion = MafRuntimeStateAdapter.AdapterPackageVersion
+            CurrentAdapterPackageVersion = MafRuntimeStateAdapter.AdapterPackageVersion,
+            RequiresVerifiedNativeAuthority = requiresVerifiedNativeAuthority || runtimeOptions.RequireDurableToolProtocol
         };
         return CompatibilityPolicy.Evaluate(request);
     }

@@ -349,9 +349,13 @@ internal sealed class MafToolRunContext {
                 MafAgentToolFailureMapper.TryMap(exception, out var failure) &&
                 failure.EffectState is AgentToolEffectState.NotCommitted or AgentToolEffectState.None) {
                 return failure;
-            } catch (AgentToolPolicyBlockedException) when (claim.Proposal.State == AgentToolProposalState.Prepared &&
+            } catch (AgentToolPolicyBlockedException exception) when (claim.Proposal.State == AgentToolProposalState.Prepared &&
                 effectScope.CommittedEffect is null) {
-                return RecordPolicyDenial("Current execution policy denied this saved proposal.");
+                // Policy reasons are written for the agent (for example the exact external-target alias to use
+                // instead of a native path); dropping them leaves the agent guessing.
+                return RecordPolicyDenial(string.IsNullOrWhiteSpace(exception.Reason)
+                    ? "Current execution policy denied this saved proposal."
+                    : $"Current execution policy denied this saved proposal. {exception.Reason}");
             }
         }
 

@@ -726,6 +726,17 @@
                     </Stack>
                 </PanelCard>
 
+                @if (!string.IsNullOrWhiteSpace(startDialog.PreviousLaunchNotice))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="info"
+                               data-testid="project-structure-process-start-previous-launch">
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@startDialog.PreviousLaunchNotice"
+                                   Class="cw-panel-copy" />
+                    </PanelCard>
+                }
+
                 @if (startDialog.Estimate is not null)
                 {
                     var estimate = startDialog.Estimate;

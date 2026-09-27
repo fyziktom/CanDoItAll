@@ -12,6 +12,7 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Components.Processes;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SchedulerPlannerPageTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
