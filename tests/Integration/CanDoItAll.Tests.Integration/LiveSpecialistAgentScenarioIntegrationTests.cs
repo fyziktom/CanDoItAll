@@ -166,7 +166,7 @@ public sealed class LiveSpecialistAgentScenarioIntegrationTests
         {
             Database = databaseName,
             IncludeErrorDetail = true,
-            Timeout = 5,
+            Timeout = PostgresTestDatabaseLease.ConnectTimeoutSeconds,
             CommandTimeout = 15
         };
 
@@ -200,7 +200,7 @@ public sealed class LiveSpecialistAgentScenarioIntegrationTests
         }
 
         builder.IncludeErrorDetail = true;
-        builder.Timeout = 5;
+        builder.Timeout = PostgresTestDatabaseLease.ConnectTimeoutSeconds;
         builder.CommandTimeout = 15;
         return builder.ConnectionString;
     }
