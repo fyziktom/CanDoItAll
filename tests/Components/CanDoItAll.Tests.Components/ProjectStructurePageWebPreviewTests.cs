@@ -8,6 +8,7 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
@@ -55,6 +56,7 @@ public sealed class ProjectStructurePageWebPreviewTests
         Assert.Equal("a", externalLink.LocalName);
         Assert.Equal("https://google.com/", externalLink.GetAttribute("href"));
         Assert.Equal("_blank", externalLink.GetAttribute("target"));
+        Assert.Empty(dialog.QuerySelectorAll("[data-testid='project-structure-web-preview-stop']"));
     }
 
     [Fact]
@@ -152,6 +154,117 @@ public sealed class ProjectStructurePageWebPreviewTests
         Assert.Contains("Run", quickActions.TextContent, StringComparison.Ordinal);
         Assert.Contains("Open preview", quickActions.TextContent, StringComparison.Ordinal);
         Assert.Empty(page.FindAll("[data-testid='project-structure-web-preview-dialog']"));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Runtime_preview_stops_its_own_node_and_keeps_failures_visible(bool succeeds) {
+        var launcher = new RuntimeLauncherProbe();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.Replace(ServiceDescriptor.Singleton<IProjectStructureRuntimeLauncher>(launcher)));
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService);
+        launcher.ProjectPath = Path.Combine(
+            harness.Context.Services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
+            "RuntimePreview.csproj");
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Environment,
+                "Running preview",
+                "Runtime stop regression",
+                string.Empty,
+                $"project:{projectId}",
+                420,
+                240,
+                ObjectSubtype: "dotnet-runtime",
+                MetadataJson: ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope {
+                    Environment = new ProjectEnvironmentMetadata {
+                        EnvironmentKind = ProjectEnvironmentKind.DotNetRuntime,
+                        LocalhostUrl = "http://localhost:5149"
+                    }
+                })));
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(page);
+        await page.InvokeAsync(() => canvasWorkbench.Instance.NodeOpened.InvokeAsync(runtimeNode.Id));
+
+        page.WaitForElement("[data-testid='project-structure-web-preview-stop']");
+        var stop = page.InvokeAsync(() => page.Find("[data-testid='project-structure-web-preview-stop']").ClickAsync(new()));
+        page.WaitForAssertion(() => {
+            Assert.Equal(runtimeNode.Id, Assert.Single(launcher.StoppedNodeIds));
+            Assert.True(page.Find("[data-testid='project-structure-web-preview-stop']").HasAttribute("disabled"));
+        });
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-web-preview-stop']").ClickAsync(new()));
+        Assert.Single(launcher.StoppedNodeIds);
+
+        const string failureMessage = "The runtime could not be stopped. Try again.";
+        launcher.StopCompletion.SetResult(new(succeeds, succeeds ? "Runtime stopped." : failureMessage));
+        await stop;
+
+        page.WaitForAssertion(() => {
+            if (succeeds) {
+                Assert.Empty(page.FindAll("[data-testid='project-structure-web-preview-dialog']"));
+            } else {
+                Assert.Equal(failureMessage, page.Find("[data-testid='project-structure-web-preview-stop-error']").TextContent.Trim());
+                Assert.False(page.Find("[data-testid='project-structure-web-preview-stop']").HasAttribute("disabled"));
+                Assert.Single(page.FindAll("[data-testid='project-structure-web-preview-frame'] iframe"));
+            }
+        });
+    }
+
+    private sealed class RuntimeLauncherProbe : IProjectStructureRuntimeLauncher {
+        private bool running = true;
+
+        public bool IsAvailable => true;
+
+        public string ProjectPath { get; set; } = string.Empty;
+
+        public List<string> StoppedNodeIds { get; } = [];
+
+        public TaskCompletionSource<ProjectStructureRuntimeLaunchResult> StopCompletion { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool IsRunning(string nodeId) => running;
+
+        public ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node)
+            => new(new ProjectStructureRuntimeLaunchPlan(
+                ProjectStructureRuntimePlanKind.DotNet,
+                ["dotnet"],
+                [],
+                new Dictionary<string, string?>(),
+                Path.GetDirectoryName(ProjectPath) ?? string.Empty,
+                "dotnet run",
+                "Running preview",
+                [new("Application project", ProjectPath, IsDirectory: false)],
+                RequiresApproval: false,
+                TerminalOnly: false), "Runtime ready.");
+
+        public ProjectStructureRuntimeLaunchResolution Resolve(
+            ProjectObjectType objectType,
+            string? objectSubtype,
+            string? notes,
+            string metadataJson,
+            ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
+            => Resolve(null);
+
+        public Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
+            ProjectStructureNode node,
+            ProjectStructureRuntimeLaunchMode mode,
+            ProjectStructureRuntimeLaunchApproval approval,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("This scenario must only stop the existing runtime.");
+
+        public async Task<ProjectStructureRuntimeLaunchResult> StopAsync(
+            ProjectStructureNode node,
+            CancellationToken cancellationToken = default) {
+            StoppedNodeIds.Add(node.Id);
+            var result = await StopCompletion.Task.WaitAsync(cancellationToken);
+            running = !result.IsSuccess;
+            return result;
+        }
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService)

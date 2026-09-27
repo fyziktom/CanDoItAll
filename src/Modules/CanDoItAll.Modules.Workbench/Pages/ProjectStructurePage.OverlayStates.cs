@@ -347,7 +347,9 @@ public sealed record ProjectStructureWebPreviewDialogState(
     Uri Url,
     string Notes,
     bool CanEmbed,
-    string EmbedUnavailableReason);
+    string EmbedUnavailableReason,
+    bool CanStopRuntime = false,
+    string RuntimeStopError = "");
 
 public sealed record ProjectStructureQuickActionButton(
     ProjectStructureQuickActionExecutionKind ExecutionKind,

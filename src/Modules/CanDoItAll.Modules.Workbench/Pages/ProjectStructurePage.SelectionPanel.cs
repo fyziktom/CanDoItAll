@@ -585,7 +585,11 @@ public partial class ProjectStructurePage
                 .Append(':')
                 .Append(webPreviewDialog.Notes)
                 .Append(':')
-                .Append(webPreviewDialog.EmbedUnavailableReason);
+                .Append(webPreviewDialog.EmbedUnavailableReason)
+                .Append(':')
+                .Append(webPreviewDialog.CanStopRuntime)
+                .Append(':')
+                .Append(webPreviewDialog.RuntimeStopError);
         }
         else
         {

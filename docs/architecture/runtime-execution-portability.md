@@ -128,6 +128,11 @@ browser gives a loopback application on a different origin from the host its own
 (`allow-same-origin`) so that SPA and WebAssembly apps can render. Same-origin and remote
 pages keep the restricted sandbox.
 
+The web preview header offers **Stop** while its runtime node has a Workbench-owned
+process. The action stops that node's process and closes the preview after success.
+A failed stop keeps the preview open and displays the failure inside the dialog.
+Closing the preview alone leaves the runtime running; ordinary web links have no Stop action.
+
 ## Read-Only Targets And Build Output
 
 An agent or process step may read a product folder without being allowed to change it,
