@@ -21,7 +21,6 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
     private const string PreviousMigration = "20260911000227_MoveWorkItemAssignments";
     private const string CurrentMigration = "20260911010404_AddSourceBoundExecutionAdmissions";
     private const string OwnerLifetimeMigration = "20260911094704_BindOwnerLifetimesAndRetainedHistory";
-    private const string LatestMigration = "20260911194528_BindWorkflowProviderDisclosureHistory";
     private static readonly DateTimeOffset SavedAt = new(2026, 4, 5, 6, 7, 8, TimeSpan.Zero);
 
     [Fact]
@@ -53,7 +52,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
             await AssertCurrentReferenceOnlyAsync(context);
             Assert.False(context.Database.HasPendingModelChanges());
             Assert.Equal(161, context.Model.GetEntityTypes().Count());
-            Assert.Equal(LatestMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
         }
     }
 
@@ -91,7 +90,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         await AssertCurrentReferenceOnlyAsync(restored);
         Assert.False(restored.Database.HasPendingModelChanges());
         Assert.Equal(161, restored.Model.GetEntityTypes().Count());
-        Assert.Equal(LatestMigration, (await restored.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(restored.Database.GetMigrations(), await restored.Database.GetAppliedMigrationsAsync());
     }
 
     [Fact]
@@ -111,7 +110,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
             await AssertNoAuthorityAsync(context);
             expected = await ReadLegacyAsync(context);
             currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
-            Assert.Equal(LatestMigration, currentMigrations.Last());
+            Assert.Equal(context.Database.GetMigrations(), currentMigrations);
             await context.GetService<IMigrator>().MigrateAsync(OwnerLifetimeMigration);
             Assert.Equal(expected, await ReadLegacyAsync(context));
             await AssertCurrentReferenceOnlyAsync(context);

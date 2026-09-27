@@ -435,6 +435,21 @@ Quarantine is not a passing result. Remove a quarantine only with focused replac
 
 ## Platform Split
 
+The 2026-09-27 Windows `main` log for application `a8084a9ba` passed stable Unit/Memory
+and the preceding portability/database steps, then failed the peer-ping MCP integration
+test during its five-second **initialize** handshake, before any ping assertion. The
+same MCP source is present at development `82a5b5a01`; the log does not establish a
+Components branch mismatch or a protocol failure. The exact test passed in five local
+reproductions and all 45 runtime integration cases passed before the fixture repair.
+
+Functional MCP fixture operations now use the same 30-second bounded budget already
+used by its process-readiness/cancellation scenario. The deliberately hanging operation
+keeps its explicit five-second deadline, and production descriptor timeouts, cleanup,
+secret redaction and protocol assertions are unchanged. Child startup/initialize timing
+is included in test output for future runner diagnosis. The repaired Release runtime
+integration filter still discovers and passes 45 cases. This local evidence does not
+claim a rerun of the remote Windows job.
+
 CI does not run the broad stable gate as one command per platform. Linux runs every stable test;
 Windows and macOS run the tests whose behavior depends on the host operating system.
 

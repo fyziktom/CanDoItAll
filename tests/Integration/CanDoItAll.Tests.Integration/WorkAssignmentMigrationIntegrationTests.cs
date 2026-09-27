@@ -19,7 +19,6 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
     private const string PreviousMigration = "20260910225242_AddWorkflowStructureReceipts";
     private const string CurrentMigration = "20260911000227_MoveWorkItemAssignments";
     private const string OwnerLifetimeMigration = "20260911094704_BindOwnerLifetimesAndRetainedHistory";
-    private const string LatestMigration = "20260911194528_BindWorkflowProviderDisclosureHistory";
     private static readonly DateTimeOffset SavedAt = new(2026, 3, 4, 5, 6, 7, TimeSpan.Zero);
 
     [Fact]
@@ -49,7 +48,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             AssertState(expected, await ReadStateAsync(context, ownerTable: true));
             Assert.False(context.Database.HasPendingModelChanges());
             Assert.Equal(161, context.Model.GetEntityTypes().Count());
-            Assert.Equal(LatestMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
             await AssertCurrentReferencesOnlyAsync(context);
             await using var work = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
             Assert.Equal(3, await work.Set<ProjectWorkAssignmentRecord>().CountAsync());
@@ -94,7 +93,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
         await AssertCurrentReferencesOnlyAsync(restored);
         Assert.False(restored.Database.HasPendingModelChanges());
         Assert.Equal(161, restored.Model.GetEntityTypes().Count());
-        Assert.Equal(LatestMigration, (await restored.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(restored.Database.GetMigrations(), await restored.Database.GetAppliedMigrationsAsync());
     }
 
     [Fact]
@@ -112,7 +111,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             await AssertCurrentReferencesOnlyAsync(context);
             expected = await ReadStateAsync(context, ownerTable: true);
             currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
-            Assert.Equal(LatestMigration, currentMigrations.Last());
+            Assert.Equal(context.Database.GetMigrations(), currentMigrations);
             await context.GetService<IMigrator>().MigrateAsync(OwnerLifetimeMigration);
             AssertState(expected, await ReadStateAsync(context, ownerTable: true));
             await AssertCurrentReferencesOnlyAsync(context);

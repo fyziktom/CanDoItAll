@@ -8,7 +8,8 @@ namespace CanDoItAll.AgentFramework.Persistence;
 
 public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceStore,
-    IAgentProviderUsageEvidenceStore,
+    IIndexedWorkspaceReadGuard,
+    IBoundedAgentProviderUsageEvidenceStore,
     ISandboxWorkspaceChatQueryStore,
     ISandboxWorkspaceChatProjectionQueryStore,
     ISandboxWorkspaceChatSessionStore,
@@ -110,6 +111,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             layout.RootPath,
             new FileProviderHistoryJournal(layout, historyCommitBoundary));
         executionSliceStore = new FileSandboxWorkspaceExecutionSliceStore(layout, jsonStore);
+        jsonStore.UsageIndex = new FileProviderUsageIndex(layout, jsonStore);
         chatProjectionStore = new FileSandboxWorkspaceChatProjectionStore(layout, jsonStore);
         crossProcessLock = new FileSandboxWorkspaceCrossProcessLock(
             layout.RootPath,
@@ -321,6 +323,35 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
         finally
         {
+            gate.Release();
+        }
+    }
+
+    public async Task<AgentProviderUsageWindowEvidence> LoadProviderUsageWindowAsync(
+        CanDoItAll.AgentFramework.Usage.ProviderUsageWindow window, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(window);
+        await gate.WaitAsync(cancellationToken);
+        try {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await RecoverPendingExecutionCommitAsync(cancellationToken);
+            return await jsonStore.UsageIndex!.ReadAsync(window, cancellationToken);
+        } finally {
+            gate.Release();
+        }
+    }
+
+    public async Task EnsureReadyAsync(bool requireSummaryIndex = false, CancellationToken cancellationToken = default) {
+        await gate.WaitAsync(cancellationToken);
+        try {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await RecoverPendingExecutionCommitAsync(cancellationToken);
+            if (!layout.ExecutionStorageExists() && (File.Exists(layout.CatalogPath) || File.Exists(layout.LegacyExecutionPath))) {
+                throw new InvalidOperationException("Legacy workspace storage needs explicit migration. Run usage-index maintenance with --migrate-legacy.");
+            }
+            if (requireSummaryIndex && layout.ExecutionStorageExists() && !await executionSliceStore.HasCurrentSummaryIndexAsync(cancellationToken)) {
+                throw new InvalidOperationException("The runtime summary index needs explicit repair. Run usage-index maintenance with --migrate-legacy.");
+            }
+        } finally {
             gate.Release();
         }
     }

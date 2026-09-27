@@ -43,6 +43,9 @@
     [Parameter]
     public string? UsageScopeQuery { get; set; }
 
+    [Parameter]
+    public string? UsagePeriodQuery { get; set; }
+
     private OverviewSandboxContext context = new();
     private AgentsOverviewState state = OverviewSandboxFixture.Create(new());
     private bool initialized;
@@ -51,7 +54,7 @@
     private string intentText = "No intent yet.";
 
     protected override void OnParametersSet() {
-        var next = OverviewSandboxContext.Parse(ScenarioQuery, LayoutQuery, UsageScopeQuery);
+        var next = OverviewSandboxContext.Parse(ScenarioQuery, LayoutQuery, UsageScopeQuery, UsagePeriodQuery);
         if (!initialized || next != context) {
             SetContext(next);
         }
@@ -66,7 +69,7 @@
     }
 
     private void SetContext(OverviewSandboxContext next) {
-        var replacesSample = !initialized || next.Scenario != context.Scenario || next.Scope != context.Scope;
+        var replacesSample = !initialized || next.Scenario != context.Scenario || next.Scope != context.Scope || next.Period != context.Period;
         initialized = true;
         context = next;
         if (replacesSample) {
@@ -91,6 +94,9 @@
     private void HandleIntent(AgentsOverviewIntent intent) {
         var ready = OverviewSandboxFixture.Create(context with { Scenario = OverviewSandboxScenario.Ready });
         switch (intent) {
+            case AgentsOverviewIntent.SelectPeriod selectPeriod:
+                SetContext(context with { Period = selectPeriod.Period });
+                break;
             case AgentsOverviewIntent.SelectUsage select:
                 SetContext(context with { Scope = select.Selection });
                 intentText = $"Sample usage scope: {select.Selection}. No query runs.";
@@ -101,7 +107,7 @@
                 break;
             case AgentsOverviewIntent.RetryUsage:
                 state = state with {
-                    UsageTotals = ready.UsageTotals, AcceptedScope = ready.AcceptedScope, Consumers = ready.Consumers,
+                    UsageTotals = ready.UsageTotals, AcceptedQuery = ready.AcceptedQuery, GeneratedAtUtc = ready.GeneratedAtUtc, AcceptedScope = ready.AcceptedScope, Consumers = ready.Consumers,
                     Providers = ready.Providers, UsageSources = ready.UsageSources, UsagePhase = AgentsOverviewReadPhase.Ready, UsageError = null
                 };
                 intentText = "Sample usage read completed. No query runs.";
@@ -110,9 +116,9 @@
                 state = state with { HeaderWarning = null, HeaderLoading = false };
                 intentText = "Sample header read completed. No query runs.";
                 break;
-            case AgentsOverviewIntent.OpenDetail detail when detail.Selection == state.DesiredScope && state.CanOpen(detail.Detail):
+            case AgentsOverviewIntent.OpenDetail detail when detail.Query == state.AcceptedQuery && state.CanOpen(detail.Detail):
                 state = state with { OpenDetails = state.OpenDetails.Add(detail.Detail) };
-                intentText = $"Sample {detail.Detail} detail requested for {detail.Selection}. No data-loading dialog opens.";
+                intentText = $"Sample {detail.Detail} detail requested for {detail.Query.Selection}. No data-loading dialog opens.";
                 break;
             case AgentsOverviewIntent.OpenTeam team when state.Teams.Any(item => item.TeamId == team.TeamId):
                 intentText = $"Sample team {team.TeamId} requested. No production navigation.";

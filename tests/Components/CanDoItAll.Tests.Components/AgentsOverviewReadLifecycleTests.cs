@@ -65,7 +65,7 @@ public sealed class AgentsOverviewReadLifecycleTests {
     [InlineData(true)]
     public async Task Disposal_cancels_each_owned_aggregate_read(bool usageLane) {
         await using var fixture = await OverviewPageFixture.CreateAsync();
-        var overview = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var overview = new TaskCompletionSource<SandboxDashboardSnapshot>();
         var usage = new TaskCompletionSource<ProviderUsageSourceResult>();
         if (usageLane) {
             fixture.Agents.Read = _ => usage.Task;
@@ -73,8 +73,9 @@ public sealed class AgentsOverviewReadLifecycleTests {
             fixture.Overview = _ => overview.Task;
         }
         var cut = fixture.Render();
-        cut.WaitForAssertion(() => Assert.Equal(1, fixture.OverviewReads));
         try {
+            await fixture.OverviewStarted.WaitAsync(BunitContext.DefaultWaitTimeout);
+            Assert.Equal(1, fixture.OverviewReads);
             await fixture.Harness.Context.DisposeRenderedComponentsAsync();
             Assert.True(usageLane ? fixture.Agents.LastToken.IsCancellationRequested : fixture.OverviewToken.IsCancellationRequested);
         } finally {
@@ -88,7 +89,7 @@ public sealed class AgentsOverviewReadLifecycleTests {
     [InlineData(true)]
     public async Task Entering_history_cancels_pending_aggregates(bool usageLane) {
         await using var fixture = await OverviewPageFixture.CreateAsync();
-        var overview = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var overview = new TaskCompletionSource<SandboxDashboardSnapshot>();
         var usage = new TaskCompletionSource<ProviderUsageSourceResult>();
         if (usageLane) {
             fixture.Agents.Read = _ => usage.Task;
@@ -96,8 +97,9 @@ public sealed class AgentsOverviewReadLifecycleTests {
             fixture.Overview = _ => overview.Task;
         }
         var cut = fixture.Render();
-        cut.WaitForAssertion(() => Assert.Equal(1, fixture.OverviewReads));
         try {
+            await fixture.OverviewStarted.WaitAsync(BunitContext.DefaultWaitTimeout);
+            Assert.Equal(1, fixture.OverviewReads);
             await NavigateQueryAsync(fixture, cut, "tab", AgentWorkspaceTabs.Providers);
             Assert.True(usageLane ? fixture.Agents.LastToken.IsCancellationRequested : fixture.OverviewToken.IsCancellationRequested);
             Assert.Equal(1, fixture.OverviewReads);
@@ -114,7 +116,7 @@ public sealed class AgentsOverviewReadLifecycleTests {
     [InlineData(AgentWorkspaceTabs.Governance)]
     public async Task Aggregate_failure_cannot_override_ready_selection_access(string tab) {
         await using var fixture = await OverviewPageFixture.CreateAsync();
-        fixture.Overview = _ => Task.FromException<AgentOverviewSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
+        fixture.Overview = _ => Task.FromException<SandboxDashboardSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
         var cut = fixture.Render(tab);
         cut.WaitForAssertion(() => Assert.Equal(1, fixture.OverviewReads));
         await cut.InvokeAsync(async () => {
@@ -140,7 +142,7 @@ public sealed class AgentsOverviewReadLifecycleTests {
     [Fact]
     public async Task Overview_failure_preserves_independently_loaded_hr_action() {
         await using var fixture = await OverviewPageFixture.CreateAsync();
-        fixture.Overview = _ => Task.FromException<AgentOverviewSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
+        fixture.Overview = _ => Task.FromException<SandboxDashboardSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
         var cut = fixture.Render();
         cut.WaitForElement("[data-testid='agents-overview-load-error']");
         cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='agents-hr-agent-open-header']").HasAttribute("disabled")));
@@ -183,7 +185,7 @@ public sealed class AgentsOverviewReadLifecycleTests {
     [Fact]
     public async Task Initial_failure_has_no_invented_facts_and_keeps_workspace_context_ready() {
         await using var fixture = await OverviewPageFixture.CreateAsync();
-        fixture.Overview = _ => Task.FromException<AgentOverviewSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
+        fixture.Overview = _ => Task.FromException<SandboxDashboardSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
         var cut = fixture.Render();
         cut.WaitForElement("[data-testid='agents-overview-load-error']");
         Assert.Empty(Context(cut).Surface.Position.Facts);
@@ -196,7 +198,7 @@ public sealed class AgentsOverviewReadLifecycleTests {
     [Fact]
     public async Task Explicit_overview_retry_only_reads_its_own_lane() {
         await using var fixture = await OverviewPageFixture.CreateAsync();
-        fixture.Overview = _ => Task.FromException<AgentOverviewSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
+        fixture.Overview = _ => Task.FromException<SandboxDashboardSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
         var cut = fixture.Render();
         cut.WaitForElement("[data-testid='agents-overview-load-error']");
         var headers = fixture.HeaderReads;
@@ -215,7 +217,7 @@ public sealed class AgentsOverviewReadLifecycleTests {
         await using var fixture = await OverviewPageFixture.CreateAsync();
         var cut = fixture.Render();
         cut.WaitForDashboardLoaded();
-        fixture.Overview = _ => Task.FromException<AgentOverviewSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
+        fixture.Overview = _ => Task.FromException<SandboxDashboardSnapshot>(new IOException(OverviewPageFixture.PrivateFailure));
         await cut.Find("[data-testid='agents-overview-retry']").ClickAsync();
         cut.WaitForElement("[data-testid='agents-overview-stale']");
         Assert.Equal("42", Metric(cut, "agents"));
@@ -338,16 +340,18 @@ public sealed class AgentsOverviewReadLifecycleTests {
 }
 
 internal sealed class OverviewPageFixture : IAsyncDisposable {
+    private readonly TaskCompletionSource overviewStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public const string PrivateFailure = "Private infrastructure failure detail";
     public ComponentTestHarness Harness { get; private set; } = default!;
     public OverviewUsageSource Agents { get; } = new(ProviderUsageWorkloadKind.Agent, "Agents accepted");
     public OverviewUsageSource Chats { get; } = new(ProviderUsageWorkloadKind.SimpleChat, "Chats accepted");
-    public Func<CancellationToken, Task<AgentOverviewSnapshot>> Overview { get; set; } = _ => Task.FromResult(Snapshot());
+    public Func<CancellationToken, Task<SandboxDashboardSnapshot>> Overview { get; set; } = _ => Task.FromResult(Snapshot());
     public bool HeaderFailure { get; set; }
     public bool BoundFailure { get; set; }
     public int OverviewReads { get; private set; }
     public int HeaderReads { get; private set; }
     public CancellationToken OverviewToken { get; private set; }
+    public Task OverviewStarted => overviewStarted.Task;
 
     public static async Task<OverviewPageFixture> CreateAsync(Action<IServiceCollection>? configure = null) {
         var fixture = new OverviewPageFixture();
@@ -360,6 +364,7 @@ internal sealed class OverviewPageFixture : IAsyncDisposable {
                 target.Overview = token => {
                     fixture.OverviewReads++;
                     fixture.OverviewToken = token;
+                    fixture.overviewStarted.TrySetResult();
                     return fixture.Overview(token);
                 };
                 target.Header = () => {
@@ -382,9 +387,7 @@ internal sealed class OverviewPageFixture : IAsyncDisposable {
         return Harness.Context.Render<AgentsHomePage>();
     }
 
-    public static AgentOverviewSnapshot Snapshot() => AgentOverviewSnapshot.Empty with {
-        Totals = AgentOverviewTotals.Empty with { AgentCount = 42, ProviderCount = 3, CapabilityCount = 7 }
-    };
+    public static SandboxDashboardSnapshot Snapshot() => new(42, 0, 3, 7, 0, 0, 0, 0, ExecutionBoundaryDescriptor.Unknown);
 
     public ValueTask DisposeAsync() => Harness.DisposeAsync();
 
@@ -396,11 +399,11 @@ internal sealed class OverviewPageFixture : IAsyncDisposable {
 
 public class OverviewWorkspaceProxy : DispatchProxy {
     public IAgentFrameworkWorkspaceService Inner { get; set; } = default!;
-    public Func<CancellationToken, Task<AgentOverviewSnapshot>> Overview { get; set; } = default!;
+    public Func<CancellationToken, Task<SandboxDashboardSnapshot>> Overview { get; set; } = default!;
     public Func<bool> Header { get; set; } = default!;
 
     protected override object? Invoke(MethodInfo? method, object?[]? args) {
-        if (method!.Name == nameof(IAgentFrameworkWorkspaceService.GetAgentOverviewAsync)) {
+        if (method!.Name == nameof(IAgentFrameworkWorkspaceService.GetDashboardAsync)) {
             return Overview((CancellationToken)args![0]!);
         }
         if (method.Name == nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) && Header()) {
@@ -410,7 +413,7 @@ public class OverviewWorkspaceProxy : DispatchProxy {
     }
 }
 
-internal sealed class OverviewUsageSource(ProviderUsageWorkloadKind kind, string name) : IProviderUsageProjectionSource {
+internal sealed class OverviewUsageSource(ProviderUsageWorkloadKind kind, string name) : IBoundedProviderUsageProjectionSource {
     public string SourceName => kind.ToString();
     public ProviderUsageWorkloadKind WorkloadKind => kind;
     public Func<CancellationToken, Task<ProviderUsageSourceResult>>? Read { get; set; }
@@ -421,6 +424,14 @@ internal sealed class OverviewUsageSource(ProviderUsageWorkloadKind kind, string
         Reads++;
         LastToken = cancellationToken;
         return new(Read?.Invoke(cancellationToken) ?? Task.FromResult(Result(name)));
+    }
+
+    public async ValueTask<ProviderUsageSourceResult> ReadWindowAsync(ProviderUsageWindow window, CancellationToken cancellationToken = default) {
+        var result = await ReadAsync(cancellationToken);
+        return result with {
+            Window = window,
+            Contributions = result.Contributions.Select(item => item with { OccurredAtUtc = window.FromUtc }).ToArray()
+        };
     }
 
     public ProviderUsageSourceResult Result(string consumer) => new(SourceName, kind, ProviderUsageSourceState.Complete,

@@ -7,6 +7,30 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentFrameworkSimpleChatsRouteTests
 {
     [Theory]
+    [InlineData("7d", ProviderUsagePeriod.SevenDays)]
+    [InlineData("14d", ProviderUsagePeriod.FourteenDays)]
+    [InlineData("1m", ProviderUsagePeriod.Month)]
+    [InlineData("1q", ProviderUsagePeriod.Quarter)]
+    [InlineData("1y", ProviderUsagePeriod.Year)]
+    [InlineData("invalid", ProviderUsagePeriod.SevenDays)]
+    public void Period_preserves_workload_and_relevant_navigation_identifiers(string value, ProviderUsagePeriod period) {
+        var agent = Guid.NewGuid();
+        var team = Guid.NewGuid();
+        var conversation = Guid.NewGuid();
+        var state = AgentWorkspaceRouteState.Parse(AgentWorkspaceTabs.Agents, agent, team, null, null, null, "agents", value);
+        Assert.Equal(period, state.UsagePeriod);
+        var route = AgentWorkspaceRouteState.Build(state);
+        Assert.Contains($"agentId={agent:D}", route);
+        Assert.Contains($"teamId={team:D}", route);
+        Assert.Contains("usageScope=agents", route);
+        Assert.Equal(period != ProviderUsagePeriod.SevenDays, route.Contains("usagePeriod=", StringComparison.Ordinal));
+        var chat = AgentWorkspaceRouteState.Parse(AgentWorkspaceTabs.SimpleChats, agent, null, "conversations", null,
+            conversation.ToString("D"), "simple-chats", value);
+        Assert.Contains($"conversationId={conversation:D}", AgentWorkspaceRouteState.Build(chat));
+        Assert.Equal(period, chat.UsagePeriod);
+    }
+
+    [Theory]
     [InlineData(AgentWorkspaceTabs.Providers)]
     [InlineData(AgentWorkspaceTabs.RequestHistory)]
     public void History_hosts_round_trip_without_inheriting_chat_or_team_routes(string tab) {
@@ -14,7 +38,7 @@ public sealed class AgentFrameworkSimpleChatsRouteTests
         Assert.Equal(tab, state.Tab);
         Assert.Null(state.TeamId);
         Assert.Equal(ProviderUsageWorkloadSelection.Agents, state.UsageSelection);
-        Assert.Equal($"/agents?tab={tab}", AgentWorkspaceRouteState.Build(state));
+        Assert.Equal($"/agents?tab={tab}&usageScope=agents", AgentWorkspaceRouteState.Build(state));
     }
 
     [Fact]

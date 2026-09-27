@@ -233,7 +233,7 @@ public sealed class AgentsHomePageTests
 
         cut.Find("[data-testid='agents-overview-open-provider-usage']").Click();
         var dialog = dialogHost.WaitForComponent<ProviderUsageDialog>(TimeSpan.FromSeconds(10));
-        Assert.Equal(ProviderUsageWorkloadSelection.SimpleChats, dialog.Instance.Selection);
+        Assert.Equal(ProviderUsageWorkloadSelection.SimpleChats, dialog.Instance.Query.Selection);
     }
 
     [Fact]

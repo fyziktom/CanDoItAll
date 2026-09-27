@@ -5,7 +5,7 @@
     <CapabilitiesSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" AgentQuery="@AgentQuery" />
 }
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Overview) {
-    <OverviewSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" UsageScopeQuery="@UsageScopeQuery" />
+    <OverviewSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" UsageScopeQuery="@UsageScopeQuery" UsagePeriodQuery="@UsagePeriodQuery" />
 }
 else if (SandboxSpecimens.Parse(SpecimenQuery) == SandboxSpecimen.Governance) {
     <GovernanceSpecimen ScenarioQuery="@ScenarioQuery" LayoutQuery="@LayoutQuery" />
@@ -39,6 +39,9 @@ else {
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "usagePeriod")]
+    public string? UsagePeriodQuery { get; set; }
+
     [SupplyParameterFromQuery(Name = "usageScope")]
     public string? UsageScopeQuery { get; set; }
 

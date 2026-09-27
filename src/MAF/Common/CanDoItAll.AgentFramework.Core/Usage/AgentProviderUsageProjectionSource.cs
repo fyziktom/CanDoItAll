@@ -7,7 +7,7 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed class AgentProviderUsageProjectionSource(
     IAgentProviderUsageEvidenceStore evidenceStore,
     ISandboxWorkspaceCatalogStore catalogStore,
-    ILogger<AgentProviderUsageProjectionSource> logger) : IProviderUsageProjectionSource
+    ILogger<AgentProviderUsageProjectionSource> logger) : IBoundedProviderUsageProjectionSource
 {
     public const string SourceIdentity = "agent-workspace";
 
@@ -15,12 +15,30 @@ public sealed class AgentProviderUsageProjectionSource(
 
     public ProviderUsageWorkloadKind WorkloadKind => ProviderUsageWorkloadKind.Agent;
 
-    public async ValueTask<ProviderUsageSourceResult> ReadAsync(
+    public ValueTask<ProviderUsageSourceResult> ReadAsync(
         CancellationToken cancellationToken = default)
+        => ReadCoreAsync(null, cancellationToken);
+
+    public ValueTask<ProviderUsageSourceResult> ReadWindowAsync(ProviderUsageWindow window, CancellationToken cancellationToken = default)
+        => ReadCoreAsync(window ?? throw new ArgumentNullException(nameof(window)), cancellationToken);
+
+    private async ValueTask<ProviderUsageSourceResult> ReadCoreAsync(ProviderUsageWindow? window, CancellationToken cancellationToken)
     {
         try
         {
-            var evidenceTask = evidenceStore.LoadProviderUsageEvidenceAsync(cancellationToken);
+            AgentProviderUsageWindowEvidence? bounded = null;
+            if (window is not null) {
+                if (evidenceStore is not IBoundedAgentProviderUsageEvidenceStore rangeStore) {
+                    throw new InvalidOperationException("The workspace store does not support bounded usage reads.");
+                }
+                bounded = await rangeStore.LoadProviderUsageWindowAsync(window, cancellationToken).ConfigureAwait(false);
+                if (bounded.Evidence.ProviderUsageObservations.Count == 0) {
+                    return new(SourceIdentity, WorkloadKind, bounded.State, [], DateTimeOffset.UnixEpoch, bounded.Error) {
+                        Window = window, CoverageVerifiedAtUtc = bounded.CoverageVerifiedAtUtc
+                    };
+                }
+            }
+            var evidenceTask = bounded is null ? evidenceStore.LoadProviderUsageEvidenceAsync(cancellationToken) : Task.FromResult(bounded.Evidence);
             var catalogTask = catalogStore.LoadCatalogAsync(cancellationToken);
             await Task.WhenAll(evidenceTask, catalogTask).ConfigureAwait(false);
             var evidence = await evidenceTask.ConfigureAwait(false);
@@ -28,7 +46,8 @@ public sealed class AgentProviderUsageProjectionSource(
             var runs = evidence.ExecutionRuns.ToDictionary(run => run.Id);
             var agents = catalog.Agents.ToDictionary(agent => agent.Id);
             var contributions = evidence.ProviderUsageObservations
-                .Select((observation, index) => Map(observation, index, runs, agents))
+                .Select((observation, index) => Map(observation, bounded?.ObservationIdentities[index]
+                    ?? (observation.Id == Guid.Empty ? $"legacy:{index:D8}:{observation.CreatedAtUtc.UtcTicks}" : observation.Id.ToString("D")), runs, agents))
                 .ToList();
             var updatedAtUtc = contributions.Count == 0
                 ? DateTimeOffset.UnixEpoch
@@ -36,9 +55,9 @@ public sealed class AgentProviderUsageProjectionSource(
             return new(
                 SourceIdentity,
                 ProviderUsageWorkloadKind.Agent,
-                ProviderUsageSourceState.Complete,
+                bounded?.State ?? ProviderUsageSourceState.Complete,
                 contributions,
-                updatedAtUtc);
+                updatedAtUtc, bounded?.Error) { Window = window, CoverageVerifiedAtUtc = bounded?.CoverageVerifiedAtUtc };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -52,13 +71,13 @@ public sealed class AgentProviderUsageProjectionSource(
                 ProviderUsageWorkloadKind.Agent,
                 "agent_usage_read_failed",
                 "Agent usage could not be read from the workspace store.",
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UnixEpoch) with { Window = window };
         }
     }
 
     private static ProviderUsageContribution Map(
         ProviderUsageObservation observation,
-        int index,
+        string contributionId,
         IReadOnlyDictionary<Guid, ExecutionRunRecord> runs,
         IReadOnlyDictionary<Guid, AgentDefinition> agents)
     {
@@ -71,9 +90,6 @@ public sealed class AgentProviderUsageProjectionSource(
         var consumerKind = agentId.HasValue
             ? ProviderUsageConsumerKind.Agent
             : ProviderUsageConsumerKind.Unattributed;
-        var contributionId = observation.Id == Guid.Empty
-            ? $"legacy:{index:D8}:{observation.CreatedAtUtc.UtcTicks}"
-            : observation.Id.ToString("D");
         return new(
             contributionId,
             workload,

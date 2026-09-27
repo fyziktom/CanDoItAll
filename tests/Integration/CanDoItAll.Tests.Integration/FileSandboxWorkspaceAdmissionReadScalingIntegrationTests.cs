@@ -43,7 +43,7 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         Assert.Empty(GetHistoricalUsageReads(scenario));
         AssertReadBudget(
             scenario,
-            expectedPhysicalReadCount: 11,
+            expectedPhysicalReadCount: 12,
             "new-session");
     }
 
@@ -79,7 +79,7 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         Assert.Empty(GetHistoricalUsageReads(scenario));
         AssertReadBudget(
             scenario,
-            expectedPhysicalReadCount: 15,
+            expectedPhysicalReadCount: 16,
             "existing-terminal-latest");
     }
 
@@ -541,6 +541,7 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         var totalBytes = reads.Sum(read => read.LengthBytes);
         output.WriteLine(
             $"admission-read-budget kind={admissionKind} historical-runs={scenario.HistoricalRunCount} successful-opens={reads.Count} total-bytes={totalBytes}");
+        Assert.Single(reads, read => read.PayloadType == typeof(FileUsageIndexHeader));
         Assert.Equal(expectedPhysicalReadCount, reads.Count);
         Assert.All(
             reads,

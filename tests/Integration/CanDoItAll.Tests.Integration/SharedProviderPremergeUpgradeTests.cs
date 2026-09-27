@@ -91,9 +91,11 @@ public sealed class SharedProviderPremergeUpgradeTests {
 
         await migrator.MigrateAsync(HistoricalReviewedMigration);
         Assert.Equal(HistoricalReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
+        await migrator.MigrateAsync(ReviewedMigration);
+        Assert.Equal(ReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
         await migrator.MigrateAsync();
         db.ChangeTracker.Clear();
-        Assert.Equal(ReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(db.Database.GetMigrations(), await db.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
         Assert.Equal(161, db.Model.GetEntityTypes().Count());

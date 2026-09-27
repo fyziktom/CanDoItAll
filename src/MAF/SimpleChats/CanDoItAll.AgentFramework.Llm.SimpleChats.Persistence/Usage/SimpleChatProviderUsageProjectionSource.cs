@@ -10,7 +10,7 @@ namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Usage;
 
 public sealed class SimpleChatProviderUsageProjectionSource(
     IDbContextFactory<SimpleChatsDbContext> dbContextFactory,
-    ILogger<SimpleChatProviderUsageProjectionSource> logger) : IProviderUsageProjectionSource
+    ILogger<SimpleChatProviderUsageProjectionSource> logger) : IBoundedProviderUsageProjectionSource
 {
     public const string SourceIdentity = "simple-chats-ef";
 
@@ -18,16 +18,26 @@ public sealed class SimpleChatProviderUsageProjectionSource(
 
     public ProviderUsageWorkloadKind WorkloadKind => ProviderUsageWorkloadKind.SimpleChat;
 
-    public async ValueTask<ProviderUsageSourceResult> ReadAsync(
+    public ValueTask<ProviderUsageSourceResult> ReadAsync(
         CancellationToken cancellationToken = default)
+        => ReadCoreAsync(null, cancellationToken);
+
+    public ValueTask<ProviderUsageSourceResult> ReadWindowAsync(ProviderUsageWindow window, CancellationToken cancellationToken = default)
+        => ReadCoreAsync(window ?? throw new ArgumentNullException(nameof(window)), cancellationToken);
+
+    private async ValueTask<ProviderUsageSourceResult> ReadCoreAsync(ProviderUsageWindow? window, CancellationToken cancellationToken)
     {
         try
         {
             await using var dbContext = await dbContextFactory
                 .CreateDbContextAsync(cancellationToken)
                 .ConfigureAwait(false);
+            var invocations = dbContext.Set<LlmChatInvocationRecordRow>().AsNoTracking();
+            if (window is not null) {
+                invocations = invocations.Where(invocation => invocation.CompletedAtUtc >= window.FromUtc && invocation.CompletedAtUtc < window.ToUtc);
+            }
             var rows = await (
-                    from invocation in dbContext.Set<LlmChatInvocationRecordRow>().AsNoTracking()
+                    from invocation in invocations
                     join operation in dbContext.Set<LlmChatOperationRow>().AsNoTracking()
                         on invocation.OperationId equals operation.Id
                     join conversation in dbContext.Set<LlmChatConversationRow>().AsNoTracking()
@@ -64,7 +74,7 @@ public sealed class SimpleChatProviderUsageProjectionSource(
                 ProviderUsageWorkloadKind.SimpleChat,
                 ProviderUsageSourceState.Complete,
                 rows.Select(Map).ToList(),
-                updatedAtUtc);
+                updatedAtUtc) { Window = window, CoverageVerifiedAtUtc = DateTimeOffset.UtcNow };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -78,7 +88,7 @@ public sealed class SimpleChatProviderUsageProjectionSource(
                 ProviderUsageWorkloadKind.SimpleChat,
                 "simple_chat_usage_read_failed",
                 "Simple Chat usage could not be read from the database.",
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UnixEpoch) with { Window = window };
         }
     }
 
@@ -104,7 +114,7 @@ public sealed class SimpleChatProviderUsageProjectionSource(
                 CacheWriteTokens: 0,
                 row.OutputTokens,
                 ReasoningTokens: 0,
-                checked(row.InputTokens + row.OutputTokens)),
+                (long)row.InputTokens + row.OutputTokens),
             row.ProviderCostUsd ?? row.CalculatedCostUsd,
             row.CompletedAtUtc);
     }

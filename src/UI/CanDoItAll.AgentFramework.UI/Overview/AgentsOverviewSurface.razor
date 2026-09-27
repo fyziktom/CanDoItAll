@@ -29,12 +29,25 @@
                  Wrap="FlexWrap.Wrap">
             <Stack Gap="0.2rem">
                 <p class="cda-eyebrow">Usage scope</p>
-                <span class="text-sm text-slate-600">Catalog counts stay workspace-wide. Usage, tokens, cost, rankings, charts, and dialogs use this scope.</span>
+                <span class="text-sm text-slate-600">Catalog and live runtime counts stay workspace-wide. Usage, tokens, cost, rankings, charts, and dialogs use @UsageCaption.</span>
+                <span class="text-xs text-slate-500">Last 3m means the previous three calendar months. Longer periods may take longer.</span>
             </Stack>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Cluster role="group" aria-label="Usage workload">
                 <SecondaryTabs Items="UsageScopeTabs"
                                SelectedKey="@UsageScopeKey"
                                SelectedKeyChanged="HandleUsageScopeChangedAsync" />
+                </Cluster>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" role="group" aria-label="Usage period" data-testid="agents-overview-period">
+                    @foreach (var period in Enum.GetValues<ProviderUsagePeriod>()) {
+                        <Button Text="@period.Label()"
+                                Size="ButtonSize.Small"
+                                Variant="@(period == State.DesiredPeriod ? Variant.Filled : Variant.Outlined)"
+                                aria-pressed="@(period == State.DesiredPeriod ? "true" : "false")"
+                                data-testid="@($"agents-overview-period-{period.ToWireValue()}")"
+                                Click="@(() => SelectPeriodAsync(period))" />
+                    }
+                </Cluster>
                 <Button Icon="refresh"
                         Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
@@ -48,8 +61,8 @@
                         Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
                         Variant="Variant.Outlined"
-                        title="Refresh selected usage scope"
-                        aria-label="Retry or refresh selected usage scope"
+                        title="Refresh selected workload and period"
+                        aria-label="Retry or refresh selected workload and period"
                         Disabled="@isUsageLoading"
                         Click="RetryUsageAsync"
                         data-testid="agents-overview-usage-retry" />
@@ -57,15 +70,24 @@
         </Cluster>
     </SurfaceCard>
 
+    @if (State.HasUsage && State.AcceptedQuery is { } accepted) {
+        <p class="text-xs text-slate-500" data-testid="agents-overview-window">
+            @UsageCaption · @accepted.Window.FromUtc.ToString("u") ≤ usage &lt; @accepted.Window.ToUtc.ToString("u") · Generated @State.GeneratedAtUtc?.ToString("u")
+        </p>
+    }
+
     @if (usageLoadError is not null) {
         <Alert AlertStyle="AlertStyle.Warning"
                data-testid="@(hasUsageLoaded ? "agents-overview-usage-stale" : "agents-overview-usage-error")">
-            @(hasUsageLoaded ? "Showing previously accepted usage for this scope." : "Usage is unavailable for the selected scope.") @usageLoadError
+            @(hasUsageLoaded ? "Showing previously accepted usage for this workload and period." : "Usage is unavailable for the selected workload and period.") @usageLoadError
         </Alert>
     }
     @if (HasUsagePartial) {
         <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-overview-usage-partial">
-            Some usage evidence is unavailable. Displayed totals are partial.
+            @UsageCaption: some usage evidence is unavailable or still indexing. Displayed totals are partial.
+            @if (State.UsageSources.Contains(ProviderUsageSourceState.Indexing)) {
+                <span>Agent usage needs the usage-index maintenance command before complete results are available.</span>
+            }
         </Alert>
     }
 
@@ -111,14 +133,14 @@
                                        Rows="@TopUsageConsumers"
                                        AvatarImageUrls="@OverviewConsumerAvatarImageUrls"
                                        TestId="agents-overview-top-consumers-list"
-                                       EmptyDescription="Run an Agent or Simple Chat in the selected scope to populate consumer usage." />
+                                       EmptyDescription="@($"No consumer usage in {UsageCaption}.")" />
         </SurfaceCard>
 
         <Stack GapScale="LayoutGap.Medium"
                Class="agents-overview-main-card agents-overview-chart-shell"
                data-testid="agents-overview-provider-bar">
             <CdaChart Title="Usage per provider"
-                      Description="Provider usage observations for the selected Agent and Simple Chat scope."
+                      Description="@($"Provider usage observations for {UsageCaption}.")"
                       Series="@ProviderUsageBarSeries"
                       Options="@ProviderUsageBarChartOptions"
                       Height="310"
@@ -130,7 +152,7 @@
                Class="agents-overview-main-card agents-overview-chart-shell"
                data-testid="agents-overview-provider-distribution">
             <CdaChart Title="Provider distribution"
-                      Description="Share of provider usage observations in the selected scope."
+                      Description="@($"Share of provider usage observations for {UsageCaption}.")"
                       Series="@ProviderUsageDistributionSeries"
                       Options="@ProviderUsageDistributionChartOptions"
                       Height="310"

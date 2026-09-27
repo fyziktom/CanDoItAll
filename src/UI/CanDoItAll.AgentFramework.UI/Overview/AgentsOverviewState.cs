@@ -9,8 +9,11 @@ public enum AgentsOverviewDetail { Consumers, Providers, Models }
 
 public sealed record AgentsOverviewState {
     public required ProviderUsageWorkloadSelection DesiredScope { get; init; }
+    public ProviderUsagePeriod DesiredPeriod { get; init; }
+    public ProviderUsageQuery? AcceptedQuery { get; init; }
+    public DateTimeOffset? GeneratedAtUtc { get; init; }
     public ProviderUsageWorkloadSelection? AcceptedScope { get; init; }
-    public AgentOverviewTotals? Totals { get; init; }
+    public AgentRuntimeTotals? Totals { get; init; }
     public ProviderUsageTotals? UsageTotals { get; init; }
     public ImmutableArray<ProviderUsageConsumerRow> Consumers { get; init; } = [];
     public ImmutableArray<ProviderUsageProviderRow> Providers { get; init; } = [];
@@ -25,18 +28,19 @@ public sealed record AgentsOverviewState {
     public bool HeaderLoading { get; init; }
     public ImmutableHashSet<AgentsOverviewDetail> OpenDetails { get; init; } = [];
     public bool HasOverview => Totals is not null;
-    public bool HasUsage => AcceptedScope == DesiredScope && UsageTotals is not null;
+    public bool HasUsage => AcceptedQuery?.Selection == DesiredScope && AcceptedQuery.Period == DesiredPeriod && UsageTotals is not null;
     public bool OverviewLoading => OverviewPhase is AgentsOverviewReadPhase.Loading or AgentsOverviewReadPhase.Refreshing;
     public bool UsageLoading => UsagePhase is AgentsOverviewReadPhase.Loading or AgentsOverviewReadPhase.Refreshing;
-    public bool UsagePartial => HasUsage && UsageSources.Any(source => source != ProviderUsageSourceState.Complete);
+    public bool UsagePartial => HasUsage && (UsageSources.IsEmpty || UsageSources.Any(source => source != ProviderUsageSourceState.Complete));
     public bool CanOpen(AgentsOverviewDetail detail) => HasUsage && !UsageLoading && !OpenDetails.Contains(detail);
 }
 
 public abstract record AgentsOverviewIntent {
     public sealed record SelectUsage(ProviderUsageWorkloadSelection Selection) : AgentsOverviewIntent;
+    public sealed record SelectPeriod(ProviderUsagePeriod Period) : AgentsOverviewIntent;
     public sealed record RetryOverview : AgentsOverviewIntent;
     public sealed record RetryUsage : AgentsOverviewIntent;
     public sealed record RetryHeader : AgentsOverviewIntent;
-    public sealed record OpenDetail(AgentsOverviewDetail Detail, ProviderUsageWorkloadSelection Selection) : AgentsOverviewIntent;
+    public sealed record OpenDetail(AgentsOverviewDetail Detail, ProviderUsageQuery Query) : AgentsOverviewIntent;
     public sealed record OpenTeam(Guid TeamId) : AgentsOverviewIntent;
 }

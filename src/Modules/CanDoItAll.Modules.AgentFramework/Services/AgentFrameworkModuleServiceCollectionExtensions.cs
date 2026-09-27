@@ -225,11 +225,14 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentProviderUsageEvidenceStore>(serviceProvider =>
             (IAgentProviderUsageEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<IIndexedWorkspaceReadGuard>(serviceProvider =>
+            (IIndexedWorkspaceReadGuard)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceCatalogStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
             AgentProviderUsageProjectionSource>());
         services.TryAddScoped<ProviderUsageQueryService>();
+        services.TryAddScoped<IProviderUsageReadContext, ProfileProviderUsageReadContext>();
         services.TryAddScoped<
             ISharedProviderImageCapabilityRelay,
             SharedProviderImageCapabilityRelay>();

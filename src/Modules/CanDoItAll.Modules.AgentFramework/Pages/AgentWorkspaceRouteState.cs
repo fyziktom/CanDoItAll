@@ -9,7 +9,8 @@ public sealed record AgentWorkspaceRouteState(
     Guid? AgentId,
     Guid? TeamId,
     SimpleChatWorkspaceRouteState SimpleChat,
-    ProviderUsageWorkloadSelection UsageSelection)
+    ProviderUsageWorkloadSelection UsageSelection,
+    ProviderUsagePeriod UsagePeriod = ProviderUsagePeriod.SevenDays)
 {
     public const string SimpleChatViewQueryKey = "simpleChatView";
     public const string DefinitionIdQueryKey = "definitionId";
@@ -23,7 +24,8 @@ public sealed record AgentWorkspaceRouteState(
         string? simpleChatView,
         string? definitionId,
         string? conversationId,
-        string? usageScope)
+        string? usageScope,
+        string? usagePeriod = null)
     {
         var resolvedTab = !string.IsNullOrWhiteSpace(tab) && AgentWorkspaceTabs.All.Contains(tab)
             ? tab
@@ -43,7 +45,8 @@ public sealed record AgentWorkspaceRouteState(
             agentId,
             resolvedTab == AgentWorkspaceTabs.Agents ? teamId : null,
             simpleChat,
-            ParseUsageSelection(usageScope));
+            ParseUsageSelection(usageScope),
+            ProviderUsagePeriods.TryParse(usagePeriod?.Trim().ToLowerInvariant(), out var period) ? period : ProviderUsagePeriod.SevenDays);
     }
 
     public static string Build(AgentWorkspaceRouteState state)
@@ -89,9 +92,13 @@ public sealed record AgentWorkspaceRouteState(
             }
         }
 
-        if (state.Tab == AgentWorkspaceTabs.Overview && state.UsageSelection != ProviderUsageWorkloadSelection.Both)
+        if (state.UsageSelection != ProviderUsageWorkloadSelection.Both)
         {
             query.Add(new(UsageScopeQueryKey, FormatUsageSelection(state.UsageSelection)));
+        }
+
+        if (state.UsagePeriod != ProviderUsagePeriod.SevenDays) {
+            query.Add(new(ProviderUsagePeriods.QueryKey, state.UsagePeriod.ToWireValue()));
         }
 
         return query.Count == 0

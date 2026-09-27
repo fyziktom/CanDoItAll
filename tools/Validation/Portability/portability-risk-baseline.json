@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-26T20:13:53.181095+00:00",
+  "generated_utc": "2026-09-27T15:02:22.645941+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15109,
+  "allowance_count": 15132,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -12767,6 +12767,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260911194528_BindWorkflowProviderDisclosureHistory.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "61b0022326f85e5cdfcc77e5088e9facb87566ba8bc0ad6b1db26b417e10492f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260927120448_AddInvocationCompletionUsageIndex.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b38b6ebf195b642dabd99db0f7650172b22003f9fdc390f977406eb567198e5e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260927120448_AddInvocationCompletionUsageIndex.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "fba09b0c527ece3410abae86b1e44547bab23389d684eab610a03a4af76eb228",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260927120448_AddInvocationCompletionUsageIndex.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "161d3f9689b99aa79d1ab8b7aa89807949011be14e17adf29a6e96542f7db185",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260927120448_AddInvocationCompletionUsageIndex.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "6893d2b38a57a14bc9264587b951366087d8abb9ec4278fb2fd1b209012083c2",
       "count": 1
     },
     {
@@ -34120,7 +34144,7 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
       "category": "atomic-write",
-      "source_fingerprint": "26d7554d325cbedbcdee1e050885fdf11245fd4c5273fa1dc39cf2e91e175bcc",
+      "source_fingerprint": "13926d6e1147a4690b58c70e166c7e90d6d03eff5cc797f5df0ee42808a59147",
       "count": 1
     },
     {
@@ -34427,6 +34451,96 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
       "category": "path-api",
       "source_fingerprint": "ed38ee65f0e1ce3784bafc13b221a745855f0e9978aea11c85499eb8550dd885",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "path-api",
+      "source_fingerprint": "31133d01f61ee7378665fa30b3f5db981eab654168f1a2d56767bd19e7ee7301",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "path-api",
+      "source_fingerprint": "521e5433c36fe4952b1e5ca894e98d56977ce64ed64143214a46d70dcf9e9227",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "path-api",
+      "source_fingerprint": "758940157be90c886f4d29c8f7a6bc6cfe914e4125d33f15f09e5a7f69f55f0d",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "path-api",
+      "source_fingerprint": "8a89ac332e219f31196f368924e0a1eef651b259290390e6714ba38886081a7f",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "path-api",
+      "source_fingerprint": "f7070c4b0a7d975869637776839ce4f1c123e04d02ee0b574a7843fd3187a468",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "path-api",
+      "source_fingerprint": "fec8b45a10ff93d2c63488eaceacf12753eb4bf502d0e809f3205a8f43473858",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "path-normalization",
+      "source_fingerprint": "95598fbf1a4981cace819199910ba1fbe532f6bc970804bb0d4a85dac9e3a4c4",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndex.cs",
+      "category": "windows-path",
+      "source_fingerprint": "04a4ed3d99e1e0b2f4c54ac57de7cea960a4bd8165d1eb7a825d639e4536fad8",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndexMaintenance.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "02529bf7fa32768043c484ccd5c0016dc1a66c1eaacd605468bd740ff13e80c7",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndexMaintenance.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "9198ede238eddeb4bd3ba1dac012e7d21d7eb0409f1b94f32f9968e5cc04f66f",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndexMaintenance.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a6c327d3d9ccabd40d873e5410a5f30dd9907f4e0f20d481a37bd780c81ac401",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndexMaintenance.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a76737e202d6372c6032ecd4f294056b6dd40524a549c1d9423142fed075b447",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndexMaintenance.cs",
+      "category": "filesystem-enumeration",
+      "source_fingerprint": "4a81ea009ed64f25265f6629ab655861f201e2c045f7acfd7a7510000932c193",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndexMaintenance.cs",
+      "category": "filesystem-enumeration",
+      "source_fingerprint": "ac3fbae1c5f4c5ed21720a8098952bfc76ca577e9338204110940919f3259183",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Usage/FileProviderUsageIndexMaintenance.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "b0461b4dce5c3e434e34572e0b0b2bee57a58653f71dce146ac159b0833dfce8",
       "count": 1
     },
     {
@@ -45809,6 +45923,12 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
       "category": "mcp",
       "source_fingerprint": "e1307221b84027dd221ca86813b165cd48be04f293993604ab5a71c118c39b18",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentsWorkspaceQuery.cs",
+      "category": "case-policy",
+      "source_fingerprint": "18e052877d9ec2aaa14fdd4b2c9746a5967cabc6e9a0725366283ec389a4cf61",
       "count": 1
     },
     {
@@ -79211,6 +79331,24 @@
       "path": "tools/SharedProviders/postgres/init-e2e-databases.sh",
       "category": "shell-elevation",
       "source_fingerprint": "b28b52bd39ee6ddc42ae31c5909f2e5faf4aa923d8fda85969fc48da2475f59e",
+      "count": 1
+    },
+    {
+      "path": "tools/UsageIndex/Program.cs",
+      "category": "path-api",
+      "source_fingerprint": "1ab098eae216101645363156b63d071501efb4c31387f111660a8c94ccca6de6",
+      "count": 1
+    },
+    {
+      "path": "tools/UsageIndex/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "e0ad8b7243d5b93330d8121ffd7e5825aa6a008b6dd3a0eb7f3382b338042173",
+      "count": 1
+    },
+    {
+      "path": "tools/UsageIndex/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "31a007de0f579b149ca3cadaba3aa533ac0f762393e3c3d4e2ab41e17d98f45e",
       "count": 1
     },
     {

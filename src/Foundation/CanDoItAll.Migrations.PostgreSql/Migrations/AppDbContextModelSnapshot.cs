@@ -357,6 +357,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("OperationId", "Ordinal");
 
+                    b.HasIndex("CompletedAtUtc");
+
                     b.HasIndex("ProviderProfileId", "StartedAtUtc");
 
                     b.ToTable("LlmChats_InvocationRecords", (string)null);
