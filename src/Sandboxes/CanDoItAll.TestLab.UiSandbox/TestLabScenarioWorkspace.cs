@@ -6,13 +6,15 @@ namespace CanDoItAll.TestLab.UiSandbox;
 public enum TestLabScenario {
     Representative, Empty, FilteredEmpty, Large, MissingPlan, MissingReferences,
     ReadFailure, StaleRefresh, InvalidEditor, DelayedRead, DelayedReferences,
-    DelayedSave, DelayedReadback, CommittedWarning, RefreshFailure, UnknownOutcome, AdmissionRefused
+    DelayedSave, DelayedReadback, CommittedWarning, RefreshFailure, UnknownOutcome, AdmissionRefused,
+    DelayedPartyLookup, ReferenceFailure
 }
 
 public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposable {
     private readonly Action changed;
     private readonly List<Pending> pending = [];
     private long generation;
+    private long referenceGeneration;
     private bool disposed;
     public TestLabScenario Scenario { get; }
     public TestLabScenarioStore Store { get; }
@@ -26,6 +28,7 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         if (scenario == TestLabScenario.MissingReferences) {
             Store.MakeReferencesUnavailable();
         }
+        Store.FailPartyLookup = scenario == TestLabScenario.ReferenceFailure;
         State.Projects = Store.Projects;
         State.ProjectsRead = TestLabReadState.Ready;
         State.Plans = scenario == TestLabScenario.ReadFailure ? [] : Store.List();
@@ -43,6 +46,9 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
                 State.Draft.Model.Title = string.Empty;
                 State.Draft.Context.Validate();
             }
+            if (scenario == TestLabScenario.ReferenceFailure) {
+                State.Draft.ChangeProject(null, null);
+            }
             SetReferences();
         }
     }
@@ -57,7 +63,7 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         State.Section = TestLabSection.Overview;
         State.EditorRead = TestLabReadState.Loading;
         Changed();
-        if (Scenario == TestLabScenario.DelayedRead && !await WaitAsync(write: false)) {
+        if (Scenario == TestLabScenario.DelayedRead && !await WaitAsync(Operation.PlanRead)) {
             return;
         }
         if (disposed || version != generation) {
@@ -66,8 +72,10 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         var plan = Store.Read(id);
         State.Draft = plan is null ? null : new(plan);
         State.EditorRead = plan is null ? TestLabReadState.Missing : TestLabReadState.Ready;
-        SetReferences();
         Changed();
+        if (State.Draft is { } draft) {
+            await LoadReferencesAsync(draft);
+        }
     }
 
     public Task NewAsync() {
@@ -82,23 +90,13 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         return Task.CompletedTask;
     }
 
-    public async Task ChangeProjectAsync(TestLabDraft origin, Guid? projectId, long? targetVersion = null) {
+    public Task ChangeProjectAsync(TestLabDraft origin, Guid? projectId, long? targetVersion = null) {
         if (!AcceptIntent(origin, targetVersion)) {
-            return;
+            return Task.CompletedTask;
         }
         RetireReads();
         origin.ChangeProject(projectId, Store.Projects.FirstOrDefault(item => item.Id == projectId)?.Admission);
-        var version = generation;
-        State.Parties = [];
-        State.PartiesRead = TestLabReadState.Loading;
-        Changed();
-        if (Scenario == TestLabScenario.DelayedReferences && !await WaitAsync(write: false)) {
-            return;
-        }
-        if (!disposed && version == generation && ReferenceEquals(State.Draft, origin)) {
-            SetReferences();
-            Changed();
-        }
+        return LoadReferencesAsync(origin);
     }
 
     public async Task SaveAsync(TestLabDraft origin, long? targetVersion = null) {
@@ -107,7 +105,7 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         }
         Changed();
         if (Scenario == TestLabScenario.DelayedSave) {
-            await WaitAsync(write: true);
+            await WaitAsync(Operation.Write);
         }
         var admitted = submission.Model.ProjectId is null && submission.Model.ExpectedProjectAdmission is null ||
             Store.Projects.Any(item => item.Id == submission.Model.ProjectId && item.Admission == submission.Model.ExpectedProjectAdmission);
@@ -127,7 +125,7 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         }
         submission.RetainIdentities(origin, id);
         origin.LastCommitted = submission;
-        if (Scenario == TestLabScenario.DelayedReadback && !await WaitAsync(write: false)) {
+        if (Scenario == TestLabScenario.DelayedReadback && !await WaitAsync(Operation.Readback)) {
             return;
         }
         if (disposed || !submission.BelongsTo(State.Draft)) {
@@ -147,14 +145,12 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
     public Task ChangePartyAsync(TestLabDraft origin, Guid? partyId, long? targetVersion = null) {
         if (AcceptIntent(origin, targetVersion)) {
             origin.Model.ResponsiblePartyId = partyId;
-            RetireReads();
-            SetReferences();
-            Changed();
+            return LoadReferencesAsync(origin);
         }
         return Task.CompletedTask;
     }
 
-    public Task RetryAsync() {
+    public async Task RetryAsync() {
         if (!disposed) {
             RefreshList();
             if (State.Draft is { LastCommitted: { } submission, Pending: null } draft && submission.BelongsTo(draft) &&
@@ -163,10 +159,11 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
                 draft.SaveState = TestLabSaveState.Saved;
                 draft.Message = $"Test plan '{id:D}' refreshed. Newer edits are retained.";
             }
-            SetReferences();
             Changed();
+            if (State.Draft is { } origin) {
+                await LoadReferencesAsync(origin);
+            }
         }
-        return Task.CompletedTask;
     }
 
     public void CompletePending() {
@@ -174,8 +171,13 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         Changed();
     }
 
-    private async Task<bool> WaitAsync(bool write) {
-        var wait = new Pending(write);
+    public void FailPendingReferenceRead() {
+        pending.First(item => item.Kind == Operation.References && !item.Completion.Task.IsCompleted)
+            .Completion.TrySetException(new InvalidOperationException("The controlled scenario read failed."));
+    }
+
+    private async Task<bool> WaitAsync(Operation kind) {
+        var wait = new Pending(kind);
         pending.Add(wait);
         Changed();
         try {
@@ -187,15 +189,61 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
 
     private void RetireReads() {
         generation++;
-        foreach (var wait in pending.Where(item => !item.Write).ToArray()) {
+        RetireReferences();
+        foreach (var wait in pending.Where(item => item.Kind != Operation.Write).ToArray()) {
             wait.Completion.TrySetResult(false);
         }
     }
 
+    private void RetireReferences() {
+        referenceGeneration++;
+        foreach (var wait in pending.Where(item => item.Kind == Operation.References).ToArray()) {
+            wait.Completion.TrySetResult(false);
+        }
+    }
+
+    private async Task LoadReferencesAsync(TestLabDraft origin) {
+        RetireReferences();
+        var version = referenceGeneration;
+        var target = origin.TargetVersion;
+        var partyId = origin.Model.ResponsiblePartyId;
+        State.Parties = [];
+        State.PartiesRead = TestLabReadState.Loading;
+        Changed();
+        bool Current() => !disposed && version == referenceGeneration && ReferenceEquals(State.Draft, origin) &&
+            origin.TargetVersion == target && origin.Model.ResponsiblePartyId == partyId;
+        try {
+            var options = Store.ListParties(origin.Model.ProjectId);
+            var needsFallback = partyId is { } id && options.All(item => item.PartyId != id);
+            var delay = Scenario == TestLabScenario.DelayedReferences || Scenario == TestLabScenario.DelayedPartyLookup && needsFallback;
+            if (delay && !await WaitAsync(Operation.References)) {
+                return;
+            }
+            if (Current()) {
+                SetReferences();
+                Changed();
+            }
+        } catch (InvalidOperationException) {
+            if (Current()) {
+                State.PartiesRead = TestLabReadState.Unavailable;
+                Changed();
+            }
+        }
+    }
+
     private void SetReferences() {
-        State.Parties = Scenario == TestLabScenario.MissingReferences || State.Draft?.Model.ProjectId is null
-            ? [] : [new(Store.PartyId, "Delivery reviewer")];
-        State.PartiesRead = State.Parties.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+        State.Parties = [];
+        try {
+            var draft = State.Draft?.Model;
+            var options = Store.ListParties(draft?.ProjectId);
+            if (draft?.ResponsiblePartyId is { } id && options.All(item => item.PartyId != id) && Store.ReadParty(id) is { } saved) {
+                options = options.Append(saved).OrderBy(item => item.DisplayName).ToArray();
+            }
+            State.Parties = options;
+            State.PartiesRead = options.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+        } catch (InvalidOperationException) {
+            State.PartiesRead = TestLabReadState.Unavailable;
+        }
     }
 
     private void RefreshList() {
@@ -216,12 +264,14 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
         disposed = true;
         RetireReads();
         foreach (var wait in pending.ToArray()) {
-            wait.Completion.TrySetResult(wait.Write);
+            wait.Completion.TrySetResult(wait.Kind == Operation.Write);
         }
     }
 
-    private sealed class Pending(bool write) {
-        public bool Write { get; } = write;
+    private enum Operation { PlanRead, References, Readback, Write }
+
+    private sealed class Pending(Operation kind) {
+        public Operation Kind { get; } = kind;
         public TaskCompletionSource<bool> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 }

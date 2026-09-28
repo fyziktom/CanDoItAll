@@ -145,7 +145,7 @@ renderer and Parity assets without production DI or a database.
 | --- | --- | --- |
 | `tests/Unit/CanDoItAll.TestLab.Tests/CanDoItAll.TestLab.Tests.csproj` | `FullyQualifiedName~TestLabSessionTests` | Production session, controlled reads/writes, origin and admission fencing, reconciliation |
 | `tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Components.TestLab` | Real renderer, form input/validation, scenario storage and dependency closure |
-| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~TestLabReconciliationTests\|FullyQualifiedName~OwnerPostcommitPageTests` | Real owner form, postcommit identity, refusal and controlled read-back |
+| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~TestLabNotificationTests\|FullyQualifiedName~TestLabReconciliationTests\|FullyQualifiedName~OwnerPostcommitPageTests` | Real page/session notification semantics with a controlled owner; real owner form, postcommit identity, refusal and controlled read-back |
 | `tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | `FullyQualifiedName~TestLabOwnerPersistenceTests\|FullyQualifiedName~ResourceTestLabAdmissionIntegrationTests\|FullyQualifiedName~OwnerPostcommitPersistenceTests` | PostgreSQL schema, restart, profiles, lifetimes and postcommit behavior |
 | `tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj` | `FullyQualifiedName~TestLabBrowserTests` | Production aggregate and navigation, held read-back, real Activity failure, standalone assets |
 
@@ -162,6 +162,12 @@ The test-only TestLabBrowserFixture uses the real Web entry point and standard-i
 controls, with no fault routes or production switches. The light test project is included
 in Components/Stable and the actual CI shards. See the
 [boundary record](architecture/testlab-ui-boundary.md) for proof and measurement provenance.
+
+The light lane also covers a real responsible-party selector change during committed
+read-back, later explicit save versus read-only retry, global saved-party fallback and
+stale reference completion. The sandbox browser journey checks those controls and fresh
+operation completion. Keep the historical extraction receipt separate from corrective
+test runs; unchanged persistence or shell cases are not new proof unless executed.
 
 ### Collaboration UI slice
 

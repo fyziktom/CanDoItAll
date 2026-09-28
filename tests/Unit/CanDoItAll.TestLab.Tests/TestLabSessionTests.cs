@@ -123,6 +123,22 @@ public sealed class TestLabSessionTests {
     }
 
     [Fact]
+    public async Task Global_saved_party_resolves_through_the_owner_without_project_admission() {
+        using var fixture = new Fixture();
+        var party = Guid.NewGuid();
+        fixture.Owner.ReadPlan = (id, _) => Task.FromResult<TestPlanEditorModel?>(new() { Id = id, ResponsiblePartyId = party });
+        fixture.Owner.ReadParties = (_, _) => throw new InvalidOperationException("A global plan has no project-scoped party read.");
+        fixture.Owner.ReadParty = (id, _) => Task.FromResult<TestLabPartyOption?>(new(id, "Known saved reviewer"));
+        await fixture.Session.SelectAsync(Guid.NewGuid());
+        Assert.Null(fixture.Draft.Model.ProjectId);
+        Assert.Null(fixture.Draft.Model.ExpectedProjectAdmission);
+        Assert.Equal(party, fixture.Draft.Model.ResponsiblePartyId);
+        Assert.Equal(new TestLabPartyOption(party, "Known saved reviewer"), Assert.Single(fixture.Session.State.Parties));
+        Assert.Equal(TestLabReadState.Ready, fixture.Session.State.PartiesRead);
+        Assert.Equal(0, fixture.Owner.Writes);
+    }
+
+    [Fact]
     public async Task Party_change_retires_a_pending_saved_lookup_without_leaving_loading_state() {
         using var fixture = new Fixture();
         await fixture.Session.ApplyRouteAsync(null, fixture.Owner.Project.Id);

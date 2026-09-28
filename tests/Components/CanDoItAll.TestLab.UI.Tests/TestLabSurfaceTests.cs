@@ -21,6 +21,7 @@ public sealed class TestLabSurfaceTests : BunitContext {
     [InlineData(TestLabScenario.StaleRefresh, "Previously loaded plans")]
     [InlineData(TestLabScenario.MissingPlan, "Requested plan was not found")]
     [InlineData(TestLabScenario.MissingReferences, "Unavailable responsible party")]
+    [InlineData(TestLabScenario.ReferenceFailure, "Responsible parties are unavailable")]
     [InlineData(TestLabScenario.Large, "250 matching plans")]
     public void Real_renderer_exposes_distinct_scenario_states(TestLabScenario scenario, string text) {
         using var view = new TestLabScenarioWorkspace(scenario, () => { });
@@ -165,6 +166,7 @@ public sealed class TestLabSurfaceTests : BunitContext {
     [InlineData(TestLabScenario.DelayedRead)]
     [InlineData(TestLabScenario.DelayedReferences)]
     [InlineData(TestLabScenario.DelayedSave)]
+    [InlineData(TestLabScenario.DelayedReadback)]
     public async Task Switching_scenario_releases_pending_work_without_replacement_callbacks(TestLabScenario scenario) {
         var changes = 0;
         using var view = new TestLabScenarioWorkspace(scenario, () => changes++);
@@ -179,7 +181,7 @@ public sealed class TestLabSurfaceTests : BunitContext {
         await pending.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(0, view.PendingCount);
         Assert.Equal(before, changes);
-        Assert.Equal(scenario == TestLabScenario.DelayedSave ? 1 : 0, view.Store.Commits);
+        Assert.Equal(scenario is TestLabScenario.DelayedSave or TestLabScenario.DelayedReadback ? 1 : 0, view.Store.Commits);
     }
 
     private static Task ScenarioAsync(IRenderedComponent<CanDoItAll.TestLab.UiSandbox.Components.Home> cut, TestLabScenario scenario) =>

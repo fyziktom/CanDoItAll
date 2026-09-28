@@ -7,6 +7,17 @@ the selected draft: an admitted delayed write updates its original stored aggreg
 after selection changes, without patching the successor. Switching scenarios releases all
 controlled waits; Retry refresh only reads committed fake data.
 
+Reference requests have their own generation and controlled waits. Changing the responsible
+party leaves a committed save's read-back pending until **Complete next delayed action**;
+completion retains the newer choice and admits a later explicit save. Retiring an editor
+or project target cannot settle a successor's submission.
+
+The bounded party catalog separates existence from project membership. A known saved party
+remains named for a global plan or a project whose choices omit it; unknown or deliberately
+unavailable IDs stay visible as unavailable. `DelayedPartyLookup` holds saved-reference
+resolution, and `ReferenceFailure` shows a failed lookup without clearing the stored ID.
+MissingReferences removes the fake catalog entry as well as retiring the project binding.
+
 ```powershell
 dotnet watch --project src/Sandboxes/CanDoItAll.TestLab.UiSandbox
 ```

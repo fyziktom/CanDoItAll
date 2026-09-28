@@ -176,6 +176,12 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
                 await TabAsync(page, section);
                 await ScreenshotAsync(page, "sandbox-" + section.ToLowerInvariant());
             }
+            var savedParty = await page.GetByTestId("testlab-responsible-party-select").InputValueAsync();
+            await page.GetByTestId("testlab-project-select").SelectOptionAsync(string.Empty);
+            await Assertions.Expect(page.GetByTestId("testlab-responsible-party-select")).ToHaveValueAsync(savedParty);
+            await Assertions.Expect(page.GetByTestId("testlab-responsible-party-select").Locator("option:checked")).ToHaveTextAsync("Delivery reviewer");
+            await Assertions.Expect(page.GetByTestId("testlab-sandbox-state")).ToHaveTextAsync("0 pending · 0 committed");
+            await ScreenshotAsync(page, "sandbox-global-party");
             foreach (var (scenario, observation) in new[] {
                 ("Empty", "No saved plans."), ("FilteredEmpty", "0 matching plans"),
                 ("ReadFailure", "Plans unavailable"), ("StaleRefresh", "Previously loaded plans"), ("Large", "250 matching plans")
@@ -187,16 +193,31 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
             await Assertions.Expect(page.GetByTestId("testlab-editor-state")).ToContainTextAsync("not found");
             await page.GetByTestId("testlab-scenario").SelectOptionAsync("MissingReferences");
             await Assertions.Expect(page.GetByTestId("testlab-responsible-party-select").Locator("option:checked")).ToContainTextAsync("Unavailable");
+            await ScreenshotAsync(page, "sandbox-missing-party");
+            await page.GetByTestId("testlab-scenario").SelectOptionAsync("ReferenceFailure");
+            await Assertions.Expect(page.GetByTestId("testlab-references-state")).ToContainTextAsync("Responsible parties are unavailable");
             await page.GetByTestId("testlab-scenario").SelectOptionAsync("InvalidEditor");
             await page.GetByTestId("testlab-save-button").ClickAsync();
             await Assertions.Expect(page.GetByText("Title is required.", new() { Exact = true })).ToBeVisibleAsync();
             await page.GetByTestId("testlab-scenario").SelectOptionAsync("DelayedReadback");
+            await Assertions.Expect(page.GetByTestId("testlab-save-state")).ToHaveAttributeAsync("data-state", "Ready");
             await page.GetByTestId("testlab-save-button").ClickAsync();
             await Assertions.Expect(page.GetByTestId("testlab-sandbox-state")).ToHaveTextAsync("1 pending · 1 committed");
+            await Assertions.Expect(page.GetByTestId("testlab-save-state")).ToHaveAttributeAsync("data-state", "Pending");
+            var pendingPlanId = await page.GetByTestId("testlab-save-state").GetAttributeAsync("data-plan-id");
+            await page.GetByTestId("testlab-responsible-party-select").SelectOptionAsync(string.Empty);
+            await Assertions.Expect(page.GetByTestId("testlab-responsible-party-select")).ToHaveValueAsync(string.Empty);
+            await Assertions.Expect(page.GetByTestId("testlab-sandbox-state")).ToHaveTextAsync("1 pending · 1 committed");
             await page.GetByTestId("testlab-title-input").FillAsync("Sandbox newer title");
-            await page.GetByTestId("testlab-complete-pending").ClickAsync();
-            await SavedIdAsync(page, "Saved");
+            await Assertions.Expect(page.GetByTestId("testlab-title-input")).ToBeFocusedAsync();
+            await page.GetByTestId("testlab-complete-pending").DispatchEventAsync("click");
+            Assert.Equal(Guid.Parse(pendingPlanId!), await SavedIdAsync(page, "Saved"));
             await Assertions.Expect(page.GetByTestId("testlab-title-input")).ToHaveValueAsync("Sandbox newer title");
+            await Assertions.Expect(page.GetByTestId("testlab-title-input")).ToBeFocusedAsync();
+            await Assertions.Expect(page.GetByTestId("testlab-responsible-party-select")).ToHaveValueAsync(string.Empty);
+            await Assertions.Expect(page.GetByTestId("testlab-save-button")).ToBeEnabledAsync();
+            await Assertions.Expect(page.GetByTestId("testlab-sandbox-state")).ToHaveTextAsync("0 pending · 1 committed");
+            await ScreenshotAsync(page, "sandbox-party-readback");
             await page.GetByTestId("testlab-scenario").SelectOptionAsync("CommittedWarning");
             await page.GetByTestId("testlab-save-button").ClickAsync();
             await SavedIdAsync(page, "SavedWithWarning");

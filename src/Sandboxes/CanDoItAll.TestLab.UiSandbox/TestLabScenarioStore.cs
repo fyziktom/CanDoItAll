@@ -6,9 +6,11 @@ namespace CanDoItAll.TestLab.UiSandbox;
 
 public sealed class TestLabScenarioStore {
     private readonly Dictionary<Guid, TestPlanEditorModel> plans = [];
+    private readonly Dictionary<Guid, TestLabPartyOption> parties = [];
     public IReadOnlyList<TestLabProjectOption> Projects { get; }
     public Guid PartyId { get; } = Guid.NewGuid();
     public int Commits { get; private set; }
+    public bool FailPartyLookup { get; set; }
 
     public TestLabScenarioStore(int count) {
         var profile = Guid.NewGuid();
@@ -16,6 +18,7 @@ public sealed class TestLabScenarioStore {
             var id = Guid.NewGuid();
             return new TestLabProjectOption(id, $"Delivery project {index}", new ProjectWriteAdmission(profile, id, Guid.NewGuid()));
         }).ToArray();
+        parties.Add(PartyId, new(PartyId, "Delivery reviewer"));
         for (var index = 0; index < count; index++) {
             var project = Projects[index % Projects.Count];
             var plan = new TestPlanEditorModel {
@@ -43,7 +46,15 @@ public sealed class TestLabScenarioStore {
 
     public TestPlanEditorModel? Read(Guid id) => plans.TryGetValue(id, out var plan) ? TestLabSubmission.Clone(plan) : null;
 
+    public IReadOnlyList<TestLabPartyOption> ListParties(Guid? projectId) =>
+        projectId == Projects[0].Id ? parties.Values.ToArray() : [];
+
+    public TestLabPartyOption? ReadParty(Guid id) => FailPartyLookup
+        ? throw new InvalidOperationException("The scenario party lookup is unavailable.")
+        : parties.GetValueOrDefault(id);
+
     public void MakeReferencesUnavailable() {
+        parties.Clear();
         foreach (var plan in plans.Values) {
             plan.ExpectedProjectAdmission = new(plan.ExpectedProjectAdmission!.DatabaseProfileId, plan.ProjectId!.Value, Guid.NewGuid());
         }

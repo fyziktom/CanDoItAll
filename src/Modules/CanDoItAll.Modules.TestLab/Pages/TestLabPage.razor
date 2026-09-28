@@ -50,6 +50,9 @@
             case TestLabSaveState.SavedWithWarning:
                 Notifications.Warning("Test plan saved; refresh incomplete", receipt.Message);
                 break;
+            case TestLabSaveState.Unknown:
+                Notifications.Error("Test plan save outcome unknown", receipt.Message);
+                break;
             default:
                 Notifications.Error("Test plan save failed", receipt.Message);
                 break;

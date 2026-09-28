@@ -99,7 +99,7 @@ instant to UTC. PostgreSQL's existing microsecond precision remains unchanged. T
 prerendered form is disabled until interactive readiness, avoiding edits lost during
 the initial server-to-interactive handoff.
 
-## Validation receipt — 2026-09-28
+## Extraction validation receipt — 2026-09-28 (historical)
 
 The branch remains `components-decoupling`. S0 is signed commit `7446c940e` (signature
 verified by Git); the TestLab implementation is the signed commit containing this record.
@@ -246,3 +246,132 @@ zero matching test/watch processes and zero remaining fixture databases. The Pos
 container's ID, name and task label were verified before stopping it; its removal was
 confirmed afterward. Raw runtime logs, TRX and temporary measurement helpers remain in
 ignored evidence directories; maintained documentation and source are committed locally.
+
+## Corrective validation receipt — 2026-09-28 (R1, R2, C1)
+
+The review-fixes package was executed on `components-decoupling`, starting from clean
+HEAD `e5654544c34a5463579031aa16193a97fd2d0be1`. The final branch is unchanged; the final
+local signed commit is the commit containing this corrective receipt. Its hash and Git
+signature status are reported at delivery. No remote operation or next module is included.
+The 24 reviewed source blobs matched the package's reviewed implementation without drift.
+All 98 manifest entries passed checkout-normalized hash validation, and all 33 inherited
+foundation files matched the original package. The historical assignment was not rerun.
+
+R1 was reproduced through the real EditForm and responsible-party selector: retiring all
+reads left the exact committed submission pending forever. Sandbox reference requests now
+have an independent generation and typed wait ownership. A party edit retains the save
+read-back until its own completion; the same draft, EditContext, active section, newer
+unblurred text and party, and parent/child identities survive. Retry only reads; a later
+explicit save writes the newer values once. Retired reference successes/errors, reset,
+disposal, selection A/B/A and project A/B/A cannot settle a successor's operation.
+
+R2 was reproduced by choosing Project None in the real form: a known saved party became
+unavailable. The bounded fake catalog now separates reference existence from project
+membership and resolves only an exact known saved ID. Global and omitted-option fallback,
+unknown IDs, deliberately missing references, failed lookup and delayed stale lookup are
+distinct. `DelayedPartyLookup` and `ReferenceFailure` expose those controlled scenarios.
+The production session's existing global fallback is covered by a new positive owner-port
+test; its implementation is unchanged.
+
+C1 now gives Unknown the title **Test plan save outcome unknown** at the real page's
+notification switch, preserving Error severity, recovery detail and replay lock. The
+four-outcome page/session test uses a narrow controlled owner, observes the actual
+notification service and confirms that refresh/project changes cannot invent certainty
+or cause another write. Real PostgreSQL behavior remains separately proved below.
+
+Implementation changes are confined to sandbox `TestLabScenarioWorkspace.cs` and
+`TestLabScenarioStore.cs`, plus the three-line Unknown branch in module
+`Pages/TestLabPage.razor`. Test changes are `TestLabSandboxReviewTests.cs`,
+`TestLabSurfaceTests.cs`, `TestLabSessionTests.cs`, `TestLabNotificationTests.cs` and
+`TestLabBrowserTests.cs`. Documentation changes are this record, `docs/testing.md` and
+the sandbox README. The renderer, draft/submission contracts, production session/owner,
+persistence, DI, project references, build settings and S0 shell are source-equivalent
+to the start HEAD. The UI README therefore needs no correction.
+
+Current environment: SDK 10.0.303, net10.0, xUnit/VSTest, Playwright 1.55 Chromium at
+1600 × 1000, `TestLabProof` outputs and default source dependency mode. The clean,
+read-only sibling HEADs are unchanged from the extraction receipt: Components
+`f258ab6a959a97fa16c01d0858e7dc122728a11a`, FileTools
+`3a080ecd31068a77c1e1bd639f7a78e21c93db85`, SharedInfo
+`83e21e23bcf43d92b061a6d367ac385241d13cd3`. Code Analytics and Components MCP tools were
+unavailable; local source, actual discovery and the existing transitive boundary tests
+provide the impact evidence. No shared component behavior changed.
+
+Each of these direct builds passed with zero warnings/errors using
+`dotnet build <project> --configuration TestLabProof /m:1`:
+
+- `src/Sandboxes/CanDoItAll.TestLab.UiSandbox/CanDoItAll.TestLab.UiSandbox.csproj`
+- `src/UI/CanDoItAll.TestLab.UI/CanDoItAll.TestLab.UI.csproj`
+- `src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj`
+- `src/App/CanDoItAll.Web/CanDoItAll.Web.csproj`
+
+Fresh failing-first evidence is `artifacts/testlab-review-fixes/red-ui.trx` (expected and
+discovered 2; passed 0, failed 2, skipped 0) and `red-c1.trx` (expected and discovered 4;
+passed 3, failed 1, skipped 0). R1 failed its pending-settlement assertion, R2 its saved-party
+options assertion, and C1 its uncertainty title assertion. The reviewer's uncompiled seeds
+were guidance, not an executed test result. The two light reproductions used filter
+`FullyQualifiedName~Party_change_during_real_form_readback_preserves_draft_and_settles_without_replay|FullyQualifiedName~Global_project_control_keeps_the_known_saved_party_named`;
+C1 used `FullyQualifiedName~TestLabNotificationTests` in the corresponding projects below.
+
+All current green lanes rebuilt/discovered the owning assembly before execution. Each
+project directory below contains its same-named `.csproj`; these are the exact commands
+with the row's project, filter and prefix substituted:
+
+```powershell
+dotnet test <project> --configuration TestLabProof --list-tests --filter '<filter>' /m:1
+dotnet test <project> --configuration TestLabProof --no-build --no-restore --filter '<filter>' --logger 'trx;LogFileName=<prefix>.trx' --results-directory artifacts/testlab-review-fixes /m:1
+```
+
+| Project under `tests` | Filter | Expected / discovered / passed | Failed / skipped | Prefix |
+| --- | --- | --- | --- | --- |
+| `Components/CanDoItAll.TestLab.UI.Tests` | `FullyQualifiedName~CanDoItAll.Tests.Components.TestLab` | 38 / 38 / 38 | 0 / 0 | `light` |
+| `Unit/CanDoItAll.TestLab.Tests` | `FullyQualifiedName~TestLabSessionTests` | 29 / 29 / 29 | 0 / 0 | `session` |
+| `Components/CanDoItAll.Tests.Components` | `FullyQualifiedName~TestLabNotificationTests\|FullyQualifiedName~TestLabReconciliationTests` | 7 / 7 / 7 | 0 / 0 | `host` |
+| `Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~TestLabBrowserTests` | 3 / 3 / 3 | 0 / 0 | `browser` |
+
+These are 77 distinct current cases. The new files are discovered in their existing owning
+projects; the light project remains selected by Components/Stable and all current component
+CI shards. There is no new assembly, solution or CI membership change. Existing warnings
+in broad test dependencies are separate from the clean direct production builds.
+
+Browser proof exercised the actual selector during the exact committed read-back, observed
+Pending then Saved for that plan identity, retained the focused newer title and party,
+enabled submit and exactly one fake commit. It also checked the global party name and
+intentional missing/failure states. Both existing production journeys ran with the real
+shell, aggregate identity, held read-back and postcommit Activity failure/read-only recovery.
+Fresh desktop captures were inspected in `output/playwright/testlab-ui`, including
+`sandbox-party-readback.png`, `sandbox-global-party.png`, `sandbox-missing-party.png`,
+`production-retained-input.png` and `production-committed-warning.png`. Browser console,
+page and asset checks passed; the only server failure was the intentionally injected
+postcommit Activity failure, with no shell disposal exception.
+
+The backend-free sandbox started with its existing Parity stylesheet, fonts and scripts.
+All three light dependency/contract boundary tests passed. References and watch inputs
+are unchanged, so the earlier 137/7 project-graph inventory and comparative measurements
+remain historical rather than being presented as new measurements. A fresh
+`dotnet watch --non-interactive --project src/Sandboxes/CanDoItAll.TestLab.UiSandbox --configuration TestLabProof --no-launch-profile -- --urls <owned-loopback-url>`
+Razor edit-to-visible smoke passed in 2,899.665 ms (one local sample, restored caches;
+not a benchmark or Web speedup claim). The source was restored byte for byte and the
+owned watch process stopped. `watch-smoke.json`, its log and screenshot retain this proof.
+
+The owned `postgres:18.6-alpine` container `cda-testlab-review-3c068a79` used
+`127.0.0.1:53685`, server version 180006, and existing isolated `WAL_LOG` database leasing.
+External browser base URLs were unset and child-host/test configurations matched.
+Cleanup verified zero remaining fixture databases and proof host/watch processes, checked
+the exact container ID/name/task label before stopping it, and confirmed automatic removal.
+The ordinary app/database on port 5032 and unrelated processes were untouched.
+
+Portability tooling self-tests passed 6/6 and artifact-secret tooling self-tests 4/4.
+The complete scan covered 6,732 files and 31,863 observations. Final enforcement without
+`--write-baseline` passed with all 15,122 reviewed executable-source findings unchanged;
+no baseline refresh was needed. Documentation evidence and canonical Markdown checks,
+run with `./tools/Validation/Test-DocumentationEvidence.ps1` and
+`./tools/Validation/Test-Documentation.ps1`, passed 9 cases and 252 maintained files.
+`git diff --cached --check` passed. Raw discovery/build/run logs, TRX, package/entry checks
+and cleanup provenance remain in ignored `artifacts/testlab-review-fixes`.
+
+The Behavioral entry and closure review found no unresolved R1/R2/C1 requirement or new
+dependency/composition boundary. The earlier 115-case extraction/S0 receipt is historical.
+Full Stable, cross-platform, owner/admission integration and shell/Collaboration reruns were
+not claimed for this correction: their production contracts, session/persistence, shared
+composition and S0 implementation did not change, so their expansion triggers did not apply.
