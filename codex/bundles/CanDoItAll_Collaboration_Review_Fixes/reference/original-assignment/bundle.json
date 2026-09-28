@@ -1,0 +1,31 @@
+{
+  "name": "CanDoItAll Collaboration UI Decoupling",
+  "reference_id": "CDA-UI-DECOUPLING-COLLABORATION-v1",
+  "version": "1.0.0",
+  "prepared_at": "2026-09-28",
+  "kind": "module-implementation-handoff",
+  "target_agent_label": "Codex GPT-6 Astra Max",
+  "entry_point": "prompt.md",
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "development",
+  "review_commit": "7db3543ab437376baeca55089cb331fbe1b30483",
+  "review_commit_is_execution_pin": false,
+  "selected_module": "Collaboration",
+  "selected_route": "/collaboration",
+  "scope": "Complete existing Collaboration workspace renderer boundary, production wiring, sandbox, related lifecycle repairs and validation.",
+  "shared_foundation": {
+    "reference_id": "CDA-UI-DECOUPLING-SHARED-v3",
+    "location": "shared/",
+    "content_modified": false,
+    "input_zip_sha256": "0fad1e632cfaf7a812783be3789cb4af1a708f8eb8288e6afde86e155eff8e1a"
+  },
+  "language": "English execution and engineering content; unchanged shared owner summary may be Czech.",
+  "application_validation": "NOT_RUN",
+  "source_register": "sources.json",
+  "validation_matrix": "VALIDATION_MATRIX.md",
+  "package_validation": "PACKAGE_VALIDATION.md",
+  "local_task_scoped_signed_commits_permitted": true,
+  "remote_publication_authorized": false,
+  "automatic_other_module_work_authorized": false,
+  "branch_rechecked_at_review_end": true
+}

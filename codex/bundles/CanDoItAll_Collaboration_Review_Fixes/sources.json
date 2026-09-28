@@ -1,0 +1,252 @@
+{
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "reviewed_head": "e55a780b36e75db39a05b7400408d8267d0f32d5",
+  "parent": "714e42706904e796e5e628f30457ca40370c7d4c",
+  "review_date": "2026-09-28",
+  "files": [
+    {
+      "id": "S01",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationWorkspaceSession.cs",
+      "git_blob_sha": "a6b83129283910d81740777d218dd48b2b2b5a84",
+      "coverage": "full source",
+      "purpose": "read/cancel/selection/form/mutation/reconciliation lifetimes",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationWorkspaceSession.cs"
+    },
+    {
+      "id": "S02",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
+      "git_blob_sha": "14ed7cd908cbd925a79b2ec306c8af15bd70a4b5",
+      "coverage": "full source",
+      "purpose": "production per-page session and navigation/notification integration",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs"
+    },
+    {
+      "id": "S03",
+      "path": "src/UI/CanDoItAll.Collaboration.UI/ICollaborationWorkspaceView.cs",
+      "git_blob_sha": "6db8e2837985b8abe90d487254c78964bc4d645a",
+      "coverage": "full source",
+      "purpose": "feature contract",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/UI/CanDoItAll.Collaboration.UI/ICollaborationWorkspaceView.cs"
+    },
+    {
+      "id": "S04",
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationDraft.cs",
+      "git_blob_sha": "7741b7f35579c4028378951960ea177e44888807",
+      "coverage": "full source",
+      "purpose": "form context, validation and admission",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/UI/CanDoItAll.Collaboration.UI/CollaborationDraft.cs"
+    },
+    {
+      "id": "S05",
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "git_blob_sha": "4c790ea63c461c9c6a344a6ceb68f984d1dcba00",
+      "coverage": "full-file response plus follow-up ranges 296-359 and 340-end; relevant forms/actions inspected",
+      "purpose": "rendered field locking, selected state and real BaseLib descendants",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor"
+    },
+    {
+      "id": "S06",
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "git_blob_sha": "e6a00254902b2ea6c5a0400779977ba1ad67521b",
+      "coverage": "full source",
+      "purpose": "section mapping and local render helpers",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs"
+    },
+    {
+      "id": "S07",
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "git_blob_sha": "a9dedb70233313f29421e243660e5a04791f690a",
+      "coverage": "full source",
+      "purpose": "deterministic scenario store/selection/delayed effects",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs"
+    },
+    {
+      "id": "S08",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Commands.cs",
+      "git_blob_sha": "b2f4a4bd13eefc18e6410443f2dc851fb4534f6e",
+      "coverage": "full source",
+      "purpose": "actual create/reply/mark-read persistence and local unread semantics",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Commands.cs"
+    },
+    {
+      "id": "S09",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Support.cs",
+      "git_blob_sha": "71d054b640a2e6aaa7fda52a5b5d5d71b4e45c93",
+      "coverage": "full source",
+      "purpose": "local request mapping and isolated change observers",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.Collaboration/CollaborationService.Support.cs"
+    },
+    {
+      "id": "S10",
+      "path": "tests/Unit/CanDoItAll.Collaboration.Tests/CollaborationWorkspaceSessionTests.cs",
+      "git_blob_sha": "2474918688d18d660c9a420fb81a34e77bd91a48",
+      "coverage": "full-file response plus tail 355-end; source inspection, no execution",
+      "purpose": "existing race/unknown/empty selection tests and scripted Owner helpers",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/tests/Unit/CanDoItAll.Collaboration.Tests/CollaborationWorkspaceSessionTests.cs"
+    },
+    {
+      "id": "S11",
+      "path": "tests/Components/CanDoItAll.Collaboration.UI.Tests/CollaborationBoundaryTests.cs",
+      "git_blob_sha": "d4e8bd88f8f00bacf03484303caa6f5a9ebf2d23",
+      "coverage": "full source",
+      "purpose": "fail-closed non-framework traversal and public shape guards",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/tests/Components/CanDoItAll.Collaboration.UI.Tests/CollaborationBoundaryTests.cs"
+    },
+    {
+      "id": "S12",
+      "path": "tests/Components/CanDoItAll.Collaboration.UI.Tests/CollaborationSurfaceTests.cs",
+      "git_blob_sha": "90f21977d502e6cd1bc48d255fc91f431fc8ede6",
+      "coverage": "full source",
+      "purpose": "real forms and scenario assertions",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/tests/Components/CanDoItAll.Collaboration.UI.Tests/CollaborationSurfaceTests.cs"
+    },
+    {
+      "id": "S13",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CollaborationBrowserTests.cs",
+      "git_blob_sha": "b6d9d7c00e7f8d0714fb9b85a841f604ad58c6fc",
+      "coverage": "full source",
+      "purpose": "real production journey and mark-read completion race",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/tests/Playwright/CanDoItAll.Tests.Playwright/CollaborationBrowserTests.cs"
+    },
+    {
+      "id": "S14",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CollaborationSandboxBrowserTests.cs",
+      "git_blob_sha": "d47ddec5a269cadd2249580c53608e9d4c2cdd35",
+      "coverage": "full source",
+      "purpose": "sandbox browser scope, delayed interactions and cleanup",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/tests/Playwright/CanDoItAll.Tests.Playwright/CollaborationSandboxBrowserTests.cs"
+    },
+    {
+      "id": "S15",
+      "path": "docs/architecture/collaboration-ui-boundary.md",
+      "git_blob_sha": null,
+      "coverage": "substantial full-file response; final closure paragraph truncated; raw ignored evidence unavailable",
+      "purpose": "attributed prior builds/tests/benchmarks and missing companion input disclosure",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/docs/architecture/collaboration-ui-boundary.md"
+    },
+    {
+      "id": "S16",
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CanDoItAll.Collaboration.UI.csproj",
+      "git_blob_sha": "5495fe1e03e35b95b5914fd92268340ebe21b0d4",
+      "coverage": "complete added-file commit patch",
+      "purpose": "declared lightweight references",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/UI/CanDoItAll.Collaboration.UI/CanDoItAll.Collaboration.UI.csproj"
+    },
+    {
+      "id": "S17",
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj",
+      "git_blob_sha": "829303ea7cadff081f93c2a5f68814cefb487306",
+      "coverage": "full source",
+      "purpose": "UI-only project edge, Parity content link and missing-CSS error",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj"
+    },
+    {
+      "id": "S18",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModuleServiceCollectionExtensions.cs",
+      "git_blob_sha": "25e87a6c65c1e19de2ce7d2509c546b6b06d4ee1",
+      "coverage": "full source",
+      "purpose": "same scoped owner alias and bounded context factory",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModuleServiceCollectionExtensions.cs"
+    },
+    {
+      "id": "S19",
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.DatabaseProfiles.cs",
+      "git_blob_sha": "0ada29c208716e5d01ec12f26483369cef918c09",
+      "coverage": "full source",
+      "purpose": "shell read generation, retention of accepted count and fault logging",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/App/CanDoItAll.Web/Components/Layout/MainLayout.DatabaseProfiles.cs"
+    },
+    {
+      "id": "S20",
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
+      "git_blob_sha": "61608348763738231193980788b53c37e4997f0d",
+      "coverage": "full source",
+      "purpose": "shell subscription and disposal state",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs"
+    },
+    {
+      "id": "S21",
+      "path": "AGENTS.md",
+      "git_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "coverage": "full source",
+      "purpose": "repository authority and mandatory static gate",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/AGENTS.md"
+    },
+    {
+      "id": "S22",
+      "path": "docs/architecture/ui-component-seams.md",
+      "git_blob_sha": "da998e19c2206ef4396e04b20aeed6ac4634bbaa",
+      "coverage": "lines 1-240 (through end of returned canonical document)",
+      "purpose": "state, editor, reconciliation and scenario obligations",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/docs/architecture/ui-component-seams.md"
+    },
+    {
+      "id": "S23",
+      "path": "src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj",
+      "git_blob_sha": "53a9755764649a74e16e401bf63beba72ebfc0bf",
+      "coverage": "full source",
+      "purpose": "next candidate declared backend/project dependencies",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj"
+    },
+    {
+      "id": "S24",
+      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
+      "git_blob_sha": "06b88f672395b90ce0634be3739bdf55aa1f5041",
+      "coverage": "lines 1-100 only",
+      "purpose": "next candidate entry route, injections, list/filter surface",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor"
+    },
+    {
+      "id": "S25",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CanDoItAll.Modules.Collaboration.Contracts.csproj",
+      "git_blob_sha": "ef5db47ed68393dbbec676d7add49f29875dc6bc",
+      "coverage": "full source",
+      "purpose": "ordinary SDK contracts project with no declared backend references",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/e55a780b36e75db39a05b7400408d8267d0f32d5/src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CanDoItAll.Modules.Collaboration.Contracts.csproj"
+    }
+  ],
+  "metadata_reads": [
+    {
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/branches/components-decoupling",
+      "observation": "branch rechecked at end of source review; still e55a780b36e75db39a05b7400408d8267d0f32d5"
+    },
+    {
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/commits/e55a780b36e75db39a05b7400408d8267d0f32d5?per_page=15&page=3",
+      "observation": "verified signed commit; parent and current implementation metadata read"
+    },
+    {
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/actions/runs?head_sha=e55a780b36e75db39a05b7400408d8267d0f32d5&per_page=20",
+      "observation": "total_count=0 at review; not proof of failure or absence of local validation"
+    }
+  ],
+  "primary_external_sources": [
+    {
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/blazor/components/synchronization-context?view=aspnetcore-10.0",
+      "purpose": "Blazor async reentrancy at incomplete awaits"
+    },
+    {
+      "url": "https://playwright.dev/dotnet/docs/test-assertions",
+      "purpose": "retrying assertions wait for their specified condition"
+    },
+    {
+      "url": "https://playwright.dev/dotnet/docs/actionability",
+      "purpose": "disabled/enabled checks are element state, not a transaction receipt"
+    }
+  ],
+  "not_performed": [
+    "application build",
+    "test discovery/execution",
+    "PostgreSQL run",
+    "browser/screenshot validation",
+    "evaluated MSBuild/restore graph",
+    "watch benchmark",
+    "Code Analytics or Components MCP execution"
+  ],
+  "local_inputs": [
+    {
+      "path": "reference/original-assignment",
+      "description": "complete prior user-supplied assignment preserved byte-for-byte, including shared v3"
+    }
+  ]
+}
