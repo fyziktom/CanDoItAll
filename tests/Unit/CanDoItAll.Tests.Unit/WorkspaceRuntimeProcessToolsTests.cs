@@ -249,55 +249,132 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     }
 
     [Fact]
-    public void BuildTailwindWatchArgumentList_targets_input_and_output_files()
-    {
-        var arguments = WorkspaceRuntimeProcessTools.BuildTailwindWatchArgumentList(
-            @"C:\repos\CanDoItAll\Tailwind\input.css",
-            @"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\wwwroot\css\output.css");
-
-        Assert.Equal(
-            [
-                "-i",
-                @"C:\repos\CanDoItAll\Tailwind\input.css",
-                "-o",
-                @"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\wwwroot\css\output.css",
-                "--watch=always"
-            ],
-            arguments);
-    }
-
-    [Fact]
-    public void BuildTailwindBuildArgumentList_targets_input_and_output_files_without_watch_mode()
-    {
-        var arguments = WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(
-            @"Tailwind\input.css",
-            @"..\src\App\CanDoItAll.Web\wwwroot\css\output.css");
-
-        Assert.Equal(
-            [
-                "-i",
-                @"Tailwind\input.css",
-                "-o",
-                @"..\src\App\CanDoItAll.Web\wwwroot\css\output.css"
-            ],
-            arguments);
-    }
-
-    [Fact]
-    public void ResolveTailwindCliScriptPath_points_to_workspace_local_node_entry()
+    public void ResolveTailwindCliShimPath_points_to_the_npm_bin_shim_that_package_scripts_run()
     {
         var tailwindWorkspacePath = Path.Combine(Path.GetTempPath(), "CanDoItAll", "Tailwind");
-        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliScriptPath(tailwindWorkspacePath);
+        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliShimPath(tailwindWorkspacePath);
 
         Assert.Equal(
             Path.Combine(
                 tailwindWorkspacePath,
                 "node_modules",
-                "@tailwindcss",
-                "cli",
-                "dist",
-                "index.mjs"),
+                ".bin",
+                OperatingSystem.IsWindows() ? "tailwindcss.cmd" : "tailwindcss"),
             path);
+    }
+
+    [Fact]
+    public void CreateNpmCommandPlan_runs_the_npm_cli_installed_beside_the_npm_launcher_through_node()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var npmPath = CreateFile(root, OperatingSystem.IsWindows() ? "npm.cmd" : "npm");
+            var npmCliPath = CreateFile(root, "node_modules", "npm", "bin", "npm-cli.js");
+            var nodePath = Path.Combine(root, OperatingSystem.IsWindows() ? "node.exe" : "node");
+
+            var plan = WorkspaceRuntimeProcessTools.CreateNpmCommandPlan(nodePath, npmPath, ["run", "watch"]);
+
+            Assert.Equal(nodePath, plan.ExecutablePath);
+            Assert.Equal([npmCliPath, "run", "watch"], plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreateNpmCommandPlan_finds_the_npm_cli_in_a_unix_style_prefix_layout()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var npmPath = CreateFile(root, "bin", OperatingSystem.IsWindows() ? "npm.cmd" : "npm");
+            var npmCliPath = CreateFile(root, "lib", "node_modules", "npm", "bin", "npm-cli.js");
+            var nodePath = Path.Combine(root, "bin", OperatingSystem.IsWindows() ? "node.exe" : "node");
+
+            var plan = WorkspaceRuntimeProcessTools.CreateNpmCommandPlan(nodePath, npmPath, ["install"]);
+
+            Assert.Equal(nodePath, plan.ExecutablePath);
+            Assert.Equal([npmCliPath, "install"], plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreateNpmCommandPlan_follows_a_unix_npm_symlink_to_its_cli_script()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var npmCliPath = CreateFile(root, "toolchain", "npm-cli.js");
+            Directory.CreateDirectory(Path.Combine(root, "bin"));
+            var npmPath = Path.Combine(root, "bin", "npm");
+            File.CreateSymbolicLink(npmPath, npmCliPath);
+
+            var plan = WorkspaceRuntimeProcessTools.CreateNpmCommandPlan("/usr/bin/node", npmPath, ["run", "watch"]);
+
+            Assert.Equal("/usr/bin/node", plan.ExecutablePath);
+            Assert.EndsWith(Path.Combine("toolchain", "npm-cli.js"), plan.Arguments[0], StringComparison.Ordinal);
+            Assert.True(File.Exists(plan.Arguments[0]));
+            Assert.Equal(["run", "watch"], plan.Arguments.Skip(1));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreateNpmCommandPlan_requires_the_npm_cli_on_windows_and_runs_npm_directly_elsewhere()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var npmPath = CreateFile(root, OperatingSystem.IsWindows() ? "npm.cmd" : "npm");
+            var nodePath = Path.Combine(root, OperatingSystem.IsWindows() ? "node.exe" : "node");
+
+            if (OperatingSystem.IsWindows())
+            {
+                var exception = Assert.Throws<InvalidOperationException>(
+                    () => WorkspaceRuntimeProcessTools.CreateNpmCommandPlan(nodePath, npmPath, ["run", "watch"]));
+                Assert.Contains("npm-cli.js", exception.Message, StringComparison.Ordinal);
+                return;
+            }
+
+            var plan = WorkspaceRuntimeProcessTools.CreateNpmCommandPlan(nodePath, npmPath, ["run", "watch"]);
+
+            Assert.Equal(npmPath, plan.ExecutablePath);
+            Assert.Equal(["run", "watch"], plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static string CreateTemporaryDirectory()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "CanDoItAll.Manager.NpmPlan", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        return root;
+    }
+
+    private static string CreateFile(string root, params string[] segments)
+    {
+        var path = Path.Combine([root, .. segments]);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, string.Empty);
+        return path;
     }
 
     [Theory]

@@ -161,7 +161,10 @@ public enum WorkspaceProcessTerminationMode
 public enum WorkspaceProcessStandardIoMode
 {
     Captured,
-    Duplex
+    Duplex,
+    // Captures output like Captured and holds an unwritten stdin pipe open until the session completes,
+    // so a child that stops on stdin EOF (for example a CSS watch tool) lives exactly as long as its owner.
+    CapturedWithOpenInput
 }
 
 public enum WorkspaceProcessTextCaptureMode

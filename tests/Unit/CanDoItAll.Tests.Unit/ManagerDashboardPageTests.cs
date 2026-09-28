@@ -79,6 +79,8 @@ public sealed class ManagerDashboardPageTests
         Assert.Contains("Services", html);
         Assert.Contains("CanDoItAll.Web", html);
         Assert.Contains("Tailwind", html);
+        Assert.Contains("id=\"tailwind-command\"", html);
+        Assert.Contains("id=\"tailwind-last-build\"", html);
         Assert.Contains("https://localhost:7271", html);
         Assert.Contains("/api/tailwind/logs", html);
         Assert.Contains("/openapi/v1.json", html);
