@@ -134,6 +134,28 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+### Scheduler UI slice
+
+Build SchedulerPlanner.Contracts, SchedulerPlanner.UI, SchedulerPlanner.Presentation, the
+SchedulerPlanner module, Web and the [sandbox](../src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/README.md)
+directly in an isolated configuration such as `SchedulerUiProof`. Set
+`CANDOITALL_TEST_CONFIGURATION` to the same configuration for browser child hosts.
+Use task-owned PostgreSQL for owner/page/browser lanes. Never reuse the ordinary application.
+Build-backed `--list-tests --filter` must confirm the expected count before execution.
+
+| Owning project | Filter | Proof |
+| --- | --- | --- |
+| `tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests` | `FullyQualifiedName~CanDoItAll.Tests.Components.SchedulerPlanner` | Light renderer, draft revisions, read fences, admission, scenarios and dependency guard |
+| `tests/Components/CanDoItAll.Tests.Components` | `FullyQualifiedName~SchedulerPlannerPageTests` | Real production composition and contextual Agent integration |
+| `tests/Unit/CanDoItAll.Tests.Unit` | `FullyQualifiedName~Scheduler` | Contract forwarding, installed Quartz boundaries, Agent acknowledgement and existing authorization consumers |
+| `tests/Integration/CanDoItAll.Tests.Integration` | `FullyQualifiedName~Scheduler` | Actual persistence/transaction, post-commit faults, cascade/admission and existing fire/source authority consumers |
+| `tests/Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~SchedulerBrowserTests` | Real Web owner journey and sandbox native canvas, multiple surfaces, raw input, lifecycle and assets |
+
+The lightweight project is included in Components/Stable solutions and all CI component
+selections, never the product solution. See the [boundary evidence](architecture/scheduler-ui-boundary.md)
+for the exact last executed counts and development-loop samples. Broad Stable remains
+subject to the named invalidation rules below.
+
 ### Plugins UI slice
 
 Build Plugins.Contracts, Plugins.UI, Plugins.Presentation, the Plugins module,

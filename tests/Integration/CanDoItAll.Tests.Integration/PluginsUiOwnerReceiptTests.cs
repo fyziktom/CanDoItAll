@@ -11,12 +11,64 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Tests.Integration;
 
 [Trait("Category", "HostPlatform")]
 public sealed class PluginsUiOwnerReceiptTests {
     public enum InvalidUpload { InvalidZip, Oversized, ReadFailure }
+
+    [Fact]
+    public async Task Replacement_and_cleanup_double_fault_preserves_stage_and_blocks_presentation_replay() {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugins-ui-replacement-double-fault");
+        var root = Path.Combine(environment.RootPath, "packages");
+        var manifest = Manifest();
+        var primary = new IOException("Controlled installed-directory replacement failure");
+        var cleanup = new UnauthorizedAccessException("Controlled temporary-directory cleanup failure");
+        var attempts = new List<string>();
+        await using var provider = await ProviderAsync(environment, root, services => services.AddScoped(serviceProvider =>
+            new PluginPackageManifestStore(serviceProvider.GetRequiredService<PluginPackageOptions>(),
+                serviceProvider.GetRequiredService<ILogger<PluginPackageManifestStore>>()) {
+                DeletePackageDirectory = path => {
+                    attempts.Add(path);
+                    if (Path.GetFileName(path) == manifest.Plugin.Package!.PackageId.Value) {
+                        throw primary;
+                    }
+                    throw cleanup;
+                }
+            }));
+        await using var scope = provider.CreateAsyncScope();
+        var options = provider.GetRequiredService<PluginPackageOptions>();
+        Directory.CreateDirectory(Path.Combine(options.InstalledRootPath, manifest.Plugin.Package!.PackageId.Value));
+        using var workspace = scope.ServiceProvider.GetRequiredService<PluginWorkspaceSession>()
+            .CreateWorkspace(new Uri("http://fixture.invalid/"), _ => Task.CompletedTask);
+        await workspace.OpenPackagesAsync();
+        using var archive = Archive(manifest);
+        var file = new PackageBrowserFile(archive.ToArray());
+        await workspace.UploadAsync(file);
+        var operation = workspace.View.Operations[new PluginOperationTarget.Upload()];
+        Assert.Equal(PluginMutationStatus.Unknown, operation.Status);
+        Assert.Equal(PluginPackageStage.ReplacementStarted, operation.PackageProgress!.Stage);
+        Assert.Equal(manifest.Plugin.Package.PackageId, operation.PackageProgress.PackageId);
+        Assert.Equal(manifest.Plugin.Id, operation.PackageProgress.PluginId);
+        Assert.Equal(2, attempts.Count);
+        Assert.True(operation.PreventsReplay);
+        await workspace.UploadAsync(file);
+        await workspace.RefreshAsync();
+        Assert.Equal(1, file.OpenCount);
+        Assert.Equal(2, attempts.Count);
+        Assert.Null(await scope.ServiceProvider.GetRequiredService<PluginInstallationStore>().FindAsync(manifest.Plugin.Id));
+        Assert.Empty(Directory.EnumerateFiles(Path.Combine(options.RuntimeStateRootPath, "uploads")));
+        var archivePath = Path.Combine(environment.RootPath, "owned-fixture.zip");
+        await File.WriteAllBytesAsync(archivePath, archive.ToArray());
+        var failure = await Assert.ThrowsAsync<PluginPackageStageException>(() =>
+            scope.ServiceProvider.GetRequiredService<PluginPackageManifestStore>()
+                .ExtractInstalledPackageAsync(archivePath, manifest, options.MaxPackageBytes));
+        Assert.Same(primary, failure.InnerException);
+        Assert.Same(cleanup, failure.CleanupException);
+        Assert.Equal(PluginPackageStage.ReplacementStarted, failure.Progress.Stage);
+    }
 
     [Theory]
     [InlineData(InvalidUpload.InvalidZip)]
@@ -268,5 +320,17 @@ public sealed class PluginsUiOwnerReceiptTests {
     private sealed class FailingStream : MemoryStream {
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
             => ValueTask.FromException<int>(new IOException("Controlled browser stream failure."));
+    }
+    private sealed class PackageBrowserFile(byte[] bytes) : IBrowserFile {
+        public string Name => "fixture.zip";
+        public DateTimeOffset LastModified => DateTimeOffset.UnixEpoch;
+        public long Size => bytes.Length;
+        public string ContentType => "application/zip";
+        public int OpenCount { get; private set; }
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default) {
+            Assert.True(Size <= maxAllowedSize);
+            OpenCount++;
+            return new MemoryStream(bytes, writable: false);
+        }
     }
 }

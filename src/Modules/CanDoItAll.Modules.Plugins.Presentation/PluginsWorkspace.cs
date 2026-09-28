@@ -17,7 +17,7 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
         this.owner = owner;
         View = new(callbackUri);
         drafts = new(View);
-        reads = new(View, owner, drafts, Notify);
+        reads = new(View, owner, drafts, Notify, () => selectionGeneration++);
         operations = new(View, owner, Notify, AcceptPackageProgress);
     }
 

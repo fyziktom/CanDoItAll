@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-28T19:48:56.209162+00:00",
+  "generated_utc": "2026-09-28T22:10:04.630678+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15124,
+  "allowance_count": 15131,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -57824,6 +57824,30 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Contracts/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "cb64df91be7fa1b4228d1ca285a0319cc026391bec753d47ce7c32c6e10d9d97",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Contracts/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "68ac49eaf5307d1bc8f0505a3d036e9fba3968330a7ce9f25f0e8b46323f2e90",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "af36245bb7509be21f2019d69661da1b62edcf691753e9a603c27a06b02b99fc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "b076009a3480515ce9000d3641195cf1ad1875aae5becdc10ed17eef59b85d5a",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs",
       "category": "case-policy",
       "source_fingerprint": "59edf25996dfbcefc978e8a0d8fe256b0fb6637166c00faedc7cd28fcef80e1f",
@@ -57839,138 +57863,6 @@
       "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs",
       "category": "case-policy",
       "source_fingerprint": "885444b73f286f5bff76ea4aaed450a88da8dc13e21f305c0e36dcfbf5b4a434",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "05a6df159ddffa29b58d65024285834db346bca07e56f3ef268663c7c2127287",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "11eaedf141ba4d2c08ef9c1ec92bd0c32b8ee6bed209c6d902fab192a064fc4d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "150c3f73ad6f65d11c5aa839e1ddf382f0f2a0165761b2e63348668829d1b9e0",
-      "count": 3
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "2482c7e02f4ba109ee1eba9b5f272e64a80f6153942d6991a0416a1559465ea6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "27df3d6ae435f3aac3a904bb4fe7e1d1e1b8aa31be6e21949588bd7cbb24d2ab",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "281f05a2822a0c03452ef9be7f73749eaf510652e1a321307458d9ab1b34e69e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "329ba0518e7532c8e328f21a13499b98ba760765b6eea7182df26f143f136170",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "339f87565638b9a02c3c555b4cfbc8a359a36fc20bf36124af0d3b421e489765",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "33b34fb8b37146696b4b3f0abb9ca1b3c818deceec400b30c44141425e4513d9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "380d030dedf9e9d72eb3cd3614fbba6cc415b875a88d0580521f7a56e976c2a0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "4b42d659a5a97173f212d2643004f629f7cb4844050b17bb9256e45337ceccfb",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "6e0933a244ed7d879390ad8c2949551e87f14b5635bfc8c1c701ea8b48307991",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "78fca435e3856b36b9f8cf7e6d9d05516b03ccef2c87f0fe24be59cb883106b8",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "85154715cceeee372f923bfcb114a731be42efe7dd67b1010eb99195d921ed73",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "95dcc631a2d7e0ce765236a388da3ebba3f630eb41e131cc2039b11e5ffeb32e",
-      "count": 3
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "a693ae76dc6913ca5fc2f78d5ecf31c92dac5b47678f24874e41f9b205961185",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "caa21f88551036859167d5619032bc4d593edf50e6c0b5214391a78162f06e40",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "cd759742b0b5f083f58e96a470b3dab223bb858b6f2d9181efdfe7e647571b33",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "e114dda343e9e72a74549d0d1a9b566c7c1f71e79032fa6a2aafced888bd3f05",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "e429a2ee24b4d4ff9be0aa44313b87004f1d143e93d8e1057df0547f6a97f6e2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "efe7a73b3b591e5f2fa91dfbd5e28d41115b05d838b1b44c1091f8457d7e3614",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "f3b23b4353cb2c0d4e7ccdb0819554e65326e125bc37b024baa5677f9798904d",
       "count": 1
     },
     {
@@ -73634,6 +73526,24 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "547d2b90a828c03a5900fdecfcb1b7341b68dce2d6d3045d17f929454fc51e60",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "efef79bcbf7c75abc4c45e035624d6fa7eb2cd49c52985545a09adc7f05e6d62",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/SchedulerScenarioStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "8e2bef2814d0989c109a373ea20a335b1fdb4f940d036b0a5c3f829ca6c4b16e",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "12af6643db7079908c57345749ca225fcff312f9098fc1bf3ddd7c74ff8830a6",
@@ -74867,6 +74777,168 @@
       "path": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryEditorForm.cs",
       "category": "case-policy",
       "source_fingerprint": "fb897889ce1a2d60c88d3cc0c53ebba26c31c481f0ce044eb1913ce3a5e03dd9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "6aa315dbd21b6fdbd2d147d23ec000aaf737732226eae67b295554ecb5e55ad5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "1f485aad734a5dc22eb008cabec600ab5b156219d18de665b7aa655e9df80c4c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2231cf0411b0aafc44037d2d5ca91ce3af5073eaa05ea79f971b89c08554b206",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2b77ac2ee74b21c63354dffca5a56877850b629109ef083a4c91baacb2353005",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3149fa20af2ada126c7f1bb40e2dfff57efc040b0aca2e4b9f1e7c9024a5adf1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "508b18507d53446845e39aabf59a8721d8121a97d7b625b9b19bcd0eb1ba7423",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "86192bc89ed8db57f95777fe4402905bc6023e6a9f6c991707f9ac384086f388",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9115047756eddc5d6da848e7ab591f85258049ea504bd14fa61ee24f45377986",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c03b87f4ab54cea268d51f68a32e44a3e8f1d5c4c03634087f2cf13377ebade3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cd9fa4ec42f3de1ed1f2b5096e565132fbc81d8eeb17aafa75b8cf10fe459d53",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerDisplay.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e58027a8e6b400c3ba9adc4e05337aa182f4857dce60cf80fc2d114256e74ae1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
+      "category": "case-policy",
+      "source_fingerprint": "11364b079e4474aa99869e2613ed6ec86eaaad62547e15b3e8dcae3cd5afa3be",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
+      "category": "case-policy",
+      "source_fingerprint": "1f937a66ffb160511f94703b4c6e0d6ae07a5bda5fc5fa1744e63f86edaa9205",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
+      "category": "case-policy",
+      "source_fingerprint": "22dc128c877ccaf625eccc1831cb7941c6a5cf362f885be98924c02d8c5101b8",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
+      "category": "case-policy",
+      "source_fingerprint": "2439aa2cc23075047bd550e3c4fa2775ac32583f9e59f0ec08613a5298f838f2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
+      "category": "case-policy",
+      "source_fingerprint": "6b083a9a63f7c6f6587742ce3a1f5fb5c6b53a5eb895e73dcc4a0e1427e3c60b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
+      "category": "case-policy",
+      "source_fingerprint": "7bb04b71cc9847a04a6a0d6610e1ed3f6b40d53a87938fc8b294d6629778367c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
+      "category": "case-policy",
+      "source_fingerprint": "dace45efdfc257a74fb4d65c8af71901f7101c21f192565c81fc1d321a6f5223",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "27e820b3eab5fd9251e7e0d1e9019fba18c43a3609f9e8678b7164be7d97013b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "3aed651b01fec2fc886454ba76c9a8eef763c6085bd48c0888e1f8f656aa1b8e",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "4e1bf16582622d00a48d1053f4f112faea3789c0643133d5338c19d77155b01b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "8fb8ded5ac139553616c9f8f23e7ecfed0f39bd60c1868494d07c2ba92d81e2c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "993a0fbb0732b24d5ed972a583995b65cd2fc87fc4a44af489711c463e7514e1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "a1e13d79e9086ffb5e45c4da0a21cb3b3e8c963cf6f7b18feef1927d194d8592",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "a73308d3a0ab5327833b43f41e197e55f37dd76e7ba4aa525df5b00acc68bff0",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "b24b6f977adcab9db65052808e0e9311c7fe6627c5be157440ff88510da4368c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerTargetPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "d4fe2b93cfe15a772eee4e186e4ed82449e42d04c5c3557fcf94979d4c6368fc",
       "count": 1
     },
     {

@@ -42,3 +42,22 @@ integration obligations.
 
 - Repository overview: `README.md` at the repo root
 - Process agent operator runbook: `docs/process-agent-operator-runbook.md`
+
+## Extracted workspace
+
+The `/scheduler` page composes the [Scheduler UI](../../UI/CanDoItAll.SchedulerPlanner.UI/README.md)
+through `SchedulerWorkspaceSession` and the shared presentation policy. The real Agent
+context provider, managed Scheduler identity and launcher stay here. Session mapping captures
+local operator authority for the immutable submission and checks the canonical profile
+identity/generation before and after authority capture. No privileged renderer field is accepted.
+
+Pure public records are forwarded to SchedulerPlanner.Contracts. The existing privileged
+editor and legacy Canvas workspace retain their module assembly. `SchedulerPlanCommittedException`
+exposes the exact persisted mutation and observed stage while preserving the primary exception.
+Only a returned durable boundary authorizes that fact: ambiguous commit acknowledgement remains
+unknown. Source lease and optional transaction order are unchanged. Managed Agent tooling records
+the committed effect before propagating a known follow-up failure. A no-op enabled-state request
+retains its original behavior and does not promise that projection was rechecked.
+
+Read refresh never synchronizes Quartz, reauthorizes, launches a Workflow or redispatches a fire.
+See the [boundary and validation record](../../../docs/architecture/scheduler-ui-boundary.md).

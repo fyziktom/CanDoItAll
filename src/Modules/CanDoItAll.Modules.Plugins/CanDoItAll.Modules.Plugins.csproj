@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <SupportedPlatform Include="browser" />
+    <InternalsVisibleTo Include="CanDoItAll.Tests.Integration" />
   </ItemGroup>
 
   <ItemGroup>

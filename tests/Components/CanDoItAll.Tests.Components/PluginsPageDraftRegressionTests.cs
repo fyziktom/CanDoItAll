@@ -18,7 +18,7 @@ public sealed class PluginsPageDraftRegressionTests {
         await ClickAsync(cut, "plugins-list-item-office365-mail");
         await ClickAsync(cut, "plugins-tab-settings");
         const string selector = "[data-testid='plugin-setting-office365-mail-office365-clientId']";
-        await cut.Find(selector).InputAsync(new ChangeEventArgs { Value = "unfinished client id " });
+        await cut.InvokeAsync(() => cut.Find(selector).InputAsync(new ChangeEventArgs { Value = "unfinished client id " }));
         await ClickAsync(cut, "plugins-tab-main");
         await ClickAsync(cut, "plugins-list-item-gmail-mail");
         await ClickAsync(cut, "plugins-list-item-office365-mail");
@@ -35,11 +35,11 @@ public sealed class PluginsPageDraftRegressionTests {
         await ClickAsync(cut, "plugins-list-item-office365-mail");
         await ClickAsync(cut, "plugins-tab-settings");
         const string selector = "[data-testid='plugin-connection-name-office365-mail-office365']";
-        await cut.Find(selector).InputAsync(new ChangeEventArgs { Value = "Unsaved account" });
-        await cut.Find("button[aria-label='Refresh']").ClickAsync(new MouseEventArgs());
+        await cut.InvokeAsync(() => cut.Find(selector).InputAsync(new ChangeEventArgs { Value = "Unsaved account" }));
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Refresh']").ClickAsync(new MouseEventArgs()));
         Assert.Equal("Unsaved account", cut.Find(selector).GetAttribute("value"));
     }
 
     private static Task ClickAsync(IRenderedComponent<PluginsPage> cut, string id)
-        => cut.Find($"[data-testid='{id}']").ClickAsync(new MouseEventArgs());
+        => cut.InvokeAsync(() => cut.Find($"[data-testid='{id}']").ClickAsync(new MouseEventArgs()));
 }

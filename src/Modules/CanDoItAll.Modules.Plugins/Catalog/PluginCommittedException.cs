@@ -5,9 +5,10 @@ public sealed class PluginCommittedException<T>(T value, Exception innerExceptio
     public T Value { get; } = value;
 }
 
-public sealed class PluginPackageStageException(PluginPackageProgress progress, Exception innerException)
+public sealed class PluginPackageStageException(PluginPackageProgress progress, Exception innerException, Exception? cleanupException = null)
     : Exception("A plugin package stage completed before a later step failed.", innerException) {
     public PluginPackageProgress Progress { get; } = progress;
+    public Exception? CleanupException { get; } = cleanupException;
 }
 
 internal static class PluginCommit {

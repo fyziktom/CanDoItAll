@@ -1,0 +1,22 @@
+@if (Draft.Error.Length > 0) {
+    <p role="alert" data-testid="scheduler-draft-error">@Draft.Error</p>
+}
+@if (Draft.Receipt is { } receipt) {
+    <SurfaceCard Soft="true" data-testid="scheduler-draft-receipt">
+        <StatusBadge Tone="@(receipt.Status is SchedulerMutationStatus.Committed ? "success" : "warning")" Text="@receipt.Status.ToString()" />
+        <p>@receipt.Message</p>
+        @if (receipt.PlanId is { } id) {
+            <p>Plan: @id</p>
+        }
+        @if (receipt.Status == SchedulerMutationStatus.Unknown) {
+            <label>Review exact saved plan ID <input value="@reviewId" @oninput="args => reviewId = args.Value?.ToString() ?? string.Empty" data-testid="scheduler-review-id" /></label>
+            <Button Text="Read and review this exact plan" ButtonStyle="ButtonStyle.Light" Disabled="@(!Guid.TryParse(reviewId, out _))" Click="ReviewAsync" data-testid="scheduler-review-unknown" />
+        }
+    </SurfaceCard>
+}
+@code {
+    [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
+    [Parameter, EditorRequired] public SchedulerDraft Draft { get; set; } = null!;
+    private string reviewId = string.Empty;
+    private Task ReviewAsync() => Guid.TryParse(reviewId, out var id) ? Workspace.ReviewUnknownAsync(Draft, id) : Task.CompletedTask;
+}

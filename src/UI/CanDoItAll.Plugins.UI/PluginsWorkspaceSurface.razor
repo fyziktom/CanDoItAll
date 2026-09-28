@@ -91,8 +91,7 @@
                         Title="No plugins are registered"
                         Description="Catalog entries appear here after app sources or runtime packages provide manifests." />
         }
-        else if (View.SelectedPlugin is { } selectedPlugin)
-        {
+        else if (View.Catalog.Value.Count > 0) {
             <ListDetailShell ListPaneWidth="24rem" DetailPaneClass="min-h-[38rem]" ListPaneClass="min-h-[38rem]">
                 <ListHeader>
                     <ListPanelHeader Title="Available plugins"
@@ -103,17 +102,24 @@
 
                 <ListContent>
                     <PluginList Catalog="@View.Catalog.Value"
-                                SelectedPlugin="@selectedPlugin"
+                                SelectedPlugin="@View.SelectedPlugin"
                                 ExpandedNodeIds="@View.ExpandedNodeIds"
                                 OnPluginSelected="Workspace.SelectAsync"
                                 OnNodeToggled="ToggleNodeAsync" />
                 </ListContent>
 
                 <DetailHeader>
-                    <PluginDetailsHeader Plugin="@selectedPlugin" Workspace="@Workspace" />
+                    @if (View.SelectedPlugin is { } selectedHeader) {
+                        <PluginDetailsHeader Plugin="@selectedHeader" Workspace="@Workspace" />
+                    }
                 </DetailHeader>
                 <DetailContent>
-                    <PluginDetails Plugin="@selectedPlugin" Workspace="@Workspace" />
+                    @if (View.SelectedPlugin is { } selectedPlugin) {
+                        <PluginDetails Plugin="@selectedPlugin" Workspace="@Workspace" />
+                    } else {
+                        <EmptyState Eyebrow="Selection unavailable" Title="Selected plugin is unavailable"
+                                    Description="Select an available plugin from the catalog. Retained drafts and unresolved operations keep their original plugin identity." />
+                    }
                 </DetailContent>
             </ListDetailShell>
         }

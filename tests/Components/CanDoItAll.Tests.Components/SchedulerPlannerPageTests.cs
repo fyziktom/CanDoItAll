@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.SchedulerPlanner.UI;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
@@ -251,7 +252,7 @@ public sealed class SchedulerPlannerPageTests
         Assert.Contains("CanDoItAllProcessed", cut.Markup);
         Assert.Equal("336", cut.Find("[data-testid='scheduler-input-lookbackHours']").GetAttribute("value"));
 
-        cut.Find("[data-testid='scheduler-input-emailAddress']").Change("ada@example.com");
+        cut.Find("[data-testid='scheduler-input-emailAddress']").Input("ada@example.com");
         cut.Find("[data-testid='scheduler-input-projectId']").Change(projectId.ToString("D"));
 
         cut.WaitForAssertion(() =>
@@ -280,7 +281,7 @@ public sealed class SchedulerPlannerPageTests
               "lookbackHours": 24
             }
             """;
-        cut.Find("[data-testid='scheduler-input-json']").Change(manualJson);
+        cut.Find("[data-testid='scheduler-input-json']").Input(manualJson);
 
         cut.WaitForAssertion(() =>
         {
@@ -377,7 +378,7 @@ public sealed class SchedulerPlannerPageTests
             .Single(element => element.TextContent.Contains("New schedule", StringComparison.Ordinal))
             .Click();
         cut.WaitForElement("[data-testid='scheduler-typed-inputs']");
-        cut.Find("[data-testid='scheduler-input-emailAddress']").Change("ada@example.com");
+        cut.Find("[data-testid='scheduler-input-emailAddress']").Input("ada@example.com");
         cut.Find("[data-testid='scheduler-input-projectId']").Change(projectId.ToString("D"));
         cut.WaitForAssertion(() => Assert.Contains("Inbox", cut.Markup));
         cut.Find("[data-testid='scheduler-input-nodeId']").Change("node-inbox");
@@ -388,7 +389,7 @@ public sealed class SchedulerPlannerPageTests
             Assert.Contains("\"emailAddress\": \"ada@example.com\"", inputJson);
         });
 
-        cut.Find("[data-testid='scheduler-input-emailAddress']").Change(string.Empty);
+        cut.Find("[data-testid='scheduler-input-emailAddress']").Input(string.Empty);
 
         cut.WaitForAssertion(() =>
         {
@@ -835,6 +836,8 @@ public sealed class SchedulerPlannerPageTests
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
         {
             services.RemoveAll<ISchedulerPlannerService>();
+            services.RemoveAll<ISchedulerWorkflowInputSchemaService>();
+            services.AddSingleton<ISchedulerWorkflowInputSchemaService>(new EmptySchedulerSchemaService());
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
 
@@ -923,6 +926,8 @@ public sealed class SchedulerPlannerPageTests
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
         {
             services.RemoveAll<ISchedulerPlannerService>();
+            services.RemoveAll<ISchedulerWorkflowInputSchemaService>();
+            services.AddSingleton<ISchedulerWorkflowInputSchemaService>(new EmptySchedulerSchemaService());
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
 
@@ -998,13 +1003,15 @@ public sealed class SchedulerPlannerPageTests
         var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-calendar']");
+        await cut.InvokeAsync(() => cut.FindComponent<SchedulerCalendar>().Instance.BeginCalendarPointer(1));
         var calendarEvent = workspace.CalendarSurface.Events.Single();
         var calendar = cut.FindComponent<CanvasCalendar>();
         await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(
             JsonSerializer.Serialize(calendarEvent, JsonOptions),
             "{}"));
+        await cut.InvokeAsync(() => calendar.Instance.OnStateChanged("{}", calendarEvent.Id, "2026-09-28", "week", "week", "UTC"));
 
-        cut.Find("[data-testid='scheduler-calendar']").TriggerEvent("ondblclick", new MouseEventArgs());
+        await cut.InvokeAsync(() => cut.FindComponent<SchedulerCalendar>().Instance.OnCalendarItemDoubleClickedAsync(1));
 
         cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
         Assert.Equal("Office365 email watch", cut.Find("[data-testid='scheduler-edit-name']").GetAttribute("value"));
@@ -1041,13 +1048,15 @@ public sealed class SchedulerPlannerPageTests
         var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-calendar']");
-        cut.Find("[data-testid='scheduler-calendar']").TriggerEvent("ondblclick", new MouseEventArgs());
+        await cut.InvokeAsync(() => cut.FindComponent<SchedulerCalendar>().Instance.BeginCalendarPointer(1));
+        await cut.InvokeAsync(() => cut.FindComponent<SchedulerCalendar>().Instance.OnCalendarItemDoubleClickedAsync(1));
 
         var calendarEvent = workspace.CalendarSurface.Events.Single();
         var calendar = cut.FindComponent<CanvasCalendar>();
         await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(
             JsonSerializer.Serialize(calendarEvent, JsonOptions),
             "{}"));
+        await cut.InvokeAsync(() => calendar.Instance.OnStateChanged("{}", calendarEvent.Id, "2026-09-28", "week", "week", "UTC"));
 
         cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
         Assert.Equal("Office365 email watch", cut.Find("[data-testid='scheduler-edit-name']").GetAttribute("value"));
@@ -1055,7 +1064,7 @@ public sealed class SchedulerPlannerPageTests
     }
 
     [Fact]
-    public async Task Scheduler_calendar_repeated_event_selection_opens_edit_dialog_for_canvas_double_click()
+    public async Task Scheduler_calendar_repeated_event_selection_does_not_invent_double_click()
     {
         var workflowId = Guid.NewGuid();
         var workflowVersionId = Guid.NewGuid();
@@ -1084,16 +1093,18 @@ public sealed class SchedulerPlannerPageTests
         var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-calendar']");
+        await cut.InvokeAsync(() => cut.FindComponent<SchedulerCalendar>().Instance.BeginCalendarPointer(1));
         var calendarEvent = workspace.CalendarSurface.Events.Single();
         var calendar = cut.FindComponent<CanvasCalendar>();
         var selectedEventJson = JsonSerializer.Serialize(calendarEvent, JsonOptions);
 
         await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(selectedEventJson, "{}"));
+        await cut.InvokeAsync(() => calendar.Instance.OnStateChanged("{}", calendarEvent.Id, "2026-09-28", "week", "week", "UTC"));
         await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(selectedEventJson, "{}"));
+        await cut.InvokeAsync(() => calendar.Instance.OnStateChanged("{}", calendarEvent.Id, "2026-09-28", "week", "week", "UTC"));
 
-        cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
-        Assert.Equal("Office365 email watch", cut.Find("[data-testid='scheduler-edit-name']").GetAttribute("value"));
-        Assert.Equal(planId, schedulerService.LastLoadedPlanId);
+        Assert.Empty(cut.FindAll("[data-testid='scheduler-edit-dialog']"));
+        Assert.Null(schedulerService.LastLoadedPlanId);
     }
 
     private sealed class StubSchedulerWorkflowInputSchemaService(
@@ -1221,6 +1232,8 @@ public sealed class SchedulerPlannerPageTests
         {
             services.RemoveAll<ISchedulerPlannerService>();
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+            services.RemoveAll<ISchedulerWorkflowInputSchemaService>();
+            services.AddSingleton<ISchedulerWorkflowInputSchemaService>(new EmptySchedulerSchemaService());
         });
         var cut = harness.Context.Render<SchedulerPlannerPage>();
         cut.WaitForElement("[data-testid='scheduler-tabs']");
@@ -1432,75 +1445,42 @@ public sealed class SchedulerPlannerPageTests
                     "Selection value.",
                     "$.choice",
                     defaultValue,
-                    WorkflowInputParameterOptionSource.None,
+                    new WorkflowInputParameterOptionSource(WorkflowInputParameterOptionSourceKind.CrmContacts, "choice", []),
                     null,
                     null,
                     defaultValue)
             ],
             UsesRawJsonFallback: false);
 
-    private static Task InvokeOpenEditScheduleDialogAsync(
-        SchedulerPlannerPage page,
-        SchedulerPlanSummary plan)
-        => InvokePrivateTask(page, "OpenEditScheduleDialogAsync", plan);
-
-    private static Task InvokeSelectTargetAsync(
-        SchedulerPlannerPage page,
-        SchedulerTargetOption target)
-        => InvokePrivateTask(page, "SelectTargetAsync", target);
-
-    private static Task InvokeWorkflowInputValueChangedAsync(
-        SchedulerPlannerPage page,
-        WorkflowInputParameterDescriptor parameter,
-        string value)
-        => InvokePrivateTask(page, "HandleWorkflowInputValueChangedAsync", parameter, value);
-
-    private static Task InvokePrivateTask(SchedulerPlannerPage page, string methodName, params object[] arguments)
-    {
-        var method = typeof(SchedulerPlannerPage).GetMethod(
-            methodName,
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, arguments));
+    private static ISchedulerWorkspace ReadWorkspace(SchedulerPlannerPage page) {
+        var field = typeof(SchedulerPlannerPage).GetField("workspace", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsAssignableFrom<ISchedulerWorkspace>(field?.GetValue(page));
     }
-
-    private static SchedulerPlanSummary? ReadSelectedPlanForEdit(SchedulerPlannerPage page)
-        => ReadPrivateField<SchedulerPlanSummary>(page, "selectedPlanForEdit");
-
-    private static SchedulerPlanEditorModel? ReadEditScheduleEditor(SchedulerPlannerPage page)
-        => ReadPrivateField<SchedulerPlanEditorModel>(page, "editScheduleEditor");
-
-    private static SchedulerPlanEditorModel ReadSchedulerEditor(SchedulerPlannerPage page)
-        => Assert.IsType<SchedulerPlanEditorModel>(ReadPrivateField<SchedulerPlanEditorModel>(page, "editor"));
-
-    private static SchedulerWorkflowInputSchema? ReadWorkflowInputSchema(SchedulerPlannerPage page)
-        => ReadPrivateField<SchedulerWorkflowInputSchema>(page, "workflowInputSchema");
-
-    private static IReadOnlyDictionary<string, IReadOnlyList<WorkflowInputParameterOption>> ReadWorkflowInputOptions(
-        SchedulerPlannerPage page)
-        => Assert.IsAssignableFrom<IReadOnlyDictionary<string, IReadOnlyList<WorkflowInputParameterOption>>>(
-            ReadPrivateField<object>(page, "workflowInputOptionsByKey"));
-
-    private static T? ReadPrivateField<T>(SchedulerPlannerPage page, string fieldName)
-    {
-        var field = typeof(SchedulerPlannerPage).GetField(
-            fieldName,
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        return (T?)field?.GetValue(page);
+    private static Task InvokeOpenEditScheduleDialogAsync(SchedulerPlannerPage page, SchedulerPlanSummary plan) => ReadWorkspace(page).EditAsync(plan.Id);
+    private static Task InvokeSelectTargetAsync(SchedulerPlannerPage page, SchedulerTargetOption target) {
+        var workspace = ReadWorkspace(page);
+        workspace.OpenPicker(workspace.NewDraft);
+        return workspace.SelectTargetAsync(target);
     }
-
-    private static AgentChatContextAccessState ReadSchedulerAgentChatAccessState(SchedulerPlannerPage page)
-    {
-        var property = typeof(SchedulerPlannerPage).GetProperty(
-            "AgentChatAccessState",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+    private static Task InvokeWorkflowInputValueChangedAsync(SchedulerPlannerPage page, WorkflowInputParameterDescriptor parameter, string value) {
+        var workspace = ReadWorkspace(page);
+        return workspace.SetInputAsync(workspace.NewDraft, parameter, value);
+    }
+    private static SchedulerPlanSummary? ReadSelectedPlanForEdit(SchedulerPlannerPage page) {
+        var workspace = ReadWorkspace(page);
+        return workspace.Data?.Plans.FirstOrDefault(plan => plan.Id == workspace.EditingPlanId);
+    }
+    private static SchedulerDraftValues? ReadEditScheduleEditor(SchedulerPlannerPage page) => ReadWorkspace(page).EditDraft?.Values;
+    private static SchedulerDraftValues ReadSchedulerEditor(SchedulerPlannerPage page) => ReadWorkspace(page).NewDraft.Values;
+    private static SchedulerWorkflowInputSchema? ReadWorkflowInputSchema(SchedulerPlannerPage page) => ReadWorkspace(page).NewDraft.Schema;
+    private static IReadOnlyDictionary<string, IReadOnlyList<WorkflowInputParameterOption>> ReadWorkflowInputOptions(SchedulerPlannerPage page)
+        => ReadWorkspace(page).NewDraft.Options.ToDictionary(pair => pair.Key, pair => pair.Value.Values);
+    private static AgentChatContextAccessState ReadSchedulerAgentChatAccessState(SchedulerPlannerPage page) {
+        var property = typeof(SchedulerPlannerPage).GetProperty("AccessState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         return Assert.IsType<AgentChatContextAccessState>(property?.GetValue(page));
     }
-
-    private static AgentChatContextSurface ReadSchedulerAgentChatSurface(SchedulerPlannerPage page)
-    {
-        var property = typeof(SchedulerPlannerPage).GetProperty(
-            "AgentChatSurface",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+    private static AgentChatContextSurface ReadSchedulerAgentChatSurface(SchedulerPlannerPage page) {
+        var property = typeof(SchedulerPlannerPage).GetProperty("AgentSurface", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         return Assert.IsType<AgentChatContextSurface>(property?.GetValue(page));
     }
 
@@ -1735,4 +1715,11 @@ public sealed class SchedulerPlannerPageTests
             public TaskCompletionSource<IReadOnlyList<WorkflowInputParameterOption>> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
+    private sealed class EmptySchedulerSchemaService : ISchedulerWorkflowInputSchemaService {
+        public Task<SchedulerWorkflowInputSchema> ResolveSchemaAsync(WorkflowId id, WorkflowVersionId? version = null, CancellationToken token = default)
+            => Task.FromResult(new SchedulerWorkflowInputSchema(id, version!.Value, "Fixture workflow", [], true));
+        public Task<SchedulerWorkflowInputValidationResult> ValidateInputAsync(WorkflowId id, WorkflowVersionId? version, string? json, CancellationToken token = default)
+            => Task.FromResult(new SchedulerWorkflowInputValidationResult(true, json!, []));
+    }
+
 }

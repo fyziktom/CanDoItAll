@@ -1,0 +1,120 @@
+@implements IAsyncDisposable
+@using Microsoft.JSInterop
+@inject IJSRuntime Js
+
+<div class="scheduler-calendar-root">
+    <SurfaceCard data-testid="scheduler-calendar-card">
+        <Split Gap="LayoutGap.Small">
+            <div><TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" /><h2 class="text-base font-semibold text-slate-900">Planned and dispatched runs</h2></div>
+            <StatusBadge Tone="info" Text="@($"{Surface.Events.Count} bounded event(s)")" />
+        </Split>
+        <p class="text-xs text-slate-500">Up to 18 planned occurrences per enabled plan over 30 days, combined maximum 160. Recent history comes from the current bounded query.</p>
+        <div class="scheduler-planner-calendar-shell mt-4" @ref="host" data-testid="scheduler-calendar">
+            <CanvasCalendar Surface="Surface" HostClass="scheduler-planner-calendar-host" SelectionChanged="SelectionChanged" StateChanged="StateChangedAsync" />
+        </div>
+    </SurfaceCard>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
+    [Parameter, EditorRequired] public CanvasCalendarSurface Surface { get; set; } = null!;
+    private readonly string registration = Guid.NewGuid().ToString("N");
+    private ElementReference host;
+    private DotNetObjectReference<SchedulerCalendar>? reference;
+    private IJSObjectReference? module;
+    private Task? attachment;
+    private bool disposed;
+    private long pointerSequence;
+    private long pointerGeneration;
+    private long? pendingSequence;
+    private Guid? selectedPlan;
+    private bool selectionAwaitingState;
+
+    protected override Task OnAfterRenderAsync(bool firstRender) => attachment ??= AttachAsync();
+
+    private async Task AttachAsync() {
+        try {
+            var imported = await Js.InvokeAsync<IJSObjectReference>("import", "./_content/CanDoItAll.SchedulerPlanner.UI/schedulerPlannerCalendarInterop.js");
+            if (disposed) {
+                await imported.DisposeAsync();
+                return;
+            }
+            module = imported;
+            reference = DotNetObjectReference.Create(this);
+            await module.InvokeVoidAsync("attach", host, registration, reference);
+        } catch (JSDisconnectedException) {
+        }
+    }
+
+    [JSInvokable]
+    public Task BeginCalendarPointer(long sequence) {
+        if (!disposed) {
+            pointerSequence = sequence;
+            pointerGeneration = Workspace.ViewGeneration;
+            selectedPlan = null;
+            pendingSequence = null;
+            selectionAwaitingState = false;
+        }
+        return Task.CompletedTask;
+    }
+
+    private void SelectionChanged(CanvasCalendarSelectionChangedEventArgs args) {
+        selectionAwaitingState = !disposed;
+    }
+
+    private Task StateChangedAsync(CanvasCalendarStateChangedEventArgs args) {
+        if (!disposed) {
+            Workspace.SetCalendarState(args);
+            if (selectionAwaitingState) {
+                selectionAwaitingState = false;
+                // The calendar's state carries the exact ID even when optional event dates cannot deserialize.
+                Workspace.SelectCalendar(Surface.Events.FirstOrDefault(item => item.Id == args.SelectedEventId));
+                selectedPlan = Workspace.SelectedCalendarPlanId;
+                return OpenSelectedAsync();
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnCalendarItemDoubleClickedAsync(long sequence) {
+        if (disposed || sequence != pointerSequence || Workspace.Tab != SchedulerTab.Calendar) {
+            return Task.CompletedTask;
+        }
+        pendingSequence = sequence;
+        return OpenSelectedAsync();
+    }
+
+    private Task OpenSelectedAsync() {
+        if (disposed || selectedPlan is not { } id || pendingSequence != pointerSequence
+            || pointerGeneration != Workspace.ViewGeneration || Workspace.Tab != SchedulerTab.Calendar) {
+            return Task.CompletedTask;
+        }
+        pendingSequence = null;
+        selectedPlan = null;
+        return Workspace.EditAsync(id);
+    }
+
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        pendingSequence = null;
+        try {
+            if (attachment is not null) {
+                await attachment;
+            }
+            if (module is not null) {
+                try {
+                    await module.InvokeVoidAsync("detach", host, registration);
+                } catch (JSDisconnectedException) {
+                }
+                await module.DisposeAsync();
+            }
+        } catch (JSDisconnectedException) {
+        } finally {
+            reference?.Dispose();
+        }
+    }
+}

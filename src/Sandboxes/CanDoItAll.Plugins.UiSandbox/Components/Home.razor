@@ -13,6 +13,13 @@
                 </select>
                 <Button Text="Release pending operations" data-testid="plugins-release" Click="Release" />
                 <Button Text="Restore settings reads" data-testid="plugins-restore-reads" Click="RestoreReadsAsync" />
+                <label class="cda-field-label" for="plugins-catalog-scenario">Catalog visibility</label>
+                <select id="plugins-catalog-scenario" class="cda-input" style="width: 10rem;" data-testid="plugins-catalog-scenario"
+                        value="@host.Store.CatalogScenario" @onchange="ChangeCatalogAsync">
+                    @foreach (var scenario in Enum.GetValues<PluginCatalogScenario>()) {
+                        <option value="@scenario">@scenario</option>
+                    }
+                </select>
                 <span data-testid="plugins-store-counts" data-scenario="@host.Store.Scenario" data-saves="@host.Store.SaveWrites" data-grants="@host.Store.GrantWrites"
                       data-packages="@host.Store.PackageWrites" data-oauth="@host.Store.OAuthStarts" data-popups="@host.Store.BrowserEffects"
                       data-restarts="@host.Store.RestartRequests">@host.Store.SaveWrites saved connections; @host.Store.PackageWrites package writes</span>
@@ -38,6 +45,10 @@
     }
 
     private void Release() => host.Store.ReleaseAll();
+    private Task ChangeCatalogAsync(ChangeEventArgs args) {
+        host.Store.CatalogScenario = Enum.Parse<PluginCatalogScenario>(args.Value!.ToString()!);
+        return host.Workspace.RefreshAsync();
+    }
     private Task RestoreReadsAsync() {
         host.Store.Scenario = PluginScenario.Normal;
         host.Store.FailSettings = false;

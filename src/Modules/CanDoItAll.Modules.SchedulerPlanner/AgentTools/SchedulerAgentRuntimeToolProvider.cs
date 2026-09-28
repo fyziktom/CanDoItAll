@@ -228,6 +228,10 @@ public sealed class SchedulerAgentRuntimeToolProvider(
                 },
                 cancellationToken);
         }
+        catch (SchedulerPlanCommittedException exception) {
+            AgentToolInvocationEffectScope.RecordCommitted(SchedulerPlanEffectSourceKind, exception.Fact.PlanId.ToString("D"));
+            throw;
+        }
         catch (SchedulerPlanValidationException exception)
         {
             // The owner validates the schedule before resolving its authority or saving it.

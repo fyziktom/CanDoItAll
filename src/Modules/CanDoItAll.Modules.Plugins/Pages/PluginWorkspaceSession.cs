@@ -71,7 +71,9 @@ public sealed class PluginWorkspaceSession(
             var result = await action();
             return result.IsSuccess ? PluginWriteReceipt<T>.Saved(result.Value!) : PluginWriteReceipt<T>.Refused();
         } catch (PluginPackageStageException exception) {
-            ReportFailure("package follow-up", exception);
+            logger.LogWarning("Plugin package {PackageId} failed after {Stage}. PrimaryExceptionType={PrimaryExceptionType}; CleanupExceptionType={CleanupExceptionType}.",
+                exception.Progress.PackageId, exception.Progress.Stage, exception.InnerException?.GetType().Name,
+                exception.CleanupException?.GetType().Name);
             return new(exception.Progress.Stage >= PluginPackageStage.Installed
                 ? PluginMutationStatus.SavedWithWarning : PluginMutationStatus.Unknown) { PackageProgress = exception.Progress };
         } catch (PluginCommittedException<T> exception) {

@@ -364,6 +364,8 @@ public sealed class PluginPackageManifestStore(
 {
     public const string ManifestFileName = "plugin.package.json";
 
+    internal Action<string> DeletePackageDirectory { get; init; } = path => Directory.Delete(path, recursive: true);
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -427,7 +429,7 @@ public sealed class PluginPackageManifestStore(
 
         if (Directory.Exists(temporaryPackagePath))
         {
-            Directory.Delete(temporaryPackagePath, recursive: true);
+            DeletePackageDirectory(temporaryPackagePath);
         }
 
         Directory.CreateDirectory(temporaryPackagePath);
@@ -472,7 +474,7 @@ public sealed class PluginPackageManifestStore(
             if (Directory.Exists(installedPackagePath))
             {
                 replacementStarted = true;
-                Directory.Delete(installedPackagePath, recursive: true);
+                DeletePackageDirectory(installedPackagePath);
             }
 
             Directory.Move(temporaryPackagePath, installedPackagePath);
@@ -486,16 +488,26 @@ public sealed class PluginPackageManifestStore(
                     PluginPackageStage.Extracted, manifest.RequiresRestart || HasRuntimeAssemblies(manifest)), exception);
             }
         }
-        catch (Exception exception)
-        {
-            if (Directory.Exists(temporaryPackagePath))
-            {
-                Directory.Delete(temporaryPackagePath, recursive: true);
+        catch (Exception exception) {
+            Exception? cleanupFailure = null;
+            try {
+                if (Directory.Exists(temporaryPackagePath)) {
+                    DeletePackageDirectory(temporaryPackagePath);
+                }
+            } catch (Exception cleanupException) {
+                cleanupFailure = cleanupException;
             }
 
+            if (exception is PluginPackageStageException staged && cleanupFailure is not null) {
+                throw new PluginPackageStageException(staged.Progress, staged.InnerException!, cleanupFailure);
+            }
             if (replacementStarted && exception is not PluginPackageStageException) {
                 throw new PluginPackageStageException(new(manifest.Plugin.Package!.PackageId, manifest.Plugin.Id,
-                    PluginPackageStage.ReplacementStarted, manifest.RequiresRestart || HasRuntimeAssemblies(manifest)), exception);
+                    PluginPackageStage.ReplacementStarted, manifest.RequiresRestart || HasRuntimeAssemblies(manifest)), exception, cleanupFailure);
+            }
+            if (cleanupFailure is not null) {
+                throw new IOException("Package preparation and temporary-directory cleanup failed before replacement.",
+                    new AggregateException(exception, cleanupFailure));
             }
             throw;
         }

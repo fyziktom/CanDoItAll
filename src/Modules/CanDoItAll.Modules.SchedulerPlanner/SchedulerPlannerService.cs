@@ -202,143 +202,160 @@ public sealed class SchedulerPlannerService(
 
     public async Task<SchedulerPlanSummary> SavePlanAsync(
         SchedulerPlanEditorModel editor,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(editor);
-        ValidateEditor(editor);
+        CancellationToken cancellationToken = default) {
+        SchedulerMutationFact? committed = null;
+        try {
+            ArgumentNullException.ThrowIfNull(editor);
+            ValidateEditor(editor);
 
-        var target = await ResolveTargetAsync(editor.TargetKind, editor.TargetId, editor.TargetVersionId, cancellationToken);
-        var normalizedInputJson = await ResolveValidatedInputJsonAsync(editor, target, cancellationToken);
-        var preparedAuthority = editor.StructureAuthority;
-        if (preparedAuthority?.ProjectScope is not null && editor.TargetKind == SchedulerPlanTargetKind.Workflow) {
-            var definition = await workflowCatalogService.GetDefinitionAsync(new(editor.TargetId),
-                target.VersionId is { } version ? new(version) : null, cancellationToken)
-                ?? throw new InvalidOperationException("The schedule's exact Workflow definition no longer exists.");
-            preparedAuthority = await (structurePreparation ?? throw new InvalidOperationException(
-                "A scoped schedule requires the Workflow owner target preparation service."))
-                .PrepareLaunchAsync(preparedAuthority, definition.Definition, cancellationToken);
-        }
-        var now = clock.GetUtcNow();
-        var cronDescription = cronDescriptionService.Describe(editor.CronExpression, editor.TimeZoneId);
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var plan = editor.Id.HasValue
-            ? await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == editor.Id.Value, cancellationToken)
-            : null;
-
-        if (editor.Id.HasValue && plan is null)
-        {
-            throw new KeyNotFoundException($"Scheduler plan '{editor.Id.Value:D}' was not found.");
-        }
-
-        if (plan is null)
-        {
-            plan = new SchedulerPlan
-            {
-                Id = editor.Id.GetValueOrDefault(Guid.NewGuid()),
-                SchedulerTriggerId = Guid.NewGuid(),
-                CreatedAtUtc = now
-            };
-            plan.SchedulerTriggerKey = BuildTriggerKey(plan.Id);
-            await dbContext.Set<SchedulerPlan>().AddAsync(plan, cancellationToken);
-        }
-
-        plan.Name = editor.Name.Trim();
-        plan.Description = editor.Description.Trim();
-        plan.TargetKind = editor.TargetKind;
-        plan.TargetId = editor.TargetId;
-        plan.TargetVersionId = editor.TargetKind == SchedulerPlanTargetKind.Workflow
-            ? target.VersionId
-            : null;
-        plan.TargetNameSnapshot = target.Name;
-        plan.CronExpression = editor.CronExpression.Trim();
-        plan.CronDescription = cronDescription;
-        plan.TimeZoneId = editor.TimeZoneId.Trim();
-        plan.MisfirePolicy = editor.MisfirePolicy;
-        plan.IsEnabled = editor.IsEnabled;
-        plan.StartAtUtc = editor.StartAtUtc;
-        plan.EndAtUtc = editor.EndAtUtc;
-        plan.InputJson = normalizedInputJson;
-        plan.StructureAuthorityJson = SchedulerFireSnapshot.SerializeAuthority(preparedAuthority);
-        plan.LastError = string.Empty;
-        plan.UpdatedAtUtc = now;
-
-        await using (var source = preparedAuthority is { } authority
-            ? await (sourceAuthority ?? throw new InvalidOperationException("A schedule with a saved source authority requires its current source policy."))
-                .AcquireAsync(authority, cancellationToken)
-            : null) {
-            await using var transaction = preparedAuthority?.ProjectScope is not null && dbContext.Database.IsRelational()
-                ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
-            using var coordination = preparedAuthority?.ProjectScope is not null
-                ? (transactions ?? throw new InvalidOperationException("Scoped schedule writes require the shared transaction coordinator.")).Enter(dbContext) : null;
-            if (source is not null) {
-                await source.RequireForMutationAsync(cancellationToken);
+            var target = await ResolveTargetAsync(editor.TargetKind, editor.TargetId, editor.TargetVersionId, cancellationToken);
+            var normalizedInputJson = await ResolveValidatedInputJsonAsync(editor, target, cancellationToken);
+            var preparedAuthority = editor.StructureAuthority;
+            if (preparedAuthority?.ProjectScope is not null && editor.TargetKind == SchedulerPlanTargetKind.Workflow) {
+                var definition = await workflowCatalogService.GetDefinitionAsync(new(editor.TargetId),
+                    target.VersionId is { } version ? new(version) : null, cancellationToken)
+                    ?? throw new InvalidOperationException("The schedule's exact Workflow definition no longer exists.");
+                preparedAuthority = await (structurePreparation ?? throw new InvalidOperationException(
+                    "A scoped schedule requires the Workflow owner target preparation service."))
+                    .PrepareLaunchAsync(preparedAuthority, definition.Definition, cancellationToken);
             }
-            await dbContext.SaveChangesAsync(cancellationToken);
-            if (source is not null && preparedAuthority?.ProjectScope is not null) {
-                await source.RequireForMutationAsync(cancellationToken);
+            var now = clock.GetUtcNow();
+            var cronDescription = cronDescriptionService.Describe(editor.CronExpression, editor.TimeZoneId);
+
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var plan = editor.Id.HasValue
+                ? await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == editor.Id.Value, cancellationToken)
+                : null;
+
+            if (editor.Id.HasValue && plan is null) {
+                throw new KeyNotFoundException($"Scheduler plan '{editor.Id.Value:D}' was not found.");
             }
-            if (transaction is not null) {
-                await transaction.CommitAsync(cancellationToken);
+
+            if (plan is null) {
+                plan = new SchedulerPlan {
+                    Id = editor.Id.GetValueOrDefault(Guid.NewGuid()),
+                    SchedulerTriggerId = Guid.NewGuid(),
+                    CreatedAtUtc = now
+                };
+                plan.SchedulerTriggerKey = BuildTriggerKey(plan.Id);
+                await dbContext.Set<SchedulerPlan>().AddAsync(plan, cancellationToken);
             }
-            coordination?.Dispose();
+
+            plan.Name = editor.Name.Trim();
+            plan.Description = editor.Description.Trim();
+            plan.TargetKind = editor.TargetKind;
+            plan.TargetId = editor.TargetId;
+            plan.TargetVersionId = editor.TargetKind == SchedulerPlanTargetKind.Workflow
+                ? target.VersionId
+                : null;
+            plan.TargetNameSnapshot = target.Name;
+            plan.CronExpression = editor.CronExpression.Trim();
+            plan.CronDescription = cronDescription;
+            plan.TimeZoneId = editor.TimeZoneId.Trim();
+            plan.MisfirePolicy = editor.MisfirePolicy;
+            plan.IsEnabled = editor.IsEnabled;
+            plan.StartAtUtc = editor.StartAtUtc;
+            plan.EndAtUtc = editor.EndAtUtc;
+            plan.InputJson = normalizedInputJson;
+            plan.StructureAuthorityJson = SchedulerFireSnapshot.SerializeAuthority(preparedAuthority);
+            plan.LastError = string.Empty;
+            plan.UpdatedAtUtc = now;
+
+            await using (var source = preparedAuthority is { } authority
+                ? await (sourceAuthority ?? throw new InvalidOperationException("A schedule with a saved source authority requires its current source policy."))
+                    .AcquireAsync(authority, cancellationToken)
+                : null) {
+                await using var transaction = preparedAuthority?.ProjectScope is not null && dbContext.Database.IsRelational()
+                    ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
+                using var coordination = preparedAuthority?.ProjectScope is not null
+                    ? (transactions ?? throw new InvalidOperationException("Scoped schedule writes require the shared transaction coordinator.")).Enter(dbContext) : null;
+                if (source is not null) {
+                    await source.RequireForMutationAsync(cancellationToken);
+                }
+                await dbContext.SaveChangesAsync(cancellationToken);
+                if (transaction is null) {
+                    committed = new(SchedulerMutationKind.Save, plan.Id, SchedulerMutationStage.Persisted, MapPlan(plan) with { NextPlannedFireAtUtc = null }, plan.InputJson);
+                }
+                if (source is not null && preparedAuthority?.ProjectScope is not null) {
+                    await source.RequireForMutationAsync(cancellationToken);
+                }
+                if (transaction is not null) {
+                    await transaction.CommitAsync(cancellationToken);
+                    committed = new(SchedulerMutationKind.Save, plan.Id, SchedulerMutationStage.Persisted, MapPlan(plan) with { NextPlannedFireAtUtc = null }, plan.InputJson);
+                }
+                coordination?.Dispose();
+            }
+            await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
+            committed = committed! with { Stage = SchedulerMutationStage.ProjectionSynchronized };
+            await dbContext.Entry(plan).ReloadAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Saved scheduler plan {PlanId} for {TargetKind} target {TargetId}. Enabled={IsEnabled}, Cron={CronExpression}, TimeZone={TimeZoneId}.",
+                plan.Id,
+                plan.TargetKind,
+                plan.TargetId,
+                plan.IsEnabled,
+                plan.CronExpression,
+                plan.TimeZoneId);
+
+            return MapPlan(plan);
+        } catch (Exception exception) when (committed is not null) {
+            throw new SchedulerPlanCommittedException(committed, exception);
         }
-        await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
-        await dbContext.Entry(plan).ReloadAsync(cancellationToken);
-
-        logger.LogInformation(
-            "Saved scheduler plan {PlanId} for {TargetKind} target {TargetId}. Enabled={IsEnabled}, Cron={CronExpression}, TimeZone={TimeZoneId}.",
-            plan.Id,
-            plan.TargetKind,
-            plan.TargetId,
-            plan.IsEnabled,
-            plan.CronExpression,
-            plan.TimeZoneId);
-
-        return MapPlan(plan);
     }
 
     public async Task SetPlanEnabledAsync(
         Guid planId,
         bool isEnabled,
-        CancellationToken cancellationToken = default)
-    {
-        EnsurePlanId(planId);
+        CancellationToken cancellationToken = default) {
+        SchedulerMutationFact? committed = null;
+        try {
+            EnsurePlanId(planId);
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
+                ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
 
-        if (plan.IsEnabled == isEnabled)
-        {
-            return;
+            if (plan.IsEnabled == isEnabled) {
+                return;
+            }
+
+            plan.IsEnabled = isEnabled;
+            plan.UpdatedAtUtc = clock.GetUtcNow();
+            await dbContext.SaveChangesAsync(cancellationToken);
+            committed = new(isEnabled ? SchedulerMutationKind.Enable : SchedulerMutationKind.Disable, plan.Id, SchedulerMutationStage.Persisted, MapPlan(plan) with { NextPlannedFireAtUtc = null }, plan.InputJson);
+            await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
+            committed = committed! with { Stage = SchedulerMutationStage.ProjectionSynchronized };
+        } catch (Exception exception) when (committed is not null) {
+            throw new SchedulerPlanCommittedException(committed, exception);
         }
-
-        plan.IsEnabled = isEnabled;
-        plan.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
     }
 
     public async Task DeletePlanAsync(
         Guid planId,
-        CancellationToken cancellationToken = default)
-    {
-        EnsurePlanId(planId);
+        CancellationToken cancellationToken = default) {
+        SchedulerMutationFact? committed = null;
+        try {
+            EnsurePlanId(planId);
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
+                ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
 
-        dbContext.Set<SchedulerPlan>().Remove(plan);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await triggerScheduler.SynchronizePlanAsync(planId, cancellationToken);
+            dbContext.Set<SchedulerPlan>().Remove(plan);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            committed = new(SchedulerMutationKind.Delete, plan.Id, SchedulerMutationStage.Persisted, MapPlan(plan) with { NextPlannedFireAtUtc = null }, plan.InputJson);
+            await triggerScheduler.SynchronizePlanAsync(planId, cancellationToken);
+            committed = committed! with { Stage = SchedulerMutationStage.ProjectionSynchronized };
 
-        logger.LogInformation(
-            "Deleted scheduler plan {PlanId} for {TargetKind} target {TargetId}.",
-            plan.Id,
-            plan.TargetKind,
-            plan.TargetId);
+            logger.LogInformation(
+                "Deleted scheduler plan {PlanId} for {TargetKind} target {TargetId}.",
+                plan.Id,
+                plan.TargetKind,
+                plan.TargetId);
+        } catch (Exception exception) when (committed is not null) {
+            throw new SchedulerPlanCommittedException(committed, exception);
+        }
     }
 
     private async Task<IReadOnlyList<SchedulerTargetOption>> ListTargetOptionsAsync(CancellationToken cancellationToken)

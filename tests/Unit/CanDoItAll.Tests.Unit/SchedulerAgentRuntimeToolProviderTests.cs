@@ -373,6 +373,7 @@ public sealed partial class SchedulerAgentRuntimeToolProviderTests
         public Guid SavedPlanId { get; } = Guid.NewGuid();
         public bool RejectBeforeSave { get; set; }
         public bool LoseAcknowledgement { get; set; }
+        public bool KnownCommitFollowupFailure { get; set; }
 
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
             SchedulerHistoryQuery? historyQuery = null,
@@ -417,6 +418,10 @@ public sealed partial class SchedulerAgentRuntimeToolProviderTests
                 null,
                 string.Empty,
                 DateTimeOffset.Parse("2026-07-20T12:00:00Z"));
+            if (KnownCommitFollowupFailure) {
+                throw new SchedulerPlanCommittedException(new(SchedulerMutationKind.Save, saved.Id, SchedulerMutationStage.Persisted,
+                    saved with { NextPlannedFireAtUtc = null }, editor.InputJson), new IOException("Known persistence; projection unavailable."));
+            }
             if (LoseAcknowledgement) {
                 throw new IOException("Schedule synchronization failed before the acknowledgement returned.");
             }

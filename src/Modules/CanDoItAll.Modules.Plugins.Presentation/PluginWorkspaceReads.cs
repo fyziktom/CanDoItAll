@@ -7,6 +7,7 @@ public sealed class PluginWorkspaceReads : IDisposable {
     private readonly PluginsWorkspaceView view;
     private readonly IPluginWorkspaceOwner owner;
     private readonly PluginDraftRegistry drafts;
+    private readonly Action selectionUnavailable;
     private readonly PluginReadLane<IReadOnlyList<PluginCatalogItem>> catalog;
     private readonly PluginReadLane<PluginSettingsDetail?> settings;
     private readonly PluginReadLane<IReadOnlyList<PluginOAuthConnectionStatusItem>> oauth;
@@ -16,10 +17,11 @@ public sealed class PluginWorkspaceReads : IDisposable {
     private readonly PluginReadLane<PluginRuntimeRestartStatus?> restart;
     private readonly HashSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase);
 
-    public PluginWorkspaceReads(PluginsWorkspaceView view, IPluginWorkspaceOwner owner, PluginDraftRegistry drafts, Action changed) {
+    public PluginWorkspaceReads(PluginsWorkspaceView view, IPluginWorkspaceOwner owner, PluginDraftRegistry drafts, Action changed, Action selectionUnavailable) {
         this.view = view;
         this.owner = owner;
         this.drafts = drafts;
+        this.selectionUnavailable = selectionUnavailable;
         catalog = new(view.Catalog, changed, error => owner.ReportFailure("catalog read", error));
         settings = new(view.Settings, changed, error => owner.ReportFailure("settings read", error));
         oauth = new(view.OAuth, changed, error => owner.ReportFailure("OAuth status read", error));
@@ -31,6 +33,9 @@ public sealed class PluginWorkspaceReads : IDisposable {
 
     public Task<bool> CatalogAsync() {
         return catalog.LoadAsync(owner.CatalogAsync, items => {
+            if (view.SelectedPlugin is { } selected && !items.Any(item => item.PluginId == selected.PluginId)) {
+                selectionUnavailable();
+            }
             if (view.SelectedPluginId is null) {
                 view.SelectedPluginId = items.FirstOrDefault()?.PluginId;
             }

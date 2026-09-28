@@ -390,3 +390,22 @@ a database and includes negative/race/recovery cases; real production behavior i
 proved separately. Future Plugins sections use the workspace seam and renderer;
 production does not bypass it. The architecture and bundle may close with the
 static/documentation/cleanup receipt above; another module requires a new request.
+
+## Bounded review closure in the Scheduler assignment
+
+At starting HEAD `0e176a3b99270cdc9a86a57d6276d05979d7352e`, fresh failing-first proof
+reproduced PL-R1 (two remaining-catalog controls absent), PL-R2 (actual replacement plus
+cleanup double fault incorrectly Refused), and removed/repopulated A allowing an old OAuth
+popup. The catalog shell now remains selectable independently of its selected detail, and
+membership disappearance retires selection effects while retaining the draft origin.
+The installer preserves its primary exception, exact `ReplacementStarted` identity and a
+secondary cleanup exception. The real session reports Unknown and keeps replay locked.
+No archive, path, size, installation or permission policy was relaxed.
+
+Fresh selected evidence in `artifacts/scheduler-ui`: light 50/50, owner 11/11, page 9/9,
+browser 2/2 (72 total). The browser covers A missing, explicit B selection, empty/repopulated
+catalog and retained unknown A with one write and no popup. A demonstrated bUnit stale-event
+lookup was repaired by locating and dispatching on the renderer, without changing its product
+assertions. Earlier 160 Plugins/consumer and 21 TestLab counts above remain historical.
+No TestLab source was changed. Scheduler final shared gates are recorded in the
+[Scheduler receipt](scheduler-ui-boundary.md).

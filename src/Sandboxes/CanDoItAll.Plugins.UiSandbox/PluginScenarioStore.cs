@@ -14,6 +14,7 @@ public enum PluginScenario {
     UnavailableReads, StaleReads, HeldReads, OAuthConnected, OAuthReconnect, OAuthError, MissingDescriptor
 }
 public enum PluginScenarioWait { Save, Settings, Grant, OAuth, Upload, Lifecycle, Package }
+public enum PluginCatalogScenario { All, MissingFirst, Empty }
 
 public sealed class PluginScenarioStore : IPluginWorkspaceOwner {
     private readonly Dictionary<PluginScenarioWait, TaskCompletionSource> waits = [];
@@ -140,6 +141,8 @@ public sealed class PluginScenarioStore : IPluginWorkspaceOwner {
     public bool FailOAuth { get; set; }
     public bool FailPackages { get; set; }
     public bool FailRestart { get; set; }
+    public PluginCatalogScenario CatalogScenario { get; set; }
+    public Func<CancellationToken, Task<IReadOnlyList<PluginCatalogItem>>>? ReadCatalogOverride { get; set; }
     public Func<PluginId, CancellationToken, Task<PluginSettingsDetail?>>? ReadSettingsOverride { get; set; }
     public Func<PluginLogQuery, CancellationToken, Task<IReadOnlyList<PluginLogItem>>>? ReadLogsOverride { get; set; }
 
@@ -170,7 +173,11 @@ public sealed class PluginScenarioStore : IPluginWorkspaceOwner {
         if (FailCatalog || Scenario == PluginScenario.UnavailableReads || (Scenario == PluginScenario.StaleReads && CatalogReads > 1)) {
             throw new InvalidOperationException("Controlled catalog read unavailable.");
         }
-        return Task.FromResult<IReadOnlyList<PluginCatalogItem>>(catalog.ToArray());
+        return ReadCatalogOverride?.Invoke(token) ?? Task.FromResult<IReadOnlyList<PluginCatalogItem>>(CatalogScenario switch {
+            PluginCatalogScenario.MissingFirst => catalog.Skip(1).ToArray(),
+            PluginCatalogScenario.Empty => [],
+            _ => catalog.ToArray()
+        });
     }
     public async Task<PluginSettingsDetail?> SettingsAsync(PluginId id, CancellationToken token) {
         settingsReads++;

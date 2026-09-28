@@ -8,6 +8,7 @@
     <Project Path="../Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
   </Folder>
   <Folder Name="/tests/Integration/">

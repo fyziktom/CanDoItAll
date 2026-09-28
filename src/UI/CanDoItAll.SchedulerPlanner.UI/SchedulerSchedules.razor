@@ -1,0 +1,192 @@
+<div class="scheduler-schedules-root">
+<SurfaceCard data-testid="scheduler-plan-list">
+    <div class="scheduler-list-toolbar" data-testid="scheduler-schedules-toolbar">
+        <div>
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Schedules" />
+            <h2 class="text-base font-semibold text-slate-900">Saved scheduled runs</h2>
+        </div>
+        <InputText @bind-Value="scheduleSearchText"
+                   class="cda-input scheduler-list-toolbar__search"
+                   placeholder="Search schedules"
+                   data-testid="scheduler-schedules-search" />
+        <select value="@FormatScheduleTargetKindFilter()"
+                class="cda-input scheduler-list-toolbar__select"
+                @onchange="HandleScheduleTargetKindFilterChanged"
+                data-testid="scheduler-schedules-target-kind">
+            <option value="">All targets</option>
+            @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>()) {
+                <option value="@kind">@kind</option>
+            }
+        </select>
+        <InputSelect @bind-Value="scheduleStateFilter"
+                     class="cda-input scheduler-list-toolbar__select"
+                     data-testid="scheduler-schedules-state">
+            @foreach (var state in Enum.GetValues<ScheduleStateFilter>()) {
+                <option value="@state">@FormatScheduleStateFilter(state)</option>
+            }
+        </InputSelect>
+        <span class="scheduler-list-toolbar__result">@ScheduleFilterResultText</span>
+        <div class="scheduler-list-toolbar__actions">
+            <Button Text="Clear"
+                    Icon="restart_alt"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!HasScheduleFilters)"
+                    Click="ClearScheduleFilters"
+                    class="scheduler-list-toolbar__button" />
+            <Button Text="New"
+                    Icon="add"
+                    Size="ButtonSize.Small"
+                    Click="@(() => Workspace.Tab = SchedulerTab.NewSchedule)"
+                    class="scheduler-list-toolbar__button"
+                    data-testid="scheduler-plan-new" />
+        </div>
+    </div>
+
+    @if (Plans.Count == 0) {
+        <div class="mt-4">
+            <EmptyState Eyebrow="No schedules"
+                        Title="Create the first scheduled run"
+                        Description="Saved plans will appear here after a workflow is assigned to a CRON schedule." />
+        </div>
+    } else if (FilteredPlans.Count == 0) {
+        <div class="mt-4">
+            <EmptyState Eyebrow="No matches"
+                        Title="No schedules match the current filters"
+                        Description="Clear search, target, or state filters to review every saved schedule." />
+        </div>
+    } else {
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fill,minmax(17.5rem,21.5rem))"
+              Class="scheduler-plan-card-grid mt-4">
+            @foreach (var plan in FilteredPlans) {
+                <article class="@ResolveScheduleCardClass(plan)" data-testid="scheduler-plan-card">
+                    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                        <Split Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <div class="min-w-0">
+                                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                    <StatusBadge Tone="@ResolveTargetKindTone(plan.TargetKind)" Text="@plan.TargetKind.ToString()" />
+                                    <StatusBadge Tone="@(plan.IsEnabled ? "success" : "neutral")" Text="@(plan.IsEnabled ? "Enabled" : "Paused")" />
+                                </Cluster>
+                                <h3 class="scheduler-plan-card__title">@plan.Name</h3>
+                                <p class="scheduler-plan-card__target">@plan.TargetName</p>
+                            </div>
+                            <Button Text="Edit"
+                                    Icon="edit"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@Workspace.IsPlanLocked(plan.Id)"
+                                    Click="@(() => Workspace.EditAsync(plan.Id))"
+                                    class="scheduler-plan-card__edit"
+                                    data-testid="scheduler-plan-edit" />
+                        </Split>
+
+                        <p class="scheduler-plan-card__cron">@plan.CronDescription</p>
+
+                        <div class="scheduler-plan-card__meta">
+                            <div>
+                                <span>Next fire</span>
+                                <strong>@FormatNextFire(plan.NextPlannedFireAtUtc)</strong>
+                            </div>
+                            <div>
+                                <span>Time zone</span>
+                                <strong>@plan.TimeZoneId</strong>
+                            </div>
+                            <div>
+                                <span>Updated</span>
+                                <strong>@plan.UpdatedAtUtc.LocalDateTime.ToString("g")</strong>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(plan.LastError)) {
+                            <p class="scheduler-plan-card__error">@plan.LastError</p>
+                        }
+
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="scheduler-plan-card__actions">
+                            <Button Text="@(plan.IsEnabled ? "Pause" : "Resume")"
+                                    Icon="@(plan.IsEnabled ? "pause" : "play_arrow")"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@Workspace.IsPlanLocked(plan.Id)"
+                                    Click="@(() => Workspace.ToggleAsync(plan))" />
+                            <Button Text="Delete"
+                                    Icon="delete"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@Workspace.IsPlanLocked(plan.Id)"
+                                    Click="@(() => Workspace.AskDelete(plan))"
+                                    data-testid="scheduler-plan-delete" />
+                        </Cluster>
+                    </Stack>
+                </article>
+            }
+        </Grid>
+    }
+</SurfaceCard>
+</div>
+@code {
+    [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
+    [Parameter] public SchedulerScheduleFilters Filters { get; set; } = new();
+    private IReadOnlyList<SchedulerPlanSummary> Plans => Workspace.Data?.Plans ?? [];
+    private string scheduleSearchText {
+        get => Filters.Search;
+        set => Filters.Search = value;
+    }
+    private SchedulerPlanTargetKind? scheduleTargetKindFilter {
+        get => Filters.TargetKind;
+        set => Filters.TargetKind = value;
+    }
+    private ScheduleStateFilter scheduleStateFilter {
+        get => Filters.State;
+        set => Filters.State = value;
+    }
+    private IReadOnlyList<SchedulerPlanSummary> FilteredPlans => Plans.Where(MatchesScheduleSearch).Where(MatchesScheduleTargetKind).Where(MatchesScheduleState)
+        .OrderByDescending(item => item.IsEnabled).ThenBy(item => item.NextPlannedFireAtUtc ?? DateTimeOffset.MaxValue)
+        .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+    private bool HasScheduleFilters => scheduleSearchText.Length > 0 || scheduleTargetKindFilter.HasValue || scheduleStateFilter != ScheduleStateFilter.All;
+    private string ScheduleFilterResultText => $"{FilteredPlans.Count} of {Plans.Count} schedule(s)";
+    private string FormatScheduleTargetKindFilter() {
+        return scheduleTargetKindFilter?.ToString() ?? string.Empty;
+    }
+
+    private void HandleScheduleTargetKindFilterChanged(ChangeEventArgs args) {
+        var value = args.Value?.ToString();
+        scheduleTargetKindFilter = Enum.TryParse<SchedulerPlanTargetKind>(value, out var kind)
+            ? kind
+            : null;
+    }
+
+    private void ClearScheduleFilters() {
+        scheduleSearchText = string.Empty;
+        scheduleTargetKindFilter = null;
+        scheduleStateFilter = ScheduleStateFilter.All;
+    }
+
+    private bool MatchesScheduleSearch(SchedulerPlanSummary plan) {
+        if (string.IsNullOrWhiteSpace(scheduleSearchText)) {
+            return true;
+        }
+
+        var query = scheduleSearchText.Trim();
+        return plan.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.TargetName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.CronExpression.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.CronDescription.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.TimeZoneId.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesScheduleTargetKind(SchedulerPlanSummary plan) {
+        return !scheduleTargetKindFilter.HasValue || plan.TargetKind == scheduleTargetKindFilter.Value;
+    }
+
+    private bool MatchesScheduleState(SchedulerPlanSummary plan) {
+        return scheduleStateFilter switch {
+            ScheduleStateFilter.Enabled => plan.IsEnabled,
+            ScheduleStateFilter.Paused => !plan.IsEnabled,
+            _ => true
+        };
+    }
+}
