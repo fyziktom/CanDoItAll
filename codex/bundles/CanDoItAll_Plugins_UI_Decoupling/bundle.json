@@ -1,0 +1,68 @@
+{
+  "id": "CDA-PLUGINS-UI-DECOUPLING-v1",
+  "title": "TestLab closure, then complete Plugins UI decoupling",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "language": "en",
+  "executable": true,
+  "product_changes_authorized_by_this_bundle": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "dd050d5a1489537207e073cac0838f40cde4340f",
+  "review_date": "2026-09-28",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/bundle.json",
+  "documents": [
+    "README.md",
+    "TESTLAB_CLOSURE_REVIEW.md",
+    "PLUGINS_REVIEW_NOTES.md",
+    "VALIDATION_MATRIX.md",
+    "DEV_LOOP.md",
+    "SOURCES.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "stages": [
+    {
+      "id": "S0",
+      "purpose": "Verify TestLab R1/R2/C1; repair only demonstrated narrow carry-over, then proceed.",
+      "requires_product_edit": false
+    },
+    {
+      "id": "Plugins",
+      "purpose": "Whole existing /plugins workspace, contracts/rendering seam, host effects, backend-free sandbox and proof.",
+      "requires_product_edit": true
+    }
+  ],
+  "authorization": {
+    "local_signed_commits": true,
+    "remote_push": false,
+    "merge": false,
+    "force_checkout_or_reset": false,
+    "sibling_changes_without_separate_authorization": false,
+    "ordinary_app_restart_or_database_use": false
+  },
+  "suggested_projects": [
+    "src/Modules/CanDoItAll.Modules.Plugins.Contracts",
+    "src/UI/CanDoItAll.Plugins.UI",
+    "src/Sandboxes/CanDoItAll.Plugins.UiSandbox"
+  ],
+  "excluded_scope": [
+    "API-only rewrite",
+    "database migration",
+    "plugin SDK/runtime redesign",
+    "new authorization/concurrency protocol",
+    "SchedulerPlanner/Processes/Workbench extraction"
+  ],
+  "reviewer_execution": {
+    "product_builds": false,
+    "product_tests": false,
+    "product_watch_measurement": false,
+    "implementer_raw_artifacts_inspected": false
+  },
+  "current_testlab_receipt": {
+    "reported_cases": 77,
+    "independently_rerun": false,
+    "source_id": "T04"
+  }
+}
