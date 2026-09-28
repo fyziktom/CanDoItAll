@@ -1,5 +1,10 @@
 namespace CanDoItAll.Memory.Abstractions;
 
+/// <summary>
+/// Kind of memory operation. In the memory-provider HTTP API it is a PascalCase string token: <c>ContextQuery</c>,
+/// <c>Ingestion</c>, <c>Feedback</c>, <c>SourceRequest</c>, <c>EventAcknowledge</c>, <c>OperationStatus</c>,
+/// <c>CapabilityExchange</c> or <c>Health</c>. Queries through that API are <c>ContextQuery</c>.
+/// </summary>
 public enum MemoryOperationKind
 {
     ContextQuery = 0,
@@ -45,6 +50,10 @@ public enum MemoryRedactionLevel
     Denied = 3
 }
 
+/// <summary>
+/// Source scope of memory, as a JSON integer: 0 Workspace, 1 Project, 2 Process, 3 Workflow, 4 Agent, 5 Crm, 6
+/// Resource, 7 Manual.
+/// </summary>
 public enum MemorySourceScope
 {
     Workspace = 0,
@@ -107,6 +116,11 @@ public enum MemoryProviderHealthStatus
     Unreachable = 2
 }
 
+/// <summary>
+/// Kind of warning attached to memory context. In the memory-provider HTTP API it is a PascalCase string token:
+/// <c>PolicyLimited</c> (policy limited the context), <c>ProviderPartial</c> (the provider returned partial context),
+/// <c>CapabilityUnavailable</c> or <c>SourceUnavailable</c>.
+/// </summary>
 public enum MemoryWarningKind
 {
     PolicyLimited = 0,

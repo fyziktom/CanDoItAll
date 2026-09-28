@@ -3,6 +3,12 @@ using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Identifier of a workflow executor, written as a non-empty string such as <c>storage.file</c>, <c>http.fetch</c> or
+/// <c>human.approval</c>; surrounding whitespace is removed. Built-in and plugin executors and their identifiers are
+/// listed by <c>GET /api/workflows/executor-catalog</c>. Readers also accept an object with a <c>value</c> member;
+/// send the plain string.
+/// </summary>
 [JsonConverter(typeof(WorkflowExecutorIdJsonConverter))]
 public readonly record struct WorkflowExecutorId
 {
@@ -54,6 +60,10 @@ public static class WorkflowExecutorIds
     public static WorkflowExecutorId CommandProcess { get; } = new("command.process");
 }
 
+/// <summary>
+/// Category of a workflow executor, as a JSON integer: 0 Storage, 1 ProjectStructure, 2 Http, 3 Image,
+/// 4 Spreadsheet, 5 Data, 6 Markdown, 7 Human, 8 Utility, 9 Command.
+/// </summary>
 public enum WorkflowExecutorCategoryKind
 {
     Storage,
@@ -68,6 +78,11 @@ public enum WorkflowExecutorCategoryKind
     Command
 }
 
+/// <summary>
+/// Where a workflow executor comes from, as a JSON integer: 0 BuiltIn (part of the application), 1 BundledPlugin
+/// (a plugin shipped with the application), 2 LocalPackage, 3 RemotePackage (plugin packages installed from a local
+/// or remote source).
+/// </summary>
 public enum WorkflowExecutorSourceKind
 {
     BuiltIn,
@@ -76,6 +91,10 @@ public enum WorkflowExecutorSourceKind
     RemotePackage
 }
 
+/// <summary>
+/// Trust level of a workflow executor's source, as a JSON integer: 0 Application, 1 BundledPlugin, 2 LocalPackage,
+/// 3 RemotePackage, 4 Untrusted.
+/// </summary>
 public enum WorkflowExecutorTrustLevel
 {
     Application,
@@ -85,6 +104,11 @@ public enum WorkflowExecutorTrustLevel
     Untrusted
 }
 
+/// <summary>
+/// How an icon is identified, as a JSON integer: 0 MaterialIcon (<c>value</c> is a Material icon name), 1 StaticAsset
+/// (<c>value</c> is the path of an application image asset), 2 PackageAsset (<c>value</c> is a path inside the plugin
+/// package named by <c>packageId</c>, whose icon <c>GET /api/plugins/packages/{packageId}/icon</c> serves).
+/// </summary>
 public enum UiIconKind
 {
     MaterialIcon,
@@ -92,6 +116,9 @@ public enum UiIconKind
     PackageAsset
 }
 
+/// <summary>
+/// Icon shown for an executor or its source in the user interface.
+/// </summary>
 public sealed record UiIconDescriptor
 {
     public UiIconDescriptor(
@@ -106,12 +133,20 @@ public sealed record UiIconDescriptor
         Label = string.IsNullOrWhiteSpace(label) ? string.Empty : label.Trim();
     }
 
+    /// <summary>
+    /// How the icon is identified, as a JSON integer: 0 MaterialIcon, 1 StaticAsset, 2 PackageAsset.
+    /// </summary>
     public UiIconKind Kind { get; init; }
 
+    /// <summary>
+    /// The Material icon name, for example <c>extension</c>, or the asset path, depending on <c>kind</c>; trimmed.
+    /// </summary>
     public string Value { get; init; }
 
+    /// <summary>Plugin package that holds a PackageAsset icon; empty for the other kinds.</summary>
     public string PackageId { get; init; }
 
+    /// <summary>Accessible label of the icon; may be empty.</summary>
     public string Label { get; init; }
 
     public static UiIconDescriptor MaterialIcon(
@@ -133,6 +168,10 @@ public sealed record UiIconDescriptor
     public static UiIconDescriptor Default { get; } = MaterialIcon("extension");
 }
 
+/// <summary>
+/// Availability of a workflow executor, as a JSON integer: 0 Available, 1 Planned (not implemented yet), 2 Disabled,
+/// 3 Unavailable (for example missing configuration or a dependency), 4 Incompatible.
+/// </summary>
 public enum WorkflowExecutorAvailabilityKind
 {
     Available,
@@ -142,12 +181,19 @@ public enum WorkflowExecutorAvailabilityKind
     Incompatible
 }
 
+/// <summary>
+/// Kind of an executor settings schema, as a JSON integer: 0 None, 1 JsonSchema.
+/// </summary>
 public enum WorkflowExecutorSettingsSchemaKind
 {
     None,
     JsonSchema
 }
 
+/// <summary>
+/// How the workflow editor presents an executor's settings, as a JSON integer: 0 Schema (a form generated from the
+/// configuration schema), 1 CustomRenderer (a dedicated settings editor of the application).
+/// </summary>
 public enum WorkflowExecutorSettingsPresentationMode
 {
     Schema,
@@ -159,6 +205,9 @@ public static class WorkflowExecutorSourceIds
     public const string BuiltIn = "candoitall.builtins";
 }
 
+/// <summary>
+/// Origin of a workflow executor: built into the application or provided by a plugin or plugin package.
+/// </summary>
 public sealed record WorkflowExecutorSourceDescriptor
 {
     public WorkflowExecutorSourceDescriptor(
@@ -186,20 +235,36 @@ public sealed record WorkflowExecutorSourceDescriptor
         Icon = icon ?? UiIconDescriptor.Default;
     }
 
+    /// <summary>
+    /// Kind of source, as a JSON integer: 0 BuiltIn, 1 BundledPlugin, 2 LocalPackage, 3 RemotePackage.
+    /// </summary>
     public WorkflowExecutorSourceKind Kind { get; init; }
 
+    /// <summary>
+    /// Identifier of the source: <c>candoitall.builtins</c> for built-in executors, otherwise the plugin or package
+    /// identifier.
+    /// </summary>
     public string SourceId { get; init; }
 
+    /// <summary>Version of the source; may be empty.</summary>
     public string SourceVersion { get; init; }
 
+    /// <summary>Identifier of the plugin that provides the executor; empty for built-in executors.</summary>
     public string PluginId { get; init; }
 
+    /// <summary>Identifier of the plugin package; empty when the executor does not come from a package.</summary>
     public string PackageId { get; init; }
 
+    /// <summary>
+    /// Trust level of the source, as a JSON integer: 0 Application, 1 BundledPlugin, 2 LocalPackage, 3 RemotePackage,
+    /// 4 Untrusted.
+    /// </summary>
     public WorkflowExecutorTrustLevel TrustLevel { get; init; }
 
+    /// <summary>Display name of the source, for example <c>Built-in</c>; may be empty.</summary>
     public string DisplayName { get; init; }
 
+    /// <summary>Icon of the source.</summary>
     public UiIconDescriptor Icon { get; init; }
 
     public static WorkflowExecutorSourceDescriptor BuiltIn(string sourceVersion = "")
@@ -247,6 +312,9 @@ public sealed record WorkflowExecutorSourceDescriptor
             icon);
 }
 
+/// <summary>
+/// Whether a workflow executor can run in this host now, evaluated when the executor catalog is read.
+/// </summary>
 public sealed record WorkflowExecutorAvailabilityDescriptor
 {
     public WorkflowExecutorAvailabilityDescriptor(
@@ -261,12 +329,21 @@ public sealed record WorkflowExecutorAvailabilityDescriptor
         Message = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
     }
 
+    /// <summary>
+    /// Availability, as a JSON integer: 0 Available, 1 Planned, 2 Disabled, 3 Unavailable, 4 Incompatible.
+    /// </summary>
     public WorkflowExecutorAvailabilityKind Kind { get; init; }
 
+    /// <summary>True when the executor can run now.</summary>
     public bool IsRunnable { get; init; }
 
+    /// <summary>
+    /// Short machine-readable reason when the executor cannot run, for example <c>planned</c> or <c>disabled</c>;
+    /// empty when it is available.
+    /// </summary>
     public string ReasonCode { get; init; }
 
+    /// <summary>Human-readable explanation of the availability.</summary>
     public string Message { get; init; }
 
     public static WorkflowExecutorAvailabilityDescriptor Available()
@@ -305,6 +382,9 @@ public sealed record WorkflowExecutorAvailabilityDescriptor
             message: message);
 }
 
+/// <summary>
+/// Versioned JSON Schema of an executor's settings.
+/// </summary>
 public sealed record WorkflowExecutorSettingsSchemaDescriptor
 {
     public WorkflowExecutorSettingsSchemaDescriptor(
@@ -317,12 +397,16 @@ public sealed record WorkflowExecutorSettingsSchemaDescriptor
         SchemaJson = string.IsNullOrWhiteSpace(schemaJson) ? string.Empty : schemaJson.Trim();
     }
 
+    /// <summary>Kind of schema, as a JSON integer: 0 None, 1 JsonSchema.</summary>
     public WorkflowExecutorSettingsSchemaKind Kind { get; init; }
 
+    /// <summary>Version of the schema, for example <c>1.0</c>; may be empty.</summary>
     public string Version { get; init; }
 
+    /// <summary>The JSON Schema as JSON text in a string; empty when there is none.</summary>
     public string SchemaJson { get; init; }
 
+    /// <summary>True when a schema is present. Computed.</summary>
     public bool HasSchema => Kind != WorkflowExecutorSettingsSchemaKind.None && !string.IsNullOrWhiteSpace(SchemaJson);
 
     public static WorkflowExecutorSettingsSchemaDescriptor None()
@@ -441,6 +525,20 @@ public enum WorkflowImageGenerationOperation
     Edit
 }
 
+/// <summary>
+/// Timeout and retry policy for running a workflow executor: an executor's default policy in the executor catalog and
+/// plugin manifests, or a node's own policy. Values outside the limits make a definition fail validation.
+/// </summary>
+/// <param name="TimeoutSeconds">Maximum duration of one attempt, in seconds, from 1 through 3,600.</param>
+/// <param name="MaxRetryAttempts">
+/// Number of retries after a failed attempt, from 0 through 10. More than 0 is rejected for executors that write
+/// external state unless their side effects allow idempotent retries.
+/// </param>
+/// <param name="RetryDelayMilliseconds">Delay before a retry, in milliseconds, from 0 through 600,000.</param>
+/// <param name="CaptureOutputArtifact">
+/// Whether the executor's output should be captured as an artifact; recorded in the execution audit. Node outputs are
+/// stored according to the workflow artifact policy.
+/// </param>
 public sealed record WorkflowExecutorExecutionPolicy(
     int TimeoutSeconds,
     int MaxRetryAttempts,
@@ -454,6 +552,16 @@ public sealed record WorkflowExecutorExecutionPolicy(
         CaptureOutputArtifact: false);
 }
 
+/// <summary>
+/// Whether and how a preview (test) run can simulate a workflow executor instead of running it.
+/// </summary>
+/// <param name="SupportsPreviewSimulation">True when a preview run can replace the executor with a template.</param>
+/// <param name="OutputTemplateJson">
+/// Template of the simulated output as JSON text in a string, which may contain placeholders such as
+/// <c>{{utcNow}}</c>, <c>{{node.id}}</c> or <c>{{inputPayload}}</c> that are filled in when a run simulates the node;
+/// use it as <c>outputTemplateJson</c> of a preview simulation step. Empty when simulation is not supported.
+/// </param>
+/// <param name="Description">What the simulation produces; empty when simulation is not supported.</param>
 public sealed record WorkflowExecutorSimulationDescriptor(
     bool SupportsPreviewSimulation,
     string OutputTemplateJson,
@@ -477,6 +585,10 @@ public sealed record WorkflowExecutorSimulationDescriptor(
     }
 }
 
+/// <summary>
+/// Strongest side effect of a workflow executor, as a JSON integer: 0 None, 1 WorkspaceRead, 2 WorkspaceWrite,
+/// 3 ExternalRead, 4 ExternalWrite (changes state outside the host, such as a remote system).
+/// </summary>
 public enum WorkflowExecutorSideEffectKind
 {
     None,
@@ -486,12 +598,38 @@ public enum WorkflowExecutorSideEffectKind
     ExternalWrite
 }
 
+/// <summary>
+/// Kind of external change a workflow executor makes, as a JSON integer: 0 None, 1 ProcessedMarker (marks an external
+/// item, such as a message, as processed).
+/// </summary>
 public enum WorkflowExecutorExternalMutationKind
 {
     None,
     ProcessedMarker
 }
 
+/// <summary>
+/// Side-effect contract of a workflow executor: what it changes and how it can be previewed, committed and retried.
+/// </summary>
+/// <param name="Kind">
+/// Strongest side effect, as a JSON integer: 0 None, 1 WorkspaceRead, 2 WorkspaceWrite, 3 ExternalRead,
+/// 4 ExternalWrite.
+/// </param>
+/// <param name="ExternalMutationKind">
+/// Kind of external change, as a JSON integer: 0 None, 1 ProcessedMarker.
+/// </param>
+/// <param name="SupportsPreview">True when the executor can report what it would do without doing it.</param>
+/// <param name="SupportsDryRun">True when the executor can run without committing its effect.</param>
+/// <param name="SupportsCommit">True when the executor commits its effect in a separate, explicit step.</param>
+/// <param name="RequiresCommitIdempotencyKey">
+/// True when committing requires an idempotency key, found at <c>idempotencyKeyJsonPath</c>.
+/// </param>
+/// <param name="AllowsIdempotentRetry">True when repeating the executor cannot repeat its external effect.</param>
+/// <param name="IdempotencyKeyJsonPath">JSON path of the idempotency key in the executor input; empty for none.</param>
+/// <param name="ReceiptSchema">
+/// Identifier of the schema of the receipt the executor records, for example <c>workflow-email-external-read/v1</c>;
+/// empty for none.
+/// </param>
 public sealed record WorkflowExecutorSideEffectDescriptor(
     WorkflowExecutorSideEffectKind Kind,
     WorkflowExecutorExternalMutationKind ExternalMutationKind,
@@ -503,6 +641,7 @@ public sealed record WorkflowExecutorSideEffectDescriptor(
     string IdempotencyKeyJsonPath,
     string ReceiptSchema)
 {
+    /// <summary>True when <c>kind</c> is ExternalWrite. Computed.</summary>
     public bool WritesExternalState => Kind == WorkflowExecutorSideEffectKind.ExternalWrite;
 
     public static WorkflowExecutorSideEffectDescriptor None { get; } = new(
@@ -557,6 +696,12 @@ public sealed record WorkflowExecutorSideEffectDescriptor(
             receiptSchema);
 }
 
+/// <summary>
+/// Capabilities a workflow executor needs, as a JSON integer bit mask that adds these values: 0 None,
+/// 1 ReadsWorkspace, 2 WritesWorkspace, 4 ReadsExternalData, 8 WritesExternalData, 16 UsesNetwork, 32 UsesSecrets,
+/// 64 RunsHostCommand, 128 EmitsArtifacts, 256 SupportsDeterministicTestMode, 512 IdempotentExternalMarker. For
+/// example 17 means ReadsWorkspace and UsesNetwork.
+/// </summary>
 [Flags]
 public enum WorkflowExecutorCapabilityFlags
 {
@@ -573,6 +718,11 @@ public enum WorkflowExecutorCapabilityFlags
     IdempotentExternalMarker = 1 << 9
 }
 
+/// <summary>
+/// Whether running a workflow executor needs a person's approval, as a JSON integer: 0 NotRequired,
+/// 1 RequiredForExternalEffect, 2 AlwaysRequired. With either of the last two, a run raises an approval request that
+/// must be approved before the executor runs.
+/// </summary>
 public enum WorkflowExecutorApprovalRequirement
 {
     NotRequired,
@@ -580,10 +730,23 @@ public enum WorkflowExecutorApprovalRequirement
     AlwaysRequired
 }
 
+/// <summary>
+/// Permissions a workflow executor needs and whether running it needs approval.
+/// </summary>
+/// <param name="RequiredCapabilities">
+/// Capabilities the executor needs, as a JSON integer bit mask: 0 None, 1 ReadsWorkspace, 2 WritesWorkspace,
+/// 4 ReadsExternalData, 8 WritesExternalData, 16 UsesNetwork, 32 UsesSecrets, 64 RunsHostCommand, 128 EmitsArtifacts,
+/// 256 SupportsDeterministicTestMode, 512 IdempotentExternalMarker.
+/// </param>
+/// <param name="ApprovalRequirement">
+/// Whether a run needs approval before the executor runs, as a JSON integer: 0 NotRequired,
+/// 1 RequiredForExternalEffect, 2 AlwaysRequired.
+/// </param>
 public sealed record WorkflowExecutorPermissionPolicy(
     WorkflowExecutorCapabilityFlags RequiredCapabilities,
     WorkflowExecutorApprovalRequirement ApprovalRequirement)
 {
+    /// <summary>True when <c>approvalRequirement</c> is not NotRequired. Computed.</summary>
     public bool RequiresApproval => ApprovalRequirement != WorkflowExecutorApprovalRequirement.NotRequired;
 
     public static WorkflowExecutorPermissionPolicy None { get; } = new(
@@ -591,6 +754,11 @@ public sealed record WorkflowExecutorPermissionPolicy(
         WorkflowExecutorApprovalRequirement.NotRequired);
 }
 
+/// <summary>
+/// Whether a workflow executor can run deterministically with fake or preview inputs for tests.
+/// </summary>
+/// <param name="IsSupported">True when the executor supports a deterministic test mode.</param>
+/// <param name="Description">How the test mode behaves; empty when it is not supported.</param>
 public sealed record WorkflowExecutorDeterministicTestModeDescriptor(
     bool IsSupported,
     string Description)
@@ -607,6 +775,27 @@ public sealed record WorkflowExecutorDeterministicTestModeDescriptor(
                 : description.Trim());
 }
 
+/// <summary>
+/// A workflow executor that Executor nodes can run, as listed by <c>GET /api/workflows/executor-catalog</c>: what it
+/// does, how it is configured, what it may change, whether it needs approval and whether it can run now.
+/// </summary>
+/// <param name="Id">Identifier to put in <c>settings.executorId</c> of a node, for example <c>storage.file</c>.</param>
+/// <param name="Name">Display name.</param>
+/// <param name="Description">What the executor does.</param>
+/// <param name="Category">
+/// Category, as a JSON integer: 0 Storage, 1 ProjectStructure, 2 Http, 3 Image, 4 Spreadsheet, 5 Data, 6 Markdown,
+/// 7 Human, 8 Utility, 9 Command.
+/// </param>
+/// <param name="IconName">Material icon name shown for the executor.</param>
+/// <param name="SetupRendererKey">Key of the settings editor the workflow workspace uses; empty for none.</param>
+/// <param name="InputShape">Shape of the value the executor receives.</param>
+/// <param name="ResultShape">Shape of the value the executor produces.</param>
+/// <param name="SettingsSchemaJson">JSON Schema of the settings as JSON text in a string; may be empty.</param>
+/// <param name="DefaultSettingsJson">
+/// Default settings as JSON text in a string; used when a node's <c>executorSettingsJson</c> is empty.
+/// </param>
+/// <param name="DefaultPolicy">Timeout and retry policy used when a node has none.</param>
+/// <param name="IsImplemented">False for executors that are planned but not implemented; they cannot run.</param>
 public sealed record WorkflowExecutorDescriptor(
     WorkflowExecutorId Id,
     string Name,
@@ -624,28 +813,46 @@ public sealed record WorkflowExecutorDescriptor(
     [JsonIgnore]
     public WorkflowDisclosureOwnerId? ProviderReadOwner { get; init; }
 
+    /// <summary>Where the executor comes from and how far it is trusted.</summary>
     public WorkflowExecutorSourceDescriptor Source { get; init; } = WorkflowExecutorSourceDescriptor.BuiltIn();
 
+    /// <summary>Whether the executor can run now, evaluated when the catalog was read.</summary>
     public WorkflowExecutorAvailabilityDescriptor Availability { get; init; } = IsImplemented
         ? WorkflowExecutorAvailabilityDescriptor.Available()
         : WorkflowExecutorAvailabilityDescriptor.Planned("Executor is planned but not implemented.");
 
+    /// <summary>Versioned JSON Schema of the settings.</summary>
     public WorkflowExecutorSettingsSchemaDescriptor SettingsSchema { get; init; } =
         WorkflowExecutorSettingsSchemaDescriptor.JsonSchema("1.0", SettingsSchemaJson);
 
+    /// <summary>
+    /// Settings fields as a form description. When it lists fields, a node's settings must be a JSON object whose
+    /// values satisfy them, otherwise the definition fails validation.
+    /// </summary>
     public ConfigurationSchema ConfigurationSchema { get; init; } = ConfigurationSchema.Empty();
 
+    /// <summary>
+    /// How the workflow editor presents the settings, as a JSON integer: 0 Schema, 1 CustomRenderer.
+    /// </summary>
     public WorkflowExecutorSettingsPresentationMode SettingsPresentationMode { get; init; } =
         WorkflowExecutorSettingsPresentationMode.Schema;
 
+    /// <summary>Whether a preview run can simulate the executor, and with which output template.</summary>
     public WorkflowExecutorSimulationDescriptor Simulation { get; init; } = WorkflowExecutorSimulationDescriptor.None;
 
+    /// <summary>Capabilities the executor needs and whether running it needs approval.</summary>
     public WorkflowExecutorPermissionPolicy PermissionPolicy { get; init; } = WorkflowExecutorPermissionPolicy.None;
 
+    /// <summary>What the executor changes and how it can be previewed, committed and retried.</summary>
     public WorkflowExecutorSideEffectDescriptor SideEffects { get; init; } = WorkflowExecutorSideEffectDescriptor.None;
 
+    /// <summary>Whether the executor supports a deterministic test mode.</summary>
     public WorkflowExecutorDeterministicTestModeDescriptor DeterministicTestMode { get; init; } = WorkflowExecutorDeterministicTestModeDescriptor.None;
 
+    /// <summary>
+    /// True when the executor is implemented and currently runnable. Computed. Definitions that use an executor that
+    /// cannot run fail validation.
+    /// </summary>
     public bool CanExecute => IsImplemented && Availability.IsRunnable;
 }
 

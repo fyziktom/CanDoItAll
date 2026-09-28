@@ -4,6 +4,10 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
 
+/// <summary>
+/// Continuation state of a prepared process launch, as a JSON integer: 0 Prepared, 1 Accepted, 2 Continuing, 3 Started,
+/// 4 ReconciliationRequired, 5 Failed.
+/// </summary>
 public enum ProcessLaunchContinuationState {
     Prepared,
     Accepted,
@@ -13,6 +17,10 @@ public enum ProcessLaunchContinuationState {
     Failed
 }
 
+/// <summary>
+/// Delivery state of the link from a launched run back to its source, as a JSON integer: 0 NotRequested, 1 Pending, 2
+/// Delivered, 3 Removed, 4 Conflict.
+/// </summary>
 public enum ProcessLaunchLinkDeliveryState {
     NotRequested,
     Pending,
@@ -102,12 +110,30 @@ public sealed class ProcessLaunchIntentConflictException(ProcessLaunchIntentId? 
     public ProcessLaunchIntentId? IntentId { get; } = intentId;
 }
 
+/// <summary>Observed state of a prepared process launch.</summary>
+/// <param name="AdmissionId">Launch admission identifier, as an object whose <c>value</c> is a GUID.</param>
+/// <param name="AcceptedRunId">
+/// Process run the launch created, as an object whose <c>value</c> is a GUID; null until a run was accepted.
+/// </param>
+/// <param name="ContinuationState">
+/// Continuation state, as a JSON integer: 0 Prepared, 1 Accepted, 2 Continuing, 3 Started, 4 ReconciliationRequired,
+/// 5 Failed.
+/// </param>
+/// <param name="LinkDeliveryState">
+/// Delivery state of the link back to the source, as a JSON integer: 0 NotRequested, 1 Pending, 2 Delivered, 3
+/// Removed, 4 Conflict.
+/// </param>
+/// <param name="PublicFailure">Failure message that is safe to show; null unless the launch failed.</param>
 public sealed record ProcessLaunchObservation(
     ProcessLaunchAdmissionId AdmissionId,
     ProcessRunId? AcceptedRunId,
     ProcessLaunchContinuationState ContinuationState,
     ProcessLaunchLinkDeliveryState LinkDeliveryState,
     string? PublicFailure) {
+    /// <summary>
+    /// Runtime status of the accepted run, as a JSON integer: 0 Created, 1 Active, 2 Waiting, 3 Blocked, 4 Completed,
+    /// 5 Failed, 6 CancelRequested, 7 Cancelled, 8 Escalated, 9 WaitingForUser; null when it was not read.
+    /// </summary>
     public ProcessRuntimeStatus? RuntimeStatus { get; init; }
 
     [JsonIgnore]

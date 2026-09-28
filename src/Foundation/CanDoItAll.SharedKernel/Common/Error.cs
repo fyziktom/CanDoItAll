@@ -1,5 +1,9 @@
 namespace CanDoItAll.SharedKernel;
 
+/// <summary>
+/// Severity of an error, as a JSON integer: 0 Info, 1 Warning (for example a rejected request value), 2 Error (a
+/// failed command or operation).
+/// </summary>
 public enum ErrorSeverity
 {
     Info,

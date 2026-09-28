@@ -149,6 +149,39 @@ public sealed partial class PromptsCuratorAgentRuntimeToolProviderTests
     }
 
     [Fact]
+    public async Task Curator_draft_rejected_by_the_gallery_is_a_correctable_no_effect_failure()
+    {
+        var gallery = PromptGalleryTestSupport.CreateService(
+            PromptGalleryTestSupport.CreateFactory(nameof(Curator_draft_rejected_by_the_gallery_is_a_correctable_no_effect_failure)));
+        var harness = CreateHarness(gallery);
+        var tools = (await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None))
+            .ToDictionary(tool => tool.Name, StringComparer.Ordinal);
+
+        var rejected = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
+            InvokeAsync<PromptsCuratorItemEditorResult>(
+                tools[PromptGalleryToolPolicy.PromptGalleryDraftCreate],
+                CreateDraftInput(" ", "Content without a title.")));
+
+        Assert.Contains("prompts.gallery.title-invalid", rejected.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentToolEffectState.None, rejected.EffectState);
+        Assert.True(rejected.CanRetryWithCorrectedInput);
+        var catalog = await InvokeAsync<PromptsCuratorCatalogSearchResult>(
+            tools[PromptGalleryToolPolicy.PromptGalleryCatalogSearch],
+            new PromptsCuratorCatalogSearchInput(pageSize: 10));
+        Assert.Equal(0, catalog.TotalCount);
+
+        var missingId = Guid.NewGuid();
+        var missing = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
+            InvokeAsync<PromptVersionSnapshot>(
+                tools[PromptGalleryToolPolicy.PromptGalleryVersionCreate],
+                new PromptsCuratorVersionCreateInput(
+                    missingId,
+                    DateTimeOffset.Parse("2026-07-19T12:00:00Z"),
+                    "Publish a missing item")));
+        Assert.Contains("prompts.gallery.not-found", missing.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Curator_tools_create_update_detect_stale_state_version_and_search_all_statuses()
     {
         var gallery = PromptGalleryTestSupport.CreateService(
@@ -177,11 +210,13 @@ public sealed partial class PromptsCuratorAgentRuntimeToolProviderTests
         Assert.Equal("Reviewed content.", updated.DraftContent);
         Assert.True(updated.UpdatedAtUtc > editor.UpdatedAtUtc);
 
-        var staleException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var staleException = await Assert.ThrowsAsync<AgentToolConflictException>(() =>
             InvokeAsync<PromptsCuratorItemEditorResult>(
                 tools[PromptGalleryToolPolicy.PromptGalleryDraftUpdate],
                 CreateUpdateInput(editor, "Stale overwrite.")));
         Assert.Contains("prompts.gallery.concurrency-conflict", staleException.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentToolEffectState.None, staleException.EffectState);
+        Assert.True(staleException.CanRetryWithCorrectedInput);
 
         var version = await InvokeAsync<PromptVersionSnapshot>(
             tools[PromptGalleryToolPolicy.PromptGalleryVersionCreate],

@@ -12,6 +12,12 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// Command resolved for a project structure node, as a JSON integer: 0 Open, 1 Wizard, 2 Branch, 3 Test, 4 Skip,
+/// 5 MarkUsed. Test returns the project's Test Lab. Open and Wizard return the node's page and, for prompt nodes,
+/// first create the node's Prompt Gallery prompt when it has none. Branch, Skip and MarkUsed return the node's page
+/// without other effects.
+/// </summary>
 public enum ProjectStructureCommandKind
 {
     Open,
@@ -160,6 +166,13 @@ internal sealed class ProjectWorkbenchViewStateRecordConfiguration : IEntityType
     }
 }
 
+/// <summary>
+/// Role of a node in the project hierarchy shown in a structure, as a JSON integer. 0 None (an ordinary node),
+/// 1 ActiveProject (the root node of the project being read, <c>project:{projectId}</c>), 2 Subproject (a child
+/// project, <c>project-child:{projectId}</c>), 3 ParentProject (a parent project linked to the root node,
+/// <c>project-related-parent:{projectId}</c>), 4 AdditionalParentProject (a parent-project node that is not linked
+/// to the root node).
+/// </summary>
 public enum ProjectStructureProjectRole
 {
     None,
@@ -354,6 +367,20 @@ public sealed record ProjectObjectSeedRequest(
     string? MetadataJson = null,
     int? DurationSeconds = null);
 
+/// <summary>
+/// Inline file content sent with a request, for example for an asset, an asset revision, a node with a picture or an
+/// imported document. Node creation, asset creation and asset revisions reject decoded content over 25 MiB with HTTP
+/// 413 <c>MediaPayloadTooLarge</c>.
+/// </summary>
+/// <param name="FileName">
+/// File name to store, for example <c>diagram.png</c>; required, a blank name is rejected with HTTP 400
+/// <c>FileNameRequired</c>.
+/// </param>
+/// <param name="ContentType">Media type of the content, for example <c>image/png</c>.</param>
+/// <param name="Base64Data">
+/// The file content, base64-encoded; required. Blank content is rejected with HTTP 400 <c>MediaPayloadRequired</c> and
+/// invalid base64 with HTTP 400 <c>InvalidBase64Payload</c>.
+/// </param>
 public sealed record ProjectObjectMediaPayload(
     string FileName,
     string ContentType,
@@ -376,6 +403,19 @@ public sealed record ProjectNodeMoveRequest(
     double X,
     double Y);
 
+/// <summary>
+/// Result of a committed transfer of project structure nodes into another project. All lists are empty when there was
+/// nothing to move.
+/// </summary>
+/// <param name="TargetProjectId">Identifier of the project that received the nodes.</param>
+/// <param name="MovedNodeIds">
+/// Identifiers of every node that moved, sorted ordinally; node identifiers do not change when nodes move.
+/// </param>
+/// <param name="MovedRootCount">
+/// Number of moved nodes whose parent did not move; they are now children of the target project's root.
+/// </param>
+/// <param name="MovedLinkCount">Number of links between moved nodes; they moved with the nodes.</param>
+/// <param name="RemovedBoundaryLinks">Links that were deleted because one end moved and the other stayed.</param>
 public sealed record ProjectStructureSubprojectTransferResult(
     Guid TargetProjectId,
     IReadOnlyList<string> MovedNodeIds,
@@ -383,6 +423,7 @@ public sealed record ProjectStructureSubprojectTransferResult(
     int MovedLinkCount,
     IReadOnlyList<ProjectStructureBoundaryLinkRemoval> RemovedBoundaryLinks)
 {
+    /// <summary>Number of nodes that moved, equal to the number of <c>movedNodeIds</c>.</summary>
     public int MovedNodeCount => MovedNodeIds.Count;
 }
 
@@ -406,6 +447,17 @@ public sealed record ProjectStructureTransferRecovery(
     ProjectStructureTransferCommitState CommitState,
     string RetryGuidance);
 
+/// <summary>
+/// A link deleted by a transfer because it connected a moved node with a node that stayed in the source project.
+/// </summary>
+/// <param name="LinkId">Identifier of the deleted link.</param>
+/// <param name="SourceNodeId">Identifier of the link's source node.</param>
+/// <param name="TargetNodeId">Identifier of the link's target node.</param>
+/// <param name="LinkKind">
+/// Kind of the deleted link, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
+/// 6 DerivedFrom, 7 BelongsTo.
+/// </param>
+/// <param name="IsSystemManaged">True when the application had created the link rather than a user.</param>
 public sealed record ProjectStructureBoundaryLinkRemoval(
     Guid LinkId,
     string SourceNodeId,
@@ -413,6 +465,10 @@ public sealed record ProjectStructureBoundaryLinkRemoval(
     ProjectObjectLinkKind LinkKind,
     bool IsSystemManaged);
 
+/// <summary>Result of an automatic re-layout of a node's descendants on the structure canvas.</summary>
+/// <param name="RootNodeId">Identifier of the node whose descendants were repositioned.</param>
+/// <param name="DescendantCount">Number of descendants of the node; 0 means nothing was moved.</param>
+/// <param name="RepositionedNodeCount">Number of nodes whose canvas position was updated.</param>
 public sealed record ProjectStructureSubtreeRecompositionResult(
     string RootNodeId,
     int DescendantCount,
@@ -429,6 +485,17 @@ public enum ProjectStructureClipboardCopyTaskPolicy
     NonTaskStructureOnly = 1
 }
 
+/// <summary>
+/// Caller-created link that a subtree copy did not copy because one end lies outside the copied set. The original link
+/// is unchanged.
+/// </summary>
+/// <param name="LinkId">Identifier of the original link record.</param>
+/// <param name="SourceNodeId">Identifier of the original link's source node.</param>
+/// <param name="TargetNodeId">Identifier of the original link's target node.</param>
+/// <param name="LinkKind">
+/// Meaning of the link, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
+/// 6 DerivedFrom, 7 BelongsTo.
+/// </param>
 public sealed record ProjectStructureCopyOmittedLink(
     Guid LinkId,
     string SourceNodeId,

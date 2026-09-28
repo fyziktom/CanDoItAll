@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
@@ -59,14 +60,15 @@ public sealed class ProjectStructureTaskPricingCommitService(
             string.Equals(node.Id, taskNodeId, StringComparison.Ordinal));
         if (task is null)
         {
-            throw new InvalidOperationException($"Task '{Mask(taskNodeId)}' is no longer available.");
+            throw PricingPreconditionFailed("TaskResourceTaskNotFound",
+                $"Task '{Mask(taskNodeId)}' is no longer available. Read the current structure and retry with an existing canonical task.");
         }
 
         if (task.IsSystemManaged ||
             task.ObjectType != ProjectObjectType.WorkItem ||
             !string.Equals(task.ObjectSubtype, TaskSubtype, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException(
+            throw PricingPreconditionFailed("TaskResourceTaskInvalid",
                 $"Node '{Mask(taskNodeId)}' is not an editable canonical task.");
         }
 
@@ -76,8 +78,8 @@ public sealed class ProjectStructureTaskPricingCommitService(
         if (expectedCurrentExecution is not null &&
             execution != expectedCurrentExecution)
         {
-            throw new InvalidOperationException(
-                "The task execution state changed before its attached resource could be priced. Reload and retry.");
+            throw PricingPreconditionFailed("TaskExecutionSnapshotStale",
+                "The task execution state changed before its attached resource could be priced. Read the task again and retry with its exact current execution snapshot.");
         }
 
         var pricingExecution = previousExecution is not null
@@ -148,6 +150,17 @@ public sealed class ProjectStructureTaskPricingCommitService(
             plan.Pricing.Status);
         return plan.Pricing;
     }
+
+
+    // Pricing is prepared before the resource is attached or any price is written, so a stale or missing task is a
+    // correctable no-effect rejection.
+    private static ProjectStructureAgentException PricingPreconditionFailed(string errorCode, string message)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            409,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
 
     private static ProjectTaskEstimate ReadEstimate(ProjectWorkItemMetadata? metadata)
         => ProjectTaskEstimatePolicy.ValidateAndNormalize(metadata is null

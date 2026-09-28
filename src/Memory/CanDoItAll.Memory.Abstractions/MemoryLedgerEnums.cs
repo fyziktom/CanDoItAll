@@ -1,5 +1,12 @@
 namespace CanDoItAll.Memory.Abstractions;
 
+/// <summary>
+/// State of an operation in the host's memory operation ledger. In the memory-provider HTTP API it is a PascalCase
+/// string token. In progress: <c>Pending</c> (recorded, not yet dispatched), <c>Accepted</c> (accepted by the provider
+/// as an asynchronous operation) and <c>Running</c>. Final: <c>Completed</c>, <c>Failed</c>, <c>TimedOut</c>,
+/// <c>Cancelled</c>, <c>Expired</c> (its retention period ended) and <c>Forgotten</c> (its data was removed under
+/// the retention policy).
+/// </summary>
 public enum MemoryLedgerStatus
 {
     Pending = 0,

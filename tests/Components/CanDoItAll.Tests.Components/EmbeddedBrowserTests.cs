@@ -1,4 +1,6 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Shell;
 
@@ -8,7 +10,7 @@ public sealed class EmbeddedBrowserTests
     public void Embeddable_source_renders_a_restricted_full_height_frame()
     {
         using var context = new BunitContext();
-        var source = new Uri("http://127.0.0.1:5032/_dev/runtime");
+        var source = new Uri(new Uri(context.Services.GetRequiredService<NavigationManager>().BaseUri), "/_dev/runtime");
 
         var cut = context.Render<EmbeddedBrowser>(parameters => parameters
             .Add(component => component.Source, source)
@@ -27,6 +29,24 @@ public sealed class EmbeddedBrowserTests
         Assert.DoesNotContain("allow-same-origin", sandbox, StringComparison.Ordinal);
         Assert.DoesNotContain("allow-top-navigation", sandbox, StringComparison.Ordinal);
         Assert.Equal("Runtime health", frame.GetAttribute("title"));
+    }
+
+    [Theory]
+    [InlineData("http://localhost:5149/", true)]
+    [InlineData("http://127.0.0.1:5149/", true)]
+    [InlineData("https://example.com/", false)]
+    public void Only_a_local_application_on_another_origin_keeps_its_own_origin(string url, bool expectOwnOrigin)
+    {
+        using var context = new BunitContext();
+
+        var cut = context.Render<EmbeddedBrowser>(parameters => parameters
+            .Add(component => component.Source, new Uri(url))
+            .Add(component => component.Title, "Local application"));
+
+        var sandbox = cut.Find("iframe").GetAttribute("sandbox") ?? string.Empty;
+        Assert.Contains("allow-scripts", sandbox, StringComparison.Ordinal);
+        Assert.Equal(expectOwnOrigin, sandbox.Contains("allow-same-origin", StringComparison.Ordinal));
+        Assert.DoesNotContain("allow-top-navigation", sandbox, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -18,12 +18,16 @@ The architecture documentation is intentionally small:
   records the finalizer, managed-artifact, and branch-aware preflight boundary.
 - [Provider model-parameter negotiation](provider-model-parameter-negotiation.md)
   defines request-feature-aware compatibility before provider dispatch.
+- [Bounded Agents Overview usage](agents-overview-usage-window.md) defines rolling
+  usage intervals, storage indexing, API permissions, rollout and validation evidence.
 - [Project Structure transfer outcome boundary](project-structure-transfer-outcome-boundary.md)
   separates shared transfer recovery from agent transport failures.
 - [Agent tool failure recovery boundary](agent-tool-failure-recovery-boundary.md)
   defines safe, retryable tool failures without exposing arbitrary exceptions.
 - [Prompt Gallery UI boundary](prompt-gallery-ui-boundary.md) records the rendering/effect
   split of the Prompt Gallery, its behavior matrix, contracts decision and validation.
+- [HTTP API documentation](api-documentation.md) explains how XML documentation becomes the
+  OpenAPI document and Swagger UI text, the conventions that pipeline requires, and its gates.
 
 Detailed operational contracts live beside their subject in the parent documentation
 directory. Project READMEs describe the local project boundary and validation command.

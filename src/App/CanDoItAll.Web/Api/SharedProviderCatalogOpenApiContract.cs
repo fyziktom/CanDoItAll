@@ -31,6 +31,15 @@ internal sealed class SharedProviderCatalogOpenApiContract
         }
 
         operation.Parameters ??= [];
+        if (context.Description.RelativePath == SharedProviderRoutes.Catalog.TrimStart('/')) {
+            operation.Parameters.Add(new OpenApiParameter {
+                Name = SharedProviderHeaders.CatalogFeatures,
+                In = ParameterLocation.Header,
+                Description = "Send image-pricing to include separate image-input and cached image-input token rates. Omit for the original schema 1.1 price shape. Responses vary by this header and acknowledge supported features.",
+                Required = false,
+                Schema = new OpenApiSchema { Type = JsonSchemaType.String }
+            });
+        }
         operation.Parameters.Add(new OpenApiParameter
         {
             Name = HeaderNames.IfNoneMatch,

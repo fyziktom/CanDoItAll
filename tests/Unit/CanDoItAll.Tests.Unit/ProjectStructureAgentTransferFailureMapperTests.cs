@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -243,8 +244,10 @@ public sealed class ProjectStructureAgentTransferFailureMapperTests
         Assert.Equal(
             reason == ProjectStructureDeletionBatchRejectionReason.SelectedNodesNotFound,
             agentFailure.Details is not null);
-        Assert.False(agentFailure.IsSafeToExpose);
-        Assert.False(agentFailure.CanRetryWithCorrectedInput);
+        // The batch is rejected before any root is deleted or replayed, so the model may correct its selection.
+        Assert.True(agentFailure.IsSafeToExpose);
+        Assert.True(agentFailure.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, agentFailure.EffectState);
         Assert.Same(applicationFailure, agentFailure.InnerException);
     }
 

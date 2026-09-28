@@ -38,7 +38,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     public WorkspaceFileListResult ListWorkspaceDirectory(string? relativePath = null, int maxResults = 100)
     {
         var allowedPath = PrepareFileReadPath(relativePath);
-        return ExecuteWithSafeAccessDenial(
+        return ExecuteReadWithSafeAccessDenial(
             allowedPath ?? ".",
             () => fileService.ListDirectory(allowedPath, maxResults));
     }
@@ -46,7 +46,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     public WorkspaceFileListResult ListWorkspaceFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
     {
         var allowedPath = PrepareFileReadPath(relativePath);
-        return ExecuteWithSafeAccessDenial(
+        return ExecuteReadWithSafeAccessDenial(
             allowedPath ?? ".",
             () => fileService.ListFiles(allowedPath, searchPattern, maxResults));
     }
@@ -54,7 +54,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     public WorkspaceTextSearchResult SearchWorkspace(string query, string? relativePath = null, int maxResults = 20)
     {
         var allowedPath = PrepareFileReadPath(relativePath);
-        return ExecuteWithSafeAccessDenial(
+        return ExecuteReadWithSafeAccessDenial(
             allowedPath ?? ".",
             () => fileService.SearchText(query, allowedPath, maxResults));
     }
@@ -62,7 +62,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     public WorkspaceTextFileReadResult ReadWorkspaceTextFile(string path, int maxCharacters = 12000)
     {
         var allowedPath = PrepareFileReadPath(path) ?? path;
-        return ExecuteWithSafeAccessDenial(
+        return ExecuteReadWithSafeAccessDenial(
             allowedPath,
             () => fileService.ReadTextFile(allowedPath, maxCharacters));
     }
@@ -70,7 +70,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     public WorkspacePathStatResult StatWorkspacePath(string path)
     {
         var allowedPath = PrepareFileReadPath(path) ?? path;
-        return ExecuteWithSafeAccessDenial(
+        return ExecuteReadWithSafeAccessDenial(
             allowedPath,
             () => fileService.StatPath(allowedPath));
     }
@@ -78,7 +78,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     public WorkspacePathHashResult HashWorkspacePath(string path, int maxFiles = 200, long maxBytes = 10485760)
     {
         var allowedPath = PrepareFileReadPath(path) ?? path;
-        return ExecuteWithSafeAccessDenial(
+        return ExecuteReadWithSafeAccessDenial(
             allowedPath,
             () => fileService.HashPath(allowedPath, maxFiles, maxBytes));
     }
@@ -198,10 +198,50 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         var allowedLeftPath = PrepareFileReadPath(leftPath) ?? leftPath;
         var allowedRightPath = PrepareFileReadPath(rightPath) ?? rightPath;
-        return ExecuteWithSafeAccessDenial(
+        return ExecuteReadWithSafeAccessDenial(
             allowedLeftPath,
             allowedRightPath,
             () => fileService.DiffTextFiles(allowedLeftPath, allowedRightPath, maxLines));
+    }
+
+    // A read changes nothing, so a denied read is a no-effect failure; a denied mutation may already be committing.
+    private static TResult ExecuteReadWithSafeAccessDenial<TResult>(
+        string requestedPath,
+        Func<TResult> operation)
+    {
+        try
+        {
+            return operation();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessibleReadPath(requestedPath);
+        }
+        catch (WorkspacePathResolutionException exception)
+        {
+            throw CreatePathInputFailure(exception);
+        }
+    }
+
+    private static TResult ExecuteReadWithSafeAccessDenial<TResult>(
+        string firstRequestedPath,
+        string secondRequestedPath,
+        Func<TResult> operation)
+    {
+        try
+        {
+            return operation();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessibleReadPaths(
+                firstRequestedPath,
+                secondRequestedPath);
+        }
+        catch (WorkspacePathResolutionException exception)
+        {
+            throw CreatePathInputFailure(exception);
+        }
     }
 
     private static TResult ExecuteWithSafeAccessDenial<TResult>(

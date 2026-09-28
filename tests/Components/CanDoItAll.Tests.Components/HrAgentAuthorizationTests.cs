@@ -315,7 +315,7 @@ public sealed class HrAgentAuthorizationTests
         Assert.DoesNotContain(
             options.Capabilities,
             capability => ManagedAgentPrivilegedCapabilityKeys.All.Contains(capability.Key));
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.CreateAsync(
             HrAgentIdentity.AgentId,
             CreateMinimalAgentInput(chatProvider) with
             {

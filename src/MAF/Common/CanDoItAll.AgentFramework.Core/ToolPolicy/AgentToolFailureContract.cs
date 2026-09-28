@@ -206,6 +206,22 @@ public sealed class WorkspaceToolAccessDeniedException : InvalidOperationExcepti
             canRetryWithCorrectedInput: true,
             AgentToolEffectState.Unknown);
 
+    /// <summary>A read-only workspace tool could not inspect part of the requested tree; a read changes nothing.</summary>
+    public static WorkspaceToolAccessDeniedException InaccessibleReadPath(string path)
+        => new(
+            $"Workspace path '{NormalizePathForMessage(path)}' could not be fully read because access to part of the requested tree was denied. Narrow the path or ask the operator to grant access, then retry.",
+            canRetryWithCorrectedInput: true,
+            AgentToolEffectState.None);
+
+    /// <summary>A read-only workspace tool could not read one of two requested paths; a read changes nothing.</summary>
+    public static WorkspaceToolAccessDeniedException InaccessibleReadPaths(
+        string firstPath,
+        string secondPath)
+        => new(
+            $"Workspace paths '{NormalizePathForMessage(firstPath)}' and '{NormalizePathForMessage(secondPath)}' could not be fully read. Narrow the paths or ask the operator to grant access, then retry.",
+            canRetryWithCorrectedInput: true,
+            AgentToolEffectState.None);
+
     private static string NormalizeSafeMessage(string safeMessage)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(safeMessage);

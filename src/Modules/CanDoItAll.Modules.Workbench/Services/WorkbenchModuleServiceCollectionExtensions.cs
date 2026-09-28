@@ -228,6 +228,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectStructureTerminalPresenter, ProjectStructureTerminalPresenter>();
         services.AddScoped<IProjectStructureRuntimeElevationAdapter, ProjectStructureRuntimeElevationAdapter>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
+        services.AddHttpClient(ProjectStructureRuntimeReadinessProbe.HttpClientName);
+        services.TryAddSingleton<ProjectStructureRuntimeReadinessProbe>();
         services.AddScoped<ProjectStructureRuntimeNodeMetadataBoundary>();
         services.AddScoped<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();
         services.TryAddEnumerable(

@@ -92,6 +92,24 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Theory]
+    [InlineData(OpenAiModelIds.GptImage25Sunburst, "xhigh")]
+    [InlineData(OpenAiModelIds.GptImage25Flare, "max")]
+    [InlineData("gpt-image-2.5-flare-2026-09-08", "max")]
+    public async Task OpenAi_image_25_quality_reaches_the_provider_and_is_rejected_for_older_models(string model, string quality) {
+        var handler = new CapturingHandler((_, _) => JsonResponse("""{"data":[{"b64_json":"AQID"}]}"""));
+        using var http = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(http, new FixedCredentialResolver("test-key"));
+        var provider = CreateProvider(ProviderKind.OpenAi, "https://api.openai.test/v1", model, purpose: ProviderProfilePurpose.ImageGeneration);
+        var request = new ProviderImageGenerationRequest(provider, model, "A blue cube", "1024x1024", quality, ProviderGeneratedImageFormat.Png, []);
+        await driver.GenerateImageAsync(request);
+        using var body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        Assert.Equal(model, body.RootElement.GetProperty("model").GetString());
+        Assert.Equal(quality, body.RootElement.GetProperty("quality").GetString());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => driver.GenerateImageAsync(request with { Model = OpenAiModelIds.GptImage2 }));
+        Assert.Single(handler.Requests);
+    }
+
+    [Theory]
     [InlineData(AgentProviderOperationKind.TranscribeSpeech)]
     [InlineData(AgentProviderOperationKind.SynthesizeSpeech)]
     public async Task OpenAiProviderDriver_RejectsSourceManagedAudioBeforeHttpDispatch(

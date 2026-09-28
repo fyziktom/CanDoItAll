@@ -26,7 +26,23 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverter : IWorkspaceD
             return CreateFailure(sourcePath, "Document source file was not found.");
         }
 
-        await using var result = await client.ConvertAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        DocumentConverterResult converted;
+        try
+        {
+            converted = await client.ConvertAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (MarkItDownException exception)
+        {
+            var fileName = Path.GetFileName(sourcePath);
+            return CreateFailure(sourcePath, exception switch
+            {
+                UnsupportedFormatException => $"Document '{fileName}' has a format the markdown converter does not support. Convert a PDF, Office, HTML, CSV, or text document instead.",
+                MissingDependencyException => $"Document '{fileName}' needs a converter component that is not installed on this host.",
+                _ => $"Document '{fileName}' could not be converted to markdown. The file may be damaged, protected, or not the format its extension suggests."
+            });
+        }
+
+        await using var result = converted;
         var fullMarkdown = result.Markdown ?? string.Empty;
         var markdown = request.MaxCharacters is { } limit && fullMarkdown.Length > limit
             ? fullMarkdown[..limit]

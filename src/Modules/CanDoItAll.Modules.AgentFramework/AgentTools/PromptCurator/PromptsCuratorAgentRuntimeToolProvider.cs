@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Prompts;
@@ -13,6 +15,10 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
     public const string ProviderKey = "prompts-curator.runtime-tools";
 
     private const int ProviderOrder = 936;
+
+    private static readonly FrozenSet<string> ConflictErrorCodes = FrozenSet.ToFrozenSet(
+        ["prompts.gallery.concurrency-conflict", "prompts.version.artifact-archived"],
+        StringComparer.Ordinal);
 
     private static readonly IReadOnlyList<string> ToolNames = Array.AsReadOnly<string>([
         PromptGalleryToolPolicy.PromptGalleryCatalogSearch,
@@ -333,10 +339,15 @@ public sealed class PromptsCuratorAgentRuntimeToolProvider(
     {
         if (result.IsFailure)
         {
+            // The Prompt Gallery owner validates the request, loads the item and compares its concurrency value
+            // before its single save, so a failed result has changed nothing and a corrected retry is safe.
             var details = string.Join(
                 "; ",
                 result.Errors.Select(error => $"{error.Code}: {error.Message}"));
-            throw new InvalidOperationException($"{operation} failed. {details}");
+            throw result.Errors.Any(error => ConflictErrorCodes.Contains(error.Code))
+                ? AgentToolConflictException.Create(
+                    $"{operation} was rejected. {details} Read the item editor again and retry with its current UpdatedAtUtc.")
+                : AgentToolInputValidationException.Create($"{operation} was rejected. {details}");
         }
 
         return result.Value

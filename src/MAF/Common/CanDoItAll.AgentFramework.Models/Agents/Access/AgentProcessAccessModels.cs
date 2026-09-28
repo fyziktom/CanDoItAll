@@ -3,14 +3,31 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Process access of an agent, the <c>processAccess</c> member of the agent editor form, stored in the agent's
+/// <c>configurationJson</c> under <c>processes</c>. A save replaces that section, and an omitted or empty object
+/// removes it. It decides whether and at which level the agent is offered in the Processes workspace chat; it attaches
+/// no runtime tools and is not an HTTP permission.
+/// </summary>
 public sealed class AgentProcessAccessSettings
 {
+    /// <summary>Offers the agent for reading processes in the Processes workspace chat.</summary>
     public bool CanRead { get; set; }
 
+    /// <summary>
+    /// Offers the agent with write access in the Processes workspace chat; the server also stores <c>canRead</c> as
+    /// true. In that chat, pending tool calls of such an agent are approved automatically for the process in scope.
+    /// </summary>
     public bool CanWrite { get; set; }
 
+    /// <summary>True to apply the access to every process definition.</summary>
     public bool AllowAllDefinitions { get; set; }
 
+    /// <summary>
+    /// Identifiers of the process definitions the access applies to when <c>allowAllDefinitions</c> is false. The
+    /// server drops all-zero identifiers and duplicates and sorts the list; it does not check that the definitions
+    /// exist.
+    /// </summary>
     public List<Guid> AllowedDefinitionIds { get; set; } = [];
 }
 

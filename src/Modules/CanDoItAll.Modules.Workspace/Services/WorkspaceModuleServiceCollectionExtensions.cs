@@ -24,6 +24,9 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddOptions<ApiAccessOptions>();
         services.AddSingleton<WorkspaceDefaultsBootstrapService>();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
+        services.TryAddSingleton<ApiPasswordService>();
+        services.TryAddSingleton<ApiSessionService>();
+        services.TryAddScoped<ApiUserAdministrationService>();
         services.TryAddScoped<IApiTokenAdministrationAccess, UnavailableApiTokenAdministrationAccess>();
         services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<ConnectorPluginRegistry>();

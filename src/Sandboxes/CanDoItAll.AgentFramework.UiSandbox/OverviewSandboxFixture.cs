@@ -11,7 +11,11 @@ public static class OverviewSandboxFixture {
     private static AgentsOverviewState Baseline { get; } = LoadBaseline();
 
     public static AgentsOverviewState Create(OverviewSandboxContext context) {
-        var state = Baseline with { DesiredScope = context.Scope, AcceptedScope = context.Scope };
+        var generated = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero);
+        var state = Baseline with {
+            DesiredScope = context.Scope, AcceptedScope = context.Scope, DesiredPeriod = context.Period,
+            AcceptedQuery = new(context.Scope, context.Period, generated), GeneratedAtUtc = generated
+        };
         if (context.Scope == ProviderUsageWorkloadSelection.SimpleChats) {
             state = state with {
                 Consumers = state.Consumers.Select(row => row with {
@@ -35,7 +39,7 @@ public static class OverviewSandboxFixture {
                 OverviewError = "The sample summary refresh failed. Previously accepted totals remain visible."
             },
             OverviewSandboxScenario.Empty => state with {
-                Totals = AgentOverviewTotals.Empty, UsageTotals = ProviderUsageTotals.Empty,
+                Totals = AgentRuntimeTotals.Empty, UsageTotals = ProviderUsageTotals.Empty,
                 Consumers = [], Providers = [], Teams = []
             },
             OverviewSandboxScenario.HeaderPartial => state with {
@@ -56,6 +60,8 @@ public static class OverviewSandboxFixture {
                 UsagePhase = AgentsOverviewReadPhase.Unavailable,
                 UsageError = "The sample result did not match the requested scope. Retry the requested scope."
             },
+            OverviewSandboxScenario.Indexing => state with { UsageSources = [ProviderUsageSourceState.Indexing, ProviderUsageSourceState.Complete] },
+            OverviewSandboxScenario.LongPeriodLoading => state with { DesiredPeriod = ProviderUsagePeriod.Year, UsageTotals = null, UsagePhase = AgentsOverviewReadPhase.Loading },
             OverviewSandboxScenario.Partial => state with { UsageSources = [ProviderUsageSourceState.Complete, ProviderUsageSourceState.Failed] },
             OverviewSandboxScenario.UnknownUnpriced => state with {
                 UsageTotals = state.UsageTotals! with { PricedObservationCount = 3, UnpricedObservationCount = 1 }

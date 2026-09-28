@@ -1,4 +1,5 @@
 using System.Xml;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -52,7 +53,8 @@ internal static class ProjectStructureSvgAssetValidator
                     "InvalidSvgRoot",
                     $"SVG asset '{fileName}' must have an <svg> document root. Correct the file and retry asset creation.",
                     canRetryWithCorrectedInput: true,
-                    diagnosticDetails: new { fileName });
+                    diagnosticDetails: new { fileName },
+                    effectState: AgentToolEffectState.NotCommitted);
             }
 
             while (reader.Read())
@@ -76,7 +78,8 @@ internal static class ProjectStructureSvgAssetValidator
                     fileName,
                     exception.LineNumber,
                     exception.LinePosition
-                });
+                },
+                effectState: AgentToolEffectState.NotCommitted);
         }
     }
 

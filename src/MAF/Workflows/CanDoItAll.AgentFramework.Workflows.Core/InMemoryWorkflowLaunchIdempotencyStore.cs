@@ -195,10 +195,12 @@ public sealed class InMemoryWorkflowLaunchIdempotencyStore :
             return;
         }
 
+        // A public API key belongs to the caller that recorded it: another caller's request is a conflict, not a replay.
         if (requested.WorkflowId != existing.WorkflowId ||
             requested.SelectionKind != existing.SelectionKind ||
             requested.RequestedVersionId != existing.RequestedVersionId ||
-            requested.Mode != existing.Mode)
+            requested.Mode != existing.Mode ||
+            requested.OriginScopeKey != existing.OriginScopeKey)
         {
             throw new WorkflowLaunchIdempotencyConflictException(requested);
         }

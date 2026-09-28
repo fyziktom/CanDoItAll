@@ -349,9 +349,13 @@ internal sealed class MafToolRunContext {
                 MafAgentToolFailureMapper.TryMap(exception, out var failure) &&
                 failure.EffectState is AgentToolEffectState.NotCommitted or AgentToolEffectState.None) {
                 return failure;
-            } catch (AgentToolPolicyBlockedException) when (claim.Proposal.State == AgentToolProposalState.Prepared &&
+            } catch (AgentToolPolicyBlockedException exception) when (claim.Proposal.State == AgentToolProposalState.Prepared &&
                 effectScope.CommittedEffect is null) {
-                return RecordPolicyDenial("Current execution policy denied this saved proposal.");
+                // Policy reasons are written for the agent (for example the exact external-target alias to use
+                // instead of a native path); dropping them leaves the agent guessing.
+                return RecordPolicyDenial(string.IsNullOrWhiteSpace(exception.Reason)
+                    ? "Current execution policy denied this saved proposal."
+                    : $"Current execution policy denied this saved proposal. {exception.Reason}");
             }
         }
 
@@ -375,7 +379,7 @@ internal sealed class MafToolRunContext {
             var checkpoint = CaptureResult(result, effectScope.PreDispatchFailure, effectScope.CommittedEffect);
             var effect = effectScope.CommittedEffect is not null ? AgentToolEffectState.Committed :
                 MafRuntimeToolInvocationResultClassifier.Assess(call.Name,
-                    toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure).EffectState;
+                    toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure, effectScope.RejectedBeforeEffect).EffectState;
             var requiresReconciliation = result is IAgentToolOwnerObservationEvidence { RequiresOwnerReconciliation: true };
             await journal.CompleteInvocationAsync(claim, checkpoint, effect, cancellationToken, requiresReconciliation,
                 effectScope.DisclosureEvidence);

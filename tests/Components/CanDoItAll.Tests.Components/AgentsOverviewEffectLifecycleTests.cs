@@ -319,15 +319,13 @@ public sealed class AgentsOverviewEffectLifecycleTests {
         await using var fixture = await OverviewPageFixture.CreateAsync();
         var workspace = fixture.Harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var id = await workspace.SaveAgentTeamAsync(new AgentTeamEditorModel { Name = "Overview navigation team" });
-        fixture.Overview = _ => Task.FromResult(OverviewPageFixture.Snapshot() with {
-            TeamShortcuts = [new(id, "Overview navigation team", "", "groups", 0)]
-        });
         var page = fixture.Render();
         page.WaitForDashboardLoaded();
         var navigation = fixture.Harness.Context.Services.GetRequiredService<NavigationManager>();
         var locations = new List<string>();
         navigation.LocationChanged += (_, args) => locations.Add(args.Location);
-        await page.InvokeAsync(() => page.Find("[data-testid='agents-overview-team-shortcut']").ClickAsync());
+        await page.InvokeAsync(() => page.FindAll("[data-testid='agents-overview-team-shortcut']")
+            .Single(button => button.TextContent.Contains("Overview navigation team", StringComparison.Ordinal)).ClickAsync());
         page.WaitForAssertion(() => Assert.Contains("teamId=" + id.ToString("D"), navigation.Uri));
         Assert.Contains("tab=agents", Assert.Single(locations));
         Assert.NotNull(page.Find("[data-testid='agents-hr-agent-open-header']"));
@@ -345,7 +343,7 @@ public sealed class AgentsOverviewEffectLifecycleTests {
         try {
             Assert.True(page.Find("[data-testid='agents-overview-open-provider-usage']").HasAttribute("disabled"));
             await page.InvokeAsync(() => page.FindComponent<AgentsOverviewSurface>().Instance.Intent.InvokeAsync(
-                new AgentsOverviewIntent.OpenDetail(AgentsOverviewDetail.Providers, ProviderUsageWorkloadSelection.Both)));
+                new AgentsOverviewIntent.OpenDetail(AgentsOverviewDetail.Providers, page.FindComponent<AgentsOverviewSurface>().Instance.State.AcceptedQuery!)));
             Assert.Single(dialogs.Dialogs);
         } finally {
             await host.InvokeAsync(() => Assert.Single(dialogs.Dialogs).CloseAsync());
@@ -354,12 +352,32 @@ public sealed class AgentsOverviewEffectLifecycleTests {
         page.WaitForAssertion(() => Assert.False(page.Find("[data-testid='agents-overview-open-provider-usage']").HasAttribute("disabled")));
     }
 
+    [Fact]
+    public async Task Period_change_closes_dialog_and_rejects_queued_intent_for_the_old_window() {
+        await using var fixture = await OverviewPageFixture.CreateAsync();
+        var page = fixture.Render();
+        page.WaitForDashboardLoaded();
+        var accepted = page.FindComponent<AgentsOverviewSurface>().Instance.State.AcceptedQuery!;
+        var host = fixture.Harness.Context.Render<DialogHost>();
+        var dialogs = fixture.Harness.Context.Services.GetRequiredService<DialogService>();
+        var opening = page.InvokeAsync(() => page.Find("[data-testid='agents-overview-open-provider-usage']").ClickAsync());
+        host.WaitForElement("[data-testid='provider-usage-dialog']");
+        Assert.Equal(accepted, host.FindComponent<ProviderUsageDialog>().Instance.Query);
+        await page.InvokeAsync(() => page.Find("[data-testid='agents-overview-period-14d']").ClickAsync());
+        await opening;
+        Assert.Empty(dialogs.Dialogs);
+        await page.InvokeAsync(() => page.FindComponent<AgentsOverviewSurface>().Instance.Intent.InvokeAsync(
+            new AgentsOverviewIntent.OpenDetail(AgentsOverviewDetail.Providers, accepted)));
+        Assert.Empty(dialogs.Dialogs);
+        Assert.Equal(ProviderUsagePeriod.FourteenDays, page.FindComponent<AgentsOverviewSurface>().Instance.State.AcceptedQuery!.Period);
+    }
+
     private sealed class WrongScopeQuery : IAgentsWorkspaceQuery {
         public Task<AgentsHeaderSnapshot> ReadHeaderAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
-        public Task<AgentOverviewSnapshot> ReadOverviewAsync(CancellationToken cancellationToken = default)
+        public Task<AgentRuntimeSummary> ReadOverviewAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
-        public ValueTask<ProviderUsageSnapshot> ReadUsageAsync(ProviderUsageWorkloadSelection selection, CancellationToken cancellationToken = default)
+        public ValueTask<ProviderUsageSnapshot> ReadUsageAsync(ProviderUsageQuery query, CancellationToken cancellationToken = default)
             => ValueTask.FromResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.SimpleChats));
     }
 
@@ -367,10 +385,10 @@ public sealed class AgentsOverviewEffectLifecycleTests {
         => fixture.Harness.Context.Render<DynamicComponent>(p => p.Add(c => c.Type, ComponentType(kind)).Add(c => c.Parameters, DynamicParameters(selection)));
 
     private static Dictionary<string, object> DynamicParameters(ProviderUsageWorkloadSelection selection)
-        => new() { [nameof(AgentUsageDialog.Selection)] = selection };
+        => new() { [nameof(AgentUsageDialog.Query)] = new ProviderUsageQuery(selection, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow) };
 
     private static Dictionary<string, object?> Parameters(ProviderUsageWorkloadSelection selection)
-        => new() { [nameof(AgentUsageDialog.Selection)] = selection };
+        => new() { [nameof(AgentUsageDialog.Query)] = new ProviderUsageQuery(selection, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow) };
 
     private static Type ComponentType(OverviewDialogCase kind) => kind switch {
         OverviewDialogCase.Consumer => typeof(AgentUsageDialog),

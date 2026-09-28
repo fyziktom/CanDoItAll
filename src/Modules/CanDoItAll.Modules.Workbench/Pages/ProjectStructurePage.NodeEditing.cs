@@ -285,6 +285,13 @@ public partial class ProjectStructurePage
             case "runtime:stop":
                 await StopRuntimeAsync(node);
                 break;
+            case RuntimePreviewActionId:
+                if (TryResolveRuntimePreviewLink(node, out var runtimePreviewLink))
+                {
+                    OpenWebPreviewDialog(node, runtimePreviewLink);
+                    await InvokeAsync(StateHasChanged);
+                }
+                break;
             case "open-local":
                 await OpenAttachmentLocallyAsync(node);
                 break;

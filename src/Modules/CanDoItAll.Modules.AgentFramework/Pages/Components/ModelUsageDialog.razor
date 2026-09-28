@@ -38,7 +38,7 @@ else {
                   Options="@ModelUsageChartOptions"
                   Height="340"
                   Class="w-full"
-                  EmptyText="No model usage has been recorded." />
+                  EmptyText="No model usage has been recorded in this interval." />
 
         <SurfaceCard Soft="true">
             @if (snapshot.Models.Count == 0) {
@@ -122,14 +122,14 @@ else {
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
-    [Parameter]
-    public ProviderUsageWorkloadSelection Selection { get; set; } = ProviderUsageWorkloadSelection.Both;
+    [Parameter, EditorRequired]
+    public ProviderUsageQuery Query { get; set; } = default!;
 
     private ProviderUsageSnapshot snapshot = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isLoading = true;
     private bool disposed;
     private long generation;
-    private ProviderUsageWorkloadSelection? requestedSelection;
+    private ProviderUsageQuery? requestedSelection;
     private CancellationTokenSource? readCancellation;
     private string? loadError;
 
@@ -160,12 +160,12 @@ else {
             ];
 
     protected override async Task OnParametersSetAsync() {
-        if (disposed || requestedSelection == Selection) {
+        if (disposed || requestedSelection == Query) {
             return;
         }
         var requestGeneration = ++generation;
         CancelRead();
-        var request = Selection;
+        var request = Query;
         requestedSelection = request;
         readCancellation = new();
         var owner = readCancellation;
@@ -173,12 +173,12 @@ else {
         isLoading = true;
         loadError = null;
         try {
-            request.Validate();
+            ArgumentNullException.ThrowIfNull(request);
             var result = await WorkspaceQuery.ReadUsageAsync(request, token);
             if (!IsCurrent()) {
                 return;
             }
-            if (result.Selection != request) {
+            if (result.Query != request) {
                 throw new InvalidDataException("Usage evidence returned a different requested scope.");
             }
             snapshot = result with {
@@ -190,7 +190,7 @@ else {
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (Exception exception) {
             if (IsCurrent()) {
-                loadError = "Usage evidence could not be refreshed. Close this dialog and retry the selected scope.";
+                loadError = "Usage evidence could not be refreshed. Close this dialog and retry the selected workload and period.";
                 Logger.LogWarning("Usage detail read failed ({FailureType}); scope {Scope}.", exception.GetType().Name, request);
             }
         } finally {
@@ -203,7 +203,7 @@ else {
             owner.Dispose();
         }
 
-        bool IsCurrent() => !disposed && generation == requestGeneration && Selection == request && !token.IsCancellationRequested;
+        bool IsCurrent() => !disposed && generation == requestGeneration && Query == request && !token.IsCancellationRequested;
     }
 
     private void CancelRead() {

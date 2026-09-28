@@ -190,8 +190,11 @@ public sealed partial class AppSmokeTests
         var unavailable = page.GetByTestId("project-structure-quick-action-primary");
         await unavailable.WaitForAsync();
         Assert.True(await unavailable.IsDisabledAsync());
-        Assert.Contains("Runtime unavailable", await unavailable.TextContentAsync(), StringComparison.Ordinal);
-        Assert.Contains("executable dependency", await unavailable.TextContentAsync(), StringComparison.OrdinalIgnoreCase);
+        var unavailableText = await unavailable.TextContentAsync() ?? string.Empty;
+        Assert.Contains("Runtime unavailable", unavailableText, StringComparison.Ordinal);
+        // A missing program is named, with the remediation (process scratch hardening BC-A12).
+        Assert.Contains("was not found on the host (b02-definitely-missing-executable)", unavailableText, StringComparison.Ordinal);
+        Assert.Contains("add its folder to the PATH", unavailableText, StringComparison.Ordinal);
         await CaptureLocatorAsync(
             dialog,
             Path.Combine(artifactsDirectory, "b07-runtime-capabilities-dependency-missing.png"));

@@ -88,7 +88,8 @@ public sealed record HrAgentWorkspaceToolAccessInput(
     bool CanReadStorage = false,
     bool CanWriteStorage = false,
     bool AllowAllStorageCatalogs = false,
-    IReadOnlyList<Guid>? AllowedStorageCatalogIds = null);
+    IReadOnlyList<Guid>? AllowedStorageCatalogIds = null,
+    bool CanScriptsReadEnvironment = false);
 
 public sealed record HrAgentWorkspaceToolAccessPatch(
     AgentWorkspaceToolProfileKind? Profile = null,
@@ -103,7 +104,8 @@ public sealed record HrAgentWorkspaceToolAccessPatch(
     bool? CanReadStorage = null,
     bool? CanWriteStorage = null,
     bool? AllowAllStorageCatalogs = null,
-    IReadOnlyList<Guid>? AllowedStorageCatalogIds = null);
+    IReadOnlyList<Guid>? AllowedStorageCatalogIds = null,
+    bool? CanScriptsReadEnvironment = null);
 
 public sealed record HrAgentSafeWorkspaceToolAccess(
     AgentWorkspaceToolProfileKind Profile,
@@ -118,7 +120,8 @@ public sealed record HrAgentSafeWorkspaceToolAccess(
     bool CanReadStorage,
     bool CanWriteStorage,
     bool AllowAllStorageCatalogs,
-    IReadOnlyList<Guid> AllowedStorageCatalogIds);
+    IReadOnlyList<Guid> AllowedStorageCatalogIds,
+    bool CanScriptsReadEnvironment = false);
 
 public sealed record HrAgentCapabilityDescriptor(
     Guid Id,

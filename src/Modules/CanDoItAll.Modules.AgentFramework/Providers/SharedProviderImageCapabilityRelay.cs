@@ -37,6 +37,8 @@ internal sealed class SharedProviderImageCapabilityRelay(
         "low",
         "medium",
         "high",
+        "xhigh",
+        "max",
         "auto"
     };
 

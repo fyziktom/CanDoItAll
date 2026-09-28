@@ -47,11 +47,11 @@ public sealed class AgentProviderProfilesPanelPricingTests
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='provider-editor-tabs']");
         cut.WaitForElement("[data-testid='providers-tree-provider']");
-        var providerNode = cut.FindAll("[data-testid='providers-tree-provider']")
-            .First(node => node.TextContent.Contains("AAA Priced Provider", StringComparison.OrdinalIgnoreCase));
-        providerNode.Click();
-        cut.WaitForAssertion(() =>
-        {
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='providers-tree-provider']")
+            .First(node => node.TextContent.Contains("AAA Priced Provider", StringComparison.OrdinalIgnoreCase))
+            .ClickAsync());
+        cut.WaitForAssertion(() => {
+            Assert.NotNull(cut.Find("[data-testid='provider-editor-tabs']"));
             Assert.Contains(
                 cut.FindAll("h2"),
                 heading => heading.TextContent.Contains("AAA Priced Provider", StringComparison.OrdinalIgnoreCase));
@@ -60,7 +60,7 @@ public sealed class AgentProviderProfilesPanelPricingTests
         await cut.InvokeAsync(() =>
             cut.FindAll("button[role='tab']")
                 .Single(button => button.TextContent.Contains("Prices", StringComparison.OrdinalIgnoreCase))
-                .Click());
+                .ClickAsync());
 
         cut.WaitForElement("[data-testid='provider-pricing-row-0']");
         var modelInput = (IHtmlInputElement)cut.Find("[data-testid='provider-pricing-model-0']");

@@ -27,6 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class ProjectTransferHistoryPersistenceTests {
     private static readonly DateTimeOffset Now = new(2026, 4, 5, 6, 7, 8, TimeSpan.Zero);
     private static readonly JsonSerializerOptions PackageJson = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };

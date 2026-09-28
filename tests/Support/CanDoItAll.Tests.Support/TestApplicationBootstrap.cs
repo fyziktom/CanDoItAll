@@ -54,6 +54,8 @@ public static class TestApplicationBootstrap
         IHostEnvironment environment,
         bool registerTestHostApplicationLifetime = true)
     {
+        // Expiration timers otherwise retain disposed fixture providers through singleton clients.
+        services.ConfigureHttpClientDefaults(builder => builder.SetHandlerLifetime(Timeout.InfiniteTimeSpan));
         services.AddLogging();
         services.AddSingleton(configuration);
         if (registerTestHostApplicationLifetime)

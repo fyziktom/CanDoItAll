@@ -6,15 +6,19 @@ using CanDoItAll.Components.Charts;
 namespace CanDoItAll.AgentFramework.UI.Overview;
 
 public static class AgentsOverviewPresentation {
-    public static AgentsOverviewState Create(AgentOverviewSnapshot? overview, ProviderUsageSnapshot? usage,
+    public static AgentsOverviewState Create(AgentRuntimeSummary? overview, ProviderUsageSnapshot? usage,
         ProviderUsageWorkloadSelection desired, bool overviewLoading, bool usageLoading,
-        string? overviewError, string? usageError, IReadOnlyDictionary<string, string?> avatars) {
+        string? overviewError, string? usageError, IReadOnlyDictionary<string, string?> avatars,
+        ProviderUsagePeriod period = ProviderUsagePeriod.SevenDays) {
         if (desired is not (ProviderUsageWorkloadSelection.Agents or ProviderUsageWorkloadSelection.SimpleChats or ProviderUsageWorkloadSelection.Both)) {
             throw new ArgumentOutOfRangeException(nameof(desired));
         }
-        var matching = usage?.Selection == desired ? usage : null;
+        var matching = usage?.Query is { } query && query.Selection == desired && query.Period == period ? usage : null;
         return new() {
             DesiredScope = desired,
+            DesiredPeriod = period,
+            AcceptedQuery = usage?.Query,
+            GeneratedAtUtc = matching?.GeneratedAtUtc,
             AcceptedScope = usage?.Selection,
             Totals = overview?.Totals,
             UsageTotals = matching?.Totals,

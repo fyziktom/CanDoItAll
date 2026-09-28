@@ -134,6 +134,16 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
 
 public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 {
+    /// <summary>
+    /// Connect timeout for per-test databases: Npgsql's own default, which the product uses. PostgreSQL on
+    /// Windows starts a new backend process for every physical connection, and a page render can open
+    /// several at once, so on a loaded CI runner a single open can take longer than 5 seconds (seen in the
+    /// Windows host test shard on 2026-09-26). An unreachable server is still reported early by
+    /// <see cref="PostgresTestAvailability"/>, which probes with the configured connection string.
+    /// </summary>
+    public const int ConnectTimeoutSeconds = 15;
+
+    private const int DatabaseMaintenanceCommandTimeoutSeconds = 60;
     private const string CreateStrategyEnvironmentVariable = "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY";
     private const string WalLogCreateStrategyValue = "WAL_LOG";
     private const string FileCopyCreateStrategyValue = "FILE_COPY";
@@ -235,7 +245,7 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
         {
             Database = databaseName,
             IncludeErrorDetail = true,
-            Timeout = 5,
+            Timeout = ConnectTimeoutSeconds,
             CommandTimeout = 15
         };
 
@@ -251,8 +261,8 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
         }
 
         builder.IncludeErrorDetail = true;
-        builder.Timeout = 5;
-        builder.CommandTimeout = 15;
+        builder.Timeout = ConnectTimeoutSeconds;
+        builder.CommandTimeout = DatabaseMaintenanceCommandTimeoutSeconds;
         return builder.ConnectionString;
     }
 

@@ -318,6 +318,57 @@ public sealed partial class HrAgentRuntimeToolProviderTests
         }
     }
 
+    [Theory]
+    [InlineData(HrAgentToolPolicy.HrCrmPartyCreate, false)]
+    [InlineData(HrAgentToolPolicy.HrCrmAffiliationUpsert, true)]
+    [InlineData(HrAgentToolPolicy.HrCrmPartyAffiliationsList, false)]
+    public async Task Rejected_CRM_commands_are_correctable_and_their_saved_rejection_is_redisclosed(string toolName, bool conflict) {
+        var context = CreateContext(HrAgentCapabilityKeys.ToolNameToCapabilityKey.Values, allowCrmScope: true);
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DisclosureWorkspace>();
+        var state = (DisclosureWorkspace)(object)workspace;
+        state.Agents = [context.Agent];
+        state.Capabilities = context.Capabilities;
+        var provider = CreateDisclosureProvider(workspace, new ThrowingCrmHrAgentQueryService(), new RejectingCrmPartyCommands());
+        var tool = Assert.IsAssignableFrom<Microsoft.Extensions.AI.AIFunction>(
+            (await provider.CreateToolsAsync(context, default)).Single(item => item.Name == toolName));
+        object request = toolName switch {
+            HrAgentToolPolicy.HrCrmPartyCreate => new CrmPartyCreateCommand(PartyType.Person, "Draft person"),
+            HrAgentToolPolicy.HrCrmAffiliationUpsert => new CrmPartyAffiliationUpsertCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+                PartyOrganizationAffiliationKind.Employee, false, ExpectedUpdatedAtUtc: DateTimeOffset.UtcNow),
+            _ => new HrCrmPersonPartyInput(Guid.NewGuid())
+        };
+
+        var failure = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+            tool.InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["request"] = request }).AsTask());
+
+        var evidence = Assert.IsAssignableFrom<IAgentToolFailureEffectEvidence>(failure);
+        Assert.Equal(conflict ? AgentToolConflictException.FailureCode : AgentToolInputValidationException.FailureCode, evidence.ErrorCode);
+        Assert.Equal(AgentToolEffectState.None, evidence.EffectState);
+        Assert.True(evidence.CanRetryWithCorrectedInput);
+        Assert.Contains(conflict ? "crmhr.affiliation.concurrency-conflict" : "crmhr.party-command.", evidence.SafeMessage,
+            StringComparison.Ordinal);
+        var metadata = provider.GetToolMetadata(context).Single(value => value.ToolName == toolName);
+        var saved = ManagedToolDisclosureTestData.CreateTypedFailure(metadata, request, evidence);
+        await using (var lease = await metadata.AuthorizeResultDisclosureAsync!(saved, default)) {
+            Assert.Null(lease);
+        }
+    }
+
+    private sealed class RejectingCrmPartyCommands : ICrmPartyCommandService {
+        public Task<Result<CrmPartyCreateResult>> CreatePartyAsync(CrmPartyCreateCommand command, string actor,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<CrmPartyCreateResult>.Failure(
+                Error.Validation("Display name is too long.", "crmhr.party-command.field-too-long")));
+        public Task<Result<IReadOnlyList<CrmPartyAffiliationResult>>> ListAffiliationsAsync(Guid personPartyId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<IReadOnlyList<CrmPartyAffiliationResult>>.Failure(
+                Error.Failure("The person is not available through this bounded command.", "crmhr.party-command.sensitive-record-denied")));
+        public Task<Result<CrmPartyAffiliationResult>> UpsertAffiliationAsync(CrmPartyAffiliationUpsertCommand command,
+            string actor, CancellationToken cancellationToken = default)
+            => Task.FromResult(Result<CrmPartyAffiliationResult>.Failure(
+                Error.Failure("The affiliation changed after it was loaded.", "crmhr.affiliation.concurrency-conflict")));
+    }
+
     private static HrAgentRuntimeToolProvider CreateDisclosureProvider(IAgentFrameworkWorkspaceService workspace,
         ICrmHrAgentQueryService query, ICrmPartyCommandService commands) => new(
             CreateUninitialized<HrAgentAdministrationService>(), CreateUninitialized<HrAgentAvatarGenerationService>(),

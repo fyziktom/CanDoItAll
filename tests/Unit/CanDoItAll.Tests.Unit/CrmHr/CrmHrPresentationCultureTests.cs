@@ -72,7 +72,11 @@ public sealed class CrmHrPresentationCultureTests
 
         using (new AmbientCulture("en-US"))
         {
-            Assert.Equal("3/9/2026 2:05 PM", CrmHrPresentationCulture.FormatShortTimestamp(afternoon));
+            // The separator before the designator belongs to the ambient pattern, which the policy keeps: a space in
+            // the Windows (NLS) culture data and a narrow no-break space (U+202F) in the ICU data of Linux and macOS.
+            Assert.Contains(
+                CrmHrPresentationCulture.FormatShortTimestamp(afternoon),
+                new[] { "3/9/2026 2:05 PM", "3/9/2026 2:05 PM" });
         }
 
         using (new AmbientCulture("el-GR"))

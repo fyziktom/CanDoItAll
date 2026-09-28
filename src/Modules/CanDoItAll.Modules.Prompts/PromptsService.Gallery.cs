@@ -7,6 +7,7 @@ namespace CanDoItAll.Modules.Prompts;
 
 public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImportService
 {
+    private const string ImportMutationScope = "prompts.gallery.import";
     private readonly IDbContextFactory<PromptsDbContext> _dbContextFactory;
     private readonly IClock _clock;
     private readonly IActivityStream _activityStream;
@@ -308,6 +309,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         var sourceKey = request.SourceKey.Trim();
         var now = _clock.GetUtcNow();
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, ImportMutationScope, cancellationToken);
         var entity = await dbContext.Set<PromptArtifact>()
             .SingleOrDefaultAsync(
                 artifact => artifact.Provenance == request.Provenance && artifact.SourceKey == sourceKey,
@@ -394,6 +396,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutation.CommitAsync(cancellationToken);
         await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
         await RecordActivityAsync(
             createVersion ? "import-version" : "verify-import",

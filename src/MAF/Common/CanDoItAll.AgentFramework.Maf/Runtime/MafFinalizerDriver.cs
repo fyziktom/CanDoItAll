@@ -390,8 +390,13 @@ internal static class MafFinalizerDriver
         IReadOnlyList<AgentFinalizerInvocation> capturedInvocations,
         IReadOnlyList<AgentToolInvocationTrace> capturedToolInvocationTraces,
         IReadOnlyList<AgentFinalizerInvocation> streamedInvocations,
-        IReadOnlyList<AgentFinalizerInvocation> synthesizedInvocations)
+        IReadOnlyList<AgentFinalizerInvocation> synthesizedInvocations,
+        bool requireCapturedInvocation = false)
     {
+        if (requireCapturedInvocation) {
+            streamedInvocations = [];
+        }
+
         if (finalizerMode != AgentFinalizerMode.Required ||
             !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
         {

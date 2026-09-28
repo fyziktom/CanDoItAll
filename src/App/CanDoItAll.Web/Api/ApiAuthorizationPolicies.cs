@@ -6,6 +6,8 @@ namespace CanDoItAll.Web.Api;
 internal static class ApiAuthorizationPolicies
 {
     public const string GeneralApi = "Api.General";
+    public const string ManageAccess = "Api.Access.Manage";
+    public const string UserSession = "Api.Access.Session";
 
     public const string IssueTokens = "Api.IssueTokens";
 

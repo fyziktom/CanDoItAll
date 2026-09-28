@@ -3,12 +3,20 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 
+/// <summary>
+/// Lifecycle status of an LLM Chat conversation, written in HTTP responses as a camel-case JSON string: <c>active</c>
+/// (accepts turns and renames) or <c>archived</c> (read-only; the transcript stays readable).
+/// </summary>
 public enum LlmChatConversationStatus
 {
     Active,
     Archived
 }
 
+/// <summary>
+/// Where an LLM Chat conversation was created, written in HTTP responses as a camel-case JSON string:
+/// <c>application</c> (in the product UI) or <c>api</c> (through the HTTP API, which always records <c>api</c>).
+/// </summary>
 public enum LlmChatConversationOrigin
 {
     Application,

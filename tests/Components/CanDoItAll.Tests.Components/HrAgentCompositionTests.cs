@@ -107,7 +107,7 @@ public sealed class HrAgentCompositionTests
             workspace,
             scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
             NullLogger<HrAgentAdministrationService>.Instance);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.CreateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentCreateInput(
                 "Invalid scoped specialist",
@@ -181,7 +181,7 @@ public sealed class HrAgentCompositionTests
         Assert.Contains("project_task_create", projectToolNames);
         Assert.Contains("project_structure_asset_create", projectToolNames);
         Assert.DoesNotContain("project_structure_project_create", projectToolNames);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.UpdateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.UpdateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentSettingsUpdateInput(
                 createdAgent.Id,
@@ -290,7 +290,7 @@ public sealed class HrAgentCompositionTests
                 createdAgent.UpdatedAtUtc.AddTicks(-1),
                 Summary: "Stale overwrite"),
             CancellationToken.None));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.UpdateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.UpdateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentSettingsUpdateInput(
                 HrAgentIdentity.AgentId,
@@ -304,13 +304,13 @@ public sealed class HrAgentCompositionTests
             workspace,
             canonicalProviderSource,
             oversizedGenerator);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => oversizedAvatarService.GenerateAsync(
+        AssertAvatarNotGenerated(await Assert.ThrowsAnyAsync<InvalidOperationException>(() => oversizedAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
                 createdAgent.Id,
                 afterAllowAll.UpdatedAtUtc,
                 "Abstract blue validation compass"),
-            CancellationToken.None));
+            CancellationToken.None)));
         var afterFailedAvatar = Assert.Single(
             await workspace.ListAgentsAsync(includeTemplates: true),
             candidate => candidate.Id == createdAgent.Id);
@@ -320,39 +320,39 @@ public sealed class HrAgentCompositionTests
             workspace,
             canonicalProviderSource,
             new StubImageGenerationService([0xff, 0xd8, 0xff, 0xd9]));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => corruptAvatarService.GenerateAsync(
+        AssertAvatarNotGenerated(await Assert.ThrowsAnyAsync<InvalidOperationException>(() => corruptAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
                 createdAgent.Id,
                 afterFailedAvatar.UpdatedAtUtc,
                 "Abstract blue validation compass"),
-            CancellationToken.None));
+            CancellationToken.None)));
 
         var validSquareJpeg = Convert.FromBase64String(ValidSquareJpegBase64);
         var mimeMismatchAvatarService = CreateAvatarService(
             workspace,
             canonicalProviderSource,
             new StubImageGenerationService(validSquareJpeg, "image/png"));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => mimeMismatchAvatarService.GenerateAsync(
+        AssertAvatarNotGenerated(await Assert.ThrowsAnyAsync<InvalidOperationException>(() => mimeMismatchAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
                 createdAgent.Id,
                 afterFailedAvatar.UpdatedAtUtc,
                 "Abstract blue validation compass"),
-            CancellationToken.None));
+            CancellationToken.None)));
 
         var nonSquareAvatarService = CreateAvatarService(
             workspace,
             canonicalProviderSource,
             new StubImageGenerationService(
                 Convert.FromBase64String(NonSquareJpegBase64)));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => nonSquareAvatarService.GenerateAsync(
+        AssertAvatarNotGenerated(await Assert.ThrowsAnyAsync<InvalidOperationException>(() => nonSquareAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
                 createdAgent.Id,
                 afterFailedAvatar.UpdatedAtUtc,
                 "Abstract blue validation compass"),
-            CancellationToken.None));
+            CancellationToken.None)));
 
         var validGenerator = new StubImageGenerationService(validSquareJpeg);
         var avatarService = CreateAvatarService(
@@ -519,6 +519,13 @@ public sealed class HrAgentCompositionTests
             RuntimeSessionKey: "hr-composition-test",
             AgentRuntimeContextIntent.Empty,
             Tags: new Dictionary<string, string>());
+    }
+
+    private static void AssertAvatarNotGenerated(InvalidOperationException exception)
+    {
+        var evidence = Assert.IsAssignableFrom<IAgentToolFailureEffectEvidence>(exception);
+        Assert.Equal(AgentToolEffectState.NotCommitted, evidence.EffectState);
+        Assert.True(evidence.IsSafeToExpose);
     }
 
     private static HrAgentAvatarGenerationService CreateAvatarService(

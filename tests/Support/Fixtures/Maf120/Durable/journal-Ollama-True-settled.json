@@ -1,0 +1,702 @@
+{
+  "mafVersion": "1.20.0.0",
+  "agent": {
+    "id": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "name": ".NET Application Developer",
+    "roleTitle": ".NET implementation specialist",
+    "summary": "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
+    "instructions": "You are the .NET application developer for C#, ASP.NET Core, Blazor, worker, console, and library tasks. Use the attached concrete deliverable delivery skill as the generic delivery contract, then layer on .NET app delivery, ASP.NET Core, component-library, frontend, Playwright, and test skills when they match the work. Inspect existing files before editing and keep the change narrowly scoped.\n\nFor greenfield .NET apps, create a real runnable project instead of loose source files. Prefer \u0060workspace_dotnet_new\u0060 only when the authoritative solution context declares \u0060initialize\u0060; preserve that mode, solution/app/test paths, project names, templates, target framework, test framework, and any existing repository topology verbatim. The upstream \u0060ProductTargetState\u0060 is the semantic decision, while \u0060ProductTargetFilesystemState\u0060 is only a read-only observation; do not change a declared \u0060initialize\u0060 or \u0060verify-existing\u0060 mode because a directory is missing, empty, populated, or preliminary. Do not infer or prefer a \u0060src\u0060/\u0060tests\u0060, inside-root, sibling-project, or product-root-host layout. If a required topology or template choice is absent, inspect authoritative current-run context, record a bounded assumption in the setup decision, and block only when no safe decision can be made. For existing apps, repair in place; do not force-regenerate over working source.\n\nTreat the process step \u0060allowedOperations\u0060 and \u0060operationTargetScope\u0060 as canonical contracts backed by the process operation catalog, not as advisory text. If the step lacks \u0060MutateProductTarget\u0060, do not edit product files. If the step lacks \u0060CaptureRuntimeProof\u0060, do not use browser tools as completion proof. If the step requires runtime/browser proof, keep it current-run and process-visible with startup, route or command, validation output, browser state when applicable, console, and cleanup receipts.\n\nFor a mutation-authorized implementation or repair step, once current product readback proves a product defect, the next work action must mutate the owning product source, test, content, or configuration through a product-target tool. Do not write the managed step artifact, rerun an unchanged validation chain, or submit a repair decision first. If the coherent repair spans several related files, write them directly or use one reviewed bounded helper; implement the smallest working behavior now rather than substituting an intended change list for source changes.\n\nBefore implementation, consume the current architecture and validation-plan artifacts when they are supplied. Keep every assigned required \u0060ProductAcceptance\u0060 criterion attached to its declared owning boundary and proof; do not reinterpret a missing implementation detail as permission to drop the criterion. Preserve \u0060DeliveryPlanning\u0060 entries as non-blocking planning context instead of implementing them as product behavior or requesting human reconfirmation unless a typed decision gate requires it. After a repair attempt, compare the new source readback, diagnostic signature, and targeted proof with the prior attempt. If the same failure remains and the evidence does not support a materially different mutation, do not repeat the same write, validation command, or managed artifact. Produce a precise diagnosis handoff through the process\u0027s negative branch, naming the failed criterion, owning source, observed signature, attempted change, and unresolved hypothesis so a specialist or manager can choose the next lane.\n\nWhen a solution file is created or inherited, verify the actual emitted \u0060.sln\u0060 or \u0060.slnx\u0060 path before adding projects. Add the runnable host and test projects to that exact solution file, then read the solution file or use a solution-list command to prove it contains those project references. Do not cite a solution build as validation when the solution is empty or missing the host/test projects; repair the solution membership first or target the concrete project files explicitly and record why no solution is authoritative.\n\nWhen host and test projects share a directory tree, inspect the actual SDK item globs and build diagnostics before changing project files. Add exclusions or explicit item rules only when the chosen topology requires them; do not rearrange the solution to match a preferred layout. If build/test output shows recursive nested paths, copy failures, static web asset conflicts, or missing runtime configuration/assets, repair the concrete project-item or topology defect before rerunning and do not add test packages to the production host as a workaround.\n\nIf you are assigned an intake, scope, planning, or architecture-preparation step and the current run already identifies a concrete deliverable plus target boundary, do not block only because preferences are incomplete. Write the required artifact with explicit assumptions, exclusions, \u0060not applicable\u0060 entries, unresolved follow-up questions, and validation hooks. Return \u0060Blocked\u0060 only when the core deliverable, writable target, mandatory upstream artifact, required authority, required credential, or safe execution boundary is genuinely missing.\n\nTreat the current run as isolated from prior examples. Use only the app topic, paths, constraints, and acceptance checks grounded in this run\u0027s project structure, work brief, upstream artifacts, or tool outputs. If tool policy blocks an external-target path, abandon that denied path immediately and use the current grounded product root or current-run artifacts instead of retrying or deriving requirements from the blocked path. Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications on the same host. The scaffold parent directory is only a \u0060workspace_dotnet_new\u0060 argument; it is not a product root, source corpus, evidence source, or permission to read sibling folders. Do not claim contextual examples, source files, templates, or implementation references were reviewed unless this execution actually inspected them through current-run tools or loaded them from attached skill/template resources.\n\nWhen the launch context contains \u0060ProductAcceptanceCriteriaContract\u0060, entries with \u0060kind=ProductAcceptance\u0060 and \u0060required=true\u0060 are the authoritative non-droppable behavior ledger for the current slice. Implement every such criterion id owned by the step, preserve the ids in implementation and test evidence, and explicitly report incomplete required product criteria for the validation repair branch. Entries with \u0060kind=DeliveryPlanning\u0060 remain non-blocking planning context and do not authorize product mutation, no-go, escalation, or human reconfirmation absent a typed decision gate. A narrower child summary, approach note, or green test set does not authorize omitting required \u0060ProductAcceptance\u0060 criteria from this contract.\n\nFor Blazor, preserve the routed-page and hosting conventions that the inspected project actually uses, use strongly typed state, and move reusable behavior into public domain or application classes with tests. Use component-library wrappers and existing CSS/theme patterns before raw markup. Do not leave starter content, stock navigation, placeholder routes, or a normally visible framework error surface as the delivered product. For a greenfield user-facing app, replace any visible template or demonstration content that is not requested. Identify it from the generated or existing files rather than assuming particular pages, links, or sample data exist. The primary route must look and behave like the requested product, not like a template with a small feature added.\n\nWhen the acceptance contract names a browser persistence mechanism, implement that exact mechanism; do not silently substitute local storage, session storage, in-memory state, cookies, or a different database. Persistence proof must cover both writing and loading in a fresh service/page lifecycle, including the required fallback behavior when browser storage is unavailable. Keep browser interop behind a typed application or infrastructure boundary and test reload/restoration behavior rather than only an in-memory cache.\n\nFor framework-specific hosting, preserve the inspected product model and keep document, routing, and application-root ownership unambiguous. If browser proof exposes an invalid document shape, duplicated application root, or incompatible hosting composition, repair the source that owns that composition; do not weaken proof selectors or change the framework merely to make validation pass.\n\nWhen the project structure includes a source visual target ImageAsset, treat it as implementation input. Inspect or resolve its media path when available, derive the visible composition and interaction state it implies, and make the primary route materially align with that target within the requested scope. If you cannot access or analyze the image with the assigned tools, record that blocker instead of building from memory.\n\nValidation is part of the implementation. Final product-validation order is: complete the last source/content/configuration mutation, rerun every affected restore/build/test/run/browser check, read back representative changed product files, write required durable evidence artifacts, then submit the governed outcome. Use \u0060workspace_dotnet_restore\u0060, \u0060workspace_dotnet_build\u0060, \u0060workspace_dotnet_test\u0060, and \u0060workspace_dotnet_run\u0060 as the task requires, targeting explicit project or solution files when the directory is ambiguous. If you mutate another product file after the read, repeat the read and rerun required validation before writing evidence or finalizing. Use \u0060waitForHttp: false\u0060 for console or worker-style runtime smoke. For HTTP startup proof without same-step browser follow-up, leave \u0060workspace_dotnet_run\u0060 \u0060keepAlive\u0060 false so the smoke test stops the launched process tree and does not lock later builds. For web UI/API work that must use Playwright in the same implementation step, set \u0060keepAlive: true\u0060 with \u0060lifetimeScope: ExecutionRun\u0060, interact with the primary workflow so the evidence shows a meaningful changed state, capture browser proof with screenshot \u0060.png\u0060, browser_snapshot \u0060.yml\u0060 or browser_evaluate \u0060.json\u0060/\u0060.txt\u0060/\u0060.md\u0060 state output, cite the returned screenshot, snapshot or state output, and console filenames in durable evidence, and then call \u0060workspace_dotnet_stop\u0060 with the recorded \u0060startup.json\u0060 receipt before finalizing. Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence, not chat-only claims or stale prior-run files. If browser tools return provider-native filenames before managed artifact import, cite those filenames; do not fail or escalate solely because workspace file tools cannot see the managed browser folder during the same attempt. Use \u0060lifetimeScope: ProcessRun\u0060 only when a later process step owns browser proof and a later cleanup step owns shutdown. Write required implementation notes only after source, content, configuration, or deliverable changes and validation are complete.\n\nDuring a repair step, distinguish product defects from proof-recipe defects by inspecting the product itself. If an expected control, state transition, interaction, visible surface, or real browser-console behavior is missing or broken, the product requires a source/configuration repair even when restore, build, and tests pass. Use a proof-only branch only when the expected behavior already exists and works and the prior route, selector, or proof recipe was wrong; absent behavior is never merely missing proof.\nFor implementation and validation work, a visible control or product-specific page without its assigned event wiring and state transition is incomplete. Do not use tests that only read Razor, HTML, CSS, or configuration text as proof of interaction, calculation, persistence, reload restoration, timing, or recovery behavior. Those checks may supplement content-hygiene proof only. Execute deterministic behavior through the real typed production boundary, and do not defer acceptance criteria already assigned to the current slice merely to make the change smaller.\nFor \u0060workspace_dotnet_run\u0060, the run target must be the runnable project file, not a solution or directory. Prefer \u0060DotNetAppProjectFileAlias\u0060 and then \u0060DotNetAppProjectFile\u0060 when launch variables provide them; otherwise select the concrete \u0060.csproj\u0060, \u0060.fsproj\u0060, or \u0060.vbproj\u0060 host project.\n\nWorkspace command timeout arguments are seconds, not milliseconds. Prefer the tool defaults unless diagnostics show a real timeout; when setting one explicitly, use values such as \u0060120\u0060, \u0060300\u0060, \u0060600\u0060, or \u00601200\u0060.\n\nIf a build, test, restore, launch, or browser check fails, inspect the diagnostics and fix the cause before rerunning. For \u0060workspace_dotnet_restore\u0060, \u0060workspace_dotnet_build\u0060, \u0060workspace_dotnet_test\u0060, and \u0060workspace_dotnet_run\u0060, read the returned stdout/stderr previews and any referenced \u0060stdout.txt\u0060, \u0060stderr.txt\u0060, request, or receipt artifacts before changing files or retrying. Do not repair from exit code alone, and do not repeatedly rewrite \u0060.csproj\u0060, framework, package, or test-runner settings without citing the concrete diagnostic that requires it. Do not hide failure behind fallback behavior or claim completion with only markdown evidence.\nNever write local fake package, framework, runtime, browser, or test-tool shim types to satisfy compilation. Fix real dependencies/project references or return a blocker with the exact failed dependency or environment issue.\n\n## Template Revision Notes\n- This file is the editable source for the default agent template; keep role behavior here instead of in C# seed code.\n- Ground each response in the current team settings, attached skills, and durable proof. If evidence is missing but the step has a negative branch that expresses the gap, select that completed branch; otherwise say what is missing and keep the outcome blocked or partial.\n- Preserve the agent\u0027s specialty: do not absorb another team member\u0027s role unless the process step explicitly assigns that work.",
+    "status": 1,
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "model": "gpt-5.6-luna",
+    "workload": 7,
+    "chatHistoryMode": 1,
+    "temperature": 0.2,
+    "requirePerServiceCallChatHistoryPersistence": false,
+    "enableBackgroundResponses": false,
+    "configurationJson": "{\u0022enableCompaction\u0022:true,\u0022slidingWindowTurns\u0022:10,\u0022maxLocalRagResults\u0022:5,\u0022managedSeedVersion\u0022:\u00222026-08-agent-template-teams-v72\u0022,\u0022projectStructure\u0022:{\u0022canRead\u0022:true,\u0022canWrite\u0022:false,\u0022canWriteNonTaskStructure\u0022:false,\u0022canWriteTasks\u0022:false,\u0022canCreateProjects\u0022:false,\u0022canCreateSubprojects\u0022:false,\u0022allowAllProjects\u0022:true,\u0022allowedProjectIds\u0022:[]},\u0022processes\u0022:{\u0022canRead\u0022:true,\u0022canWrite\u0022:false,\u0022allowAllDefinitions\u0022:true,\u0022allowedDefinitionIds\u0022:[]},\u0022workspaceTools\u0022:{\u0022profile\u0022:\u0022software-development\u0022,\u0022canReadFiles\u0022:true,\u0022canWriteFiles\u0022:true,\u0022canRunValidationCommands\u0022:true,\u0022canRunLocalScripts\u0022:true,\u0022canScaffoldProjects\u0022:true,\u0022canManageWorkspacePaths\u0022:true,\u0022canTransformArtifacts\u0022:true,\u0022allowedExternalTargetAliases\u0022:[],\u0022externalTargetRootBindings\u0022:[],\u0022canReadStorage\u0022:false,\u0022canWriteStorage\u0022:false,\u0022allowAllStorageCatalogs\u0022:false,\u0022allowedStorageCatalogIds\u0022:[]},\u0022modelParameters\u0022:{\u0022reasoningEffort\u0022:\u0022medium\u0022}}",
+    "isTemplate": false,
+    "templateKey": "dotnet-application-developer",
+    "permissions": {
+      "canUseTools": true,
+      "canAskOtherAgents": true,
+      "canEscalateToHuman": true,
+      "canObserveOtherAgents": false,
+      "canScheduleWork": false,
+      "requiresApprovalForExternalCalls": true,
+      "autoApproveExternalCallsByDefault": false,
+      "allowedSecrets": []
+    },
+    "capabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "cac2c6d5-a6b5-e65c-89ba-bfe33ad52a29",
+        "capabilityKey": "aspnet-core-skill",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "d64a34cb-f698-f556-9318-936a830f99e4",
+        "capabilityKey": "blazor-ssr-delivery-inline-skill",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "90abf7da-0fc9-6552-8aaa-7ab4390786e3",
+        "capabilityKey": "candoitall-codeanalytics-mcp",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "1094eff3-0da5-bf59-8e99-3f2edd3d2f79",
+        "capabilityKey": "candoitall-components-mcp",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "be552d8b-2baf-eb57-83b5-9d07f449e2ff",
+        "capabilityKey": "candoitall-frontend-theme",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "64e8a081-868e-b45d-b8af-f0d23b4f63df",
+        "capabilityKey": "candoitall-watch-playwright-loop",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "b1e0cb0e-a5a6-3654-92da-426737afbce6",
+        "capabilityKey": "concrete-deliverable-delivery-inline-skill",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "a381db7f-9ea9-b85e-8e70-030745014db0",
+        "capabilityKey": "dotnet-app-delivery-inline-skill",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "d405199d-6a5b-ae5c-ac58-8fd2119b772c",
+        "capabilityKey": "frontend-skill",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "0c9b1a78-c258-a55e-b0cf-758a5b1a1dda",
+        "capabilityKey": "git-standard-operations",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "36d3e461-ea84-ec5f-ade7-389cde3f514a",
+        "capabilityKey": "repository-playbook",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "4aa60b79-dfc3-225f-8fb6-66ab0136225b",
+        "capabilityKey": "run-tests",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "c27dba02-99b5-7e5d-b0d3-0103f4c5be0b",
+        "capabilityKey": "writing-mstest-tests",
+        "kind": 1,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "12822a95-b555-9d57-998c-cb66e9f3191e",
+        "capabilityKey": "workspace-append-file",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "1c571b50-9aeb-f657-82bb-4b403e125fed",
+        "capabilityKey": "workspace-copy-path",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "25695124-de66-9d51-8990-288a9206b72d",
+        "capabilityKey": "workspace-create-directory",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "cdd3c837-b1d3-a257-9a9f-dfa7d8ebcfff",
+        "capabilityKey": "workspace-delete-path",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "87c8ef72-a74d-7b51-8863-fd5b6dc2179f",
+        "capabilityKey": "workspace-diff-text",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "0502f80d-9b41-2752-83d6-31486de23c47",
+        "capabilityKey": "workspace-dotnet-build",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "3a392e8c-a297-0b59-b535-7a05c5825135",
+        "capabilityKey": "workspace-dotnet-new",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "549872f6-feb7-4f59-874a-50f15ffd527d",
+        "capabilityKey": "workspace-dotnet-restore",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "9e21c5b1-26a8-4c52-8438-283af6201933",
+        "capabilityKey": "workspace-dotnet-run",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "2bbd712c-a8f8-a155-b6ac-5f26e21402b6",
+        "capabilityKey": "workspace-dotnet-stop",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "e6c607d7-6af2-9659-9175-fa66ca8498a5",
+        "capabilityKey": "workspace-dotnet-test",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "e4ede1b7-c09f-1255-bdd3-641d85e0cf26",
+        "capabilityKey": "workspace-git-add",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "8eb4e745-ea7b-fd56-9334-2b8f5a093f26",
+        "capabilityKey": "workspace-git-branch-create",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "526e3326-fbfa-985c-ae58-90a1ea8a9e93",
+        "capabilityKey": "workspace-git-commit",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "785edbbf-6692-9857-9432-d9423ef46edc",
+        "capabilityKey": "workspace-git-diff",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "807d0775-b5d4-c855-aae0-116e040fee96",
+        "capabilityKey": "workspace-git-log",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "686b9ea0-4550-f05f-aed3-8c00556863b3",
+        "capabilityKey": "workspace-git-show",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "5ad33031-3129-b650-8c3c-29aeadf87469",
+        "capabilityKey": "workspace-git-status",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "0c45c247-f0ea-bb58-8976-679059049132",
+        "capabilityKey": "workspace-git-switch",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "fff44c74-56b9-f051-b775-4c80180a4d80",
+        "capabilityKey": "workspace-git-unstage",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "00be8142-b42a-d45f-a8b7-6bb67f0d39d5",
+        "capabilityKey": "workspace-list-files",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "9d578e92-4d57-7056-bbaf-869a1fd0b573",
+        "capabilityKey": "workspace-move-path",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "296d292d-e3af-4952-8c6b-51b4f62c4499",
+        "capabilityKey": "workspace-pwsh-run-script",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "a382bd15-e357-3450-847c-9aa768c89b45",
+        "capabilityKey": "workspace-python-run-file",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "6e0e28f2-70c3-e355-8f49-4189b66e42fc",
+        "capabilityKey": "workspace-read-file",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "33145e91-f890-b853-b8f4-a0fc87a8bd78",
+        "capabilityKey": "workspace-search",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "2fcd083f-2fc1-6551-990d-6682b23409de",
+        "capabilityKey": "workspace-stat-path",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "0414cccf-0dcd-e95f-8224-da882e528717",
+        "capabilityKey": "workspace-write-file",
+        "kind": 2,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      },
+      {
+        "capabilityId": "4ace0b10-6882-c350-ae87-83bc63e1fa65",
+        "capabilityKey": "workspace-source-rag",
+        "kind": 4,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ],
+    "tags": [
+      "dotnet",
+      "programming",
+      "blazor"
+    ],
+    "createdAtUtc": "2026-04-10T00:00:00+00:00",
+    "updatedAtUtc": "2026-04-10T00:00:00+00:00",
+    "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-05.jpg"
+  },
+  "provider": {
+    "id": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "name": "Journal provider",
+    "kind": 0,
+    "baseUrl": "https://provider.example.test",
+    "apiKeyEnvironmentVariable": "",
+    "defaultModel": "fixture-model",
+    "transport": 0,
+    "isEnabled": true,
+    "supportsStreaming": true,
+    "supportsTools": true,
+    "preferFrameworkManagedChatHistory": true,
+    "supportsBackgroundResponses": false,
+    "configurationJson": "{}",
+    "notes": "",
+    "healthStatus": "",
+    "lastCheckedAtUtc": null,
+    "suggestedModels": [],
+    "purpose": 0,
+    "connectorPluginKey": "",
+    "credentialBinding": null,
+    "networkAccessPolicy": 0,
+    "featureConstraints": null,
+    "modelSelectionConstraint": null,
+    "isPrivateProvider": false,
+    "isSourceManaged": false,
+    "modelCatalog": [],
+    "modelPrices": [],
+    "pricingSourceRevision": null,
+    "tags": [],
+    "modelThinkingEffortCapabilities": []
+  },
+  "profile": {
+    "profileId": "5633811d-3d79-444e-9df5-214d47a57ac1",
+    "fingerprint": "journal-fixture-profile",
+    "generation": {
+      "value": 1
+    }
+  },
+  "session": {
+    "executionRunId": "3dab5211-297f-4cd2-92e7-0fdf44ec4052",
+    "chatSessionId": "0194b0de-e976-4d84-b69b-d50918309e9a",
+    "authorityId": {
+      "value": "42c42141-be06-411d-bdfc-30b7fde60994",
+      "isEmpty": false
+    }
+  },
+  "detail": {
+    "id": "3dab5211-297f-4cd2-92e7-0fdf44ec4052",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": "0194b0de-e976-4d84-b69b-d50918309e9a",
+    "title": "Durable tool admission",
+    "sourceKind": "chat-session",
+    "sourceId": "0194b0dee9764d84b69bd50918309e9a",
+    "correlationId": "",
+    "causationId": "",
+    "requestedBy": "operator",
+    "requestedByKind": "user",
+    "metadataJson": "{\u0022agentTurnContextReference\u0022:{\u0022turnContextId\u0022:\u00226dfcb306e1904ebf926bde86ca441722\u0022,\u0022contextEpochId\u0022:\u0022bd0af62fb21240fe976bc73ac2af3ccf\u0022,\u0022sourceKind\u0022:\u0022agents\u0022,\u0022sourceId\u0022:\u0022agents\u0022,\u0022surface\u0022:\u0022agents\u0022,\u0022view\u0022:\u0022chat\u0022,\u0022observationVersion\u0022:1,\u0022modelContextDigest\u0022:\u0022fixture-context\u0022,\u0022capturedAtUtc\u0022:\u00222026-09-23T19:03:42.0591147\\u002B00:00\u0022,\u0022schemaVersion\u0022:1},\u0022agentExecutionAuthority\u0022:{\u0022authorityId\u0022:\u002242c42141be06411dbdfc30b7fde60994\u0022,\u0022agentId\u0022:\u00221e267ce2bf18ce5297439b36b9314994\u0022,\u0022databaseProfileId\u0022:\u00225633811d3d79444e9df5214d47a57ac1\u0022,\u0022workspaceScopeKind\u0022:\u0022Sandbox\u0022,\u0022workspaceScopeKey\u0022:\u0022\u0022,\u0022databaseProfileGeneration\u0022:1,\u0022readAllowed\u0022:true,\u0022mutationAllowed\u0022:true,\u0022policyVersion\u0022:\u0022fixture-policy\u0022,\u0022policyFingerprint\u0022:\u0022fixture-authority\u0022,\u0022schemaVersion\u0022:1}}",
+    "inputSummary": "Create the reviewed definitions.",
+    "resultSummary": "",
+    "providerName": "Journal provider",
+    "model": "fixture-model",
+    "state": 2,
+    "outcome": null,
+    "createdAtUtc": "2026-09-23T19:03:42.0591147+00:00",
+    "updatedAtUtc": "2026-09-23T19:03:46.7716908+00:00",
+    "startedAtUtc": "2026-09-23T19:03:42.0591147+00:00",
+    "completedAtUtc": null,
+    "runtimeSessionKey": "",
+    "serializedSessionStateJson": "{\u0022adapterId\u0022:\u0022maf\u0022,\u0022schemaVersion\u0022:2,\u0022adapterPackageVersion\u0022:\u00221.20.0\\u002B575b408e0ec8fb7c96b1e56acb654c79c07aea26\u0022,\u0022providerProfileId\u0022:\u0022c1c103db-707e-3f52-8809-8d804fc171d1\u0022,\u0022providerTransport\u0022:1,\u0022model\u0022:\u0022fixture-model\u0022,\u0022toolsetFingerprint\u0022:\u0022fixture-toolset\u0022,\u0022contextPolicyFingerprint\u0022:\u0022fixture-context\u0022,\u0022createdAtUtc\u0022:\u00222026-09-23T19:03:43.5537583\u002B00:00\u0022,\u0022payloadJson\u0022:\u0022{\\u0022conversationId\\u0022:\\u0022_agent_local_chat_history\\u0022,\\u0022stateBag\\u0022:{\\u0022_pendingApprovalRequests\\u0022:[{\\u0022toolCall\\u0022:{\\u0022$type\\u0022:\\u0022functionCall\\u0022,\\u0022name\\u0022:\\u0022admission_fixture_create\\u0022,\\u0022arguments\\u0022:{\\u0022value\\u0022:\\u0022alpha\\u0022},\\u0022informationalOnly\\u0022:false,\\u0022callId\\u0022:\\u0022de4b7872\\u0022},\\u0022requiresConfirmation\\u0022:true,\\u0022requestId\\u0022:\\u0022ficc_de4b7872\\u0022},{\\u0022toolCall\\u0022:{\\u0022$type\\u0022:\\u0022functionCall\\u0022,\\u0022name\\u0022:\\u0022admission_fixture_create\\u0022,\\u0022arguments\\u0022:{\\u0022value\\u0022:\\u0022alpha\\u0022},\\u0022informationalOnly\\u0022:false,\\u0022callId\\u0022:\\u0022d9fb9026\\u0022},\\u0022requiresConfirmation\\u0022:true,\\u0022requestId\\u0022:\\u0022ficc_d9fb9026\\u0022}],\\u0022InMemoryChatHistoryProvider\\u0022:{\\u0022messages\\u0022:[{\\u0022role\\u0022:\\u0022user\\u0022,\\u0022contents\\u0022:[{\\u0022$type\\u0022:\\u0022text\\u0022,\\u0022text\\u0022:\\u0022Create two reviewed definitions.\\u0022}]},{\\u0022createdAt\\u0022:\\u00222026-08-03T12:00:00\\\\u002B00:00\\u0022,\\u0022role\\u0022:\\u0022assistant\\u0022,\\u0022contents\\u0022:[{\\u0022$type\\u0022:\\u0022functionCall\\u0022,\\u0022name\\u0022:\\u0022admission_fixture_create\\u0022,\\u0022arguments\\u0022:{\\u0022value\\u0022:\\u0022alpha\\u0022},\\u0022informationalOnly\\u0022:false,\\u0022callId\\u0022:\\u0022de4b7872\\u0022,\\u0022providerRaw\\u0022:{\\u0022kind\\u0022:\\u0022Ollama\\u0022,\\u0022model\\u0022:\\u0022OllamaSharp.Models.Chat.Message\\\\u002BToolCall\\u0022,\\u0022json\\u0022:\\u0022{\\\\u0022function\\\\u0022:{\\\\u0022index\\\\u0022:0,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022}},\\\\u0022id\\\\u0022:null}\\u0022}},{\\u0022$type\\u0022:\\u0022functionCall\\u0022,\\u0022name\\u0022:\\u0022admission_fixture_create\\u0022,\\u0022arguments\\u0022:{\\u0022value\\u0022:\\u0022alpha\\u0022},\\u0022informationalOnly\\u0022:false,\\u0022callId\\u0022:\\u0022d9fb9026\\u0022,\\u0022providerRaw\\u0022:{\\u0022kind\\u0022:\\u0022Ollama\\u0022,\\u0022model\\u0022:\\u0022OllamaSharp.Models.Chat.Message\\\\u002BToolCall\\u0022,\\u0022json\\u0022:\\u0022{\\\\u0022function\\\\u0022:{\\\\u0022index\\\\u0022:1,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022}},\\\\u0022id\\\\u0022:null}\\u0022}}],\\u0022messageId\\u0022:\\u002292782aeddf4345a094de2a4565d2e192\\u0022,\\u0022additionalProperties\\u0022:{\\u0022load_duration\\u0022:\\u002200:00:00\\u0022,\\u0022total_duration\\u0022:\\u002200:00:00\\u0022,\\u0022prompt_eval_duration\\u0022:\\u002200:00:00\\u0022,\\u0022eval_duration\\u0022:\\u002200:00:00\\u0022}}]}}}\u0022,\u0022historyMode\u0022:1,\u0022authorityPolicyFingerprint\u0022:\u0022fixture-authority\u0022,\u0022capabilityPolicyFingerprint\u0022:\u0022fixture-capabilities\u0022}",
+    "pendingApprovals": [],
+    "autoApprovePendingToolCalls": false,
+    "processRunId": "",
+    "processStepId": "",
+    "schedulerRunId": "",
+    "messageId": "",
+    "revision": 14,
+    "structuredOutputContractKey": "",
+    "structuredOutputTypeName": "",
+    "structuredOutputSchemaName": "",
+    "structuredOutputSchemaDescription": "",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "structuredOutputJsonSchema": "",
+    "structuredOutputSchemaHash": "",
+    "structuredOutputSchemaVersion": "",
+    "structuredOutputSchemaStrict": false,
+    "structuredOutputRawOutput": "",
+    "structuredOutputValidationStatus": "",
+    "structuredOutputValidationErrorsJson": "[]",
+    "historyCaller": null,
+    "failureProviderName": "",
+    "failureModel": "",
+    "toolAdmission": {
+      "schemaVersion": 1,
+      "revision": 17,
+      "session": {
+        "reference": {
+          "executionRunId": "3dab5211-297f-4cd2-92e7-0fdf44ec4052",
+          "chatSessionId": "0194b0de-e976-4d84-b69b-d50918309e9a",
+          "authorityId": {
+            "value": "42c42141-be06-411d-bdfc-30b7fde60994",
+            "isEmpty": false
+          }
+        },
+        "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+        "purpose": 1,
+        "profile": {
+          "profileId": "5633811d-3d79-444e-9df5-214d47a57ac1",
+          "fingerprint": "journal-fixture-profile",
+          "generation": {
+            "value": 1
+          }
+        }
+      },
+      "segments": [
+        {
+          "id": "2dd35d0b-b669-476f-bca6-ee2178a84745",
+          "ordinal": 0,
+          "firstBatchOrdinal": 0,
+          "restartCheckpoint": {
+            "format": "maf-tool-protocol",
+            "version": 1,
+            "payloadJson": "{\u0022Packages\u0022:\u002210.9.0.0|2.12.0.0|5.4.25.0\u0022,\u0022Shape\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafToolRunContext\\u002BRestartCheckpoint\u0022,\u0022Value\u0022:{\u0022serializedSessionStateJson\u0022:\u0022{\\u0022adapterId\\u0022:\\u0022maf\\u0022,\\u0022schemaVersion\\u0022:2,\\u0022adapterPackageVersion\\u0022:\\u00221.20.0\\\\u002B575b408e0ec8fb7c96b1e56acb654c79c07aea26\\u0022,\\u0022providerProfileId\\u0022:\\u0022c1c103db-707e-3f52-8809-8d804fc171d1\\u0022,\\u0022providerTransport\\u0022:1,\\u0022model\\u0022:\\u0022fixture-model\\u0022,\\u0022toolsetFingerprint\\u0022:\\u0022fixture-toolset\\u0022,\\u0022contextPolicyFingerprint\\u0022:\\u0022fixture-context\\u0022,\\u0022createdAtUtc\\u0022:\\u00222026-09-23T19:03:42.769613\\u002B00:00\\u0022,\\u0022payloadJson\\u0022:\\u0022{\\\\u0022stateBag\\\\u0022:{}}\\u0022,\\u0022historyMode\\u0022:1,\\u0022authorityPolicyFingerprint\\u0022:\\u0022fixture-authority\\u0022,\\u0022capabilityPolicyFingerprint\\u0022:\\u0022fixture-capabilities\\u0022}\u0022,\u0022input\u0022:[{\u0022role\u0022:\u0022user\u0022,\u0022contents\u0022:[{\u0022$type\u0022:\u0022text\u0022,\u0022text\u0022:\u0022Create two reviewed definitions.\u0022}]}],\u0022isApprovalContinuation\u0022:false,\u0022pendingApprovals\u0022:[]}}",
+            "digest": {
+              "value": "09c8c27e877cb9f166925861dffe740f458038470e1bad6423e975ee793e7695"
+            }
+          },
+          "continuesSegmentId": null,
+          "approvalCheckpoint": {
+            "format": "maf-tool-protocol",
+            "version": 1,
+            "payloadJson": "{\u0022Packages\u0022:\u002210.9.0.0|2.12.0.0|5.4.25.0\u0022,\u0022Shape\u0022:\u0022System.String\u0022,\u0022Value\u0022:\u0022{\\u0022adapterId\\u0022:\\u0022maf\\u0022,\\u0022schemaVersion\\u0022:2,\\u0022adapterPackageVersion\\u0022:\\u00221.20.0\\\\u002B575b408e0ec8fb7c96b1e56acb654c79c07aea26\\u0022,\\u0022providerProfileId\\u0022:\\u0022c1c103db-707e-3f52-8809-8d804fc171d1\\u0022,\\u0022providerTransport\\u0022:1,\\u0022model\\u0022:\\u0022fixture-model\\u0022,\\u0022toolsetFingerprint\\u0022:\\u0022fixture-toolset\\u0022,\\u0022contextPolicyFingerprint\\u0022:\\u0022fixture-context\\u0022,\\u0022createdAtUtc\\u0022:\\u00222026-09-23T19:03:43.5537583\\u002B00:00\\u0022,\\u0022payloadJson\\u0022:\\u0022{\\\\u0022conversationId\\\\u0022:\\\\u0022_agent_local_chat_history\\\\u0022,\\\\u0022stateBag\\\\u0022:{\\\\u0022_pendingApprovalRequests\\\\u0022:[{\\\\u0022toolCall\\\\u0022:{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022de4b7872\\\\u0022},\\\\u0022requiresConfirmation\\\\u0022:true,\\\\u0022requestId\\\\u0022:\\\\u0022ficc_de4b7872\\\\u0022},{\\\\u0022toolCall\\\\u0022:{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022d9fb9026\\\\u0022},\\\\u0022requiresConfirmation\\\\u0022:true,\\\\u0022requestId\\\\u0022:\\\\u0022ficc_d9fb9026\\\\u0022}],\\\\u0022InMemoryChatHistoryProvider\\\\u0022:{\\\\u0022messages\\\\u0022:[{\\\\u0022role\\\\u0022:\\\\u0022user\\\\u0022,\\\\u0022contents\\\\u0022:[{\\\\u0022$type\\\\u0022:\\\\u0022text\\\\u0022,\\\\u0022text\\\\u0022:\\\\u0022Create two reviewed definitions.\\\\u0022}]},{\\\\u0022createdAt\\\\u0022:\\\\u00222026-08-03T12:00:00\\\\\\\\u002B00:00\\\\u0022,\\\\u0022role\\\\u0022:\\\\u0022assistant\\\\u0022,\\\\u0022contents\\\\u0022:[{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022de4b7872\\\\u0022,\\\\u0022providerRaw\\\\u0022:{\\\\u0022kind\\\\u0022:\\\\u0022Ollama\\\\u0022,\\\\u0022model\\\\u0022:\\\\u0022OllamaSharp.Models.Chat.Message\\\\\\\\u002BToolCall\\\\u0022,\\\\u0022json\\\\u0022:\\\\u0022{\\\\\\\\u0022function\\\\\\\\u0022:{\\\\\\\\u0022index\\\\\\\\u0022:0,\\\\\\\\u0022name\\\\\\\\u0022:\\\\\\\\u0022admission_fixture_create\\\\\\\\u0022,\\\\\\\\u0022arguments\\\\\\\\u0022:{\\\\\\\\u0022value\\\\\\\\u0022:\\\\\\\\u0022alpha\\\\\\\\u0022}},\\\\\\\\u0022id\\\\\\\\u0022:null}\\\\u0022}},{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022d9fb9026\\\\u0022,\\\\u0022providerRaw\\\\u0022:{\\\\u0022kind\\\\u0022:\\\\u0022Ollama\\\\u0022,\\\\u0022model\\\\u0022:\\\\u0022OllamaSharp.Models.Chat.Message\\\\\\\\u002BToolCall\\\\u0022,\\\\u0022json\\\\u0022:\\\\u0022{\\\\\\\\u0022function\\\\\\\\u0022:{\\\\\\\\u0022index\\\\\\\\u0022:1,\\\\\\\\u0022name\\\\\\\\u0022:\\\\\\\\u0022admission_fixture_create\\\\\\\\u0022,\\\\\\\\u0022arguments\\\\\\\\u0022:{\\\\\\\\u0022value\\\\\\\\u0022:\\\\\\\\u0022alpha\\\\\\\\u0022}},\\\\\\\\u0022id\\\\\\\\u0022:null}\\\\u0022}}],\\\\u0022messageId\\\\u0022:\\\\u002292782aeddf4345a094de2a4565d2e192\\\\u0022,\\\\u0022additionalProperties\\\\u0022:{\\\\u0022load_duration\\\\u0022:\\\\u002200:00:00\\\\u0022,\\\\u0022total_duration\\\\u0022:\\\\u002200:00:00\\\\u0022,\\\\u0022prompt_eval_duration\\\\u0022:\\\\u002200:00:00\\\\u0022,\\\\u0022eval_duration\\\\u0022:\\\\u002200:00:00\\\\u0022}}]}}}\\u0022,\\u0022historyMode\\u0022:1,\\u0022authorityPolicyFingerprint\\u0022:\\u0022fixture-authority\\u0022,\\u0022capabilityPolicyFingerprint\\u0022:\\u0022fixture-capabilities\\u0022}\u0022}",
+            "digest": {
+              "value": "d6e2b8c11752cc32bba0ac701284b182611d644d0a180927c54ced478c61e65c"
+            }
+          },
+          "pendingApprovals": [
+            {
+              "approvalId": "ficc_de4b7872",
+              "callId": "de4b7872",
+              "toolName": "admission_fixture_create",
+              "toolKind": "function",
+              "details": "",
+              "argumentsJson": "{\u0022value\u0022:\u0022alpha\u0022}",
+              "toolAdmission": {
+                "batchId": {
+                  "value": "b60eeb38-0f88-44d0-a304-5a8df5c89418"
+                },
+                "intentId": {
+                  "value": "cb005922-d77c-4b48-8bd3-a14e0f5427f9"
+                },
+                "semanticVersion": 1,
+                "digest": {
+                  "value": "33b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21"
+                }
+              }
+            },
+            {
+              "approvalId": "ficc_d9fb9026",
+              "callId": "d9fb9026",
+              "toolName": "admission_fixture_create",
+              "toolKind": "function",
+              "details": "",
+              "argumentsJson": "{\u0022value\u0022:\u0022alpha\u0022}",
+              "toolAdmission": {
+                "batchId": {
+                  "value": "b60eeb38-0f88-44d0-a304-5a8df5c89418"
+                },
+                "intentId": {
+                  "value": "13d92382-7824-4fc0-9600-aaa1a42ebf6c"
+                },
+                "semanticVersion": 1,
+                "digest": {
+                  "value": "33b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ace18e74-5c23-426d-ba63-033083cc0d40",
+          "ordinal": 1,
+          "firstBatchOrdinal": 1,
+          "restartCheckpoint": {
+            "format": "maf-tool-protocol",
+            "version": 1,
+            "payloadJson": "{\u0022Packages\u0022:\u002210.9.0.0|2.12.0.0|5.4.25.0\u0022,\u0022Shape\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafToolRunContext\\u002BRestartCheckpoint\u0022,\u0022Value\u0022:{\u0022serializedSessionStateJson\u0022:\u0022{\\u0022adapterId\\u0022:\\u0022maf\\u0022,\\u0022schemaVersion\\u0022:2,\\u0022adapterPackageVersion\\u0022:\\u00221.20.0\\\\u002B575b408e0ec8fb7c96b1e56acb654c79c07aea26\\u0022,\\u0022providerProfileId\\u0022:\\u0022c1c103db-707e-3f52-8809-8d804fc171d1\\u0022,\\u0022providerTransport\\u0022:1,\\u0022model\\u0022:\\u0022fixture-model\\u0022,\\u0022toolsetFingerprint\\u0022:\\u0022fixture-toolset\\u0022,\\u0022contextPolicyFingerprint\\u0022:\\u0022fixture-context\\u0022,\\u0022createdAtUtc\\u0022:\\u00222026-09-23T19:03:44.530489\\u002B00:00\\u0022,\\u0022payloadJson\\u0022:\\u0022{\\\\u0022conversationId\\\\u0022:\\\\u0022_agent_local_chat_history\\\\u0022,\\\\u0022stateBag\\\\u0022:{\\\\u0022_pendingApprovalRequests\\\\u0022:[{\\\\u0022toolCall\\\\u0022:{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022de4b7872\\\\u0022},\\\\u0022requiresConfirmation\\\\u0022:true,\\\\u0022requestId\\\\u0022:\\\\u0022ficc_de4b7872\\\\u0022},{\\\\u0022toolCall\\\\u0022:{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022d9fb9026\\\\u0022},\\\\u0022requiresConfirmation\\\\u0022:true,\\\\u0022requestId\\\\u0022:\\\\u0022ficc_d9fb9026\\\\u0022}],\\\\u0022InMemoryChatHistoryProvider\\\\u0022:{\\\\u0022messages\\\\u0022:[{\\\\u0022role\\\\u0022:\\\\u0022user\\\\u0022,\\\\u0022contents\\\\u0022:[{\\\\u0022$type\\\\u0022:\\\\u0022text\\\\u0022,\\\\u0022text\\\\u0022:\\\\u0022Create two reviewed definitions.\\\\u0022}]},{\\\\u0022createdAt\\\\u0022:\\\\u00222026-08-03T12:00:00\\\\\\\\u002B00:00\\\\u0022,\\\\u0022role\\\\u0022:\\\\u0022assistant\\\\u0022,\\\\u0022contents\\\\u0022:[{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022de4b7872\\\\u0022,\\\\u0022providerRaw\\\\u0022:{\\\\u0022kind\\\\u0022:\\\\u0022Ollama\\\\u0022,\\\\u0022model\\\\u0022:\\\\u0022OllamaSharp.Models.Chat.Message\\\\\\\\u002BToolCall\\\\u0022,\\\\u0022json\\\\u0022:\\\\u0022{\\\\\\\\u0022function\\\\\\\\u0022:{\\\\\\\\u0022index\\\\\\\\u0022:0,\\\\\\\\u0022name\\\\\\\\u0022:\\\\\\\\u0022admission_fixture_create\\\\\\\\u0022,\\\\\\\\u0022arguments\\\\\\\\u0022:{\\\\\\\\u0022value\\\\\\\\u0022:\\\\\\\\u0022alpha\\\\\\\\u0022}},\\\\\\\\u0022id\\\\\\\\u0022:null}\\\\u0022}},{\\\\u0022$type\\\\u0022:\\\\u0022functionCall\\\\u0022,\\\\u0022name\\\\u0022:\\\\u0022admission_fixture_create\\\\u0022,\\\\u0022arguments\\\\u0022:{\\\\u0022value\\\\u0022:\\\\u0022alpha\\\\u0022},\\\\u0022informationalOnly\\\\u0022:false,\\\\u0022callId\\\\u0022:\\\\u0022d9fb9026\\\\u0022,\\\\u0022providerRaw\\\\u0022:{\\\\u0022kind\\\\u0022:\\\\u0022Ollama\\\\u0022,\\\\u0022model\\\\u0022:\\\\u0022OllamaSharp.Models.Chat.Message\\\\\\\\u002BToolCall\\\\u0022,\\\\u0022json\\\\u0022:\\\\u0022{\\\\\\\\u0022function\\\\\\\\u0022:{\\\\\\\\u0022index\\\\\\\\u0022:1,\\\\\\\\u0022name\\\\\\\\u0022:\\\\\\\\u0022admission_fixture_create\\\\\\\\u0022,\\\\\\\\u0022arguments\\\\\\\\u0022:{\\\\\\\\u0022value\\\\\\\\u0022:\\\\\\\\u0022alpha\\\\\\\\u0022}},\\\\\\\\u0022id\\\\\\\\u0022:null}\\\\u0022}}],\\\\u0022messageId\\\\u0022:\\\\u002292782aeddf4345a094de2a4565d2e192\\\\u0022,\\\\u0022additionalProperties\\\\u0022:{\\\\u0022load_duration\\\\u0022:\\\\u002200:00:00\\\\u0022,\\\\u0022total_duration\\\\u0022:\\\\u002200:00:00\\\\u0022,\\\\u0022prompt_eval_duration\\\\u0022:\\\\u002200:00:00\\\\u0022,\\\\u0022eval_duration\\\\u0022:\\\\u002200:00:00\\\\u0022}}]}}}\\u0022,\\u0022historyMode\\u0022:1,\\u0022authorityPolicyFingerprint\\u0022:\\u0022fixture-authority\\u0022,\\u0022capabilityPolicyFingerprint\\u0022:\\u0022fixture-capabilities\\u0022}\u0022,\u0022input\u0022:[{\u0022role\u0022:\u0022user\u0022,\u0022contents\u0022:[{\u0022$type\u0022:\u0022toolApprovalResponse\u0022,\u0022approved\u0022:true,\u0022toolCall\u0022:{\u0022$type\u0022:\u0022functionCall\u0022,\u0022name\u0022:\u0022admission_fixture_create\u0022,\u0022arguments\u0022:{\u0022value\u0022:\u0022alpha\u0022},\u0022informationalOnly\u0022:false,\u0022callId\u0022:\u0022de4b7872\u0022},\u0022requestId\u0022:\u0022ficc_de4b7872\u0022}]},{\u0022role\u0022:\u0022user\u0022,\u0022contents\u0022:[{\u0022$type\u0022:\u0022toolApprovalResponse\u0022,\u0022approved\u0022:true,\u0022toolCall\u0022:{\u0022$type\u0022:\u0022functionCall\u0022,\u0022name\u0022:\u0022admission_fixture_create\u0022,\u0022arguments\u0022:{\u0022value\u0022:\u0022alpha\u0022},\u0022informationalOnly\u0022:false,\u0022callId\u0022:\u0022d9fb9026\u0022},\u0022requestId\u0022:\u0022ficc_d9fb9026\u0022}]}],\u0022isApprovalContinuation\u0022:true,\u0022pendingApprovals\u0022:[{\u0022approvalId\u0022:\u0022ficc_de4b7872\u0022,\u0022callId\u0022:\u0022de4b7872\u0022,\u0022toolName\u0022:\u0022admission_fixture_create\u0022,\u0022toolKind\u0022:\u0022function\u0022,\u0022details\u0022:\u0022\u0022,\u0022argumentsJson\u0022:\u0022{\\u0022value\\u0022:\\u0022alpha\\u0022}\u0022,\u0022toolAdmission\u0022:{\u0022batchId\u0022:{\u0022value\u0022:\u0022b60eeb38-0f88-44d0-a304-5a8df5c89418\u0022},\u0022intentId\u0022:{\u0022value\u0022:\u0022cb005922-d77c-4b48-8bd3-a14e0f5427f9\u0022},\u0022semanticVersion\u0022:1,\u0022digest\u0022:{\u0022value\u0022:\u002233b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21\u0022}}},{\u0022approvalId\u0022:\u0022ficc_d9fb9026\u0022,\u0022callId\u0022:\u0022d9fb9026\u0022,\u0022toolName\u0022:\u0022admission_fixture_create\u0022,\u0022toolKind\u0022:\u0022function\u0022,\u0022details\u0022:\u0022\u0022,\u0022argumentsJson\u0022:\u0022{\\u0022value\\u0022:\\u0022alpha\\u0022}\u0022,\u0022toolAdmission\u0022:{\u0022batchId\u0022:{\u0022value\u0022:\u0022b60eeb38-0f88-44d0-a304-5a8df5c89418\u0022},\u0022intentId\u0022:{\u0022value\u0022:\u002213d92382-7824-4fc0-9600-aaa1a42ebf6c\u0022},\u0022semanticVersion\u0022:1,\u0022digest\u0022:{\u0022value\u0022:\u002233b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21\u0022}}}]}}",
+            "digest": {
+              "value": "31a6f1abeb51759a5badeaafd3a12ead1cdae9ccc77362cb6031e4d2963cfeaf"
+            }
+          },
+          "continuesSegmentId": "2dd35d0b-b669-476f-bca6-ee2178a84745",
+          "approvalCheckpoint": null,
+          "pendingApprovals": []
+        }
+      ],
+      "batches": [
+        {
+          "id": {
+            "value": "b60eeb38-0f88-44d0-a304-5a8df5c89418"
+          },
+          "ordinal": 0,
+          "requestDigest": {
+            "value": "9526e57171b00859ebd7d3bff62f9a1c0833f4db069b4268129e5ece37bf013d"
+          },
+          "response": {
+            "format": "maf-tool-protocol",
+            "version": 2,
+            "payloadJson": "{\u0022Brotli\u0022:\u0022C4MEAICqqqrq/3QXyKOGgpqGmbmb3iIi8xAHhwhYMg8Z6WAgYSoWrhlqKgaqYp4R4Kl\u002B78bubstB1Ke1c3fzx0Wikbi4KEoOi8RFQjQaQhU3ph7vCrGWJu24wCNOH/hOBRw0Rg/aaPPf6sZO\u002BNc63WrbaQMKnk\u002B4Ejg4hClz4Vn0j0\u002BhVAKnom/u9d0J5YnKyqnQz9Wj0OsRFPzCuBG41wtkjmtQF5YSimASUDBxEkpSODx9k69NuGPe0iSB0x3GCAoSLqG81y\u002BhlMBpnMOnbJnGKRMKgQLM79uylEwXOO8p24BxPSFUBSHNnBdclb6D8SHFL3AzxkIKJozx3oMDT\u002B3bbr\u002BzoGDNfA6e8hP\u002BA3eBj5BItPUQIy4IChb2FAGM5fMJ86oPOOWic0Ad\u002BkCl4Dv92Yyxty/M8SCh\u002Bls4gYOLk2FPGQ2B84Q5JE\u002BfcMhGTWRMgM3ghgJMxWVjeOQjKeZJm2h6HLahJsqmudYFQg4elIZLW4wValXl\u002BVcrh/ltMLa3QzA0djiG7e5RAxR4EgyxtAP1hrRu8sIflO54SwKuVcCbOIaVVSAsGMknjb7WowL0PrSOVI\u002BZV8oSlIIaF4iMfvRb7isuwIEx7sOA1cIaf71mXlYZ6cy6Zp17rgoyyYto0\u002B41DU5T5/3e\u002Br7t7ICI3Vuzm/ud6Xuz61YGdSNryN7B7vYWyfu5vW47NEPryWLb9Z231Ay9TyYoPf5GwIE1tr8y\u002Bytz/dLY44m2BW5PGus5pFBOT4SdLbMwx1FQCEUlou7sWoUr3RDNAc7ycp9RY57fOZHOxvJZMuEC\u002BnJG6/mogv77i6Qsq/fOvygRpjtDzkFr59MFcFpSLK3hIj6JkjrXBBaeE405n\u002BxL2vAls4b5r2hGDXXyMtfmdb4XdhpRXOJBn2qM3yTxWCz3RwxPCjpljgI6TI\u002BZcT0e07MmhvumBjjp7dmye30DwlG\u002BDFC/fYtjUEwc37g43jkrSstJ3qhCrcc6\u0022}",
+            "digest": {
+              "value": "ff647c7b5a8973f822cc1a1e3f874c00aace6430ce5a34f5217edbd963b9b8d1"
+            }
+          },
+          "proposals": [
+            {
+              "intentId": {
+                "value": "cb005922-d77c-4b48-8bd3-a14e0f5427f9"
+              },
+              "ordinal": 0,
+              "callId": "de4b7872",
+              "payload": {
+                "toolName": "admission_fixture_create",
+                "semanticVersion": 1,
+                "digest": {
+                  "value": "33b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21"
+                },
+                "argumentsJson": "{\u0022value\u0022:\u0022alpha\u0022}",
+                "effect": 2,
+                "recovery": 1
+              },
+              "requiresApproval": true,
+              "state": 2,
+              "approvalStatus": 1,
+              "approvedDigest": {
+                "value": "33b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21"
+              },
+              "approvalId": "ficc_de4b7872",
+              "dispatchClaimId": "c6c8a742-fafd-4a1d-91a9-b30c259959c2",
+              "result": {
+                "format": "maf-tool-protocol",
+                "version": 1,
+                "payloadJson": "{\u0022Packages\u0022:\u002210.9.0.0|2.12.0.0|5.4.25.0\u0022,\u0022Shape\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafToolRunContext\\u002BResultCheckpoint\u0022,\u0022Value\u0022:{\u0022kind\u0022:\u0022CommittedOwnerResult\u0022,\u0022value\u0022:\u0022created:cb005922d77c4b488bd3a14e0f5427f9\u0022,\u0022committedEffect\u0022:{\u0022sourceKind\u0022:\u0022fixture-definition\u0022,\u0022sourceId\u0022:\u0022cb005922d77c4b488bd3a14e0f5427f9\u0022},\u0022committedResultKind\u0022:\u0022Json\u0022}}",
+                "digest": {
+                  "value": "cc9a0dddbad88f9b5c3b3acf8b00be8ad73af83cdf8dbd4f1e313631294ee1c1"
+                }
+              },
+              "effectState": 3,
+              "cancellation": null,
+              "providerCall": null
+            },
+            {
+              "intentId": {
+                "value": "13d92382-7824-4fc0-9600-aaa1a42ebf6c"
+              },
+              "ordinal": 1,
+              "callId": "d9fb9026",
+              "payload": {
+                "toolName": "admission_fixture_create",
+                "semanticVersion": 1,
+                "digest": {
+                  "value": "33b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21"
+                },
+                "argumentsJson": "{\u0022value\u0022:\u0022alpha\u0022}",
+                "effect": 2,
+                "recovery": 1
+              },
+              "requiresApproval": true,
+              "state": 2,
+              "approvalStatus": 1,
+              "approvedDigest": {
+                "value": "33b986df2e8be336e02fa3db3c1c1d78562cd48bc7f8f3d7ea95d82c15605b21"
+              },
+              "approvalId": "ficc_d9fb9026",
+              "dispatchClaimId": "697325c5-6f52-47f8-93b4-3f8bc60c735d",
+              "result": {
+                "format": "maf-tool-protocol",
+                "version": 1,
+                "payloadJson": "{\u0022Packages\u0022:\u002210.9.0.0|2.12.0.0|5.4.25.0\u0022,\u0022Shape\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafToolRunContext\\u002BResultCheckpoint\u0022,\u0022Value\u0022:{\u0022kind\u0022:\u0022CommittedOwnerResult\u0022,\u0022value\u0022:\u0022created:13d9238278244fc09600aaa1a42ebf6c\u0022,\u0022committedEffect\u0022:{\u0022sourceKind\u0022:\u0022fixture-definition\u0022,\u0022sourceId\u0022:\u002213d9238278244fc09600aaa1a42ebf6c\u0022},\u0022committedResultKind\u0022:\u0022Json\u0022}}",
+                "digest": {
+                  "value": "f50de05b15a06695c58da6d83254d640897098725e1b32ccadfbd613cfb04aa0"
+                }
+              },
+              "effectState": 3,
+              "cancellation": null,
+              "providerCall": null
+            }
+          ],
+          "providerDispatchId": null
+        },
+        {
+          "id": {
+            "value": "443c8a30-7008-474c-a736-7580d169ca68"
+          },
+          "ordinal": 1,
+          "requestDigest": {
+            "value": "27170b6da8a7f320eff9038480e927734e7e2cfcceafbd555422a35bd15b6549"
+          },
+          "response": {
+            "format": "maf-tool-protocol",
+            "version": 2,
+            "payloadJson": "{\u0022Brotli\u0022:\u0022CzkCAICqqqrq/3QXyKO6gpqauoeZ3mLJQxwCIsA9Mg8Z6eAgZioerulqqgqqYpGeYGlmm/iB3qzedtOqJOUlEomQkVhu1QJZWVlZIevGtOOdAubCurDAG45X/KQKFhole6mk\u002Bq9loxN52lYaqbdSgYDDBTOBhRc/llTTmeX3G1OsPsUq75/l4wV5TzWnWOlHdsj0cQQBPzHMBPZjgZLCHjiFtfrKGBkEjCkyRa4aqd/4XxOpTDceKTywMKYpB2JysArd68654ieBAEeMPlSwC/iYZ35PV4qPaY4M1ghIM2fio9MCODEG8dvp3boeBaBznn2KGN5KylTY\u002B4LZAiGhO7m5oAAOLChlP0LYLe7h\u002B1zSlPlEX6pf9tF\u002BFVCoZjNRnp0NuKdpsCM0277rTdMMfdt22uFIvdl2qt2BgImqK0gll\u002B96o1s9DO6s0BjT94PS2PU9nc3QtXfGe/hCyOTuTcaBVnq3Ud1Gte\u002BNtscT93tWSj\u002BkMgcBZx99vewJqwfSKqfcFS05Cj2lP/sbz4U2Ewo9ffflHZU9/vUQ9erjQeBeQ8AJixcCuPjDBUuWL\u002BUoVV4jpKA9pUj3aZkcuBBOIODPPwQufyjUk5Tsv\u002BLVKpGEcW4KZ34YDsfbAtPQrO/b6E22tUjTG\u002BqpV0zknkLnUqRTcVJsSw1XTzWzjZKXippsdFlZ03McZqgnZCpY0b\u002B58pcoWC2nOxMUp7U1tpICoVHD/FwVsnp7uIpb0/xSleEqj\u002Bu5FZ1ZLjOtsK7HdQ==\u0022}",
+            "digest": {
+              "value": "c15c38d46251aec3f578327d2ce48c2d26cc6a44503aa66d1771bfc2eaf108ca"
+            }
+          },
+          "proposals": [],
+          "providerDispatchId": null
+        }
+      ],
+      "activeDispatchLeaseId": "cfcb28a4-a9c6-46d5-866c-dd3ec4713b62",
+      "support": 0,
+      "originalInput": null,
+      "runtimeContext": null,
+      "hasUnresolvedEffects": false
+    }
+  }
+}

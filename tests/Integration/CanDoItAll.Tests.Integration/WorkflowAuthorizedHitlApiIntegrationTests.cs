@@ -279,7 +279,8 @@ public sealed class WorkflowAuthorizedHitlApiIntegrationTests
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: true,
             useInMemoryDatabase: false);
-        SetToken(host, ApiAccessScopeNames.RespondWorkflows, "real-hitl-human");
+        SetToken(host, ApiAccessScopeNames.RespondWorkflows, "real-hitl-human",
+            ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows, ApiAccessScopeNames.ExecuteWorkflows);
         var started = await StartRealHitlRunAsync(host, "authorized-response");
         Assert.Equal(WorkflowRunState.WaitingForInput, started.Run.State);
         var pending = Assert.Single(started.PendingExternalRequests);
@@ -296,7 +297,7 @@ public sealed class WorkflowAuthorizedHitlApiIntegrationTests
         Assert.Equal(HttpStatusCode.Forbidden, forbiddenResponse.StatusCode);
         Assert.Empty(await LoadOperationsAsync(host, pending.Id));
 
-        SetToken(host, ApiAccessScopeNames.RespondWorkflows, "real-hitl-human");
+        SetToken(host, ApiAccessScopeNames.RespondWorkflows, "real-hitl-human", ApiAccessScopeNames.ReadWorkflows);
         using var response = await SubmitAsync(
             host.Client,
             pending.Id,
@@ -394,7 +395,8 @@ public sealed class WorkflowAuthorizedHitlApiIntegrationTests
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: true,
             useInMemoryDatabase: false);
-        SetToken(host, ApiAccessScopeNames.RespondWorkflows, "real-hitl-cancel-human");
+        SetToken(host, ApiAccessScopeNames.RespondWorkflows, "real-hitl-cancel-human",
+            ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows, ApiAccessScopeNames.ExecuteWorkflows);
         var started = await StartRealHitlRunAsync(host, "late-response-after-cancel");
         Assert.Equal(WorkflowRunState.WaitingForInput, started.Run.State);
         var pending = Assert.Single(started.PendingExternalRequests);
@@ -506,14 +508,13 @@ public sealed class WorkflowAuthorizedHitlApiIntegrationTests
     private static void SetToken(
         ApiTestHost host,
         string scope,
-        string subject)
-    {
+        string subject,
+        params string[] additionalScopes) {
         var token = host.App.Services.GetRequiredService<IApiTokenService>().IssueToken(
-            new ApiTokenIssueRequest
-            {
+            new ApiTokenIssueRequest {
                 Subject = subject,
                 DisplayName = subject,
-                Scopes = [scope]
+                Scopes = [scope, .. additionalScopes]
             });
         host.Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(token.TokenType, token.Token);

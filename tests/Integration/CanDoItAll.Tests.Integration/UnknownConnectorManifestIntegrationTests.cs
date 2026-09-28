@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.External;
 
+[Trait("Category", "HostPlatform")]
 public sealed class UnknownConnectorManifestIntegrationTests
 {
     private const string ProviderBaseUrlFieldKey = "baseUrl";

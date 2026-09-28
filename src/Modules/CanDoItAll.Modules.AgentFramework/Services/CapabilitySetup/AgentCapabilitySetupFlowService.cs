@@ -31,14 +31,23 @@ public sealed partial class AgentCapabilitySetupFlowService(
         ArgumentNullException.ThrowIfNull(request);
 
         var correlationId = ResolveCorrelationId(request.CorrelationId, "tool-setup");
+        // Descriptor, input and tool-kind checks run before the external tool is invoked, so their failures left
+        // nothing behind; a failure reported by the invoked tool itself keeps its uncertain effect.
         if (!TryBuildExternalToolDescriptor(request.Capability, correlationId, out var descriptor, out var diagnostics))
         {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
             return ToolSetupFailure(correlationId, diagnostics);
         }
 
         if (!IsValidJsonInput(request.JsonInput, correlationId, descriptor.Identity, out var inputDiagnostic))
         {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
             return new CapabilitySetupTestResult(false, descriptor.Identity, correlationId, [inputDiagnostic]);
+        }
+
+        if (descriptor is not (ExternalProcessToolDescriptor or ExternalHttpToolDescriptor))
+        {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
         }
 
         return descriptor switch
@@ -75,15 +84,18 @@ public sealed partial class AgentCapabilitySetupFlowService(
         ArgumentNullException.ThrowIfNull(request);
 
         var correlationId = ResolveCorrelationId(request.CorrelationId, "mcp-setup");
+        // Descriptor and host checks run before any MCP server is started, so their failures left nothing behind.
         var descriptor = BuildMcpDescriptor(request.Capability, correlationId, out var diagnostics);
         if (diagnostics.Count > 0)
         {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
             return McpSetupTestResult.Failure(descriptor, correlationId, diagnostics);
         }
 
         var mcpSetupTestService = serviceProvider.GetService<IMcpSetupTestService>();
         if (mcpSetupTestService is null)
         {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
             return McpSetupTestResult.Failure(
                 descriptor,
                 correlationId,

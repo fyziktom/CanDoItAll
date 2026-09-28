@@ -10,7 +10,7 @@ public static class AgentUsageDisplay
         return value.ToString("N0", CultureInfo.CurrentCulture);
     }
 
-    public static string FormatTokens(int value)
+    public static string FormatTokens(long value)
     {
         return value.ToString("N0", CultureInfo.CurrentCulture);
     }

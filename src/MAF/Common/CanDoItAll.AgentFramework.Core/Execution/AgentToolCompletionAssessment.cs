@@ -32,13 +32,19 @@ internal sealed record AgentToolCompletionAssessment(
                 AgentToolCompletionFailureKind.PortableOutputValidation);
         }
 
+        // The summary names one unresolved attempt: an uncertain effect before a proven no-effect rejection, and otherwise
+        // the latest attempt, because the agent may already have corrected the input an earlier attempt was refused for.
         var unresolvedMutation = traces
             .Where(trace =>
                 trace.Classification == ToolInvocationClassification.Mutation &&
                 trace.CompletedAtUtc.HasValue &&
                 (trace.Outcome != AgentToolInvocationOutcome.Succeeded ||
                  trace.EffectState != AgentToolEffectState.Committed))
-            .FirstOrDefault(trace => !IsResolvedByLaterCommittedAttempt(trace, traces));
+            .Where(trace => !IsProhibitedBeforeEffect(trace))
+            .Where(trace => !IsResolvedByLaterCommittedAttempt(trace, traces))
+            .OrderByDescending(trace => trace.EffectState is not (AgentToolEffectState.NotCommitted or AgentToolEffectState.None))
+            .ThenByDescending(trace => trace.Sequence)
+            .FirstOrDefault();
         if (unresolvedMutation is null)
         {
             return new AgentToolCompletionAssessment(
@@ -56,6 +62,15 @@ internal sealed record AgentToolCompletionAssessment(
             $"Required mutation '{unresolvedMutation.ToolName}' did not complete: {reason}",
             AgentToolCompletionFailureKind.RequiredMutation);
     }
+
+    // An owner that never permits the requested operation refuses it before any effect and directs the agent to
+    // another approach. No retry of that operation can commit, so the refusal is not a mutation the run still owes.
+    internal static bool IsProhibitedBeforeEffect(AgentToolInvocationTrace trace)
+        => trace.EffectState is AgentToolEffectState.NotCommitted or AgentToolEffectState.None &&
+           string.Equals(
+               trace.FailureCode,
+               AgentToolInvocationEffectScope.OperationProhibitedFailureCode,
+               StringComparison.Ordinal);
 
     internal static bool IsResolvedByLaterCommittedAttempt(
         AgentToolInvocationTrace failedAttempt,

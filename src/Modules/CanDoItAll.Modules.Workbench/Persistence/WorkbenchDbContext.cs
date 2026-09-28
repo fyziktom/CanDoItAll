@@ -25,11 +25,22 @@ public sealed class WorkbenchDbContext(DbContextOptions<WorkbenchDbContext> opti
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess) {
         ApplicationManagedConcurrencyTokens.Stamp(ChangeTracker);
+        RecordDomainChanges();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) {
         ApplicationManagedConcurrencyTokens.Stamp(ChangeTracker);
+        RecordDomainChanges();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    // Lease bookkeeping and operation analytics never change the project an agent tool invocation acted on.
+    private void RecordDomainChanges() {
+        if (ChangeTracker.Entries().Any(entry =>
+                entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted &&
+                entry.Entity is not (ProjectStructureLeaseRecord or ProjectStructureOperationAnalyticsRecord))) {
+            ProjectStructureToolEffectObservation.RecordDomainWrite();
+        }
     }
 }

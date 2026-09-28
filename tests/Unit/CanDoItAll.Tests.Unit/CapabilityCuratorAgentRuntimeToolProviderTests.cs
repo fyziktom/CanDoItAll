@@ -365,7 +365,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.False(created.IsBuiltIn);
         Assert.Equal(1, harness.Workspace.SaveCapabilityCallCount);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
             InvokeAsync<CapabilityCuratorVerifyResult>(
                 verify,
                 new CapabilityCuratorVerifyInput(
@@ -439,7 +439,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.NotNull(editor.Configuration.Skill);
         Assert.Equal(CapabilityCuratorSkillSource.Inline, editor.Configuration.Skill!.Source);
         Assert.Equal("Use the custom skill.", editor.Configuration.Skill.InlineInstructions);
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet],
             new CapabilityCuratorEditorGetInput(Guid.NewGuid())));
         Assert.Throws<ArgumentOutOfRangeException>(() => new CapabilityCuratorCatalogSearchInput(pageSize: 51));
@@ -472,7 +472,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.NotEqual(created.Fingerprint, updated.Fingerprint);
         Assert.Equal(created.Fingerprint, harness.Workspace.LastSavedCapabilityEditor!.ExpectedFingerprint);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
+        await Assert.ThrowsAsync<AgentToolConflictException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             CreateInlineSkillCandidate(
                 created.Key,
@@ -485,7 +485,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
         var builtInEditor = await InvokeAsync<CapabilityCuratorEditorResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorEditorGet],
             new CapabilityCuratorEditorGetInput(builtIn.Id));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             CreateInlineSkillCandidate(
                 "cannot-edit-built-in",
@@ -495,7 +495,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
                 builtInEditor.Fingerprint)));
 
         var nullKey = create with { Key = null! };
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorSave],
             nullKey));
         Assert.DoesNotContain("NullReferenceException", exception.ToString(), StringComparison.Ordinal);
@@ -723,7 +723,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
                      "https://example.test/api?access_token=literal-value"
                  })
         {
-            await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorToolSetupTestResult>(
+            await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorToolSetupTestResult>(
                 tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
                 new CapabilityCuratorCapabilitySetupTestInput(validHttp with
                 {
@@ -755,7 +755,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
                         [argument],
                         AllowedExecutableNames: ["dotnet"]))
             };
-            await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorToolSetupTestResult>(
+            await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorToolSetupTestResult>(
                 tools[CapabilityCuratorToolPolicy.CapabilityCuratorToolSetupTest],
                 new CapabilityCuratorCapabilitySetupTestInput(processCandidate)));
         }
@@ -773,7 +773,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
                 Command: "npx",
                 Arguments: ["--api-key=literal-value"],
                 AllowedTools: ["ping"]));
-        await Assert.ThrowsAsync<ArgumentException>(() => InvokeAsync<CapabilityCuratorMcpSetupTestResult>(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorMcpSetupTestResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorMcpSetupTest],
             new CapabilityCuratorCapabilitySetupTestInput(unsafeMcp)));
     }
@@ -895,9 +895,45 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorAssignmentEditorResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet],
             new CapabilityCuratorAssignmentEditorGetInput(harness.TargetAgentId)));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => InvokeAsync<CapabilityCuratorVerifyResult>(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorVerifyResult>(
             tools[CapabilityCuratorToolPolicy.CapabilityCuratorVerify],
             new CapabilityCuratorVerifyInput(harness.TargetAgentId, harness.CustomCapabilityId)));
+    }
+
+    [Fact]
+    public async Task Rejected_assignment_requests_are_correctable_and_their_saved_rejection_can_be_redisclosed()
+    {
+        var harness = CreateHarness();
+        var tools = await CreateToolDictionaryAsync(harness);
+        var missingAgentId = Guid.NewGuid();
+
+        var missing = await Assert.ThrowsAsync<AgentToolInputValidationException>(() => InvokeAsync<CapabilityCuratorAssignmentEditorResult>(
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet],
+            new CapabilityCuratorAssignmentEditorGetInput(missingAgentId)));
+        Assert.Contains(missingAgentId.ToString("D"), missing.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentToolEffectState.None, missing.EffectState);
+
+        var stale = await Assert.ThrowsAsync<AgentToolConflictException>(() => InvokeAsync<CapabilityCuratorAssignmentUpdateResult>(
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate],
+            new CapabilityCuratorAssignmentUpdateInput(
+                harness.TargetAgentId,
+                harness.CustomCapabilityId,
+                CapabilityCuratorAssignmentAction.Attach,
+                DateTimeOffset.Parse("2020-01-01T00:00:00Z"))));
+        Assert.Contains("changed after it was read", stale.Message, StringComparison.Ordinal);
+        var unchanged = await InvokeAsync<CapabilityCuratorAssignmentEditorResult>(
+            tools[CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet],
+            new CapabilityCuratorAssignmentEditorGetInput(harness.TargetAgentId));
+        Assert.DoesNotContain(harness.CustomCapabilityId, unchanged.SelectedCapabilityIds);
+
+        var metadata = harness.Provider.GetToolMetadata(harness.Context)
+            .Single(item => item.ToolName == CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentEditorGet);
+        var saved = ManagedToolDisclosureTestData.CreateTypedFailure(
+            metadata, new CapabilityCuratorAssignmentEditorGetInput(missingAgentId), missing);
+        await using (var lease = await metadata.AuthorizeResultDisclosureAsync!(saved, default))
+        {
+            Assert.Null(lease);
+        }
     }
 
     [Fact]

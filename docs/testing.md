@@ -16,6 +16,28 @@ are not a prerequisite for this solution. The default build graph requires sibli
 README. DotNetWatch integration tests additionally require the sibling `CanDoItAll.Mcp`
 repository.
 
+When running the Linux stable gate in Docker, start the SDK container with `--init`.
+Process-host tests deliberately orphan descendants; the container needs an init process
+to reap them. A `sleep` entry point alone leaves zombies in the owned process group and
+correctly causes process-cleanup assertions to fail.
+
+## PostgreSQL test server
+
+Database-backed tests require an explicitly isolated PostgreSQL 18 server through
+`CANDOITALL_TESTS_POSTGRES_CONNECTION`. The availability helper fails on a missing
+configuration, unavailable server or wrong major version. It never starts the development
+Compose stack or probes the ordinary development database. Keep the test endpoint separate
+from installed resources, the application on port 5032 and retained manual-provider data.
+Leases create uniquely named databases and retain the existing bounded cleanup contract.
+CI records `server_version_num` before its database lanes.
+
+For local runs provision a disposable PostgreSQL 18 cluster, then set the existing
+connection variable privately for the test process. The role needs database-creation
+privileges. Record `show server_version_num` and the sanitized endpoint in the test report.
+Do not print the password-bearing connection string. An ignored `.env` can still override
+a new Compose image default; follow the [migration runbook](../tools/dev/Migrate-PostgreSql16To18.md)
+before changing any retained cluster.
+
 ## Test Entry Points
 
 | Entry point | Scope |
@@ -31,6 +53,21 @@ The stable aggregate excludes the Playwright project. Its command filter also ex
 special traits because those tests remain in their owning assemblies for focused and
 environment-specific execution. Test-support projects are transitive dependencies of
 their owning test projects and are not standalone gates.
+
+PostgreSQL fixture administration uses a separate 60-second command timeout for database
+creation and cleanup. Ordinary test connections retain their 15-second SQL timeout.
+`DROP DATABASE` can wait for a server checkpoint: a measured local cleanup spent 19.5
+seconds flushing files and exceeded the former shared 15-second deadline after all test
+assertions had passed. Keep the bounded maintenance budget separate from application
+query and HTTP deadlines; do not suppress cleanup failures.
+
+The shared test bootstrap disables HTTP handler-expiry timers for its short-lived hosts.
+A timer in `DefaultHttpClientFactory` can retain a disposed fixture's root service
+provider when a singleton storage driver still references its typed client. Repeating
+fixtures then retains their entire service graphs. The lifetime regression test resolves
+the real storage drivers and requires the disposed provider to be collectible. This
+fixture setting keeps HTTP handlers and request timeouts in place and leaves production
+HTTP-client configuration unchanged.
 
 ## Local And Bundle Loop
 
@@ -71,6 +108,31 @@ calling `DisposeComponentsAsync()` outside a busy renderer dispatcher can clear 
 list before the queued disposal reads it, leaving old components and their scoped
 registrations alive. The helper dispatches the entire operation; its regression test
 holds the renderer busy to verify that disposal still releases the rendered components.
+
+When a component can render in the background, find the DOM element and dispatch its
+event together inside `cut.InvokeAsync`. A render between `Find` and `Click` can replace
+the event handler and make bUnit report `UnknownEventHandlerIdException`. Re-querying the
+element outside the dispatcher does not close that race.
+
+Workflow canvas preview tests must wait until the supplied definition name appears in
+`workflow-canvas-name` before starting the preview. The toolbar renders while
+`OnInitializedAsync` is still loading secrets; button existence alone does not prove
+that `OnParametersSetAsync` has replaced the initial empty draft. Use the shared
+`RunWorkflowCanvasPreviewAsync` test helper to wait for that state and await the click.
+
+In bUnit 2.7.2, synchronous `Click()` discards the event-dispatch task. Use
+`await ClickAsync()` before asserting callback effects, including the absence of a
+second intent; a busy dispatcher can otherwise leave the click queued during the
+assertion. For an event that awaits a scripted query, capture the `ClickAsync()` task,
+assert the pending state, complete the query, then await the click before the next
+action. Use `WaitForAssertion` for the resulting rendered state. See bUnit's
+[event-handler completion guidance](https://bunit.dev/docs/interaction/trigger-event-handlers.html).
+
+For editors loaded asynchronously after a selection, wait for the editor form or tabs
+before using them. A catalog tree and the selected record's heading can render while
+the editor is still loading. Await the selection's `ClickAsync()` task, then verify
+editor readiness; a heading-only assertion does not establish that readiness. The
+provider profile seam tests exercise both initial loading and a delayed selection.
 
 ### Prompt Gallery UI slice
 
@@ -186,6 +248,82 @@ Send, and `live` only when a model was actually reached, and `modelRequests.used
 requests the provider journal counted. A report that claims live proof cites that manifest, the
 provider and model it names, and the persisted run and owner state it recorded.
 
+## Event Stream Shutdown
+
+A profile switch or client disconnect can cancel an underlying event read before the
+linked token in the SSE writer observes cancellation. Check the original lifetime
+signals when deciding whether to stop or handle cancellation, and drain the pending
+read before releasing its scope. Finish an in-progress frame using the request token;
+a profile switch must end the HTTP response cleanly without emitting subsequent events.
+Do not suppress unrelated reader failures or accept a truncated HTTP body in tests.
+
+`ApiStreamingTransportTests` forces delayed cancellation propagation, both cancelled
+and successful reads during shutdown, and a real HTTP profile-switch race.
+`ApiRunEventAdapterTests` checks clean profile-switch closure for global and run-specific
+workflow/process streams. `LlmChatsApiPostgreSqlIntegrationTests` retains the PostgreSQL
+profile-fencing and durable-usage assertions. The heartbeat/disconnect test waits for
+an observed flush before disconnecting instead of assuming a heartbeat arrives in 150 ms.
+
+## Timing And Scale Checks
+
+Stable CI runs on shared runners. Wall-clock ceilings are coarse regression guards,
+not product latency targets. Prefer observable completion, cancellation, row counts,
+query plans and operation ordering over short sleeps or minimum elapsed-time assertions.
+Keep functional deadlines (such as process termination before a child exits naturally)
+separate from performance measurements.
+
+Provider-history search retains its million-row dataset, indexed plans with a root
+`Limit`, page sizes and response-size bounds. Its cold-query ceiling is 10 seconds and
+its warm p95 ceiling is 5 seconds on every platform. Measurements and budgets are logged
+before latency assertions. A macOS CI run on 2026-09-22 measured a warm p95 of 565.7 ms
+against the former 500 ms limit even though all three measured PostgreSQL plans used
+indexes and executed in 0.11–0.15 ms. These ceilings tolerate runner scheduling and
+connection delays; they do not replace query-plan and bounded-work assertions.
+
+The former one-row provider-history plan test was superseded by that scale test. The
+serial capture prelude's 25 ms p95 assertions were also removed: earlier readiness runs
+already recorded 28–29 ms failures unrelated to the candidate change. The runtime test
+still verifies 24 concurrent captures, 20 searches and deletion of 5,000 expired rows in
+batches of at most 1,000, with positive progress and a two-minute cancellation guard.
+Use the opt-in `SharedProviderPremergePerformanceTests` for allocation and timing
+measurements; retain its bounded-cleanup and revocation checks.
+
+## PostgreSQL 18 migration and installer proof
+
+Set `CANDOITALL_TESTS_POSTGRES_CONNECTION` to a separately provisioned PostgreSQL 18
+fixture with permission to create/drop test databases. The availability helper requires
+this explicit setting and reports the observed server major; it never provisions Compose
+or probes a default development database. Keep credentials out of tracked files and
+command transcripts. `CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY=WAL_LOG` retains the
+ordinary stable-gate policy.
+
+`PostgreSqlProtocolRestoreTests` is a `LiveProcess` test because it runs real `pg_dump`
+and `pg_restore` executables. Place verified PostgreSQL 18 clients on the calling
+process's PATH, discover this exact filter, then run it against the isolated fixture:
+
+```powershell
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --list-tests --filter "FullyQualifiedName~PostgreSqlProtocolRestoreTests" /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~PostgreSqlProtocolRestoreTests" /m:1
+```
+
+The case verifies legacy v1 and compressed v2 protocol envelopes, corrupt-payload
+rejection, stable run identity and a 256-batch journal through a real JSONB dump/restore.
+Its table is a transport fixture, not a new application storage contract. The existing
+`MafLongJournalIntegrationTests` separately covers the production filesystem journal.
+
+On Windows, run the installer checks in Windows PowerShell 5.1:
+
+```powershell
+powershell -NoProfile -File ./tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1
+powershell -NoProfile -File ./tools/install/tests/Test-PostgreSql18Safety.ps1 -RunDocker -NativeBinPath '<verified PostgreSQL 18.6 bin directory>'
+```
+
+The safety harness rejects legacy, unknown, partial and conflicting data before setup,
+and exercises fresh setup, repair, persistence and database startup from the generated
+launcher. It uses unique fixture resource names through test-only seams; a different
+InstallRoot by itself would not isolate the production installer's fixed Docker names.
+Without `-RunDocker` or `-NativeBinPath`, only non-provisioning native rejection cases run.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
@@ -206,16 +344,83 @@ dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Relea
 
 `/m:1` avoids `bin` and `obj` contention when local MCP or watch processes are active. A developer with an isolated workspace may increase parallelism, but the result must still come from the same configuration and filter.
 
-Those commands use sibling source projects. CI checks out Components and FileTools at the
-pinned commits declared in its workflow, and Docker receives the same repositories as
-named build contexts. Keep source roots and commits identical for the whole gate; do not
-substitute an unpublished package graph for any command.
+Those commands use sibling source projects. CI resolves the Components branch matching the
+application branch (`development` or `main`); pull requests use their target branch, while
+pushes and manual runs use the selected branch. A missing matching branch fails checkout.
+The dependency job resolves that branch once to a commit, and every platform and container
+job checks out that exact commit. FileTools retains its explicit workflow commit pin.
+Docker receives the same repositories as named build contexts. Keep source roots and
+commits identical for the whole gate; do not substitute an unpublished package graph for
+any command. A PR from `development` to `main` therefore validates against Components
+`main`; required Components changes must reach that branch before the application merges.
 
 The gate is long. Measure it when you run it and compare the number with the `timeout-minutes` of
 the stable job in the CI workflow before assuming the two agree: this workstation has recorded runs
 close to, and above, that budget, and a runner that is slower than the budget fails the job without
 a test failing. Neither reducing the filter nor raising the timeout without a measurement is an
 acceptable answer to that.
+
+Since 2026-09-25 CI no longer runs this gate as one command per platform; see
+[Platform Split](#platform-split). The measurements in the rest of this section describe the
+former single-job gate and remain the baseline for the full scope.
+
+The CI workflow gave each platform its own budget in the stable job's matrix. They came from the
+first CI run of this gate on all three platforms (commit `d0f3c41a4`, 2026-09-19), whose logs time
+every phase:
+
+| Platform | Checkout, setup and build | Components | Integration | End of the test step |
+|---|---|---|---|---|
+| Linux (`ubuntu-24.04`) | 6.7 min | 16.0 min | 90.0 min | 114 min |
+| macOS (`macos-15`) | 7.6 min | 12.1 min | 98.9 min | 120 min |
+| Windows (`windows-latest`) | 16.6 min | 32.0 min | still running after 131.4 min | cancelled at 180 min |
+
+Windows was cancelled by the former 180-minute budget without a failing test. Projecting its
+Integration run from the Components-to-Integration ratio of Linux (5.6) and of this workstation
+(4.1, already exceeded) puts it between 131 and 181 minutes, so the whole Windows job, with the
+Memory and Unit assemblies and the portability gates that follow the test step, needs about 205 to
+265 minutes; its budget is 300. That first measurement left Linux and macOS at 180. The
+portability gates after the test step did not run in that measurement on any platform.
+
+The later [run 35577411480](https://github.com/fyziktom/CanDoItAll/actions/runs/35577411480)
+(2026-09-21, application `8744d2dd1`) completed Windows in 245.5 minutes: 27.1 minutes
+for Components, 188.9 for Integration, then all remaining stable and portability gates.
+This replaces the Windows projection and supports the existing 300-minute budget.
+Linux passed Components and all 3,120 integration cases, then failed one tuning-request
+unit test at its five-second polling deadline. That test now observes status events with
+a bounded wait, reports failed terminal states, and avoids asserting a transient queued
+snapshot after background execution has already been scheduled.
+
+macOS did start and build. Its Components tests passed, but the integration assembly
+reported database and HTTP timeouts and was still running when the 180-minute job budget
+expired. The old job-level `FILE_COPY` setting forced checkpoints for every new database.
+The broad stable gate now uses `WAL_LOG` on all platforms; the focused PostgreSQL migration
+and restart step retains the matrix strategy, including `FILE_COPY` on macOS. This keeps
+both strategies covered without adding that checkpoint cost to thousands of tests.
+[PostgreSQL's CREATE DATABASE documentation](https://www.postgresql.org/docs/16/sql-createdatabase.html)
+describes this tradeoff. The logs do not prove that checkpoint pressure caused every
+macOS timeout; a new macOS run is required to confirm the resulting duration and failures.
+That repair left the macOS budget and test exclusions unchanged.
+
+The next [run 35603506190](https://github.com/fyziktom/CanDoItAll/actions/runs/35603506190)
+again started and built macOS, then cancelled it at 180 minutes while Integration was
+still running. After repairing fixture lifetimes, the 2026-09-22 local Linux Docker run
+passed all 14,586 stable cases with zero failures or skips in 222.0 minutes: 27.8 minutes
+for Components and 192.3 for Integration, on four CPUs with an 8 GiB limit. This excludes
+restore/build and the separate portability gates. No memory-limit or OOM events occurred.
+Linux and macOS now use the same bounded 300-minute job budget as Windows. Application
+SQL and HTTP deadlines and test exclusions are unchanged. macOS still needs a remote
+rerun to verify its failures and duration.
+
+The supplied CI logs from 2026-09-23 (`logs_97185037017.zip`) subsequently show PostgreSQL
+18 (`server_version_num=180006`) starting successfully on all three platforms. Each
+platform passed all 3,131 integration cases and failed the same two workflow unit tests:
+executor failure events omitted the sanitized cause, and a payload test incorrectly
+expected an oversized result to remain entirely inline. The MAF 1.22 change restores the
+policy-filtered failure detail and asserts truncation plus the stored artifact reference.
+Both exact regressions passed at the [2026-09-25 CI-readiness checkpoint](architecture/maf-1.22-validation.md).
+Those logs do not establish a PostgreSQL failure; the later dedicated migration/restart
+and logical-restore steps were not reached after the unit failures. Keep those CI gates
+and the existing platform budgets in place.
 
 The filter intentionally excludes:
 
@@ -227,6 +432,78 @@ The filter intentionally excludes:
 - tests with an explicit `Quarantined` trait
 
 Quarantine is not a passing result. Remove a quarantine only with focused replacement evidence and a passing owning gate.
+
+## Platform Split
+
+The 2026-09-27 Windows `main` log for application `a8084a9ba` passed stable Unit/Memory
+and the preceding portability/database steps, then failed the peer-ping MCP integration
+test during its five-second **initialize** handshake, before any ping assertion. The
+same MCP source is present at development `82a5b5a01`; the log does not establish a
+Components branch mismatch or a protocol failure. The exact test passed in five local
+reproductions and all 45 runtime integration cases passed before the fixture repair.
+
+Functional MCP fixture operations now use the same 30-second bounded budget already
+used by its process-readiness/cancellation scenario. The deliberately hanging operation
+keeps its explicit five-second deadline, and production descriptor timeouts, cleanup,
+secret redaction and protocol assertions are unchanged. Child startup/initialize timing
+is included in test output for future runner diagnosis. The repaired Release runtime
+integration filter still discovers and passes 45 cases. This local evidence does not
+claim a rerun of the remote Windows job.
+
+CI does not run the broad stable gate as one command per platform. Linux runs every stable test;
+Windows and macOS run the tests whose behavior depends on the host operating system.
+
+| Job | Platforms | Runs |
+|---|---|---|
+| `stable` | Windows, Linux, macOS | Unit and Memory with the stable filter, then the actual-host portability, PostgreSQL, runtime-portability, headless-host, documentation and installer gates |
+| `tests-linux` | Linux, 5 shards | every stable Components and Integration test |
+| `tests-host` | Windows and macOS, 3 shards each | Components and Integration classes in `Category=HostPlatform`; in the full scope, every stable Components and Integration test |
+
+The full scope runs for pushes to and pull requests into `main`, the weekly schedule, and a manual
+run with `platform-scope: full`. Every other run uses the split scope. Both scopes use the stable
+filter and its exclusions; the split scope only removes platform-neutral classes from the Windows
+and macOS shards.
+
+A Components or Integration test class is host-platform when its own source reaches the operating
+system: processes, real files and directories, temporary roots, links and file modes, data
+protection or secret stores, environment variables and special folders, native path literals, or
+operating-system checks. Mark it at class level with `[Trait("Category", "HostPlatform")]`. A
+class-level `UnixPortabilityCore` or `UnixRuntimePortability` category also qualifies, because
+those classes run in the per-platform portability gates. `HostPlatformTestClassificationTests`
+fails for any class whose source matches those patterns without such a category. It cannot see
+indirect dependence, where a fixture or production code reaches the host but the class does not;
+tag such a class by hand when its assertions depend on platform behavior. Unit and Memory run
+completely on every platform and need no classification.
+
+`tools/Validation/Invoke-TestShard.ps1` lists the filtered tests, groups them by class and packs
+whole classes into shards by their weight in `tools/Validation/TestShardWeights.json` (measured
+seconds; a class without a weight counts its cases at the recorded mean case duration). Every
+shard computes the same partition in ordinal order, and discovery fails when a listed test would
+be claimed by no class selector or by two. Inside a shard, tests keep their assembly's execution
+policy: shards add processes on separate runners, each with its own PostgreSQL server, never
+concurrency within one test process. The workflow policy test requires each sharded step's
+`-ShardCount` to match its matrix, so removing a matrix entry cannot silently drop classes.
+
+Inspect a shard locally with `-ListOnly`, or run it with the same filter and shard arguments as
+CI. Refresh the weights from complete Linux runs of both assemblies when shard durations drift
+apart:
+
+```powershell
+./tools/Validation/Update-TestShardWeights.ps1 -TrxPath <components.trx>,<integration.trx> -Source "<commit and host>"
+```
+
+The shard counts and budgets come from a 2026-09-25 Linux Docker run of application `95abfbae9`
+(8 CPUs, PostgreSQL 18.6) that also produced the committed weights. It passed Unit (9,061 cases)
+in 1.5 minutes, Components (2,331) in 18.1 minutes and Integration (3,170) in 106 minutes.
+Host-platform classes accounted for 25% of the Components time and 38% of the Integration time;
+the largest class, `ProcessCatalogAuthorityPersistenceTests`, took 13.3 minutes and bounds the
+shortest possible shard. The earlier single-job gates took 84–104 minutes on Linux, 138–181 on
+macOS and 219–273 on Windows. Scaling those gates by the measured shares projects about 17
+minutes of tests per Linux shard and about 27 per Windows host-platform shard, each after roughly
+7 (Linux) or 17 (Windows) minutes of setup and build; a Windows full-scope shard projects to about
+75 minutes. The budgets (`stable` 90–120, `tests-linux` 90, `tests-host` 180 minutes) leave room
+for the full scope. These are projections: compare the first CI run's step durations with them and
+record the result here before changing a shard count or budget.
 
 ## Documentation
 

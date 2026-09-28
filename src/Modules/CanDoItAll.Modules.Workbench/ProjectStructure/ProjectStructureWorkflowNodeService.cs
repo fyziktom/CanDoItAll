@@ -39,20 +39,20 @@ public sealed class ProjectStructureWorkflowNodeService(
     {
         if (string.IsNullOrWhiteSpace(parentNodeId))
         {
-            throw new ProjectStructureAgentException(400, "ParentNodeRequired", "A parent project-structure node id is required.");
+            throw WorkflowNodeRejection(400, "ParentNodeRequired", "A parent project-structure node id is required.");
         }
 
         var project = await projectSummaryQuery.GetSummaryAsync(projectId, cancellationToken);
         if (project is null)
         {
-            throw new ProjectStructureAgentException(404, "ProjectNotFound", $"Project '{projectId:D}' was not found.");
+            throw WorkflowNodeRejection(404, "ProjectNotFound", $"Project '{projectId:D}' was not found.");
         }
 
         var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
         var nodesById = surface.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
         if (!nodesById.TryGetValue(parentNodeId, out var parentNode))
         {
-            throw new ProjectStructureAgentException(404, "ParentNodeNotFound", $"Parent node '{parentNodeId}' was not found.");
+            throw WorkflowNodeRejection(404, "ParentNodeNotFound", $"Parent node '{parentNodeId}' was not found.");
         }
 
         var inputSettings = ProjectStructureWorkflowInputSettingsNormalizer.Normalize(request.InputSettings);
@@ -129,7 +129,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         ProjectStructureAgentContext agent, CancellationToken cancellationToken = default) {
         var intentId = request.IntentId ?? Guid.NewGuid();
         if (intentId == Guid.Empty) {
-            throw new ProjectStructureAgentException(400, "WorkflowIntentRequired", "The workflow launch intent cannot be empty.");
+            throw WorkflowNodeRejection(400, "WorkflowIntentRequired", "The workflow launch intent cannot be empty.");
         }
 
         try {
@@ -204,7 +204,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         var run = workflowMetadata.LastRunId.HasValue
             ? await workflowRuntimeManager.GetRunAsync(workflowMetadata.LastRunId.Value, cancellationToken) : null;
         if (workflowMetadata.LastRunId.HasValue && run is null) {
-            throw new ProjectStructureAgentException(404, "WorkflowRunNotFound", "The workflow run linked from this node was not found.");
+            throw WorkflowNodeRejection(404, "WorkflowRunNotFound", "The workflow run linked from this node was not found.");
         }
 
         return await BuildStatusAsync(detail.Definition, workflowMetadata, run, cancellationToken);
@@ -213,7 +213,7 @@ public sealed class ProjectStructureWorkflowNodeService(
     public async Task<ProjectWorkflowDeliveryState> ReconcileAsync(Guid intentId,
         CancellationToken cancellationToken = default) {
         var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, cancellationToken)
-            ?? throw new ProjectStructureAgentException(404, "WorkflowAdmissionNotFound", "The workflow launch admission was not found.");
+            ?? throw WorkflowNodeRejection(404, "WorkflowAdmissionNotFound", "The workflow launch admission was not found.");
         var run = await workflowRunStore.GetRunAsync(admission.Binding.RunId, cancellationToken);
         if (run is null) {
             await workflowAuthority.EnsureCurrentAsync(admission.Binding.Authority, null, cancellationToken);
@@ -245,24 +245,24 @@ public sealed class ProjectStructureWorkflowNodeService(
     {
         if (request.WorkflowId.Value == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "WorkflowDefinitionRequired", "A workflow definition id is required.");
+            throw WorkflowNodeRejection(400, "WorkflowDefinitionRequired", "A workflow definition id is required.");
         }
 
         if (request.VersionId.HasValue && request.VersionId.Value.Value == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(400, "WorkflowVersionInvalid", "Workflow version id cannot be empty.");
+            throw WorkflowNodeRejection(400, "WorkflowVersionInvalid", "Workflow version id cannot be empty.");
         }
 
         if (string.IsNullOrWhiteSpace(parentNodeId))
         {
-            throw new ProjectStructureAgentException(400, "ParentNodeRequired", "A parent project-structure node id is required.");
+            throw WorkflowNodeRejection(400, "ParentNodeRequired", "A parent project-structure node id is required.");
         }
 
         var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
         var parentNode = surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
         if (parentNode is null)
         {
-            throw new ProjectStructureAgentException(404, "ParentNodeNotFound", $"Parent node '{parentNodeId}' was not found.");
+            throw WorkflowNodeRejection(404, "ParentNodeNotFound", $"Parent node '{parentNodeId}' was not found.");
         }
 
         if (allowCanonicalTaskParent)
@@ -271,7 +271,7 @@ public sealed class ProjectStructureWorkflowNodeService(
                     parentNode.ObjectType,
                     parentNode.ObjectSubtype))
             {
-                throw new ProjectStructureAgentException(
+                throw WorkflowNodeRejection(
                     400,
                     "CanonicalTaskRequired",
                     $"Node '{parentNodeId}' is not a canonical WorkItem/task node.");
@@ -290,7 +290,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             cancellationToken);
         if (detail is null)
         {
-            throw new ProjectStructureAgentException(
+            throw WorkflowNodeRejection(
                 404,
                 "WorkflowDefinitionNotFound",
                 $"Workflow definition '{request.WorkflowId}' was not found.");
@@ -360,7 +360,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         Guid intentId, ProjectStructureWorkflowNodeStartInput request, ProjectStructureAgentContext agent,
         CancellationToken cancellationToken) {
         if (string.IsNullOrWhiteSpace(nodeId)) {
-            throw new ProjectStructureAgentException(400, "NodeRequired", "A project-structure node id is required.");
+            throw WorkflowNodeRejection(400, "NodeRequired", "A project-structure node id is required.");
         }
 
         var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, cancellationToken);
@@ -457,19 +457,19 @@ public sealed class ProjectStructureWorkflowNodeService(
         var project = await projectSummaryQuery.GetSummaryAsync(projectId, cancellationToken);
         if (project is null)
         {
-            throw new ProjectStructureAgentException(404, "ProjectNotFound", $"Project '{projectId:D}' was not found.");
+            throw WorkflowNodeRejection(404, "ProjectNotFound", $"Project '{projectId:D}' was not found.");
         }
 
         var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
         var nodesById = surface.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
         if (!nodesById.TryGetValue(nodeId, out var node))
         {
-            throw new ProjectStructureAgentException(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
+            throw WorkflowNodeRejection(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
         }
 
         if (string.IsNullOrWhiteSpace(node.ParentId) || !nodesById.TryGetValue(node.ParentId, out var parentNode))
         {
-            throw new ProjectStructureAgentException(
+            throw WorkflowNodeRejection(
                 400,
                 "WorkflowParentNodeMissing",
                 $"Workflow node '{nodeId}' must have an existing parent node to supply run input.");
@@ -484,7 +484,7 @@ public sealed class ProjectStructureWorkflowNodeService(
     {
         if (workflowMetadata.WorkflowId is not { } workflowId)
         {
-            throw new ProjectStructureAgentException(
+            throw WorkflowNodeRejection(
                 400,
                 "WorkflowDefinitionRequired",
                 "Workflow node metadata is missing the workflow definition id.");
@@ -496,7 +496,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             cancellationToken);
         if (detail is null)
         {
-            throw new ProjectStructureAgentException(
+            throw WorkflowNodeRejection(
                 404,
                 "WorkflowDefinitionNotFound",
                 $"Workflow definition '{workflowId}' was not found.");
@@ -509,7 +509,7 @@ public sealed class ProjectStructureWorkflowNodeService(
     {
         if (node.ObjectType != ProjectObjectType.WorkflowDefinition)
         {
-            throw new ProjectStructureAgentException(
+            throw WorkflowNodeRejection(
                 400,
                 "WorkflowNodeRequired",
                 $"Node '{node.Id}' is '{node.ObjectType}', but workflow start requires a workflow node.");
@@ -518,7 +518,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
         if (metadata.Workflow is null)
         {
-            throw new ProjectStructureAgentException(
+            throw WorkflowNodeRejection(
                 400,
                 "WorkflowMetadataMissing",
                 $"Workflow node '{node.Id}' is missing workflow metadata.");
@@ -526,7 +526,7 @@ public sealed class ProjectStructureWorkflowNodeService(
 
         if (metadata.Workflow.WorkflowId is null)
         {
-            throw new ProjectStructureAgentException(
+            throw WorkflowNodeRejection(
                 400,
                 "WorkflowDefinitionRequired",
                 $"Workflow node '{node.Id}' is missing the workflow definition id.");
@@ -542,7 +542,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             return;
         }
 
-        throw new ProjectStructureAgentException(
+        throw WorkflowNodeRejection(
             400,
             "WorkflowDefinitionInvalid",
             $"Workflow definition '{detail.Definition.Name}' cannot start from project structure because validation failed.",
@@ -631,7 +631,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             var requested = options.FirstOrDefault(item => item.WorkflowId == requestedWorkflowId.Value);
             if (requested is null)
             {
-                throw new ProjectStructureAgentException(
+                throw WorkflowNodeRejection(
                     404,
                     "WorkflowDefinitionNotFound",
                     $"Workflow definition '{requestedWorkflowId.Value}' was not found.");
@@ -639,7 +639,7 @@ public sealed class ProjectStructureWorkflowNodeService(
 
             if (!requested.IsSelectable)
             {
-                throw new ProjectStructureAgentException(
+                throw WorkflowNodeRejection(
                     400,
                     "WorkflowDefinitionInactive",
                     $"Workflow definition '{requested.DisplayName}' is not active.");
@@ -807,7 +807,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         {
             if (!nodesById.TryGetValue(nodeId, out var node))
             {
-                throw new ProjectStructureAgentException(
+                throw WorkflowNodeRejection(
                     404,
                     "WorkflowSelectedNodeNotFound",
                     $"Selected workflow input node '{nodeId}' was not found.");
@@ -1173,7 +1173,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             return;
         }
 
-        throw new ProjectStructureAgentException(
+        throw WorkflowNodeRejection(
             400,
             "WorkflowDefinitionInactive",
             $"Workflow definition '{definition.Name}' is not active.");
@@ -1237,4 +1237,19 @@ public sealed class ProjectStructureWorkflowNodeService(
         string MarkerIcon,
         string MarkerTone,
         string MarkerLabel);
+
+    // Workflow nodes are resolved and validated before a node is written or a run is launched, so each rejection is
+    // a no-effect failure the model can correct.
+    private static ProjectStructureAgentException WorkflowNodeRejection(
+        int statusCode,
+        string errorCode,
+        string message,
+        object? diagnosticDetails = null)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            statusCode,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            diagnosticDetails,
+            AgentToolEffectState.NotCommitted);
 }

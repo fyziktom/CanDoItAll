@@ -119,6 +119,23 @@ internal sealed class SharedProviderInferenceOpenApiContract
                     required: false,
                     pattern: "^[0-9]{1,5}$");
             }
+
+            // A streaming operation declares its JSON and its event-stream success separately for the same status, and
+            // the generator keeps only the last one; restore the JSON reply of a request without stream: true.
+            if (responseEntry.Key == StatusCodes.Status200OK.ToString() &&
+                response.Content is { } content &&
+                content.ContainsKey("text/event-stream") &&
+                !content.ContainsKey(MediaTypeNames.Application.Json))
+            {
+                content[MediaTypeNames.Application.Json] = new OpenApiMediaType
+                {
+                    Schema = new OpenApiSchema
+                    {
+                        Type = JsonSchemaType.Object,
+                        Description = "The provider's response object, relayed as JSON when the request does not set stream: true."
+                    }
+                };
+            }
         }
 
         return Task.CompletedTask;

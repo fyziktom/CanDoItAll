@@ -155,13 +155,16 @@ internal static class LocalStdioMcpProcessLauncher
                     cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (WorkspaceProcessStartException)
+        catch (WorkspaceProcessStartException exception)
         {
+            var explanation = WorkspaceLaunchExplanations.For(exception.FailureKind);
             throw new McpSetupException(
                 CapabilityDiagnosticCategory.ProcessStart,
                 "$.command",
-                $"MCP server '{descriptor.ServerKey}' could not start its approved executable.",
-                "Verify executable permissions, runtime dependencies, and the authorized working directory.");
+                $"MCP server '{descriptor.ServerKey}' could not start its approved executable ({explanation.Code}).",
+                exception.FailureKind == WorkspaceProcessStartFailureKind.Unknown
+                    ? "Verify executable permissions, runtime dependencies, and the authorized working directory."
+                    : explanation.OperatorRemediation);
         }
 
         if (session is IWorkspaceDuplexProcessSession duplexSession)

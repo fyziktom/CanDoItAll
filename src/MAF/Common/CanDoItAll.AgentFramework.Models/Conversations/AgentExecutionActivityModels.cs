@@ -13,6 +13,7 @@ public static class AgentExecutionActivityFailureCodes
 {
     public const string UnhandledExecutionFailure = "agent-execution-unhandled";
     public const string OutputValidationFailure = "agent-output-validation";
+    public const string RequiredMutationFailure = "agent-required-mutation";
 }
 
 [JsonConverter(typeof(AgentExecutionOperationIdJsonConverter))]

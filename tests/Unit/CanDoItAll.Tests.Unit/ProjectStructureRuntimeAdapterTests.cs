@@ -17,7 +17,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var adapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver("/tools/dotnet"),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         var plan = CreatePlan(
             ["run", "--project", "/workspace/App.csproj"],
             new Dictionary<string, string?> { ["ASPNETCORE_URLS"] = "http://127.0.0.1:5032" });
@@ -28,7 +29,7 @@ public sealed class ProjectStructureRuntimeAdapterTests
         Assert.NotNull(host.Request);
         Assert.Equal("/tools/dotnet", host.Request!.ExecutablePath);
         Assert.Equal(plan.Arguments, host.Request.Arguments);
-        Assert.Equal(plan.EnvironmentVariables, host.Request.EnvironmentVariables);
+        Assert.Equal("http://127.0.0.1:5032", host.Request.EnvironmentVariables["ASPNETCORE_URLS"]);
         Assert.Equal(plan.WorkingDirectory, host.Request.WorkingDirectory);
         Assert.False(host.Session.Detached);
         Assert.True(registry.IsRunning("node-1"));
@@ -40,6 +41,82 @@ public sealed class ProjectStructureRuntimeAdapterTests
     }
 
     [Fact]
+    public async Task Direct_adapter_inherits_the_toolchain_environment_the_host_would_otherwise_clear()
+    {
+        var host = new RecordingLongRunningProcessHost();
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(
+            registry,
+            new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
+        var inheritedPath = Environment.GetEnvironmentVariable("PATH");
+        Assert.False(string.IsNullOrWhiteSpace(inheritedPath));
+
+        var result = await adapter.LaunchAsync(
+            CreatePlan(environment: new Dictionary<string, string?> { ["PATH"] = "/plan/bin" }),
+            "node-1",
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        var environment = host.Request!.EnvironmentVariables;
+        Assert.Equal("/plan/bin", environment["PATH"]);
+        var inheritedName = OperatingSystem.IsWindows() ? "TEMP" : "HOME";
+        environment.TryGetValue(inheritedName, out var inheritedValue);
+        Assert.Equal(Environment.GetEnvironmentVariable(inheritedName), inheritedValue);
+        Assert.DoesNotContain(environment.Keys, key => key.Contains("SECRET", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Direct_adapter_reports_an_immediate_exit_with_its_code_and_output()
+    {
+        var host = new RecordingLongRunningProcessHost
+        {
+            ExitImmediately = (1, "MSBUILD : error MSB1025: Access to the path 'C:\\WINDOWS\\MSBuildTemp' is denied.")
+        };
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(
+            registry,
+            new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.FromSeconds(5));
+
+        var result = await adapter.LaunchAsync(CreatePlan(), "node-1", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("exited immediately", result.Message, StringComparison.Ordinal);
+        Assert.Contains("code 1", result.Message, StringComparison.Ordinal);
+        Assert.Contains("MSB1025", result.Message, StringComparison.Ordinal);
+        Assert.False(registry.IsRunning("node-1"));
+        var lastExit = Assert.IsType<ProjectStructureRuntimeExitRecord>(adapter.GetLastExit("node-1"));
+        Assert.Equal(1, lastExit.ExitCode);
+    }
+
+    [Fact]
+    public async Task Registry_keeps_a_later_failure_but_not_an_operator_stop()
+    {
+        var host = new RecordingLongRunningProcessHost();
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(
+            registry,
+            new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
+        Assert.True((await adapter.LaunchAsync(CreatePlan(), "crashing", CancellationToken.None)).IsSuccess);
+        Assert.True((await adapter.LaunchAsync(CreatePlan(), "stopped", CancellationToken.None)).IsSuccess);
+
+        host.Sessions[0].Exit(3, "Unhandled exception. System.InvalidOperationException: boom");
+        var crashed = await registry.WaitForExitAsync("crashing", TimeSpan.FromSeconds(5), CancellationToken.None);
+        var stopped = await registry.StopSessionAsync("stopped", CancellationToken.None);
+
+        Assert.Equal(3, Assert.IsType<ProjectStructureRuntimeExitRecord>(crashed).ExitCode);
+        Assert.Contains("boom", registry.GetLastExit("crashing")!.Describe(), StringComparison.Ordinal);
+        Assert.False(registry.IsRunning("crashing"));
+        Assert.True(stopped.IsSuccess, stopped.Message);
+        Assert.Null(registry.GetLastExit("stopped"));
+    }
+
+    [Fact]
     public async Task Direct_adapter_reports_cancellation_without_shell_fallback()
     {
         var host = new RecordingLongRunningProcessHost { CancelStart = true };
@@ -47,7 +124,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var adapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver("/tools/dotnet"),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
@@ -59,6 +137,44 @@ public sealed class ProjectStructureRuntimeAdapterTests
     }
 
     [Fact]
+    public async Task Direct_adapter_explains_a_start_failure_to_the_operator_with_the_folder_and_remedy()
+    {
+        var host = new RecordingLongRunningProcessHost { FailStart = WorkspaceProcessStartFailureKind.WorkingDirectoryTooLong };
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(
+            registry,
+            new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
+        var longFolder = "/workspace/" + new string('w', 270);
+
+        var result = await adapter.LaunchAsync(CreatePlan(workingDirectory: longFolder), "node-1", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.StartsWith(".NET runtime could not start. The working folder path is", result.Message, StringComparison.Ordinal);
+        Assert.Contains(longFolder, result.Message, StringComparison.Ordinal);
+        Assert.Contains("Move the project to a shorter folder", result.Message, StringComparison.Ordinal);
+        Assert.False(adapter.IsRunning("node-1"));
+    }
+
+    [Fact]
+    public void Executable_resolver_names_the_missing_program_without_its_folder_and_gives_the_remedy()
+    {
+        var resolver = new ProjectStructureExecutableResolver(new WorkspaceExecutableLocator());
+
+        var resolution = resolver.Resolve(
+            [Path.Combine(Path.GetTempPath(), $"cdia-missing-{Guid.NewGuid():N}", "cdia-missing-runtime")],
+            Path.GetTempPath());
+
+        Assert.False(resolution.IsSuccess);
+        Assert.Equal(
+            "The program this command needs was not found on the host (cdia-missing-runtime). " +
+            WorkspaceLaunchExplanations.For(WorkspaceProcessStartFailureKind.ExecutableNotFound).OperatorRemediation,
+            resolution.Message);
+        Assert.DoesNotContain(Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar), resolution.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     [Trait("Category", "UnixPortabilityCore")]
     public async Task Direct_adapter_starts_a_real_cross_platform_executable_without_a_shell()
     {
@@ -66,7 +182,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var adapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new ProjectStructureExecutableResolver(new WorkspaceExecutableLocator()),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         var plan = CreatePlan(
             arguments: ["--version"],
             workingDirectory: AppContext.BaseDirectory);
@@ -84,7 +201,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var adapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver(null),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
 
         var missing = adapter.Probe(CreatePlan());
         var terminalOnly = adapter.Probe(CreatePlan(terminalOnly: true));
@@ -101,11 +219,13 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var firstAdapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver("/tools/dotnet"),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         var recoveredAdapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver("/tools/dotnet"),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         var started = await firstAdapter.LaunchAsync(CreatePlan(), "node-1", CancellationToken.None);
 
         var stopped = await recoveredAdapter.StopAsync("node-1", CancellationToken.None);
@@ -124,7 +244,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var adapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver("/tools/dotnet"),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         var started = await adapter.LaunchAsync(CreatePlan(), "node-1", CancellationToken.None);
 
         await registry.StopAsync(CancellationToken.None);
@@ -142,7 +263,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var adapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver("/tools/dotnet"),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         Assert.True((await adapter.LaunchAsync(CreatePlan(), "node-1", CancellationToken.None)).IsSuccess);
         Assert.True((await adapter.LaunchAsync(CreatePlan(), "node-2", CancellationToken.None)).IsSuccess);
         using var cancellation = new CancellationTokenSource();
@@ -164,7 +286,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var adapter = new ProjectStructureRuntimeExecutionAdapter(
             registry,
             new StubExecutableResolver("/tools/dotnet"),
-            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance);
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance,
+            TimeSpan.Zero);
         Assert.True((await adapter.LaunchAsync(CreatePlan(), "node-1", CancellationToken.None)).IsSuccess);
         Assert.True((await adapter.LaunchAsync(CreatePlan(), "node-2", CancellationToken.None)).IsSuccess);
 
@@ -208,6 +331,52 @@ public sealed class ProjectStructureRuntimeAdapterTests
         var capability = presenter.Probe(CreatePlan());
 
         Assert.Equal(ProjectStructureRuntimeCapabilityStatus.Headless, capability.Status);
+    }
+
+    [Fact]
+    public void Windows_terminal_prelude_removes_every_variable_outside_the_composed_environment()
+    {
+        var environment = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TEMP"] = @"C:\Users\operator\AppData\Local\Temp",
+            ["PATH"] = @"C:\Program Files\dotnet",
+            ["UNSET_BY_CALLER"] = null
+        };
+
+        var command = ProjectStructureTerminalPresenter.BuildPowerShellPresentationCommand(
+            CreatePlan(workingDirectory: @"C:\work\app"),
+            @"C:\Program Files\dotnet\dotnet.exe",
+            environment);
+
+        Assert.StartsWith("$cdiaKeep = @('PATH','TEMP'); Get-ChildItem Env: | Where-Object { $cdiaKeep -notcontains $_.Name } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name)", command, StringComparison.Ordinal);
+        Assert.Contains("[System.Environment]::SetEnvironmentVariable('PATH', 'C:\\Program Files\\dotnet')", command, StringComparison.Ordinal);
+        Assert.Contains(ProjectStructureTerminalPresenter.TerminalEnvironmentExplanation, command, StringComparison.Ordinal);
+        Assert.EndsWith("& 'C:\\Program Files\\dotnet\\dotnet.exe' 'run'", command, StringComparison.Ordinal);
+        Assert.DoesNotContain("UNSET_BY_CALLER", command, StringComparison.Ordinal);
+        Assert.DoesNotContain("OPENAI_API_KEY", command, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Unix_terminal_runs_the_runtime_through_env_i_with_only_the_composed_environment()
+    {
+        var presenter = new ProjectStructureTerminalPresenter(
+            new ProjectStructureRuntimeHostContext(ProjectStructureRuntimeHostPlatform.Linux),
+            new ProjectStructureRuntimePresentationOptions
+            {
+                LinuxTerminalExecutable = "x-terminal-emulator",
+                LinuxTerminalArgumentPrefix = ["-e"]
+            },
+            new StubExecutableResolver("/usr/bin/resolved"),
+            NullLogger<ProjectStructureTerminalPresenter>.Instance);
+
+        var startInfo = presenter.BuildStartInfo(CreatePlan(), "/usr/bin/x-terminal-emulator", "/usr/bin/dotnet");
+        var arguments = startInfo.ArgumentList.ToArray();
+
+        Assert.Equal(["-e", "env", "-i"], arguments[..3]);
+        Assert.Equal(["/usr/bin/dotnet", "run"], arguments[^2..]);
+        Assert.Contains(arguments, argument => argument.StartsWith("PATH=", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(arguments, argument => argument.StartsWith("OPENAI_API_KEY=", StringComparison.OrdinalIgnoreCase));
+        Assert.False(startInfo.UseShellExecute);
     }
 
     [Fact]
@@ -295,6 +464,10 @@ public sealed class ProjectStructureRuntimeAdapterTests
 
         public bool CancelEveryTermination { get; init; }
 
+        public (int ExitCode, string Stderr)? ExitImmediately { get; init; }
+
+        public WorkspaceProcessStartFailureKind? FailStart { get; init; }
+
         public ExecutionBoundaryDescriptor DescribeBoundary() => ExecutionBoundaryDescriptor.Unknown;
 
         public Task<WorkspaceProcessExecutionResult> ExecuteAsync(
@@ -311,10 +484,23 @@ public sealed class ProjectStructureRuntimeAdapterTests
                 throw new OperationCanceledException(cancellationToken);
             }
 
+            if (FailStart is { } failureKind)
+            {
+                throw new WorkspaceProcessStartException(
+                    WorkspaceLaunchExplanations.For(failureKind).AgentText,
+                    failureKind,
+                    operatorDetail: "operator detail");
+            }
+
             Request = request;
             var session = Sessions.Count == 0 ? firstSession : new RecordingProcessSession();
             session.CancelTermination = CancelEveryTermination;
             Sessions.Add(session);
+            if (ExitImmediately is { } exit)
+            {
+                session.Exit(exit.ExitCode, exit.Stderr);
+            }
+
             return Task.FromResult<IWorkspaceProcessSession>(session);
         }
 
@@ -348,9 +534,16 @@ public sealed class ProjectStructureRuntimeAdapterTests
                 1234,
                 Guid.Empty));
 
-        public bool HasExited => false;
+        public bool HasExited => completion.Task.IsCompleted;
 
         public WorkspaceProcessOutputSnapshot CaptureOutput() => new(string.Empty, string.Empty, false, false);
+
+        public void Exit(int exitCode, string stderr)
+            => completion.TrySetResult(CreateExecutionResult(
+                WorkspaceProcessTerminationReason.Completed,
+                string.Empty,
+                exitCode,
+                stderr));
 
         public Task<WorkspaceProcessExecutionResult> WaitForExitAsync(CancellationToken cancellationToken = default)
             => completion.Task.WaitAsync(cancellationToken);
@@ -393,12 +586,14 @@ public sealed class ProjectStructureRuntimeAdapterTests
 
         private static WorkspaceProcessExecutionResult CreateExecutionResult(
             WorkspaceProcessTerminationReason reason,
-            string failureMessage)
+            string failureMessage,
+            int exitCode = 0,
+            string stderr = "")
             => new(
                 Started: true,
-                ExitCode: 0,
+                ExitCode: exitCode,
                 Stdout: string.Empty,
-                Stderr: string.Empty,
+                Stderr: stderr,
                 StdoutTruncated: false,
                 StderrTruncated: false,
                 StartedAtUtc: DateTimeOffset.Parse("2026-08-10T00:00:00Z"),

@@ -12,8 +12,8 @@ public sealed class AgentsOverviewPresentationTests {
         var providers = new List<ProviderUsageProviderRow> { new(null, "Provider", ProviderKind.OpenAi, ProviderUsageTotals.Empty, null) };
         var sources = new List<ProviderUsageSourceStatus> { new("Source", ProviderUsageWorkloadKind.Agent, ProviderUsageSourceState.Partial, DateTimeOffset.UnixEpoch, new("private", "Internal source detail")) };
         var avatars = new Dictionary<string, string?> { ["id"] = "safe-avatar.svg" };
-        var state = AgentsOverviewPresentation.Create(AgentOverviewSnapshot.Empty with { TeamShortcuts = teams },
-            ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both) with { Consumers = consumers, Providers = providers, Sources = sources },
+        var state = AgentsOverviewPresentation.Create(AgentRuntimeSummary.Empty with { TeamShortcuts = teams },
+            ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both) with { Query = new(ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow), Consumers = consumers, Providers = providers, Sources = sources },
             ProviderUsageWorkloadSelection.Both, false, false, null, null, avatars);
         teams.Clear();
         consumers.Clear();
@@ -30,7 +30,7 @@ public sealed class AgentsOverviewPresentationTests {
 
     [Fact]
     public void Mismatched_usage_snapshot_preserves_observed_identity_but_omits_its_data() {
-        var state = AgentsOverviewPresentation.Create(AgentOverviewSnapshot.Empty,
+        var state = AgentsOverviewPresentation.Create(AgentRuntimeSummary.Empty,
             ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Agents), ProviderUsageWorkloadSelection.SimpleChats,
             false, false, null, "Selected scope is unavailable.", new Dictionary<string, string?>());
         Assert.Equal(ProviderUsageWorkloadSelection.Agents, state.AcceptedScope);
@@ -49,8 +49,8 @@ public sealed class AgentsOverviewPresentationTests {
     [InlineData(true, true, false, AgentsOverviewReadPhase.Refreshing)]
     [InlineData(true, false, true, AgentsOverviewReadPhase.Stale)]
     public void Read_phase_preserves_loading_accepted_and_error_meanings(bool accepted, bool loading, bool failed, AgentsOverviewReadPhase expected) {
-        var state = AgentsOverviewPresentation.Create(accepted ? AgentOverviewSnapshot.Empty : null,
-            accepted ? ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both) : null,
+        var state = AgentsOverviewPresentation.Create(accepted ? AgentRuntimeSummary.Empty : null,
+            accepted ? ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both) with { Query = new(ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow) } : null,
             ProviderUsageWorkloadSelection.Both, loading, loading, failed ? "Unavailable" : null, failed ? "Unavailable" : null,
             new Dictionary<string, string?>());
         Assert.Equal(expected, state.OverviewPhase);

@@ -124,6 +124,27 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
         }
     }
 
+    internal static async Task<AgentToolAdmissionJournalFixture> RestoreRetainedAsync(
+        AgentDefinition agent, ProviderProfile provider, AgentToolProfileBinding profile, ExecutionRunRecord run) {
+        var environment = CanDoItAllTestEnvironment.Create($"retained-tool-admission-{Guid.NewGuid():N}");
+        try {
+            var workspace = environment.CreateInMemoryProfile("retained");
+            var store = new FileSandboxWorkspaceStore(workspace.WorkspaceRootPath, WorkspaceScopeDescriptor.Sandbox);
+            await store.UpdateCatalogAsync(catalog => catalog with {
+                Agents = catalog.Agents.Where(item => item.Id != agent.Id).Append(agent).ToArray(),
+                Providers = catalog.Providers.Where(item => item.Id != provider.Id).Append(provider).ToArray()
+            });
+            var chat = new ChatSessionRecord(run.ChatSessionId!.Value, agent.Id, run.Title, run.CreatedAtUtc,
+                run.UpdatedAtUtc, [], LatestExecutionRunId: run.Id);
+            var saved = await store.SaveExecutionRunDetailAsync(new(run, chat, [], []));
+            return new(environment, workspace.WorkspaceRootPath, store, profile, agent, provider, saved,
+                WorkspaceScopeDescriptor.Sandbox, []);
+        } catch {
+            await environment.DisposeAsync();
+            throw;
+        }
+    }
+
     internal static void RequireScriptedFault(Exception failure, string expectedMessage) {
         for (Exception? current = failure; current is not null; current = current.InnerException) {
             if (current is IOException && current.Message == expectedMessage) {

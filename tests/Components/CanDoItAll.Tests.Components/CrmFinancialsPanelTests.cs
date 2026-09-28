@@ -15,8 +15,7 @@ public sealed class CrmFinancialsPanelTests
     private static readonly Guid AccountB = Guid.Parse("87000000-0000-0000-0000-00000000000b");
 
     [Fact]
-    public void Renders_currency_safe_metrics_period_controls_and_unavailable_sources()
-    {
+    public async Task Renders_currency_safe_metrics_period_controls_and_unavailable_sources() {
         using var context = CreateContext(new StubFinancialSnapshotQueryService(Snapshot(AccountA)));
 
         var cut = context.Render<CrmFinancialsPanel>(
@@ -34,9 +33,9 @@ public sealed class CrmFinancialsPanelTests
         Assert.Single(cut.FindComponents<CrmHrFinancialsSurface>());
         Assert.Single(cut.FindComponents<CdaChart>());
 
-        cut.Find("[data-testid='crmhr-financials-year']").Click();
+        await cut.Find("[data-testid='crmhr-financials-year']").ClickAsync();
 
-        Assert.Contains("Sold value by year", cut.Markup, StringComparison.Ordinal);
+        cut.WaitForAssertion(() => Assert.Contains("Sold value by year", cut.Markup, StringComparison.Ordinal));
         Assert.DoesNotContain("100% sold", cut.Markup, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -86,8 +85,7 @@ public sealed class CrmFinancialsPanelTests
     }
 
     [Fact]
-    public async Task Retry_reads_the_failed_account_once_and_the_period_choice_survives_an_account_change()
-    {
+    public async Task Retry_reads_the_failed_account_once_and_the_period_choice_survives_an_account_change() {
         var query = new ScriptedFinancialQuery();
         using var context = CreateContext(query);
 
@@ -95,14 +93,14 @@ public sealed class CrmFinancialsPanelTests
         await cut.InvokeAsync(() => query.Fail(0, new IOException("offline")));
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='crmhr-financials-retry']")));
 
-        cut.Find("[data-testid='crmhr-financials-retry']").Click();
+        var retryClick = cut.Find("[data-testid='crmhr-financials-retry']").ClickAsync();
         cut.WaitForAssertion(() => Assert.True(cut.Find("[data-testid='crmhr-financials-retry']").HasAttribute("disabled")));
         Assert.Equal(2, query.Calls.Count);
         await cut.InvokeAsync(() => query.Complete(1, Snapshot(AccountA)));
+        await retryClick;
         cut.WaitForAssertion(() => Assert.Equal("ready", cut.Find("[data-testid='crmhr-financials-panel']").GetAttribute("data-phase")));
 
-        // The retry click's own completion is still queued on the dispatcher, so the period render is awaited.
-        cut.Find("[data-testid='crmhr-financials-year']").Click();
+        await cut.Find("[data-testid='crmhr-financials-year']").ClickAsync();
         cut.WaitForAssertion(() => Assert.Equal("year", cut.Find("[data-testid='crmhr-financials-panel']").GetAttribute("data-period")));
         Assert.Equal(2, query.Calls.Count);
 

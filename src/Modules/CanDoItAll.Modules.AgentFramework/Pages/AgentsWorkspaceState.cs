@@ -43,6 +43,7 @@ public sealed record AgentsWorkspaceState {
     public Guid? TeamId { get; init; }
     public SimpleChatWorkspaceRouteState SimpleChat { get; init; } = SimpleChatWorkspaceRouteState.Default;
     public ProviderUsageWorkloadSelection UsageSelection { get; init; } = ProviderUsageWorkloadSelection.Both;
+    public ProviderUsagePeriod UsagePeriod { get; init; } = ProviderUsagePeriod.SevenDays;
     public AgentChatContextAccessState SelectionAccess { get; init; } = AgentChatContextAccessState.Loading;
 
     public AgentsWorkspaceState SelectSection(AgentWorkspaceSection section) {
@@ -63,6 +64,7 @@ public sealed record AgentsWorkspaceState {
             TeamId = route.TeamId,
             SimpleChat = route.SimpleChat,
             UsageSelection = route.UsageSelection,
+            UsagePeriod = route.UsagePeriod,
             SelectionAccess = Section == section && AgentId == route.AgentId && TeamId == route.TeamId
                 ? SelectionAccess
                 : InitialAccess(section)
@@ -70,7 +72,7 @@ public sealed record AgentsWorkspaceState {
     }
 
     public AgentWorkspaceRouteState ToRoute()
-        => new(Section.ToTabKey(), AgentId, TeamId, SimpleChat, UsageSelection);
+        => new(Section.ToTabKey(), AgentId, TeamId, SimpleChat, UsageSelection, UsagePeriod);
 
     private static AgentChatContextAccessState InitialAccess(AgentWorkspaceSection section)
         => section.UsesAgentSelection() ? AgentChatContextAccessState.Loading : AgentChatContextAccessState.Ready;

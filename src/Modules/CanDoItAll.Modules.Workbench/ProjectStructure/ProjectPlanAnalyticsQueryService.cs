@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -841,10 +842,12 @@ public sealed class ProjectPlanAnalyticsQueryService
         }
         catch (ArgumentOutOfRangeException exception)
         {
-            throw new ProjectStructureAgentException(
+            throw ProjectStructureAgentException.CreateAgentVisible(
                 400,
                 "PlanSummaryQueryInvalid",
-                exception.Message);
+                exception.Message,
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.None);
         }
     }
 
@@ -856,10 +859,12 @@ public sealed class ProjectPlanAnalyticsQueryService
         }
         catch (ArgumentException exception)
         {
-            throw new ProjectStructureAgentException(
+            throw ProjectStructureAgentException.CreateAgentVisible(
                 400,
                 "PlanSummaryQueryInvalid",
-                exception.Message);
+                exception.Message,
+                canRetryWithCorrectedInput: true,
+                effectState: AgentToolEffectState.None);
         }
     }
 

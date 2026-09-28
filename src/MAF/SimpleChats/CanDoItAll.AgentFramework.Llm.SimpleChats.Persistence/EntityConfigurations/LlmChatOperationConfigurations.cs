@@ -69,6 +69,7 @@ internal sealed class LlmChatInvocationRecordConfiguration : IEntityTypeConfigur
             .HasForeignKey(row => row.OperationId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(row => new { row.ProviderProfileId, row.StartedAtUtc });
+        builder.HasIndex(row => row.CompletedAtUtc);
     }
 }
 

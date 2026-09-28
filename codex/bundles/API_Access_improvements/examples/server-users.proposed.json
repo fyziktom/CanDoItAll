@@ -1,0 +1,22 @@
+{
+  "Api": {
+    "Enabled": true,
+    "Authorization": {
+      "Enabled": true,
+      "Issuer": "CanDoItAll.Api",
+      "Audience": "CanDoItAll.Api",
+      "DefaultTokenLifetimeMinutes": 480,
+      "MaxTokenLifetimeMinutes": 1440
+    },
+    "UserAuthentication": {
+      "Enabled": true,
+      "TokenLifetimeMinutes": 60
+    },
+    "AccessManagement": {
+      "Enabled": true
+    },
+    "BootstrapAdmin": {
+      "UserName": "admin"
+    }
+  }
+}

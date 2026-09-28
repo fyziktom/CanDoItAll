@@ -12,6 +12,8 @@ Before finalizing, resolve every required criterion. When a required criterion w
 
 After browser proof, call `workspace_dotnet_stop` with the current startup receipt and record cleanup evidence before returning any branch outcome. Project-structure writeback belongs to the result-recording steps; do not call project-structure mutation tools from this validation step.
 
+For static delivery, validate the actual published output on the contract's declared local proof host unless the source explicitly requires an external deployment. If a handoff omitted a proof-host choice, resolve a disposable loopback static host within the available tools and record that reversible validation decision. Verify the SPA entry point, required assets, response headers, and declared PWA cache/update behavior against that host. Do not substitute development-server behavior for published-output proof. Missing optional production credentials or a cloud-provider choice is not a blocker for local delivery. Conversely, never report an explicitly requested external deployment as verified from local evidence. A local static proof server is validation infrastructure and does not violate a client-only application boundary.
+
 ## Evidence
 
 Record declared targets and capabilities, commands, files, current startup and cleanup receipts, URLs, screenshots, browser state, console/page errors, failed criteria, and assumptions.

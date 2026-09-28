@@ -3,6 +3,7 @@ namespace CanDoItAll.SharedProviders.Abstractions;
 public static class SharedProviderProtocol
 {
     public const string CurrentSchemaVersion = "1.1";
+    public const string ImagePricingFeature = "image-pricing";
 }
 
 public static class SharedProviderHeaders
@@ -10,6 +11,7 @@ public static class SharedProviderHeaders
     public const string AccessContextReference = "CanDoItAll-Access-Context-Ref";
     public const string AccessContextReferenceType = "CanDoItAll-Access-Context-Type";
     public const string RequestId = "CanDoItAll-Request-Id";
+    public const string CatalogFeatures = "CanDoItAll-Catalog-Features";
 }
 
 public static class SharedProviderRoutes

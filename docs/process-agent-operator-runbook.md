@@ -34,7 +34,7 @@ This runbook covers the current PostgreSQL-backed process runtime, local dispatc
 | `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
 | `POST` | `/api/processes/launch` | Accept the prepared durable run and optionally queue it. |
 | `GET` | `/api/processes/launch/{admissionId}` | Read preparation, acceptance, continuation and link delivery without executing them. |
-| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work once. |
+| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready steps within the request until none is ready or the run is blocked, cancel-requested or finished (at most 200 passes). |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
 | `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
 | `GET` | `/api/processes/live` | Read live projections. |
@@ -86,6 +86,10 @@ Project Structure starts are handled by `ProjectStructureProcessNodeService`.
 Preserve project id, its original lifetime, node id, definition id, caller intent, admission id, run id, launch variables, and the parent run/step relationship in operator evidence. The source caller is distinct from the Agent selected to execute the Process.
 
 The Structure dialog and Processes workspace retain only the launch intent UUID in per-tab `sessionStorage`. Reload restores the exact owner preparation and accepted run. A missing owner preparation or corrupt marker requires explicit resolution; it is never rebuilt against the current project. Use `Prepare another launch` or `Launch another run` only for an intentional repetition.
+
+The Structure dialog restores an accepted intent only while its launch continuation is still pending (`Accepted` or `Continuing`); that dialog shows the accepted run and offers `Open accepted run`. Once the continuation has finished (`Started`, `Failed` or `ReconciliationRequired`), `Start` retires the retained intent, retries a still-pending Structure link delivery once, and prepares a new launch. The dialog names the earlier run so an operator can open it instead. Without this rule a tab whose accepted launch reported a removed or conflicting Structure link replayed that old run on every later `Start` and never created a new one.
+
+Live processes keeps runs that need operator attention visible regardless of the selected history window. `Hide run` hides the run's root group in the current browser on every live process page, survives reloads, and expires after 30 days. A hidden group returns as soon as one of its runs needs attention again after it was hidden, and a run requested through `runId` stays visible. The header shows the hidden count, and the eye action shows all hidden runs again. Hiding is a per-browser view preference: cancel a run to remove it from attention for every operator.
 
 An accepted run can still have pending continuation or Structure link delivery. Inspect the saved observation after a connection or queue failure before attempting another launch. The continuation worker retries the original outstanding work; pure status reads do not dispatch or recreate links. A removed link remains removed, and a conflicting target is reported explicitly. Historical acceptance remains observable after project retirement or source revocation; a new effect still requires current authority for its original project lifetime.
 

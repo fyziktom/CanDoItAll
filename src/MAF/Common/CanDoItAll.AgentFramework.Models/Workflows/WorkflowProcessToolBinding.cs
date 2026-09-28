@@ -2,6 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Approved agent tool proposal and process step that admitted a workflow run. Internal lineage recorded in the
+/// launch origin.
+/// </summary>
 public sealed record WorkflowProcessToolBinding {
     [JsonConstructor]
     public WorkflowProcessToolBinding(AgentToolSessionReference session, AgentToolProfileBinding profile,
@@ -22,16 +26,27 @@ public sealed record WorkflowProcessToolBinding {
         Validate();
     }
 
+    /// <summary>Background agent session in which the tool was proposed.</summary>
     public AgentToolSessionReference Session { get; }
+    /// <summary>Profile binding of the agent tool.</summary>
     public AgentToolProfileBinding Profile { get; }
+    /// <summary>Batch of tool calls the proposal belongs to.</summary>
     public AgentToolBatchId BatchId { get; }
+    /// <summary>Business intent of the proposal; it also becomes the workflow run identifier.</summary>
     public AgentToolBusinessIntentId IntentId { get; }
+    /// <summary>Name of the tool, at most 128 characters.</summary>
     public string ToolName { get; }
+    /// <summary>Fingerprint of the approved proposal.</summary>
     public AgentToolSemanticDigest ProposalFingerprint { get; }
+    /// <summary>Identifier of the agent that executes the tool.</summary>
     public Guid ExecutorAgentId { get; }
+    /// <summary>Identifier of the capability that allows the agent to launch workflows.</summary>
     public Guid LaunchCapabilityId { get; }
+    /// <summary>Process run that owns the step.</summary>
     public WorkflowProcessRunId ProcessRun { get; }
+    /// <summary>Process step instance that made the proposal.</summary>
     public WorkflowProcessAssignmentId StepInstance { get; }
+    /// <summary>Hash of the step readiness at approval; internal.</summary>
     public string ReadinessHash { get; }
 
     [JsonIgnore]

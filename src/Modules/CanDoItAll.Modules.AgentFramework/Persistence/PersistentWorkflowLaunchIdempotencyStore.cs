@@ -499,10 +499,13 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
             return;
         }
 
+        // A public API key is unique on the host but belongs to the caller that recorded it (actor and authorization
+        // scope): another caller's request with the same key is a conflict, never a replay of that caller's run.
         if (requested.WorkflowId.Value != existing.WorkflowId ||
             requested.SelectionKind != existing.SelectionKind ||
             (requested.RequestedVersionId?.Value ?? Guid.Empty) != existing.RequestedVersionId ||
-            requested.Mode != existing.Mode)
+            requested.Mode != existing.Mode ||
+            !string.Equals(requested.OriginScopeKey.Value, existing.OriginScopeKey, StringComparison.Ordinal))
         {
             throw new WorkflowLaunchIdempotencyConflictException(requested);
         }

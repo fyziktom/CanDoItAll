@@ -193,12 +193,12 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
 
             if (model.Id.HasValue && current is null)
             {
-                throw new InvalidOperationException($"Capability '{model.Id.Value:D}' was not found.");
+                throw new CapabilityCatalogRejectedException($"Capability '{model.Id.Value:D}' was not found.");
             }
 
             if (!model.Id.HasValue && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
             {
-                throw new InvalidOperationException("A capability create cannot specify an expected fingerprint.");
+                throw new CapabilityCatalogRejectedException("A capability create cannot specify an expected fingerprint.");
             }
 
             if (current is not null && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
@@ -207,8 +207,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     CapabilityEditorModel.FromDefinition(current));
                 if (!string.Equals(actualFingerprint, model.ExpectedFingerprint.Trim(), StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException(
-                        $"Capability '{current.Id:D}' changed after it was read. Reload it before saving.");
+                    throw new CapabilityCatalogRejectedException(
+                        $"Capability '{current.Id:D}' changed after it was read. Reload it before saving.",
+                        isConcurrencyConflict: true);
                 }
             }
 
@@ -285,7 +286,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new CapabilityCatalogRejectedException(
             $"Capability save would reuse canonical capability identity '{identityKey}', which already belongs to: {string.Join(", ", collisions)}.");
     }
 

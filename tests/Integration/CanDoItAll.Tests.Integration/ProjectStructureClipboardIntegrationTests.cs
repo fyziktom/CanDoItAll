@@ -613,12 +613,13 @@ public sealed class ProjectStructureClipboardIntegrationTests
             [firstRoot.Id, firstChild.Id, firstGrandchild.Id, secondRoot.Id, secondChild.Id]);
 
         saveCounter.Reset();
-        var cycleException = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var cycleException = await Assert.ThrowsAsync<ProjectStructureInvariantViolationException>(async () =>
             await workbench.ReparentSubtreesAsync(
                 projectId,
                 [firstRoot.Id, secondRoot.Id],
                 firstGrandchild.Id));
         Assert.Contains("cycle", cycleException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ProjectStructureInvariantViolation.HierarchyCycle, cycleException.Violation);
         Assert.Equal(0, saveCounter.SaveChangesCount);
 
         saveCounter.Reset();

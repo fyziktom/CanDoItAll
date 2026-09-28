@@ -1,0 +1,115 @@
+{
+  "source": "S03",
+  "source_commit": "160616c8256594257d00612b4e7dbadd567c024e",
+  "status": "historical reported inventory; regenerate from the final current host",
+  "paths": 289,
+  "operations": 321,
+  "schemas": 518,
+  "families": [
+    {
+      "prefix": "/_dev",
+      "reported_paths": 10,
+      "reported_operations": 10
+    },
+    {
+      "prefix": "/api/access",
+      "reported_paths": 2,
+      "reported_operations": 2
+    },
+    {
+      "prefix": "/api/agent-recruiting",
+      "reported_paths": 6,
+      "reported_operations": 6
+    },
+    {
+      "prefix": "/api/agents",
+      "reported_paths": 62,
+      "reported_operations": 75
+    },
+    {
+      "prefix": "/api/crm-hr",
+      "reported_paths": 15,
+      "reported_operations": 19
+    },
+    {
+      "prefix": "/api/llm-chat-operations",
+      "reported_paths": 4,
+      "reported_operations": 4
+    },
+    {
+      "prefix": "/api/llm-chats",
+      "reported_paths": 8,
+      "reported_operations": 10
+    },
+    {
+      "prefix": "/api/llm-conversations",
+      "reported_paths": 6,
+      "reported_operations": 6
+    },
+    {
+      "prefix": "/api/memory-providers",
+      "reported_paths": 4,
+      "reported_operations": 5
+    },
+    {
+      "prefix": "/api/plugins",
+      "reported_paths": 18,
+      "reported_operations": 20
+    },
+    {
+      "prefix": "/api/processes",
+      "reported_paths": 16,
+      "reported_operations": 16
+    },
+    {
+      "prefix": "/api/project-structure",
+      "reported_paths": 58,
+      "reported_operations": 59
+    },
+    {
+      "prefix": "/api/projects",
+      "reported_paths": 10,
+      "reported_operations": 13
+    },
+    {
+      "prefix": "/api/prompt-gallery",
+      "reported_paths": 10,
+      "reported_operations": 11
+    },
+    {
+      "prefix": "/api/runtime",
+      "reported_paths": 2,
+      "reported_operations": 2
+    },
+    {
+      "prefix": "/api/shared-providers",
+      "reported_paths": 5,
+      "reported_operations": 5
+    },
+    {
+      "prefix": "/api/storage-placement-recovery",
+      "reported_paths": 9,
+      "reported_operations": 9
+    },
+    {
+      "prefix": "/api/workflows",
+      "reported_paths": 39,
+      "reported_operations": 44
+    },
+    {
+      "prefix": "/authorized-files",
+      "reported_paths": 2,
+      "reported_operations": 2
+    },
+    {
+      "prefix": "/managed-files",
+      "reported_paths": 1,
+      "reported_operations": 1
+    },
+    {
+      "prefix": "/storage",
+      "reported_paths": 2,
+      "reported_operations": 2
+    }
+  ]
+}

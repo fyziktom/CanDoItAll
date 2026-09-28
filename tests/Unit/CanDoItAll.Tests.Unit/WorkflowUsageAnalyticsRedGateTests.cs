@@ -260,8 +260,8 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
         var apiSource = ReadSource("src", "App", "CanDoItAll.Web", "Api", "WorkflowsApi.cs");
         var endpoint = Slice(
             apiSource,
-            "workflows.MapGet(\"/analytics\"",
-            ".WithName(\"GetWorkflowAnalytics\");");
+            "internal static async Task<IResult> GetAnalyticsAsync(",
+            "GetWorkflowAnalyticsResultAsync(query, analyticsQueryService, cancellationToken);");
 
         Assert.Contains("IWorkflowAnalyticsQueryService", endpoint, StringComparison.Ordinal);
         Assert.DoesNotContain("IWorkflowRunStore", endpoint, StringComparison.Ordinal);

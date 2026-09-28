@@ -139,7 +139,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>()
                 ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
             physicalPathPolicyFactory,
-            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>());
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>(),
+            serviceProvider.GetService<Microsoft.Extensions.Logging.ILoggerFactory>());
         // One owned workspace aggregate: the bundle constructs the single
         // process host for this workspace identity, every consumer below uses
         // that same instance, and the workspace service disposes the bundle

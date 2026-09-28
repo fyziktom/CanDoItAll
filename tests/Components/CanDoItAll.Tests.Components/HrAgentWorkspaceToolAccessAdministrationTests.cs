@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
 
+[Trait("Category", "HostPlatform")]
 public sealed class HrAgentWorkspaceToolAccessAdministrationTests
 {
     [Fact]
@@ -123,6 +124,62 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
     }
 
     [Fact]
+    public async Task Script_environment_permission_is_set_kept_and_cleared_through_hr_patches()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("hr-script-environment");
+        var profile = environment.CreateInMemoryProfile("primary");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(profile);
+        var services = new ServiceCollection();
+        TestApplicationBootstrap.ConfigureDefaultServices(
+            services,
+            configuration,
+            environment.CreateHostEnvironment("CanDoItAll.HrScriptEnvironmentTests"));
+        await using var serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        await TestApplicationBootstrap.InitializeSchemaAsync(serviceProvider, TestSchemaBootstrapModules.None);
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var workspace = scope.ServiceProvider
+            .GetRequiredService<ICanDoItAllAgentWorkspaceFactory>()
+            .GetOrganizationWorkspaceService();
+        var administration = new HrAgentAdministrationService(
+            workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
+            NullLogger<HrAgentAdministrationService>.Instance);
+        var createResult = await administration.CreateAsync(
+            HrAgentIdentity.AgentId,
+            CreateInput(new HrAgentWorkspaceToolAccessInput(CanRunLocalScripts: true, CanScriptsReadEnvironment: true)),
+            CancellationToken.None);
+        var created = await FindAgentAsync(workspace, createResult.AgentId);
+
+        Assert.True((await administration.GetSettingsAsync(created.Id, CancellationToken.None))
+            .WorkspaceToolAccess.CanScriptsReadEnvironment);
+
+        await administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                created.Id,
+                created.UpdatedAtUtc,
+                WorkspaceToolAccess: new HrAgentWorkspaceToolAccessPatch(CanTransformArtifacts: true)),
+            CancellationToken.None);
+        var kept = await FindAgentAsync(workspace, created.Id);
+        Assert.True((await administration.GetSettingsAsync(created.Id, CancellationToken.None))
+            .WorkspaceToolAccess.CanScriptsReadEnvironment);
+
+        await administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                created.Id,
+                kept.UpdatedAtUtc,
+                WorkspaceToolAccess: new HrAgentWorkspaceToolAccessPatch(CanScriptsReadEnvironment: false)),
+            CancellationToken.None);
+        Assert.False((await administration.GetSettingsAsync(created.Id, CancellationToken.None))
+            .WorkspaceToolAccess.CanScriptsReadEnvironment);
+    }
+
+    [Fact]
     public async Task Null_patch_preserves_legacy_default_and_invalid_workspace_requests_fail()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("hr-workspace-validation");
@@ -178,22 +235,22 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
             initialReadback.WorkspaceToolAccess,
             afterNullPatch.WorkspaceToolAccess);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.CreateAsync(
             HrAgentIdentity.AgentId,
             CreateInput(new HrAgentWorkspaceToolAccessInput(
                 Profile: (AgentWorkspaceToolProfileKind)int.MaxValue)),
             CancellationToken.None));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.CreateAsync(
             HrAgentIdentity.AgentId,
             CreateInput(new HrAgentWorkspaceToolAccessInput(
                 AllowedExternalTargetAliases: [@"C:\"])),
             CancellationToken.None));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.CreateAsync(
             HrAgentIdentity.AgentId,
             CreateInput(new HrAgentWorkspaceToolAccessInput(
                 AllowedStorageCatalogIds: [Guid.Empty])),
             CancellationToken.None));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.CreateAsync(
             HrAgentIdentity.AgentId,
             CreateInput(new HrAgentWorkspaceToolAccessInput(
                 AllowAllStorageCatalogs: true,
@@ -201,7 +258,7 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
             CancellationToken.None));
 
         var afterSummaryUpdate = await FindAgentAsync(workspace, created.Id);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.UpdateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.UpdateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentSettingsUpdateInput(
                 created.Id,
@@ -209,7 +266,7 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
                 WorkspaceToolAccess: new HrAgentWorkspaceToolAccessPatch(
                     AllowedExternalTargetAliases: ["external-target/C/../invalid"])),
             CancellationToken.None));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.UpdateAsync(
+        await Assert.ThrowsAsync<AgentToolInputValidationException>(() => administration.UpdateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentSettingsUpdateInput(
                 created.Id,

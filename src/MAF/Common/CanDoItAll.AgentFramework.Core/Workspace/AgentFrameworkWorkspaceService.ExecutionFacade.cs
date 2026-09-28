@@ -133,6 +133,18 @@ public sealed partial class AgentFrameworkWorkspaceService
             autoApprovePendingToolCalls,
             cancellationToken);
 
+    public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsAsync(Guid executionRunId,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
+        EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,
+            "Pending approval cancellation accepted.", operation => executionService.CancelPendingExecutionApprovalsWithinOperationAsync(
+                operation, executionRunId, cancellationToken));
+    }
+
+    public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default)
+        => executionService.CancelPendingExecutionApprovalsWithinOperationAsync(operation, executionRunId, cancellationToken);
+
     public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunAsync(Guid executionRunId,
         AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
         EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));

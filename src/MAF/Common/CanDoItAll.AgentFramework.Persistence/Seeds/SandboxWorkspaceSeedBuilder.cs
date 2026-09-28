@@ -15,6 +15,7 @@ internal static class SandboxWorkspaceSeedBuilder
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
     [
         ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        OpenAiModelIds.Gpt6Astra,
         OpenAiModelIds.Gpt56,
         OpenAiModelIds.Gpt56Luna,
         OpenAiModelIds.Gpt56Terra,
@@ -26,6 +27,8 @@ internal static class SandboxWorkspaceSeedBuilder
 
     private static readonly IReadOnlyList<string> OpenAiImageSuggestedModels =
     [
+        OpenAiModelIds.GptImage25Sunburst,
+        OpenAiModelIds.GptImage25Flare,
         OpenAiModelIds.GptImage2
     ];
 
@@ -446,6 +449,7 @@ internal static class SandboxWorkspaceSeedBuilder
         access.CanRunValidationCommands = workspaceTools.CanRunValidationCommands ?? access.CanRunValidationCommands;
         access.CanScaffoldProjects = workspaceTools.CanScaffoldProjects ?? access.CanScaffoldProjects;
         access.CanRunLocalScripts = workspaceTools.CanRunLocalScripts ?? access.CanRunLocalScripts;
+        access.CanScriptsReadEnvironment = workspaceTools.CanScriptsReadEnvironment ?? access.CanScriptsReadEnvironment;
         access.CanTransformArtifacts = workspaceTools.CanTransformArtifacts ?? access.CanTransformArtifacts;
     }
 

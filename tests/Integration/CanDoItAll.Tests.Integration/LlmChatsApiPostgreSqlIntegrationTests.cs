@@ -21,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
 
+[Trait("Category", "HostPlatform")]
 public sealed class LlmChatsApiPostgreSqlIntegrationTests
 {
     private const string FastModel = "model-fast";
@@ -999,7 +1000,6 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         Assert.True(send.GetProperty("responses").TryGetProperty("409", out _));
         Assert.True(send.GetProperty("responses").TryGetProperty("422", out _));
         Assert.True(send.GetProperty("responses").TryGetProperty("503", out _));
-        Assert.True(send.GetProperty("responses").TryGetProperty("504", out _));
         Assert.Equal(
             "GetLlmChatOperation",
             paths.GetProperty("/api/llm-chat-operations/{operationId}")

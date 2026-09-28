@@ -493,6 +493,7 @@ public sealed class AgentChatEffectOwnershipTests {
 
     public class EffectsProxy : DispatchProxy {
         public Queue<TaskCompletionSource<AgentChatRunResult>> Sends { get; } = [];
+        public TaskCompletionSource<AgentChatRunResult> Approval { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<AgentVoiceTranscriptionResult> Transcription { get; } = new();
         public Func<CancellationToken, Task<AgentVoiceTranscriptionResult>>? ReadTranscription { get; set; }
         public TaskCompletionSource<AgentChatAttachmentStagingResult> Upload { get; set; } = new();
@@ -500,6 +501,8 @@ public sealed class AgentChatEffectOwnershipTests {
         public List<AgentChatSendRequest> Requests { get; } = [];
         protected override object? Invoke(MethodInfo? method, object?[]? args) {
             switch (method?.Name) {
+                case nameof(IAgentChatExecutionOrchestrator.StartApprovalContinuation):
+                    return new AgentChatOperationHandle(CreateActivityStreamId(), Approval.Task);
                 case nameof(IAgentChatExecutionOrchestrator.StartSendMessage):
                     SendCalls++;
                     Requests.Add((AgentChatSendRequest)args![0]!);

@@ -95,6 +95,28 @@ public sealed class ApiRunEventAdapterTests
         Assert.DoesNotContain(otherProcessRunId.Value.ToString("D"), processFrame, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task Run_event_streams_close_cleanly_when_the_database_profile_changes(bool workflow, bool runSpecific) {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        var route = workflow ? "/api/workflows" : "/api/processes";
+        route += runSpecific ? $"/runs/{Guid.NewGuid():D}/events/stream" : "/events/stream";
+        using var request = new HttpRequestMessage(HttpMethod.Get, route);
+        using var response = await host.Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+        var runtimeState = Assert.IsType<DatabaseRuntimeState>(
+            host.App.Services.GetRequiredService<IDatabaseRuntimeState>());
+        var current = host.App.Services.GetRequiredService<IDatabaseProfileRuntimeAccessor>().ResolveCurrentProfile();
+
+        runtimeState.PublishRestartObserved(runtimeState.GetSnapshot(), current);
+
+        var content = await response.Content.ReadAsStringAsync().WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Empty(content);
+    }
+
     [Fact]
     public void Workflow_adapter_maps_lifecycle_signal_without_message_or_payload()
     {

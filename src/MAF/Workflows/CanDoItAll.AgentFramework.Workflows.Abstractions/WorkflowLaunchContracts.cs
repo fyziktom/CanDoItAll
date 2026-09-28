@@ -63,8 +63,13 @@ public interface IWorkflowLaunchIdempotencyQueryStore
 
 public interface IWorkflowLaunchIdempotencyQueryService
 {
+    /// <summary>
+    /// Finds the start recorded under <paramref name="callerKey"/> by the HTTP start operations for the same caller;
+    /// a key that another caller recorded is reported as not found.
+    /// </summary>
     Task<WorkflowLaunchIdempotencyEvidence?> FindApiKeyAsync(
         WorkflowLaunchIdempotencyKey callerKey,
+        WorkflowLaunchOrigin.Api caller,
         CancellationToken cancellationToken = default);
 }
 

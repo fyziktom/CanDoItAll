@@ -1,0 +1,2375 @@
+{
+  "schemaVersion": 1,
+  "kind": "implementation_validation",
+  "actualBaseCommit": "b82ffc57283f5e4819d82322e1c5bf836dcd9536",
+  "finalCommit": "Resolve the signed commit containing this report; the conversation reports its actual SHA.",
+  "applicationValidationStatus": "implemented_with_unfiltered_gate_failures",
+  "environment": {
+    "os": "Windows",
+    "sdk": "10.0.303",
+    "dockerServer": "29.8.0",
+    "database": "PostgreSQL",
+    "configuration": "Release",
+    "liveModelFlags": {
+      "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+      "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+      "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+    }
+  },
+  "codeAnalytics": {
+    "base": "b82ffc57283f5e4819d82322e1c5bf836dcd9536",
+    "impact": {
+      "status": "conservative fallback",
+      "confidence": "Low",
+      "fallbackKind": "AllSuppliedSuites",
+      "fallbackReason": "Static traversal exhausted its explicit member budget.",
+      "workspaces": [
+        {
+          "suiteName": "Unit",
+          "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Unit.slnx",
+          "projectCount": 139,
+          "sourceTestCount": 6609,
+          "isHealthy": true,
+          "diagnosticCount": 576
+        },
+        {
+          "suiteName": "Components",
+          "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Components.slnx",
+          "projectCount": 138,
+          "sourceTestCount": 1716,
+          "isHealthy": true,
+          "diagnosticCount": 402
+        },
+        {
+          "suiteName": "Integration",
+          "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Integration.slnx",
+          "projectCount": 137,
+          "sourceTestCount": 2050,
+          "isHealthy": true,
+          "diagnosticCount": 238
+        },
+        {
+          "suiteName": "Playwright",
+          "workspacePath": "C:\\repositories\\CanDoItAll\\tests\\Solutions\\CanDoItAll.Tests.Playwright.slnx",
+          "projectCount": 136,
+          "sourceTestCount": 106,
+          "isHealthy": true,
+          "diagnosticCount": 124
+        }
+      ],
+      "required": "All four supplied test workspaces; 10481 source tests",
+      "conditionalSelectionCount": 0,
+      "changedPaths": 103,
+      "changedRanges": 974,
+      "maxVisitedMembers": 50000
+    },
+    "architecture": {
+      "snapshotId": "snap-20260920122302-3a3f0f27",
+      "hasBlockingErrors": false,
+      "documents": 574,
+      "types": 1885,
+      "members": 15550,
+      "projectReferences": [
+        {
+          "name": "CanDoItAll.Infrastructure",
+          "references": []
+        },
+        {
+          "name": "CanDoItAll.Modules.AgentFramework",
+          "references": [
+            "proj-candoitall-infrastructure",
+            "proj-candoitall-modules-workspace"
+          ]
+        },
+        {
+          "name": "CanDoItAll.Modules.Workspace",
+          "references": [
+            "proj-candoitall-infrastructure"
+          ]
+        },
+        {
+          "name": "CanDoItAll.Processes.Projections",
+          "references": []
+        },
+        {
+          "name": "CanDoItAll.Web",
+          "references": [
+            "proj-candoitall-infrastructure",
+            "proj-candoitall-modules-agentframework",
+            "proj-candoitall-modules-workspace",
+            "proj-candoitall-processes-projections"
+          ]
+        }
+      ],
+      "cycles": [
+        {
+          "level": "Module",
+          "nodes": [
+            "CanDoItAll.Infrastructure.Persistence",
+            "CanDoItAll.Infrastructure.ControlPlane",
+            "CanDoItAll.Infrastructure.Storage"
+          ]
+        },
+        {
+          "level": "Module",
+          "nodes": [
+            "CanDoItAll.Modules.AgentFramework.Hosting",
+            "CanDoItAll.Modules.AgentFramework"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodes": [
+            "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider",
+            "CanDoItAll.Modules.AgentFramework.ImageGenerationAgentRuntimeToolProvider.ImageGenerationToolBuilder"
+          ]
+        }
+      ]
+    },
+    "laterQueries": [
+      {
+        "changeSet": "Login/stream guards and their two HTTP test classes",
+        "actualChangedPaths": 4,
+        "maxVisitedMembers": 50000,
+        "outcome": "tool_timeout",
+        "timeoutSeconds": 1800,
+        "decision": "Keep the earlier AllSuppliedSuites requirement; execute focused final regressions as well."
+      },
+      {
+        "changeSet": "Prompt Gallery import coordination and concurrent Production draft proof",
+        "actualChangedPaths": 2,
+        "maxVisitedMembers": 5000,
+        "outcome": "tool_timeout",
+        "timeoutSeconds": 1800,
+        "decision": "Keep the earlier AllSuppliedSuites requirement. Current import Unit tests, Production acceptance and the expanded compatibility selection provide focused closure."
+      }
+    ],
+    "finalDiffCheckpoint": {
+      "changedCodePaths": 110,
+      "changedRanges": 1009,
+      "behaviorIntent": "BehaviorChange"
+    },
+    "lateCompatibilityRepairs": {
+      "scope": "Canonical recruiting-review capability catalog and exact route permission; workflow HTTP fixture grants; controlled throttle clock and explicit stream options; safe logging and server-error compatibility.",
+      "requiredCurrentSelections": [
+        "integration-compatibility.trx (158; throttle rerun below)",
+        "credentials-catalog.trx (12)",
+        "components-catalog.trx (7)",
+        "integration-fixture-repair.trx (26)",
+        "integration-query-log.trx (1)",
+        "integration-failure-contract.trx (40)",
+        "production-error-contract.trx (2)"
+      ],
+      "dependencyReview": "recruiting-architecture.json",
+      "broaderRequirement": "All four originally supplied suites remain required; no narrowing is inferred from timed-out follow-up queries."
+    }
+  },
+  "promptImportArchitecture": {
+    "snapshotId": "snap-20260920144611-52ec5111",
+    "hasBlockingErrors": false,
+    "projects": [
+      {
+        "name": "CanDoItAll.Modules.Prompts",
+        "projectReferences": []
+      }
+    ],
+    "documents": 24,
+    "types": 80,
+    "members": 535,
+    "cycles": [],
+    "summary": {
+      "projectCount": 1,
+      "typeCount": 80,
+      "memberCount": 535,
+      "serviceRegistrationCount": 0,
+      "entityCount": 0,
+      "findingCount": 22,
+      "openQuestionCount": 0,
+      "diagnosticCount": 0
+    }
+  },
+  "recruitingCapabilityArchitecture": {
+    "snapshotId": "snap-20260920151903-3fa5051e",
+    "hasBlockingErrors": false,
+    "scope": {
+      "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Workspace\\CanDoItAll.Modules.Workspace.csproj",
+      "scopeProjectNames": [
+        "CanDoItAll.AgentFramework.Models",
+        "CanDoItAll.Modules.Workspace"
+      ],
+      "scopeNamespacePrefixes": [],
+      "includeDi": false,
+      "includePersistence": false,
+      "includeRisks": true,
+      "includeXmlDocs": false,
+      "includeMermaidExports": false
+    },
+    "documents": 164,
+    "types": 924,
+    "members": 6691,
+    "diagnostics": 0,
+    "projectEdges": [
+      {
+        "edgeId": "dep-projectreference-proj-candoitall-modules-workspace-74b0170e7c42",
+        "kind": "ProjectReference",
+        "fromId": "proj-candoitall-modules-workspace",
+        "toId": "proj-candoitall-agentframework-models",
+        "weight": 1
+      }
+    ],
+    "cycles": [],
+    "interpretation": "The scoped Workspace -> AgentFramework.Models reference reuses the canonical recruiting-review constant. No scoped cycles or Foundation-to-Module reference were introduced."
+  },
+  "builds": [
+    {
+      "owner": "Infrastructure",
+      "command": "dotnet build src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj -c Release --no-restore /m:1",
+      "status": "passed"
+    },
+    {
+      "owner": "Workspace",
+      "command": "dotnet build src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj -c Release --no-restore /m:1",
+      "status": "passed"
+    },
+    {
+      "owner": "AgentFramework",
+      "command": "dotnet build src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj -c Release --no-restore /m:1",
+      "status": "passed"
+    },
+    {
+      "owner": "Prompts",
+      "command": "dotnet build src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj -c Release --no-restore /m:1",
+      "status": "passed"
+    },
+    {
+      "owner": "Process projections",
+      "command": "dotnet build src/Processes/CanDoItAll.Processes.Projections/CanDoItAll.Processes.Projections.csproj -c Release --no-restore /m:1",
+      "status": "passed"
+    },
+    {
+      "owner": "Web",
+      "command": "dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release --no-restore /m:1",
+      "status": "passed"
+    }
+  ],
+  "finalCapabilityReferenceBuilds": [
+    {
+      "owner": "Workspace",
+      "command": "dotnet build src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj -c Release /m:1",
+      "status": "passed",
+      "warnings": 0,
+      "errors": 0,
+      "log": "artifacts/api-access/workspace-recruiting-build.log"
+    },
+    {
+      "owner": "Web",
+      "command": "dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release /m:1",
+      "status": "passed",
+      "warnings": 0,
+      "errors": 0,
+      "log": "artifacts/api-access/web-recruiting-build.log"
+    }
+  ],
+  "testRuns": [
+    {
+      "result": "artifacts/api-access/tests/api-credentials.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 12,
+      "executed": 12,
+      "passed": 12,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 12,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T07:13:32.7966210-04:00",
+      "finished": "2026-09-20T07:13:42.4647656-04:00",
+      "elapsedSeconds": 9.668,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiCredentialRulesTests|FullyQualifiedName~ApiTokenRegistryTests' --logger 'trx;LogFileName=api-credentials.trx' --results-directory artifacts/api-access/tests /m:1",
+      "resultSha256": "d2624f0c1b0655a2e9a026053522e1a2602d1b56817cc1b6755025bfd2421943"
+    },
+    {
+      "result": "artifacts/api-access/tests/workflow-template-drafts.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 3,
+      "executed": 3,
+      "passed": 3,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 3,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T07:38:13.2384018-04:00",
+      "finished": "2026-09-20T07:38:15.7227255-04:00",
+      "elapsedSeconds": 2.484,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~WorkflowTemplateDraftTests' --logger 'trx;LogFileName=workflow-template-drafts.trx' --results-directory artifacts/api-access/tests /m:1",
+      "resultSha256": "c25b8ad7a1432498e1c51b8d1f458bc286ec6b552f6016278b5f1862137e3270"
+    },
+    {
+      "result": "artifacts/api-access/tests/api-boundaries.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 22,
+      "executed": 22,
+      "passed": 22,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 22,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T07:12:01.3306895-04:00",
+      "finished": "2026-09-20T07:13:21.4593077-04:00",
+      "elapsedSeconds": 80.129,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiUserSessionIntegrationTests|FullyQualifiedName~ApiSessionBoundaryTests|FullyQualifiedName~ApiAccessAuthorizationIntegrationTests' --logger 'trx;LogFileName=api-boundaries.trx' --results-directory artifacts/api-access/tests /m:1",
+      "resultSha256": "22489b07e8cdc88336ad3c50a325019b9c7ce5ccc19537ecc97a948872d3d597"
+    },
+    {
+      "result": "artifacts/api-access/tests/api-sections.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 3,
+      "executed": 3,
+      "passed": 3,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 3,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T07:20:18.6735082-04:00",
+      "finished": "2026-09-20T07:21:03.3443936-04:00",
+      "elapsedSeconds": 44.671,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiSectionPermissionsTests' --logger 'trx;LogFileName=api-sections.trx' --results-directory artifacts/api-access/tests /m:1",
+      "resultSha256": "ec90c6cb32e6e535e24ee5c4925fad13213ea86656d7769c0fe59454619c1332"
+    },
+    {
+      "result": "artifacts/api-access/api-documentation.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 25,
+      "executed": 25,
+      "passed": 25,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 25,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T08:11:06.5652500-04:00",
+      "finished": "2026-09-20T08:11:36.3343191-04:00",
+      "elapsedSeconds": 29.769,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiDocumentationCoverageTests|FullyQualifiedName~ApiAccessContractTests' --logger 'trx;LogFileName=api-documentation.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "705dae173c4130d188f94a796efe0f1ff5023b500512fab29ebe24ddab4f5396"
+    },
+    {
+      "result": "artifacts/api-access/components-final.trx",
+      "suite": "Components",
+      "status": "passed",
+      "expectedDiscovery": 7,
+      "executed": 7,
+      "passed": 7,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 7,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T09:19:12.3909595-04:00",
+      "finished": "2026-09-20T09:19:44.4728589-04:00",
+      "elapsedSeconds": 32.082,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiUserAdministrationPanelTests|FullyQualifiedName~ApiTokenAdministrationTests|FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_selects_running_node_from_progress' --logger 'trx;LogFileName=components-final.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "bd79f3a460ddb00af292c80887c9a92bae8f7851304a72b9a80273f62b68c762"
+    },
+    {
+      "result": "artifacts/api-access/production-boundaries.trx",
+      "suite": "Playwright",
+      "status": "passed",
+      "expectedDiscovery": 2,
+      "executed": 2,
+      "passed": 2,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 2,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:44:32.8974144-04:00",
+      "finished": "2026-09-20T10:46:08.2650671-04:00",
+      "elapsedSeconds": 95.368,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Playwright.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiAccessDeploymentTests|FullyQualifiedName~ApiAccessSettingsBrowserTests' --logger 'trx;LogFileName=production-boundaries.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "19308bd2d5a855f1dde027d1a6559dff6392f5a2a0396fbb63bb1776786e0067"
+    },
+    {
+      "result": "artifacts/api-access/browser-closure.trx",
+      "suite": "Playwright",
+      "status": "failed",
+      "expectedDiscovery": 9,
+      "executed": 9,
+      "passed": 8,
+      "failed": 1,
+      "notExecuted": 0,
+      "totalResults": 9,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T08:44:31.6385536-04:00",
+      "finished": "2026-09-20T08:51:44.9651626-04:00",
+      "elapsedSeconds": 433.327,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Playwright.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiAccessDeploymentTests|FullyQualifiedName~ApiAccessSettingsBrowserTests|FullyQualifiedName~DashboardOperationalSnapshotPlaywrightTests|FullyQualifiedName~WorkflowShellSmokeTests|FullyQualifiedName~ProviderHistoryPremergeUiTests|FullyQualifiedName~AiAgentFlowTests|FullyQualifiedName~ProcessShellSmokeTests' --logger 'trx;LogFileName=browser-closure.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "58b7c5904744e087673ca123428355761e3a3e4319a2be5267cdd60f8096b915"
+    },
+    {
+      "result": "artifacts/api-access/process-browser-ready.trx",
+      "suite": "Playwright",
+      "status": "passed",
+      "expectedDiscovery": 2,
+      "executed": 2,
+      "passed": 2,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 2,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T08:59:42.8279130-04:00",
+      "finished": "2026-09-20T09:00:53.6791967-04:00",
+      "elapsedSeconds": 70.851,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Playwright.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ProcessShellSmokeTests' --logger 'trx;LogFileName=process-browser-ready.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "ffc7765cb333593aaa79df2d8db95567502d222bd63c89caa35294120ba8afc8"
+    },
+    {
+      "result": "artifacts/api-access/unit-all.trx",
+      "suite": "Unit",
+      "status": "failed",
+      "expectedDiscovery": 9285,
+      "executed": 9319,
+      "passed": 9318,
+      "failed": 1,
+      "notExecuted": 0,
+      "totalResults": 9319,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T07:49:09.7204650-04:00",
+      "finished": "2026-09-20T07:52:49.2228428-04:00",
+      "elapsedSeconds": 219.502,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --logger 'trx;LogFileName=unit-all.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "745acb6177691769d246477933381daf1c2fc485bedef2dfba34f1c2ff391aed"
+    },
+    {
+      "result": "artifacts/api-access/components-all.trx",
+      "suite": "Components",
+      "status": "failed",
+      "expectedDiscovery": 2305,
+      "executed": 2305,
+      "passed": 2304,
+      "failed": 1,
+      "notExecuted": 0,
+      "totalResults": 2305,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T07:58:23.5556035-04:00",
+      "finished": "2026-09-20T09:13:28.6442437-04:00",
+      "elapsedSeconds": 4505.089,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx -c Release --no-build --no-restore --logger 'trx;LogFileName=components-all.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "4dc5c95986fee5e1b02eb39c21f47b85d6cb10fee4b55c66fd262597ba99e678"
+    },
+    {
+      "suite": "Integration",
+      "status": "aborted",
+      "expectedDiscovery": 3166,
+      "reason": "The raw streaming fixture lacked request services and waited indefinitely for a first write. The runner was cancelled before it produced counters or a TRX; no completed totals are claimed.",
+      "log": "artifacts/api-access/integration-all-aborted.log",
+      "replacement": "Complete discovered integration inventory partitioned into four verified, disjoint class selections."
+    },
+    {
+      "result": "artifacts/api-access/playwright-all.trx",
+      "suite": "Playwright",
+      "status": "failed",
+      "expectedDiscovery": 109,
+      "executed": 109,
+      "passed": 88,
+      "failed": 21,
+      "notExecuted": 0,
+      "totalResults": 109,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T08:19:03.3282228-04:00",
+      "finished": "2026-09-20T08:39:33.9186549-04:00",
+      "elapsedSeconds": 1230.59,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Playwright.slnx -c Release --no-build --no-restore --logger 'trx;LogFileName=playwright-all.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "99a927b20b41f0434b87b2bc2c374dc3c496f63be4fbd17a684cee0b99100c88"
+    },
+    {
+      "result": "artifacts/api-access/source-secret-scan-final.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 1,
+      "executed": 1,
+      "passed": 1,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 1,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:58:20.1994210-04:00",
+      "finished": "2026-09-20T10:58:24.4008378-04:00",
+      "elapsedSeconds": 4.201,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName=CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys' --logger 'trx;LogFileName=source-secret-scan-final.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "fc2cf059d52ba80baee665f87b6e3368a03acb5ad10477a9dca17d43e4ba8f88",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/Users/lucys/.codex/worktrees/api-access-verification/CanDoItAll"
+      },
+      "sourceVerification": "Same-base changed sources were copied and SHA-256 verified before execution; the shared latest-copy manifest has since been refreshed. Later runs retain dedicated manifests."
+    },
+    {
+      "result": "artifacts/api-access/integration-final.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 99,
+      "executed": 99,
+      "passed": 99,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 99,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:27:05.2905326-04:00",
+      "finished": "2026-09-20T10:29:47.4572293-04:00",
+      "elapsedSeconds": 162.167,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiUserSessionIntegrationTests|FullyQualifiedName~ApiSessionBoundaryTests|FullyQualifiedName~ApiAccessAuthorizationIntegrationTests|FullyQualifiedName~ApiSectionPermissionsTests|FullyQualifiedName~ApiDocumentationCoverageTests|FullyQualifiedName~ApiAccessContractTests|FullyQualifiedName~ApiStreamingTransportTests|FullyQualifiedName~SharedProviderStreamingIntegrationTests|FullyQualifiedName~Storage_operator_Workflow_HTTP_requires_explicit_current_grants_and_original_intent|FullyQualifiedName~Storage_recovery_HTTP_requires_current_Storage_and_project_scopes' --logger 'trx;LogFileName=integration-final.trx' --results-directory artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "a06ddc33097bbb68facee6aaf4b1223901d180a9ad17dfe60f917f6c022b709f",
+      "workingDirectory": "C:/repositories/CanDoItAll",
+      "environment": {
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1"
+    },
+    {
+      "result": "artifacts/api-access/integration-final-before-input-repair.trx",
+      "suite": "Integration",
+      "status": "failed",
+      "expectedDiscovery": 99,
+      "executed": 99,
+      "passed": 98,
+      "failed": 1,
+      "notExecuted": 0,
+      "totalResults": 99,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:18:04.5222790-04:00",
+      "finished": "2026-09-20T10:20:34.6304307-04:00",
+      "elapsedSeconds": 150.108,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiUserSessionIntegrationTests|FullyQualifiedName~ApiSessionBoundaryTests|FullyQualifiedName~ApiAccessAuthorizationIntegrationTests|FullyQualifiedName~ApiSectionPermissionsTests|FullyQualifiedName~ApiDocumentationCoverageTests|FullyQualifiedName~ApiAccessContractTests|FullyQualifiedName~ApiStreamingTransportTests|FullyQualifiedName~SharedProviderStreamingIntegrationTests|FullyQualifiedName~Storage_operator_Workflow_HTTP_requires_explicit_current_grants_and_original_intent|FullyQualifiedName~Storage_recovery_HTTP_requires_current_Storage_and_project_scopes' --logger 'trx;LogFileName=integration-final-before-input-repair.trx' --results-directory artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "641e8da6355e8b8e03ff87a1c559a644ef8f21a9f95729b4abcd20604782fc6e",
+      "workingDirectory": "C:/repositories/CanDoItAll",
+      "environment": {
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1"
+    },
+    {
+      "result": "artifacts/api-access/streaming-transport-repair.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 16,
+      "executed": 16,
+      "passed": 16,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 16,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:16:22.0794197-04:00",
+      "finished": "2026-09-20T10:16:23.8316834-04:00",
+      "elapsedSeconds": 1.752,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiStreamingTransportTests' --logger 'trx;LogFileName=streaming-transport-repair.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "514e6ba160286c5a6b50dca54961bf173b8c2588bda7b04b27395bda97b7bc66"
+    },
+    {
+      "result": "artifacts/api-access/integration-batch-1.trx",
+      "suite": "Integration",
+      "status": "failed",
+      "expectedDiscovery": 794,
+      "executed": 794,
+      "passed": 793,
+      "failed": 1,
+      "notExecuted": 0,
+      "totalResults": 794,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:30:41.7850144-04:00",
+      "finished": "2026-09-20T12:20:58.0965495-04:00",
+      "elapsedSeconds": 6616.312,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentApiFailureContractIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentCatalogOperationsIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentRecoveryApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.CrmHrLiveAgentToolSmokeIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.EmailWorkflowSwitchScenarioTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.McpExternalToolPortabilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.ToolOutcomeCompletionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowCatalogConcurrencyPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowHitlRecoveryExecutorDedupPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowLaunchIdempotencyPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowProjectStructureReportPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentHistoryOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentProjectAccessClaimIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiResponseContractIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiRunEventAdapterTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CoordinatedDatabaseTransactionTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrSchemaIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrSourceSnapshotPagingIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.OpportunityConversionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.RecruitmentLifecycleIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.External.ConnectorPluginIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.HistoryTransferOwnerSessionTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.EfLlmConversationStoreIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatBoundedReadModelIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatConversationTransactionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationAuditApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatReceiptMigrationAndTransferIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsDefinitionApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsIdempotencyApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.ControlPlaneDatabaseProfileIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.MigrationAuthorityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.PostgreSqlClaimQueryPlanIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessExecutionAuthorityPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessLaunchProducerApiTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRunRecordConcurrencyIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectCurrentLifetimeBatchIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectLifecycleOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectProjectionRepairAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureNodeCopyBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureTaskHttpBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureTaskUpdateRawJsonTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureWorkflowScenarioHarnessTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.WorkbenchSourceSnapshotIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Prompts.PromptGalleryMixedReadBackPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderHistoryAuthorizationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolCancelledReadRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolDisclosureEvidencePersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolSessionObservationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.CrmPlanningRuntimeIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafHostFailureCheckpointTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafHostedToolJournalIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafMemoryResultDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafStorageResultDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafToolAdmissionNativeLoopIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.ManagedSeedExecutionFallbackIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.ProjectStructureResultDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.WatchSupervisorServiceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SecurityOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.TaskAssignmentAdmissionHttpTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.TestLab.TestLabOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkAssignmentMigrationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowReceiptMigrationIntegrationTests.' --logger 'trx;LogFileName=integration-batch-1.trx' --results-directory artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "c492b8aa460e469db790e5de8161d01575ba5d379ad53feb5f3b56e20e888dd5",
+      "workingDirectory": "C:/repositories/CanDoItAll",
+      "environment": {
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1"
+    },
+    {
+      "result": "artifacts/api-access/integration-batch-2.trx",
+      "suite": "Integration",
+      "status": "failed",
+      "expectedDiscovery": 793,
+      "executed": 798,
+      "passed": 791,
+      "failed": 7,
+      "notExecuted": 0,
+      "totalResults": 798,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:30:41.7993509-04:00",
+      "finished": "2026-09-20T12:11:22.4842908-04:00",
+      "elapsedSeconds": 6040.685,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentApiPublicProjectionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentEditorReadCompositionTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentEventsApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkRuntimeSwitchingIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentPackageImportApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentProjectStructureAccessDeletionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentTeamCatalogIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.DirectSharedToolTransportParityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.LiveSpecialistAgentScenarioIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.PromptGalleryApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowRuntimePersistenceLifecycleTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiAccessContractTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiDocumentationCoverageTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiDocumentationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiDocumentationPipelineTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiStreamingTransportTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiUserSessionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.AgentRecruitingApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.AiTechnicalProjectionPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmFinancialSnapshotQueryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmInteractionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.OpportunityIntegrityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.WorkforceProfileIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.External.EmailPluginClientTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.External.PluginDesktopPortabilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.External.PluginSecretBrokerIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatApiPrivacyIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatDefinitionCreateReceiptIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationDispatchClaimIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationEventJournalIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationEvidenceMigrationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatTransactionalConcurrencyIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatTurnTransactionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsApiPostgreSqlIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsConversationApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsDatabaseTransferIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsRecoveryApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsSecurityApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.SimpleChatsOwnershipIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.OwnerLifetimeHistoryMigrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.BackgroundJobOwnerIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.BusinessBootstrapOwnerIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.DatabaseDriverBootstrapIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.ResourceStorageObjectIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.StorageMigrationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessPreparedLaunchPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectLifetimeMigrationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectCrossModuleMutationClaimIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectCrossModuleMutationScopeReleaseIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionSharedStorageConcurrencyIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectPartyAssignmentIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProcessRunRecordIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProjectExistenceHttpTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectWorkbenchSubtreeRecompositionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectsOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderHistoryRuntimeIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderTransferGuardOwnerTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.CollaborationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafHrResultDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafPromptGalleryDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.SecretPortabilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SchedulerFireAdmissionPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SchedulerWorkspaceOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderRuntimePathCharacterizationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SourceBoundExecutionAdmissionMigrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkAssignmentOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkbenchAssignmentOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowAuthorizedHitlApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkspacePreferenceTransferOwnerTests.' --logger 'trx;LogFileName=integration-batch-2.trx' --results-directory artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "7f10e67e5c17c9341a84e741e58a156c298da13cd6b005661a78bea55ade6008",
+      "workingDirectory": "C:/repositories/CanDoItAll",
+      "environment": {
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1"
+    },
+    {
+      "result": "artifacts/api-access/integration-batch-3.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 793,
+      "executed": 793,
+      "passed": 793,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 793,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:30:41.8743772-04:00",
+      "finished": "2026-09-20T12:21:09.2978634-04:00",
+      "elapsedSeconds": 6627.423,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionCapabilityFilteringIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentJsonSchemaOutputExecutionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AiAgentDirectoryQueryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.ProviderInitializationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.ToolOutcomeReceiptApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowCatalogSearchPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowHitlRecoveryPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiSectionPermissionsTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.ApiSessionBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.DevelopmentEndpointAccessTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Api.WebHostLoggingConfigurationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmDevelopmentDiagnosticQueryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmPartyCommandIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.PartyDirectoryIntegrityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.StaffingAllocationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.WorkspaceAgentRecruitingTargetResolverTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmProjectionMigrationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.External.UnknownConnectorManifestIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatApiMetadataIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationStorageContractIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsTurnApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Memory.MemoryOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Memory.MemoryProvidersApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.DatabaseSwitchIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.ManagedFilesStorageIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.MigrationBootstrapIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.RecordQueryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.PluginsOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessCapabilityPortabilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessRunRecordApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProjectStructureProcessToolPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleMutationCoordinationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectPartyAssignmentMoveReceiptIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentAcceptanceOracleTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAssetEffectIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAutomaticPlacementIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureDeletionHttpBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureGeneratedImageAttachmentIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProjectObjectTypeHttpContractTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProjectObjectTypeHttpHardeningTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureRealMafPromptHarnessTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectsApiDeletionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.WorkflowStructureDeliveryPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTransferOwnerInspectionTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectWriteAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderHistorySourceProjectionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderSecretTransferOwnerTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProvidersOwnershipIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ResourcesOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafConfiguredWorkspaceImageAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafImageGenerationResultDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafSdkSkillAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafWorkspaceToolResultDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.ProfileHarnessIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SchedulerSourceAuthorityPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderAccessContextTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.StorageCatalogContractPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.StorageStablePlacementPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkbenchOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowProviderDisclosureMigrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowProviderDisclosurePersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkspaceSettingsOwnerPersistenceTests.' --logger 'trx;LogFileName=integration-batch-3.trx' --results-directory artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "7a4f11e44186623e81e98231c85331b576aecbde4ebcf1477438a34cb123f99e",
+      "workingDirectory": "C:/repositories/CanDoItAll",
+      "environment": {
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1"
+    },
+    {
+      "result": "artifacts/api-access/integration-batch-4.trx",
+      "suite": "Integration",
+      "status": "failed",
+      "expectedDiscovery": 793,
+      "executed": 792,
+      "passed": 780,
+      "failed": 12,
+      "notExecuted": 0,
+      "totalResults": 793,
+      "runnerSkipped": 1,
+      "started": "2026-09-20T10:30:41.7917536-04:00",
+      "finished": "2026-09-20T12:12:07.3145451-04:00",
+      "elapsedSeconds": 6085.523,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilitySetupApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentDiagnosticsReadsTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentExecutionRunContextBoundaryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentExternalProvisioningApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRunTrackingIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentProjectLifetimePersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.CapabilityWorkspaceResolutionTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.CapsuleCatalogServiceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.MafAgentRuntimeHandoffTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.ProjectStructureAgentToolIntegrityEndToEndTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.ProviderManagementCapabilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.ScopedPriorToolEvidenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowCallerLaunchBoundaryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowFileProviderDisclosureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowHitlRecoveryCompositionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowHttpSecretAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowRunIdempotencyApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowStableIdentityApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.WorkflowUsagePersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.AgentNativeProjectAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrAgentQueryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrAuditTrailIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrCrossModuleIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.PartyMergeIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.PartyOrganizationAffiliationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHrOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.DatabaseTransferContractPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.External.ConnectorOutboxIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LiveLocalOllamaThinkingEffortIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatApiValidationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatCanonicalTitleMigrationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatProjectStructureReportPersistenceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.LlmChats.LlmChatsCancellationApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.MergeTargetSchemaUpgradeIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.OwnerPostcommitPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.DatabaseTransferIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.LegacyDatabaseProfileIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ManagerProcessDiscoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessApiIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessPlanMigrationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectAdmissionSnapshotRaceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectCreationReservationIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentRuntimeToolRoundTripIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureClipboardIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureFileInteractionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureReadHttpBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureRootAuthorityHttpBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureSubprojectTransferCoordinatorIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectWorkbenchProjectionMaintenanceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectsServiceIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTransferHistoryPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.PromptsOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ProviderHistoryOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentAdmittedRunRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentChatSessionRejectionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolProviderDispatchIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentTypedContextJournalImmutabilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.ExecutionFoundationPortabilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafGenericToolAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafIntermediateCheckpointActivityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafOwnerAcknowledgementCheckpointTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.MafPolicyDenialCheckpointTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SearchStorageOwnerPersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderOpenAiCompatibilityIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviderPremergeUpgradeTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.SharedProviders.SharedProviderSourceSyncIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkAssignmentAdmissionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkAssignmentCoherencePersistenceTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkbenchOwnerProjectionIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowExternalResponseWebBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.' --logger 'trx;LogFileName=integration-batch-4.trx' --results-directory artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "45b43beb20532056f090278db0b8d487e78531770e2bcf388d305c9315c40239",
+      "workingDirectory": "C:/repositories/CanDoItAll",
+      "environment": {
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1"
+    },
+    {
+      "result": "artifacts/api-access/production-concurrent-before-repair.trx",
+      "suite": "Playwright",
+      "status": "failed",
+      "expectedDiscovery": 2,
+      "executed": 2,
+      "passed": 1,
+      "failed": 1,
+      "notExecuted": 0,
+      "totalResults": 2,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:36:22.5963184-04:00",
+      "finished": "2026-09-20T10:38:24.4943981-04:00",
+      "elapsedSeconds": 121.898,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Playwright.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiAccessDeploymentTests|FullyQualifiedName~ApiAccessSettingsBrowserTests' --logger 'trx;LogFileName=production-concurrent-before-repair.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "6e0ef7c3d280420c8cbcdfab595dbc6a8facb71d8295e12a8bc0b6b3eca9b074"
+    },
+    {
+      "result": "artifacts/api-access/prompt-import-repair.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 12,
+      "executed": 12,
+      "passed": 12,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 12,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:48:04.3771643-04:00",
+      "finished": "2026-09-20T10:48:09.0135946-04:00",
+      "elapsedSeconds": 4.636,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~PromptGalleryImportTests|FullyQualifiedName~WorkflowPromptGalleryBoundaryTests|FullyQualifiedName~WorkflowTemplateDraftTests' --logger 'trx;LogFileName=prompt-import-repair.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "edc8cff8717d9b8dac8b55cfb36dc6bee7e0f8eeba82c94099e1684e90cbc242"
+    },
+    {
+      "result": "artifacts/api-access/integration-closure.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 138,
+      "executed": 138,
+      "passed": 138,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 138,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T10:54:29.1856912-04:00",
+      "finished": "2026-09-20T11:01:55.7895946-04:00",
+      "elapsedSeconds": 446.604,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiUserSessionIntegrationTests|FullyQualifiedName~ApiSessionBoundaryTests|FullyQualifiedName~ApiAccessAuthorizationIntegrationTests|FullyQualifiedName~ApiSectionPermissionsTests|FullyQualifiedName~ApiDocumentationCoverageTests|FullyQualifiedName~ApiAccessContractTests|FullyQualifiedName~ApiStreamingTransportTests|FullyQualifiedName~SharedProviderStreamingIntegrationTests|FullyQualifiedName~Storage_operator_Workflow_HTTP_requires_explicit_current_grants_and_original_intent|FullyQualifiedName~Storage_recovery_HTTP_requires_current_Storage_and_project_scopes|FullyQualifiedName~WorkflowAuthorizedHitlApiIntegrationTests' --logger 'trx;LogFileName=integration-closure.trx' --results-directory C:/repositories/CanDoItAll/artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "88af42d623e87d72e768f587e5dd0f6b11f6d443c6af1fe5ab68584f78bfdd1d",
+      "workingDirectory": "C:/repositories/api-v",
+      "sourceVerification": "Each copied file was SHA-256 verified before the isolated build. The shared latest-copy manifest has since been refreshed for subsequent repairs.",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v",
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1 -p:CanDoItAllComponentsRepositoryRoot=C:/repositories/CanDoItAll.Components -p:CanDoItAllFileToolsRepositoryRoot=C:/repositories/CanDoItAll.FileTools"
+    },
+    {
+      "result": "artifacts/api-access/source-secret-scan-final-source.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 1,
+      "executed": 1,
+      "passed": 1,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 1,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T12:42:26.0986034-04:00",
+      "finished": "2026-09-20T12:42:29.0479817-04:00",
+      "elapsedSeconds": 2.949,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName=CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys' --logger 'trx;LogFileName=source-secret-scan-final-source.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "d541aaac5d75a7da5c9d1b71641e551a00ea98fec70bad83bc35b401c9915ad6",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v"
+      },
+      "sourceVerification": "artifacts/api-access/integration-failure-contract-source-snapshot.json"
+    },
+    {
+      "result": "artifacts/api-access/integration-failure-contract.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 40,
+      "executed": 40,
+      "passed": 40,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 40,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T12:30:35.6884086-04:00",
+      "finished": "2026-09-20T12:32:01.9909387-04:00",
+      "elapsedSeconds": 86.303,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~AgentApiFailureContractIntegrationTests|FullyQualifiedName~ApiUserSessionIntegrationTests|FullyQualifiedName~ApiSessionBoundaryTests|FullyQualifiedName~ApiAccessContractTests' --logger 'trx;LogFileName=integration-failure-contract.trx' --results-directory C:/repositories/CanDoItAll/artifacts/api-access /m:1 --logger 'console;verbosity=normal'",
+      "resultSha256": "a5b98e9046900acc13762016bd290be110d37c9910ed30da8ff0cb3bc35c6d2b",
+      "workingDirectory": "C:/repositories/api-v",
+      "sourceVerification": "artifacts/api-access/integration-failure-contract-source-snapshot.json",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1 -p:CanDoItAllComponentsRepositoryRoot=C:/repositories/CanDoItAll.Components -p:CanDoItAllFileToolsRepositoryRoot=C:/repositories/CanDoItAll.FileTools"
+    },
+    {
+      "result": "artifacts/api-access/production-error-contract.trx",
+      "suite": "Playwright",
+      "status": "passed",
+      "expectedDiscovery": 2,
+      "executed": 2,
+      "passed": 2,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 2,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T12:35:12.3507591-04:00",
+      "finished": "2026-09-20T12:36:11.5724160-04:00",
+      "elapsedSeconds": 59.222,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Playwright.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiAccessDeploymentTests|FullyQualifiedName~ApiAccessSettingsBrowserTests' --logger 'trx;LogFileName=production-error-contract.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "c87df163b98793bcbbd8cf25db45e8273ebc5c8552e171d86708fa9f0180ad81"
+    },
+    {
+      "result": "artifacts/api-access/integration-deferred.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 1,
+      "executed": 6,
+      "passed": 6,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 6,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T12:12:57.5823078-04:00",
+      "finished": "2026-09-20T12:12:59.5352852-04:00",
+      "elapsedSeconds": 1.953,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName=CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects' --logger 'trx;LogFileName=integration-deferred.trx' --results-directory C:/repositories/CanDoItAll/artifacts/api-access /m:1",
+      "resultSha256": "4d943d38e5dffbdbaadfe51cd7f31fc2c818b8ef7955bca3fd89b42bba912071",
+      "workingDirectory": "C:/repositories/api-v",
+      "sourceVerification": "artifacts/api-access/integration-query-log-source-snapshot.json",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1 -p:CanDoItAllComponentsRepositoryRoot=C:/repositories/CanDoItAll.Components -p:CanDoItAllFileToolsRepositoryRoot=C:/repositories/CanDoItAll.FileTools",
+      "expectedRuntimeCases": 6,
+      "expansionReason": "One deferred MemberData discovery entry expands into the six explicit BundledPluginSimulationCases rows."
+    },
+    {
+      "result": "artifacts/api-access/integration-query-log.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 1,
+      "executed": 1,
+      "passed": 1,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 1,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:45:06.0262815-04:00",
+      "finished": "2026-09-20T11:45:24.2388458-04:00",
+      "elapsedSeconds": 18.213,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName=CanDoItAll.Tests.Integration.LlmChats.LlmChatsSecurityApiIntegrationTests.AuthorizationEnabledHost_EnforcesDistinctScopesAndAuthenticatesSseOnlyThroughBearerHeader' --logger 'trx;LogFileName=integration-query-log.trx' --results-directory C:/repositories/CanDoItAll/artifacts/api-access /m:1 --logger 'console;verbosity=normal'",
+      "resultSha256": "7ddbb1d65223b84dc6e2c9763cc5069822edf2442db963012c9b076cdc6b264d",
+      "workingDirectory": "C:/repositories/api-v",
+      "sourceVerification": "artifacts/api-access/integration-query-log-source-snapshot.json",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1 -p:CanDoItAllComponentsRepositoryRoot=C:/repositories/CanDoItAll.Components -p:CanDoItAllFileToolsRepositoryRoot=C:/repositories/CanDoItAll.FileTools"
+    },
+    {
+      "result": "artifacts/api-access/source-secret-scan-logging.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 1,
+      "executed": 1,
+      "passed": 1,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 1,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:44:16.3014381-04:00",
+      "finished": "2026-09-20T11:44:19.7000978-04:00",
+      "elapsedSeconds": 3.399,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName=CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys' --logger 'trx;LogFileName=source-secret-scan-logging.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "e3f176cd97a4975801e28545538960772a9e73dbe4c39c9f0ab7e5ecff2d29af",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v"
+      },
+      "sourceVerification": "artifacts/api-access/integration-query-log-source-snapshot.json"
+    },
+    {
+      "result": "artifacts/api-access/integration-fixture-repair.trx",
+      "suite": "Integration",
+      "status": "passed",
+      "expectedDiscovery": 26,
+      "executed": 26,
+      "passed": 26,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 26,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:35:51.9485283-04:00",
+      "finished": "2026-09-20T11:37:12.1642303-04:00",
+      "elapsedSeconds": 80.216,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiSessionBoundaryTests|FullyQualifiedName~AgentEventsApiIntegrationTests' --logger 'trx;LogFileName=integration-fixture-repair.trx' --results-directory C:/repositories/CanDoItAll/artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "027d1b37f5ccc11bfe4df0f05aead4933b76b9c938703be9f2c18db5a2f30602",
+      "workingDirectory": "C:/repositories/api-v",
+      "sourceVerification": "artifacts/api-access/integration-fixture-repair-source-snapshot.json",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v",
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1 -p:CanDoItAllComponentsRepositoryRoot=C:/repositories/CanDoItAll.Components -p:CanDoItAllFileToolsRepositoryRoot=C:/repositories/CanDoItAll.FileTools"
+    },
+    {
+      "result": "artifacts/api-access/source-secret-scan-current.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 1,
+      "executed": 1,
+      "passed": 1,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 1,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:35:49.2210342-04:00",
+      "finished": "2026-09-20T11:35:52.6417366-04:00",
+      "elapsedSeconds": 3.421,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName=CanDoItAll.Tests.Unit.Infrastructure.SecretScanningTests.Repository_contains_no_realistic_provider_keys' --logger 'trx;LogFileName=source-secret-scan-current.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "f6be52be7e0b129b5acfa8849b1f154f3666c5e4ff1e68718e8233dd0375b56e",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v"
+      },
+      "sourceVerification": "artifacts/api-access/integration-fixture-repair-source-snapshot.json"
+    },
+    {
+      "result": "artifacts/api-access/integration-compatibility.trx",
+      "suite": "Integration",
+      "status": "failed",
+      "expectedDiscovery": 158,
+      "executed": 158,
+      "passed": 157,
+      "failed": 1,
+      "notExecuted": 0,
+      "totalResults": 158,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:20:32.1622638-04:00",
+      "finished": "2026-09-20T11:33:42.4368062-04:00",
+      "elapsedSeconds": 790.275,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiUserSessionIntegrationTests|FullyQualifiedName~ApiSessionBoundaryTests|FullyQualifiedName~ApiAccessAuthorizationIntegrationTests|FullyQualifiedName~ApiSectionPermissionsTests|FullyQualifiedName~ApiDocumentationCoverageTests|FullyQualifiedName~ApiAccessContractTests|FullyQualifiedName~ApiStreamingTransportTests|FullyQualifiedName~SharedProviderStreamingIntegrationTests|FullyQualifiedName~Storage_operator_Workflow_HTTP_requires_explicit_current_grants_and_original_intent|FullyQualifiedName~Storage_recovery_HTTP_requires_current_Storage_and_project_scopes|FullyQualifiedName~WorkflowAuthorizedHitlApiIntegrationTests|FullyQualifiedName~AgentRecruitingApiIntegrationTests|FullyQualifiedName~WorkflowHitlEndToEndIntegrationTests' --logger 'trx;LogFileName=integration-compatibility.trx' --results-directory C:/repositories/CanDoItAll/artifacts/api-access /m:1 --blame-hang-timeout 5m --blame-hang-dump-type none --logger 'console;verbosity=normal'",
+      "resultSha256": "0aac0c6f3788914b98ec5d2616a0ed3e6ca5dd9cff7a639b5b4ac2fa21a207de",
+      "workingDirectory": "C:/repositories/api-v",
+      "sourceVerification": "artifacts/api-access/integration-compatibility-source-snapshot.json",
+      "environment": {
+        "CANDOITALL_TEST_REPOSITORY_ROOT": "C:/repositories/api-v",
+        "CANDOITALL_RUN_LIVE_AGENT_VALIDATION": "false",
+        "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE": "false",
+        "CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION": "false"
+      },
+      "freshBuildCommand": "dotnet build tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-restore /m:1 -p:CanDoItAllComponentsRepositoryRoot=C:/repositories/CanDoItAll.Components -p:CanDoItAllFileToolsRepositoryRoot=C:/repositories/CanDoItAll.FileTools"
+    },
+    {
+      "result": "artifacts/api-access/production-catalog.trx",
+      "suite": "Playwright",
+      "status": "passed",
+      "expectedDiscovery": 2,
+      "executed": 2,
+      "passed": 2,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 2,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:24:18.1830108-04:00",
+      "finished": "2026-09-20T11:26:20.4550117-04:00",
+      "elapsedSeconds": 122.272,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Playwright.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiAccessDeploymentTests|FullyQualifiedName~ApiAccessSettingsBrowserTests' --logger 'trx;LogFileName=production-catalog.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "d677b2f013569f2e02b206923a984c69bb1fcbe43cba343fb23d978ec8de4e4d"
+    },
+    {
+      "result": "artifacts/api-access/credentials-catalog.trx",
+      "suite": "Unit",
+      "status": "passed",
+      "expectedDiscovery": 12,
+      "executed": 12,
+      "passed": 12,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 12,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:20:35.7459776-04:00",
+      "finished": "2026-09-20T11:20:43.3789225-04:00",
+      "elapsedSeconds": 7.633,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiCredentialRulesTests|FullyQualifiedName~ApiTokenRegistryTests' --logger 'trx;LogFileName=credentials-catalog.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "1245e29977fdfe6cb9e021b69e1bf1b8e226078c14658f30361857d8f3c33c5e"
+    },
+    {
+      "result": "artifacts/api-access/components-catalog.trx",
+      "suite": "Components",
+      "status": "passed",
+      "expectedDiscovery": 7,
+      "executed": 7,
+      "passed": 7,
+      "failed": 0,
+      "notExecuted": 0,
+      "totalResults": 7,
+      "runnerSkipped": 0,
+      "started": "2026-09-20T11:22:55.5165435-04:00",
+      "finished": "2026-09-20T11:23:44.7059973-04:00",
+      "elapsedSeconds": 49.189,
+      "reproductionCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~ApiUserAdministrationPanelTests|FullyQualifiedName~ApiTokenAdministrationTests|FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.WorkflowsPageTests.Workflow_canvas_preview_selects_running_node_from_progress' --logger 'trx;LogFileName=components-catalog.trx' --results-directory artifacts/api-access /m:1",
+      "resultSha256": "609840a5cc8a5af25875adfa7d2bf6ef19de74d40082a5b8345a3dd8106c6690"
+    }
+  ],
+  "integrationInventory": {
+    "expectedDiscovery": 3173,
+    "classCount": 314,
+    "discoveryVerified": true,
+    "batches": [
+      {
+        "index": 1,
+        "classes": [
+          "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests",
+          "CanDoItAll.Tests.Integration.Runtime.ProjectStructureResultDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.McpExternalToolPortabilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafHostFailureCheckpointTests",
+          "CanDoItAll.Tests.Integration.ProviderHistoryAuthorizationIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentApiFailureContractIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureTaskUpdateRawJsonTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessExecutionAuthorityPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.ToolOutcomeCompletionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.CrmPlanningRuntimeIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.CapabilityCorrectnessIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.ApiAccessAuthorizationIntegrationTests",
+          "CanDoItAll.Tests.Integration.CoordinatedDatabaseTransactionTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafHostedToolJournalIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviders.ProviderMutationCommitIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkAssignmentMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentToolCancelledReadRecoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafToolAdmissionNativeLoopIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.CapabilityProofPublicationIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.ApiRunEventAdapterTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatReceiptMigrationAndTransferIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviders.ProviderApiOutcomeIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentProjectAccessClaimIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.WatchSupervisorServiceIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentRecoveryApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowHitlRecoveryExecutorDedupPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.HistoryTransferOwnerSessionTests",
+          "CanDoItAll.Tests.Integration.ProjectLifecycleOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentToolDisclosureEvidencePersistenceTests",
+          "CanDoItAll.Tests.Integration.SecurityOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.WorkflowReceiptMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentHistoryOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.CrmHr.RecruitmentLifecycleIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessLaunchProducerApiTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafStorageResultDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentsWorkspaceQueryTests",
+          "CanDoItAll.Tests.Integration.Api.ApiResponseContractIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.EfLlmConversationStoreIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.WorkbenchSourceSnapshotIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentToolSessionObservationIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.ManagedSeedExecutionFallbackIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkflowOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowCatalogConcurrencyPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmHrSchemaIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatConversationTransactionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.MigrationAuthorityIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectProjectionRepairAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureNodeCopyBoundaryTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureTaskHttpBoundaryTests",
+          "CanDoItAll.Tests.Integration.TestLab.TestLabOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentCatalogOperationsIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRecoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.EmailWorkflowSwitchScenarioTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowLaunchIdempotencyPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmHrSourceSnapshotPagingIntegrationTests",
+          "CanDoItAll.Tests.Integration.External.ConnectorPluginIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationAuditApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsDefinitionApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectCurrentLifetimeBatchIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureWorkflowScenarioHarnessTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafMemoryResultDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.CrmHrLiveAgentToolSmokeIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowProjectStructureReportPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.OpportunityConversionIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatBoundedReadModelIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsIdempotencyApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.ControlPlaneDatabaseProfileIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.PostgreSqlClaimQueryPlanIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessRunRecordConcurrencyIntegrationTests",
+          "CanDoItAll.Tests.Integration.Prompts.PromptGalleryMixedReadBackPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.TaskAssignmentAdmissionHttpTests"
+        ],
+        "expectedDiscovery": 794,
+        "filterCharacters": 7486,
+        "runnerCounts": {
+          "total": 794,
+          "executed": 794,
+          "passed": 793,
+          "failed": 1,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        },
+        "runnerSkipped": 0
+      },
+      {
+        "index": 2,
+        "classes": [
+          "CanDoItAll.Tests.Integration.OwnerLifetimeHistoryMigrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceSeedIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkflowAuthorizedHitlApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatDefinitionCreateReceiptIntegrationTests",
+          "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessPreparedLaunchPersistenceTests",
+          "CanDoItAll.Tests.Integration.Api.ApiDocumentationCoverageTests",
+          "CanDoItAll.Tests.Integration.ProviderHistoryPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.External.EmailPluginClientTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentTeamCatalogIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentEventsApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.ApiStreamingTransportTests",
+          "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceStoreLockIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.AiTechnicalProjectionPersistenceTests",
+          "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceUsageProjectionIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatTurnTransactionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.BusinessBootstrapOwnerIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationEventJournalIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsApiPostgreSqlIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests",
+          "CanDoItAll.Tests.Integration.SourceBoundExecutionAdmissionMigrationTests",
+          "CanDoItAll.Tests.Integration.Api.ApiDocumentationPipelineTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectPartyAssignmentIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafHrResultDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.SchedulerFireAdmissionPersistenceTests",
+          "CanDoItAll.Tests.Integration.CrmHr.AgentRecruitingApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatTransactionalConcurrencyIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkAssignmentOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsDatabaseTransferIntegrationTests",
+          "CanDoItAll.Tests.Integration.SchedulerWorkspaceOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.DirectSharedToolTransportParityIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.ApiUserSessionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.BackgroundJobOwnerIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectLifetimeMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceAdmissionReadScalingIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderRuntimePathCharacterizationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentApiPublicProjectionIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentProjectStructureAccessDeletionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.ApiAccessContractTests",
+          "CanDoItAll.Tests.Integration.LlmChats.SimpleChatsOwnershipIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProcessRunRecordIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderOpenApiSchemaTests",
+          "CanDoItAll.Tests.Integration.CrmHr.WorkforceProfileIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatApiPrivacyIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectsOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.Runtime.CollaborationIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.SecretPortabilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkspacePreferenceTransferOwnerTests",
+          "CanDoItAll.Tests.Integration.Api.ApiDocumentationIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.OpportunityIntegrityIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsConversationApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.StorageMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectCrossModuleMutationScopeReleaseIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProjectExistenceHttpTests",
+          "CanDoItAll.Tests.Integration.ProviderTransferGuardOwnerTests",
+          "CanDoItAll.Tests.Integration.WorkbenchAssignmentOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorReadCompositionTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentPackageImportApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.PromptGalleryApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmFinancialSnapshotQueryIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmInteractionIntegrationTests",
+          "CanDoItAll.Tests.Integration.External.PluginDesktopPortabilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationDispatchClaimIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsRecoveryApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectCrossModuleMutationClaimIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectWorkbenchSubtreeRecompositionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafPromptGalleryDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkRuntimeSwitchingIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.LiveSpecialistAgentScenarioIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowRuntimePersistenceLifecycleTests",
+          "CanDoItAll.Tests.Integration.External.PluginSecretBrokerIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationEvidenceMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsSecurityApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.DatabaseDriverBootstrapIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.ResourceStorageObjectIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionSharedStorageConcurrencyIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProviderHistoryRuntimeIntegrationTests"
+        ],
+        "expectedDiscovery": 793,
+        "filterCharacters": 7629,
+        "runnerCounts": {
+          "total": 798,
+          "executed": 798,
+          "passed": 791,
+          "failed": 7,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        },
+        "runnerSkipped": 0
+      },
+      {
+        "index": 3,
+        "classes": [
+          "CanDoItAll.Tests.Integration.ProjectStructure.WorkflowStructureDeliveryPersistenceTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviders.SharedProviderRuntimeProjectionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafSdkSkillAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.SchedulerSourceAuthorityPersistenceTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafWorkspaceToolResultDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkflowProviderDisclosurePersistenceTests",
+          "CanDoItAll.Tests.Integration.CrmHr.WorkspaceAgentRecruitingTargetResolverTests",
+          "CanDoItAll.Tests.Integration.Processes.ProjectStructureProcessToolPersistenceTests",
+          "CanDoItAll.Tests.Integration.ProviderHistorySourceProjectionIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowHitlRecoveryPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.Memory.MemoryProvidersApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderStreamingIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentAcceptanceOracleTests",
+          "CanDoItAll.Tests.Integration.SharedProviderAccessContextTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureGeneratedImageAttachmentIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProjectObjectTypeHttpHardeningTests",
+          "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectTransferOwnerInspectionTests",
+          "CanDoItAll.Tests.Integration.ProviderHistoryQueryIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests",
+          "CanDoItAll.Tests.Integration.StorageStablePlacementPersistenceTests",
+          "CanDoItAll.Tests.Integration.Api.ApiSessionBoundaryTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureProjectObjectTypeHttpContractTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafImageGenerationResultDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderPremergePerformanceTests",
+          "CanDoItAll.Tests.Integration.CrmHr.PartyDirectoryIntegrityIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.ManagedFilesStorageIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilityMutationBoundaryTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionCapabilityFilteringIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProviderSecretTransferOwnerTests",
+          "CanDoItAll.Tests.Integration.WorkbenchOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.CrmDevelopmentDiagnosticQueryTests",
+          "CanDoItAll.Tests.Integration.Persistence.MigrationBootstrapIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAssetEffectIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.DevelopmentEndpointAccessTests",
+          "CanDoItAll.Tests.Integration.Persistence.RecordQueryIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectWriteAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentGovernanceReadsTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.ToolOutcomeReceiptApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmProjectionMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleMutationCoordinationIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProvidersOwnershipIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafConfiguredWorkspaceImageAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.StorageCatalogContractPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.CapabilityVerificationRaceIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.ApiSectionPermissionsTests",
+          "CanDoItAll.Tests.Integration.CrmHr.StaffingAllocationIntegrationTests",
+          "CanDoItAll.Tests.Integration.Memory.MemoryOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.PluginsOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureDeletionHttpBoundaryTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureRealMafPromptHarnessTests",
+          "CanDoItAll.Tests.Integration.ResourcesOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.WorkflowProviderDisclosureMigrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AiAgentDirectoryQueryIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.ProviderInitializationIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmHrApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmPartyCommandIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatApiMetadataIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessRunRecordApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAutomaticPlacementIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectsApiDeletionIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkspaceSettingsOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentJsonSchemaOutputExecutionIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowCatalogSearchPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.Api.WebHostLoggingConfigurationTests",
+          "CanDoItAll.Tests.Integration.External.UnknownConnectorManifestIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatOperationStorageContractIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsTurnApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.DatabaseSwitchIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessCapabilityPortabilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectPartyAssignmentMoveReceiptIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.ProfileHarnessIntegrationTests"
+        ],
+        "expectedDiscovery": 793,
+        "filterCharacters": 7757,
+        "runnerCounts": {
+          "total": 793,
+          "executed": 793,
+          "passed": 793,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        },
+        "runnerSkipped": 0
+      },
+      {
+        "index": 4,
+        "classes": [
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowHttpSecretAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafGenericToolAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkflowExternalResponseWebBoundaryTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentFrameworkExecutionRunTrackingIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowFileProviderDisclosureIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentAdmittedRunRecoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderOpenAiCompatibilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectTransferHistoryPersistenceTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentTypedContextJournalImmutabilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviders.ProviderRecoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderPremergeRelayTests",
+          "CanDoItAll.Tests.Integration.OwnerPostcommitPersistenceTests",
+          "CanDoItAll.Tests.Integration.SharedProviders.SharedProviderSourceSyncIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureAgentRuntimeToolRoundTripIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowUsagePersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests",
+          "CanDoItAll.Tests.Integration.ProviderHistoryCaptureIntegrationTests",
+          "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentProjectLifetimePersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentNativeProjectAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests",
+          "CanDoItAll.Tests.Integration.WorkAssignmentAdmissionIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProviderHistoryOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafOwnerAcknowledgementCheckpointTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentEditorAdapterIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.ScopedPriorToolEvidenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHrOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectsServiceIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.ProjectStructureAgentToolIntegrityEndToEndTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentToolProviderDispatchIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentExecutionRunContextBoundaryIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.MafAgentRuntimeHandoffTests",
+          "CanDoItAll.Tests.Integration.CrmHr.PartyOrganizationAffiliationIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectCreationReservationIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureClipboardIntegrationTests",
+          "CanDoItAll.Tests.Integration.SearchStorageOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.WorkAssignmentCoherencePersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowRunIdempotencyApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.PartyMergeIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.PromptsOwnerPersistenceTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentProjectCatalogPolicyIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowStableIdentityApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.External.ConnectorOutboxIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectWorkbenchProjectionMaintenanceIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.AgentChatSessionRejectionIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafPolicyDenialCheckpointTests",
+          "CanDoItAll.Tests.Integration.WorkbenchOwnerProjectionIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowCallerLaunchBoundaryIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmHrAuditTrailIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatApiValidationIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.DatabaseTransferIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ManagerProcessDiscoveryIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureFileInteractionIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureRootAuthorityHttpBoundaryTests",
+          "CanDoItAll.Tests.Integration.Runtime.MafIntermediateCheckpointActivityIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentCapabilitySetupApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentExternalProvisioningApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.CapsuleCatalogServiceIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.ProviderManagementCapabilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmHrCrossModuleIntegrationTests",
+          "CanDoItAll.Tests.Integration.DatabaseTransferContractPersistenceTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatCanonicalTitleMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatProjectStructureReportPersistenceIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectAdmissionSnapshotRaceTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureSubprojectTransferCoordinatorIntegrationTests",
+          "CanDoItAll.Tests.Integration.Runtime.ExecutionFoundationPortabilityIntegrationTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.AgentDiagnosticsReadsTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.CapabilityWorkspaceResolutionTests",
+          "CanDoItAll.Tests.Integration.AgentFramework.WorkflowHitlRecoveryCompositionIntegrationTests",
+          "CanDoItAll.Tests.Integration.CrmHr.CrmHrAgentQueryIntegrationTests",
+          "CanDoItAll.Tests.Integration.LiveLocalOllamaThinkingEffortIntegrationTests",
+          "CanDoItAll.Tests.Integration.LlmChats.LlmChatsCancellationApiIntegrationTests",
+          "CanDoItAll.Tests.Integration.MergeTargetSchemaUpgradeIntegrationTests",
+          "CanDoItAll.Tests.Integration.Persistence.LegacyDatabaseProfileIntegrationTests",
+          "CanDoItAll.Tests.Integration.Processes.ProcessPlanMigrationIntegrationTests",
+          "CanDoItAll.Tests.Integration.ProjectStructure.ProjectStructureReadHttpBoundaryTests",
+          "CanDoItAll.Tests.Integration.SharedProviderPremergeUpgradeTests"
+        ],
+        "expectedDiscovery": 793,
+        "filterCharacters": 7848,
+        "runnerCounts": {
+          "total": 793,
+          "executed": 792,
+          "passed": 780,
+          "failed": 12,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "inconclusive": 0,
+          "passedButRunAborted": 0,
+          "notRunnable": 0,
+          "notExecuted": 0,
+          "disconnected": 0,
+          "warning": 0,
+          "completed": 0,
+          "inProgress": 0,
+          "pending": 0
+        },
+        "runnerSkipped": 1
+      }
+    ],
+    "missingCases": 0,
+    "overlappingCases": 0,
+    "subsequentDiscovery": {
+      "currentCases": 3174,
+      "additionalCases": {
+        "CanDoItAll.Tests.Integration.Api.ApiSessionBoundaryTests.Concurrent_profile_reset_and_login_never_restore_superseded_authority": 1
+      },
+      "proof": "integration-closure.trx",
+      "expectedFollowUp": 138,
+      "actualFollowUp": 138,
+      "passed": 138
+    },
+    "executionCoverage": {
+      "expectedDiscovery": 3173,
+      "actualResults": 3178,
+      "missingCases": 0,
+      "missingMethods": {},
+      "additionalRuntimeCases": 5,
+      "expandedMethods": {
+        "CanDoItAll.Tests.Integration.External.PluginCatalogIntegrationTests.packaged_plugin_preview_simulation_avoids_live_external_effects": 5
+      },
+      "counts": {
+        "runnerSkipped": 1,
+        "total": 3178,
+        "executed": 3177,
+        "passed": 3157,
+        "failed": 20,
+        "notExecuted": 0
+      },
+      "status": "complete"
+    }
+  },
+  "integrationFailureDisposition": {
+    "comparison": "Exact runner display-name match, including every theory argument.",
+    "counts": {
+      "repaired_and_passed": 20,
+      "opt_in_lane_not_run": 1
+    },
+    "failures": [
+      {
+        "batch": 1,
+        "test": "CanDoItAll.Tests.Integration.AgentFramework.AgentApiFailureContractIntegrationTests.Provider_save_storage_failure_is_not_misclassified_as_request_validation",
+        "caseNameSha256": "5793a904d6df2b22e31abf848a3417701c3b8776914e2ac42a9752fa3603d8e6",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-failure-contract.trx"
+      },
+      {
+        "batch": 2,
+        "test": "CanDoItAll.Tests.Integration.AgentFramework.AgentEventsApiIntegrationTests.Provider_stream_cancels_and_observes_dispatch_when_running_frame_fails",
+        "caseNameSha256": "b1a1c3628ef25562294b33bc2ff38987ff64fc67759d53e30256bb6bd2a189f2",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-fixture-repair.trx"
+      },
+      {
+        "batch": 2,
+        "test": "CanDoItAll.Tests.Integration.CrmHr.AgentRecruitingApiIntegrationTests.Recruiting_api_lists_correlated_interviews_and_round_trips_analysis",
+        "caseNameSha256": "4207e0e3d5f9572608d736ab3ee869a0e906c3b0fb95e7ee9d7327d95163a7f1",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 2,
+        "test": "CanDoItAll.Tests.Integration.CrmHr.AgentRecruitingApiIntegrationTests.Recruiting_api_round_trips_all_target_kinds_and_never_activates_candidate",
+        "caseNameSha256": "5c166a5024d0fd279dabf086b04e7505726975fd1b977684769a74d282e75697",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 2,
+        "test": "CanDoItAll.Tests.Integration.WorkflowAuthorizedHitlApiIntegrationTests.AuthenticatedResponse_AfterRealCancellation_ReturnsGoneWithoutCreatingOperation",
+        "caseNameSha256": "b26eb1ddcac9f5d1bc8c8c431fcd0394c176c3a8397a464b6a902d2b37fcab7d",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 2,
+        "test": "CanDoItAll.Tests.Integration.AgentFramework.AgentEventsApiIntegrationTests.Provider_heartbeat_wait_returns_success_when_completion_races_the_tick",
+        "caseNameSha256": "843c67768db3cd1d9c13aae282de3ba4038409c5d49f68b697fd8794dbb2e170",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-fixture-repair.trx"
+      },
+      {
+        "batch": 2,
+        "test": "CanDoItAll.Tests.Integration.CrmHr.AgentRecruitingApiIntegrationTests.Recruiting_api_rejects_unknown_mismatched_and_invalid_evidence",
+        "caseNameSha256": "e99b2490360518350abdb3566750bab84bde3d85215c2ce78fc8807171afd38b",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 2,
+        "test": "CanDoItAll.Tests.Integration.WorkflowAuthorizedHitlApiIntegrationTests.AuthenticatedResponse_TraversesWebServicePostgreSqlAndMaf",
+        "caseNameSha256": "630ebfc93cd5526d52364aa791d306d7de093509ab72cff21b4b83f37b883ed7",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.LiveLocalOllamaThinkingEffortIntegrationTests.Installed_catalog_and_native_effort_mapping_match_thinking_capabilities",
+        "caseNameSha256": "45a4bed9c29d8d5b5d48f87e87234b0fe76560633539503a364978712cacdc1f",
+        "originalOutcome": "NotExecuted",
+        "disposition": "opt_in_lane_not_run",
+        "passingProof": null
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.Approval_AfterHostReconstruction_EnforcesDecision",
+        "caseNameSha256": "aa8c48e6abfd6d830edc3763f0ac2615f1149882c414711535cc28f4cb04ceb0",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.CorruptRecoveryState_AfterHostReconstruction_FailsClosed",
+        "caseNameSha256": "bdf572f0a0005966952b2bfb52faee55aa2bb6a36ff2cfa1f10d74ef4d90f2f9",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.ApprovalCrashWindow_AfterHostReconstruction_RecoversWithoutDuplicateEffect",
+        "caseNameSha256": "87d975a4677e9ebbac0522f258be3fe1134db55ac97102a6bda54447bbe0729d",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.ApprovalCrashWindow_AfterHostReconstruction_RecoversWithoutDuplicateEffect",
+        "caseNameSha256": "e97c3a270f8c3eab945f7294e432f6cf2fd7f73bbc02194b3fc4861af5e03a14",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.CorruptRecoveryState_AfterHostReconstruction_FailsClosed",
+        "caseNameSha256": "ebfacbbbd45b19b6c456a1bbd9aab9f9254acf862f2e8756042251be0fa0ba80",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.LegacyWaitingRun_AfterHostReconstruction_RemainsInspectableAndRejectsResponse",
+        "caseNameSha256": "3b3c8cd0ecbac9d48316adb7c28feebfb8217b2f9352fdd25a7bb2e446ebbe8d",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.ConcurrentApprovalResponses_CreateOneActiveContinuationAndOneEffect",
+        "caseNameSha256": "7e789b3e760232f8a4524341e7c6dce380950e125389126ec97d94c20197a1d8",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.CorruptRecoveryState_AfterHostReconstruction_FailsClosed",
+        "caseNameSha256": "8069de9059cdbf8a93eac113816aa924891c234ed494acc630c1e5ca72a12dca",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.CorruptRecoveryState_AfterHostReconstruction_FailsClosed",
+        "caseNameSha256": "ec1804e41dc32dae1cd910e5ced52d87acaab25eeb303759b8fbdaa99d43187d",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.Approval_AfterHostReconstruction_EnforcesDecision",
+        "caseNameSha256": "cb1d4f58832f63ca5bdf26ebd37f836bc81288ad450ad5a79f6358ccfbf2c9c6",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.HumanInput_AfterHostReconstruction_ResumesConsecutiveWaitsWithoutRerunningPrefix",
+        "caseNameSha256": "1f500bec82faca470005cffe36ee3036c29247d8a254ba46c9f50bd0a6d0b9aa",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      },
+      {
+        "batch": 4,
+        "test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.RestartableResponsesAndLogs_DoNotExposeCheckpointOrSecrets",
+        "caseNameSha256": "3fed3a16fd7989c561fac6d2f92a26a1bdcc3dcadf472ff3d146f6cb114511ed",
+        "originalOutcome": "Failed",
+        "disposition": "repaired_and_passed",
+        "passingProof": "integration-compatibility.trx"
+      }
+    ]
+  },
+  "artifactHygiene": {
+    "source": "source-secret-scan-final-source.trx",
+    "genericScan": {
+      "schema_version": 3,
+      "generated_utc": "2026-09-20T16:49:23.391402+00:00",
+      "root": "C:/repositories/CanDoItAll/artifacts/api-access",
+      "excluded_directories": [],
+      "max_file_bytes": 536870912,
+      "scanned_files": 234,
+      "coverage": {
+        "candidate_files": 248,
+        "scanned_text_files": 234,
+        "oversized_text_files": {
+          "count": 0,
+          "files": []
+        },
+        "excluded_non_text_files": {
+          "count": 13,
+          "files": [
+            {
+              "path": "classify_integration_failures.py",
+              "bytes": 2050
+            },
+            {
+              "path": "copy_verified_sources.py",
+              "bytes": 1475
+            },
+            {
+              "path": "describe_access_routes.py",
+              "bytes": 5771
+            },
+            {
+              "path": "describe_contracts.py",
+              "bytes": 26605
+            },
+            {
+              "path": "final_change_seeds.py",
+              "bytes": 1404
+            },
+            {
+              "path": "integration_progress.py",
+              "bytes": 684
+            },
+            {
+              "path": "partition_integration.py",
+              "bytes": 1564
+            },
+            {
+              "path": "redact_credential_artifacts.py",
+              "bytes": 2780
+            },
+            {
+              "path": "scan_credential_artifacts.py",
+              "bytes": 1123
+            },
+            {
+              "path": "update_compatibility_evidence.py",
+              "bytes": 4201
+            },
+            {
+              "path": "update_operator_docs.py",
+              "bytes": 4993
+            },
+            {
+              "path": "verify_integration_results.py",
+              "bytes": 2752
+            },
+            {
+              "path": "write_evidence.py",
+              "bytes": 24073
+            }
+          ]
+        },
+        "unreadable_text_files": {
+          "count": 0,
+          "files": []
+        },
+        "excluded_control_input_files": {
+          "count": 1,
+          "files": [
+            {
+              "path": "artifact-secret-scan-final.json",
+              "bytes": 2217
+            }
+          ]
+        }
+      },
+      "finding_count": 0,
+      "sentinel_input_file_count": 0,
+      "sentinel_value_count": 0,
+      "sentinel_finding_count": 0,
+      "by_rule": {},
+      "value_disclosure": "Findings contain metadata and truncated SHA-256 fingerprints only; source excerpts and secret values are never stored.",
+      "findings": []
+    },
+    "browserScan": {
+      "schema_version": 3,
+      "generated_utc": "2026-09-20T16:39:40.568275+00:00",
+      "root": "C:/repositories/CanDoItAll/output/playwright/api-access",
+      "excluded_directories": [],
+      "max_file_bytes": 536870912,
+      "scanned_files": 1,
+      "coverage": {
+        "candidate_files": 2,
+        "scanned_text_files": 1,
+        "oversized_text_files": {
+          "count": 0,
+          "files": []
+        },
+        "excluded_non_text_files": {
+          "count": 1,
+          "files": [
+            {
+              "path": "settings-users-after-restart.png",
+              "bytes": 41938
+            }
+          ]
+        },
+        "unreadable_text_files": {
+          "count": 0,
+          "files": []
+        },
+        "excluded_control_input_files": {
+          "count": 0,
+          "files": []
+        }
+      },
+      "finding_count": 0,
+      "sentinel_input_file_count": 0,
+      "sentinel_value_count": 0,
+      "sentinel_finding_count": 0,
+      "by_rule": {},
+      "value_disclosure": "Findings contain metadata and truncated SHA-256 fingerprints only; source excerpts and secret values are never stored.",
+      "findings": []
+    },
+    "credentialScan": {
+      "scannedTextFiles": 249,
+      "findings": [],
+      "status": "passed"
+    },
+    "redactions": [
+      {
+        "path": "artifacts/api-access/integration-batch-2.log",
+        "redactions": {
+          "JWT": 2
+        },
+        "beforeSha256": "bbec38b854cc6315b85a95b3f9e12ca4f12de94d1f5ef3c72149ad5a6de50ea6",
+        "afterSha256": "c4f0e0e71eeea1eaa5380a431277407d68fead6051310694d963f66bb1f0082b",
+        "testOutcomesPreserved": false
+      },
+      {
+        "path": "artifacts/api-access/integration-batch-2.trx",
+        "redactions": {
+          "JWT": 2
+        },
+        "beforeSha256": "91e3a2fdc641ca4b3fa004f64c5ad3391a826df02326c03fd954b1357d3dea11",
+        "afterSha256": "efa8964dde77199352aa1825a0d5277b54daff79633ff7bc4f7921e56ef438b8",
+        "testOutcomesPreserved": true
+      },
+      {
+        "path": "artifacts/api-access/integration-batch-2.log",
+        "redactions": {
+          "ExplicitRedactionMarker": 2
+        },
+        "beforeSha256": "c4f0e0e71eeea1eaa5380a431277407d68fead6051310694d963f66bb1f0082b",
+        "afterSha256": "bd8fe6b6867b1ab39ad03607b3a33e628b28fdbc4ea7de8ab415b80199994cf4",
+        "testOutcomesPreserved": false
+      },
+      {
+        "path": "artifacts/api-access/integration-batch-2.trx",
+        "redactions": {
+          "ExplicitRedactionMarker": 2
+        },
+        "beforeSha256": "efa8964dde77199352aa1825a0d5277b54daff79633ff7bc4f7921e56ef438b8",
+        "afterSha256": "7f10e67e5c17c9341a84e741e58a156c298da13cd6b005661a78bea55ade6008",
+        "testOutcomesPreserved": true
+      }
+    ]
+  },
+  "finalErrorBoundaryBuild": {
+    "owner": "Web",
+    "command": "dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release --no-restore /m:1",
+    "status": "passed",
+    "warnings": 0,
+    "errors": 0,
+    "log": "artifacts/api-access/web-error-contract-build.log"
+  },
+  "concurrencyScenarios": [
+    {
+      "id": "C06",
+      "proof": "integration-closure.trx",
+      "operations": [
+        "Version-matched profile update",
+        "Version-matched password reset",
+        "Login with the original password"
+      ],
+      "observed": [
+        "Exactly one mutation returned 200 and the other returned 409.",
+        "The original registered session was rejected.",
+        "The winning password authenticated with the current grants.",
+        "Any raced login still accepted by /me had only the current account grants."
+      ]
+    }
+  ],
+  "abortedAttempts": [
+    {
+      "suite": "Integration",
+      "expectedDiscovery": 99,
+      "workingDirectory": "C:/repositories/api-v",
+      "status": "aborted",
+      "log": "artifacts/api-access/integration-final-aborted.log",
+      "reason": "The same missing-request-services streaming fixture stalled this isolated attempt. Cancellation produced no TRX counters. The repaired 16-case transport selection passed, and the final 99-case selection was rerun in the main checkout."
+    }
+  ],
+  "environmentRepair": {
+    "attempt": "Integration build in the deep managed verification worktree",
+    "initialStatus": "failed",
+    "reason": "Three MSB3021 template-copy failures exceeded Windows path length limits.",
+    "resolution": "A verified short junction C:/repositories/api-v names the same checkout; the unchanged build then passed."
+  },
+  "buildSchedulingRepair": {
+    "attempt": "Unit build while a Production acceptance host was running",
+    "initialStatus": "failed",
+    "reason": "Windows prevented a referenced Web-output DLL from being overwritten while the owned test host held it.",
+    "resolution": "Waited for the acceptance host to exit, then repeated the build successfully; one existing test analyzer warning, zero errors."
+  },
+  "abortedBuildAttempts": [
+    {
+      "attempt": "Integration fixture-repair build started in the main checkout",
+      "status": "cancelled",
+      "reason": "Corrected the working directory to the isolated verification checkout before the main Integration assembly was written.",
+      "preservedMainAssemblyWriteTimeUtc": "2026-09-20T14:26:32.7659649Z",
+      "log": "artifacts/api-access/integration-fixture-repair-wrong-workspace-aborted.log"
+    }
+  ],
+  "httpScenarios": [
+    {
+      "ids": [
+        "A04",
+        "B01"
+      ],
+      "method": "POST",
+      "path": "/api/access/login",
+      "credentialKind": "Administrator password",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Real hash helper and JWT handler used.",
+        "Registered administrator session returned with no-store."
+      ]
+    },
+    {
+      "ids": [
+        "B02",
+        "D01"
+      ],
+      "method": "GET",
+      "path": "/api/workflows/templates",
+      "credentialKind": "UserSession",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Scoped user reads the real template catalog."
+      ]
+    },
+    {
+      "ids": [
+        "A04",
+        "B07"
+      ],
+      "method": "GET",
+      "path": "/api/access/users",
+      "credentialKind": "Machine",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Forwarding and a valid machine bearer do not establish administrator authority."
+      ]
+    },
+    {
+      "ids": [
+        "A04"
+      ],
+      "method": "GET",
+      "path": "/api/access/users",
+      "credentialKind": "Anonymous",
+      "expectedStatus": 401,
+      "actualStatus": 401,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Safe JSON challenge without HTML fallback or redirect."
+      ]
+    },
+    {
+      "ids": [
+        "A03",
+        "F01"
+      ],
+      "method": "GET",
+      "path": "/api/access/users",
+      "credentialKind": "AdministratorSession",
+      "expectedStatus": 404,
+      "actualStatus": 404,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Management disabled after restart; local Settings still performs account mutations."
+      ]
+    },
+    {
+      "ids": [
+        "B04",
+        "B09"
+      ],
+      "method": "POST",
+      "path": "/api/access/login",
+      "credentialKind": "Anonymous",
+      "expectedStatus": 413,
+      "actualStatus": 413,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Actual Kestrel rejects the oversized body with safe JSON and no-store."
+      ]
+    },
+    {
+      "ids": [
+        "B08"
+      ],
+      "method": "POST",
+      "path": "/api/access/login",
+      "credentialKind": "Unknown account passwords",
+      "expectedStatus": 429,
+      "actualStatus": 429,
+      "proof": "tests/api-boundaries.trx",
+      "stateAssertions": [
+        "The 31st rotating username from one client is rate limited; Retry-After is present; no account created."
+      ]
+    },
+    {
+      "ids": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "F02"
+      ],
+      "method": "GET",
+      "path": "/api/access/me",
+      "credentialKind": "Superseded UserSession",
+      "expectedStatus": 401,
+      "actualStatus": 401,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Scope edit, password reset, disable/re-enable and deletion/recreation reject old sessions.",
+        "Recreated username has a new immutable ID.",
+        "Independent machine access remains valid until explicitly revoked."
+      ]
+    },
+    {
+      "ids": [
+        "C05"
+      ],
+      "method": "POST",
+      "path": "/api/access/logout",
+      "credentialKind": "UserSession",
+      "expectedStatus": 204,
+      "actualStatus": 204,
+      "proof": "tests/api-boundaries.trx",
+      "stateAssertions": [
+        "Only the current registration is revoked; a second session still works."
+      ]
+    },
+    {
+      "ids": [
+        "C07"
+      ],
+      "method": "GET",
+      "path": "/api/access/me",
+      "credentialKind": "AdministratorSession issued before hash rotation",
+      "expectedStatus": 401,
+      "actualStatus": 401,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Restart keeps the signing key and machine bearer valid, rejects the old administrator session/password, and accepts the new password."
+      ]
+    },
+    {
+      "ids": [
+        "C08",
+        "A08"
+      ],
+      "method": "GET",
+      "path": "/api/access/users",
+      "credentialKind": "AdministratorSession",
+      "expectedStatus": 503,
+      "actualStatus": 503,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Unsupported private account schema fails closed through the actual proxy and production error pipeline."
+      ]
+    },
+    {
+      "ids": [
+        "D02",
+        "D03"
+      ],
+      "method": "PUT",
+      "path": "/api/settings/workspace",
+      "credentialKind": "UserSession with unrelated/read-only section grant",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "proof": "tests/api-sections.trx",
+      "stateAssertions": [
+        "Valid settings body denied before mutation; persisted workspace name remains unchanged.",
+        "Ten section grants are exercised against all ten representative reads."
+      ]
+    },
+    {
+      "ids": [
+        "E01"
+      ],
+      "method": "GET",
+      "path": "/api/processes/definitions and /{realKey}[/roles|/steps]",
+      "credentialKind": "UserSession",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Real catalog key used; nonempty current projection shapes returned."
+      ]
+    },
+    {
+      "ids": [
+        "E02",
+        "E03"
+      ],
+      "method": "POST",
+      "path": "/api/workflows/templates/{realKey}/drafts",
+      "credentialKind": "UserSession",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Actual template listing supplies the key.",
+        "Two concurrent requests produce distinct draft identities, each independently read from PostgreSQL through the definition API.",
+        "Draft lifecycle and persisted graph checked; no model execution."
+      ]
+    },
+    {
+      "ids": [
+        "E05"
+      ],
+      "method": "PUT",
+      "path": "/api/settings/workspace",
+      "credentialKind": "Machine with workspace-write grant",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Actual persisted settings read back before switching the database profile."
+      ]
+    },
+    {
+      "ids": [
+        "F07"
+      ],
+      "method": "POST",
+      "path": "HTTP /api/access/login with spoofed forwarding headers",
+      "credentialKind": "Anonymous",
+      "expectedStatus": 400,
+      "actualStatus": 400,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Untrusted forwarding cannot replace required HTTPS or create local authority."
+      ]
+    },
+    {
+      "ids": [
+        "F08"
+      ],
+      "method": "GET",
+      "path": "Proxy SSR, Settings, Blazor, developer and unapproved file routes",
+      "credentialKind": "Anonymous",
+      "expectedStatus": 404,
+      "actualStatus": 404,
+      "proof": "production-error-contract.trx",
+      "stateAssertions": [
+        "Only approved /api/** routes are forwarded.",
+        "Backend listeners are loopback only."
+      ]
+    }
+  ],
+  "unitDiscoveryExpansion": [
+    {
+      "test": "CanDoItAll.Tests.Unit.AgentFramework.FloatingAgentChatSettingsValidatorTests.Validate_rejects_values_outside_inclusive_boundaries",
+      "listed": 1,
+      "runtime": 8,
+      "delta": 7
+    },
+    {
+      "test": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeToolPreflightServiceTests.Process_starting_tool_contracts_have_deterministic_host_routes",
+      "listed": 1,
+      "runtime": 21,
+      "delta": 20
+    },
+    {
+      "test": "CanDoItAll.Tests.Unit.AgentFramework.MafFinalizerToolFactorySchemaCharacterizationTests.CreateCapture_produces_the_policy_tool_name_description_and_json_schema",
+      "listed": 1,
+      "runtime": 8,
+      "delta": 7
+    }
+  ],
+  "browserFailureDisposition": [
+    {
+      "test": "CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_SHARED_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.Smoke.WorkflowShellSmokeTests.Workflow_shell_creates_and_runs_starter_preview_on_large_screen",
+      "originalRunnerOutcome": "Failed",
+      "classification": "repaired_and_focused_passed",
+      "reason": "Isolated fixture/startup readiness repair; focused rerun passed.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.Project_structure_export_image_capture_generates_i18_artifacts",
+      "originalRunnerOutcome": "Failed",
+      "classification": "pre_existing_quarantined_failure",
+      "reason": "Missing historical before/after screenshot inputs.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.ProviderHistoryPremergeUiTests.Isolated_history_paging_details_and_policy_remain_explicit",
+      "originalRunnerOutcome": "Failed",
+      "classification": "repaired_and_focused_passed",
+      "reason": "Isolated fixture/startup readiness repair; focused rerun passed.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.Startup_modal_shell_switcher_and_settings_data_sources_flow_render_cleanly",
+      "originalRunnerOutcome": "Failed",
+      "classification": "pre_existing_quarantined_failure",
+      "reason": "Existing quarantined startup-dialog expectation times out.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.AiAgentFlowTests.Crm_agent_directory_accepts_the_first_search_and_card_selection_only_once_interactive",
+      "originalRunnerOutcome": "Failed",
+      "classification": "repaired_and_focused_passed",
+      "reason": "Isolated fixture/startup readiness repair; focused rerun passed.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.SharedProviderRealCatalogUiTests.Real_Ollama_inventory_replaces_fixture_data_and_mirrors_without_foreign_prices",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_SHARED_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.Smoke.ProcessShellSmokeTests.Process_shell_routes_render_global_and_project_scoped_workspaces",
+      "originalRunnerOutcome": "Failed",
+      "classification": "repaired_and_focused_passed",
+      "reason": "Isolated fixture/startup readiness repair; focused rerun passed.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_SHARED_UI_CLIENT_URL",
+        "CANDOITALL_SHARED_UI_EVIDENCE_DIRECTORY",
+        "CANDOITALL_SHARED_UI_SHARED_URL",
+        "CANDOITALL_SHARED_UI_UPSTREAM_TOKEN_FILE",
+        "CANDOITALL_SHARED_UI_VISION_IMAGE"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.SharedProviderRealCatalogUiTests.Real_OpenAi_inventory_is_configured_in_UI_and_mirrored_without_aliases_or_fake_prices",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_SHARED_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.AiAgentFlowTests.Agentframework_catalog_projects_agents_into_crm_hr_directory",
+      "originalRunnerOutcome": "Failed",
+      "classification": "repaired_and_focused_passed",
+      "reason": "Isolated fixture/startup readiness repair; focused rerun passed.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.Visual.DashboardOperationalSnapshotPlaywrightTests.Empty_snapshot_and_failed_refresh_remain_honest_in_the_real_app",
+      "originalRunnerOutcome": "Failed",
+      "classification": "repaired_and_focused_passed",
+      "reason": "Isolated fixture/startup readiness repair; focused rerun passed.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_SHARED_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.ProviderHistoryUiAcceptanceTests.Provider_and_global_history_are_lazy_and_filter_the_same_attempts",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_SHARED_UI_CLIENT_URL",
+        "CANDOITALL_SHARED_UI_EVIDENCE_DIRECTORY",
+        "CANDOITALL_SHARED_UI_SHARED_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.SharedProviderRealCatalogUiTests.Real_shared_providers_execute_simple_chats_agent_image_and_vision_through_UI",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_CLIENT_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 1,
+      "missingConfigurationKeys": [
+        "CANDOITALL_ALLOW_SHARED_PROVIDER_FIXTURE_WRITES"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.StorageDriver_settings_and_workbench_artifacts_capture_required_browser_evidence",
+      "originalRunnerOutcome": "Failed",
+      "classification": "pre_existing_quarantined_failure",
+      "reason": "Existing quarantined PDF fixture has invalid Base64.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.SimpleChatAvatarBrowserTests.Avatar_matches_catalog_editor_picker_and_persists_selection_and_reset",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 2,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_CLIENT_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.Project_structure_artifacts_capture_required_canvas_evidence",
+      "originalRunnerOutcome": "Failed",
+      "classification": "pre_existing_quarantined_failure",
+      "reason": "Existing quarantined quick-action selector is absent.",
+      "caseOrdinalWithinMethod": 1
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 2,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_CLIENT_URL"
+      ]
+    },
+    {
+      "test": "CanDoItAll.Tests.Playwright.LocalSimpleChatBrowserAccessTests.LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected",
+      "originalRunnerOutcome": "Failed",
+      "classification": "external_fixture_not_configured",
+      "reason": "Explicit source/client hosts, evidence paths and fixture authorization are not configured. No real or paid provider calls were attempted.",
+      "caseOrdinalWithinMethod": 3,
+      "missingConfigurationKeys": [
+        "CANDOITALL_REAL_CLIENT_URL"
+      ]
+    }
+  ],
+  "productionComposition": {
+    "status": "passed",
+    "databaseProvider": "PostgreSQL",
+    "controlPlaneIsolated": true,
+    "proof": "production-error-contract.trx",
+    "restart": "Same private account/token root with a second PostgreSQL profile; stale sessions remain rejected.",
+    "hashHelper": "Actual ApiPasswordHash executable receives generated password through stdin; no secret command arguments."
+  },
+  "proxyBoundary": {
+    "status": "passed",
+    "proof": "production-error-contract.trx",
+    "proxy": "Actual TLS YARP allowlist routing only /api/** to loopback-only backend listeners",
+    "assertions": [
+      "Configured trusted forwarding permits intended API requests.",
+      "Forwarded anonymous and machine callers never become administrators.",
+      "SSR, Settings, Blazor transport, developer, OpenAPI and unapproved file routes return 404.",
+      "Disallowed CORS origins receive no allow-origin header.",
+      "Oversized credential request returns safe JSON 413 with no-store."
+    ]
+  },
+  "browserJourneys": [
+    {
+      "status": "passed",
+      "test": "Real_settings_mutations_invalidate_sessions_and_preserve_machine_access_across_restart",
+      "actions": [
+        "create",
+        "scopes",
+        "stale edit rejection",
+        "reset password",
+        "disable",
+        "re-enable",
+        "delete",
+        "recreate",
+        "machine issue/list/revoke",
+        "restart/profile switch",
+        "repeated Save with real mutation lease",
+        "committed account survives failed Refresh"
+      ],
+      "screenshot": "output/playwright/api-access/settings-users-after-restart.png",
+      "readBackDistinction": "Automatic post-commit read failure is covered by the passing component test. The production browser separately injects an explicit Refresh failure after a committed Save."
+    }
+  ],
+  "portabilityStatic": {
+    "status": "passed",
+    "command": "python tools/Validation/Portability/scan_portability.py --repo-root . --output artifacts/api-access/portability-final.json",
+    "enforcementCommand": "python tools/Validation/Portability/enforce_portability_baseline.py --scan artifacts/api-access/portability-final.json --baseline tools/Validation/Portability/portability-risk-baseline.json",
+    "reviewedAllowances": 14937,
+    "evidencePath": "artifacts/api-access/portability-enforcement-final.log"
+  },
+  "limitations": [
+    "Unfiltered suite failures remain failures; this report does not claim an entirely green suite or merge readiness.",
+    "External browser fixtures and paid/real model lanes were not configured or executed.",
+    "Four pre-existing quarantined browser failures remain recorded without changing their quarantine.",
+    "The broad Unit source scanner failed on unrelated pre-existing ignored historical artifacts. The unchanged scanner passed on a clean same-base worktree with actual changed sources copied and SHA-256 verified.",
+    "Linux/macOS runtime and Unix permission lanes were not run on this Windows host.",
+    "No push, PR or development-to-main merge was performed."
+  ]
+}

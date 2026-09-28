@@ -22,6 +22,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     private const int GovernedProcessDefaultStructureReadTake = 80;
     private const int GovernedProcessMaxExplicitLeaseMinutes = 5;
     private const string ProjectsSourceKind = "projects";
+    private const string WorkspaceScopeKindTag = "workspaceScopeKind";
+    private const string WorkspaceScopeKeyTag = "workspaceScopeKey";
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
     private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512}}""";
@@ -316,7 +318,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 context.Governance) {
                     ProviderContext = context,
                     SourceProject = context.Purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation ? null :
-                        await admissionService.CaptureSourceProjectAsync(context.Governance, context.AdmittedToolSession, cancellationToken)
+                        await admissionService.CaptureSourceProjectAsync(context.Governance, context.AdmittedToolSession, cancellationToken),
+                    ActiveWorkspaceScope = ResolveActiveWorkspaceScope(context.Tags)
                 };
             if (!accessState.CanRead &&
                 !accessState.CanWrite &&
@@ -459,7 +462,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureWorkflowNodeStartInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeWorkflowStartAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_workflow_start",
-                    "Starts the workflow represented by a project-structure workflow node and returns the initial run status."),
+                    "Starts the workflow represented by a project-structure workflow node and returns the initial run status. Supply a new GUID as request.intentId for each launch and reuse the same intentId only to recover a launch whose acknowledgement was lost."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureNodeWorkflowStatusGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_node_workflow_status_get",
@@ -611,9 +614,9 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     ProjectStructureToolPolicy.ProjectTaskCreate,
                     "Creates a typed project task under the Main backlog, applies its delivery schedule and estimate, optionally assigns a person/agent or attaches a workflow/process, and inserts it into the Gantt row order."));
                 tools.Add(AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureTaskDetailsUpdateRequest request, CancellationToken cancellationToken = default) => ProjectTaskUpdateAsync(agent, accessState, projectId, request, cancellationToken),
+                    (Guid projectId, ProjectStructureTaskUpdateAgentInput request, CancellationToken cancellationToken = default) => ProjectTaskUpdateAsync(agent, accessState, projectId, request, cancellationToken),
                     ProjectStructureToolPolicy.ProjectTaskUpdate,
-                    "Updates a typed project task through the Gantt task-details mutation path. Read the current task first and provide exact current estimate, execution, and expected-cost-basis snapshots for optimistic concurrency. currentCostBasis is required even when its value is null. currentProgressPercent accepts -1 for untracked progress, while proposedProgressPercent must be 0-100. Direct assignees may be a person or agent."));
+                    "Updates a typed project task through the Gantt task-details mutation path. Read the current task first and provide exact current estimate, execution, and expected-cost-basis snapshots for optimistic concurrency. taskId is the task node id. currentCostBasis is required even when its value is null. currentProgressPercent accepts -1 for untracked progress, while proposedProgressPercent must be 0-100. To reschedule, send scheduleChange with a gesture and one affectedTasks entry per moved task holding its node id and its exact current and proposed start and end. Direct assignees may be a person or agent."));
                 tools.Add(AIFunctionFactory.Create(
                     (Guid projectId, string taskNodeId, ProjectStructureTaskResourceAttachRequest request, CancellationToken cancellationToken = default) => ProjectTaskResourceAttachAsync(agent, accessState, projectId, taskNodeId, request, cancellationToken),
                     ProjectStructureToolPolicy.ProjectTaskResourceAttach,
@@ -746,14 +749,16 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 cancellationToken);
         }
 
-        private Task<ProjectStructureGanttMutationResult> ProjectTaskUpdateAsync(
+        private async Task<ProjectStructureGanttMutationResult> ProjectTaskUpdateAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
             Guid projectId,
-            ProjectStructureTaskDetailsUpdateRequest request,
+            ProjectStructureTaskUpdateAgentInput input,
             CancellationToken cancellationToken)
         {
-            return ExecuteAsync(
+            ArgumentNullException.ThrowIfNull(input);
+            var request = input.ToRequest();
+            return await ExecuteAsync(
                 agent,
                 "tasks.update",
                 projectId,
@@ -2039,7 +2044,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     if (!request.IntentId.HasValue || request.IntentId == Guid.Empty) {
-                        throw new ProjectStructureAgentException(400, "WorkflowIntentRequired", "Supply one intentId for this launch and reuse it if its acknowledgement is lost.");
+                        throw ProjectStructureAgentException.CreateAgentVisible(
+                            400,
+                            "WorkflowIntentRequired",
+                            "Supply one new GUID as request.intentId for this launch and reuse the same intentId if its acknowledgement is lost.",
+                            canRetryWithCorrectedInput: true,
+                            effectState: AgentToolEffectState.None);
                     }
 
                     accessState.EnsureProjectWriteAllowed(projectId);
@@ -2769,6 +2779,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         {
             var stopwatch = Stopwatch.StartNew();
             var context = BuildAgentContext(agent);
+            using var effects = ProjectStructureToolEffectObservation.Begin();
             T response;
 
             try
@@ -2812,6 +2823,11 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         exception.Message,
                         ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
                         ProjectStructureAnalyticsService.SerializeSummary(exception.Details)));
+                if (ProjectStructureLeaseRejection.TryCreateNoEffect(exception, effects, operationName, out var rejection))
+                {
+                    throw rejection;
+                }
+
                 throw;
             }
             catch (Exception exception)
@@ -2840,6 +2856,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                             {
                                 FailureType = exception.GetType().Name
                             })));
+                // A serializable conflict rolls back its own transaction; it proves no effect only when the invocation
+                // had not yet entered a leased mutation or saved any domain row.
                 throw ProjectStructureAgentException.CreateAgentVisible(
                     409,
                     errorCode,
@@ -2848,7 +2866,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     diagnosticDetails: new
                     {
                         FailureType = exception.GetType().Name
-                    });
+                    },
+                    effects.MayHaveChangedState ? AgentToolEffectState.Unknown : AgentToolEffectState.NotCommitted);
             }
             catch (Exception exception)
             {
@@ -2922,7 +2941,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     {
                         exception.JsonPath,
                         FailureType = exception.GetType().Name
-                    });
+                    },
+                    AgentToolEffectState.None);
             }
         }
 
@@ -3083,12 +3103,14 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 return scopedAgentContext with {
                     WorkflowAuthority = workflowAuthority,
                     ExpectedProjectAdmission = scopedProcessAccess.ExpectedProjectAdmission,
-                    ProcessMutationAdmission = CaptureProcessMutationAdmission(accessState)
+                    ProcessMutationAdmission = CaptureProcessMutationAdmission(accessState),
+                    ActiveWorkspaceScope = accessState.ActiveWorkspaceScope
                 };
             }
 
             return BuildAgentContext(agent, branchName, repositoryRoot) with {
                 WorkflowAuthority = workflowAuthority,
+                ActiveWorkspaceScope = accessState.ActiveWorkspaceScope,
                 ExpectedProjectAdmission = projectId is null ? null :
                     accessState.SessionCreatedReservations.TryGetValue(projectId.Value, out var created)
                         ? new(created.DatabaseProfileId, created.ProjectId, created.LifetimeId) : accessState.ScopedProcessAccess?.ExpectedProjectAdmission,
@@ -3305,10 +3327,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             var node = response.Nodes.FirstOrDefault(item => string.Equals(item.Id, nodeId, StringComparison.Ordinal));
             if (node is null)
             {
-                throw new ProjectStructureAgentException(
+                throw ProjectStructureAgentException.CreateAgentVisible(
                     404,
                     "NodeNotFound",
-                    $"Project-structure node '{nodeId}' was not found in project '{projectId:D}'.");
+                    $"Project-structure node '{nodeId}' was not found in project '{projectId:D}'. Read the current structure and retry with an existing node id.",
+                    canRetryWithCorrectedInput: true,
+                    effectState: AgentToolEffectState.None);
             }
 
             ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericUpdateAllowed(
@@ -3479,10 +3503,28 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             out Guid projectId)
         {
             projectId = Guid.Empty;
-            return tags.TryGetValue("workspaceScopeKind", out var scopeKind) &&
+            return tags.TryGetValue(WorkspaceScopeKindTag, out var scopeKind) &&
                    string.Equals(scopeKind, WorkspaceScopeKind.Project.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                   tags.TryGetValue("workspaceScopeKey", out var scopeKey) &&
+                   tags.TryGetValue(WorkspaceScopeKeyTag, out var scopeKey) &&
                    Guid.TryParse(scopeKey, out projectId);
+        }
+
+        // The runtime tags every provider context with the execution workspace scope its workspace tools were built
+        // for, so a workspace path an agent wrote is resolved in that same scope.
+        private static WorkspaceScopeDescriptor? ResolveActiveWorkspaceScope(IReadOnlyDictionary<string, string> tags)
+        {
+            if (!tags.TryGetValue(WorkspaceScopeKindTag, out var scopeKind))
+            {
+                return null;
+            }
+
+            if (!Enum.TryParse<WorkspaceScopeKind>(scopeKind, ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
+            {
+                throw new InvalidOperationException(
+                    $"The runtime tool context names an unsupported workspace scope kind '{scopeKind}'.");
+            }
+
+            return new WorkspaceScopeDescriptor(kind, tags.GetValueOrDefault(WorkspaceScopeKeyTag));
         }
 
         private static bool ContainsProcessOperation(

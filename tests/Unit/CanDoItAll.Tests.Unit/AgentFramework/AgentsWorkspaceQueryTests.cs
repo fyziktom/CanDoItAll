@@ -23,12 +23,25 @@ public sealed class AgentsWorkspaceQueryTests {
     [Fact]
     public async Task Usage_refresh_does_not_reload_shell() {
         var query = CreateQuery(out var workspace, out var usage, out var bindings);
-        var snapshot = await query.ReadUsageAsync(ProviderUsageWorkloadSelection.Agents);
+        var snapshot = await query.ReadUsageAsync(new(ProviderUsageWorkloadSelection.Agents, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow));
         Assert.Equal(ProviderUsageWorkloadSelection.Agents, snapshot.Selection);
         Assert.Equal(1, usage.Reads);
         Assert.Equal(0, workspace.OverviewReads);
         Assert.Equal(0, workspace.AgentReads);
         Assert.Equal(0, bindings.Reads);
+    }
+
+    [Fact]
+    public async Task Legacy_readiness_failure_prevents_catalog_initialization_but_preserves_independent_bindings() {
+        var query = CreateQuery(out var workspace, out _, out var bindings);
+        workspace.FailReadiness = true;
+        var header = await query.ReadHeaderAsync();
+        Assert.Equal(AgentsHeaderFailure.HrAgent | AgentsHeaderFailure.Avatars, header.Failures);
+        Assert.Equal(7, header.BoundResourceCount);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => query.ReadOverviewAsync());
+        Assert.Equal(0, workspace.AgentReads);
+        Assert.Equal(0, workspace.OverviewReads);
+        Assert.Equal(1, bindings.Reads);
     }
 
     [Theory]
@@ -45,7 +58,7 @@ public sealed class AgentsWorkspaceQueryTests {
         if (failOverview) {
             await Assert.ThrowsAsync<InvalidOperationException>(() => query.ReadOverviewAsync());
         } else {
-            Assert.Equal(AgentOverviewTotals.Empty, (await query.ReadOverviewAsync()).Totals);
+            Assert.Equal(AgentRuntimeTotals.Empty, (await query.ReadOverviewAsync()).Totals);
         }
     }
 
@@ -85,10 +98,14 @@ public sealed class AgentsWorkspaceQueryTests {
         workspace = (WorkspaceReads)(object)service;
         usage = new();
         bindings = new();
-        return new(service, new ProviderUsageQueryService([usage]), bindings, Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentsWorkspaceQuery>.Instance);
+        return new(service, new ProviderUsageQueryService([usage]), bindings,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentsWorkspaceQuery>.Instance, workspace);
     }
 
-    public class WorkspaceReads : DispatchProxy {
+    public class WorkspaceReads : DispatchProxy, IIndexedWorkspaceReadGuard {
+        public bool FailReadiness { get; set; }
+        public Task EnsureReadyAsync(bool requireSummaryIndex = false, CancellationToken cancellationToken = default)
+            => FailReadiness ? throw new InvalidOperationException("Migration required.") : Task.CompletedTask;
         public int OverviewReads { get; private set; }
         public int AgentReads { get; private set; }
         public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
@@ -97,11 +114,11 @@ public sealed class AgentsWorkspaceQueryTests {
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
             ArgumentNullException.ThrowIfNull(targetMethod);
-            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.GetAgentOverviewAsync)) {
+            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.GetDashboardAsync)) {
                 OverviewReads++;
                 return FailOverview
-                    ? Task.FromException<AgentOverviewSnapshot>(new InvalidOperationException("Overview unavailable."))
-                    : Task.FromResult(AgentOverviewSnapshot.Empty);
+                    ? Task.FromException<SandboxDashboardSnapshot>(new InvalidOperationException("Overview unavailable."))
+                    : Task.FromResult(new SandboxDashboardSnapshot(0, 0, 0, 0, 0, 0, 0, 0, ExecutionBoundaryDescriptor.Unknown));
             }
             if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync)) {
                 AgentReads++;
@@ -109,14 +126,19 @@ public sealed class AgentsWorkspaceQueryTests {
                     ? Task.FromException<IReadOnlyList<AgentDefinition>>(new InvalidOperationException("Catalog unavailable."))
                     : Task.FromResult(Agents);
             }
+            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.ListAgentTeamsAsync)) {
+                return Task.FromResult<IReadOnlyList<AgentTeamDefinition>>([]);
+            }
             throw new InvalidOperationException($"Unexpected workspace operation {targetMethod.Name}.");
         }
     }
 
-    private sealed class UsageReads : IProviderUsageProjectionSource {
+    private sealed class UsageReads : IBoundedProviderUsageProjectionSource {
         public string SourceName => nameof(UsageReads);
         public ProviderUsageWorkloadKind WorkloadKind => ProviderUsageWorkloadKind.Agent;
         public int Reads { get; private set; }
+        public async ValueTask<ProviderUsageSourceResult> ReadWindowAsync(ProviderUsageWindow window, CancellationToken cancellationToken = default)
+            => (await ReadAsync(cancellationToken)) with { Window = window };
         public ValueTask<ProviderUsageSourceResult> ReadAsync(CancellationToken cancellationToken = default) {
             Reads++;
             return ValueTask.FromResult(new ProviderUsageSourceResult(SourceName, WorkloadKind,

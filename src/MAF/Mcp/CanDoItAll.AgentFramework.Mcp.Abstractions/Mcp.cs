@@ -160,11 +160,34 @@ public sealed record McpToolDescriptor(
     CapabilitySideEffectProfile SideEffectProfile,
     CapabilityAvailabilityState AvailabilityState);
 
+/// <summary>
+/// A tool reported by an MCP server during a setup test.
+/// </summary>
+/// <param name="Name">Name of the tool.</param>
+/// <param name="Description">Description reported by the server; may be empty.</param>
+/// <param name="InputSchema">JSON Schema of the tool's input as reported by the server, or null.</param>
 public sealed record DiscoveredMcpTool(
     McpToolName Name,
     string Description,
     JsonElement? InputSchema = null);
 
+/// <summary>
+/// Result of an MCP server capability setup test.
+/// </summary>
+/// <param name="IsSuccess">
+/// True when the definition was valid, the server started or connected, its tools were listed and matched the
+/// allowed tools, and the server was stopped cleanly.
+/// </param>
+/// <param name="Identity">Kind and key of the tested capability, in the identity numbering.</param>
+/// <param name="ServerKey">Key of the tested MCP server.</param>
+/// <param name="CorrelationId">Correlation identifier of the test.</param>
+/// <param name="DiscoveredTools">Tools the server reported; empty when listing did not happen.</param>
+/// <param name="AllowedTools">Reported tools that the definition allows; empty when the test failed.</param>
+/// <param name="Diagnostics">Problems found; empty when the test succeeded.</param>
+/// <param name="CleanupCompleted">
+/// True when the server was stopped cleanly after the test; false when stopping failed or the test ended before the
+/// server was started.
+/// </param>
 public sealed record McpSetupTestResult(
     bool IsSuccess,
     CapabilityIdentity Identity,

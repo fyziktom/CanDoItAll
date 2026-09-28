@@ -21,7 +21,9 @@ internal static class MafRuntimeToolInvocationResultClassifier
         string toolName,
         ToolInvocationClassification classification,
         object? result,
-        AgentToolPreDispatchFailure? preDispatchFailure = null)
+        AgentToolPreDispatchFailure? preDispatchFailure = null,
+        bool rejectedBeforeEffect = false,
+        bool prohibitedBeforeEffect = false)
     {
         if (preDispatchFailure is not null) {
             return new(AgentToolInvocationOutcome.Failed, AgentToolEffectState.NotCommitted,
@@ -52,15 +54,27 @@ internal static class MafRuntimeToolInvocationResultClassifier
                 ToolInvocationClassification.Read => AgentToolEffectState.None,
                 ToolInvocationClassification.Mutation when succeeded &&
                     directReceiptExecutionRunId.HasValue => AgentToolEffectState.Committed,
+                // The owner recorded that it rejected the request before any effect.
+                ToolInvocationClassification.Mutation when !succeeded && rejectedBeforeEffect => AgentToolEffectState.NotCommitted,
                 ToolInvocationClassification.Mutation => AgentToolEffectState.Unknown,
                 _ => AgentToolEffectState.None
             };
+            var prohibited = effectState == AgentToolEffectState.NotCommitted && prohibitedBeforeEffect;
+            // Only the platform's own workspace command results may carry a launch code; other tools'
+            // JSON is untrusted and never sets a code or the retry flag.
+            var launchExplanation = !succeeded &&
+                                    TrustedWorkspaceReceiptToolNames.Contains(toolName) &&
+                                    WorkspaceLaunchExplanations.TryParseCode(ResolveFailureCode(result), out var parsedLaunchExplanation)
+                ? parsedLaunchExplanation
+                : null;
             return new MafToolInvocationResultAssessment(
                 outcome,
                 effectState,
-                FailureCode: string.Empty,
+                FailureCode: prohibited
+                    ? AgentToolInvocationEffectScope.OperationProhibitedFailureCode
+                    : launchExplanation?.Code ?? string.Empty,
                 FailureMessage: succeeded ? string.Empty : ResolveFailureMessage(result),
-                CanRetryWithCorrectedInput: false,
+                CanRetryWithCorrectedInput: launchExplanation?.CanRetryWithCorrectedInput ?? false,
                 directReceiptExecutionRunId);
         }
 
@@ -82,7 +96,9 @@ internal static class MafRuntimeToolInvocationResultClassifier
     }
 
     private static readonly HashSet<string> TrustedWorkspaceReceiptToolNames =
-        ToolContractCatalog.WorkspaceToolNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        ToolContractCatalog.WorkspaceToolNames
+            .Append(AgentToolInvocationPolicyMetadata.RunSkillScript)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static readonly string[] ResultEnvelopePropertyNames =
     [
@@ -102,7 +118,9 @@ internal static class MafRuntimeToolInvocationResultClassifier
     private static readonly IReadOnlyDictionary<string, string> TrustedReceiptOperationAliases =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            [ToolContractCatalog.WorkspaceInspectSpreadsheet] = "workspace_spreadsheet_preview"
+            [ToolContractCatalog.WorkspaceInspectSpreadsheet] = "workspace_spreadsheet_preview",
+            // The skill script runner records its command receipt under the recipe operation it executes.
+            [AgentToolInvocationPolicyMetadata.RunSkillScript] = "skill_script_run"
         };
 
     public static bool IsSuccessful(object? result)
@@ -110,11 +128,36 @@ internal static class MafRuntimeToolInvocationResultClassifier
         return TryResolveSuccess(result, [], out var succeeded) && succeeded;
     }
 
+    /// <summary>True only when the result positively reports failure (not when the outcome is unknown).</summary>
+    public static bool IsExplicitFailure(object? result)
+    {
+        return TryResolveSuccess(result, [], out var succeeded) && !succeeded;
+    }
+
     public static string ResolveFailureMessage(object? result)
     {
         return TryResolveFailureMessage(result, [], out var message)
             ? message
             : "Tool invocation returned an unsuccessful result.";
+    }
+
+    /// <summary>
+    /// The typed failure code a workspace command result carries (<c>failureCode</c>), for
+    /// example <c>ProcessStartFailed.ExecutableNotFound</c>; empty when there is none.
+    /// </summary>
+    public static string ResolveFailureCode(object? result)
+    {
+        switch (result)
+        {
+            case WorkspaceCommandExecutionResult { FailureCode: { } code }:
+                return code;
+            case JsonElement { ValueKind: JsonValueKind.Object } element
+                when TryGetJsonProperty(element, "failureCode", out var property) &&
+                     property.ValueKind == JsonValueKind.String:
+                return property.GetString() ?? string.Empty;
+            default:
+                return string.Empty;
+        }
     }
 
     public static Guid? ResolveDurableReceiptExecutionRunId(

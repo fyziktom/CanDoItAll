@@ -480,8 +480,10 @@ public sealed class WorkflowFoundationTests
         Assert.False(startedPayload.InlineTruncated);
         Assert.Empty(startedPayload.Reference);
         Assert.DoesNotContain("raw-token-value", startedPayload.InlineJson, StringComparison.Ordinal);
-        Assert.False(completedPayload.InlineTruncated);
-        Assert.Empty(completedPayload.Reference);
+        Assert.True(completedPayload.InlineTruncated);
+        Assert.InRange(completedPayload.InlineJson.Length, 1, settings.ArtifactPolicy.MaxInlinePayloadCharacters);
+        Assert.NotEmpty(completedPayload.Reference);
+        Assert.Contains(artifacts, artifact => artifact.StoragePath == completedPayload.Reference);
         Assert.DoesNotContain("raw-token-value", completedPayload.InlineJson, StringComparison.Ordinal);
         Assert.Contains(artifacts, artifact =>
             artifact.Kind == WorkflowArtifactKind.Json &&

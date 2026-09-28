@@ -23,6 +23,7 @@ using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.Pr
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class MafImageGenerationResultDisclosureIntegrationTests {
     [Theory]
     [InlineData(0)]
@@ -34,7 +35,9 @@ public sealed class MafImageGenerationResultDisclosureIntegrationTests {
         await fixture.CompleteThroughLostFinalAcknowledgementAsync();
         var saved = await fixture.ProposalAsync();
         Assert.Equal(AgentToolProposalState.Completed, saved.State);
-        Assert.Equal(AgentToolEffectState.Unknown, saved.EffectState);
+        // The written output file is the generation's committed effect; without it every run that generated an image
+        // would end with an unresolved required mutation.
+        Assert.Equal(AgentToolEffectState.Committed, saved.EffectState);
         Assert.Equal(AgentToolProposalRecovery.ReconcileBeforeRetry, saved.Payload.Recovery);
         Assert.Equal(ExecutionApprovalStatus.Approved, saved.ApprovalStatus);
         Assert.Equal(saved.Payload.Digest, saved.ApprovedDigest);

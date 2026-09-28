@@ -3,24 +3,67 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Project Structure access of an agent, the <c>projectStructureAccess</c> member of the agent editor form. It is
+/// stored in the agent's <c>configurationJson</c> under <c>projectStructure</c>; a save replaces that section with
+/// these values, and an omitted object or one with every flag false and no project removes it. The flags decide which
+/// Project Structure runtime tools an agent run can receive; the run still needs the agent's <c>canUseTools</c>
+/// permission, a project-scoped run context and the approval policy. They are not HTTP permissions.
+/// </summary>
 public sealed class AgentProjectStructureAccessSettings
 {
+    /// <summary>
+    /// Allows the Project Structure read tools for the permitted projects. The server stores true whenever any other
+    /// flag is true or a project is listed.
+    /// </summary>
     public bool CanRead { get; set; }
 
+    /// <summary>
+    /// Allows every Project Structure write tool, including changes to task nodes, in the permitted projects. A write
+    /// also needs a live lifetime binding of the project unless <c>allowAllProjects</c> is true.
+    /// </summary>
     public bool CanWrite { get; set; }
 
+    /// <summary>
+    /// Allows structure writes that do not change canonical task nodes; tools that need full structure write, such as
+    /// the structure import, stay unavailable unless <c>canWrite</c> is also true.
+    /// </summary>
     public bool CanWriteNonTaskStructure { get; set; }
 
+    /// <summary>
+    /// Adds the canonical task tools (task create, task update and task resource attach) for the permitted projects.
+    /// </summary>
     public bool CanWriteTasks { get; set; }
 
+    /// <summary>Adds the tool that creates standalone projects.</summary>
     public bool CanCreateProjects { get; set; }
 
+    /// <summary>
+    /// Adds the tool that creates a subproject under a parent project. Linking existing projects as subprojects and
+    /// moving nodes into a new subproject also need <c>canWrite</c>.
+    /// </summary>
     public bool CanCreateSubprojects { get; set; }
 
+    /// <summary>
+    /// True to permit every project, including projects created later, without lifetime bindings; the server then
+    /// clears <c>allowedProjectIds</c> and <c>allowedProjectLifetimes</c>. It is ignored in governed process runs.
+    /// </summary>
     public bool AllowAllProjects { get; set; }
 
+    /// <summary>
+    /// Identifiers of the permitted projects when <c>allowAllProjects</c> is false. The server drops all-zero
+    /// identifiers and duplicates and sorts the list. A project added here for the first time must exist (or be
+    /// reserved for creation by this agent); otherwise the save is rejected. The server binds a newly added existing
+    /// project to its current lifetime automatically.
+    /// </summary>
     public List<Guid> AllowedProjectIds { get; set; } = [];
 
+    /// <summary>
+    /// Server-maintained bindings of permitted projects to the project lifetimes they apply to; writes need a live
+    /// binding. Send back the list as read. On save the list is merged with the bindings already stored and limited
+    /// to <c>allowedProjectIds</c>; a binding the agent did not have must name the project's current live lifetime, and
+    /// omitting stored bindings of a still permitted project does not remove them.
+    /// </summary>
     public List<AgentProjectStructureLifetime> AllowedProjectLifetimes { get; set; } = [];
 }
 

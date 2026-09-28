@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "implementation_validation_template",
+  "applicationValidationStatus": "not_run",
+  "reviewedDevelopmentCommit": "b82ffc57283f5e4819d82322e1c5bf836dcd9536",
+  "actualBaseCommit": null,
+  "actualFinalCommit": null,
+  "codeAnalytics": {
+    "executed": false,
+    "workspaceHealth": [],
+    "requiredSelectors": [],
+    "conditionalSelectors": [],
+    "promotionTriggers": []
+  },
+  "builds": [],
+  "testRuns": [],
+  "portabilityStatic": {
+    "status": "not_run",
+    "command": null,
+    "evidencePath": null
+  },
+  "httpScenarios": [
+    {
+      "id": "A01",
+      "status": "not_run",
+      "credentialKind": null,
+      "method": null,
+      "path": null,
+      "expectedStatus": null,
+      "actualStatus": null,
+      "stateAssertions": []
+    }
+  ],
+  "browserJourneys": [],
+  "productionComposition": {
+    "status": "not_run",
+    "databaseProvider": null,
+    "controlPlaneIsolated": null
+  },
+  "proxyBoundary": {
+    "status": "not_run"
+  },
+  "blockers": [],
+  "notes": [
+    "Do not record passwords, bearer tokens, password hashes, signing keys or private credential fingerprints."
+  ]
+}

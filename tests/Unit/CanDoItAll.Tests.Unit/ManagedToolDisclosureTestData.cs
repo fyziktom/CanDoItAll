@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 
@@ -19,4 +20,12 @@ internal static class ManagedToolDisclosureTestData {
             read ? AgentToolProposalRecovery.RevalidateAndRead : AgentToolProposalRecovery.ReconcileBeforeRetry),
             effectState, JsonSerializer.SerializeToElement(result ?? new { acknowledged = true }, Options));
     }
+
+    // The runtime saves an owner's typed rejection as the failure it returned to the model, flagged as typed.
+    internal static AgentToolResultDisclosure CreateTypedFailure(AgentRuntimeToolMetadata metadata, object? request,
+        IAgentToolFailureEffectEvidence failure)
+        => Create(metadata, request, new AgentToolFailureResult(false, failure.ErrorCode, failure.SafeMessage,
+            failure.CanRetryWithCorrectedInput) { EffectState = failure.EffectState }, failure.EffectState) with {
+            IsTypedFailure = true
+        };
 }

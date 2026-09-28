@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -834,6 +835,45 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void Effective_finalizer_invocations_do_not_complete_a_durable_proposal_before_invocation() {
+        var policy = CreatePolicy();
+        var proposal = new AgentFinalizerInvocation(policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Proposed outcome."), Sequence: 1);
+
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required,
+            [], [], [proposal], [], requireCapturedInvocation: true);
+
+        Assert.Empty(effective);
+    }
+
+    [Fact]
+    public void Effective_finalizer_invocations_accept_the_executed_durable_finalizer() {
+        var policy = CreatePolicy();
+        var captured = new AgentFinalizerInvocation(policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Executed outcome."), Sequence: 1);
+
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required,
+            [captured], [], [captured], [], requireCapturedInvocation: true);
+
+        Assert.Equal(captured, Assert.Single(effective));
+    }
+
+    [Fact]
+    public void Effective_finalizer_invocations_preserve_nonjournal_stream_capture() {
+        var policy = CreatePolicy();
+        var streamed = new AgentFinalizerInvocation(policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Streamed outcome."), Sequence: 1);
+
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required,
+            [], [], [streamed], []);
+
+        Assert.Equal(streamed, Assert.Single(effective));
+    }
+
+    [Fact]
     public void Effective_finalizer_invocations_prefer_valid_json_repair_over_invalid_captured_attempt()
     {
         var policy = CreatePolicy();
@@ -1004,6 +1044,15 @@ public sealed class AgentFinalizerPolicyTests
         var provider = CreateProvider(
             ProviderTransportKind.Responses,
             preferFrameworkManagedHistory: false);
+        var checkpoint = new MafRuntimeStateAdapter().CreateEnvelope(new AgentRuntimeStateCaptureRequest(
+            provider.Id,
+            provider.Transport,
+            provider.DefaultModel,
+            string.Empty,
+            string.Empty,
+            """{"conversationId":"provider-conversation"}""",
+            DateTimeOffset.UtcNow,
+            AgentChatHistoryMode.ProviderManaged));
         var session = new ChatSessionRecord(
             Guid.NewGuid(),
             agent.Id,
@@ -1011,7 +1060,7 @@ public sealed class AgentFinalizerPolicyTests
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
             RuntimeSessionKey: "runtime-session",
-            SerializedSessionStateJson: """{"conversationId":"provider-conversation"}""",
+            SerializedSessionStateJson: checkpoint.ToJson(),
             Messages: [],
             PendingApprovals:
             [

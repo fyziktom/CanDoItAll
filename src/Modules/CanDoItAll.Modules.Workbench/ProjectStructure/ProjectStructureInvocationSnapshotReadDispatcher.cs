@@ -60,10 +60,7 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
         ArgumentNullException.ThrowIfNull(contextIntent);
         if (!Enum.IsDefined(requestedSource))
         {
-            throw Failure(
-                400,
-                "ProjectStructureReadSourceInvalid",
-                $"Project-structure read source '{requestedSource}' is undefined.");
+            throw UndefinedSourceFailure(requestedSource);
         }
 
         return requestedSource switch
@@ -77,16 +74,13 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
                 when IsInteractiveProjectStructureContext(purpose, contextIntent)
                 => ProjectStructureReadSource.InvocationSnapshot,
             ProjectStructureReadSource.InvocationSnapshot
-                => throw Failure(
+                => throw CorrectableFailure(
                     409,
                     "ProjectStructureInvocationSnapshotContextIneligible",
                     "InvocationSnapshot is available only to interactive project-structure chat. Governed-process and non-project contexts must use CanonicalCurrent."),
             ProjectStructureReadSource.CanonicalCurrent
                 => ProjectStructureReadSource.CanonicalCurrent,
-            _ => throw Failure(
-                400,
-                "ProjectStructureReadSourceInvalid",
-                $"Project-structure read source '{requestedSource}' is undefined.")
+            _ => throw UndefinedSourceFailure(requestedSource)
         };
     }
 
@@ -157,7 +151,7 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
                     "The project-structure invocation attachment kind was published with an unexpected payload type.");
             }
 
-            throw Failure(
+            throw CorrectableFailure(
                 409,
                 "ProjectStructureInvocationSnapshotUnavailable",
                 "No project-structure invocation snapshot was captured for this agent invocation. Reopen the chat from a ready project-structure surface or use CanonicalCurrent.");
@@ -218,10 +212,10 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
             snapshot.ProjectId != projectId ||
             contextProjectId != projectId)
         {
-            throw Failure(
+            throw CorrectableFailure(
                 409,
                 "ProjectStructureInvocationSnapshotProjectMismatch",
-                $"The requested project '{projectId:D}' does not match the captured project-structure invocation snapshot.");
+                $"The requested project '{projectId:D}' does not match the captured project-structure invocation snapshot. Use CanonicalCurrent to read another project.");
         }
 
         var freshness = envelope.ResolveFreshness(
@@ -229,7 +223,7 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
             nowUtc);
         if (freshness == AgentChatContextAttachmentFreshness.ProfileMismatch)
         {
-            throw Failure(
+            throw CorrectableFailure(
                 409,
                 "ProjectStructureInvocationSnapshotProfileMismatch",
                 "The active database profile generation changed after the project-structure snapshot was captured. Reopen the chat from the current surface or use CanonicalCurrent.");
@@ -237,7 +231,7 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
 
         if (freshness == AgentChatContextAttachmentFreshness.Expired)
         {
-            throw Failure(
+            throw CorrectableFailure(
                 409,
                 "ProjectStructureInvocationSnapshotExpired",
                 "The held project-structure snapshot exceeded its freshness lifetime. Refresh the surface or use CanonicalCurrent.");
@@ -245,7 +239,7 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
 
         if (freshness == AgentChatContextAttachmentFreshness.NotYetValid)
         {
-            throw Failure(
+            throw CorrectableFailure(
                 409,
                 "ProjectStructureInvocationSnapshotNotYetValid",
                 "The project-structure snapshot capture time is later than the current execution time. Refresh the surface or use CanonicalCurrent.");
@@ -512,10 +506,33 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
 
     private static ProjectStructureAgentException CoverageFailure(string reason)
     {
-        return Failure(
+        return CorrectableFailure(
             409,
             "ProjectStructureInvocationSnapshotCoverageInsufficient",
             $"{reason} {SnapshotCoverageGuidance}");
+    }
+
+    private static ProjectStructureAgentException UndefinedSourceFailure(ProjectStructureReadSource requestedSource)
+    {
+        return CorrectableFailure(
+            400,
+            "ProjectStructureReadSourceInvalid",
+            $"Project-structure read source '{requestedSource}' is undefined. Use ContextDefault, InvocationSnapshot, or CanonicalCurrent.");
+    }
+
+    // A read the model can correct, usually by choosing CanonicalCurrent, is a typed no-effect failure it may retry.
+    // Integrity mismatches of the captured snapshot stay opaque and fail closed.
+    private static ProjectStructureAgentException CorrectableFailure(
+        int statusCode,
+        string errorCode,
+        string message)
+    {
+        return ProjectStructureAgentException.CreateAgentVisible(
+            statusCode,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.None);
     }
 
     private static ProjectStructureAgentException Failure(

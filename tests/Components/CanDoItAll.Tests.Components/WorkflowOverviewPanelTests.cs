@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowOverviewPanelTests
 {
     private static readonly DateTimeOffset AsOfUtc = new(2026, 7, 19, 18, 0, 0, TimeSpan.Zero);

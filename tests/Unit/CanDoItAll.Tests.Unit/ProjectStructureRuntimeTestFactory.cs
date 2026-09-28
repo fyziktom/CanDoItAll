@@ -62,6 +62,14 @@ internal static class ProjectStructureRuntimeTestFactory
     {
         public bool IsRunning(string nodeId) => false;
 
+        public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => null;
+
+        public Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
+            string nodeId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult<ProjectStructureRuntimeExitRecord?>(null);
+
         public ProjectStructureRuntimeCapability Probe(ProjectStructureRuntimeLaunchPlan plan)
             => plan.TerminalOnly
                 ? ProjectStructureRuntimeCapability.Unavailable(

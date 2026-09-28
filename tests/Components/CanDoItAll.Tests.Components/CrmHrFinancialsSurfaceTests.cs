@@ -31,8 +31,7 @@ public sealed class CrmHrFinancialsSurfaceTests
     }
 
     [Fact]
-    public void Failed_phase_offers_a_retry_that_names_the_failed_read_and_is_blocked_while_retrying()
-    {
+    public async Task Failed_phase_offers_a_retry_that_names_the_failed_read_and_is_blocked_while_retrying() {
         using var context = CreateContext();
         var intents = new List<CrmHrFinancialsIntent>();
 
@@ -45,19 +44,18 @@ public sealed class CrmHrFinancialsSurfaceTests
         Assert.Contains("financial projection is unavailable", cut.Markup, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(cut.FindComponents<CdaChart>());
 
-        cut.Find("[data-testid='crmhr-financials-retry']").Click();
+        await cut.Find("[data-testid='crmhr-financials-retry']").ClickAsync();
         Assert.Equal(7, Assert.IsType<CrmHrFinancialsIntent.Retry>(Assert.Single(intents)).Generation);
 
         cut.Render(parameters => parameters
             .Add(component => component.Presentation, CrmHrFinancialsPresentation.CreateFailed(8, "still failing", CrmHrFinancialPeriod.Month, isRetrying: true)));
         Assert.True(cut.Find("[data-testid='crmhr-financials-retry']").HasAttribute("disabled"));
-        cut.Find("[data-testid='crmhr-financials-retry']").Click();
+        await cut.Find("[data-testid='crmhr-financials-retry']").ClickAsync();
         Assert.Single(intents);
     }
 
     [Fact]
-    public void Ready_snapshot_renders_currency_separated_metrics_unavailable_sources_the_incomplete_note_and_the_aligned_chart()
-    {
+    public async Task Ready_snapshot_renders_currency_separated_metrics_unavailable_sources_the_incomplete_note_and_the_aligned_chart() {
         using var context = CreateContext();
         var intents = new List<CrmHrFinancialsIntent>();
 
@@ -96,10 +94,10 @@ public sealed class CrmHrFinancialsSurfaceTests
         Assert.False(chart.Instance.Options.EnableZoom);
         Assert.True(chart.Instance.Options.ShowLegend);
 
-        cut.Find("[data-testid='crmhr-financials-year']").Click();
+        await cut.Find("[data-testid='crmhr-financials-year']").ClickAsync();
         Assert.Equal(CrmHrFinancialPeriod.Year, Assert.IsType<CrmHrFinancialsIntent.SetPeriod>(Assert.Single(intents)).Period);
         // The active period is not re-requested.
-        cut.Find("[data-testid='crmhr-financials-month']").Click();
+        await cut.Find("[data-testid='crmhr-financials-month']").ClickAsync();
         Assert.Single(intents);
 
         cut.Render(parameters => parameters

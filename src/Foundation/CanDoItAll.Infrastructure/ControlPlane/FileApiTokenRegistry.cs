@@ -41,7 +41,7 @@ public sealed class FileApiTokenRegistry(
             throw new ArgumentOutOfRangeException(nameof(query), "Page size must be between 1 and 100.");
         }
 
-        var search = query.Search.Trim();
+        var search = query.Search?.Trim() ?? string.Empty;
         var matches = new List<ApiTokenRecord>();
         foreach (var path in Directory.EnumerateFiles(ResolveRoot(), "*.json")) {
             cancellationToken.ThrowIfCancellationRequested();
@@ -49,13 +49,13 @@ public sealed class FileApiTokenRegistry(
                 throw new InvalidDataException("The API token registry contains an invalid record name.");
             }
             var token = await FindAsync(id, cancellationToken).ConfigureAwait(false);
-            if (token is not null && Matches(token, search)) {
+            if (token is not null && (query.Kind is null || token.Kind == query.Kind) && Matches(token, search)) {
                 matches.Add(token);
             }
         }
 
         return new ApiTokenPage(matches.OrderByDescending(token => token.IssuedAtUtc)
-            .ThenBy(token => token.Id).Skip(query.Offset).Take(query.PageSize).ToArray(), matches.Count);
+            .ThenBy(token => token.Id).Skip(query.Offset).Take(query.PageSize).Select(ApiTokenSummary.FromRecord).ToArray(), matches.Count);
     }
 
     public async Task RevokeAsync(Guid id, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken = default) {
@@ -101,7 +101,10 @@ public sealed class FileApiTokenRegistry(
         if (token.Id == Guid.Empty || token.Id != expectedId ||
             string.IsNullOrWhiteSpace(token.Subject) || string.IsNullOrWhiteSpace(token.DisplayName) ||
             token.Scopes is null || token.Scopes.Count == 0 || token.Scopes.Any(string.IsNullOrWhiteSpace) ||
-            token.ExpiresAtUtc <= token.IssuedAtUtc) {
+            token.ExpiresAtUtc <= token.IssuedAtUtc || !Enum.IsDefined(token.Kind) ||
+            (token.Kind == ApiCredentialKind.Machine && (token.UserId is not null || token.AuthenticationRevision is not null || token.AdministratorCredentialBinding is not null)) ||
+            (token.Kind == ApiCredentialKind.UserSession && (token.UserId is null || token.UserId == Guid.Empty || token.AuthenticationRevision is null or < 1 || token.AdministratorCredentialBinding is not null)) ||
+            (token.Kind == ApiCredentialKind.AdministratorSession && (token.UserId is not null || token.AuthenticationRevision is not null || string.IsNullOrWhiteSpace(token.AdministratorCredentialBinding)))) {
             throw new InvalidDataException("The API token registry record is invalid.");
         }
     }

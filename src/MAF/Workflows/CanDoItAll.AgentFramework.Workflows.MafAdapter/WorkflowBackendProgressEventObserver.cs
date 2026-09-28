@@ -46,7 +46,11 @@ internal sealed class WorkflowBackendProgressEventObserver(
             ? $"Workflow node '{progress.NodeId}' {progress.State.ToString().ToLowerInvariant()}."
             : $"Workflow node '{progress.NodeId}' {progress.State.ToString().ToLowerInvariant()} for executor '{progress.ExecutorId}'.";
         var payloadResult = await ApplyPayloadPolicyAsync(progress, cancellationToken);
-        events.Add(new WorkflowEventRecord(
+        if (progress.State == WorkflowNodeExecutionProgressState.Failed &&
+            !string.IsNullOrWhiteSpace(payloadResult.InlinePayload)) {
+            message = $"{message} {payloadResult.InlinePayload}";
+        }
+        var workflowEvent = new WorkflowEventRecord(
             Guid.NewGuid(),
             runId,
             MapProgressState(progress.State),
@@ -66,7 +70,8 @@ internal sealed class WorkflowBackendProgressEventObserver(
             progress.OccurredAtUtc) {
                 CompletionProof = progress.CompletionProof,
                 ProviderReadEvidence = progress.ProviderReadEvidence
-            });
+            };
+        events.Add(workflowEvent);
         AddArtifact(payloadResult.Artifact);
 
         if (next is not null)
@@ -83,7 +88,7 @@ internal sealed class WorkflowBackendProgressEventObserver(
                 },
                 _ => progress
             };
-            await next.RecordAsync(safeProgress, cancellationToken);
+            await next.RecordEventAsync(safeProgress, workflowEvent, cancellationToken);
         }
     }
 

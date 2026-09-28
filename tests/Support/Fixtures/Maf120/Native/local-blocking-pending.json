@@ -1,0 +1,87 @@
+{
+  "mafVersion": "1.20.0.0",
+  "aiVersion": "10.9.0.0",
+  "serviceManaged": false,
+  "streaming": false,
+  "stage": "pending",
+  "invocationCount": 0,
+  "state": {
+    "stateBag": {
+      "_pendingApprovalRequests": [
+        {
+          "toolCall": {
+            "$type": "functionCall",
+            "name": "write_artifact",
+            "arguments": {
+              "path": "approved.txt"
+            },
+            "informationalOnly": false,
+            "callId": "fixture-write-call"
+          },
+          "requiresConfirmation": true,
+          "requestId": "ficc_fixture-write-call"
+        }
+      ],
+      "InMemoryChatHistoryProvider": {
+        "messages": [
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "fixture completed"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "write"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "toolApprovalRequest",
+                "toolCall": {
+                  "$type": "functionCall",
+                  "name": "write_artifact",
+                  "arguments": {
+                    "path": "approved.txt"
+                  },
+                  "informationalOnly": false,
+                  "callId": "fixture-write-call"
+                },
+                "requiresConfirmation": true,
+                "requestId": "ficc_fixture-write-call"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "approvals": [
+    {
+      "requestId": "ficc_fixture-write-call",
+      "callId": "fixture-write-call",
+      "name": "write_artifact",
+      "arguments": {
+        "path": "approved.txt"
+      }
+    }
+  ]
+}

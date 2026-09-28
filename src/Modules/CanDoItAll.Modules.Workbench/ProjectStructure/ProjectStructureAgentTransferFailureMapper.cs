@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -17,6 +18,7 @@ internal static class ProjectStructureAgentTransferFailureMapper
         {
             var safeMessage =
                 $"Root '{deletionDispositionMismatch.RootNodeId}' is already deleted ({deletionDispositionMismatch.CompletedNodeCount} node(s)); retry durable mutation '{deletionDispositionMismatch.DurableMutationId:D}' with managedStorageDisposition '{deletionDispositionMismatch.PersistedDisposition}'.";
+            // The cleanup retry compares the requested and persisted disposition before it commits or cleans anything.
             mappedException = ProjectStructureAgentException.CreateMapped(
                 409,
                 "ProjectStructureDeletionDispositionMismatch",
@@ -31,7 +33,8 @@ internal static class ProjectStructureAgentTransferFailureMapper
                 },
                 isSafeToExpose: true,
                 canRetryWithCorrectedInput: true,
-                exception);
+                exception,
+                AgentToolEffectState.NotCommitted);
             return true;
         }
 
@@ -180,14 +183,17 @@ internal static class ProjectStructureAgentTransferFailureMapper
             ? new { requestedNodeIds = rejection.RequestedNodeIds }
             : null;
 
+        // A batch is rejected only when nothing was selected, or when no selected node matched and nothing was deleted
+        // or replayed.
         return ProjectStructureAgentException.CreateMapped(
             statusCode,
             errorCode,
             rejection.Message,
             details,
-            isSafeToExpose: false,
-            canRetryWithCorrectedInput: false,
-            outerException);
+            isSafeToExpose: true,
+            canRetryWithCorrectedInput: true,
+            outerException,
+            AgentToolEffectState.NotCommitted);
     }
 
     private static ProjectStructureAgentException MapCompensatedTransfer(

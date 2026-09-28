@@ -194,7 +194,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         var readTool = toolName == WorkflowToolPolicy.WorkflowsDefinitionsList
             ? WorkflowToolPolicy.WorkflowsDefinitionsList : WorkflowToolPolicy.WorkflowsRunStatusGet;
         await RequireReadAsync();
-        if (disclosure.EffectState != AgentToolEffectState.NotCommitted) {
+        if (disclosure.EffectState != AgentToolEffectState.NotCommitted && !disclosure.IsNoEffectTypedFailure) {
             if (toolName == WorkflowToolPolicy.WorkflowsDefinitionsList) {
                 var saved = disclosure.Result.Deserialize<WorkflowAgentDefinitionListResult>(DisclosureJson)
                     ?? throw new InvalidOperationException("The saved Workflow catalog result is unavailable.");
@@ -270,6 +270,16 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        try
+        {
+            using var _ = JsonDocument.Parse(request.InputJson);
+        }
+        catch (JsonException)
+        {
+            throw AgentToolInputValidationException.Create(
+                "inputJson must be one valid JSON document for the workflow input. Correct it and retry.");
+        }
+
         WorkflowLaunchOrigin origin = WorkflowProcessToolAdmission.UsesJournal(context)
             ? await RequireProcessTools().CaptureAsync(context, request, cancellationToken)
             : await CreateOriginAsync(context, cancellationToken);
@@ -295,9 +305,28 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             origin is WorkflowLaunchOrigin.ProcessToolInvocation tool
                 ? new WorkflowLaunchIdempotency.CallerSupplied(new(tool.Invocation.IntentId.Value.ToString("D")))
                 : ResolveIdempotency(context, request));
-        var result = await launchService.LaunchAsync(intent, cancellationToken);
+        WorkflowLaunchResult result;
+        try
+        {
+            result = await launchService.LaunchAsync(intent, cancellationToken);
+        }
+        catch (WorkflowLaunchValidationException exception)
+        {
+            // The launch service validates the definition and input before it claims a key or starts a run.
+            throw AgentToolInputValidationException.Create(
+                $"{exception.Message} Correct the workflow input or choose an active, valid workflow, then retry.");
+        }
+        catch (WorkflowLaunchIdempotencyConflictException)
+        {
+            throw AgentToolConflictException.Create(
+                "This idempotency key was already used for a different workflow launch. Use a new idempotency key for a new launch, or repeat the original request unchanged.");
+        }
+
         if (origin is WorkflowLaunchOrigin.ProcessToolInvocation process) {
             WorkflowProcessToolAdmission.RecordCommitted(result, process);
+        } else {
+            // The launch service admitted or replayed a durable run for this request.
+            AgentToolInvocationEffectScope.RecordCommitted(WorkflowRunEffectSourceKind, result.Run.RunId.Value.ToString("D"));
         }
 
         return new WorkflowAgentStartResult(
@@ -308,6 +337,9 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             result.Observation == WorkflowLaunchObservation.Confirmed ? "Workflow launch was admitted through the governed launch service."
                 : "Workflow launch was admitted; subsequent acknowledgement requires observation.") { Observation = result.Observation };
     }
+
+    private const string WorkflowRunEffectSourceKind = "workflow-run";
+    private const string WorkflowExternalResponseEffectSourceKind = "workflow-external-response";
 
     private WorkflowProcessToolAdmission RequireProcessTools() => processTools
         ?? throw new InvalidOperationException("The governed Process Workflow tool requires its owner journal admission adapter.");
@@ -339,6 +371,18 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         var result = await runtimeManager.RequestCancellationAsync(
             new WorkflowRunId(request.RunId),
             cancellationToken);
+        if (result.Succeeded)
+        {
+            AgentToolInvocationEffectScope.RecordCommitted(WorkflowRunEffectSourceKind, request.RunId.ToString("D"));
+        }
+        else if (result.Outcome is WorkflowRunCancellationOutcome.NotFound or
+                 WorkflowRunCancellationOutcome.AlreadyTerminal or
+                 WorkflowRunCancellationOutcome.NotActive)
+        {
+            // The runtime decides these outcomes from the run's current state before it signals anything.
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+        }
+
         return new WorkflowAgentCancellationResult(
             result.Outcome,
             result.Succeeded,
@@ -362,6 +406,17 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                 new WorkflowExternalResponseIdempotencyKey(request.IdempotencyKey),
                 new WorkflowLaunchCorrelationId(ResolveCorrelationId(context))),
             cancellationToken);
+        if (IsAcceptedOutcome(result.Outcome))
+        {
+            AgentToolInvocationEffectScope.RecordCommitted(
+                WorkflowExternalResponseEffectSourceKind,
+                request.ExternalRequestId.ToString("D"));
+        }
+        else if (IsRejectedBeforeOperation(result.Outcome))
+        {
+            AgentToolInvocationEffectScope.RecordRejectedBeforeEffect();
+        }
+
         return new WorkflowAgentExternalResponseResult(
             result.Outcome,
             IsAcceptedOutcome(result.Outcome),
@@ -456,6 +511,19 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             WorkflowExternalResponseServiceOutcome.WaitingAgain or
             WorkflowExternalResponseServiceOutcome.Denied or
             WorkflowExternalResponseServiceOutcome.Resuming;
+
+    // The response service decides these outcomes while validating the response or failing to create its operation,
+    // before anything resumes the run. An active-operation conflict can also come from a later continuation claim.
+    private static bool IsRejectedBeforeOperation(WorkflowExternalResponseServiceOutcome outcome)
+        => outcome is WorkflowExternalResponseServiceOutcome.Unauthenticated or
+            WorkflowExternalResponseServiceOutcome.Forbidden or
+            WorkflowExternalResponseServiceOutcome.InvalidResponse or
+            WorkflowExternalResponseServiceOutcome.RequestNotFound or
+            WorkflowExternalResponseServiceOutcome.RunNotFound or
+            WorkflowExternalResponseServiceOutcome.RequestVersionMismatch or
+            WorkflowExternalResponseServiceOutcome.RequestNotPending or
+            WorkflowExternalResponseServiceOutcome.RunNotWaiting or
+            WorkflowExternalResponseServiceOutcome.IdempotencyConflict;
 
     private static AgentRuntimeToolMetadata CreateMetadata(
         string toolName,

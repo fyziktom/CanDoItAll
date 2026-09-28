@@ -1,5 +1,9 @@
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// What pricing did to a task's estimate, as a JSON integer: 0 Preserved (the estimate was kept), 1 Refreshed (the cost
+/// amount and currency were set from the resource's price), 2 Cleared (the cost amount and currency were removed).
+/// </summary>
 public enum ProjectStructureTaskEstimateRefreshStatus
 {
     Preserved,
@@ -7,6 +11,12 @@ public enum ProjectStructureTaskEstimateRefreshStatus
     Cleared
 }
 
+/// <summary>
+/// Why pricing treated a task's estimate as it did, as a JSON integer: 0 ExecutionStateDoesNotAllowRefresh (the task
+/// has started or finished, so its cost is kept), 1 NoResourceSelected, 2 AuthoritativeResourceRemoved (the priced
+/// resource was removed, so the cost was cleared), 3 AuthoritativeQuoteApplied, 4 AuthoritativeQuoteUnavailable (no
+/// price was available for the resource, so the cost was cleared).
+/// </summary>
 public enum ProjectStructureTaskEstimateRefreshReason
 {
     ExecutionStateDoesNotAllowRefresh,
@@ -22,6 +32,22 @@ public enum ProjectStructureTaskMissingResourcePricingPolicy
     ClearAuthoritativeSnapshot
 }
 
+/// <summary>
+/// Outcome of pricing a task's estimate from its resource: the resulting estimate, what happened and why, and the price
+/// and cost basis used.
+/// </summary>
+/// <param name="Estimate">The task's estimate after pricing.</param>
+/// <param name="Status">What pricing did, as a JSON integer: 0 Preserved, 1 Refreshed, 2 Cleared.</param>
+/// <param name="Reason">
+/// Why, as a JSON integer: 0 ExecutionStateDoesNotAllowRefresh, 1 NoResourceSelected, 2 AuthoritativeResourceRemoved,
+/// 3 AuthoritativeQuoteApplied, 4 AuthoritativeQuoteUnavailable.
+/// </param>
+/// <param name="Resource">The resource the task was priced for; null when it has none.</param>
+/// <param name="Quote">The resource's price that was requested; null when no price was requested.</param>
+/// <param name="CalculatedCostBasis">
+/// Cost basis recorded with the estimate for this price; null when none was calculated.
+/// </param>
+/// <param name="ReplacesCostBasis">True when this pricing replaces or clears the task's stored cost basis.</param>
 public sealed record ProjectStructureTaskEstimateRefreshResult(
     ProjectTaskEstimate Estimate,
     ProjectStructureTaskEstimateRefreshStatus Status,

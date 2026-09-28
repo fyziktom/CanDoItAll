@@ -75,6 +75,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
             configuration["LaneKind"]);
 
+        services.AddOptions<ProcessEnvironmentOptions>()
+            .Bind(configuration.GetSection(ProcessEnvironmentOptions.SectionName));
+        services.AddHostedService<ProcessEnvironmentSettingsInitializer>();
         services.AddOptions<ProcessMockAgentOptions>()
             .Bind(configuration.GetSection(ProcessMockAgentOptions.SectionName));
         services.AddOptions<WorkflowExampleCatalogSeedOptions>()
@@ -195,7 +198,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
             serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
-            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>(),
+            serviceProvider.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()));
         services.TryAddScoped<MafAgentRuntime>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
@@ -221,11 +225,14 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentProviderUsageEvidenceStore>(serviceProvider =>
             (IAgentProviderUsageEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<IIndexedWorkspaceReadGuard>(serviceProvider =>
+            (IIndexedWorkspaceReadGuard)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceCatalogStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
             AgentProviderUsageProjectionSource>());
         services.TryAddScoped<ProviderUsageQueryService>();
+        services.TryAddScoped<IProviderUsageReadContext, ProfileProviderUsageReadContext>();
         services.TryAddScoped<
             ISharedProviderImageCapabilityRelay,
             SharedProviderImageCapabilityRelay>();
@@ -359,6 +366,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ISettingsRendererSource, WorkflowSettingsRendererSource>());
         services.AddWorkflowTemplateServices();
         services.AddScoped<WorkflowExampleCatalogSeedService>();
+        services.AddScoped<WorkflowTemplateDraftService>();
         services.AddScoped<WorkflowPromptGalleryMigrationService>();
         services.AddHostedService<WorkflowPromptGalleryMigrationHostedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();

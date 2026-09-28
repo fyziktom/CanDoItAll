@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace CanDoItAll.AgentFramework.Models;
 
 /// <summary>
-/// Identifies one resolved execution authority snapshot.
+/// Identifier of one resolved execution authority snapshot, as an object whose <c>value</c> is a GUID.
 /// </summary>
 public readonly record struct AgentExecutionAuthorityId
 {
@@ -20,8 +20,10 @@ public readonly record struct AgentExecutionAuthorityId
         Value = value;
     }
 
+    /// <summary>The authority snapshot GUID.</summary>
     public Guid Value { get; }
 
+    /// <summary>Computed: true when <c>value</c> is the all-zero GUID.</summary>
     public bool IsEmpty => Value == Guid.Empty;
 
     public static AgentExecutionAuthorityId Create()

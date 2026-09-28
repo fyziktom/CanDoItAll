@@ -2,12 +2,20 @@ using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
+/// <summary>
+/// Whether a price could be determined for a task resource, as a JSON integer: 0 Available, 1 Unavailable.
+/// </summary>
 public enum ProjectStructureTaskResourceCostQuoteStatus
 {
     Available,
     Unavailable
 }
 
+/// <summary>
+/// Source the owner used to price a task resource, as a JSON integer: 0 Unknown (no usable source), 1 CrmWorkforceRate
+/// (a CRM/HR person's rate), 2 AgentRunHistory, 3 WorkflowRunHistory and 4 ProcessRunHistory (recorded execution cost
+/// of the agent, workflow or process).
+/// </summary>
 public enum ProjectStructureTaskResourceCostSource
 {
     Unknown,
@@ -55,6 +63,19 @@ public sealed record ProjectStructureTaskResourceCostRequest(
     ProjectStructureTaskResourceSelection Resource,
     ProjectTaskEstimate Estimate);
 
+/// <summary>
+/// Price the owner determined for a task resource, used to set the task's expected cost.
+/// </summary>
+/// <param name="Status">Whether a price was determined, as a JSON integer: 0 Available, 1 Unavailable.</param>
+/// <param name="Amount">Expected total cost for the task; null when no price is available.</param>
+/// <param name="CurrencyCode">Currency of <c>amount</c>, for example <c>EUR</c>; may be empty when unavailable.</param>
+/// <param name="Source">Human-readable description of where the price comes from.</param>
+/// <param name="Summary">Human-readable explanation of the price or of why none is available.</param>
+/// <param name="CalculatedAtUtc">Instant (with offset) when the price was calculated.</param>
+/// <param name="SourceKind">
+/// Source used, as a JSON integer: 0 Unknown, 1 CrmWorkforceRate, 2 AgentRunHistory, 3 WorkflowRunHistory,
+/// 4 ProcessRunHistory.
+/// </param>
 public sealed record ProjectStructureTaskResourceCostQuote(
     ProjectStructureTaskResourceCostQuoteStatus Status,
     decimal? Amount,
@@ -64,6 +85,7 @@ public sealed record ProjectStructureTaskResourceCostQuote(
     DateTimeOffset CalculatedAtUtc,
     ProjectStructureTaskResourceCostSource SourceKind)
 {
+    /// <summary>True when <c>status</c> is Available and <c>amount</c> has a value.</summary>
     public bool IsAvailable => Status == ProjectStructureTaskResourceCostQuoteStatus.Available && Amount.HasValue;
 
     public static ProjectStructureTaskResourceCostQuote Unavailable(

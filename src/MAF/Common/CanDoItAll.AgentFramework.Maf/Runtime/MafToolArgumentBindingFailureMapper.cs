@@ -40,13 +40,76 @@ internal static class MafToolArgumentBindingFailureMapper
             return true;
         }
 
-        if (TryValidateNode(function.JsonSchema, argumentObject, "$", out var failure))
+        if (!TryValidateNode(function.JsonSchema, argumentObject, "$", out var failure) ||
+            !TryBindParameters(function, arguments, out failure))
         {
-            return false;
+            result = failure;
+            return true;
         }
 
-        result = failure;
+        return false;
+    }
+
+    // Tool input records validate their values in constructors, which run while the function binds its arguments.
+    // Binding the same JSON before dispatch turns such a rejection into a typed failure the model can correct,
+    // instead of an exception raised from inside the invocation.
+    private static bool TryBindParameters(
+        AIFunction function,
+        IEnumerable<KeyValuePair<string, object?>> arguments,
+        out AgentToolFailureResult failure)
+    {
+        failure = default!;
+        if (function.UnderlyingMethod is not { } method)
+        {
+            return true;
+        }
+
+        var values = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach (var argument in arguments)
+        {
+            values[argument.Key] = argument.Value;
+        }
+
+        foreach (var parameter in method.GetParameters())
+        {
+            if (parameter.Name is not { Length: > 0 } name ||
+                !values.TryGetValue(name, out var value) ||
+                value is null ||
+                parameter.ParameterType.IsInstanceOfType(value))
+            {
+                continue;
+            }
+
+            try
+            {
+                var element = value as JsonElement? ??
+                              JsonSerializer.SerializeToElement(value, function.JsonSerializerOptions);
+                _ = element.Deserialize(parameter.ParameterType, function.JsonSerializerOptions);
+            }
+            // A serializer contract failure (for example a constructor it cannot bind) would fail the invocation's own
+            // binding in the same way, so it is rejected here too, before anything is dispatched.
+            catch (Exception exception) when (exception is ArgumentException or JsonException or FormatException or
+                InvalidOperationException or NotSupportedException)
+            {
+                failure = CreateFailure(
+                    AppendPath("$", name),
+                    exception is ArgumentException rejected
+                        ? $"was rejected: {DescribeRejection(rejected)}"
+                        : "could not be read as the tool's argument type");
+                return false;
+            }
+        }
+
         return true;
+    }
+
+    private static string DescribeRejection(ArgumentException exception)
+    {
+        var message = exception.ParamName is { Length: > 0 } parameterName
+            ? exception.Message.Replace($" (Parameter '{parameterName}')", string.Empty, StringComparison.Ordinal)
+            : exception.Message;
+        message = message.Trim().TrimEnd('.');
+        return message.Length <= MaximumPathLength ? message : message[..MaximumPathLength];
     }
 
     private static bool TryValidateNode(

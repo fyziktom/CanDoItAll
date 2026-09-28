@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -14,16 +16,24 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
     private static readonly TimeSpan TerminationTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan GracefulTerminationTimeout = TimeSpan.FromMilliseconds(750);
     private readonly Func<ProcessStartInfo, string, string, LocalWorkspaceProcessOwnershipStart> prepareOwnershipStart;
+    private readonly ILogger logger;
 
     public LocalWorkspaceProcessHost()
         : this(LocalWorkspaceProcessOwnershipStart.Prepare)
     {
     }
 
+    public LocalWorkspaceProcessHost(ILogger<LocalWorkspaceProcessHost>? logger)
+        : this(LocalWorkspaceProcessOwnershipStart.Prepare, logger)
+    {
+    }
+
     internal LocalWorkspaceProcessHost(
-        Func<ProcessStartInfo, string, string, LocalWorkspaceProcessOwnershipStart> prepareOwnershipStart)
+        Func<ProcessStartInfo, string, string, LocalWorkspaceProcessOwnershipStart> prepareOwnershipStart,
+        ILogger? logger = null)
     {
         this.prepareOwnershipStart = prepareOwnershipStart ?? throw new ArgumentNullException(nameof(prepareOwnershipStart));
+        this.logger = logger ?? NullLogger.Instance;
     }
 
     private static readonly ExecutionBoundaryDescriptor Boundary = new(
@@ -59,21 +69,13 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
                     request.StandardInput),
                 cancellationToken).ConfigureAwait(false);
         }
-        catch (WorkspaceProcessStartException)
+        catch (WorkspaceProcessStartException exception)
         {
-            return new WorkspaceProcessExecutionResult(
-                Started: false,
-                ExitCode: -1,
-                Stdout: string.Empty,
-                Stderr: string.Empty,
-                StdoutTruncated: false,
-                StderrTruncated: false,
-                StartedAtUtc: startedAtUtc,
-                CompletedAtUtc: DateTimeOffset.UtcNow,
-                TimedOut: false,
-                Boundary: Boundary,
-                FailureMessage: "The configured workspace process could not be started.",
-                TerminationReason: WorkspaceProcessTerminationReason.StartFailed);
+            return WorkspaceLaunchExplanations.CreateStartFailedResult(
+                exception.FailureKind,
+                Boundary,
+                startedAtUtc,
+                exception.OperatorDetail);
         }
 
         await using (session.ConfigureAwait(false))
@@ -119,9 +121,19 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         }
 
         var startInfo = BuildStartInfo(request);
-        var executableIdentityPath = new WorkspaceExecutableLocator().ResolveExecutablePath(
-            [request.ExecutablePath],
-            request.WorkingDirectory);
+        string executableIdentityPath;
+        try
+        {
+            executableIdentityPath = new WorkspaceExecutableLocator().ResolveExecutablePath(
+                [request.ExecutablePath],
+                request.WorkingDirectory);
+        }
+        catch (WorkspaceExecutableResolutionException exception)
+        {
+            startInfo.Environment.Clear();
+            throw CreateStartException(exception, request, request.ExecutablePath, processStarted: false, exception);
+        }
+
         startInfo.FileName = executableIdentityPath;
         var startedAtUtc = DateTimeOffset.UtcNow;
         Process? process = null;
@@ -160,12 +172,16 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         }
         catch (Exception exception) when (IsStartFailure(exception))
         {
+            var processStarted = process is not null;
             var cleanupException = await CleanupFailedStartAsync(
                 process,
                 ownership,
                 ownershipStart).ConfigureAwait(false);
-            throw new WorkspaceProcessStartException(
-                "The configured workspace process could not be started.",
+            throw CreateStartException(
+                exception,
+                request,
+                executableIdentityPath,
+                processStarted,
                 cleanupException is null
                     ? exception
                     : new AggregateException(exception, cleanupException));
@@ -401,7 +417,12 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         startInfo.Environment.Clear();
         foreach (var environmentVariable in request.EnvironmentVariables)
         {
-            startInfo.Environment[environmentVariable.Key] = environmentVariable.Value ?? string.Empty;
+            // A null value means "not set"; an empty variable would be worse than none (an empty TEMP
+            // makes Windows fall back to its own folder).
+            if (environmentVariable.Value is not null)
+            {
+                startInfo.Environment[environmentVariable.Key] = environmentVariable.Value;
+            }
         }
 
         foreach (var argument in request.Arguments)
@@ -414,6 +435,31 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
 
     private static bool IsStartFailure(Exception exception)
         => exception is Win32Exception or InvalidOperationException or FileNotFoundException or DirectoryNotFoundException;
+
+    private WorkspaceProcessStartException CreateStartException(
+        Exception cause,
+        WorkspaceProcessSessionRequest request,
+        string executable,
+        bool processStarted,
+        Exception innerException)
+    {
+        var kind = WorkspaceProcessStartFailureClassifier.Classify(cause, request.WorkingDirectory, processStarted);
+        var operatorDetail =
+            $"{WorkspaceLaunchExplanations.DescribeForOperator(kind, executable, request.WorkingDirectory)} " +
+            $"({WorkspaceProcessStartFailureClassifier.DescribeCause(cause)})";
+        logger.LogWarning(
+            cause,
+            "Workspace process for tool {ToolName} recipe {RecipeId} could not start ({FailureKind}). {OperatorDetail}",
+            request.ToolName,
+            request.RecipeId,
+            kind,
+            operatorDetail);
+        return new WorkspaceProcessStartException(
+            WorkspaceLaunchExplanations.For(kind).AgentText,
+            kind,
+            innerException,
+            operatorDetail);
+    }
 
     private static OwnedProcessIdentityMatch MatchIdentity(
         Process process,

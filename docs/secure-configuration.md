@@ -57,6 +57,17 @@ Current supported runtime paths:
 
 Do not add a generic model-visible "read secret" tool. If an action needs a secret, resolve it inside the server-side action and return only non-secret output.
 
+### Host environment variables and child processes
+
+Processes that CanDoItAll starts (agent workspace commands, runtime nodes, local MCP servers, Docker, git) begin with an empty environment. They receive only an allowlist of basic variables plus the settings of their toolchain. Host variables such as `OPENAI_API_KEY`, database connection strings or cloud credentials never reach them, so keep credentials in the secret vault rather than relying on the host environment.
+
+Two operator options under `AgentFramework:ProcessEnvironment` widen this; both are off by default:
+
+- `NetworkTrust: true` passes the host's proxy and certificate variables (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, `SSL_CERT_FILE`, `NODE_EXTRA_CA_CERTS`, …). Proxy URLs can contain a user name and password; enable it only when the proxy is needed and its URL is acceptable in child processes.
+- `AdditionalInheritedNames` lists further variable names. Names that look like secrets (containing `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD` or `CREDENTIAL`) or that inject code into a runtime (`DOTNET_STARTUP_HOOKS`, `MSBUILD*`, `NODE_OPTIONS`, `LD_PRELOAD`, `DYLD_*`, …) are rejected and logged at startup.
+
+An agent's own PowerShell and Python scripts receive these extra variables only when the agent has the workspace-tool permission "Scripts may read environment variables". Without it, a script that reads a variable outside the basic set, enumerates the environment, or reads a computed variable name is refused before it starts. See [Runtime execution and shell portability](architecture/runtime-execution-portability.md#process-environment-and-launch-failures).
+
 ## Secret UI
 
 The shared `SecretField` BaseLib component is the standard secret-value editor. It masks by default, supports copy buttons for the value and secret name, and only reveals the value through a timed "Show for 30s" action.

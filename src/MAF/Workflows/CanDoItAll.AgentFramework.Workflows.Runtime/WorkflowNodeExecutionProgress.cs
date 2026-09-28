@@ -44,6 +44,12 @@ public interface IWorkflowNodeExecutionProgressObserver
     ValueTask RecordAsync(
         WorkflowNodeExecutionProgress progress,
         CancellationToken cancellationToken = default);
+
+    ValueTask RecordEventAsync(
+        WorkflowNodeExecutionProgress progress,
+        WorkflowEventRecord workflowEvent,
+        CancellationToken cancellationToken = default)
+        => RecordAsync(progress, cancellationToken);
 }
 
 public sealed class WorkflowNodeExecutionProgressScope : IDisposable

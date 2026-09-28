@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProviderHistoryOwnerPersistenceTests {
     [Fact]
     public async Task Owner_model_contains_exactly_history_records_with_complete_schema_parity() {

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowAnalyticsPanelTests
 {
     private static readonly DateTimeOffset AsOfUtc = new(2026, 7, 12, 21, 0, 0, TimeSpan.Zero);

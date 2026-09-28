@@ -869,6 +869,12 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
 
     private static void WriteCellValue(IXLCell cell, object? value)
     {
+        // Cells are filled in memory before the workbook is saved, so an oversized value still rejects the whole write.
+        if (value is string { Length: > SpreadsheetWriteInputException.MaximumCellTextLength })
+        {
+            throw SpreadsheetWriteInputException.CellTextTooLong();
+        }
+
         if (value is string text && text.Length > 1 && text.StartsWith('='))
         {
             cell.FormulaA1 = text[1..];

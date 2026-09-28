@@ -5,6 +5,13 @@ using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Core;
 
+/// <summary>
+/// Category of a model-provider failure, as a camel-case string: <c>quotaOrBilling</c> (the provider reported no
+/// remaining quota or credit, or blocked billing), <c>rateLimit</c> (the provider throttled the request),
+/// <c>requestCompatibility</c> (an OpenAI Chat Completions provider rejected reasoning effort combined with function
+/// tools), <c>providerConfiguration</c> (the provider profile failed its readiness validation, or a shared provider
+/// source rejected the connection's credential) or <c>providerError</c> (any other provider failure).
+/// </summary>
 public enum AgentProviderFailureCategory
 {
     ProviderError,

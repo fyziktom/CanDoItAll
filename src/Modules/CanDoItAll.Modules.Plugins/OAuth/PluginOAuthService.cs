@@ -1060,6 +1060,8 @@ public sealed class PluginOAuthService(
             .ToArray();
     }
 
+    // The return path must stay on this host. Browsers read a backslash as a slash and drop tabs and line breaks from
+    // an address, so "/\host" and "/<tab>/host" leave the site just like "//host" does.
     private static string NormalizeReturnPath(string? returnPath)
     {
         if (string.IsNullOrWhiteSpace(returnPath))
@@ -1068,7 +1070,9 @@ public sealed class PluginOAuthService(
         }
 
         var normalized = returnPath.Trim();
-        if (normalized[0] != '/' || normalized.StartsWith("//", StringComparison.Ordinal))
+        if (normalized[0] != '/' ||
+            (normalized.Length > 1 && normalized[1] is '/' or '\\') ||
+            normalized.Any(char.IsControl))
         {
             return "/plugins";
         }

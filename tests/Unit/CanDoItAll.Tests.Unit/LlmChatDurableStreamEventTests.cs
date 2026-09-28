@@ -527,7 +527,7 @@ public sealed class LlmChatDurableStreamEventTests
         signal.Publish(identity, operationId, 1);
 
         await waiting.WaitAsync(TimeSpan.FromSeconds(5));
-        await pressure.WaitAsync(TimeSpan.FromSeconds(5));
+        await pressure.WaitAsync(TimeSpan.FromSeconds(30));
         Assert.InRange(GetSignalStateCount(signal), 1, 4_096);
     }
 

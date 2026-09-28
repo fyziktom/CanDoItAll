@@ -1059,6 +1059,38 @@ public sealed class WorkspaceFileServiceTests
     }
 
     [Fact]
+    public void Deleting_a_project_file_or_project_directory_is_a_prohibited_refusal_before_any_effect()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var projectRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "App")).FullName;
+        File.WriteAllText(Path.Combine(projectRoot, "App.csproj"), "<Project />");
+        File.WriteAllText(Path.Combine(projectRoot, "notes.txt"), "keep");
+        var mutationService = new WorkspaceFileMutationService(
+            TestWorkspaceServices.CreatePathPolicy(workspace.RootPath),
+            new WorkspaceFileReceiptWriter(workspace.RootPath));
+
+        foreach (var (path, recursive) in new[] { ("App/App.csproj", false), ("App", true) })
+        {
+            using var capture = AgentToolInvocationEffectScope.Begin();
+            var result = mutationService.DeletePath(path, recursive);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("is not allowed", result.Message, StringComparison.Ordinal);
+            Assert.True(capture.ProhibitedBeforeEffect);
+        }
+
+        using (var capture = AgentToolInvocationEffectScope.Begin())
+        {
+            Assert.False(mutationService.DeletePath("App").Succeeded);
+            Assert.True(capture.RejectedBeforeEffect);
+            Assert.False(capture.ProhibitedBeforeEffect);
+        }
+
+        Assert.True(File.Exists(Path.Combine(projectRoot, "App.csproj")));
+        Assert.True(File.Exists(Path.Combine(projectRoot, "notes.txt")));
+    }
+
+    [Fact]
     public void RecursiveDelete_rename_failure_rolls_back_directory_and_cleans_tombstone()
     {
         using var workspace = new TemporaryWorkspace();

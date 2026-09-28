@@ -53,9 +53,27 @@ public sealed class WorkspaceArtifactToolService(
     {
         cancellationToken.ThrowIfCancellationRequested();
         var startedAtUtc = DateTimeOffset.UtcNow;
-        var resolvedOutputPath = string.IsNullOrWhiteSpace(outputPath)
-            ? BuildDefaultMarkdownOutputPath(path)
-            : WorkspacePathPolicy.NormalizeRelativePath(outputPath);
+        string resolvedOutputPath;
+        try
+        {
+            resolvedOutputPath = string.IsNullOrWhiteSpace(outputPath)
+                ? BuildDefaultMarkdownOutputPath(path)
+                : WorkspacePathPolicy.NormalizeRelativePath(outputPath);
+        }
+        catch (ArgumentException)
+        {
+            var invalidOutputMessage = $"Output path '{outputPath}' is not a canonical workspace-relative path. Use a relative path such as 'docs/converted.md' without '.', '..', a leading or trailing '/', or a drive prefix.";
+            return CreateDocumentConversionResult(
+                succeeded: false,
+                outcome: "Denied",
+                invalidOutputMessage,
+                path,
+                outputPath ?? string.Empty,
+                diagnostics: invalidOutputMessage,
+                startedAtUtc,
+                targetPaths: [path]);
+        }
+
         if (LooksLikeImagePath(path))
         {
             var message = $"'{path}' is an image asset. Use workspace_inspect_image or workspace_analyze_image for visual evidence instead of workspace_convert_document.";

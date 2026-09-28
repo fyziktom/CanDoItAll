@@ -490,6 +490,8 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
                 $"rangeWrites item {exception.WriteNumber} values row {exception.ValuesRowNumber} is null. Supply an array for that row or remove it, then retry.",
             SpreadsheetWriteInputFailureKind.InputWorkbookMissing =>
                 "The input workbook does not exist and createWorkbookIfMissing is false. Choose an existing workbook or set createWorkbookIfMissing to true, then retry.",
+            SpreadsheetWriteInputFailureKind.CellTextTooLong =>
+                $"A cell value is longer than the {SpreadsheetWriteInputException.MaximumCellTextLength:N0} characters an Excel cell can hold. Shorten or split that text, then retry.",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(exception),
                 exception.Kind,
@@ -552,13 +554,10 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             WorkspacePathResolutionFailureKind.OutsideWorkspace or
             WorkspacePathResolutionFailureKind.ManagedPathAliasMismatch or
             WorkspacePathResolutionFailureKind.ReparsePointTraversal or
-            WorkspacePathResolutionFailureKind.ForeignManagedScope =>
-                $"{argumentName} is not a valid accessible workspace file path. Choose an allowed workspace path and retry.",
+            WorkspacePathResolutionFailureKind.ForeignManagedScope or
+            WorkspacePathResolutionFailureKind.ForeignHostPath or
             WorkspacePathResolutionFailureKind.DirectoryRequired =>
-                throw new ArgumentOutOfRangeException(
-                    nameof(exception),
-                    exception.Kind,
-                    "A directory-required failure is invalid for workbook file resolution."),
+                $"{argumentName} is not a valid accessible workspace file path. Choose an allowed workspace path and retry.",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(exception),
                 exception.Kind,

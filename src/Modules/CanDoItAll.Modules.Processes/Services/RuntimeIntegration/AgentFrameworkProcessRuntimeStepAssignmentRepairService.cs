@@ -40,6 +40,10 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
     {
         ArgumentNullException.ThrowIfNull(assignment);
 
+        if (!ProcessLaunchExecutorKinds.CanResolveAsAgent(assignment.ExecutorKind)) {
+            return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
+        }
+
         var plan = await planStore.LoadAsync(assignment.PlanId, cancellationToken).ConfigureAwait(false);
         var planSteps = plan?.Steps
             .Where(step => step.StepInstanceId == assignment.StepInstanceId)

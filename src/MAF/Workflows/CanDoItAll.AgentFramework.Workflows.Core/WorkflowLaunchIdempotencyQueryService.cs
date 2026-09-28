@@ -5,14 +5,20 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class WorkflowLaunchIdempotencyQueryService(
     IWorkflowLaunchIdempotencyQueryStore queryStore,
-    IWorkflowRunStore runStore) : IWorkflowLaunchIdempotencyQueryService
+    IWorkflowRunStore runStore,
+    IWorkflowLaunchAuthorizationScopeResolver authorizationScopeResolver) : IWorkflowLaunchIdempotencyQueryService
 {
     public async Task<WorkflowLaunchIdempotencyEvidence?> FindApiKeyAsync(
         WorkflowLaunchIdempotencyKey callerKey,
+        WorkflowLaunchOrigin.Api caller,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(caller);
+
         var record = await queryStore.FindApiKeyAsync(callerKey, cancellationToken);
-        if (record is null)
+        // A key belongs to the caller that recorded it; a key recorded by another caller is not disclosed and reads as
+        // not found.
+        if (record is null || record.Scope.OriginScopeKey != CreateCallerScopeKey(caller))
         {
             return null;
         }
@@ -40,5 +46,16 @@ public sealed class WorkflowLaunchIdempotencyQueryService(
             record.ReplayCount > 0,
             record.ReplayCount,
             record.LastReplayedAtUtc);
+    }
+
+    // The same caller scope a start records: the caller's actor under the authorization scope a launch resolves now.
+    private WorkflowLaunchOriginScopeKey CreateCallerScopeKey(WorkflowLaunchOrigin.Api caller)
+    {
+        var authorization = authorizationScopeResolver.Resolve(caller);
+        return WorkflowLaunchIdempotencyRequestFactory.CreateOriginScopeKey(caller with
+        {
+            AuthorizationScope = authorization.Scope,
+            AuthorizationPolicyFingerprint = authorization.PolicyFingerprint
+        });
     }
 }

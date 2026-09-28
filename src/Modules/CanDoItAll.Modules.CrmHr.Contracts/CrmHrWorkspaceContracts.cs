@@ -433,6 +433,12 @@ public sealed record CrmAccountWorkspaceModel(
 
 public sealed record WorkforceProfileSummaryModel(Guid Id, Guid PartyId, WorkforceKind WorkforceKind, string JobTitle, string Status);
 
+/// <summary>
+/// Availability of a party for new work on the current UTC date, as a JSON integer: 0 Bench (at most 10 percent
+/// allocated and less than 25 percent blocked), 1 NearAvailable (a current allocation or a capacity block ends within
+/// 30 days), 2 Allocated (any other committed state), 3 Overallocated (allocated plus blocked above 100 percent).
+/// Overallocated is checked first, then Bench, then NearAvailable.
+/// </summary>
 public enum WorkforceAvailabilityState
 {
     Bench,
@@ -463,28 +469,124 @@ public sealed record WorkforceListItemModel(
     DateOnly? ContractEndDate = null,
     DateOnly? NextAvailabilityOn = null);
 
+/// <summary>
+/// The workforce profile of a party as returned in the workforce workspace. The profile save request
+/// (<c>POST /api/crm-hr/workforce/profiles</c>) has the same fields except <c>id</c> and <c>lastChangedBy</c>. When no
+/// profile was saved yet, the fields hold defaults and <c>id</c> is null.
+/// </summary>
 public sealed class WorkforceProfileEditorModel
 {
+    /// <summary>
+    /// Identifier of the workforce profile; null when the party has no saved profile. It is not the party identifier,
+    /// and the profile save finds the profile by <c>partyId</c> instead.
+    /// </summary>
     public Guid? Id { get; set; }
+
+    /// <summary>
+    /// Identifier of the party the profile belongs to.
+    /// </summary>
     public Guid PartyId { get; set; }
+
+    /// <summary>
+    /// Work classification, as a JSON integer: 0 Employee, 1 Contractor, 2 Freelancer, 3 DeliveryUnit. Without a saved
+    /// profile: DeliveryUnit for organizations and organization units, Contractor or Freelancer when the party has that
+    /// role, otherwise Employee.
+    /// </summary>
     public WorkforceKind WorkforceKind { get; set; } = WorkforceKind.Employee;
+
+    /// <summary>
+    /// Personnel number or similar code from an HR system; empty when not set.
+    /// </summary>
     public string EmployeeCode { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Job title; empty when not set.
+    /// </summary>
     public string JobTitle { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Professional discipline as free text; empty when not set.
+    /// </summary>
     public string Discipline { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Seniority level as free text; empty when not set.
+    /// </summary>
     public string Seniority { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Identifier of the organization or organization unit the party belongs to; null when none. Its name is
+    /// <c>homeUnitName</c> of the workspace.
+    /// </summary>
     public Guid? HomeUnitPartyId { get; set; }
+
+    /// <summary>
+    /// Identifier of the person who manages the party; null when none. Its name is <c>managerName</c> of the workspace.
+    /// </summary>
     public Guid? ManagerPartyId { get; set; }
+
+    /// <summary>
+    /// Date the work relationship starts (<c>yyyy-MM-dd</c>); null when not set.
+    /// </summary>
     public DateOnly? StartDate { get; set; }
+
+    /// <summary>
+    /// Date the work relationship ends (<c>yyyy-MM-dd</c>); null when open-ended.
+    /// </summary>
     public DateOnly? EndDate { get; set; }
+
+    /// <summary>
+    /// Work location as free text; empty when not set.
+    /// </summary>
     public string Location { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Time zone as free text; empty when not set.
+    /// </summary>
     public string TimeZone { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Internal cost of one <c>rateUnit</c> of the party's work in <c>rateCurrencyCode</c>; null when unknown. A rate,
+    /// not a total.
+    /// </summary>
     public decimal? InternalCostRate { get; set; }
+
+    /// <summary>
+    /// Price billed to customers for one <c>rateUnit</c> of the party's work in <c>rateCurrencyCode</c>; null when
+    /// unknown.
+    /// </summary>
     public decimal? ExternalBillingRate { get; set; }
+
+    /// <summary>
+    /// Time unit of both rates, as a JSON integer: 0 Hour, 1 ManDay.
+    /// </summary>
     public ProjectResourceRateUnit RateUnit { get; set; } = ProjectResourceRateUnit.Hour;
+
+    /// <summary>
+    /// Three-letter currency code of both rates, for example <c>EUR</c>; <c>USD</c> when not set.
+    /// </summary>
     public string RateCurrencyCode { get; set; } = "USD";
+
+    /// <summary>
+    /// Weekly working capacity in hours; 40 when not set.
+    /// </summary>
     public decimal CapacityHoursPerWeek { get; set; } = 40m;
+
+    /// <summary>
+    /// Employment status as free text. Without a saved profile: <c>Active</c> or <c>Inactive</c> when the party has
+    /// that lifecycle status, otherwise <c>Planned</c>.
+    /// </summary>
     public string Status { get; set; } = "Planned";
+
+    /// <summary>
+    /// Free-text notes; empty when not set.
+    /// </summary>
     public string Notes { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Actor that last changed the party record, which is not necessarily a change of the profile, for example
+    /// <c>crm-hr-api</c>. The profile save request does not carry it.
+    /// </summary>
     public string LastChangedBy { get; set; } = "crm-hr-ui";
 
     // An independent submission; the model holds no mutable descendants.
@@ -509,6 +611,55 @@ public sealed record WorkforceProfileWorkspaceModel(
     IReadOnlyList<SkillCatalogItemModel> SkillCatalog,
     IReadOnlyList<PartySkillItemModel> Skills);
 
+/// <summary>
+/// The workforce view of one party returned by <c>GET /api/crm-hr/workforce/{partyId}</c>: party summary, workforce
+/// profile, skill catalog and party skills, capacity blocks, project allocations and a capacity summary for the current
+/// UTC date. It contains personal and HR data.
+/// </summary>
+/// <param name="PartyId">Identifier of the party.</param>
+/// <param name="DisplayName">Name shown for the party.</param>
+/// <param name="Summary">Short description of the party; returned also for sensitive parties.</param>
+/// <param name="PartyType">
+/// Kind of party, as a JSON integer: 0 Person, 1 Organization, 2 OrganizationUnit (AI agent parties have no workforce
+/// workspace).
+/// </param>
+/// <param name="LifecycleStatus">
+/// Lifecycle status of the party, as a JSON integer: 0 Draft, 1 Active, 2 Inactive, 3 Archived, 4 Former, 5 Candidate,
+/// 6 Prospect.
+/// </param>
+/// <param name="IsSensitive">
+/// True when the party is marked for restricted handling; <c>primaryEmail</c> and <c>primaryPhone</c> are then empty.
+/// </param>
+/// <param name="LastChangedBy">Actor that last changed the party record, for example <c>crm-hr-api</c>.</param>
+/// <param name="UpdatedAtUtc">
+/// When the party record last changed, in UTC; saving the workforce profile updates it.
+/// </param>
+/// <param name="Roles">
+/// Business roles of the party, one entry per role assignment ordered by role, each as a JSON integer: 0 Customer,
+/// 1 CustomerContact, 2 Partner, 3 Vendor, 4 Employee, 5 Contractor, 6 Freelancer, 7 DeliveryUnit, 8 Candidate,
+/// 9 AiSteward, 10 AccountManager, 11 Recruiter, 12 Stakeholder.
+/// </param>
+/// <param name="PrimaryEmail">
+/// The party's primary public email address, or another public one when none is primary; empty when there is none or
+/// the party is sensitive.
+/// </param>
+/// <param name="PrimaryPhone">
+/// The party's primary public phone number, or another public one when none is primary; empty when there is none or
+/// the party is sensitive.
+/// </param>
+/// <param name="HomeUnitName">Display name of the profile's home unit; empty when none.</param>
+/// <param name="ManagerName">Display name of the profile's manager; empty when none.</param>
+/// <param name="Profile">The workforce profile, or default values with a null <c>id</c> when none was saved.</param>
+/// <param name="SkillCatalog">The whole skill catalog, active skills first, then by category and name.</param>
+/// <param name="Skills">The party's skills, ordered by skill category and name.</param>
+/// <param name="CapacityBlocks">
+/// The party's capacity blocks, past, current and future, ordered by start date and kind.
+/// </param>
+/// <param name="ProjectAllocations">
+/// The party's project allocations, active ones first, then by start date and project name. Past allocations and
+/// allocations of earlier project lifetimes are included.
+/// </param>
+/// <param name="CapacitySummary">Capacity figures for the current UTC date.</param>
 public sealed record WorkforceWorkspaceModel(
     Guid PartyId,
     string DisplayName,
@@ -530,6 +681,17 @@ public sealed record WorkforceWorkspaceModel(
     IReadOnlyList<ProjectAllocationItemModel> ProjectAllocations,
     WorkforceCapacitySummaryModel CapacitySummary);
 
+/// <summary>
+/// A skill definition of the workforce skill catalog. Party skills refer to it by its identifier; it is not an agent
+/// skill or capability.
+/// </summary>
+/// <param name="Id">Identifier of the skill definition; use it as <c>skillId</c> of a party skill.</param>
+/// <param name="Name">Skill name, unique in the catalog.</param>
+/// <param name="Category">Category that groups skills; empty when not set.</param>
+/// <param name="Description">Description of the skill; empty when not set.</param>
+/// <param name="IsActive">
+/// False when the skill is deactivated; inactive skills stay in the catalog after the active ones.
+/// </param>
 public sealed record SkillCatalogItemModel(
     Guid Id,
     string Name,
@@ -549,6 +711,20 @@ public sealed class SkillDefinitionEditorModel
     public SkillDefinitionEditorModel Snapshot() => (SkillDefinitionEditorModel)MemberwiseClone();
 }
 
+/// <summary>
+/// A party's recorded proficiency in one catalog skill, as returned in the workforce workspace.
+/// </summary>
+/// <param name="Id">Identifier of the party skill record; send it as <c>id</c> to update the record.</param>
+/// <param name="SkillId">Identifier of the skill definition.</param>
+/// <param name="SkillName">Name of the skill definition.</param>
+/// <param name="SkillCategory">Category of the skill definition; empty when not set.</param>
+/// <param name="Proficiency">
+/// Proficiency level, lowest first, as a JSON integer: 0 Basic, 1 Working, 2 Strong, 3 Expert.
+/// </param>
+/// <param name="YearsExperience">Years of experience with the skill; 0 or more.</param>
+/// <param name="CertificationStatus">Certification state as free text; empty when not set.</param>
+/// <param name="LastValidatedOn">Date the proficiency was last checked (<c>yyyy-MM-dd</c>); null when never.</param>
+/// <param name="Notes">Free-text notes; empty when not set.</param>
 public sealed record PartySkillItemModel(
     Guid Id,
     Guid SkillId,
@@ -575,6 +751,28 @@ public sealed class PartySkillEditorModel
     public PartySkillEditorModel Snapshot() => (PartySkillEditorModel)MemberwiseClone();
 }
 
+/// <summary>
+/// A capacity block of a party as returned in the workforce workspace: a date range in which a percentage of the
+/// party's capacity is not available. It is not a task or a project assignment.
+/// </summary>
+/// <param name="Id">Identifier of the capacity block; send it as <c>id</c> to update the block.</param>
+/// <param name="BlockKind">
+/// Reason for the block, as a JSON integer: 0 Leave, 1 Unavailable, 2 Reserve, 3 Tentative.
+/// </param>
+/// <param name="StartDate">First day of the block (<c>yyyy-MM-dd</c>).</param>
+/// <param name="EndDate">Last day of the block, inclusive (<c>yyyy-MM-dd</c>).</param>
+/// <param name="Percentage">
+/// Share of the party's capacity that the block takes, in percent (above 0, at most 100).
+/// </param>
+/// <param name="RelatedProjectId">Identifier of the project the block relates to; null when none.</param>
+/// <param name="RelatedProjectName">
+/// Name of the related project; empty when none or when the project no longer exists.
+/// </param>
+/// <param name="Notes">Free-text notes; empty when not set.</param>
+/// <param name="IsActive">
+/// True when the current UTC date is within the block; active blocks count in <c>activeBlockedPercent</c>.
+/// </param>
+/// <param name="IsFuture">True when the block starts after the current UTC date.</param>
 public sealed record CapacityBlockItemModel(
     Guid Id,
     CapacityBlockKind BlockKind,
@@ -602,6 +800,32 @@ public sealed class CapacityBlockEditorModel
     public CapacityBlockEditorModel Snapshot() => (CapacityBlockEditorModel)MemberwiseClone();
 }
 
+/// <summary>
+/// A project allocation of a party as returned in the workforce workspace: a project participation or a task work
+/// assignment that carries an allocation percentage. Only allocations bound to the current lifetime of their project
+/// count in the capacity summary.
+/// </summary>
+/// <param name="AssignmentId">Identifier of the underlying project participation or task work assignment.</param>
+/// <param name="ProjectId">Identifier of the project.</param>
+/// <param name="ProjectName">
+/// Name of the project; empty when the project no longer exists or was recreated with the same identifier after the
+/// allocation was made.
+/// </param>
+/// <param name="PartyId">Identifier of the allocated party.</param>
+/// <param name="PartyDisplayName">Display name of the allocated party.</param>
+/// <param name="Role">
+/// Role of the party in the project, as a JSON integer: 0 Customer, 1 CustomerContact, 2 DeliveryUnit, 3 TeamMember,
+/// 4 Manager, 5 Partner, 6 Vendor, 7 Stakeholder, 8 MeetingParticipant, 9 WorkItemAssignee (a task work assignment),
+/// 10 Reviewer, 11 AiAgent, 12 BillingContact, 13 TechnicalContact.
+/// </param>
+/// <param name="AllocationPercent">Share of the party's capacity allocated, in percent.</param>
+/// <param name="StartsOn">First day of the allocation as a UTC date (<c>yyyy-MM-dd</c>); null when open.</param>
+/// <param name="EndsOn">Last day of the allocation as a UTC date (<c>yyyy-MM-dd</c>); null when open-ended.</param>
+/// <param name="Notes">Free-text notes of the participation or assignment; empty when not set.</param>
+/// <param name="IsActive">
+/// True when the current UTC date is within the allocation's dates; missing dates are open.
+/// </param>
+/// <param name="IsFuture">True when the allocation starts after the current UTC date.</param>
 public sealed record ProjectAllocationItemModel(
     Guid AssignmentId,
     Guid ProjectId,
@@ -616,6 +840,29 @@ public sealed record ProjectAllocationItemModel(
     bool IsActive,
     bool IsFuture);
 
+/// <summary>
+/// Capacity figures of a party for the current UTC date, calculated from its active capacity blocks and from its active
+/// allocations bound to current project lifetimes.
+/// </summary>
+/// <param name="CapacityHoursPerWeek">
+/// Weekly capacity in hours from the workforce profile; 40 when there is no profile or it has 0 or less.
+/// </param>
+/// <param name="ActiveAllocationPercent">
+/// Sum of the allocation percentages of the party's active allocations in current project lifetimes; can exceed 100.
+/// </param>
+/// <param name="ActiveBlockedPercent">Sum of the percentages of the party's active capacity blocks.</param>
+/// <param name="AvailablePercent">100 minus the allocated and blocked percentages, never below 0.</param>
+/// <param name="AvailabilityState">
+/// Availability classification, as a JSON integer: 0 Bench, 1 NearAvailable, 2 Allocated, 3 Overallocated.
+/// </param>
+/// <param name="AvailabilityMessage">
+/// English sentence describing the availability, for display; its wording can change.
+/// </param>
+/// <param name="NextAvailabilityOn">
+/// Earliest end date, today or later, of a current-lifetime allocation or of a capacity block; null when there is none.
+/// </param>
+/// <param name="IsOverallocated">True when <c>availabilityState</c> is Overallocated.</param>
+/// <param name="IsBench">True when <c>availabilityState</c> is Bench.</param>
 public sealed record WorkforceCapacitySummaryModel(
     decimal CapacityHoursPerWeek,
     decimal ActiveAllocationPercent,

@@ -35,6 +35,12 @@ public enum SecretVaultAvailability
     Unavailable
 }
 
+/// <summary>
+/// Protection offered by a secret vault. Where the runtime API reports it, it is a string token: <c>Unknown</c>,
+/// <c>DevelopmentOnly</c> (acceptable for development only), <c>BasicLocal</c> (encrypted in a permission-restricted
+/// local file whose key the same operating-system account can read) or <c>Strong</c> (for example the Windows Data
+/// Protection API).
+/// </summary>
 public enum SecretVaultProtectionLevel
 {
     Unknown,
@@ -71,6 +77,13 @@ public sealed class SecretVaultUnavailableException(SecretVaultProbeResult resul
     public SecretVaultProbeResult Result { get; } = result;
 }
 
+/// <summary>
+/// Secret-vault provider. Where the runtime API reports it, it is a string token: <c>Auto</c> (chosen from the host
+/// profile), <c>Dpapi</c> (Windows Data Protection API), <c>MauiSecureStorage</c>, <c>MacOsKeychain</c>,
+/// <c>LinuxSecretService</c>, <c>ExternalWrappingKeyFile</c> (encrypted file whose key comes from outside the vault),
+/// <c>LocalUserFile</c> (encrypted permission-restricted local file), <c>DataProtectionFile</c> (legacy local file,
+/// development or migration only), <c>AzureKeyVault</c>, <c>HashiCorp</c> or <c>InMemory</c> (process memory only).
+/// </summary>
 public enum SecretVaultProviderKind
 {
     Auto,

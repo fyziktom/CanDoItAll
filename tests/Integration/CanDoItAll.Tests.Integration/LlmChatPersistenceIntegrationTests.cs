@@ -35,6 +35,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
 
+[Trait("Category", "HostPlatform")]
 public sealed class EfLlmConversationStoreIntegrationTests
 {
     [Fact]

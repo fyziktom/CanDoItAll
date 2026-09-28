@@ -1,0 +1,416 @@
+{
+  "mafVersion": "1.20.0.0",
+  "definition": {
+    "id": "50e93258-84af-4cde-8d48-b83f0a01be7f",
+    "versionId": "570f5aae-322c-4996-af4c-0e4625b2a72c",
+    "name": "Native HITL workflow",
+    "description": "Exercises MAF checkpoint rehydration.",
+    "status": 0,
+    "graph": {
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "kind": 0,
+          "name": "start",
+          "ports": [],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "",
+            "inputShape": {
+              "kind": 0,
+              "schemaJson": "",
+              "description": "Plain text"
+            },
+            "resultShape": {
+              "kind": 0,
+              "schemaJson": "",
+              "description": "Plain text"
+            },
+            "providerProfileId": null,
+            "model": "",
+            "executorId": null,
+            "executorSettingsJson": "",
+            "executionPolicy": null
+          },
+          "canvasX": 0,
+          "canvasY": 0
+        },
+        {
+          "id": "marker",
+          "kind": 1,
+          "name": "marker",
+          "ports": [],
+          "settings": {
+            "componentId": "9a90522d-092c-42a1-bc27-08c204036b1c",
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "Record one marker invocation.",
+            "inputShape": {
+              "kind": 0,
+              "schemaJson": "",
+              "description": "Plain text"
+            },
+            "resultShape": {
+              "kind": 0,
+              "schemaJson": "",
+              "description": "Plain text"
+            },
+            "providerProfileId": null,
+            "model": "",
+            "executorId": null,
+            "executorSettingsJson": "",
+            "executionPolicy": null
+          },
+          "canvasX": 0,
+          "canvasY": 0
+        },
+        {
+          "id": "human",
+          "kind": 6,
+          "name": "human",
+          "ports": [],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": 0,
+            "instructions": "Provide the reviewed payload.",
+            "inputShape": {
+              "kind": 0,
+              "schemaJson": "",
+              "description": "Plain text"
+            },
+            "resultShape": {
+              "kind": 1,
+              "schemaJson": "{\u0022type\u0022:\u0022object\u0022}",
+              "description": "JSON object"
+            },
+            "providerProfileId": null,
+            "model": "",
+            "executorId": null,
+            "executorSettingsJson": "",
+            "executionPolicy": null
+          },
+          "canvasX": 0,
+          "canvasY": 0
+        },
+        {
+          "id": "end",
+          "kind": 9,
+          "name": "end",
+          "ports": [],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "",
+            "inputShape": {
+              "kind": 1,
+              "schemaJson": "{\u0022type\u0022:\u0022object\u0022}",
+              "description": "JSON object"
+            },
+            "resultShape": {
+              "kind": 0,
+              "schemaJson": "",
+              "description": "Plain text"
+            },
+            "providerProfileId": null,
+            "model": "",
+            "executorId": null,
+            "executorSettingsJson": "",
+            "executionPolicy": null
+          },
+          "canvasX": 0,
+          "canvasY": 0
+        }
+      ],
+      "edges": [
+        {
+          "id": "start-marker",
+          "sourceNodeId": "start",
+          "sourcePortId": null,
+          "targetNodeId": "marker",
+          "targetPortId": null,
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        },
+        {
+          "id": "marker-human",
+          "sourceNodeId": "marker",
+          "sourcePortId": null,
+          "targetNodeId": "human",
+          "targetPortId": null,
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        },
+        {
+          "id": "human-end",
+          "sourceNodeId": "human",
+          "sourcePortId": null,
+          "targetNodeId": "end",
+          "targetPortId": null,
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        }
+      ]
+    },
+    "runtimePolicy": {
+      "preferredBackend": 0,
+      "allowInProcessPreviewRuns": true,
+      "requireDurableProductionRuns": false,
+      "exposeAzureFunctionsStatusEndpoint": false,
+      "exposeAzureFunctionsMcpTool": false
+    },
+    "createdAtUtc": "2026-09-23T19:33:46.9114202+00:00",
+    "updatedAtUtc": "2026-09-23T19:33:46.9114202+00:00",
+    "inputParameters": [],
+    "templateKey": "",
+    "templatePackKey": "",
+    "templatePackVersion": "",
+    "sourceHash": "",
+    "externalNamespace": "",
+    "externalKey": ""
+  },
+  "run": {
+    "runId": "d8261053-4fef-474e-8390-59607e0aafd9",
+    "workflowId": "50e93258-84af-4cde-8d48-b83f0a01be7f",
+    "versionId": "570f5aae-322c-4996-af4c-0e4625b2a72c",
+    "state": 2,
+    "backend": 0,
+    "backendRunId": "d8261053-4fef-474e-8390-59607e0aafd9",
+    "summary": "Workflow is waiting for input at node \u0027human\u0027.",
+    "createdAtUtc": "2026-09-23T19:33:47.0102336+00:00",
+    "updatedAtUtc": "2026-09-23T19:33:47.5418668+00:00",
+    "terminalAtUtc": null,
+    "origin": {
+      "$origin": "api",
+      "actor": {
+        "kind": 0,
+        "subjectId": "native-hitl-test-user"
+      },
+      "kind": 0,
+      "correlationId": {
+        "value": "native-hitl-test"
+      },
+      "authorizationScope": {
+        "kind": 4,
+        "key": "native-hitl-test-profile",
+        "isDefaultSandbox": false,
+        "displayName": "organization/native-hitl-test-profile",
+        "partitionRelativePath": "scopes/organization/native-hitl-test-profile",
+        "dataRootRelativePath": "data/scopes/organization/native-hitl-test-profile",
+        "artifactRootRelativePath": "artifacts/scopes/organization/native-hitl-test-profile",
+        "integrationMapRootRelativePath": "integration-map/scopes/organization/native-hitl-test-profile",
+        "outputRootRelativePath": "output/scopes/organization/native-hitl-test-profile",
+        "managedRootRelativePaths": [
+          "data/scopes/organization/native-hitl-test-profile",
+          "artifacts/scopes/organization/native-hitl-test-profile",
+          "integration-map/scopes/organization/native-hitl-test-profile",
+          "output/scopes/organization/native-hitl-test-profile"
+        ]
+      },
+      "authorizationPolicyFingerprint": "40146b007ac7b3385ed97b80b57f8c6e4604e4025972e7b2a65bcd148baf41f6",
+      "historyCaller": null,
+      "structureAuthority": null
+    }
+  },
+  "request": {
+    "id": "eb9c43b4-8cff-408f-86af-e1abea892ce7",
+    "runId": "d8261053-4fef-474e-8390-59607e0aafd9",
+    "kind": 0,
+    "nodeId": "human",
+    "eventName": "MafHumanInputRequested",
+    "requestJson": "{\u0022prompt\u0022:\u0022Provide the reviewed payload.\u0022,\u0022responseShape\u0022:{\u0022kind\u0022:1,\u0022schemaJson\u0022:\u0022{\\u0022type\\u0022:\\u0022object\\u0022}\u0022,\u0022description\u0022:\u0022JSON object\u0022},\u0022context\u0022:{\u0022marker\u0022:\u0022before-human\u0022}}",
+    "responseJson": "",
+    "createdAtUtc": "2026-09-23T19:33:47.5196952+00:00",
+    "respondedAtUtc": null,
+    "version": {
+      "value": 1
+    },
+    "state": 0,
+    "responseContract": {
+      "kind": 0,
+      "schemaId": "CanDoItAll.WorkflowHumanInputResponse/v1",
+      "schemaVersion": 1,
+      "schemaJson": "{\u0022type\u0022:\u0022object\u0022}",
+      "schemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+      "maximumPayloadBytes": 65536
+    }
+  },
+  "authorizationPolicy": {
+    "originActor": {
+      "kind": 0,
+      "subjectId": "native-hitl-test-user"
+    },
+    "executorId": null,
+    "requiredCapabilities": 0,
+    "approvalRequirement": 0,
+    "intendedApproverSubjectId": "",
+    "authorizationScope": {
+      "kind": 4,
+      "key": "native-hitl-test-profile",
+      "isDefaultSandbox": false,
+      "displayName": "organization/native-hitl-test-profile",
+      "partitionRelativePath": "scopes/organization/native-hitl-test-profile",
+      "dataRootRelativePath": "data/scopes/organization/native-hitl-test-profile",
+      "artifactRootRelativePath": "artifacts/scopes/organization/native-hitl-test-profile",
+      "integrationMapRootRelativePath": "integration-map/scopes/organization/native-hitl-test-profile",
+      "outputRootRelativePath": "output/scopes/organization/native-hitl-test-profile",
+      "managedRootRelativePaths": [
+        "data/scopes/organization/native-hitl-test-profile",
+        "artifacts/scopes/organization/native-hitl-test-profile",
+        "integration-map/scopes/organization/native-hitl-test-profile",
+        "output/scopes/organization/native-hitl-test-profile"
+      ]
+    },
+    "authorizationPolicyFingerprint": "40146b007ac7b3385ed97b80b57f8c6e4604e4025972e7b2a65bcd148baf41f6",
+    "responseAuthorizationLifetimeSeconds": 900
+  },
+  "continuation": {
+    "request": {
+      "externalRequestId": "eb9c43b4-8cff-408f-86af-e1abea892ce7",
+      "backendRequestId": {
+        "value": "03cd10b523f442128f07800d8979221a"
+      },
+      "backendRequestPortId": {
+        "value": "570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request"
+      }
+    },
+    "checkpoint": {
+      "sessionId": {
+        "value": "d8261053-4fef-474e-8390-59607e0aafd9"
+      },
+      "checkpointId": {
+        "value": "a0df5f5f38874c9bb8137dbd113544dd"
+      }
+    },
+    "compilerContractVersion": {
+      "value": 2
+    },
+    "topologyFingerprint": {
+      "value": "6fa471359d87bbbae5f31358ac40a7ec02ccbbdb949914d86697ea67733cd208"
+    },
+    "checkpointPayloadHash": {
+      "value": "3f408cf1fef1beef42c95ed00f2d3ce853a43102d52037082fa77e27c9eea54c"
+    }
+  },
+  "checkpoint": {
+    "id": "9763778c-b1ff-41ba-b98f-f2492bbc1f89",
+    "runId": "d8261053-4fef-474e-8390-59607e0aafd9",
+    "workflowId": "50e93258-84af-4cde-8d48-b83f0a01be7f",
+    "versionId": "570f5aae-322c-4996-af4c-0e4625b2a72c",
+    "backend": 0,
+    "kind": 2,
+    "trustBoundary": 1,
+    "resumeAvailability": 2,
+    "nodeId": "human",
+    "externalRequestId": "eb9c43b4-8cff-408f-86af-e1abea892ce7",
+    "backendCheckpointId": "a0df5f5f38874c9bb8137dbd113544dd",
+    "payloadReference": "workflow-checkpoint://d8261053-4fef-474e-8390-59607e0aafd9/a0df5f5f38874c9bb8137dbd113544dd",
+    "payloadHash": "3f408cf1fef1beef42c95ed00f2d3ce853a43102d52037082fa77e27c9eea54c",
+    "summary": "Workflow is waiting for input at node \u0027human\u0027.",
+    "resumeUnavailableReason": "",
+    "createdAtUtc": "2026-09-23T19:33:47.5011689+00:00",
+    "resumedAtUtc": null
+  },
+  "payload": {
+    "session": {
+      "id": {
+        "value": "d8261053-4fef-474e-8390-59607e0aafd9"
+      },
+      "runId": "d8261053-4fef-474e-8390-59607e0aafd9",
+      "workflowId": "50e93258-84af-4cde-8d48-b83f0a01be7f",
+      "workflowVersionId": "570f5aae-322c-4996-af4c-0e4625b2a72c",
+      "backend": 0,
+      "format": {
+        "value": "maf-json"
+      },
+      "formatVersion": {
+        "value": 1
+      },
+      "compilerContractVersion": {
+        "value": 2
+      },
+      "topologyFingerprint": {
+        "value": "6fa471359d87bbbae5f31358ac40a7ec02ccbbdb949914d86697ea67733cd208"
+      }
+    },
+    "index": {
+      "link": {
+        "sessionId": {
+          "value": "d8261053-4fef-474e-8390-59607e0aafd9"
+        },
+        "checkpointId": {
+          "value": "a0df5f5f38874c9bb8137dbd113544dd"
+        }
+      },
+      "parent": {
+        "sessionId": {
+          "value": "d8261053-4fef-474e-8390-59607e0aafd9"
+        },
+        "checkpointId": {
+          "value": "fdba0f3a2ebc4641a6bae7a1729a983e"
+        }
+      },
+      "commitOrdinal": {
+        "value": 3
+      },
+      "createdAtUtc": "2026-09-23T19:33:47.5011689+00:00"
+    },
+    "payload": {
+      "json": "{\u0022stepNumber\u0022:3,\u0022workflow\u0022:{\u0022executors\u0022:{\u0022start\u0022:{\u0022executorType\u0022:{\u0022assemblyName\u0022:\u0022Microsoft.Agents.AI.Workflows, Version=1.20.0.0, Culture=neutral, PublicKeyToken=f300afd708cefcd3\u0022,\u0022typeName\u0022:\u0022Microsoft.Agents.AI.Workflows.FunctionExecutor\\u00602[[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]\u0022},\u0022executorId\u0022:\u0022start\u0022},\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-prepare\u0022:{\u0022executorType\u0022:{\u0022assemblyName\u0022:\u0022Microsoft.Agents.AI.Workflows, Version=1.20.0.0, Culture=neutral, PublicKeyToken=f300afd708cefcd3\u0022,\u0022typeName\u0022:\u0022Microsoft.Agents.AI.Workflows.FunctionExecutor\\u00602[[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[CanDoItAll.AgentFramework.Maf.MafWorkflowHumanInputRequest, CanDoItAll.AgentFramework.Workflows.MafAdapter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]\u0022},\u0022executorId\u0022:\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-prepare\u0022},\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022:{\u0022executorType\u0022:{\u0022assemblyName\u0022:\u0022Microsoft.Agents.AI.Workflows, Version=1.20.0.0, Culture=neutral, PublicKeyToken=f300afd708cefcd3\u0022,\u0022typeName\u0022:\u0022Microsoft.Agents.AI.Workflows.Specialized.RequestInfoExecutor\u0022},\u0022executorId\u0022:\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022},\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-response\u0022:{\u0022executorType\u0022:{\u0022assemblyName\u0022:\u0022Microsoft.Agents.AI.Workflows, Version=1.20.0.0, Culture=neutral, PublicKeyToken=f300afd708cefcd3\u0022,\u0022typeName\u0022:\u0022Microsoft.Agents.AI.Workflows.FunctionExecutor\\u00602[[CanDoItAll.AgentFramework.Maf.MafWorkflowHumanInputResponse, CanDoItAll.AgentFramework.Workflows.MafAdapter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]\u0022},\u0022executorId\u0022:\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-response\u0022},\u0022marker\u0022:{\u0022executorType\u0022:{\u0022assemblyName\u0022:\u0022Microsoft.Agents.AI.Workflows, Version=1.20.0.0, Culture=neutral, PublicKeyToken=f300afd708cefcd3\u0022,\u0022typeName\u0022:\u0022Microsoft.Agents.AI.Workflows.FunctionExecutor\\u00602[[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]\u0022},\u0022executorId\u0022:\u0022marker\u0022},\u0022end\u0022:{\u0022executorType\u0022:{\u0022assemblyName\u0022:\u0022Microsoft.Agents.AI.Workflows, Version=1.20.0.0, Culture=neutral, PublicKeyToken=f300afd708cefcd3\u0022,\u0022typeName\u0022:\u0022Microsoft.Agents.AI.Workflows.FunctionExecutor\\u00602[[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[CanDoItAll.AgentFramework.Models.WorkflowNodeInput, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]\u0022},\u0022executorId\u0022:\u0022end\u0022}},\u0022edges\u0022:{\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-prepare\u0022:[{\u0022$type\u0022:0,\u0022hasCondition\u0022:false,\u0022kind\u0022:0,\u0022connection\u0022:{\u0022sourceIds\u0022:[\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-prepare\u0022],\u0022sinkIds\u0022:[\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022]}}],\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022:[{\u0022$type\u0022:0,\u0022hasCondition\u0022:false,\u0022kind\u0022:0,\u0022connection\u0022:{\u0022sourceIds\u0022:[\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022],\u0022sinkIds\u0022:[\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-response\u0022]}}],\u0022start\u0022:[{\u0022$type\u0022:0,\u0022hasCondition\u0022:false,\u0022kind\u0022:0,\u0022connection\u0022:{\u0022sourceIds\u0022:[\u0022start\u0022],\u0022sinkIds\u0022:[\u0022marker\u0022]}}],\u0022marker\u0022:[{\u0022$type\u0022:0,\u0022hasCondition\u0022:false,\u0022kind\u0022:0,\u0022connection\u0022:{\u0022sourceIds\u0022:[\u0022marker\u0022],\u0022sinkIds\u0022:[\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-prepare\u0022]}}],\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-response\u0022:[{\u0022$type\u0022:0,\u0022hasCondition\u0022:false,\u0022kind\u0022:0,\u0022connection\u0022:{\u0022sourceIds\u0022:[\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-response\u0022],\u0022sinkIds\u0022:[\u0022end\u0022]}}]},\u0022requestPorts\u0022:[{\u0022requestType\u0022:{\u0022assemblyName\u0022:\u0022CanDoItAll.AgentFramework.Workflows.MafAdapter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null\u0022,\u0022typeName\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafWorkflowHumanInputRequest\u0022},\u0022responseType\u0022:{\u0022assemblyName\u0022:\u0022CanDoItAll.AgentFramework.Workflows.MafAdapter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null\u0022,\u0022typeName\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafWorkflowHumanInputResponse\u0022},\u0022portId\u0022:\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022}],\u0022startExecutorId\u0022:\u0022start\u0022,\u0022outputExecutorIds\u0022:{\u0022end\u0022:[]}},\u0022runnerData\u0022:{\u0022instantiatedExecutors\u0022:[\u0022start\u0022,\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-prepare\u0022,\u0022marker\u0022,\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022],\u0022queuedMessages\u0022:{},\u0022outstandingRequests\u0022:[{\u0022portInfo\u0022:{\u0022requestType\u0022:{\u0022assemblyName\u0022:\u0022CanDoItAll.AgentFramework.Workflows.MafAdapter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null\u0022,\u0022typeName\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafWorkflowHumanInputRequest\u0022},\u0022responseType\u0022:{\u0022assemblyName\u0022:\u0022CanDoItAll.AgentFramework.Workflows.MafAdapter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null\u0022,\u0022typeName\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafWorkflowHumanInputResponse\u0022},\u0022portId\u0022:\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request\u0022},\u0022requestId\u0022:\u002203cd10b523f442128f07800d8979221a\u0022,\u0022data\u0022:{\u0022typeId\u0022:{\u0022assemblyName\u0022:\u0022CanDoItAll.AgentFramework.Workflows.MafAdapter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null\u0022,\u0022typeName\u0022:\u0022CanDoItAll.AgentFramework.Maf.MafWorkflowHumanInputRequest\u0022},\u0022value\u0022:{\u0022workflowId\u0022:\u002250e93258-84af-4cde-8d48-b83f0a01be7f\u0022,\u0022workflowVersionId\u0022:\u0022570f5aae-322c-4996-af4c-0e4625b2a72c\u0022,\u0022nodeId\u0022:\u0022human\u0022,\u0022kind\u0022:0,\u0022prompt\u0022:\u0022Provide the reviewed payload.\u0022,\u0022responseShape\u0022:{\u0022kind\u0022:1,\u0022schemaJson\u0022:\u0022{\\u0022type\\u0022:\\u0022object\\u0022}\u0022,\u0022description\u0022:\u0022JSON object\u0022},\u0022context\u0022:{\u0022payloadJson\u0022:\u0022{\\u0022marker\\u0022:\\u0022before-human\\u0022}\u0022,\u0022executionOccurrence\u0022:{\u0022runId\u0022:\u0022d8261053-4fef-474e-8390-59607e0aafd9\u0022,\u0022path\u0022:\u0022F9E37E08E12D0D6F1717BE3576E121E2CF7CC61D88A3D2662C66207AC230534B\u0022}}}}}]},\u0022stateData\u0022:{\u0022570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request||WrappedRequestsStateKey\u0022:{\u0022typeId\u0022:{\u0022assemblyName\u0022:\u0022System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e\u0022,\u0022typeName\u0022:\u0022System.Collections.Generic.Dictionary\\u00602[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[Microsoft.Agents.AI.Workflows.ExternalRequest, Microsoft.Agents.AI.Workflows, Version=1.20.0.0, Culture=neutral, PublicKeyToken=f300afd708cefcd3]]\u0022},\u0022value\u0022:{}}},\u0022edgeStateData\u0022:{},\u0022parent\u0022:{\u0022sessionId\u0022:\u0022d8261053-4fef-474e-8390-59607e0aafd9\u0022,\u0022checkpointId\u0022:\u0022fdba0f3a2ebc4641a6bae7a1729a983e\u0022}}",
+      "sha256": {
+        "value": "3f408cf1fef1beef42c95ed00f2d3ce853a43102d52037082fa77e27c9eea54c"
+      },
+      "hasValidHash": true
+    },
+    "externalRequestLink": {
+      "externalRequestId": "eb9c43b4-8cff-408f-86af-e1abea892ce7",
+      "backendRequestId": {
+        "value": "03cd10b523f442128f07800d8979221a"
+      },
+      "backendRequestPortId": {
+        "value": "570f5aae322c4996af4c0e4625b2a72c::human::hitl-human-request"
+      }
+    }
+  }
+}

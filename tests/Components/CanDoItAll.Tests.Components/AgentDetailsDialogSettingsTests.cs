@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentDetailsDialogSettingsTests
 {
     [Theory]
@@ -368,6 +369,72 @@ public sealed class AgentDetailsDialogSettingsTests
         var warning = cut.Find("[data-testid='agents-catalog-auto-approval-warning']");
         Assert.Contains("Automatic approval is enabled", warning.TextContent, StringComparison.Ordinal);
         Assert.Empty(context.Services.GetRequiredService<DialogService>().Dialogs);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_local_scripts_confirmation_leaves_scripts_disabled()
+    {
+        using var context = CreateContext();
+        var dialogHost = context.Render<DialogHost>();
+        var editor = CreateEditor();
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
+
+        var changeTask = cut.Find("[data-testid='agents-catalog-workspace-scripts']").ChangeAsync(true);
+        dialogHost.WaitForElement("[data-testid='agents-workspace-scripts-confirmation']");
+        Assert.False(editor.WorkspaceToolAccess.CanRunLocalScripts);
+
+        dialogHost.Find("[data-testid='agents-workspace-scripts-confirmation-cancel']").Click();
+        await changeTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.False(editor.WorkspaceToolAccess.CanRunLocalScripts);
+        Assert.False(cut.Find("[data-testid='agents-catalog-workspace-scripts']").HasAttribute("checked"));
+        Assert.Empty(cut.FindAll("[data-testid='agents-catalog-workspace-scripts-warning']"));
+        Assert.True(cut.Find("[data-testid='agents-catalog-workspace-scripts-environment']").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Acknowledging_local_scripts_enables_them_with_a_warning_and_explains_the_environment_block()
+    {
+        using var context = CreateContext();
+        var dialogHost = context.Render<DialogHost>();
+        var editor = CreateEditor();
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
+
+        var changeTask = cut.Find("[data-testid='agents-catalog-workspace-scripts']").ChangeAsync(true);
+        dialogHost.WaitForElement("[data-testid='agents-workspace-scripts-confirmation']");
+        Assert.True(dialogHost.Find("[data-testid='agents-workspace-scripts-confirmation-confirm']").HasAttribute("disabled"));
+        dialogHost.Find("[data-testid='agents-workspace-scripts-confirmation-risk-acknowledgement']").Change(true);
+        dialogHost.Find("[data-testid='agents-workspace-scripts-confirmation-confirm']").Click();
+        await changeTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(editor.WorkspaceToolAccess.CanRunLocalScripts);
+        Assert.False(editor.WorkspaceToolAccess.CanScriptsReadEnvironment);
+        var warning = cut.Find("[data-testid='agents-catalog-workspace-scripts-warning']");
+        Assert.Contains("Local scripts are enabled", warning.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Scripts may read environment variables", warning.TextContent, StringComparison.Ordinal);
+        Assert.False(cut.Find("[data-testid='agents-catalog-workspace-scripts-environment']").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task The_script_environment_permission_needs_its_own_confirmation_and_shows_its_warning()
+    {
+        using var context = CreateContext();
+        var dialogHost = context.Render<DialogHost>();
+        var editor = CreateEditor();
+        editor.WorkspaceToolAccess.CanRunLocalScripts = true;
+        var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
+
+        var changeTask = cut.Find("[data-testid='agents-catalog-workspace-scripts-environment']").ChangeAsync(true);
+        dialogHost.WaitForElement("[data-testid='agents-workspace-environment-confirmation']");
+        dialogHost.Find("[data-testid='agents-workspace-environment-confirmation-risk-acknowledgement']").Change(true);
+        dialogHost.Find("[data-testid='agents-workspace-environment-confirmation-confirm']").Click();
+        await changeTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(editor.WorkspaceToolAccess.CanScriptsReadEnvironment);
+        Assert.NotNull(cut.Find("[data-testid='agents-catalog-workspace-scripts-environment-warning']"));
+
+        cut.Find("[data-testid='agents-catalog-workspace-scripts-environment']").Change(false);
+        Assert.False(editor.WorkspaceToolAccess.CanScriptsReadEnvironment);
     }
 
     [Fact]

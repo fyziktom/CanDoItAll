@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -230,6 +231,116 @@ public sealed class WorkflowRunIdempotencyApiIntegrationTests
     }
 
     [Fact]
+    public async Task Idempotency_keys_belong_to_the_caller_that_recorded_them()
+    {
+        await using var host = await CreateHostAsync(jwtEnabled: true);
+        var workflows = await SeedWorkflowsAsync(host);
+        var tokens = host.App.Services.GetRequiredService<IApiTokenService>();
+        var owner = tokens.IssueToken(new ApiTokenIssueRequest
+        {
+            Subject = "idempotency-owner", Scopes = [ApiAccessScopeNames.Api]
+        });
+        var otherCaller = tokens.IssueToken(new ApiTokenIssueRequest
+        {
+            Subject = "idempotency-other-caller", Scopes = [ApiAccessScopeNames.Api]
+        });
+        var key = $"workflow-start-shared-{Guid.NewGuid():N}";
+        const string input = """{"customer":{"region":"EU"}}""";
+        var lookupRoute = $"/api/workflows/runs/by-idempotency-key/{Uri.EscapeDataString(key)}";
+
+        UseToken(host, owner);
+        using var ownerStart = await StartAsync(
+            host.Client,
+            "/api/workflows/runs/start",
+            key,
+            workflows.PrimaryV1.Id.Value,
+            workflows.PrimaryV1.VersionId.Value,
+            WorkflowRuntimeBackendKind.InProcess,
+            input);
+        var started = await ReadStartResponseAsync(ownerStart);
+
+        UseToken(host, otherCaller);
+        using var otherStart = await StartAsync(
+            host.Client,
+            "/api/workflows/runs/start",
+            key,
+            workflows.PrimaryV1.Id.Value,
+            workflows.PrimaryV1.VersionId.Value,
+            WorkflowRuntimeBackendKind.InProcess,
+            input);
+        var otherStartBody = await otherStart.Content.ReadAsStringAsync();
+        using var otherLookup = await host.Client.GetAsync(lookupRoute);
+        var otherLookupBody = await otherLookup.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.Conflict, otherStart.StatusCode);
+        Assert.Contains("workflows.idempotency-key-conflict", otherStartBody, StringComparison.Ordinal);
+        Assert.DoesNotContain(started.Run.RunId.ToString("D"), otherStartBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.NotFound, otherLookup.StatusCode);
+        Assert.DoesNotContain(started.Run.RunId.ToString("D"), otherLookupBody, StringComparison.OrdinalIgnoreCase);
+
+        UseToken(host, owner);
+        using var ownerLookup = await host.Client.GetAsync(lookupRoute);
+        var evidence = JsonSerializer.Deserialize<WorkflowLaunchIdempotencyEvidence>(
+            await ownerLookup.Content.ReadAsStringAsync(),
+            JsonOptions)!;
+        using var ownerReplay = await StartAsync(
+            host.Client,
+            "/api/workflows/runs/start",
+            key,
+            workflows.PrimaryV1.Id.Value,
+            workflows.PrimaryV1.VersionId.Value,
+            WorkflowRuntimeBackendKind.InProcess,
+            input);
+        var replayed = await ReadStartResponseAsync(ownerReplay);
+
+        Assert.Equal(HttpStatusCode.OK, ownerLookup.StatusCode);
+        Assert.Equal(started.Run.RunId, evidence.OriginalRunId.Value);
+        Assert.True(replayed.Replayed);
+        Assert.Equal(started.Run.RunId, replayed.Run.RunId);
+    }
+
+    [Fact]
+    public async Task Cancellation_and_analytics_withhold_the_launch_origin_of_stored_runs()
+    {
+        await using var host = await CreateHostAsync(jwtEnabled: false);
+        var workflows = await SeedWorkflowsAsync(host);
+        using var start = await StartAsync(
+            host.Client,
+            "/api/workflows/runs/start",
+            $"workflow-origin-{Guid.NewGuid():N}",
+            workflows.PrimaryV1.Id.Value,
+            workflows.PrimaryV1.VersionId.Value,
+            WorkflowRuntimeBackendKind.InProcess,
+            "{}");
+        var started = await ReadStartResponseAsync(start);
+
+        using var cancel = await host.Client.PostAsync($"/api/workflows/runs/{started.Run.RunId:D}/cancel", null);
+        var cancelBody = await cancel.Content.ReadAsStringAsync();
+        using var analytics = await host.Client.GetAsync(
+            $"/api/workflows/analytics?workflowId={workflows.PrimaryV1.Id.Value:D}");
+        var analyticsBody = await analytics.Content.ReadAsStringAsync();
+
+        // The run already completed, so cancellation reports AlreadyTerminal with the stored run record.
+        Assert.Equal(HttpStatusCode.Conflict, cancel.StatusCode);
+        using var cancelDocument = JsonDocument.Parse(cancelBody);
+        Assert.Equal(started.Run.RunId, cancelDocument.RootElement.GetProperty("run").GetProperty("runId").GetGuid());
+        AssertNoLaunchOrigin(cancelDocument.RootElement.GetProperty("run"));
+        Assert.DoesNotContain("$origin", cancelBody, StringComparison.Ordinal);
+
+        Assert.Equal(HttpStatusCode.OK, analytics.StatusCode);
+        using var analyticsDocument = JsonDocument.Parse(analyticsBody);
+        AssertNoLaunchOrigin(Assert.Single(analyticsDocument.RootElement.GetProperty("recentRuns").EnumerateArray()));
+        AssertNoLaunchOrigin(Assert.Single(analyticsDocument.RootElement.GetProperty("runs").EnumerateArray())
+            .GetProperty("run"));
+        Assert.DoesNotContain("$origin", analyticsBody, StringComparison.Ordinal);
+    }
+
+    private static void AssertNoLaunchOrigin(JsonElement run)
+        => Assert.True(
+            !run.TryGetProperty("origin", out var origin) || origin.ValueKind == JsonValueKind.Null,
+            run.GetRawText());
+
+    [Fact]
     public async Task Openapi_exposes_idempotency_headers_and_typed_success_not_found_and_conflict_responses()
     {
         await using var host = await CreateHostAsync(jwtEnabled: false);
@@ -267,6 +378,10 @@ public sealed class WorkflowRunIdempotencyApiIntegrationTests
                 services.RemoveAll<ISecretVault>();
                 services.AddSingleton<ISecretVault, InMemorySecretVault>();
             });
+
+    private static void UseToken(ApiTestHost host, ApiTokenIssueResult token)
+        => host.Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue(token.TokenType, token.Token);
 
     private static async Task<SeededWorkflows> SeedWorkflowsAsync(ApiTestHost host)
     {

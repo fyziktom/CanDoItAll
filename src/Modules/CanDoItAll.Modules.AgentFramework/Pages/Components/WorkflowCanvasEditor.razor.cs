@@ -983,7 +983,7 @@ public partial class WorkflowCanvasEditor
                 new WorkflowTestRunRequest(
                     WorkflowId: null,
                     VersionId: null,
-                    DraftDefinition: definition,
+                    DraftDefinition: ToPreviewDraft(definition),
                     InputJson: inputJson,
                     RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
                     ValidateOnly: false)
@@ -1024,6 +1024,18 @@ public partial class WorkflowCanvasEditor
             isBusy = false;
         }
     }
+
+    // The canvas previews its current content, which for a published workflow is an unsaved draft of that version.
+    // The launch service admits only Draft definitions as draft previews, and a fresh version id keeps the canvas
+    // graph from being attributed to the saved version.
+    private static WorkflowDefinition ToPreviewDraft(WorkflowDefinition definition)
+        => definition.Status == WorkflowLifecycleStatus.Draft
+            ? definition
+            : definition with
+            {
+                Status = WorkflowLifecycleStatus.Draft,
+                VersionId = WorkflowVersionId.New()
+            };
 
     private async Task SelectPreviewNodeAsync(WorkflowNodeId nodeId)
     {

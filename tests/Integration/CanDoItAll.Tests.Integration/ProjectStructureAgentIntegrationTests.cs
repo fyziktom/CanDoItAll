@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Net;
-using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -37,6 +36,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureAgentIntegrationTests
 {
     private static readonly ProjectStructureAgentContext DefaultAgent = new(
@@ -157,12 +157,13 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
-    public async Task LeaseService_RunWithProjectMutationLeaseAsync_waits_once_for_near_expiry_competing_lease()
-    {
+    public async Task LeaseService_RunWithProjectMutationLeaseAsync_does_not_run_callback_before_competing_lease_expires() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        DateTimeOffset leaseExpiresAt;
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Near-expiry lease project");
@@ -170,40 +171,37 @@ public sealed class ProjectStructureAgentIntegrationTests
             new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString("D"), "Competing short mutation", 1),
             DefaultAgent);
 
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
-        {
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync()) {
             var leaseRecord = await dbContext.Set<ProjectStructureLeaseRecord>()
                 .SingleAsync(item => item.LeaseToken == competingLease.LeaseToken);
 
-            var now = DateTimeOffset.UtcNow;
+            var now = clock.GetUtcNow();
+            leaseExpiresAt = now.AddMilliseconds(750);
             leaseRecord.RenewedAtUtc = now;
-            leaseRecord.ExpiresAtUtc = now.AddMilliseconds(750);
+            leaseRecord.ExpiresAtUtc = leaseExpiresAt;
             await dbContext.SaveChangesAsync();
         }
 
-        var nextAgent = DefaultAgent with
-        {
+        var nextAgent = DefaultAgent with {
             AgentId = "next-agent",
             AgentName = "Next Agent",
             MachineName = "next-machine"
         };
 
-        var elapsed = Stopwatch.StartNew();
-        var result = await leaseService.RunWithProjectMutationLeaseAsync(
+        var callbackAt = await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             null,
             nextAgent,
             "Wait for near-expiry competing mutation",
-            _ => Task.FromResult("ok"));
-        elapsed.Stop();
+            _ => Task.FromResult(clock.GetUtcNow()));
 
         var activeLease = await leaseService.GetActiveLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
             projectId.ToString("D"),
             CancellationToken.None);
 
-        Assert.Equal("ok", result);
-        Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(500));
+        Assert.True(callbackAt >= leaseExpiresAt,
+            $"Mutation ran at {callbackAt:O}, before the competing lease expired at {leaseExpiresAt:O}.");
         Assert.Null(activeLease);
     }
 
@@ -1402,7 +1400,9 @@ public sealed class ProjectStructureAgentIntegrationTests
             scope.ServiceProvider,
             new ProcessRunId(parent.RunId.Value),
             parentAssignment.StepInstanceId);
-        var retry = await agentService.StartProcessSubprocessAsync(
+        await using var resumedScope = application.Services.CreateAsyncScope();
+        var resumedAgentService = resumedScope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var retry = await resumedAgentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
             parentAssignment.StepInstanceId.ToString(),
@@ -4286,6 +4286,47 @@ public sealed class ProjectStructureAgentIntegrationTests
         var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
         var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
         Assert.Equal(validProjectPath, persistedMetadata.Environment!.ProjectPath);
+    }
+
+    [Fact]
+    public async Task AgentService_UpdateNodeTypeAsync_explains_how_to_change_a_runtime_node_into_another_runnable_type()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var projectDirectory = Path.Combine(workspaceRoot, "runtime-reclassification", "Calculator");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "Calculator.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var projectId = await CreateProjectAsync(projects, "Runtime reclassification guidance");
+        var created = await agentService.CreateNodeAsync(
+            projectId,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Environment,
+                "Run Calculator",
+                "dotnet watch",
+                "Runs the Calculator project.",
+                $"project:{projectId}",
+                ObjectSubtype: "dotnet-watch",
+                MetadataJson: CreateDotNetRuntimeMetadata(projectDirectory)),
+            DefaultAgent);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.UpdateNodeTypeAsync(
+                projectId,
+                created.Id,
+                new ProjectStructureNodeTypeInput(ProjectObjectType.Script, "powershell"),
+                DefaultAgent));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(AgentToolEffectState.NotCommitted, exception.EffectState);
+        Assert.Contains("project_structure_node_update", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("metadataJson for the new type", exception.Message, StringComparison.Ordinal);
+        var persistedNode = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Id == created.Id);
+        Assert.Equal(ProjectObjectType.Environment, persistedNode.ObjectType);
     }
 
     [Fact]

@@ -435,6 +435,10 @@ public sealed class OpenAiProviderDriver(
             request.Provider,
             request.Model);
         EnsureImageProviderPurpose(request.Provider);
+        if (!request.Provider.IsSourceManaged && request.Quality is "xhigh" or "max" &&
+            !OpenAiModelIds.SupportsExtendedImageQuality(request.Model)) {
+            throw new InvalidOperationException($"Image quality '{request.Quality}' requires a GPT Image 2.5 model.");
+        }
         var credential = ResolveCredential(request.Provider);
         using var httpRequest = request.Sources.Count == 0
             ? CreateImageGenerationRequest(request, credential)

@@ -13,6 +13,8 @@ internal sealed class StorageRuntimePlugin(
     IStorageBrowseDriverRegistry? browseDriverRegistry,
     AgentWorkspaceToolAccessSettings accessSettings)
 {
+    internal const string StorageObjectSourceKind = "storage-object";
+
     private readonly IStorageCatalogService catalogService = catalogService;
     private readonly IStorageDriverRegistry driverRegistry = driverRegistry;
     private readonly IStorageBrowseDriverRegistry? browseDriverRegistry = browseDriverRegistry;
@@ -24,6 +26,11 @@ internal sealed class StorageRuntimePlugin(
             throw new AgentToolAdmissionException("storage.result-disclosure-denied", "The saved result belongs to another Storage tool.");
         }
         EnsureStorageReadAllowed();
+        if (disclosure.IsNoEffectTypedFailure) {
+            // A rejected request carries only its correction text, never catalog content, so the current Storage grant
+            // is the whole disclosure authority; the rejected catalog may still be missing, disabled or read-only.
+            return;
+        }
         using var arguments = JsonDocument.Parse(disclosure.Payload.ArgumentsJson);
         if (toolName == StorageToolPolicy.StorageCatalogList) {
             var includeDisabled = arguments.RootElement.TryGetProperty("includeDisabled", out var include) && include.GetBoolean();
@@ -112,7 +119,15 @@ internal sealed class StorageRuntimePlugin(
                 metadata: metadata);
         } catch (StorageBrowseException exception) when (exception.Error.Code == StorageBrowseErrorCode.InvalidRequest) {
             throw new InvalidBrowseRequestFailure(exception);
+        } catch (StorageBrowseException exception) when (exception.Error.Code == StorageBrowseErrorCode.InvalidCursor) {
+            throw new StorageToolRequestFailure(
+                "StorageBrowseCursorInvalid",
+                "The storage browse cursor is invalid. Pass nextCursor exactly as returned, or omit cursor to start from the first page, then retry.",
+                canRetryWithCorrectedInput: true,
+                AgentToolEffectState.None,
+                exception);
         }
+        // A failure reported by the storage driver itself stays the driver's uncertain outcome.
         var page = await driver.BrowseAsync(storage, request, cancellationToken).ConfigureAwait(false);
 
         return new AgentStorageBrowseResult(
@@ -153,6 +168,24 @@ internal sealed class StorageRuntimePlugin(
         public bool CanRetryWithCorrectedInput => true;
         public AgentToolEffectState EffectState => AgentToolEffectState.None;
     }
+
+    // Storage request rejections are raised while resolving the catalog, driver or locator, before any driver call, so
+    // each is a proven no-effect failure the model may correct: none for reads and validation, not committed for a
+    // rejected write or delete. Authorization denials and failures reported by a driver stay opaque.
+    private sealed class StorageToolRequestFailure(
+        string errorCode,
+        string message,
+        bool canRetryWithCorrectedInput,
+        AgentToolEffectState effectState,
+        Exception? innerException = null)
+        : InvalidOperationException(message, innerException), IAgentToolFailureEffectEvidence {
+        public string ErrorCode { get; } = errorCode;
+        public string SafeMessage => Message;
+        public bool IsSafeToExpose => true;
+        public bool CanRetryWithCorrectedInput { get; } = canRetryWithCorrectedInput;
+        public AgentToolEffectState EffectState { get; } = effectState;
+    }
+
 
     public async Task<AgentStorageTextReadResult> ReadStorageTextFile(
         Guid storageId,
@@ -206,6 +239,9 @@ internal sealed class StorageRuntimePlugin(
                     RelativePathHint: normalizedPath),
                 cancellationToken)
             .ConfigureAwait(false);
+        AgentToolInvocationEffectScope.RecordCommitted(
+            StorageObjectSourceKind,
+            $"{storage.Id:D}/{result.Reference.Locator}");
 
         return new AgentStorageWriteToolResult(
             storage.Id,
@@ -228,6 +264,9 @@ internal sealed class StorageRuntimePlugin(
         var driver = ResolveDriver(storage, StorageCapability.Delete);
         var reference = BuildReference(storage, locator);
         await driver.DeleteAsync(storage, reference, cancellationToken).ConfigureAwait(false);
+        AgentToolInvocationEffectScope.RecordCommitted(
+            StorageObjectSourceKind,
+            $"{storage.Id:D}/{reference.Locator}");
         return new AgentStorageDeleteToolResult(storage.Id, storage.Name, reference.Locator, true);
     }
 
@@ -236,19 +275,25 @@ internal sealed class StorageRuntimePlugin(
         bool requireWrite,
         CancellationToken cancellationToken)
     {
+        var rejectedEffect = requireWrite ? AgentToolEffectState.NotCommitted : AgentToolEffectState.None;
+        const string chooseCatalog = " Call storage_catalog_list and retry with an allowed, enabled catalog id.";
         if (storageId == Guid.Empty)
         {
-            throw new InvalidOperationException("A storage catalog id is required.");
+            throw new StorageToolRequestFailure(
+                "StorageCatalogRequired", "A storage catalog id is required." + chooseCatalog, true, rejectedEffect);
         }
 
         var storage = await catalogService.GetDriverAsync(storageId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Storage catalog '{storageId:D}' was not found.");
+            ?? throw new StorageToolRequestFailure(
+                "StorageCatalogNotFound", $"Storage catalog '{storageId:D}' was not found." + chooseCatalog, true, rejectedEffect);
 
         if (!storage.IsEnabled)
         {
-            throw new InvalidOperationException($"Storage catalog '{storage.Name}' is disabled.");
+            throw new StorageToolRequestFailure(
+                "StorageCatalogDisabled", $"Storage catalog '{storage.Name}' is disabled." + chooseCatalog, true, rejectedEffect);
         }
 
+        // A catalog outside the agent's grants is an authorization denial, not a correctable request.
         if (!IsStorageCatalogAllowed(storage))
         {
             throw new InvalidOperationException($"Storage catalog '{storage.Name}' is not allowed for this agent.");
@@ -256,7 +301,8 @@ internal sealed class StorageRuntimePlugin(
 
         if (requireWrite && storage.IsReadOnly)
         {
-            throw new InvalidOperationException($"Storage catalog '{storage.Name}' is read-only.");
+            throw new StorageToolRequestFailure(
+                "StorageCatalogReadOnly", $"Storage catalog '{storage.Name}' is read-only." + chooseCatalog, true, rejectedEffect);
         }
 
         return storage;
@@ -271,8 +317,11 @@ internal sealed class StorageRuntimePlugin(
         var effectiveCapabilities = capabilityMask & driver.SupportedCapabilities;
         if ((effectiveCapabilities & requiredCapability) != requiredCapability)
         {
-            throw new InvalidOperationException(
-                $"Storage catalog '{storageName}' does not support required capability '{requiredCapability}'.");
+            throw new StorageToolRequestFailure(
+                "StorageCapabilityUnsupported",
+                $"Storage catalog '{storageName}' does not support required capability '{requiredCapability}'. Choose another catalog and retry.",
+                canRetryWithCorrectedInput: true,
+                requiredCapability == StorageCapability.Read ? AgentToolEffectState.None : AgentToolEffectState.NotCommitted);
         }
 
         return driver;
@@ -304,7 +353,17 @@ internal sealed class StorageRuntimePlugin(
 
     private static StorageObjectReference BuildReference(StorageDriverInput storage, string locator)
     {
-        var entryId = new StorageBrowseEntryId(locator).Value;
+        string entryId;
+        try {
+            entryId = new StorageBrowseEntryId(locator ?? string.Empty).Value;
+        } catch (StorageBrowseException exception) {
+            throw new StorageToolRequestFailure(
+                "StorageLocatorInvalid",
+                "The storage locator is empty or too long. Use an entryId returned by storage_browse and retry.",
+                canRetryWithCorrectedInput: true,
+                AgentToolEffectState.None,
+                exception);
+        }
         var (locatorKind, normalizedLocator) = ResolveStorageLocator(storage.ProviderKind, entryId);
         return new StorageObjectReference(
             storage.Id,
@@ -338,7 +397,7 @@ internal sealed class StorageRuntimePlugin(
             var contentAddress = entryId["cid:".Length..];
             if (string.IsNullOrWhiteSpace(contentAddress))
             {
-                throw new InvalidOperationException("An IPFS content address is required after 'cid:'.");
+                throw InvalidLocator("An IPFS content address is required after 'cid:'.");
             }
 
             return (StorageLocatorKind.ContentAddress, contentAddress);
@@ -349,7 +408,7 @@ internal sealed class StorageRuntimePlugin(
             var mutablePath = NormalizeStoragePath(entryId);
             if (mutablePath.Length == "mfs:".Length)
             {
-                throw new InvalidOperationException("An IPFS mutable-file path is required after 'mfs:'.");
+                throw InvalidLocator("An IPFS mutable-file path is required after 'mfs:'.");
             }
 
             return (StorageLocatorKind.RemotePath, mutablePath);
@@ -362,22 +421,26 @@ internal sealed class StorageRuntimePlugin(
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            throw new InvalidOperationException("A storage object path is required.");
+            throw InvalidLocator("A storage object path is required.");
         }
 
         var normalized = path.Trim().Replace('\\', '/').TrimStart('/');
         if (normalized.Length == 0)
         {
-            throw new InvalidOperationException("A storage object path is required.");
+            throw InvalidLocator("A storage object path is required.");
         }
 
         if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
         {
-            throw new InvalidOperationException("Storage object paths cannot contain '.' or '..' segments.");
+            throw InvalidLocator("Storage object paths cannot contain '.' or '..' segments.");
         }
 
         return normalized;
     }
+
+    private static StorageToolRequestFailure InvalidLocator(string reason)
+        => new("StorageLocatorInvalid", $"{reason} Correct the storage path or locator and retry.",
+            canRetryWithCorrectedInput: true, AgentToolEffectState.None);
 
     private static string ResolveContentType(string path)
     {
@@ -423,8 +486,11 @@ internal sealed class StorageRuntimePlugin(
     {
         if (!driver.Capabilities.HasFlag(StorageBrowseCapability.Metadata))
         {
-            throw new InvalidOperationException(
-                $"Storage provider '{driver.ProviderKind}' does not support browse metadata. Retry with includeMetadata=false.");
+            throw new StorageToolRequestFailure(
+                "StorageBrowseMetadataUnsupported",
+                $"Storage provider '{driver.ProviderKind}' does not support browse metadata. Retry with includeMetadata=false.",
+                canRetryWithCorrectedInput: true,
+                AgentToolEffectState.None);
         }
 
         return StorageBrowseMetadataField.Size |

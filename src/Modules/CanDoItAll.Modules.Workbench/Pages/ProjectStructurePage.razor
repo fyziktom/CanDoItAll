@@ -328,6 +328,7 @@ else
                                                            CloseQuickActionDialog="CloseQuickActionDialog"
                                                            ExecuteQuickAction="ExecuteQuickActionAsync"
                                                            WebPreviewDialog="@webPreviewDialog"
+                                                           StopWebPreviewRuntime="StopWebPreviewRuntimeAsync"
                                                            CloseWebPreviewDialog="CloseWebPreviewDialog"
                                                            PreviewNode="@previewNode"
                                                            PreviewInteraction="@PreviewInteraction"
@@ -969,6 +970,7 @@ else
         var processNavigation = AgentChatNavigationFence;
         if (loadedProjectId != ProjectId || processDialogNavigationIdentity != processNavigation) {
             processDialogNavigationIdentity = processNavigation;
+            CancelRuntimePreviewWait();
             CloseProcessStartDialog();
             CloseProcessLinkDialog();
             actionNavigationRevision++;
@@ -1620,6 +1622,13 @@ else
         {
             CloseQuickActionDialog();
             await OpenMermaidViewerAsync(node);
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (ProjectStructureNodeActionCapabilityResolver.IsRuntimeCapable(node) && !RuntimeLauncher.IsRunning(node.Id))
+        {
+            OpenQuickActionDialog(node);
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3089,6 +3098,7 @@ else
     {
         Interlocked.Increment(ref surfaceReloadGeneration);
         CancelPendingCanvasViewStatePersistence();
+        CancelRuntimePreviewWait();
         CloseProcessStartDialog();
         CloseProcessLinkDialog();
         deferredCompletionCts.Cancel();

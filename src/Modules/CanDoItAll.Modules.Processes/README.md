@@ -6,6 +6,18 @@ integration, agent-chat context, and Blazor application surfaces.
 The module orchestrates the Processes domain through application/runtime contracts. It
 does not write persisted process state outside the process runtime.
 
+Live Processes shows the selected run even outside the history window. Launch feedback
+is only pending while that run's projection is unavailable; the projection owns its
+actual status. Structure launch dialogs retain browser intent identities across uncertain
+acknowledgements, and retire them after continuation and link delivery are confirmed.
+Opening a retained accepted launch observes that same run; it does not rework a blocked
+step. Preparing another launch creates a new intent.
+
+The browser lifecycle gate correlates the latest required host with its own successful
+stop receipt in the current execution. It accepts multiple hosts stopping in either
+order and requires browser evidence from within the matching host's lifetime. A later
+stop for another host cannot replace or invalidate that cleanup proof.
+
 ```powershell
 dotnet build .\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj
 ```

@@ -17,7 +17,11 @@ internal sealed partial class WebStoragePlacementRecoveryAccess(WebCurrentPrinci
             var principal = await principals.ResolveAsync(cancellationToken);
             await principals.RequireScopeAsync(principal, ApiAuthorizationPolicies.ReadStoragePlacementRecovery,
                 ApiAccessScopeNames.ReadStoragePlacementRecovery, cancellationToken);
-            await principals.RequireScopeAsync(principal, ApiAuthorizationPolicies.GeneralApi, ApiAccessScopeNames.Api, cancellationToken);
+            if (principal.Credential?.Kind == ApiCredentialKind.UserSession) {
+                await principals.RequireScopeAsync(principal, ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.ReadProjects, cancellationToken);
+            } else {
+                await principals.RequireScopeAsync(principal, ApiAuthorizationPolicies.GeneralApi, ApiAccessScopeNames.Api, cancellationToken);
+            }
             var canWriteProject = ApiAuthorizationPolicies.HasScope(principal.Principal, ApiAccessScopeNames.WriteProjectStructure) &&
                 await principals.HasScopeAsync(principal, ApiAuthorizationPolicies.WriteProjectStructure,
                 ApiAccessScopeNames.WriteProjectStructure, cancellationToken);

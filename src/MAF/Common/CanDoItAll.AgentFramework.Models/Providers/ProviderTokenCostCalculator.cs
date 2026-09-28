@@ -9,6 +9,8 @@ internal static class ProviderTokenCostCalculator {
     public static bool HasOnlyZeroRates(ProviderModelTokenPrice price) =>
         price.InputPerMillionTokensUsd == 0 && price.CachedInputPerMillionTokensUsd == 0
         && price.OutputPerMillionTokensUsd == 0 && price.CacheWritePerMillionTokensUsd is null or 0
+        && price.ImageInputPerMillionTokensUsd is null or 0
+        && price.CachedImageInputPerMillionTokensUsd is null or 0
         && price.LongContextInputPerMillionTokensUsd is null or 0
         && price.LongContextCachedInputPerMillionTokensUsd is null or 0
         && price.LongContextCacheWritePerMillionTokensUsd is null or 0

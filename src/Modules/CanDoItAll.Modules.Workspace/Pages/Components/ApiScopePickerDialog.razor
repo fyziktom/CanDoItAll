@@ -1,7 +1,7 @@
 @using CanDoItAll.Modules.Workspace.ApiAccess
 
 <Dialog IsOpen="true" Title="API namespaces and permissions"
-        Subtitle="Select the scopes this token may use. Grant token administration only when needed."
+        Subtitle="Select explicit API capabilities. Execution and configuration grants can affect shared data and tools."
         Size="ModalSize.Wide" OnClose="OnClose" TestId="api-scopes-dialog">
     <ChildContent>
         <Stack GapScale="LayoutGap.Small">
@@ -10,28 +10,35 @@
                 <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => selected.Clear())" />
                 <StatusBadge Text="@($"{selected.Count} selected")" Tone="info" />
             </Cluster>
-            <Grid ColumnsMd="2" Gap="LayoutGap.Small">
-                @foreach (var scope in scopes) {
+            @foreach (var section in scopes.GroupBy(scope => scope.Section).OrderBy(section => section.Key, StringComparer.Ordinal)) {
+                <FormSection Title="@section.Key">
+                    <Grid ColumnsMd="2" Gap="LayoutGap.Small">
+                    @foreach (var scope in section) {
                     <label class="cda-inline-option" data-testid="api-scope-option">
                         <input type="checkbox" checked="@selected.Contains(scope.Name)"
                                @onchange="args => SetSelected(scope.Name, args.Value is true)" value="@scope.Name" />
                         <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
                             <strong>@scope.Label</strong>
+                            @if (scope.Sensitive) {
+                                <StatusBadge Text="Sensitive capability" Tone="warning" />
+                            }
                             <code class="text-xs break-all">@scope.Name</code>
                             <span class="cda-body-muted">@scope.Description</span>
                         </Stack>
                     </label>
-                }
-            </Grid>
+                    }
+                    </Grid>
+                </FormSection>
+            }
             @if (selected.Count == 0) {
-                <Alert AlertStyle="AlertStyle.Warning">Select at least one scope. No permissions are selected.</Alert>
+                <Alert AlertStyle="AlertStyle.Warning">@(ForUser ? "No business permissions. This user can only manage its current session." : "Select at least one scope. No permissions are selected.")</Alert>
             }
         </Stack>
     </ChildContent>
     <Footer>
         <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
             <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="OnClose" />
-            <Button Text="Use selection" Disabled="@(selected.Count == 0)" Click="ConfirmAsync" data-testid="api-scopes-confirm" />
+            <Button Text="Use selection" Disabled="@(!ForUser && selected.Count == 0)" Click="ConfirmAsync" data-testid="api-scopes-confirm" />
         </Cluster>
     </Footer>
 </Dialog>
@@ -39,6 +46,9 @@
 @code {
     [Parameter]
     public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ForUser { get; set; }
 
     [Parameter]
     public EventCallback<string> Confirmed { get; set; }
@@ -51,9 +61,8 @@
 
     protected override void OnInitialized() {
         selected.UnionWith(ApiScopeCatalog.Parse(Value));
-        scopes = ApiScopeCatalog.All.Concat(selected
-            .Where(name => !ApiScopeCatalog.All.Any(scope => string.Equals(scope.Name, name, StringComparison.OrdinalIgnoreCase)))
-            .Select(name => new ApiScopeDefinition(name, "Custom scope", "Previously entered scope; verify that the API supports it."))).ToArray();
+        scopes = ApiScopeCatalog.All.Where(scope => ForUser ? scope.UserSelectable : scope.MachineSelectable).ToArray();
+        selected.IntersectWith(scopes.Select(scope => scope.Name));
     }
 
     private void SetSelected(string scope, bool value) {
@@ -66,7 +75,7 @@
 
     private void SelectAll() => selected.UnionWith(scopes.Select(scope => scope.Name));
 
-    private Task ConfirmAsync() => selected.Count == 0
+    private Task ConfirmAsync() => !ForUser && selected.Count == 0
         ? Task.CompletedTask
         : Confirmed.InvokeAsync(string.Join(' ', scopes.Where(scope => selected.Contains(scope.Name))
             .Select(scope => scope.Name).OrderBy(name => name, StringComparer.OrdinalIgnoreCase)));

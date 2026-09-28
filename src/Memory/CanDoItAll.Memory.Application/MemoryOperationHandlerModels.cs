@@ -17,6 +17,22 @@ public sealed record MemoryOperationHandlerRequest<TPayload>(
     public MemoryExtensionData Extensions { get; init; } = MemoryExtensionData.Empty;
 }
 
+/// <summary>
+/// Outcome of a memory operation request. In the memory-provider HTTP API it is a PascalCase string token and the
+/// response status follows it: <c>Completed</c> 200; <c>Accepted</c> 202; <c>ProviderNotFound</c> and
+/// <c>NotFound</c> 404; <c>CapabilityDenied</c>, <c>ProviderDenied</c> and <c>AccessDenied</c> 403;
+/// <c>DriverUnavailable</c>, <c>DriverFailed</c>, <c>SourceCaptureFailed</c> and <c>Failed</c> 502; <c>TimedOut</c>
+/// 504; every other value 409. Values: <c>Completed</c> (finished), <c>Accepted</c> (accepted as an asynchronous
+/// operation), <c>NoProviderConfigured</c>, <c>NoEnabledProvider</c>, <c>ProviderNotFound</c>,
+/// <c>ProviderDisabled</c>, <c>CapabilityUnavailable</c> (the provider does not advertise the capability),
+/// <c>CapabilityDenied</c> (policy denies the capability), <c>CapabilityMismatch</c> (the request does not include its
+/// required capability), <c>DriverUnavailable</c> (no usable driver for the provider), <c>SourceCaptureFailed</c>,
+/// <c>NotFound</c> (the operation does not exist), <c>Cancelled</c>, <c>Failed</c>, <c>TimedOut</c>,
+/// <c>UnsupportedOperation</c> (the provider reported the operation as unsupported), <c>ProviderDenied</c>,
+/// <c>ProviderSelectionRequired</c>, <c>AccessDenied</c> (the operation belongs to another caller),
+/// <c>ProviderConfigurationFailed</c> and <c>DriverFailed</c> (the provider call failed or returned an invalid
+/// result).
+/// </summary>
 public enum MemoryOperationHandlerStatus
 {
     Completed = 0,

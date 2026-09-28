@@ -9,8 +9,13 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Playwright;
 
-[Collection(PlaywrightCollection.Name)]
-public sealed class AiAgentFlowTests(PlaywrightAppFixture fixture, ITestOutputHelper output) {
+public sealed class AiAgentFlowTests(ITestOutputHelper output) : IAsyncLifetime {
+    private readonly PlaywrightAppFixture fixture = new();
+
+    public Task InitializeAsync() => fixture.InitializeAsync();
+
+    public Task DisposeAsync() => fixture.DisposeAsync();
+
     [Fact]
     public async Task Agentframework_catalog_projects_agents_into_crm_hr_directory()
     {

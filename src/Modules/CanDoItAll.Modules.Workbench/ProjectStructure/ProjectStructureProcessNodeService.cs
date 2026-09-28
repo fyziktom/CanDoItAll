@@ -143,7 +143,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         if (request.ProjectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectIdRequired",
                 "Project id is required to build project-scoped process launch variables.");
@@ -151,7 +151,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         if (string.IsNullOrWhiteSpace(request.ProjectNodeId))
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectNodeIdRequired",
                 "Project node id is required to build project-scoped process launch variables.");
@@ -165,7 +165,7 @@ public sealed partial class ProjectStructureProcessNodeService(
             request.ProjectId,
             cancellationToken).ConfigureAwait(false);
         var targetNode = surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, request.ProjectNodeId, StringComparison.Ordinal))
-            ?? throw new ProjectStructureAgentException(
+            ?? throw ProcessNodeRejection(
                 404,
                 "ProjectStructureNodeNotFound",
                 $"Node '{request.ProjectNodeId}' was not found in project '{request.ProjectId:D}'.");
@@ -224,7 +224,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         if (projectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectIdRequired",
                 "Project id is required to start a process from project structure.");
@@ -232,7 +232,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         if (string.IsNullOrWhiteSpace(nodeId))
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "NodeIdRequired",
                 "Node id is required to start a process from project structure.");
@@ -268,13 +268,13 @@ public sealed partial class ProjectStructureProcessNodeService(
         {
             if (node is null)
             {
-                throw new ProjectStructureAgentException(
+                throw ProcessNodeRejection(
                     404,
                     "ProjectStructureNodeNotFound",
                     $"Node '{nodeId}' was not found in project '{projectId:D}'.");
             }
 
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProcessDefinitionRequired",
                 $"Node '{nodeId}' is not linked to a process definition.");
@@ -288,7 +288,7 @@ public sealed partial class ProjectStructureProcessNodeService(
             : null;
         if (targetNode is null)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProcessStartTargetRequired",
                 $"Process definition node '{processDefinitionNodeId ?? nodeId}' is not linked from a project-structure source node.");
@@ -387,7 +387,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         if (projectId == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProjectIdRequired",
                 "Project id is required to launch a subprocess from project structure.");
@@ -436,7 +436,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         if (string.IsNullOrWhiteSpace(projectNodeId))
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ProcessSubprocessProjectNodeRequired",
                 $"Parent process step '{parentAssignment.StepKey}' does not carry a project node id. Supply ParentProjectNodeId.");
@@ -445,7 +445,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         var projectNode = surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, projectNodeId, StringComparison.Ordinal));
         if (projectNode is null)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 404,
                 "ProjectStructureNodeNotFound",
                 $"Parent project node '{projectNodeId}' was not found in project '{projectId:D}'.");
@@ -1314,6 +1314,16 @@ public sealed partial class ProjectStructureProcessNodeService(
             : null);
     }
 
+    // A process start or subprocess launch is resolved and validated before the launch service admits any run, so each
+    // rejection is a no-effect failure the model can correct.
+    private static ProjectStructureAgentException ProcessNodeRejection(int statusCode, string errorCode, string message)
+        => ProjectStructureAgentException.CreateAgentVisible(
+            statusCode,
+            errorCode,
+            message,
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
+
     private static Guid? ResolveLinkedProcessDefinitionId(
         ProjectStructureSurface surface,
         string sourceNodeId)
@@ -1336,7 +1346,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         {
             0 => null,
             1 => linkedDefinitionIds[0],
-            _ => throw new ProjectStructureAgentException(
+            _ => throw ProcessNodeRejection(
                 400,
                 "ProcessDefinitionAmbiguous",
                 $"Node '{sourceNodeId}' is linked to multiple process definitions. Supply ProcessDefinitionId to choose one.")
@@ -1386,7 +1396,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         if (!Guid.TryParse(value, out var parsed) ||
             parsed == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ParentProcessRunIdInvalid",
                 $"Parent process run id '{value}' is not a valid non-empty GUID.");
@@ -1400,7 +1410,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         if (!Guid.TryParse(value, out var parsed) ||
             parsed == Guid.Empty)
         {
-            throw new ProjectStructureAgentException(
+            throw ProcessNodeRejection(
                 400,
                 "ParentProcessStepIdInvalid",
                 $"Parent process step id '{value}' is not a valid non-empty GUID.");

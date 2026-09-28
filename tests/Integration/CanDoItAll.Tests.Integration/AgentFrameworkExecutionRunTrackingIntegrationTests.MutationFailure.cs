@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -37,12 +38,14 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests {
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agent = (await workspace.ListAgentsAsync(includeTemplates: false)).First(item => item.ProviderProfileId.HasValue);
         var chat = await workspace.GetOrCreateChatSessionAsync(agent.Id);
-        var result = await workspace.ExecuteRunAsync(new(agent.Id, "Perform the reviewed mutation.", AgentExecutionOperationId.New(),
+        var operationId = AgentExecutionOperationId.New();
+        var result = await workspace.ExecuteRunAsync(new(agent.Id, "Perform the reviewed mutation.", operationId,
             chat.Id, AutoApprovePendingToolCalls: false));
         if (approvalContinuation) {
             var pending = (await workspace.GetExecutionRunDetailAsync(result.ExecutionRunId))!;
             Assert.Equal(ExecutionState.WaitingOnTool, pending.Run.State);
-            result = await workspace.ContinueExecutionRunAsync(result.ExecutionRunId, AgentExecutionOperationId.New(),
+            operationId = AgentExecutionOperationId.New();
+            result = await workspace.ContinueExecutionRunAsync(result.ExecutionRunId, operationId,
                 decisions: pending.Run.PendingApprovals.Select(item => new PendingToolApprovalDecision(item.ApprovalId, true)).ToArray(),
                 autoApprovePendingToolCalls: false);
         }
@@ -55,5 +58,17 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests {
         Assert.Contains(saved.ExecutionLog, entry => entry.State == ExecutionState.Failed && entry.Phase == "Tool execution" &&
             entry.Message.Contains("unresolved required mutation", StringComparison.Ordinal));
         Assert.DoesNotContain(saved.ExecutionLog, entry => entry.State == ExecutionState.Failed && entry.Phase == "Output validation");
+
+        // The operation's terminal activity, which the chat shows, names the unresolved mutation instead of an output
+        // contract the run never had.
+        await using var reader = scope.ServiceProvider.GetRequiredService<AgentExecutionActivityCoordinator>().OpenReader(
+            scope.ServiceProvider.GetRequiredService<AgentExecutionActivityWorkspaceIdentity>().CreateStreamId(operationId),
+            StreamSequence.Beginning);
+        using var readTimeout = new CancellationTokenSource(AsyncObservationTimeout);
+        var replay = Assert.IsType<SequencedStreamEvents<AgentExecutionActivity>>(await reader.ReadAsync(readTimeout.Token));
+        var terminal = Assert.Single(replay.Items, item => item.Event.IsTerminal).Event;
+        Assert.Equal(AgentExecutionActivityTerminalOutcome.Failed, terminal.TerminalOutcome);
+        Assert.Equal(AgentExecutionActivityFailureCodes.RequiredMutationFailure, terminal.ErrorCode);
+        Assert.Equal(saved.Run.ResultSummary, terminal.Message);
     }
 }

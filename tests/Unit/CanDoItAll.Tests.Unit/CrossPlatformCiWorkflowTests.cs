@@ -10,7 +10,7 @@ public sealed class CrossPlatformCiWorkflowTests
 
     [Fact]
     [Trait("Category", "UnixPortabilityCore")]
-    public void Active_workflow_satisfies_the_sibling_pin_platform_and_gate_policy()
+    public void Active_workflow_satisfies_the_sibling_source_platform_and_gate_policy()
     {
         string workflow = ReadActiveWorkflow();
 
@@ -24,7 +24,7 @@ public sealed class CrossPlatformCiWorkflowTests
     public void Moving_a_pin_to_another_immutable_commit_needs_no_second_edit()
     {
         string workflow = ReadActiveWorkflow();
-        string moved = ReplacePin(workflow, "CANDOITALL_COMPONENTS_COMMIT", "0123456789abcdef0123456789abcdef01234567");
+        string moved = ReplacePin(workflow, "CANDOITALL_FILETOOLS_COMMIT", "0123456789abcdef0123456789abcdef01234567");
 
         Assert.NotEqual(workflow, moved);
         Assert.Empty(CiWorkflowPolicy.Validate(moved));
@@ -34,10 +34,21 @@ public sealed class CrossPlatformCiWorkflowTests
     [Trait("Category", "UnixPortabilityCore")]
     [InlineData("branch-pin")]
     [InlineData("literal-checkout-ref")]
+    [InlineData("pr-source-branch")]
+    [InlineData("missing-resolver-dependency")]
+    [InlineData("broad-file-copy")]
     [InlineData("missing-source-asset-check")]
     [InlineData("baseline-auto-acceptance")]
     [InlineData("package-substitution")]
     [InlineData("quarantine-in-stable-gate")]
+    [InlineData("quarantine-in-host-lane")]
+    [InlineData("dropped-linux-shard")]
+    [InlineData("dropped-host-shard")]
+    [InlineData("linux-host-platform-only")]
+    [InlineData("host-lane-without-windows")]
+    [InlineData("full-scope-never-runs")]
+    [InlineData("main-runs-split-scope")]
+    [InlineData("stable-lane-without-postgres")]
     public void Weakened_workflow_is_rejected(string weakening)
     {
         string workflow = ReadActiveWorkflow();
@@ -46,8 +57,11 @@ public sealed class CrossPlatformCiWorkflowTests
             "branch-pin" => ReplacePin(workflow, "CANDOITALL_FILETOOLS_COMMIT", "development"),
             "literal-checkout-ref" => ReplaceFirst(
                 workflow,
-                "ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}",
+                "ref: ${{ needs.dependencies.outputs.components-commit }}",
                 "ref: development"),
+            "pr-source-branch" => ReplaceFirst(workflow, "github.base_ref || github.ref_name", "github.head_ref || github.ref_name"),
+            "missing-resolver-dependency" => ReplaceFirst(workflow, "    needs: dependencies\n", string.Empty),
+            "broad-file-copy" => ReplaceFirst(workflow, "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG", "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: FILE_COPY"),
             "missing-source-asset-check" => RemoveFirstStep(workflow, SourceAssetStepName),
             "baseline-auto-acceptance" => ReplaceFirst(
                 workflow,
@@ -58,6 +72,23 @@ public sealed class CrossPlatformCiWorkflowTests
                 "dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=true",
                 "dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=false"),
             "quarantine-in-stable-gate" => ReplaceFirst(workflow, "&Category!=Quarantined", string.Empty),
+            "quarantine-in-host-lane" => ReplaceFirst(
+                workflow,
+                "Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform",
+                "Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform"),
+            "dropped-linux-shard" => ReplaceFirst(workflow, "shard: [1, 2, 3, 4, 5]", "shard: [1, 2, 3, 4]"),
+            "dropped-host-shard" => ReplaceFirst(workflow, "shard: [1, 2, 3]\n", "shard: [1, 2]\n"),
+            "linux-host-platform-only" => ReplaceFirst(
+                workflow,
+                "RequiresHostDocker!=true\"\n          -ShardIndex ${{ matrix.shard }} -ShardCount 5",
+                "RequiresHostDocker!=true&Category=HostPlatform\"\n          -ShardIndex ${{ matrix.shard }} -ShardCount 5"),
+            "host-lane-without-windows" => ReplaceFirst(workflow, "            os: windows-latest\n          - name: macos-arm64\n            os: macos-15\n    runs-on", "            os: macos-15\n          - name: macos-arm64\n            os: macos-15\n    runs-on"),
+            "full-scope-never-runs" => ReplaceFirst(workflow, "if: needs.dependencies.outputs.platform-scope == 'full'", "if: false"),
+            "main-runs-split-scope" => ReplaceFirst(workflow, "$env:GITHUB_REF -eq 'refs/heads/main'", "$env:GITHUB_REF -eq 'refs/heads/release'"),
+            "stable-lane-without-postgres" => ReplaceFirst(
+                workflow,
+                "      - name: Run stable Unit and Memory gate\n        shell: pwsh\n        env:\n          CANDOITALL_TESTS_POSTGRES_CONNECTION:",
+                "      - name: Run stable Unit and Memory gate\n        shell: pwsh\n        env:\n          CANDOITALL_TESTS_POSTGRES_UNUSED:"),
             _ => throw new ArgumentOutOfRangeException(nameof(weakening))
         };
 
@@ -207,18 +238,13 @@ public sealed class CrossPlatformCiWorkflowTests
         return next < 0 ? workflow[..start] : workflow[..start] + workflow[(next + 1)..];
     }
 
-    /// <summary>
-    /// Invariants of the CI workflow: sibling sources are pinned to immutable commits that every checkout consumes,
-    /// committed source assets are verified before any build, all supported platforms and PostgreSQL create
-    /// strategies run, required gates are wired and no package substitution or baseline auto-acceptance exists.
-    /// </summary>
     private static class CiWorkflowPolicy
     {
-        private static readonly (string Repository, string PinKey)[] Siblings =
-        [
-            ("fyziktom/CanDoItAll.Components", "CANDOITALL_COMPONENTS_COMMIT"),
-            ("fyziktom/CanDoItAll.FileTools", "CANDOITALL_FILETOOLS_COMMIT")
-        ];
+        private const string ComponentsRepository = "fyziktom/CanDoItAll.Components";
+        private const string FileToolsPinKey = "CANDOITALL_FILETOOLS_COMMIT";
+        private const string ComponentsBranchRef = "${{ github.base_ref || github.ref_name }}";
+        private const string ComponentsCommitRef = "${{ needs.dependencies.outputs.components-commit }}";
+        private static readonly string[] Siblings = [ComponentsRepository, "fyziktom/CanDoItAll.FileTools"];
 
         private static readonly string[] StableGateExclusions =
         [
@@ -228,10 +254,26 @@ public sealed class CrossPlatformCiWorkflowTests
 
         private static readonly string[] RequiredCommands =
         [
-            "dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+            "  stable:\n    needs: dependencies",
+            "  containers:\n    needs: dependencies",
+            "components-commit: ${{ steps.components.outputs.commit }}",
+            "git -C CanDoItAll.Components rev-parse --verify HEAD",
+            "Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value \"commit=$commit\"",
+            "  tests-linux:\n    needs: dependencies",
+            "  tests-host:\n    needs: dependencies",
+            "platform-scope: ${{ steps.scope.outputs.scope }}",
+            "$env:GITHUB_EVENT_NAME -eq 'schedule'",
+            "$env:GITHUB_REF -eq 'refs/heads/main'",
+            "dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+            "dotnet test ./tests/Solutions/CanDoItAll.Tests.Memory.slnx",
+            "./tools/Validation/Invoke-TestShard.ps1",
+            "-WeightsPath ./tools/Validation/TestShardWeights.json",
             "(Category=UnixPortabilityCore)&(Category!=UnixRuntimePortability)&(RequiresHostDocker!=true)",
             "(Category=UnixPortabilityCore)&(RequiresHostDocker=true)",
             "ikalnytskyi/action-setup-postgres@",
+            "postgres-version: \"18\"",
+            "Verify PostgreSQL 18 server provenance",
+            "show server_version_num",
             "CANDOITALL_TESTS_POSTGRES_CONNECTION",
             "playwright.ps1 install chromium",
             "Test-RuntimePortability.ps1",
@@ -250,6 +292,8 @@ public sealed class CrossPlatformCiWorkflowTests
         private static readonly string[] ForbiddenFragments =
         [
             "UseLocalCanDoItAllLibraries=false",
+            "-UseLocalCanDoItAllLibraries $false",
+            "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: FILE_COPY",
             "--write-baseline",
             "codex/bundles",
             "continue-on-error: true"
@@ -260,17 +304,9 @@ public sealed class CrossPlatformCiWorkflowTests
             string workflow = workflowText.Replace("\r\n", "\n", StringComparison.Ordinal);
             var violations = new List<string>();
 
-            foreach (var (_, pinKey) in Siblings)
-            {
-                Match pin = Regex.Match(workflow, $"(?m)^  {Regex.Escape(pinKey)}:[ \\t]*(\\S+)[ \\t]*$");
-                if (!pin.Success)
-                {
-                    violations.Add($"{pinKey} is not declared in the workflow environment.");
-                }
-                else if (!Regex.IsMatch(pin.Groups[1].Value, "^[0-9a-f]{40}$"))
-                {
-                    violations.Add($"{pinKey} is not an immutable 40-character commit: {pin.Groups[1].Value}");
-                }
+            Match pin = Regex.Match(workflow, $"(?m)^  {FileToolsPinKey}:[ \\t]*(\\S+)[ \\t]*$");
+            if (!pin.Success || !Regex.IsMatch(pin.Groups[1].Value, "^[0-9a-f]{40}$")) {
+                violations.Add($"{FileToolsPinKey} must declare an immutable 40-character commit.");
             }
 
             foreach (var (jobName, steps) in Jobs(workflow))
@@ -279,12 +315,20 @@ public sealed class CrossPlatformCiWorkflowTests
             }
 
             ValidatePlatformMatrix(workflow, violations);
-            Match stableGate = Regex.Match(workflow, "--filter \"([^\"]*Category!=Playwright[^\"]*)\"");
+            ValidateTestLanes(workflow, violations);
+            string[] stableFilters = Regex.Matches(workflow, "(?:--filter|-Filter) \"([^\"]*Category!=Playwright[^\"]*)\"")
+                .Select(match => match.Groups[1].Value)
+                .ToArray();
+            if (stableFilters.Length == 0)
+            {
+                violations.Add("No stable test lane filter is wired.");
+            }
+
             foreach (string exclusion in StableGateExclusions)
             {
-                if (!stableGate.Success || !stableGate.Groups[1].Value.Split('&').Contains(exclusion, StringComparer.Ordinal))
+                if (stableFilters.Any(filter => !filter.Split('&').Contains(exclusion, StringComparer.Ordinal)))
                 {
-                    violations.Add($"The stable test gate filter no longer excludes {exclusion}.");
+                    violations.Add($"A stable test lane filter no longer excludes {exclusion}.");
                 }
             }
 
@@ -305,7 +349,7 @@ public sealed class CrossPlatformCiWorkflowTests
             for (int index = 0; index < steps.Count; index++)
             {
                 string step = steps[index];
-                foreach (var (repository, pinKey) in Siblings)
+                foreach (var repository in Siblings)
                 {
                     if (!step.Contains($"repository: {repository}", StringComparison.Ordinal))
                     {
@@ -313,9 +357,11 @@ public sealed class CrossPlatformCiWorkflowTests
                     }
 
                     string checkoutPath = repository[(repository.IndexOf('/') + 1)..];
-                    if (!step.Contains($"ref: ${{{{ env.{pinKey} }}}}", StringComparison.Ordinal))
-                    {
-                        violations.Add($"Job {jobName} checks out {repository} without consuming {pinKey}.");
+                    string expectedRef = repository == ComponentsRepository
+                        ? jobName == "dependencies" ? ComponentsBranchRef : ComponentsCommitRef
+                        : $"${{{{ env.{FileToolsPinKey} }}}}";
+                    if (!step.Contains($"ref: {expectedRef}", StringComparison.Ordinal)) {
+                        violations.Add($"Job {jobName} checks out {repository} without consuming {expectedRef}.");
                     }
 
                     if (!step.Contains($"path: {checkoutPath}", StringComparison.Ordinal))
@@ -323,7 +369,7 @@ public sealed class CrossPlatformCiWorkflowTests
                         violations.Add($"Job {jobName} checks out {repository} outside the sibling path {checkoutPath}.");
                     }
 
-                    if (pinKey == "CANDOITALL_COMPONENTS_COMMIT" && componentsCheckout < 0)
+                    if (repository == ComponentsRepository && componentsCheckout < 0)
                     {
                         componentsCheckout = index;
                     }
@@ -347,10 +393,17 @@ public sealed class CrossPlatformCiWorkflowTests
                 {
                     violations.Add($"Job {jobName} step '{StepName(step)}' builds without the pinned sibling sources.");
                 }
+
+                // PostgreSQL-backed tests fail rather than skip without the connection, so every stable lane needs it.
+                if (Regex.IsMatch(step, "(?:--filter|-Filter) \"[^\"]*Category!=Playwright") &&
+                    !Regex.IsMatch(step, @"(?m)^\s+env:\s*\n(?:\s{10,}\S.*\n)*?\s{10,}CANDOITALL_TESTS_POSTGRES_CONNECTION: Host="))
+                {
+                    violations.Add($"Job {jobName} step '{StepName(step)}' runs a stable test lane without CANDOITALL_TESTS_POSTGRES_CONNECTION.");
+                }
             }
 
-            if (componentsCheckout >= 0 &&
-                (assetCheck < 0 || assetCheck < componentsCheckout || (firstBuild >= 0 && assetCheck > firstBuild)))
+            if (componentsCheckout >= 0 && firstBuild >= 0 &&
+                (assetCheck < 0 || assetCheck < componentsCheckout || assetCheck > firstBuild))
             {
                 violations.Add($"Job {jobName} does not verify committed Components source assets before building.");
             }
@@ -363,7 +416,8 @@ public sealed class CrossPlatformCiWorkflowTests
                 violations.Add("The platform matrix must not cancel the other platforms after one failure.");
             }
 
-            string[] systems = Regex.Matches(workflow, @"(?m)^\s+os: (\S+)\s*$").Select(match => match.Groups[1].Value).ToArray();
+            string stableJob = JobText(workflow, "stable");
+            string[] systems = Regex.Matches(stableJob, @"(?m)^\s+os: (\S+)\s*$").Select(match => match.Groups[1].Value).ToArray();
             foreach (string family in new[] { "windows-", "ubuntu-", "macos-" })
             {
                 if (!systems.Any(system => system.StartsWith(family, StringComparison.Ordinal)))
@@ -372,7 +426,7 @@ public sealed class CrossPlatformCiWorkflowTests
                 }
             }
 
-            string[] strategies = Regex.Matches(workflow, @"(?m)^\s+postgres-create-strategy: (\S+)\s*$")
+            string[] strategies = Regex.Matches(stableJob, @"(?m)^\s+postgres-create-strategy: (\S+)\s*$")
                 .Select(match => match.Groups[1].Value)
                 .ToArray();
             if (strategies.Length != systems.Length ||
@@ -383,12 +437,97 @@ public sealed class CrossPlatformCiWorkflowTests
                 violations.Add("Every matrix platform must choose a supported PostgreSQL create strategy, and both strategies must run.");
             }
 
-            if (!workflow.Contains(
+            if (!workflow.Contains("      CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: WAL_LOG", StringComparison.Ordinal)) {
+                violations.Add("The broad stable gate must use WAL_LOG rather than forcing checkpoints for every database.");
+            }
+            var postgresGate = Jobs(workflow).Single(job => job.Name == "stable").Steps
+                .Single(step => step.StartsWith("name: Run PostgreSQL-backed core migration and restart gate", StringComparison.Ordinal));
+            if (!postgresGate.Contains(
                     "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY: ${{ matrix.postgres-create-strategy }}",
                     StringComparison.Ordinal))
             {
                 violations.Add("The matrix PostgreSQL create strategy is not passed to the tests.");
             }
+        }
+
+        // Linux shards run every stable Components and Integration test; Windows and macOS shards run the host-platform
+        // classes, or everything in the full scope. A shard count that differs from its matrix would skip classes.
+        private static void ValidateTestLanes(string workflow, List<string> violations)
+        {
+            foreach (string jobName in new[] { "tests-linux", "tests-host" })
+            {
+                string job = JobText(workflow, jobName);
+                Match shards = Regex.Match(job, @"(?m)^\s+shard: \[([0-9, ]+)\]\s*$");
+                int[] shardValues = shards.Success
+                    ? shards.Groups[1].Value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray()
+                    : [];
+                string[] invocations = Regex.Split(job, @"(?m)^      - ")
+                    .Where(step => step.Contains("./tools/Validation/Invoke-TestShard.ps1", StringComparison.Ordinal))
+                    .ToArray();
+                if (invocations.Length == 0 || shardValues.Length == 0 ||
+                    !shardValues.SequenceEqual(Enumerable.Range(1, shardValues.Length)))
+                {
+                    violations.Add($"Job {jobName} must run Invoke-TestShard.ps1 over a contiguous shard matrix starting at 1.");
+                    continue;
+                }
+
+                foreach (string invocation in invocations)
+                {
+                    Match count = Regex.Match(invocation, @"-ShardIndex \$\{\{ matrix\.shard \}\} -ShardCount (\d+)");
+                    if (!count.Success || int.Parse(count.Groups[1].Value) != shardValues.Length)
+                    {
+                        violations.Add($"Job {jobName} step '{StepName(invocation)}' does not partition over its {shardValues.Length} matrix shards.");
+                    }
+
+                    foreach (string project in new[] { "CanDoItAll.Tests.Components.csproj", "CanDoItAll.Tests.Integration.csproj" })
+                    {
+                        if (!invocation.Contains(project, StringComparison.Ordinal))
+                        {
+                            violations.Add($"Job {jobName} step '{StepName(invocation)}' does not shard {project}.");
+                        }
+                    }
+                }
+
+                bool[] hostOnly = invocations.Select(step => step.Contains("&Category=HostPlatform\"", StringComparison.Ordinal)).ToArray();
+                if (jobName == "tests-linux" && hostOnly.Any(value => value))
+                {
+                    violations.Add("Linux shards must run every stable Components and Integration test, not only host-platform classes.");
+                }
+
+                if (jobName == "tests-host")
+                {
+                    foreach (string family in new[] { "os: windows-", "os: macos-" })
+                    {
+                        if (!job.Contains(family, StringComparison.Ordinal))
+                        {
+                            violations.Add($"The host-platform lane no longer covers {family[4..].TrimEnd('-')}.");
+                        }
+                    }
+
+                    bool split = invocations.Any(step => step.Contains("&Category=HostPlatform\"", StringComparison.Ordinal) &&
+                        step.Contains("if: needs.dependencies.outputs.platform-scope != 'full'", StringComparison.Ordinal));
+                    bool full = invocations.Any(step => !step.Contains("Category=HostPlatform", StringComparison.Ordinal) &&
+                        step.Contains("if: needs.dependencies.outputs.platform-scope == 'full'", StringComparison.Ordinal));
+                    if (!split || !full)
+                    {
+                        violations.Add("The host-platform lane must run host-platform classes in the split scope and every stable test in the full scope.");
+                    }
+                }
+            }
+        }
+
+        private static string JobText(string workflow, string jobName)
+        {
+            int jobsStart = workflow.IndexOf("\njobs:\n", StringComparison.Ordinal);
+            Match header = Regex.Match(workflow[Math.Max(jobsStart, 0)..], $@"(?m)^  {Regex.Escape(jobName)}:\s*$");
+            if (jobsStart < 0 || !header.Success)
+            {
+                return string.Empty;
+            }
+
+            int start = jobsStart + header.Index;
+            Match next = Regex.Match(workflow[(start + header.Length)..], @"(?m)^  [A-Za-z0-9_-]+:\s*$");
+            return next.Success ? workflow[start..(start + header.Length + next.Index)] : workflow[start..];
         }
 
         private static IEnumerable<(string Name, IReadOnlyList<string> Steps)> Jobs(string workflow)

@@ -58,6 +58,19 @@ disclosure. The local alias registry is not a remote ACL service.
 
 ## Persistence And Recovery
 
+The MAF progress observer creates one canonical event after applying payload policy and
+forwards that same record to the runtime through `RecordEventAsync`. Its ID, artifact
+reference, usage envelope, completion proof and private provider-read evidence travel
+together. Progress-only observers can retain `RecordAsync`; a durable observer must
+persist the supplied canonical record rather than create another event identity.
+
+Initial start and external-response continuation exclude already recorded event IDs
+before persisting/publishing backend results. Resume result mapping still sees the full
+turn before this filtering, and usage observations and artifacts retain their existing
+persistence paths. Node, kind, message and timestamp are not execution identities:
+separate actual observations keep separate IDs even when those values match. Response
+replay and SSE reconnect retain those IDs. Historical records are not rewritten.
+
 Run admission atomically stores a declaration bound to the exact definition/source and reviewed
 simulation plan with the run and Started event. Actual node completion binds the full
 result digest and owner evidence to its original invocation. Both initial execution and

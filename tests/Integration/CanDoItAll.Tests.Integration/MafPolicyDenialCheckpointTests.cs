@@ -10,6 +10,7 @@ using Microsoft.Extensions.AI;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "HostPlatform")]
 public sealed class MafPolicyDenialCheckpointTests {
     [Theory]
     [InlineData(ToolInvocationClassification.Read)]

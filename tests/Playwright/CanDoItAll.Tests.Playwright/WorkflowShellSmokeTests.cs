@@ -2,15 +2,12 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
 
-[Collection(PlaywrightCollection.Name)]
-public sealed class WorkflowShellSmokeTests
-{
-    private readonly PlaywrightAppFixture fixture;
+public sealed class WorkflowShellSmokeTests : IAsyncLifetime {
+    private readonly PlaywrightAppFixture fixture = new();
 
-    public WorkflowShellSmokeTests(PlaywrightAppFixture fixture)
-    {
-        this.fixture = fixture;
-    }
+    public Task InitializeAsync() => fixture.InitializeAsync();
+
+    public Task DisposeAsync() => fixture.DisposeAsync();
 
     [Fact]
     public async Task Workflow_shell_creates_and_runs_starter_preview_on_large_screen()
@@ -31,7 +28,7 @@ public sealed class WorkflowShellSmokeTests
         var response = await page.GotoAsync($"{fixture.BaseUrl}/agents/workflows");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /agents/workflows to return 2xx, got {(int)response.Status}.");
-        await DismissStartupModalIfPresentAsync(page);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await page.GetByTestId("workflows-tabs").WaitForAsync();
         await page.GetByTestId("workflows-create-starter").WaitForAsync();
         await page.GetByTestId("workflows-create-starter").ClickAsync();
@@ -55,28 +52,6 @@ public sealed class WorkflowShellSmokeTests
         }
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
-    }
-
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
-    {
-        var startupDialog = page.GetByTestId("database-startup-modal");
-        try
-        {
-            await startupDialog.WaitForAsync(new LocatorWaitForOptions
-            {
-                Timeout = timeoutMs
-            });
-        }
-        catch (TimeoutException)
-        {
-            return;
-        }
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Detached
-        });
     }
 
     private static async Task ExpectTextContainsAsync(ILocator locator, string expectedValue, int timeoutMs)

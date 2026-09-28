@@ -24,9 +24,9 @@ public sealed record AgentsHeaderSnapshot(
 
 public interface IAgentsWorkspaceQuery {
     Task<AgentsHeaderSnapshot> ReadHeaderAsync(CancellationToken cancellationToken = default);
-    Task<AgentOverviewSnapshot> ReadOverviewAsync(CancellationToken cancellationToken = default);
+    Task<AgentRuntimeSummary> ReadOverviewAsync(CancellationToken cancellationToken = default);
     ValueTask<ProviderUsageSnapshot> ReadUsageAsync(
-        ProviderUsageWorkloadSelection selection,
+        ProviderUsageQuery query,
         CancellationToken cancellationToken = default);
 }
 
@@ -34,7 +34,8 @@ public sealed class AgentsWorkspaceQuery(
     IAgentFrameworkWorkspaceService workspace,
     ProviderUsageQueryService usage,
     IBoundAgentResourceQuery boundResources,
-    ILogger<AgentsWorkspaceQuery> logger) : IAgentsWorkspaceQuery {
+    ILogger<AgentsWorkspaceQuery> logger,
+    IIndexedWorkspaceReadGuard readGuard) : IAgentsWorkspaceQuery {
     public async Task<AgentsHeaderSnapshot> ReadHeaderAsync(CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
         var agentsTask = ReadAgentHeaderAsync(cancellationToken);
@@ -48,17 +49,29 @@ public sealed class AgentsWorkspaceQuery(
         };
     }
 
-    public Task<AgentOverviewSnapshot> ReadOverviewAsync(CancellationToken cancellationToken = default)
-        => workspace.GetAgentOverviewAsync(cancellationToken);
+    public async Task<AgentRuntimeSummary> ReadOverviewAsync(CancellationToken cancellationToken = default) {
+        await readGuard.EnsureReadyAsync(requireSummaryIndex: true, cancellationToken);
+        var dashboardTask = workspace.GetDashboardAsync(cancellationToken);
+        var teamsTask = workspace.ListAgentTeamsAsync(cancellationToken);
+        await Task.WhenAll(dashboardTask, teamsTask);
+        var dashboard = await dashboardTask;
+        var teams = await teamsTask;
+        return new(new(dashboard.AgentCount, dashboard.TemplateCount, teams.Count, dashboard.ProviderCount,
+            dashboard.CapabilityCount, dashboard.SessionCount, dashboard.MemoryCount, dashboard.ActiveRuns, dashboard.FailedRuns),
+            teams.OrderByDescending(team => team.AgentIds.Count).ThenBy(team => team.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(team => new AgentTeamOverviewShortcutRow(team.Id, team.Name, team.Description,
+                    AgentTeamIconCatalog.Normalize(team.Icon), team.AgentIds.Count)).ToArray());
+    }
 
     public ValueTask<ProviderUsageSnapshot> ReadUsageAsync(
-        ProviderUsageWorkloadSelection selection,
+        ProviderUsageQuery query,
         CancellationToken cancellationToken = default)
-        => usage.QueryAsync(selection, cancellationToken);
+        => usage.QueryWindowAsync(query, cancellationToken);
 
     private async Task<AgentsHeaderSnapshot> ReadAgentHeaderAsync(CancellationToken token) {
         IReadOnlyList<AgentDefinition> agents;
         try {
+            await readGuard.EnsureReadyAsync(cancellationToken: token);
             agents = await workspace.ListAgentsAsync(includeTemplates: false, token);
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
             throw;

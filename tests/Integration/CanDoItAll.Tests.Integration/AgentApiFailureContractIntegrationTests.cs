@@ -22,6 +22,7 @@ using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentApiFailureContractIntegrationTests
 {
     private static readonly JsonSerializerOptions ApiJsonOptions = new(
@@ -602,6 +603,7 @@ public sealed class AgentApiFailureContractIntegrationTests
             });
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
         var raw = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain(
             ProviderSaveStorageFailureProxy.Secret,

@@ -54,7 +54,7 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         drivers.Armed = true;
         var url = $"{StoragePlacementRecoveryEndpoints.Route}/{storageIntent.Value:D}/owner-continuation?databaseProfileId={context.DatabaseProfileId:D}&generation={context.Generation}";
         using var read = await host.Client.GetAsync(url);
-        Assert.Equal(grant == ContinuationHttpGrant.None ? HttpStatusCode.Forbidden : HttpStatusCode.OK, read.StatusCode);
+        Assert.Equal(grant == ContinuationHttpGrant.None ? HttpStatusCode.Unauthorized : HttpStatusCode.OK, read.StatusCode);
         if (read.IsSuccessStatusCode) {
             var observation = (await read.Content.ReadFromJsonAsync<StoragePlacementOwnerContinuationObservation>())!;
             Assert.Equal(original, observation.WorkflowIntent);
@@ -73,7 +73,11 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         using var response = await host.Client.PostAsJsonAsync(StoragePlacementRecoveryEndpoints.Route + "/continue-workflow-asset",
             new StoragePlacementWorkflowContinuationCommand(context, storageIntent,
                 StoragePlacementOwnerContinuationAction.CompletePreparedWorkflowAsset, original));
-        Assert.Equal(grant == ContinuationHttpGrant.Reconcile ? HttpStatusCode.OK : HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(grant switch {
+            ContinuationHttpGrant.None => HttpStatusCode.Unauthorized,
+            ContinuationHttpGrant.Reconcile => HttpStatusCode.OK,
+            _ => HttpStatusCode.Forbidden
+        }, response.StatusCode);
         if (response.IsSuccessStatusCode) {
             Assert.Equal(StoragePlacementOwnerContinuationState.ReceiptRecorded,
                 (await response.Content.ReadFromJsonAsync<StoragePlacementOwnerContinuationObservation>())!.State);

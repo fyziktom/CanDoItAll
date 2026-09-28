@@ -251,6 +251,30 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 cancellationToken));
     }
 
+    public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ValidateActivityOperationScope(operation);
+        EnsureRequiredActivityOperationId(operation.StreamId.OperationId, nameof(operation));
+        return ExecuteWithinActivityBoundaryAsync(operation, async () => {
+            var run = await LoadExecutionRunAsync(executionRunId, cancellationToken);
+            EnsureActivityRunBinding(operation, run);
+            AgentPendingApprovalCancellation.RequireSupported(run);
+            await ValidateAdmittedResumeAuthorityAsync(run, cancellationToken);
+            var writer = store as ISandboxWorkspaceExecutionRunMutationStore
+                ?? throw new InvalidOperationException("Approval cancellation requires the canonical atomic run writer.");
+            var saved = await writer.UpdateExecutionRunDetailAsync(run.Id,
+                current => AgentPendingApprovalCancellation.Apply(current, run, DateTimeOffset.UtcNow), cancellationToken);
+            transientContextRegistry.Remove(run.Id);
+            if (saved.ExecutionLog.FirstOrDefault(item => item.Phase == AgentPendingApprovalCancellation.Phase) is { } entry) {
+                NotifyExecutionUpdated(entry);
+                await executionEventSink.PublishAsync(CreateExecutionEvent(saved.Run, entry), cancellationToken);
+            }
+            operation.Cancel(AgentPendingApprovalCancellation.Summary);
+            return saved;
+        });
+    }
+
     public Task<AgentToolRunCancellationReconciliation> ReconcileCancelledExecutionRunWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(operation);
@@ -865,7 +889,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
                 TerminalizePersistedActivity(
                     activityOperation,
-                    completionState);
+                    completionState,
+                    toolCompletionAssessment);
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
@@ -1734,7 +1759,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
                 TerminalizePersistedActivity(
                     activityOperation,
-                    completionState);
+                    completionState,
+                    toolCompletionAssessment);
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
@@ -2086,7 +2112,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private static void TerminalizePersistedActivity(
         IAgentExecutionActivityOperationLease activityOperation,
-        ExecutionState completionState)
+        ExecutionState completionState,
+        AgentToolCompletionAssessment? completionAssessment = null)
     {
         if (activityOperation.IsTerminal)
         {
@@ -2109,6 +2136,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             {
                 case ExecutionState.Completed:
                     activityOperation.Complete("The agent operation completed.");
+                    break;
+                // The agent answered, but a mutation it attempted neither committed nor was replaced by a committed retry.
+                case ExecutionState.Failed when completionAssessment is
+                {
+                    FailureKind: AgentToolCompletionFailureKind.RequiredMutation,
+                    FailureSummary.Length: > 0
+                }:
+                    activityOperation.Fail(
+                        completionAssessment.FailureSummary,
+                        AgentExecutionActivityFailureCodes.RequiredMutationFailure);
                     break;
                 case ExecutionState.Failed:
                     activityOperation.Fail(
@@ -2170,9 +2207,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return providerFailureDisplay.Message;
         }
 
-        return exception is AgentExecutionGovernanceException governanceException
-            ? governanceException.SanitizedDisplayMessage
-            : UnclassifiedRunFailureMessage;
+        return exception switch {
+            AgentExecutionGovernanceException governanceException => governanceException.SanitizedDisplayMessage,
+            AgentToolAdmissionException { Code: AgentToolAdmissionException.UnsupportedProtocolCode } =>
+                "The saved tool or approval checkpoint is incompatible with this runtime. Reconcile saved approvals and effects using the original runtime " +
+                "or a verified migration before starting replacement work in a new thread. Preserve the history, journal and artifacts together; do not retry the saved approval.",
+            _ => UnclassifiedRunFailureMessage
+        };
     }
 
     private void LogUnexpectedRunFailure(Guid executionRunId, Guid agentId, Guid? chatSessionId, Exception exception) {

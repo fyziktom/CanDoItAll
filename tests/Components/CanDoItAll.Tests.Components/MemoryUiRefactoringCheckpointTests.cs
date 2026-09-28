@@ -1,5 +1,6 @@
 namespace CanDoItAll.Tests.Components.Memory;
 
+[Trait("Category", "HostPlatform")]
 public sealed class MemoryUiRefactoringCheckpointTests
 {
     [Fact]

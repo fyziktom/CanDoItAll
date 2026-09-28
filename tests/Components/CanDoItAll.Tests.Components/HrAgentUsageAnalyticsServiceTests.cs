@@ -86,7 +86,7 @@ public sealed class HrAgentUsageAnalyticsServiceTests
             new StubExecutionStore(SandboxWorkspaceExecutionState.Empty),
             new StubReferenceDataProvider([], []));
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetAsync(
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() => service.GetAsync(
             new HrAgentUsageInput(Guid.NewGuid()),
             CancellationToken.None));
 

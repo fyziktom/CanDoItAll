@@ -110,6 +110,7 @@ public sealed class SharedProviderCatalogClient(
             HttpMethod.Get,
             SharedProviderRoutes.ResolveCatalog(canonicalSourceBaseUri));
         message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        message.Headers.Add(SharedProviderHeaders.CatalogFeatures, SharedProviderProtocol.ImagePricingFeature);
         message.Headers.Authorization = request.AccessToken.UseValue(
             value => new AuthenticationHeaderValue("Bearer", value));
         if (request.IfNoneMatch is { } entityTag)

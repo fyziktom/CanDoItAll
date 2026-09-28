@@ -89,8 +89,7 @@ internal static class ProcessAgentExecutionRecoveryPolicy
         out ProcessCompletionIssue issue)
     {
         issue = null!;
-        var text = exception.ToString();
-        if (!LooksLikeTransientAgentExecutionFailure(text))
+        if (!LooksLikeTransientAgentExecutionFailure(exception))
         {
             return false;
         }

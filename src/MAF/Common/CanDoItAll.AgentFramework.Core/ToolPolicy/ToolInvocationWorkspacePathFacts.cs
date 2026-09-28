@@ -25,6 +25,8 @@ public static class ToolInvocationWorkspacePathFacts {
         ToolContractCatalog.WorkspaceDotNetRestore,
         ToolContractCatalog.WorkspaceDotNetBuild,
         ToolContractCatalog.WorkspaceDotNetTest,
+        ToolContractCatalog.WorkspaceDotNetPublish,
+        ToolContractCatalog.WorkspaceStaticServe,
         ToolContractCatalog.WorkspaceDotNetRun,
         ToolContractCatalog.WorkspaceDotNetStop,
         ToolContractCatalog.WorkspacePowerShellRunScript,

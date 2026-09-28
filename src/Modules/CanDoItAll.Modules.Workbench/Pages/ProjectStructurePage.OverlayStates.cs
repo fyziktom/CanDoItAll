@@ -314,6 +314,8 @@ public sealed record ProjectStructureProcessStartDialogState(
 
     internal ProcessLaunchObservation? LaunchObservation { get; init; }
 
+    internal string PreviousLaunchNotice { get; init; } = string.Empty;
+
     internal bool IsAccepted => LaunchObservation?.AcceptedRunId is not null;
 }
 
@@ -345,7 +347,9 @@ public sealed record ProjectStructureWebPreviewDialogState(
     Uri Url,
     string Notes,
     bool CanEmbed,
-    string EmbedUnavailableReason);
+    string EmbedUnavailableReason,
+    bool CanStopRuntime = false,
+    string RuntimeStopError = "");
 
 public sealed record ProjectStructureQuickActionButton(
     ProjectStructureQuickActionExecutionKind ExecutionKind,

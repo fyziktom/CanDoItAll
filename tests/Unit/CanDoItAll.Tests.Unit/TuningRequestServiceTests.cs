@@ -72,28 +72,33 @@ public sealed class TuningRequestServiceTests
         Assert.True(File.Exists(Path.Combine(record.EvidenceDirectory, "attachments", "mock.png")));
         Assert.False(adapter.Executed);
 
-        var submitted = await service.SubmitAsync(record.Id);
-        Assert.Equal(TuningRequestStatus.Queued, submitted.Status);
+        await service.SubmitAsync(record.Id);
         var ready = await WaitForStatusAsync(service, record.Id, TuningRequestStatus.ReadyForReview);
         Assert.True(adapter.Executed);
         Assert.Equal("The request is ready for review.", ready.Summary);
     }
 
-    private static async Task<TuningRequestRecord> WaitForStatusAsync(TuningRequestService service, Guid requestId, TuningRequestStatus expectedStatus)
-    {
-        var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (DateTimeOffset.UtcNow < timeoutAt)
-        {
-            var current = service.Get(requestId);
-            if (current?.Status == expectedStatus)
-            {
-                return current;
+    private static async Task<TuningRequestRecord> WaitForStatusAsync(TuningRequestService service, Guid requestId, TuningRequestStatus expectedStatus) {
+        var updates = service.Subscribe(requestId, out var subscriptionId);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try {
+            while (true) {
+                var current = service.Get(requestId)
+                    ?? throw new InvalidOperationException($"Tuning request {requestId} no longer exists.");
+                if (current.Status == expectedStatus) {
+                    return current;
+                }
+                if (current.Status is TuningRequestStatus.Failed or TuningRequestStatus.VerificationFailed or TuningRequestStatus.Cancelled) {
+                    throw new InvalidOperationException($"Expected {expectedStatus}, but request ended as {current.Status}: {current.Summary}");
+                }
+                await updates.ReadAsync(timeout.Token);
             }
-
-            await Task.Delay(50);
+        } catch (OperationCanceledException) when (timeout.IsCancellationRequested) {
+            var current = service.Get(requestId);
+            throw new TimeoutException($"Timed out waiting for {expectedStatus}. Last status: {current?.Status}; {current?.Summary}");
+        } finally {
+            service.Unsubscribe(requestId, subscriptionId);
         }
-
-        throw new TimeoutException($"Timed out waiting for status {expectedStatus}.");
     }
 
     private static TuningRequestService CreateService(
@@ -109,7 +114,7 @@ public sealed class TuningRequestServiceTests
                 ["Manager:TuningModeEnabled"] = "true",
                 ["Manager:ReviewBeforeSend"] = reviewBeforeSend.ToString(),
                 ["Manager:WorkspaceRoot"] = rootPath,
-                ["Manager:ArtifactsRoot"] = ".artifacts\\codex-manager"
+                ["Manager:ArtifactsRoot"] = Path.Combine(".artifacts", "codex-manager")
             })
             .Build();
 

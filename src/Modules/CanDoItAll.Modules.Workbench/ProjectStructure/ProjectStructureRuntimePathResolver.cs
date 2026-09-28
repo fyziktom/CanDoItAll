@@ -170,7 +170,10 @@ internal sealed class ProjectStructureRuntimePathResolver(
                 !CanCurrentExecutionReadPath(candidatePath, pathAuthorityMode))
             {
                 failureMessage = pathAuthorityMode == ProjectStructureRuntimePathAuthorityMode.AgentExecution
-                    ? "is outside the active workspace and is not authorized for this agent execution."
+                    ? "is outside the active workspace and is not authorized for this agent execution. " +
+                      "Use a folder inside the workspace, or the folder declared by the project block above this node. " +
+                      "In a project-structure chat that folder is readable only while the user has this node (or that project block) selected, " +
+                      "so ask the user to select this node and send the request again instead of changing the path."
                     : "is outside the active workspace and is not authorized for the current execution.";
                 return false;
             }

@@ -26,7 +26,7 @@ public sealed class HrAgentAdministrationService(
         ArgumentNullException.ThrowIfNull(input);
         if (input.Take is < 1 or > MaximumSearchTake)
         {
-            throw new ArgumentOutOfRangeException(nameof(input), $"Take must be between 1 and {MaximumSearchTake}.");
+            throw Rejected($"Take must be between 1 and {MaximumSearchTake}.");
         }
 
         ValidateOptionalEnum(input.Status, nameof(input.Status));
@@ -184,7 +184,7 @@ public sealed class HrAgentAdministrationService(
             }
         }
 
-        var created = await GetAgentAsync(id, cancellationToken);
+        var created = await GetSavedAgentAsync(id, cancellationToken);
         warnings.AddRange(BuildReadinessWarnings(created));
         logger.LogInformation(
             "HR agent {ActorAgentId} created target agent {TargetAgentId} with {CapabilityCount} capabilities.",
@@ -207,12 +207,12 @@ public sealed class HrAgentAdministrationService(
         EnsureTargetCanBeManaged(actorAgentId, input.AgentId);
         if (input.ExpectedUpdatedAtUtc == default)
         {
-            throw new InvalidOperationException("ExpectedUpdatedAtUtc is required for an agent settings update.");
+            throw Rejected("ExpectedUpdatedAtUtc is required for an agent settings update.");
         }
 
         if (input.ProviderProfileId.HasValue && input.ClearProviderProfile)
         {
-            throw new InvalidOperationException("ProviderProfileId and ClearProviderProfile cannot be supplied together.");
+            throw Rejected("ProviderProfileId and ClearProviderProfile cannot be supplied together.");
         }
 
         ValidateOptionalText(input.Name, MaximumNameLength, nameof(input.Name), allowEmpty: false);
@@ -286,7 +286,7 @@ public sealed class HrAgentAdministrationService(
             input.AgentId,
             "update",
             () => workspaceService.SaveAgentAsync(editor, cancellationToken));
-        var updated = await GetAgentAsync(input.AgentId, cancellationToken);
+        var updated = await GetSavedAgentAsync(input.AgentId, cancellationToken);
         warnings.AddRange(BuildReadinessWarnings(updated));
         logger.LogInformation(
             "HR agent {ActorAgentId} updated target agent {TargetAgentId} from timestamp {PreviousUpdatedAtUtc} to {UpdatedAtUtc}.",
@@ -327,7 +327,7 @@ public sealed class HrAgentAdministrationService(
         var requested = requestedIds ?? [];
         if (requested.Any(id => id == Guid.Empty))
         {
-            throw new InvalidOperationException("Capability IDs cannot contain an empty GUID.");
+            throw Rejected("Capability IDs cannot contain an empty GUID.");
         }
 
         var ids = requested
@@ -338,13 +338,13 @@ public sealed class HrAgentAdministrationService(
         var missing = ids.Except(selected.Select(item => item.Id)).ToArray();
         if (missing.Length > 0)
         {
-            throw new InvalidOperationException($"Unknown capability IDs: {string.Join(", ", missing.Select(id => id.ToString("D")))}.");
+            throw Rejected($"Unknown capability IDs: {string.Join(", ", missing.Select(id => id.ToString("D")))}.");
         }
 
         var privileged = selected.Where(item => ManagedAgentPrivilegedCapabilityKeys.All.Contains(item.Key)).ToArray();
         if (privileged.Length > 0)
         {
-            throw new InvalidOperationException($"Privileged managed-agent capabilities cannot be granted by an HR runtime tool: {string.Join(", ", privileged.Select(item => item.Key))}.");
+            throw Rejected($"Privileged managed-agent capabilities cannot be granted by an HR runtime tool: {string.Join(", ", privileged.Select(item => item.Key))}.");
         }
 
         return selected;
@@ -375,15 +375,15 @@ public sealed class HrAgentAdministrationService(
         }
 
         var provider = providers.FirstOrDefault(item => item.Id == providerId.Value)
-            ?? throw new InvalidOperationException($"Provider '{providerId.Value:D}' was not found.");
+            ?? throw Rejected($"Provider '{providerId.Value:D}' was not found.");
         if (!provider.IsEnabled)
         {
-            throw new InvalidOperationException($"Provider '{provider.Name}' is disabled.");
+            throw Rejected($"Provider '{provider.Name}' is disabled.");
         }
 
         if (provider.Purpose != ProviderProfilePurpose.Chat)
         {
-            throw new InvalidOperationException($"Provider '{provider.Name}' is not a chat provider.");
+            throw Rejected($"Provider '{provider.Name}' is not a chat provider.");
         }
 
         return provider;
@@ -395,7 +395,7 @@ public sealed class HrAgentAdministrationService(
         {
             if (!string.IsNullOrWhiteSpace(requestedModel))
             {
-                throw new InvalidOperationException("A model cannot be selected without a chat provider.");
+                throw Rejected("A model cannot be selected without a chat provider.");
             }
 
             return string.Empty;
@@ -406,7 +406,7 @@ public sealed class HrAgentAdministrationService(
             : requestedModel.Trim();
         if (string.IsNullOrWhiteSpace(model))
         {
-            throw new InvalidOperationException($"Provider '{provider.Name}' does not define a default model; select one explicitly.");
+            throw Rejected($"Provider '{provider.Name}' does not define a default model; select one explicitly.");
         }
 
         return model;
@@ -422,20 +422,33 @@ public sealed class HrAgentAdministrationService(
         }
 
         return teams.FirstOrDefault(team => team.Id == teamId.Value)
-            ?? throw new InvalidOperationException($"Agent team '{teamId.Value:D}' was not found.");
+            ?? throw Rejected($"Agent team '{teamId.Value:D}' was not found.");
     }
 
     private async Task<AgentDefinition> GetAgentAsync(Guid agentId, CancellationToken cancellationToken)
     {
         if (agentId == Guid.Empty)
         {
-            throw new ArgumentException("Agent id cannot be empty.", nameof(agentId));
+            throw Rejected("Agent id cannot be empty.");
         }
 
-        return (await workspaceService.ListAgentsAsync(includeTemplates: true, cancellationToken))
-            .FirstOrDefault(agent => agent.Id == agentId)
-            ?? throw new InvalidOperationException($"Agent '{agentId:D}' was not found.");
+        return await FindAgentAsync(agentId, cancellationToken)
+            ?? throw Rejected($"Agent '{agentId:D}' was not found. Search the agent catalog and retry with an existing agent id.");
     }
+
+    // Reads the agent back after its catalog save committed, so a missing agent is not a rejected request.
+    private async Task<AgentDefinition> GetSavedAgentAsync(Guid agentId, CancellationToken cancellationToken)
+        => await FindAgentAsync(agentId, cancellationToken)
+            ?? throw new InvalidOperationException($"Agent '{agentId:D}' was not found after its catalog save.");
+
+    private async Task<AgentDefinition?> FindAgentAsync(Guid agentId, CancellationToken cancellationToken)
+        => (await workspaceService.ListAgentsAsync(includeTemplates: true, cancellationToken))
+            .FirstOrDefault(agent => agent.Id == agentId);
+
+    // Request checks run before the catalog save, so a rejected request has changed nothing and the HR agent can
+    // correct it and retry.
+    private static AgentToolInputValidationException Rejected(string message)
+        => AgentToolInputValidationException.Create(message);
 
     private static HrAgentSafeSettings MapSettings(
         AgentDefinition agent,
@@ -518,7 +531,8 @@ public sealed class HrAgentAdministrationService(
             access.CanReadStorage,
             access.CanWriteStorage,
             access.AllowAllStorageCatalogs,
-            access.AllowedStorageCatalogIds.ToArray());
+            access.AllowedStorageCatalogIds.ToArray(),
+            access.CanScriptsReadEnvironment);
     }
 
     private static HrAgentAvatarMetadata MapAvatarMetadata(string? avatarImageUrl)
@@ -700,7 +714,7 @@ public sealed class HrAgentAdministrationService(
         ValidateTemperature(input.Temperature);
         if (!Enum.IsDefined(input.Workload) || !Enum.IsDefined(input.ChatHistoryMode))
         {
-            throw new InvalidOperationException("Workload and chat-history mode must be defined enum values.");
+            throw Rejected("Workload and chat-history mode must be defined enum values.");
         }
     }
 
@@ -719,14 +733,14 @@ public sealed class HrAgentAdministrationService(
         var requestedProjectIds = patch.AllowedProjectIds ?? normalizedCurrent.AllowedProjectIds;
         if (projectIdsWereSupplied && requestedProjectIds.Any(projectId => projectId == Guid.Empty))
         {
-            throw new InvalidOperationException("Project-structure access IDs cannot contain an empty GUID.");
+            throw Rejected("Project-structure access IDs cannot contain an empty GUID.");
         }
 
         if (patch.AllowAllProjects == true &&
             projectIdsWereSupplied &&
             requestedProjectIds.Count > 0)
         {
-            throw new InvalidOperationException(
+            throw Rejected(
                 "AllowAllProjects cannot be combined with explicit project-structure access IDs.");
         }
 
@@ -781,6 +795,7 @@ public sealed class HrAgentAdministrationService(
                 CanWriteFiles = input.CanWriteFiles,
                 CanRunValidationCommands = input.CanRunValidationCommands,
                 CanRunLocalScripts = input.CanRunLocalScripts,
+                CanScriptsReadEnvironment = input.CanScriptsReadEnvironment,
                 CanScaffoldProjects = input.CanScaffoldProjects,
                 CanManageWorkspacePaths = input.CanManageWorkspacePaths,
                 CanTransformArtifacts = input.CanTransformArtifacts,
@@ -833,6 +848,8 @@ public sealed class HrAgentAdministrationService(
                 CanRunValidationCommands =
                     patch.CanRunValidationCommands ?? normalizedCurrent.CanRunValidationCommands,
                 CanRunLocalScripts = patch.CanRunLocalScripts ?? normalizedCurrent.CanRunLocalScripts,
+                CanScriptsReadEnvironment =
+                    patch.CanScriptsReadEnvironment ?? normalizedCurrent.CanScriptsReadEnvironment,
                 CanScaffoldProjects = patch.CanScaffoldProjects ?? normalizedCurrent.CanScaffoldProjects,
                 CanManageWorkspacePaths =
                     patch.CanManageWorkspacePaths ?? normalizedCurrent.CanManageWorkspacePaths,
@@ -859,7 +876,7 @@ public sealed class HrAgentAdministrationService(
                 externalTargetPathRegistry);
             if (string.IsNullOrWhiteSpace(alias))
             {
-                throw new InvalidOperationException(
+                throw Rejected(
                     "Workspace external target aliases must be absolute paths or canonical external-target aliases below a drive root.");
             }
 
@@ -877,7 +894,7 @@ public sealed class HrAgentAdministrationService(
         var storageIds = requestedIds ?? [];
         if (storageIds.Any(storageId => storageId == Guid.Empty))
         {
-            throw new InvalidOperationException("Workspace storage access IDs cannot contain an empty GUID.");
+            throw Rejected("Workspace storage access IDs cannot contain an empty GUID.");
         }
 
         return storageIds
@@ -893,7 +910,7 @@ public sealed class HrAgentAdministrationService(
     {
         if (allowAllStorageCatalogs && storageIdsWereSupplied && storageIds.Count > 0)
         {
-            throw new InvalidOperationException(
+            throw Rejected(
                 "AllowAllStorageCatalogs cannot be combined with explicit workspace storage access IDs.");
         }
     }
@@ -904,7 +921,7 @@ public sealed class HrAgentAdministrationService(
     {
         if (!Enum.IsDefined(profile))
         {
-            throw new InvalidOperationException($"{fieldName} must be a defined enum value.");
+            throw Rejected($"{fieldName} must be a defined enum value.");
         }
     }
 
@@ -912,7 +929,7 @@ public sealed class HrAgentAdministrationService(
     {
         if (temperature is < 0d or > 2d)
         {
-            throw new InvalidOperationException("Temperature must be between 0 and 2.");
+            throw Rejected("Temperature must be between 0 and 2.");
         }
     }
 
@@ -920,7 +937,7 @@ public sealed class HrAgentAdministrationService(
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException($"{fieldName} cannot be empty.");
+            throw Rejected($"{fieldName} cannot be empty.");
         }
 
         ValidateOptionalText(value, maximumLength, fieldName, allowEmpty: false);
@@ -931,7 +948,7 @@ public sealed class HrAgentAdministrationService(
     {
         if (value.HasValue && !Enum.IsDefined(value.Value))
         {
-            throw new InvalidOperationException($"{fieldName} must be a defined enum value.");
+            throw Rejected($"{fieldName} must be a defined enum value.");
         }
     }
 
@@ -948,12 +965,12 @@ public sealed class HrAgentAdministrationService(
 
         if (!allowEmpty && string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException($"{fieldName} cannot be empty.");
+            throw Rejected($"{fieldName} cannot be empty.");
         }
 
         if (value.Trim().Length > maximumLength)
         {
-            throw new InvalidOperationException($"{fieldName} cannot exceed {maximumLength} characters.");
+            throw Rejected($"{fieldName} cannot exceed {maximumLength} characters.");
         }
     }
 
@@ -966,12 +983,12 @@ public sealed class HrAgentAdministrationService(
             .ToArray();
         if (normalized.Length > MaximumTagCount)
         {
-            throw new InvalidOperationException($"An agent can have at most {MaximumTagCount} tags.");
+            throw Rejected($"An agent can have at most {MaximumTagCount} tags.");
         }
 
         if (normalized.Any(tag => tag.Length > MaximumTagLength))
         {
-            throw new InvalidOperationException($"Agent tags cannot exceed {MaximumTagLength} characters.");
+            throw Rejected($"Agent tags cannot exceed {MaximumTagLength} characters.");
         }
 
         return normalized;
@@ -1010,12 +1027,12 @@ public sealed class HrAgentAdministrationService(
     {
         if (targetAgentId == Guid.Empty)
         {
-            throw new ArgumentException("Target agent id cannot be empty.", nameof(targetAgentId));
+            throw Rejected("Target agent id cannot be empty.");
         }
 
         if (targetAgentId == actorAgentId || targetAgentId == HrAgentIdentity.AgentId)
         {
-            throw new InvalidOperationException("The managed HR agent cannot update its own identity or authority.");
+            throw Rejected("The managed HR agent cannot update its own identity or authority.");
         }
     }
 

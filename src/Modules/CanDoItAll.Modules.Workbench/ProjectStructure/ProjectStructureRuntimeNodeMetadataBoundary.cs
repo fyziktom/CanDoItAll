@@ -262,13 +262,16 @@ public sealed class ProjectStructureRuntimeNodeMetadataBoundary(
             403,
             "RuntimePathNotAuthorized",
             $"The runtime {description} is outside the managed workspace and is not included in this execution's audited external targets.",
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
     }
 
+    // Runtime metadata is validated and canonicalized before the owner writes the node, so a rejection changes nothing.
     private static ProjectStructureAgentException InvalidRuntimeMetadata(string message)
         => ProjectStructureAgentException.CreateAgentVisible(
             400,
             "InvalidRuntimeMetadata",
             message,
-            canRetryWithCorrectedInput: true);
+            canRetryWithCorrectedInput: true,
+            effectState: AgentToolEffectState.NotCommitted);
 }

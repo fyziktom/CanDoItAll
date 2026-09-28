@@ -1,15 +1,30 @@
 namespace CanDoItAll.AgentFramework.Usage;
 
-public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjectionSource> sources)
+public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjectionSource> sources, TimeProvider? clock = null,
+    IProviderUsageReadContext? context = null)
 {
+    private readonly TimeProvider clock = clock ?? TimeProvider.System;
     private readonly IReadOnlyList<IProviderUsageProjectionSource> _sources = sources?.ToList()
         ?? throw new ArgumentNullException(nameof(sources));
 
-    public async ValueTask<ProviderUsageSnapshot> QueryAsync(
+    public ValueTask<ProviderUsageSnapshot> QueryAsync(
         ProviderUsageWorkloadSelection selection,
         CancellationToken cancellationToken = default)
+        => QueryCoreAsync(selection, null, cancellationToken);
+
+    public ProviderUsageQuery Resolve(ProviderUsageWorkloadSelection selection, ProviderUsagePeriod period)
+        => new(selection, period, clock.GetUtcNow());
+
+    public ValueTask<ProviderUsageSnapshot> QueryWindowAsync(ProviderUsageQuery query, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(query);
+        return QueryCoreAsync(query.Selection, query, cancellationToken);
+    }
+
+    private async ValueTask<ProviderUsageSnapshot> QueryCoreAsync(
+        ProviderUsageWorkloadSelection selection, ProviderUsageQuery? query, CancellationToken cancellationToken)
     {
         selection.Validate();
+        context?.EnsureCurrent();
         var selectedSources = _sources
             .Where(source => selection.Includes(source.WorkloadKind))
             .OrderBy(source => source.SourceName, StringComparer.Ordinal)
@@ -19,10 +34,12 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
         for (var index = 0; index < selectedSources.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            readTasks[index] = ReadSourceAsync(selectedSources[index], cancellationToken);
+            readTasks[index] = ReadSourceAsync(selectedSources[index], query?.Window, cancellationToken);
         }
 
         var sourceResults = await Task.WhenAll(readTasks).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        context?.EnsureCurrent();
 
         var contributions = Deduplicate(sourceResults
                 .Where(result => result.State != ProviderUsageSourceState.Failed)
@@ -30,34 +47,59 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
             .Where(contribution => selection.Includes(contribution.WorkloadKind))
             .ToList();
 
+        if (query is not null && contributions.Any(item => !query.Window.Contains(item.OccurredAtUtc))) {
+            throw new InvalidDataException("A bounded usage source returned evidence outside the requested interval.");
+        }
+
         var statuses = sourceResults
             .Select(result => new ProviderUsageSourceStatus(
                 result.SourceName,
                 result.WorkloadKind,
                 result.State,
                 result.UpdatedAtUtc,
-                result.Error))
+                result.Error) { CoverageVerifiedAtUtc = result.CoverageVerifiedAtUtc })
             .ToList();
+        if (query is not null) {
+            foreach (var kind in new[] { ProviderUsageWorkloadKind.Agent, ProviderUsageWorkloadKind.SimpleChat }) {
+                if (selection.Includes(kind) && !statuses.Any(status => status.WorkloadKind == kind)) {
+                    statuses.Add(new(kind.ToString(), kind, ProviderUsageSourceState.Failed, DateTimeOffset.UnixEpoch,
+                        new("usage_source_unavailable", "A required usage source is not configured.")));
+                }
+            }
+        }
         var updatedAtUtc = statuses.Count == 0
             ? DateTimeOffset.UnixEpoch
             : statuses.Max(status => status.UpdatedAtUtc);
 
-        return new ProviderUsageSnapshot(
+        var snapshot = new ProviderUsageSnapshot(
             selection,
             Summarize(contributions),
             BuildConsumers(contributions),
             BuildProviders(contributions),
             BuildModels(contributions),
             statuses,
-            updatedAtUtc);
+            updatedAtUtc) { Query = query, GeneratedAtUtc = clock.GetUtcNow() };
+        cancellationToken.ThrowIfCancellationRequested();
+        context?.EnsureCurrent();
+        return snapshot;
     }
 
     private static async Task<ProviderUsageSourceResult> ReadSourceAsync(
         IProviderUsageProjectionSource source,
+        ProviderUsageWindow? window,
         CancellationToken cancellationToken)
     {
-        var result = await source.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var result = window is null
+            ? await source.ReadAsync(cancellationToken).ConfigureAwait(false)
+            : source is IBoundedProviderUsageProjectionSource bounded
+                ? await bounded.ReadWindowAsync(window, cancellationToken).ConfigureAwait(false)
+                : ProviderUsageSourceResult.Failed(source.SourceName, source.WorkloadKind,
+                    "bounded_usage_unavailable", "This source does not support bounded usage reads.", DateTimeOffset.UnixEpoch)
+                    with { Window = window };
         ValidateSourceResult(source, result);
+        if (result.Window != window) {
+            throw new InvalidDataException("Usage source returned a different interval than requested.");
+        }
         return result;
     }
 
@@ -185,12 +227,12 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
         var usageObservationCount = 0;
         var knownUsageObservationCount = 0;
         var pricedObservationCount = 0;
-        var inputTokens = 0;
-        var cachedInputTokens = 0;
-        var cacheWriteTokens = 0;
-        var outputTokens = 0;
-        var reasoningTokens = 0;
-        var totalTokens = 0;
+        long inputTokens = 0;
+        long cachedInputTokens = 0;
+        long cacheWriteTokens = 0;
+        long outputTokens = 0;
+        long reasoningTokens = 0;
+        long totalTokens = 0;
         var imageCount = 0;
         var knownCostUsd = 0m;
         foreach (var item in source)

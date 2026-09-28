@@ -5,6 +5,12 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 
+/// <summary>
+/// Outcome of one provider invocation attempt of an LLM Chat turn. In the operation resource
+/// (<c>invocationAttempts[].outcome</c>) it is a JSON integer: 0 Succeeded (the provider returned a complete reply),
+/// 1 Failed (see the attempt's failure code), 2 Cancelled (the attempt was cancelled). In the operation event stream
+/// (<c>payload.outcome</c>) the same values are camel-case strings: <c>succeeded</c>, <c>failed</c>, <c>cancelled</c>.
+/// </summary>
 public enum LlmChatInvocationOutcome
 {
     Succeeded,

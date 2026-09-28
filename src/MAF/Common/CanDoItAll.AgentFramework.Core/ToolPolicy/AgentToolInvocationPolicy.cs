@@ -90,6 +90,13 @@ public sealed record ToolInvocationPolicyContext(
     public IReadOnlyList<string> AllowedManagedArtifactReadRefs { get; init; } = [];
 
     /// <summary>
+    /// Whether the agent's scripts may read environment variables beyond the basic set, list them, or read
+    /// names computed at run time. The agent runtime sets it from the agent's workspace tool settings; when
+    /// false, script tools whose inspected content does so are denied before approval.
+    /// </summary>
+    public bool ScriptEnvironmentAccessAllowed { get; init; } = true;
+
+    /// <summary>
     /// The admitted execution governance snapshot for this run, when present.
     /// The invocation policy enforces it independently of capability
     /// composition: a mutation-classified tool is denied when the snapshot
@@ -275,6 +282,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (readOnlyExternalTargetDecision is not null)
         {
             return ValueTask.FromResult(readOnlyExternalTargetDecision);
+        }
+
+        var scriptEnvironmentDecision = EvaluateScriptEnvironmentAccess(context, signature);
+        if (scriptEnvironmentDecision is not null)
+        {
+            return ValueTask.FromResult(scriptEnvironmentDecision);
         }
 
         var dotnetNewForceDecision = EvaluateScopeRestrictions(context, signature, ToolInvocationScopePolicyPhase.AfterReadOnlyTargetBoundary);
@@ -469,6 +482,53 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return " No external product root is grounded for this run, so abandon the denied external-target path instead of retrying it.";
+    }
+
+    internal const string ScriptEnvironmentSettingName = "Scripts may read environment variables";
+
+    private static readonly WorkspaceCommandEnvironmentPolicy ScriptEnvironmentPolicy = new();
+
+    /// <summary>
+    /// The script-tool protection pipeline: without the agent's environment permission, a script that reads
+    /// variables beyond the basic set, lists them, or reads a name computed at run time is denied before any
+    /// approval prompt, with the reason and the setting that allows it. A script that could not be inspected
+    /// is denied the same way.
+    /// </summary>
+    private static ToolInvocationPolicyDecision? EvaluateScriptEnvironmentAccess(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (context.ScriptEnvironmentAccessAllowed ||
+            !WorkspaceScriptEnvironmentAccessAnalyzer.IsInspectedScriptTool(context.ToolName))
+        {
+            return null;
+        }
+
+        const string Remedy =
+            $"Remove the environment access from the script, or ask the operator to enable '{ScriptEnvironmentSettingName}' " +
+            "in this agent's Workspace tools settings. Scripts always receive the basic variables such as PATH, TEMP and HOME.";
+        if (string.IsNullOrWhiteSpace(context.InspectedScriptContent))
+        {
+            var failure = string.IsNullOrWhiteSpace(context.ScriptInspectionFailure)
+                ? "the script content was not available"
+                : context.ScriptInspectionFailure;
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"The script could not be inspected for environment access ({failure.TrimEnd('.')}). {Remedy}");
+        }
+
+        var executable = string.Equals(context.ToolName, ToolContractCatalog.WorkspacePythonRunFile, StringComparison.OrdinalIgnoreCase)
+            ? "python"
+            : "pwsh";
+        var findings = WorkspaceScriptEnvironmentAccessAnalyzer.Analyze(
+            context.ToolName,
+            context.InspectedScriptContent,
+            name => ScriptEnvironmentPolicy.IsBaseInheritedName(name, context.ToolName, executable));
+        return findings.Count == 0
+            ? null
+            : ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"The script {WorkspaceScriptEnvironmentAccessAnalyzer.Describe(findings)}, but this agent may not read the process environment. {Remedy}");
     }
 
     private static ToolInvocationPolicyDecision? EvaluateReadOnlyExternalTargetMutation(

@@ -12,7 +12,6 @@ using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -26,7 +25,7 @@ public sealed class AgentsHomePageTests
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IAgentChatLauncher>(launcher));
         var cut = harness.Context.Render<AgentsHomePage>();
         cut.WaitForDashboardLoaded();
-        var launch = cut.Find("[data-testid='agents-hr-agent-open-header']").ClickAsync();
+        var launch = cut.InvokeAsync(() => cut.Find("[data-testid='agents-hr-agent-open-header']").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotNull(launcher.StartedAgentId));
         await cut.InvokeAsync(cut.Instance.Dispose);
         Assert.True(launcher.Token.IsCancellationRequested);
@@ -79,20 +78,19 @@ public sealed class AgentsHomePageTests
         navigation.NavigateTo("/agents");
         var cut = harness.Context.Render<AgentsHomePage>();
         cut.WaitForDashboardLoaded();
-        var tabsRow = cut.WaitForElement(
-            "[data-testid='agents-shell-tabs']",
+        cut.WaitForElement(
+            "[data-testid='agents-shell-tabs'] [data-testid='agents-shell-feed-defaults']",
             TimeSpan.FromSeconds(10));
-        var loadDefaultsButton = Assert.IsAssignableFrom<IElement>(
-            tabsRow.QuerySelector("[data-testid='agents-shell-feed-defaults']"));
 
-        var clickTask = loadDefaultsButton.ClickAsync(new MouseEventArgs());
+        var clickTask = cut.InvokeAsync(() => cut.Find(
+            "[data-testid='agents-shell-tabs'] [data-testid='agents-shell-feed-defaults']").ClickAsync());
 
         dialogHost.WaitForElement(
             "[data-testid='agents-feed-defaults-confirmation']",
             TimeSpan.FromSeconds(10));
         Assert.False(clickTask.IsCompleted);
 
-        dialogHost.Find("[data-testid='agents-feed-defaults-cancel']").Click();
+        await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='agents-feed-defaults-cancel']").ClickAsync());
         await clickTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Empty(harness.Context.Services.GetRequiredService<DialogService>().Dialogs);
@@ -132,17 +130,17 @@ public sealed class AgentsHomePageTests
         Assert.Equal(TooltipPosition.Bottom, tooltipTarget.Instance.Position);
         Assert.Equal("agents-hr-agent-tooltip", tooltipTarget.Instance.TestId);
 
-        FindTab(cut, "Providers").Click();
+        await cut.InvokeAsync(() => FindTab(cut, "Providers").ClickAsync());
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("tab=providers", navigation.Uri, StringComparison.Ordinal);
             Assert.Single(cut.FindAll("[data-testid='agents-hr-agent-open-header']"));
         });
 
-        cut.Find("[data-testid='agents-hr-agent-open-header']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-hr-agent-open-header']").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(HrAgentIdentity.AgentId, launcher.StartedAgentId));
 
-        FindTab(cut, "Agents").Click();
+        await cut.InvokeAsync(() => FindTab(cut, "Agents").ClickAsync());
         cut.WaitForElement("[data-testid='agents-catalog-workspace']", TimeSpan.FromSeconds(10));
         Assert.Single(cut.FindAll("[data-testid='agents-hr-agent-open-header']"));
         Assert.Empty(cut.FindAll("[data-testid='agents-hr-agent-open-top']"));
@@ -175,7 +173,7 @@ public sealed class AgentsHomePageTests
         var simpleChatsIndex = Array.FindIndex(tabs, label => label.StartsWith("Simple Chats", StringComparison.Ordinal));
 
         Assert.Equal(agentsIndex + 1, simpleChatsIndex);
-        await FindTab(cut, "Simple Chats").ClickAsync();
+        await cut.InvokeAsync(() => FindTab(cut, "Simple Chats").ClickAsync());
 
         cut.WaitForElement("[data-testid='llm-chats-tabs']", TimeSpan.FromSeconds(10));
         cut.WaitForElement("[data-testid='llm-chat-definition-catalog']", TimeSpan.FromSeconds(10));
@@ -193,7 +191,7 @@ public sealed class AgentsHomePageTests
             "true",
             cut.Find("[data-testid='llm-chats-tab-definitions']").GetAttribute("aria-selected"));
 
-        await cut.Find("[data-testid='llm-chats-tab-conversations']").ClickAsync();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='llm-chats-tab-conversations']").ClickAsync());
         var loadedConversations = await conversations.Listed.Task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.True(loadedConversations.IsSuccess);
         Assert.Empty(loadedConversations.Value!.Items);
@@ -214,14 +212,13 @@ public sealed class AgentsHomePageTests
         var cut = harness.Context.Render<AgentsHomePage>();
         cut.WaitForDashboardLoaded();
 
-        var scope = cut.WaitForElement("[data-testid='agents-overview-usage-scope']", TimeSpan.FromSeconds(10));
+        cut.WaitForElement("[data-testid='agents-overview-usage-scope']", TimeSpan.FromSeconds(10));
         var scopeTabs = cut.FindComponents<SecondaryTabs>()
             .Single(component => component.Instance.Items.Any(item => item.Label == "Both"));
         Assert.Equal(nameof(ProviderUsageWorkloadSelection.Both), scopeTabs.Instance.SelectedKey);
 
-        var chats = scope.QuerySelectorAll("button")
-            .Single(button => button.TextContent.Trim().StartsWith("Chats", StringComparison.Ordinal));
-        chats.Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-overview-usage-scope']").QuerySelectorAll("button")
+            .Single(button => button.TextContent.Trim().StartsWith("Chats", StringComparison.Ordinal)).ClickAsync());
         cut.WaitForAssertion(
             () => Assert.Equal(
                 nameof(ProviderUsageWorkloadSelection.SimpleChats),
@@ -231,9 +228,14 @@ public sealed class AgentsHomePageTests
             TimeSpan.FromSeconds(10));
         Assert.Contains("usageScope=simple-chats", navigation.Uri, StringComparison.Ordinal);
 
-        cut.Find("[data-testid='agents-overview-open-provider-usage']").Click();
+        var opening = cut.InvokeAsync(() => cut.Find("[data-testid='agents-overview-open-provider-usage']").ClickAsync());
         var dialog = dialogHost.WaitForComponent<ProviderUsageDialog>(TimeSpan.FromSeconds(10));
-        Assert.Equal(ProviderUsageWorkloadSelection.SimpleChats, dialog.Instance.Selection);
+        try {
+            Assert.Equal(ProviderUsageWorkloadSelection.SimpleChats, dialog.Instance.Query.Selection);
+        } finally {
+            await dialogHost.InvokeAsync(() => harness.Context.Services.GetRequiredService<DialogService>().CloseAsync());
+            await opening;
+        }
     }
 
     [Fact]

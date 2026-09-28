@@ -8,15 +8,18 @@ using CanDoItAll.Infrastructure;
 using CanDoItAll.McpTestHost;
 using CanDoItAll.Modules.AgentFramework;
 using System.Diagnostics;
+using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 [Collection("B04 environment")]
 [Trait("Category", "UnixRuntimePortability")]
-public sealed class McpExternalToolPortabilityIntegrationTests
+public sealed class McpExternalToolPortabilityIntegrationTests(ITestOutputHelper output)
 {
     private const string SecretSentinel = "B04_RUNTIME_SECRET_SENTINEL_7f2b18";
     private const string SecretSourceName = "CANDOITALL_B04_TEST_SECRET_SOURCE";
+    private static readonly TimeSpan ProtocolTestTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ExpectedOperationTimeout = TimeSpan.FromSeconds(5);
 
     [Fact]
     [Trait("Category", "McpPortability")]
@@ -35,7 +38,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
                 CancellationToken.None);
             try
             {
-                await client.StartAsync(CancellationToken.None);
+                await StartClientAsync(client);
                 var tools = await client.ListToolsAsync(CancellationToken.None);
                 var result = await client.CallToolAsync(
                     McpToolName.Create("echo"),
@@ -83,7 +86,8 @@ public sealed class McpExternalToolPortabilityIntegrationTests
         using var workspace = new TemporaryDirectory();
         var descriptor = CreateMcpDescriptor(
             workspace.Path,
-            [mode]);
+            [mode],
+            timeout: mode == "--hang-list" ? ExpectedOperationTimeout : null);
         var setup = new McpSetupTestService(CreateMcpFactory(workspace.Path));
 
         var previousSecret = Environment.GetEnvironmentVariable(SecretSourceName);
@@ -132,7 +136,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
         Environment.SetEnvironmentVariable(SecretSourceName, SecretSentinel);
         try
         {
-            await client.StartAsync(CancellationToken.None);
+            await StartClientAsync(client);
             await client.ListToolsAsync(CancellationToken.None);
 
             var exception = await Assert.ThrowsAsync<McpSetupException>(() =>
@@ -212,7 +216,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
             CancellationToken.None);
         try
         {
-            await client.StartAsync(CancellationToken.None);
+            await StartClientAsync(client);
             var tools = await client.ListToolsAsync(CancellationToken.None);
             var result = await client.CallToolAsync(
                 McpToolName.Create("echo"),
@@ -243,7 +247,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
             CancellationToken.None);
         try
         {
-            await client.StartAsync(CancellationToken.None);
+            await StartClientAsync(client);
             var tools = await client.ListToolsAsync(CancellationToken.None);
 
             Assert.Equal("echo", Assert.Single(tools).Name.Value);
@@ -277,7 +281,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
             CancellationToken.None);
         try
         {
-            await client.StartAsync(CancellationToken.None);
+            await StartClientAsync(client);
             var exception = await Assert.ThrowsAsync<McpSetupException>(() =>
                 client.ListToolsAsync(CancellationToken.None));
 
@@ -302,7 +306,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
             CancellationToken.None);
         try
         {
-            await client.StartAsync(CancellationToken.None);
+            await StartClientAsync(client);
             var exception = await Assert.ThrowsAsync<McpSetupException>(() =>
                 client.ListToolsAsync(CancellationToken.None));
 
@@ -465,6 +469,15 @@ public sealed class McpExternalToolPortabilityIntegrationTests
         Assert.Fail($"Process {processId} remained alive after cancellation cleanup.");
     }
 
+    private async Task StartClientAsync(IMcpRuntimeClient client) {
+        var timer = Stopwatch.StartNew();
+        try {
+            await client.StartAsync(CancellationToken.None);
+        } finally {
+            output.WriteLine("MCP child startup and initialize handshake: {0:F0} ms", timer.Elapsed.TotalMilliseconds);
+        }
+    }
+
     private static LocalStdioMcpClientFactory CreateMcpFactory(string workspaceRoot)
         => new(
             new LocalWorkspaceProcessHost(),
@@ -496,7 +509,7 @@ public sealed class McpExternalToolPortabilityIntegrationTests
                 : new Dictionary<string, string>(),
             rawEnvironmentVariables: new Dictionary<string, string>(),
             approvalMode: McpApprovalMode.AlwaysRequire,
-            timeout: timeout ?? TimeSpan.FromSeconds(5),
+            timeout: timeout ?? ProtocolTestTimeout,
             messageFraming: McpStdioMessageFraming.NewlineDelimitedJson);
     }
 

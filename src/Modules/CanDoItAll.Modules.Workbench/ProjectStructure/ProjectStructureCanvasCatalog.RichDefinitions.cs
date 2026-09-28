@@ -112,7 +112,9 @@ internal static partial class ProjectStructureCanvasCatalog
         Option("auto", "Auto"),
         Option("low", "Low"),
         Option("medium", "Medium"),
-        Option("high", "High")
+        Option("high", "High"),
+        Option("xhigh", "Extra high (GPT Image 2.5)"),
+        Option("max", "Max (GPT Image 2.5)")
     ];
 
     private static readonly IReadOnlyList<CanvasWorkbenchInputOption> ImageOutputFormatOptions =

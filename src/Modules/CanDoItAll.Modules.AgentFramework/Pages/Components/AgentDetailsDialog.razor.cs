@@ -83,6 +83,8 @@ public partial class AgentDetailsDialog : IDisposable
     private Task? projectStructureProjectsLoadTask;
     private int selectedTabIndex => AgentEditorSections.IndexOf(Section);
     private int autoApprovalInputVersion;
+    private bool isConfirmingWorkspaceRisk;
+    private int workspaceRiskInputVersion;
 
     private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
     [
@@ -299,10 +301,12 @@ public partial class AgentDetailsDialog : IDisposable
         isBusy = false;
         isConfirmingDelete = false;
         isConfirmingAutoApproval = false;
+        isConfirmingWorkspaceRisk = false;
         isOpeningCapabilityWizard = false;
         isLoadingProjectStructureProjects = false;
         projectStructureProjectsLoadTask = null;
         autoApprovalInputVersion++;
+        workspaceRiskInputVersion++;
     }
 
     public void Dispose() {
@@ -822,7 +826,7 @@ public partial class AgentDetailsDialog : IDisposable
 
         if (access.CanRunLocalScripts)
         {
-            enabled.Add("local scripts");
+            enabled.Add(access.CanScriptsReadEnvironment ? "local scripts (with environment access)" : "local scripts");
         }
 
         if (access.CanScaffoldProjects)
@@ -1100,11 +1104,123 @@ public partial class AgentDetailsDialog : IDisposable
         NormalizeWorkspaceToolAccess();
     }
 
-    private void ToggleWorkspaceLocalScripts(object? rawValue)
+    private async Task HandleWorkspaceLocalScriptsChangedAsync(object? rawValue)
     {
-        MarkWorkspaceToolProfileCustom();
-        editorModel.WorkspaceToolAccess.CanRunLocalScripts = rawValue is bool value && value;
-        NormalizeWorkspaceToolAccess();
+        if (rawValue is not true)
+        {
+            MarkWorkspaceToolProfileCustom();
+            editorModel.WorkspaceToolAccess.CanRunLocalScripts = false;
+            NormalizeWorkspaceToolAccess();
+            return;
+        }
+
+        if (editorModel.WorkspaceToolAccess.CanRunLocalScripts)
+        {
+            return;
+        }
+
+        if (await ConfirmWorkspaceRiskAsync(
+                "Allow this agent to run local scripts?",
+                "Enable local scripts?",
+                "The agent can run PowerShell and Python scripts in its workspace with your account's rights. Scripts can change files, start programs and reach the network. Each run still needs approval unless auto-approval is on, and scripts are inspected before they run.",
+                "I understand that scripts run with my account's rights on this machine.",
+                "Enable local scripts",
+                "agents-workspace-scripts-confirmation"))
+        {
+            MarkWorkspaceToolProfileCustom();
+            editorModel.WorkspaceToolAccess.CanRunLocalScripts = true;
+            NormalizeWorkspaceToolAccess();
+        }
+    }
+
+    private async Task HandleScriptsReadEnvironmentChangedAsync(object? rawValue)
+    {
+        if (rawValue is not true)
+        {
+            editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment = false;
+            NormalizeWorkspaceToolAccess();
+            return;
+        }
+
+        if (editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment || !editorModel.WorkspaceToolAccess.CanRunLocalScripts)
+        {
+            return;
+        }
+
+        if (await ConfirmWorkspaceRiskAsync(
+                "Allow this agent's scripts to read environment variables?",
+                "Allow environment access?",
+                "Scripts will be able to list all environment variables they receive and read any of them, including proxy settings and extra variables the operator passes to processes (proxy URLs can contain credentials). Host secrets such as API keys are still never passed to processes.",
+                "I understand that the agent's scripts can read every variable passed to them.",
+                "Allow environment access",
+                "agents-workspace-environment-confirmation"))
+        {
+            editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment = true;
+            NormalizeWorkspaceToolAccess();
+        }
+    }
+
+    private async Task<bool> ConfirmWorkspaceRiskAsync(
+        string question,
+        string title,
+        string warning,
+        string acknowledgement,
+        string confirmText,
+        string testId)
+    {
+        if (isConfirmingWorkspaceRisk)
+        {
+            return false;
+        }
+
+        var owner = session;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
+        isConfirmingWorkspaceRisk = true;
+        var confirmed = false;
+        try
+        {
+            confirmed = await DialogService.OpenAsync<AgentWorkspaceRiskConfirmationDialog>(
+                title,
+                new Dictionary<string, object?>
+                {
+                    [nameof(AgentWorkspaceRiskConfirmationDialog.Question)] = question,
+                    [nameof(AgentWorkspaceRiskConfirmationDialog.Warning)] = warning,
+                    [nameof(AgentWorkspaceRiskConfirmationDialog.Acknowledgement)] = acknowledgement,
+                    [nameof(AgentWorkspaceRiskConfirmationDialog.ConfirmText)] = confirmText,
+                    [nameof(AgentWorkspaceRiskConfirmationDialog.TestIdPrefix)] = testId
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Workspace tools",
+                    Subtitle = "Confirm that you understand what this permission allows.",
+                    Size = ModalSize.Compact,
+                    DenseChrome = true,
+                    AriaLabel = title,
+                    TestId = testId
+                },
+                cancellationToken: request.Token) is true;
+            return confirmed && IsCurrent(owner);
+        }
+        catch (Exception)
+        {
+            if (IsCurrent(owner))
+            {
+                NotificationService.Error("Confirmation failed", "The confirmation could not be completed. The permission was not enabled.");
+            }
+
+            return false;
+        }
+        finally
+        {
+            if (IsCurrent(owner))
+            {
+                isConfirmingWorkspaceRisk = false;
+                if (!confirmed)
+                {
+                    workspaceRiskInputVersion++;
+                }
+            }
+        }
     }
 
     private void ToggleWorkspaceScaffoldProjects(object? rawValue)

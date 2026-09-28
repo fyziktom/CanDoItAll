@@ -5,10 +5,12 @@ internal sealed class WorkspaceCommandInputException : InvalidOperationException
     private WorkspaceCommandInputException(
         string diagnosticMessage,
         string safeMessage,
-        Exception? innerException)
+        Exception? innerException,
+        bool prohibited)
         : base(NormalizeMessage(diagnosticMessage, nameof(diagnosticMessage)), innerException)
     {
         SafeMessage = NormalizeMessage(safeMessage, nameof(safeMessage));
+        Prohibited = prohibited;
     }
 
     public string ErrorCode => AgentToolInputValidationException.FailureCode;
@@ -19,11 +21,21 @@ internal sealed class WorkspaceCommandInputException : InvalidOperationException
 
     public bool CanRetryWithCorrectedInput => true;
 
+    /// <summary>
+    /// The recipe never permits the requested operation on this target, so only a different approach can proceed.
+    /// </summary>
+    public bool Prohibited { get; }
+
     public static WorkspaceCommandInputException Create(
         string diagnosticMessage,
         string safeMessage,
         Exception? innerException = null)
-        => new(diagnosticMessage, safeMessage, innerException);
+        => new(diagnosticMessage, safeMessage, innerException, prohibited: false);
+
+    public static WorkspaceCommandInputException CreateProhibited(
+        string diagnosticMessage,
+        string safeMessage)
+        => new(diagnosticMessage, safeMessage, innerException: null, prohibited: true);
 
     private static string NormalizeMessage(string message, string parameterName)
     {

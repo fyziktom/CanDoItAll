@@ -90,7 +90,7 @@ public sealed class WorkflowProcessToolAdmission(IAgentToolAdmissionVerifier adm
         AgentToolResultDisclosure disclosure, CancellationToken cancellationToken) {
         codec.Read(disclosure.Payload);
         var session = await RequireSessionAsync(context, cancellationToken);
-        if (disclosure.EffectState == AgentToolEffectState.NotCommitted) {
+        if (disclosure.EffectState == AgentToolEffectState.NotCommitted || disclosure.IsNoEffectTypedFailure) {
             return CompletedCheck.Instance;
         }
         var result = disclosure.Result.Deserialize<WorkflowAgentStartResult>(WorkflowProcessToolProposalCodec.SerializerOptions)

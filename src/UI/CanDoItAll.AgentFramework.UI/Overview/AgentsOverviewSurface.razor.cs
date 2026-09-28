@@ -25,8 +25,10 @@ public partial class AgentsOverviewSurface {
     private bool HasUsagePartial => State.UsagePartial;
     private ProviderUsageWorkloadSelection usageSelection => State.DesiredScope;
     private string UsageChartEmptyText => !hasUsageLoaded
-        ? isUsageLoading ? "Usage evidence is loading." : "Usage evidence is unavailable for this scope. Retry the usage read."
-        : "No provider usage has been recorded in this scope.";
+        ? isUsageLoading ? "Usage evidence is loading." : "Usage evidence is unavailable for this workload and period. Retry the usage read."
+        : $"No provider usage has been recorded for {UsageCaption}.";
+
+    private string UsageCaption => $"{UsageScopeLabel} · {State.DesiredPeriod.Label()}";
 
     private IReadOnlyList<SecondaryTabItem> UsageScopeTabs =>
     [
@@ -48,35 +50,35 @@ public partial class AgentsOverviewSurface {
     [
         new(
             "Agents",
-            ResolveOverviewValue((State.Totals ?? AgentOverviewTotals.Empty).AgentCount),
+            ResolveOverviewValue((State.Totals ?? AgentRuntimeTotals.Empty).AgentCount),
             "groups",
             "info",
             "Organization-scoped technical runtime records.",
             "agents-overview-metric-agents"),
         new(
             "Teams",
-            ResolveOverviewValue((State.Totals ?? AgentOverviewTotals.Empty).TeamCount),
+            ResolveOverviewValue((State.Totals ?? AgentRuntimeTotals.Empty).TeamCount),
             "hub",
             "success",
             "Agent teams available from the technical catalog.",
             "agents-overview-metric-teams"),
         new(
             "Providers",
-            ResolveOverviewValue((State.Totals ?? AgentOverviewTotals.Empty).ProviderCount),
+            ResolveOverviewValue((State.Totals ?? AgentRuntimeTotals.Empty).ProviderCount),
             "cloud",
             "accent",
                 "Provider profiles executed through AgentFramework.",
             "agents-overview-metric-providers"),
         new(
             "Capabilities",
-            ResolveOverviewValue((State.Totals ?? AgentOverviewTotals.Empty).CapabilityCount),
+            ResolveOverviewValue((State.Totals ?? AgentRuntimeTotals.Empty).CapabilityCount),
             "extension",
             "warning",
             "Reusable skills, MCP servers, and other runtime capabilities.",
             "agents-overview-metric-capabilities"),
         new(
             "Sessions",
-            ResolveOverviewValue((State.Totals ?? AgentOverviewTotals.Empty).SessionCount),
+            ResolveOverviewValue((State.Totals ?? AgentRuntimeTotals.Empty).SessionCount),
             "forum",
             "neutral",
             "Chat and runtime sessions associated with the workspace.",
@@ -86,21 +88,21 @@ public partial class AgentsOverviewSurface {
             ResolveUsageValue((State.UsageTotals ?? ProviderUsageTotals.Empty).UsageObservationCount),
             "monitor_heart",
             "info",
-            $"Usage observations for {UsageScopeLabel}.",
+            $"Usage observations for {UsageCaption}.",
             "agents-overview-metric-usage"),
         new(
             "Tokens",
             ResolveUsageTokens((State.UsageTotals ?? ProviderUsageTotals.Empty).Tokens.TotalTokens),
             "token",
             "success",
-            $"Known token usage for {UsageScopeLabel}.",
+            $"Known token usage for {UsageCaption}.",
             "agents-overview-metric-tokens"),
         new(
             "Cost",
             ResolveUsageCost(),
             "paid",
             "danger",
-            $"Known execution-time provider cost for {UsageScopeLabel}; unpriced observations are never treated as free.",
+            $"Known execution-time provider cost for {UsageCaption}; unpriced observations are never treated as free.",
             "agents-overview-metric-cost")
     ];
 
@@ -178,7 +180,7 @@ public partial class AgentsOverviewSurface {
     private string ResolveUsageValue(int value)
         => hasUsageLoaded ? AgentUsageDisplay.FormatCount(value) : isUsageLoading ? "..." : "\u2014";
 
-    private string ResolveUsageTokens(int value)
+    private string ResolveUsageTokens(long value)
         => hasUsageLoaded ? AgentUsageDisplay.FormatTokens(value) : isUsageLoading ? "..." : "\u2014";
 
     private string ResolveUsageCost() {
@@ -202,10 +204,11 @@ public partial class AgentsOverviewSurface {
     }));
 
     private Task RetryOverviewAsync() => Intent.InvokeAsync(new AgentsOverviewIntent.RetryOverview());
+    private Task SelectPeriodAsync(ProviderUsagePeriod period) => Intent.InvokeAsync(new AgentsOverviewIntent.SelectPeriod(period));
     private Task RetryUsageAsync() => Intent.InvokeAsync(new AgentsOverviewIntent.RetryUsage());
     private Task RetryHeaderAsync() => Intent.InvokeAsync(new AgentsOverviewIntent.RetryHeader());
     private Task OpenDetailAsync(AgentsOverviewDetail detail) => State.CanOpen(detail)
-        ? Intent.InvokeAsync(new AgentsOverviewIntent.OpenDetail(detail, State.DesiredScope)) : Task.CompletedTask;
+        ? Intent.InvokeAsync(new AgentsOverviewIntent.OpenDetail(detail, State.AcceptedQuery!)) : Task.CompletedTask;
     private Task OpenAgentsForTeamAsync(Guid id) => Intent.InvokeAsync(new AgentsOverviewIntent.OpenTeam(id));
 
     private sealed record OverviewMetricBadge(string Label, string Value, string Icon, string Tone, string TooltipText, string TestId);

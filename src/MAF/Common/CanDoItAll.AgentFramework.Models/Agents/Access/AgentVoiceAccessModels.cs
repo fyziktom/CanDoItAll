@@ -3,10 +3,20 @@ using System.Text.Json.Nodes;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Voice settings of an agent, the <c>voiceAccess</c> member of the agent editor form, stored in the agent's
+/// <c>configurationJson</c> under <c>voiceAccess</c>. A save replaces that section, and an omitted or empty object
+/// removes it. They affect the voice features of the chat interface only; they attach no runtime tools.
+/// </summary>
 public sealed class AgentVoiceAccessSettings
 {
+    /// <summary>Enables voice mode for this agent in the chat interface, including spoken replies.</summary>
     public bool CanUseVoiceMode { get; set; }
 
+    /// <summary>
+    /// Text-to-speech voice identifier to use for this agent instead of the global voice; trimmed, and empty when voice
+    /// mode is off or no preference is set. It is not validated when saved.
+    /// </summary>
     public string PreferredVoiceId { get; set; } = string.Empty;
 }
 

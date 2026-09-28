@@ -5,12 +5,19 @@ using CanDoItAll.Modules.Security;
 
 namespace CanDoItAll.Composition;
 
+/// <summary>
+/// How the host is published, as a string token: <c>FrameworkDependent</c> (the host needs a matching installed .NET
+/// runtime).
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RuntimeDeploymentPublishMode
 {
     FrameworkDependent
 }
 
+/// <summary>
+/// Processor architecture of a publish target, as a string token: <c>X64</c> or <c>Arm64</c>.
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RuntimeDeploymentArchitecture
 {
@@ -18,6 +25,10 @@ public enum RuntimeDeploymentArchitecture
     Arm64
 }
 
+/// <summary>
+/// Evidence behind a deployment support claim, as a string token: <c>ActualHostValidated</c> (validated on a real
+/// host of that kind) or <c>ActualHostUnverified</c> (built and tested, but not yet validated on a real host).
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RuntimeDeploymentEvidenceLevel
 {
@@ -25,6 +36,11 @@ public enum RuntimeDeploymentEvidenceLevel
     ActualHostUnverified
 }
 
+/// <summary>
+/// Operational state of the host, as a string token: <c>Starting</c> (startup has not finished), <c>Ready</c> (startup
+/// finished, including the preparation of the active database) or <c>Unavailable</c> (not ready for another reason,
+/// for example a failed startup step).
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RuntimeOperationalState
 {
@@ -33,12 +49,42 @@ public enum RuntimeOperationalState
     Unavailable
 }
 
+/// <summary>
+/// One supported publish target of the host in the deployment support manifest.
+/// </summary>
+/// <param name="RuntimeIdentifier">
+/// .NET runtime identifier of the target: <c>win-x64</c>, <c>linux-x64</c>, <c>osx-x64</c> or <c>osx-arm64</c>.
+/// </param>
+/// <param name="OperatingSystem">
+/// Operating system of the target, as a string token: <c>Windows</c>, <c>Linux</c> or <c>MacOs</c>.
+/// </param>
+/// <param name="Architecture">Processor architecture, as a string token: <c>X64</c> or <c>Arm64</c>.</param>
+/// <param name="RuntimeEvidence">
+/// Evidence for the target, as a string token: <c>ActualHostValidated</c> or <c>ActualHostUnverified</c>.
+/// </param>
 public sealed record RuntimeDeploymentSupportTarget(
     string RuntimeIdentifier,
     RuntimeHostOperatingSystem OperatingSystem,
     RuntimeDeploymentArchitecture Architecture,
     RuntimeDeploymentEvidenceLevel RuntimeEvidence);
 
+/// <summary>
+/// One supported headless host profile in the deployment support manifest, with the secret storage it uses by default.
+/// </summary>
+/// <param name="Profile">
+/// The host profile, as a string token: <c>WindowsHeadless</c>, <c>LinuxHeadless</c> or <c>MacOsHeadless</c>.
+/// </param>
+/// <param name="BaselineSecretProvider">
+/// Secret-vault provider the profile uses by default, as a string token, for example <c>Dpapi</c> or
+/// <c>LocalUserFile</c>; the full token list is on the <c>SecretVaultProviderKind</c> schema.
+/// </param>
+/// <param name="BaselineProtectionLevel">
+/// Protection of that secret storage, as a string token: <c>Unknown</c>, <c>DevelopmentOnly</c>, <c>BasicLocal</c> or
+/// <c>Strong</c>.
+/// </param>
+/// <param name="RuntimeEvidence">
+/// Evidence for the profile, as a string token: <c>ActualHostValidated</c> or <c>ActualHostUnverified</c>.
+/// </param>
 public sealed record RuntimeDeploymentSupportProfile(
     RuntimeHostProfileKind Profile,
     [property: JsonConverter(typeof(JsonStringEnumConverter))]
@@ -47,6 +93,25 @@ public sealed record RuntimeDeploymentSupportProfile(
     SecretVaultProtectionLevel BaselineProtectionLevel,
     RuntimeDeploymentEvidenceLevel RuntimeEvidence);
 
+/// <summary>
+/// Deployment support manifest embedded in this build of the host: how it is published, the supported publish
+/// targets and headless host profiles, the prerequisites and the validations still pending. It describes the build,
+/// not the current host.
+/// </summary>
+/// <param name="SchemaVersion">Version of the manifest format; currently 1.</param>
+/// <param name="Product">Product the manifest describes: <c>CanDoItAll.Web</c>.</param>
+/// <param name="PublishMode">How the host is published, as a string token: <c>FrameworkDependent</c>.</param>
+/// <param name="HeadlessCoreRequiresDesktopCapabilities">
+/// Whether the headless core needs desktop capabilities; always false in a valid manifest.
+/// </param>
+/// <param name="Targets">The supported publish targets.</param>
+/// <param name="Profiles">The supported headless host profiles.</param>
+/// <param name="Prerequisites">
+/// Human-readable prerequisites for running the host, such as the required .NET runtime and PostgreSQL version.
+/// </param>
+/// <param name="DeferredValidationIds">
+/// Identifiers of support validations that are still pending, for example <c>MACOS-KEYCHAIN-VALIDATION-001</c>.
+/// </param>
 public sealed record RuntimeDeploymentSupportManifest(
     int SchemaVersion,
     string Product,
@@ -57,6 +122,22 @@ public sealed record RuntimeDeploymentSupportManifest(
     IReadOnlyList<string> Prerequisites,
     IReadOnlyList<string> DeferredValidationIds);
 
+/// <summary>
+/// Operational snapshot returned by <c>GET /api/runtime/operations</c>: whether the host finished starting, the
+/// deployment support manifest of this build and the current host capability snapshot.
+/// </summary>
+/// <param name="State">
+/// Operational state, as a string token: <c>Starting</c>, <c>Ready</c> or <c>Unavailable</c>. Only <c>Ready</c> means
+/// the host finished starting.
+/// </param>
+/// <param name="DatabaseAndMigrationsReady">
+/// True when the host reports itself ready, which happens only after its startup prepared the active database,
+/// including the migrations. It is true exactly when <c>state</c> is <c>Ready</c>.
+/// </param>
+/// <param name="DeploymentSupport">The deployment support manifest embedded in this build.</param>
+/// <param name="HostCapabilities">
+/// The current host capability snapshot, the same as <c>GET /api/runtime/capabilities</c> returns.
+/// </param>
 public sealed record RuntimeOperationsSnapshot(
     RuntimeOperationalState State,
     bool DatabaseAndMigrationsReady,

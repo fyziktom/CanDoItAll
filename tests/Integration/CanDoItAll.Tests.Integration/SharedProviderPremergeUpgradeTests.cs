@@ -26,6 +26,7 @@ using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManag
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SharedProviderPremergeUpgradeTests {
     private const string DevelopmentMigration = "20260822013043_AddWorkflowNativeCheckpointRequestUniqueness";
     private const string HistoricalReviewedMigration = "20260911010404_AddSourceBoundExecutionAdmissions";
@@ -90,9 +91,11 @@ public sealed class SharedProviderPremergeUpgradeTests {
 
         await migrator.MigrateAsync(HistoricalReviewedMigration);
         Assert.Equal(HistoricalReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
+        await migrator.MigrateAsync(ReviewedMigration);
+        Assert.Equal(ReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
         await migrator.MigrateAsync();
         db.ChangeTracker.Clear();
-        Assert.Equal(ReviewedMigration, (await db.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(db.Database.GetMigrations(), await db.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
         Assert.Equal(161, db.Model.GetEntityTypes().Count());

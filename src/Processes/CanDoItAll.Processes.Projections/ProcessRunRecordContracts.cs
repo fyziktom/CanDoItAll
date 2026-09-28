@@ -95,6 +95,14 @@ public enum ProcessRunStepOutcome
     Skipped
 }
 
+/// <summary>
+/// Category of the runtime events of a process run in its durable record. The HTTP API writes it as one of the text
+/// tokens <c>RunLifecycle</c> (run created, activated, cancellation requested, cancelled, completed, failed, blocked
+/// or reactivated),
+/// <c>Step</c> (step state changes and rework requests), <c>Dispatch</c> (step claims and their leases),
+/// <c>Manager</c> (process manager incidents, recovery and branch decisions, loop budget escalations and subprocess
+/// messages) or <c>Other</c>.
+/// </summary>
 public enum ProcessRunRuntimeEventCategory
 {
     RunLifecycle,

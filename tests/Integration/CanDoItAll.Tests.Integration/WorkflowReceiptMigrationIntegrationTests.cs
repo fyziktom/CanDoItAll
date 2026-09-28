@@ -18,7 +18,6 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class WorkflowReceiptMigrationIntegrationTests {
     private const string PreviousMigration = "20260910213323_AddCrmTechnicalProjectionProvenance";
     private const string ReceiptMigration = "20260910225242_AddWorkflowStructureReceipts";
-    private const string LatestMigration = "20260911194528_BindWorkflowProviderDisclosureHistory";
     private static readonly DateTimeOffset SavedAt = new(2026, 2, 3, 4, 5, 6, TimeSpan.Zero);
     private const string OriginalJson = "{\"original\":true,\"unknownExtension\":{\"revision\":7}}";
 
@@ -44,7 +43,7 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
             Assert.Equal(original, await NativePayloadsAsync(context));
             Assert.False(context.Database.HasPendingModelChanges());
             Assert.Equal(161, context.Model.GetEntityTypes().Count());
-            Assert.Equal(LatestMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
             await AssertEmptyReceiptSchemaAsync(context);
         }
     }
@@ -74,7 +73,7 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         Assert.Equal(original, await NativePayloadsAsync(context));
         Assert.False(context.Database.HasPendingModelChanges());
         Assert.Equal(161, context.Model.GetEntityTypes().Count());
-        Assert.Equal(LatestMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
         await AssertEmptyReceiptSchemaAsync(context);
     }
 

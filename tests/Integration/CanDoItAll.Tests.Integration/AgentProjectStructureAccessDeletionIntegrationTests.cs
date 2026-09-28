@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentProjectStructureAccessDeletionIntegrationTests
 {
     private static readonly ProjectDeletionParticipantId ParticipantId =

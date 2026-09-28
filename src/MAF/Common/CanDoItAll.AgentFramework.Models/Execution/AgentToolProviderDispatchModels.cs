@@ -13,6 +13,11 @@ public readonly record struct AgentToolProviderDispatchId {
     public Guid Value { get; }
 }
 
+/// <summary>
+/// State of a model-provider request that carried approvals of tool calls the provider runs itself, as a JSON
+/// integer: 0 Started (sent; no response was recorded), 1 ResponseAdmitted (the provider's response was recorded),
+/// 2 CancelledUnreconciled (cancelled after sending; the provider may have run the approved calls).
+/// </summary>
 public enum AgentToolProviderDispatchState {
     Started,
     ResponseAdmitted,

@@ -43,7 +43,7 @@ internal static class LocalStdioMcpEnvironmentBinder
             }
         }
 
-        return environmentPolicy.MergeEnvironmentVariables(explicitValues, "local_mcp");
+        return environmentPolicy.MergeEnvironmentVariables(explicitValues, "local_mcp", descriptor.Command);
     }
 
     private static void ValidateEnvironmentVariableName(

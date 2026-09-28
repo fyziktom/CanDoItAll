@@ -12,6 +12,20 @@ public interface IAgentChatAttachmentStagingService
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// A stored image attachment, returned by <c>POST /api/agents/attachments/images</c>. Attach the image to an agent
+/// chat message or execution run by sending <c>relativePath</c>.
+/// </summary>
+/// <param name="RelativePath">
+/// Path of the stored image relative to the managed workspace, with <c>/</c> separators, for example
+/// <c>artifacts/chat-attachments/20260919/101500123-3f2504e04f8911d39a0c0305e82c3301-diagram.png</c>. Send it
+/// unchanged in <c>attachmentPaths</c> or <c>inputAttachmentPaths</c>; it is not a URL.
+/// </param>
+/// <param name="ContentType">
+/// Image media type derived from the file name extension: <c>image/png</c>, <c>image/jpeg</c>, <c>image/gif</c> or
+/// <c>image/webp</c>.
+/// </param>
+/// <param name="SizeBytes">Number of bytes stored, at most 10485760.</param>
 public sealed record AgentChatAttachmentStagingResult(
     string RelativePath,
     string ContentType,

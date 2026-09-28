@@ -55,6 +55,7 @@ public static class ManagedSeedProviderFallbacks
     private static readonly IReadOnlyList<string> ManagedSeedOpenAiSuggestedModels =
     [
         OpenAiDefaultModel,
+        OpenAiModelIds.Gpt6Astra,
         OpenAiModelIds.Gpt56Luna,
         OpenAiModelIds.Gpt56Terra,
         OpenAiModelIds.Gpt56Sol,

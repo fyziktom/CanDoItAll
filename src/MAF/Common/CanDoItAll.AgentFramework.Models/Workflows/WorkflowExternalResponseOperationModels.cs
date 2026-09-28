@@ -1,5 +1,10 @@
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Stored state of an attempt to answer an external request, as a JSON integer: 0 Accepted, 1 Claimed, 2 Resuming
+/// (processing has not finished), 3 WaitingAgain (the run waits for another request), 4 Completed, 5 Denied,
+/// 6 FailedRetryable (resend the submission with the same key to continue), 7 FailedTerminal, 8 Cancelled.
+/// </summary>
 public enum WorkflowExternalResponseOperationState
 {
     Accepted,
@@ -13,6 +18,12 @@ public enum WorkflowExternalResponseOperationState
     Cancelled
 }
 
+/// <summary>
+/// Detailed result code of an attempt to answer an external request, as a JSON integer: 0 None (no final result yet),
+/// 1 WaitingAgain, 2 Completed, 3 Denied, 4 Cancelled, 5 BackendUnavailable, 6 ResumeFailed, 7 CheckpointMissing,
+/// 8 CheckpointCorrupt, 9 CheckpointIncompatible, 10 TopologyMismatch, 11 WorkflowVersionMismatch,
+/// 12 RequestMismatch, 13 ResponseRejected, 14 AttemptLimitReached.
+/// </summary>
 public enum WorkflowExternalResponseOperationOutcomeCode
 {
     None,

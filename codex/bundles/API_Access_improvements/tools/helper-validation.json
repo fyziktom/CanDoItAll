@@ -1,0 +1,16 @@
+{
+  "script": "capture_review_snapshot.py",
+  "testEnvironment": "Synthetic temporary Git repository only",
+  "passed": 7,
+  "failed": 0,
+  "cases": [
+    "Pinned refs, merge base and divergent counts captured correctly",
+    "Common-base delta distinguished from head-to-head comparison",
+    "HEAD, tracked content and untracked status preserved",
+    "Output inside checkout rejected without creating files",
+    "Nonempty output directory rejected",
+    "Missing reference rejected without creating output",
+    "Output in Git metadata rejected"
+  ],
+  "applicationTestsRun": false
+}

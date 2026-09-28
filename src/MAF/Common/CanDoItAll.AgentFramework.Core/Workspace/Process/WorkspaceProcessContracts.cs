@@ -12,9 +12,25 @@ public interface IWorkspaceProcessHost
 public sealed class WorkspaceProcessStartException : InvalidOperationException
 {
     public WorkspaceProcessStartException(string message, Exception? innerException = null)
-        : base(message, innerException)
+        : this(message, WorkspaceProcessStartFailureKind.Unknown, innerException)
     {
     }
+
+    public WorkspaceProcessStartException(
+        string message,
+        WorkspaceProcessStartFailureKind failureKind,
+        Exception? innerException = null,
+        string? operatorDetail = null)
+        : base(message, innerException)
+    {
+        FailureKind = failureKind;
+        OperatorDetail = operatorDetail ?? string.Empty;
+    }
+
+    public WorkspaceProcessStartFailureKind FailureKind { get; }
+
+    /// <summary>Operator-only detail (can name paths); never return it to an agent.</summary>
+    public string OperatorDetail { get; }
 }
 
 public interface IWorkspaceLongRunningProcessHost : IWorkspaceProcessHost
@@ -79,13 +95,15 @@ public interface IWorkspaceCommandExecutionService
 
     Task<WorkspaceCommandExecutionResult> GitSwitch(string branchName, string? workingDirectory = null, int timeoutSeconds = 30);
 
-    Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600);
+    // artifactsPath (restore/build/test/run): a workspace-relative folder for bin/obj, set only for
+    // read-only external targets (see WorkspaceReadOnlyBuildOutput). Null keeps dotnet's default layout.
+    Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null);
 
-    Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600);
+    Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600, string? artifactsPath = null);
 
-    Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300);
+    Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300, string? artifactsPath = null);
 
-    Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun);
+    Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun, string? artifactsPath = null);
 
     Task<WorkspaceCommandExecutionResult> DotnetStop(string startupReceiptPath, int timeoutSeconds = 30);
 
@@ -97,9 +115,9 @@ public interface IWorkspaceCommandExecutionService
         int timeoutSeconds = 300,
         string? targetFramework = null);
 
-    Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null);
+    Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null, bool extendedEnvironmentAllowed = false);
 
-    Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null);
+    Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null, bool extendedEnvironmentAllowed = false);
 
     Task<WorkspaceCommandExecutionResult> InspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300);
 
@@ -219,4 +237,11 @@ public sealed record WorkspaceProcessExecutionResult(
     ExecutionBoundaryDescriptor Boundary,
     string FailureMessage,
     WorkspaceProcessTerminationReason TerminationReason = WorkspaceProcessTerminationReason.Completed,
-    bool ResidualProcessPossible = false);
+    bool ResidualProcessPossible = false)
+{
+    /// <summary>Why the process did not start; <see cref="WorkspaceProcessStartFailureKind.None"/> when it started.</summary>
+    public WorkspaceProcessStartFailureKind StartFailureKind { get; init; }
+
+    /// <summary>Operator-only start-failure detail (can name paths); never return it to an agent.</summary>
+    public string StartFailureDetail { get; init; } = string.Empty;
+}

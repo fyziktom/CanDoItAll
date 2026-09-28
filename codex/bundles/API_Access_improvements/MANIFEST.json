@@ -1,0 +1,112 @@
+{
+  "package": "CanDoItAll API access and API-only UI integration",
+  "preparedOn": "2026-09-20",
+  "development": "b82ffc57283f5e4819d82322e1c5bf836dcd9536",
+  "uiRef": "e101d5db1478ea329a572db79c0104b927d97f15",
+  "mergeBase": "a2903c400cc35e6d1d2f233c51e73feb256ce2aa",
+  "applicationImplementation": "not_performed",
+  "applicationValidation": "not_run",
+  "helperValidation": {
+    "environment": "synthetic Git repository",
+    "passed": 7,
+    "failed": 0
+  },
+  "hashAlgorithm": "SHA-256",
+  "files": [
+    {
+      "path": "ALL_IN_ONE.md",
+      "bytes": 114646,
+      "sha256": "367fafd1c59319b9a27994a8f9c3a67fe34274d9f692e0ef881b9f0f6d5672e7"
+    },
+    {
+      "path": "CODEX_PROMPT.md",
+      "bytes": 12817,
+      "sha256": "169d41d39c43ff891d3c59adeb6f982e16a9ae2b08681128709a645777527ff7"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3051,
+      "sha256": "b7457f8380538daf67824cabe57f10ad0c77a46d631deca8e6421d3ab89ad6ef"
+    },
+    {
+      "path": "docs/01_CURRENT_IMPLEMENTATION.md",
+      "bytes": 10993,
+      "sha256": "788199cc1f16f2c83c2669ad5e880bc5bde0f7746f71cff77554c7c1f2d7d031"
+    },
+    {
+      "path": "docs/02_UI_BRANCH_DELTA.md",
+      "bytes": 10781,
+      "sha256": "cc154ea37ac8a3f9b3849db145cc3f390b8af1fd8368a13b3a9a702fe2924ed0"
+    },
+    {
+      "path": "docs/03_ARCHITECTURE.md",
+      "bytes": 20060,
+      "sha256": "b09dd25350b4ca375ad87678dd5c4d0595315d26f867e01c857de4734972bcaf"
+    },
+    {
+      "path": "docs/04_API_AND_CONFIGURATION.md",
+      "bytes": 13122,
+      "sha256": "6d8aa3b2f30f8a55ed53a4ad279c955243f639898c68d95a605bbca8624cb356"
+    },
+    {
+      "path": "docs/05_SETTINGS_UI.md",
+      "bytes": 7062,
+      "sha256": "98d4972a45efcee890bfcb555c574788aacbbe8b33d6ac5580a8465cadb5ae85"
+    },
+    {
+      "path": "docs/06_VALIDATION.md",
+      "bytes": 18681,
+      "sha256": "d0c840739cc6222db417a7870a060013f61e96a33eb85f5795a54ae475e233eb"
+    },
+    {
+      "path": "docs/07_SOURCES_AND_LIMITS.md",
+      "bytes": 13902,
+      "sha256": "f7f7cfe57bd7b2290d1e81d4d4681634565e2aaa696e3017d4ae6aaa7ea3807d"
+    },
+    {
+      "path": "examples/README.md",
+      "bytes": 1281,
+      "sha256": "9890bb96ab8391d98add4247f4adfb5f197763b7ca40302bd36ec3e6ea930da9"
+    },
+    {
+      "path": "examples/machine-jwt.proposed.json",
+      "bytes": 356,
+      "sha256": "7835a2b127d6122319f270fd0022e758d2271b9df8b325832804915ef1c11c71"
+    },
+    {
+      "path": "examples/open-desktop.proposed.json",
+      "bytes": 206,
+      "sha256": "363cc349cf6fe4402ff828a84d193e11c585cfb7529e4171d47289037c8c6176"
+    },
+    {
+      "path": "examples/server-users.proposed.json",
+      "bytes": 445,
+      "sha256": "9b8aee442e8308be188dd7f0527cfc82b5f29f710a901bbecf449b62204c954f"
+    },
+    {
+      "path": "examples/users-local-admin.proposed.json",
+      "bytes": 365,
+      "sha256": "a784daced46224dfe1bcf7a51864fca40a937b4abe54593093ae3e91a136a7c1"
+    },
+    {
+      "path": "examples/validation-evidence.template.json",
+      "bytes": 1136,
+      "sha256": "f336e4076417cc12b84ccfa5dd5181aad4f776c528b1ce3ef6b9941d4f8c67f8"
+    },
+    {
+      "path": "tools/README.md",
+      "bytes": 1881,
+      "sha256": "10322d12e733a62be494aabafdd13d87ca7abe329b23ff4842a43ca9a615aebf"
+    },
+    {
+      "path": "tools/capture_review_snapshot.py",
+      "bytes": 6594,
+      "sha256": "5cfe73360f2b027eff953683df2457412dd8b5a86e95a295ab50ea6803270084"
+    },
+    {
+      "path": "tools/helper-validation.json",
+      "bytes": 588,
+      "sha256": "fbdc31441621aa27db0fd5a40ed644a87ec551d58b5ddc00714ff2a051f6644f"
+    }
+  ]
+}

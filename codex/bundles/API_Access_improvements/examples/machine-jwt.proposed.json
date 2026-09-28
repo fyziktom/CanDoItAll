@@ -1,0 +1,18 @@
+{
+  "Api": {
+    "Enabled": true,
+    "Authorization": {
+      "Enabled": true,
+      "Issuer": "CanDoItAll.Api",
+      "Audience": "CanDoItAll.Api",
+      "DefaultTokenLifetimeMinutes": 480,
+      "MaxTokenLifetimeMinutes": 1440
+    },
+    "UserAuthentication": {
+      "Enabled": false
+    },
+    "AccessManagement": {
+      "Enabled": false
+    }
+  }
+}

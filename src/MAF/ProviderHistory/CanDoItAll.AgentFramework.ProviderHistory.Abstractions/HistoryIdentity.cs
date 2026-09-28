@@ -17,6 +17,8 @@ public readonly record struct ProviderAttemptId(Guid Value) {
     public static ProviderAttemptId New() => new(Guid.NewGuid());
 }
 public readonly record struct ProviderIdentity(Guid Value);
+/// <summary>Identifier of a managed API credential issued by this host.</summary>
+/// <param name="Value">The credential's GUID.</param>
 public readonly record struct ManagedCredentialId(Guid Value);
 public readonly record struct HistoryOwnerId(string Value);
 public readonly record struct HistoryEvidenceId(string Value);

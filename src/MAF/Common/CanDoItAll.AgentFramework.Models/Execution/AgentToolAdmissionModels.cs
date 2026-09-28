@@ -2,6 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+/// <summary>
+/// Identifier of a batch of agent tool calls proposed together by the model, as an object whose <c>value</c> is a
+/// non-empty GUID.
+/// </summary>
 public readonly record struct AgentToolBatchId {
     [JsonConstructor]
     public AgentToolBatchId(Guid value) {
@@ -9,9 +13,13 @@ public readonly record struct AgentToolBatchId {
         Value = value;
     }
 
+    /// <summary>The batch identifier; never the all-zero GUID.</summary>
     public Guid Value { get; }
 }
 
+/// <summary>
+/// Identifier of the business intent of one agent tool proposal, as an object whose <c>value</c> is a non-empty GUID.
+/// </summary>
 public readonly record struct AgentToolBusinessIntentId {
     [JsonConstructor]
     public AgentToolBusinessIntentId(Guid value) {
@@ -19,9 +27,13 @@ public readonly record struct AgentToolBusinessIntentId {
         Value = value;
     }
 
+    /// <summary>The intent identifier; never the all-zero GUID.</summary>
     public Guid Value { get; }
 }
 
+/// <summary>
+/// SHA-256 fingerprint, as an object whose <c>value</c> holds 64 lower-case hexadecimal characters.
+/// </summary>
 public readonly record struct AgentToolSemanticDigest {
     [JsonConstructor]
     public AgentToolSemanticDigest(string value) {
@@ -33,9 +45,14 @@ public readonly record struct AgentToolSemanticDigest {
         Value = value.ToLowerInvariant();
     }
 
+    /// <summary>The fingerprint: 64 lower-case hexadecimal characters.</summary>
     public string Value { get; }
 }
 
+/// <summary>
+/// Agent execution run in which a tool call was proposed: either an interactive turn (with a chat session and an
+/// authority snapshot) or a background source such as a process step, never both.
+/// </summary>
 public sealed record AgentToolSessionReference {
     [JsonConstructor]
     public AgentToolSessionReference(Guid executionRunId, Guid chatSessionId, AgentExecutionAuthorityId authorityId,
@@ -53,18 +70,27 @@ public sealed record AgentToolSessionReference {
         BackgroundSource = backgroundSource;
     }
 
+    /// <summary>Identifier of the agent execution run; never the all-zero GUID.</summary>
     public Guid ExecutionRunId { get; }
 
+    /// <summary>Identifier of the chat session of an interactive turn; omitted for a background source.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Guid ChatSessionId { get; }
 
+    /// <summary>
+    /// Authority snapshot the interactive turn was admitted under; omitted for a background source.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public AgentExecutionAuthorityId AuthorityId { get; }
 
+    /// <summary>Background owner that started the run; omitted for an interactive turn.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AgentToolBackgroundSourceBinding? BackgroundSource { get; }
 }
 
+/// <summary>
+/// Database profile that an agent tool session was admitted under.
+/// </summary>
 public sealed record AgentToolProfileBinding {
     public AgentToolProfileBinding(Guid profileId, string fingerprint, DatabaseProfileGeneration generation) {
         ArgumentOutOfRangeException.ThrowIfEqual(profileId, Guid.Empty);
@@ -74,8 +100,13 @@ public sealed record AgentToolProfileBinding {
         Generation = generation;
     }
 
+    /// <summary>Identifier of the database profile; never the all-zero GUID.</summary>
     public Guid ProfileId { get; }
+
+    /// <summary>Fingerprint of the database profile's runtime settings at admission.</summary>
     public string Fingerprint { get; }
+
+    /// <summary>Generation of the host's active database profile at admission.</summary>
     public DatabaseProfileGeneration Generation { get; }
 }
 

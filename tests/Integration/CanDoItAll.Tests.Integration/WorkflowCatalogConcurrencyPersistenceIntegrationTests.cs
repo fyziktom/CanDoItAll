@@ -151,7 +151,9 @@ public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
         IReadOnlyList<long> expectedRevisions)
     {
         var winner = Assert.Single(outcomes, outcome => outcome.Definition is not null).Definition!;
-        var conflict = Assert.IsType<InvalidOperationException>(
+        // The losing writer gets the typed concurrency rejection that callers such as the workflow curator tools
+        // branch on; its transaction saved nothing.
+        var conflict = Assert.IsType<WorkflowDefinitionConcurrencyException>(
             Assert.Single(outcomes, outcome => outcome.Exception is not null).Exception);
         Assert.Contains("updated by another request", conflict.Message, StringComparison.OrdinalIgnoreCase);
 

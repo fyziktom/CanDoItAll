@@ -132,11 +132,48 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
         var incompatibleItemTool = Assert.Single(
             incompatibleTools,
             tool => tool.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
             InvokeAsync<PromptGalleryAgentItemResult>(
                 incompatibleItemTool,
                 new PromptGalleryAgentItemInput(promptId)));
         Assert.Contains("not declared as supported", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AgentToolEffectState.None, exception.EffectState);
+        Assert.True(exception.IsSafeToExpose);
+    }
+
+    [Fact]
+    public async Task Item_get_for_an_unknown_item_is_a_correctable_read_rejection()
+    {
+        var gallery = PromptGalleryTestSupport.CreateService(
+            PromptGalleryTestSupport.CreateFactory(nameof(Item_get_for_an_unknown_item_is_a_correctable_read_rejection)));
+        var toolProvider = new PromptGalleryAgentRuntimeToolProvider(
+            gallery,
+            new PromptGalleryCompatibilityEvaluator());
+        var tools = await toolProvider.CreateToolsAsync(CreateContext("gpt-5-mini"), CancellationToken.None);
+        var itemTool = Assert.Single(
+            tools,
+            tool => tool.Name == PromptGalleryToolPolicy.PromptGalleryItemGet);
+        var missingId = Guid.NewGuid();
+
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(() =>
+            InvokeAsync<PromptGalleryAgentItemResult>(
+                itemTool,
+                new PromptGalleryAgentItemInput(missingId)));
+
+        Assert.Contains("prompts.gallery.not-found", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(missingId.ToString(), exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AgentToolEffectState.None, exception.EffectState);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+
+        // An approval continuation re-authorizes the saved rejection; it carries no item body to re-check.
+        var metadata = toolProvider.GetToolMetadata(CreateContext("gpt-5-mini"))
+            .Single(item => item.ToolName == PromptGalleryToolPolicy.PromptGalleryItemGet);
+        var saved = ManagedToolDisclosureTestData.CreateTypedFailure(metadata, new PromptGalleryAgentItemInput(missingId), exception);
+        await using (var lease = await metadata.AuthorizeResultDisclosureAsync!(saved, default)) {
+            Assert.Null(lease);
+        }
+        await Assert.ThrowsAnyAsync<Exception>(() =>
+            metadata.AuthorizeResultDisclosureAsync!(saved with { IsTypedFailure = false }, default).AsTask());
     }
 
     private static PromptGalleryDraft CreateDraft(

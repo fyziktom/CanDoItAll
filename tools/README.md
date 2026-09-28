@@ -19,6 +19,10 @@ must validate targets, fail explicitly, and support `-WhatIf` where practical.
 Compiled-tool category directories use PascalCase to match solution navigation and
 project paths. Script-only categories use lower-case names.
 
+Before updating an existing database, follow the
+[PostgreSQL 16-to-18 preservation runbook](dev/Migrate-PostgreSql16To18.md).
+The installer rejects incompatible data; it does not perform a major upgrade.
+
 The canonical Windows web app entry point is:
 
 ```powershell

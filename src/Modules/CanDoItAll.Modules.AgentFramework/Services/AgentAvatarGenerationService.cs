@@ -11,6 +11,13 @@ public sealed record AgentAvatarGenerationResult(
     string ContentType,
     int ContentLength);
 
+/// <summary>
+/// The avatar request or the generated image failed this service's own checks. Its message is safe to show, and no
+/// avatar has been stored when it is raised; a failure of the provider call itself is not converted into it.
+/// </summary>
+public sealed class AgentAvatarGenerationRejectedException(string message, Exception? innerException = null)
+    : InvalidOperationException(message, innerException);
+
 public sealed class AgentAvatarGenerationService(
     IAgentImageGenerationService imageGenerationService,
     ILogger<AgentAvatarGenerationService> logger)
@@ -45,17 +52,25 @@ public sealed class AgentAvatarGenerationService(
             cancellationToken);
         if (generated.Format != AgentGeneratedImageFormat.Jpeg)
         {
-            throw new InvalidOperationException(
+            throw new AgentAvatarGenerationRejectedException(
                 "Avatar generation returned a format that does not match the requested JPEG avatar format.");
         }
 
         if (generated.Images.Count != 1)
         {
-            throw new InvalidOperationException("Avatar generation must return exactly one image.");
+            throw new AgentAvatarGenerationRejectedException("Avatar generation must return exactly one image.");
         }
 
         var image = generated.Images[0];
-        var imageInfo = AgentAvatarImagePolicy.InspectGeneratedJpeg(image.ContentType, image.Bytes);
+        AgentAvatarImageInfo imageInfo;
+        try
+        {
+            imageInfo = AgentAvatarImagePolicy.InspectGeneratedJpeg(image.ContentType, image.Bytes);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new AgentAvatarGenerationRejectedException(exception.Message, exception);
+        }
         var avatarDataUrl = AgentAvatarImagePolicy.BuildDataUrl(imageInfo.ContentType, image.Bytes);
         var generatedModel = string.IsNullOrWhiteSpace(generated.Model)
             ? normalizedModel
@@ -83,29 +98,29 @@ public sealed class AgentAvatarGenerationService(
     {
         if (!provider.IsEnabled)
         {
-            throw new InvalidOperationException($"Image-generation provider '{provider.Name}' is disabled.");
+            throw new AgentAvatarGenerationRejectedException($"Image-generation provider '{provider.Name}' is disabled.");
         }
 
         if (provider.Purpose != ProviderProfilePurpose.ImageGeneration)
         {
-            throw new InvalidOperationException($"Provider '{provider.Name}' is not an image-generation provider.");
+            throw new AgentAvatarGenerationRejectedException($"Provider '{provider.Name}' is not an image-generation provider.");
         }
 
         if (string.IsNullOrWhiteSpace(model))
         {
-            throw new InvalidOperationException(
+            throw new AgentAvatarGenerationRejectedException(
                 $"Image-generation provider '{provider.Name}' does not define a default model.");
         }
 
         if (string.IsNullOrWhiteSpace(visualBrief) || visualBrief.Length > MaximumVisualBriefLength)
         {
-            throw new InvalidOperationException(
+            throw new AgentAvatarGenerationRejectedException(
                 $"Avatar prompt is required and cannot exceed {MaximumVisualBriefLength} characters.");
         }
 
         if (outputCompression is < 0 or > 100)
         {
-            throw new InvalidOperationException("Output compression must be between 0 and 100.");
+            throw new AgentAvatarGenerationRejectedException("Output compression must be between 0 and 100.");
         }
     }
 

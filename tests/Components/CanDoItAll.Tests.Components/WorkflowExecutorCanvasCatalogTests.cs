@@ -9,6 +9,7 @@ using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class WorkflowExecutorCanvasCatalogTests
 {
     [Fact]

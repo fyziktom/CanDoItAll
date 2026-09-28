@@ -6,6 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace CanDoItAll.SharedProviders.Abstractions;
 
+/// <summary>
+/// Opaque routing identifier of a shared model, 80 characters: <c>sp1.</c>, the publication identifier as 32 lowercase
+/// hexadecimal characters, a dot and a 43-character hash of the publisher's model name. Send it as <c>model</c> in the
+/// inference operations and never substitute the upstream model name. It stays the same while the publication and the
+/// model stay the same.
+/// </summary>
 [JsonConverter(typeof(SharedProviderRoutingModelIdJsonConverter))]
 public readonly record struct SharedProviderRoutingModelId
 {

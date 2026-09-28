@@ -1,0 +1,14 @@
+{
+  "Api": {
+    "Enabled": true,
+    "Authorization": {
+      "Enabled": false
+    },
+    "UserAuthentication": {
+      "Enabled": false
+    },
+    "AccessManagement": {
+      "Enabled": false
+    }
+  }
+}
