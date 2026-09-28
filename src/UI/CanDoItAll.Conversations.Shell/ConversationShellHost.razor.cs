@@ -15,6 +15,7 @@ public partial class ConversationShellHost
     ];
 
     private readonly CancellationTokenSource lifetime = new();
+    private CancellationToken lifetimeToken;
     private readonly Dictionary<ConversationShellWindowKey, OverlayWindowState> windowStates = [];
     private IReadOnlyList<IConversationShellContributor> contributors = [];
     private ConversationShellState state = new(
@@ -27,6 +28,8 @@ public partial class ConversationShellHost
     private bool attached;
     private bool isInitializing;
     private int disposed;
+
+    internal Task Initialization { get; private set; } = Task.CompletedTask;
 
     private int SelectedLifecycleIndex
         => state.Lifecycle == ConversationCatalogLifecycle.Active ? 1 : 0;
@@ -109,38 +112,36 @@ public partial class ConversationShellHost
 
         attached = true;
         state = Coordinator.Snapshot();
-        _ = InitializeContributorsAsync();
+        lifetimeToken = lifetime.Token;
+        Initialization = InitializeContributorsAsync();
         return Task.CompletedTask;
     }
 
-    private async Task InitializeContributorsAsync()
-    {
+    private async Task InitializeContributorsAsync() {
         isInitializing = true;
-        await InvokeAsync(StateHasChanged);
-        foreach (var contributor in contributors)
-        {
-            try
-            {
-                await contributor.InitializeAsync(lifetime.Token);
-            }
-            catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
-            {
+        await RenderIfAliveAsync();
+        foreach (var contributor in contributors) {
+            if (Volatile.Read(ref disposed) != 0 || lifetimeToken.IsCancellationRequested) {
                 return;
             }
-            catch (Exception exception)
-            {
-                Logger.LogError(
-                    exception,
-                    "Unable to initialize conversation shell contributor. SourceId={SourceId} FailureType={FailureType}.",
-                    contributor.SourceId,
-                    exception.GetType().Name);
+            try {
+                await contributor.InitializeAsync(lifetimeToken);
+            } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+                return;
+            } catch (Exception exception) {
+                if (Volatile.Read(ref disposed) == 0) {
+                    Logger.LogError(
+                        exception,
+                        "Unable to initialize conversation shell contributor. SourceId={SourceId} FailureType={FailureType}.",
+                        contributor.SourceId,
+                        exception.GetType().Name);
+                }
             }
         }
 
-        isInitializing = false;
-        if (Volatile.Read(ref disposed) == 0)
-        {
-            await InvokeAsync(StateHasChanged);
+        if (Volatile.Read(ref disposed) == 0) {
+            isInitializing = false;
+            await RenderIfAliveAsync();
         }
     }
 
@@ -208,7 +209,7 @@ public partial class ConversationShellHost
         }
 
         var contributor = ResolveContributor(window.Key.SourceId);
-        await contributor.HandleWindowCloseAsync(window.Key.WindowId, lifetime.Token);
+        await contributor.HandleWindowCloseAsync(window.Key.WindowId, lifetimeToken);
     }
 
     private async Task HandleParticipantDoubleClickedAsync(ConversationPresentationKey key)
@@ -222,19 +223,19 @@ public partial class ConversationShellHost
 
         await ResolveContributor(participant.SourceId).HandleParticipantActionAsync(
             new(key, action.Key),
-            lifetime.Token);
+            lifetimeToken);
     }
 
     private Task HandleParticipantActionAsync(ParticipantActionRequest request)
     {
         var participant = ResolveParticipant(request.ParticipantKey);
-        return ResolveContributor(participant.SourceId).HandleParticipantActionAsync(request, lifetime.Token);
+        return ResolveContributor(participant.SourceId).HandleParticipantActionAsync(request, lifetimeToken);
     }
 
     private Task HandleActiveActionAsync(ConversationActionRequest request)
     {
         var activeItem = ResolveActiveItem(request.ItemKey);
-        return ResolveContributor(activeItem.SourceId).HandleActiveActionAsync(request, lifetime.Token);
+        return ResolveContributor(activeItem.SourceId).HandleActiveActionAsync(request, lifetimeToken);
     }
 
     private ConversationShellParticipant ResolveParticipant(ConversationPresentationKey key)
@@ -266,24 +267,29 @@ public partial class ConversationShellHost
            value.Contains(searchText, StringComparison.OrdinalIgnoreCase);
 
     private void HandleShellChanged(object? sender, EventArgs eventArgs)
-    {
-        if (Volatile.Read(ref disposed) != 0)
-        {
-            return;
-        }
-
-        _ = InvokeAsync(() =>
-        {
-            state = Coordinator.Snapshot();
-            StateHasChanged();
-        });
-    }
+        => _ = RenderIfAliveAsync(refreshState: true);
 
     private void HandleContributorChanged(object? sender, EventArgs eventArgs)
-    {
-        if (Volatile.Read(ref disposed) == 0)
-        {
-            _ = InvokeAsync(StateHasChanged);
+        => _ = RenderIfAliveAsync();
+
+    private async Task RenderIfAliveAsync(bool refreshState = false) {
+        if (Volatile.Read(ref disposed) != 0) {
+            return;
+        }
+        try {
+            await InvokeAsync(() => {
+                if (Volatile.Read(ref disposed) != 0) {
+                    return;
+                }
+                if (refreshState) {
+                    state = Coordinator.Snapshot();
+                }
+                StateHasChanged();
+            });
+        } catch (Exception exception) {
+            if (Volatile.Read(ref disposed) == 0) {
+                Logger.LogError(exception, "Unable to update conversation shell. FailureType={FailureType}.", exception.GetType().Name);
+            }
         }
     }
 
@@ -315,6 +321,16 @@ public partial class ConversationShellHost
         }
 
         await lifetime.CancelAsync();
-        lifetime.Dispose();
+        _ = ReleaseLifetimeAsync();
+    }
+
+    private async Task ReleaseLifetimeAsync() {
+        try {
+            await Initialization;
+        } catch (Exception exception) {
+            Logger.LogError(exception, "Conversation shell initialization failed during shutdown. FailureType={FailureType}.", exception.GetType().Name);
+        } finally {
+            lifetime.Dispose();
+        }
     }
 }

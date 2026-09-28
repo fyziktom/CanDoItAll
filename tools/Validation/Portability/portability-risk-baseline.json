@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15149,
+  "allowance_count": 15119,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
