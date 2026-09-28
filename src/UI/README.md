@@ -14,3 +14,6 @@ This area contains reusable UI facades owned by this application.
 
 General-purpose components belong in `CanDoItAll.Components`. Product-specific pages and
 orchestration belong in the owning module.
+
+[TestLab.UI](CanDoItAll.TestLab.UI/README.md) renders the complete TestLab workspace with
+host-owned state and pure draft/submission reconciliation, without backend dependencies.

@@ -22,7 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="../TestLabBrowserFixture/ProbeProtocol.cs" Link="TestLab/ProbeProtocol.cs" />
+    <ProjectReference Include="../TestLabBrowserFixture/TestLabBrowserFixture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.TestLab.UiSandbox/CanDoItAll.TestLab.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\..\tools\ApiAccess\ApiPasswordHash\ApiPasswordHash.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
     <ProjectReference Include="..\..\..\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj" />

@@ -134,6 +134,35 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+### TestLab UI slice
+
+Build the TestLab.Contracts, TestLab.UI and TestLab module projects directly, followed by
+affected composition/consumer projects and Web. The standalone
+[TestLab sandbox](../src/Sandboxes/CanDoItAll.TestLab.UiSandbox/README.md) uses the same
+renderer and Parity assets without production DI or a database.
+
+| Owning project | Focused filter | Proof |
+| --- | --- | --- |
+| `tests/Unit/CanDoItAll.TestLab.Tests/CanDoItAll.TestLab.Tests.csproj` | `FullyQualifiedName~TestLabSessionTests` | Production session, controlled reads/writes, origin and admission fencing, reconciliation |
+| `tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Components.TestLab` | Real renderer, form input/validation, scenario storage and dependency closure |
+| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~TestLabReconciliationTests\|FullyQualifiedName~OwnerPostcommitPageTests` | Real owner form, postcommit identity, refusal and controlled read-back |
+| `tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | `FullyQualifiedName~TestLabOwnerPersistenceTests\|FullyQualifiedName~ResourceTestLabAdmissionIntegrationTests\|FullyQualifiedName~OwnerPostcommitPersistenceTests` | PostgreSQL schema, restart, profiles, lifetimes and postcommit behavior |
+| `tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj` | `FullyQualifiedName~TestLabBrowserTests` | Production aggregate and navigation, held read-back, real Activity failure, standalone assets |
+
+Also discover the affected CRM/HR responsible-party, Workbench projection and Project
+Structure tests from current references. Keep the bounded shell lifecycle regressions and
+production Collaboration browser journey when changing the shared shell. Confirm actual
+case counts with `--list-tests` before execution. The mixed owner classes intentionally
+retain Resources rows; running a bounded whole class avoids silently missing theory data.
+
+Use the explicit isolated PostgreSQL 18 endpoint and leave external browser base URLs
+unset. A task configuration such as `TestLabProof` keeps project outputs separate from a
+running application; set `CANDOITALL_TEST_CONFIGURATION` to match browser child outputs.
+The test-only TestLabBrowserFixture uses the real Web entry point and standard-input
+controls, with no fault routes or production switches. The light test project is included
+in Components/Stable and the actual CI shards. See the
+[boundary record](architecture/testlab-ui-boundary.md) for proof and measurement provenance.
+
 ### Collaboration UI slice
 
 Build the affected contracts, UI, module and Web projects directly, then the standalone

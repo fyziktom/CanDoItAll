@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-28T14:22:16.737040+00:00",
+  "generated_utc": "2026-09-28T16:25:02.726007+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15119,
+  "allowance_count": 15122,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59900,45 +59900,15 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "27f596f1a6394988c879520db8fad6c684e34d53fe9a56fff1f666f1782b0306",
+      "path": "src/Modules/CanDoItAll.Modules.TestLab.Contracts/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "ff736fc094a50d633129838ba9af729c3b270d81393b001957a764febb7388e6",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "3bb28fe9dd3acf3b307248be5faf4faedd912b08e40b5844b33d5f1efff98529",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "5fb0131b74b26d943d389f70360304a3281a52c7c03ee237b46c3fb6421a1b69",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "9e2b57f324ca42b85243f82bff2da7f9c61151e4bda9b4c783ca0a02143aa465",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "a93b0caf6fb97c23b828f20476a1a429bca1f138ce24223d36967dffd0518944",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "fc4fab0dbc1b370c96285b10bfe6a5e04b6d8e2b54d413d8ce86ac93d050f768",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "fe5af1001e3fcbf80a8ea3afff913d26d29cca1a9f9bff31606d699add7ee1c5",
+      "path": "src/Modules/CanDoItAll.Modules.TestLab.Contracts/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "e0cf5add98c6f646f911c8347238888c7198845f1563bf8acc4a5f317001d563",
       "count": 1
     },
     {
@@ -73766,6 +73736,18 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "12af6643db7079908c57345749ca225fcff312f9098fc1bf3ddd7c74ff8830a6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "8616b50fd4ea73d8ef6a8b4361b399008b4b1ce9b9c60d3c8fc27f0ac9af94f0",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
       "category": "mcp",
       "source_fingerprint": "0b30ee0cf769125b0f899d53c9ac256a40b6ab76433ebc04e5eb1221f3772821",
@@ -74873,6 +74855,42 @@
       "path": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryEditorForm.cs",
       "category": "case-policy",
       "source_fingerprint": "fb897889ce1a2d60c88d3cc0c53ebba26c31c481f0ce044eb1913ce3a5e03dd9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.TestLab.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "d7fc13957faad137af3dd2f8f9871c18457c3f593eca67d9049e81cb3cabcf45",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.TestLab.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "19d0f26ca929234a84c81e6b90dcaaaa40439cd67b7d7303b90e77239ba4fa19",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2c5ac2d84438313d0a1b56d0f4b699aad85a0d20cd598ebc6d609375a80f495e",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6f6426a46ef9e882a4dca9fbab6e5f6e109bac6388b90404d8539a64c4b02d70",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6fe36b5b2badeedd7fcf2f1a4cd0767b9ca9fd340e4767792341ed8fa5612d4a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "c82ef3c83c59a08b776ae9d455e8689ff6fabc9028a421ee670ec09d04650137",
       "count": 1
     },
     {
