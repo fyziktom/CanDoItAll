@@ -8,15 +8,11 @@ public sealed class ManagerOptions
 
     public string TailwindWorkspacePath { get; set; } = "Tailwind";
 
+    public string TailwindWatchScript { get; set; } = "watch";
+
     public string TailwindInputPath { get; set; } = "Tailwind/input.css";
 
     public string TailwindOutputPath { get; set; } = "src/App/CanDoItAll.Web/wwwroot/css/output.css";
-
-    public string[] TailwindContentWatchPaths { get; set; } = ["src"];
-
-    public int TailwindWatchDebounceMilliseconds { get; set; } = 150;
-
-    public int TailwindWatchPollingMilliseconds { get; set; } = 2_000;
 
     public string WatchLaunchProfile { get; set; } = "https";
 
