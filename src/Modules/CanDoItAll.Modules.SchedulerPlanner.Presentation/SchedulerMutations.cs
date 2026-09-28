@@ -5,6 +5,8 @@ namespace CanDoItAll.Modules.SchedulerPlanner.Presentation;
 internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Task> refresh, Action notify, Action<string> fail) : IDisposable {
     private readonly Dictionary<Guid, SchedulerMutationReceipt> planReceipts = [];
     private readonly Dictionary<Guid, SchedulerDraftValues> submissions = [];
+    private readonly Dictionary<Guid, SchedulerReadLane> draftReviews = [];
+    private readonly Dictionary<Guid, SchedulerReadLane> planReviews = [];
     private bool disposed;
     public IReadOnlyDictionary<Guid, SchedulerMutationReceipt> Receipts => planReceipts;
     public bool IsPlanLocked(Guid id) => planReceipts.GetValueOrDefault(id)?.Status is SchedulerMutationStatus.Pending or SchedulerMutationStatus.Unknown;
@@ -13,7 +15,13 @@ internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Ta
     public Task DeleteAsync(Guid id) => MutatePlanAsync(id, SchedulerMutationKind.Delete, () => owner.DeleteAsync(id));
     private void Notify() => notify();
     private Task RefreshAsync() => refresh();
-    public void Dispose() => disposed = true;
+    public bool IsPlanReviewing(Guid id) => planReviews.ContainsKey(id);
+    public void Dispose() {
+        disposed = true;
+        foreach (var lane in draftReviews.Values.Concat(planReviews.Values)) {
+            lane.Dispose();
+        }
+    }
     public void Acknowledge(Guid id) {
         if (planReceipts.GetValueOrDefault(id)?.Status is SchedulerMutationStatus.Committed or SchedulerMutationStatus.CommittedWithWarning or SchedulerMutationStatus.Refused) {
             planReceipts.Remove(id);
@@ -119,8 +127,19 @@ internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Ta
             || receipt.Kind == SchedulerMutationKind.Save) {
             return;
         }
+        if (planReviews.Remove(id, out var previous)) {
+            previous.Dispose();
+        }
+        using var lane = new SchedulerReadLane();
+        planReviews[id] = lane;
+        using var request = lane.Begin();
+        bool Current() => !disposed && request.IsCurrent && ReferenceEquals(planReceipts.GetValueOrDefault(id), receipt);
+        Notify();
         try {
-            var observed = await owner.EditorAsync(id, CancellationToken.None);
+            var observed = await owner.EditorAsync(id, request.Token);
+            if (!Current()) {
+                return;
+            }
             if (receipt.Kind == SchedulerMutationKind.Delete || observed.IsEnabled != (receipt.Kind == SchedulerMutationKind.Enable)) {
                 planReceipts[id] = receipt with { Message = "The exact plan does not yet show the requested state. Replay remains locked." };
                 Notify();
@@ -128,11 +147,18 @@ internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Ta
             }
         } catch (KeyNotFoundException) when (receipt.Kind == SchedulerMutationKind.Delete) {
         } catch (Exception exception) {
-            planReceipts[id] = receipt with { Message = exception.Message };
-            Notify();
+            if (Current()) {
+                planReceipts[id] = receipt with { Message = exception.Message };
+                Notify();
+            }
             return;
+        } finally {
+            if (ReferenceEquals(planReviews.GetValueOrDefault(id), lane)) {
+                planReviews.Remove(id);
+                Notify();
+            }
         }
-        if (planReceipts.GetValueOrDefault(id) == receipt) {
+        if (Current()) {
             planReceipts[id] = receipt with { Status = SchedulerMutationStatus.CommittedWithWarning, Stage = SchedulerMutationStage.Persisted,
                 Message = "Exact persisted state reviewed. The earlier operation and trigger projection were not independently confirmed." };
         }
@@ -144,8 +170,22 @@ internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Ta
             || !submissions.TryGetValue(draft.Origin, out var submitted)) {
             return;
         }
+        var receipt = draft.Receipt;
+        if (draftReviews.Remove(draft.Origin, out var previous)) {
+            previous.Dispose();
+        }
+        using var lane = new SchedulerReadLane();
+        draftReviews[draft.Origin] = lane;
+        using var request = lane.Begin();
+        bool Current() => !disposed && request.IsCurrent && ReferenceEquals(draft.Receipt, receipt)
+            && ReferenceEquals(submissions.GetValueOrDefault(draft.Origin), submitted);
+        draft.IsReviewing = true;
+        Notify();
         try {
-            var observed = await owner.EditorAsync(exactPlanId, CancellationToken.None);
+            var observed = await owner.EditorAsync(exactPlanId, request.Token);
+            if (!Current()) {
+                return;
+            }
             if (!SchedulerInputSession.SameTarget(submitted, observed) || submitted.Id is { } id && id != observed.Id) {
                 throw new InvalidOperationException("The reviewed plan does not have the submitted exact target and identity.");
             }
@@ -155,7 +195,17 @@ internal sealed class SchedulerMutations(ISchedulerWorkspaceOwner owner, Func<Ta
             planReceipts[exactPlanId] = draft.Receipt;
             submissions.Remove(draft.Origin);
         } catch (Exception exception) {
-            draft.Error = exception.Message;
+            if (Current()) {
+                draft.Error = exception.Message;
+            }
+        } finally {
+            if (ReferenceEquals(draftReviews.GetValueOrDefault(draft.Origin), lane)) {
+                draftReviews.Remove(draft.Origin);
+                if (!disposed) {
+                    draft.IsReviewing = false;
+                    Notify();
+                }
+            }
         }
         Notify();
     }

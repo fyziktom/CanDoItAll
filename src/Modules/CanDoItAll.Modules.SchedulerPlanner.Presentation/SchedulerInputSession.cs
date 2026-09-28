@@ -87,6 +87,7 @@ internal sealed class SchedulerInputSession(SchedulerDraft draft, ISchedulerWork
         }
         foreach (var dependent in draft.Schema?.Parameters.Where(item => item.Key != parameter.Key && item.OptionSource.DependsOnParameterKey == parameter.Key) ?? []) {
             draft.InputValues.Remove(dependent.Key);
+            draft.Issues = draft.Issues.Where(item => item.ParameterKey != dependent.Key).ToArray();
             if (TryRootProperty(dependent, out var dependentProperty)) {
                 root.Remove(dependentProperty);
             }

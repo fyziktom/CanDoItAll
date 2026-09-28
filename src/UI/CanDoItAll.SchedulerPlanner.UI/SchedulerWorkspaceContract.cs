@@ -93,6 +93,7 @@ public sealed class SchedulerDraft(SchedulerDraftValues values) {
         HasUnappliedInput = true;
     }
     public SchedulerMutationReceipt? Receipt { get; set; }
+    public bool IsReviewing { get; set; }
     public bool IsLocked => Receipt?.Status is SchedulerMutationStatus.Pending or SchedulerMutationStatus.Unknown;
     public string Error { get; set; } = string.Empty;
     public SchedulerReadStatus SchemaStatus { get; set; }
@@ -127,6 +128,7 @@ public interface ISchedulerWorkspace {
     IReadOnlyList<SchedulerDraft> RetainedDrafts { get; }
     IReadOnlyDictionary<Guid, SchedulerMutationReceipt> PlanReceipts { get; }
     bool IsPlanLocked(Guid id);
+    bool IsPlanReviewing(Guid id);
     string DescribeCron(SchedulerDraftValues values);
     Task RefreshAsync();
     Task ResetAsync();

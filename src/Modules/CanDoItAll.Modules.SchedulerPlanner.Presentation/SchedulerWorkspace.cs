@@ -56,6 +56,7 @@ public sealed class SchedulerWorkspace : ISchedulerWorkspace, IDisposable {
     public Task InitializeAsync() => Task.WhenAll(RefreshAsync(), LoadDefaultAsync(NewDraft));
 
     public bool IsPlanLocked(Guid id) => mutations.IsPlanLocked(id);
+    public bool IsPlanReviewing(Guid id) => mutations.IsPlanReviewing(id);
 
     public string DescribeCron(SchedulerDraftValues values) {
         try {

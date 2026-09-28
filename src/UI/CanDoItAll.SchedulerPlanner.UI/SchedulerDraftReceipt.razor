@@ -10,7 +10,7 @@
         }
         @if (receipt.Status == SchedulerMutationStatus.Unknown) {
             <label>Review exact saved plan ID <input value="@reviewId" @oninput="args => reviewId = args.Value?.ToString() ?? string.Empty" data-testid="scheduler-review-id" /></label>
-            <Button Text="Read and review this exact plan" ButtonStyle="ButtonStyle.Light" Disabled="@(!Guid.TryParse(reviewId, out _))" Click="ReviewAsync" data-testid="scheduler-review-unknown" />
+            <Button Text="Read and review this exact plan" ButtonStyle="ButtonStyle.Light" Disabled="@(Draft.IsReviewing || !Guid.TryParse(reviewId, out _))" IsBusy="@Draft.IsReviewing" Click="ReviewAsync" data-testid="scheduler-review-unknown" />
         }
     </SurfaceCard>
 }

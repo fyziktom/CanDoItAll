@@ -62,7 +62,7 @@
                         <Button Text="Acknowledge notice" Click="@(() => Workspace.AcknowledgeReceipt(acknowledgedId))" ButtonStyle="ButtonStyle.Light" />
                     }
                     @if (receipt.PlanId is { } id && receipt.Status == SchedulerMutationStatus.Unknown && receipt.Kind != SchedulerMutationKind.Save) {
-                        <Button Text="Read and review exact persisted state" Click="@(() => Workspace.ReviewPlanAsync(id))" ButtonStyle="ButtonStyle.Light" />
+                        <Button Text="Read and review exact persisted state" Click="@(() => Workspace.ReviewPlanAsync(id))" Disabled="@Workspace.IsPlanReviewing(id)" IsBusy="@Workspace.IsPlanReviewing(id)" ButtonStyle="ButtonStyle.Light" />
                     } else if (receipt.PlanId is { } savedId && receipt.Kind == SchedulerMutationKind.Save) {
                         <Button Text="Open exact plan" Click="@(() => Workspace.EditAsync(savedId))" ButtonStyle="ButtonStyle.Light" />
                     }
