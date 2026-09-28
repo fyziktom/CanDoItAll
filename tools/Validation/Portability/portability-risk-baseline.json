@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-27T15:02:22.645941+00:00",
+  "generated_utc": "2026-09-28T13:19:32.960673+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15132,
+  "allowance_count": 15149,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -47024,33 +47024,45 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationContracts.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CollaborationContracts.cs",
       "category": "process-domain",
-      "source_fingerprint": "2c2752ef4f9911d6c1b3b0adf5fab85e9f8384f0a9adaa4c5d25e46b58ab9ff0",
+      "source_fingerprint": "02a2ccbc03f4ab070c0359e9abfc3a913872fd11ee48b2c495a12531381b0dc4",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationContracts.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CollaborationContracts.cs",
       "category": "process-domain",
-      "source_fingerprint": "da9d655e54d4de009f86b75334ca4c786032346339d97c4dfc083e9ba26dab80",
+      "source_fingerprint": "0f6c585f11d9b078f7e4a3203dc4141d68666475ac5e3c801948632dd6faef63",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationContracts.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CollaborationContracts.cs",
       "category": "process-domain",
-      "source_fingerprint": "f1914f31acf073dc9bb41b5925431bf62932547be4cfbdda2fb9caef9ac10921",
+      "source_fingerprint": "4ff1860df4c455b61ec0a3e74921582fb22d0d687b255a8011530a84dbf79103",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModels.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CollaborationEnums.cs",
       "category": "process-domain",
-      "source_fingerprint": "24989046e1294aa6256d5ffe595abf2aae9df85bc5b8ad8e30503f2a9fc0a40f",
+      "source_fingerprint": "44f1c457e62434e902eb2f859a78b2602e274287b0c84e55671830c63dff3081",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/CollaborationModels.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CollaborationEnums.cs",
       "category": "process-domain",
-      "source_fingerprint": "d5158754d2ac92aecbbe61387da4d1b1f8cf792c2bf9e02d1078db3a43e50652",
+      "source_fingerprint": "604f5eaa64d1900244611ae085249ca023e1cdb15517f3b95603531454b5f5bf",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "0d7bc361f4dabcd315678a60fda8fc1f8d138032aa29248c500bd7222e03619b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration.Contracts/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "96f9432f4d377ab3db81836e2a22115f8c3b6ebeca0cbf3c653126de7ad7b5e6",
       "count": 1
     },
     {
@@ -47138,165 +47150,33 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "manager-discovery",
-      "source_fingerprint": "bea8335939d3de99fc88939eb11c6c251c76702fe682bf6f5598868dc6c5c9e2",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationWorkspaceSession.cs",
+      "category": "process-domain",
+      "source_fingerprint": "3715d53c98a2c8e839464c3276505bd747f8ce9d1547aad32e76b8d68c0d13aa",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationWorkspaceSession.cs",
       "category": "process-domain",
-      "source_fingerprint": "023a96910e781036b0a5a64cb1bdfbd2420765968d09f669a9bb3d809d06cc80",
+      "source_fingerprint": "e4f1cda6b132ed9b68305851c834d1597fa3665194443b300c46f4af61111f18",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationWorkspaceSession.cs",
       "category": "process-domain",
-      "source_fingerprint": "05fc2bd151262e1bad202c4063581d35556a8171be25c2117120e50899484fe9",
+      "source_fingerprint": "e5c09c14211d7c56731def4587022426623fc68ef2bcff6eff8f9ef6357dd17e",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationWorkspaceSession.cs",
       "category": "process-domain",
-      "source_fingerprint": "0602f4567d9bb14220743c16bd9ac5c05a46feec942b636f3375707f5e7e057e",
+      "source_fingerprint": "f00896d7310c6a81455939d370d1d9d459791be14cd751b2495898a415aea5aa",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "2c7a4e1e7064c90beb45c3c2ab9a500376b5cc5c32159b4e162cd976e195760e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "342b85fde1818e3979857167816edaf713262836c1c140c371daa964cdde356c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "452c3e9da934b162148a6799161f052bb552ce889a49f24f610458a044ec7448",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "7adbfcca94db6ff163ff08db555abd29cf4d1c8e58bb6b2c5c2539c416fd4ec0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "7cbd90327a356d3a0c0b7ff68bfd9aa1d64035d8ad9de381d50b957ac2e8d851",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "8164cb0592e3d7d81404a821eb6bb6a0dab992224de65d19ef34260aea8d0d7f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "a5e8a5a2072529b4aaf3650ad22078a195da655815223196f79ae165e7b49f60",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "b8c81882cd6bd25f39e81aeedbb2abdd9d384043b5e857723f9ea0fe660a236d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "d1f38eb9707a293c7928f44f0b278ff00a9605cf6af7f2d66918eaf4817342b9",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "d8ce7e53c5e14d287cb84ce9d7408327a7561ea589ab70a5edcf043a82edc5bd",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "e656a9185f7830a8b364a9295bd86369fd578724dccc7295819d9ed6439af170",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor",
-      "category": "process-domain",
-      "source_fingerprint": "fa1695576822e3c60e60980b66410babd08d364ab89b562bfe4f23e0d1d8bd37",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "007971687536cab3e03b3e3358b16e8419275e767ac9192b2177eacb9e4a2d33",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "0b5a40ce8c54b9c4a738fb973158c91e62f75b8eafcb52fcf8dad6c9011cc7a5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "1d6240471e9959cf2d2d95d9b682c49bed1bddc1276ed4a7303d181bb47132ea",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "277741da77a9577b71bb753dcd7e2ba3b0c86861fde92aa2223fd71d79dab777",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "3b09ab47632c4ac2b4ea86b250767f203f93696197db81c7a75dc0016d455bfe",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "511c772f0cce95ba0833711f78bf043a9f177a37f84ca8b4a98bddf02af71a6a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "910411dd077e7eba1cd12c304db8648b48acfd15046ba11d8ea72bd29f844284",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "b816cac54460c54a87701ed7b6f66b264204722f7cfc68d8a6d8da528fcf5a12",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "b85ea6873e7bef5137e3666a224616abbe8282c50f00786b17669cd963d61137",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "cdaae894bf60e6f5b7ee0b4000adccca34d87e0d52eb7f34dd198dddf42f9cc5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "category": "process-domain",
-      "source_fingerprint": "de71a285086693340943428722a72c8d47ccca9097a0cebe36d5066e62375f94",
+      "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationWorkspaceSession.cs",
+      "category": "windows-path",
+      "source_fingerprint": "2874c299ff163a8f0c065b121fe50accbac5abb1afbeb3310ed852565d77c65a",
       "count": 1
     },
     {
@@ -73556,6 +73436,66 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "16f1f84860488533b1ea1b50e490c1a54dc01edba14739cbee91084d6fb71ff9",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "3092abca48f5287f6d8f5c9aa194bf9ac987d7d837169274688b770bb2415152",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "4f195a6482f0ef545bd09c8876f79eb855fe08aa83c4084c043f85e10a65e583",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "8a0d3174d827c15c49c8cdca6da7a2b0d8ff0f93618768f29de4676fcb80d5fc",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "957233b4241b7b5e5a111416cd981f0d1d0ead451e3fe2a893f0b54b25b94fcd",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "b4460a4c1bc0ca8306c4dd9751765c485a489c3da6b9f3ace9859025bc1a8ab1",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "eacba54a43f6083dc277b0ec57c9502c60c729339fe34da687e9432bca4f1f36",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
+      "category": "process-domain",
+      "source_fingerprint": "ffcc3b60570361cbd90427ea47589425192891187ea11992175f4c95ffad6248",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "d251327595f87ac65f2adf4922aaff421898c7d8b9c298010565f1064c274bed",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "81859b45b5bc40d2b15930d2cbbf23ef1f9ec36003d5956bcbb3ffb0e52c3418",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/AgentRecruitingEvidenceSandbox.cs",
       "category": "case-policy",
       "source_fingerprint": "c82a7da5d03eabda48b71a4044b830234a948fdb801c3a8bbb6e231830fb39a8",
@@ -74585,6 +74525,168 @@
       "path": "src/UI/CanDoItAll.AppComponents/README.md",
       "category": "windows-executable",
       "source_fingerprint": "cf20ae960b7877edcd2cb76429e2597c1ebb62298e8a3481d1e1dad7459cedcd",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "manager-discovery",
+      "source_fingerprint": "7b7e23e0846645b34fcdbfe985a2e9feb6d1144ca453ab2e0e48e7161b1261bc",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "35909ab7dd7caab57bf228c0b84843f80187c4dd0530b03ab9c17e5cca9530ab",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "37b7b851d04330ee2cdeda47b00666ded572ed52960b61fa27af743b0ee5eab0",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "3b2096e02d5a6c2694669b96c022b2fb3dc771e790106f031801b057a7728e9b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "5c6d9c2e1ed7f20a9453fedc351ab9a6f641d0354175889eb564ac3c3524ae06",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "5edba49b551ae4320f572512365c97078bf02a021ba5f35956a2827ddf8345fd",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "6f39eedc60dcc691601c88d4966ca508edc7740db5bc4ed0ba262eae7c5bf0ff",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "8c351244bbcf6e745175d261d47bada7fa716fd49c7ed3b2025bca3006dec36b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "a6a8f8df297c52e694fed755e25639981b1539c3bcb1b1d6d60115cbcea1307a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "bf118cf1733e945e85f1b609b2358e898c9cd94ab7b1629e9fc81a9c9a2f2d60",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "c22c2b1518a00b032b595d34ea4c7babbeb81866515f4c69a7a30571b9b1b2ea",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "c8ae6d3b10b02c8c8595efbfd8aec611bb5b2bc1081fccb08003f87359852df3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "c9e6ffede71d20fcc660533adb00fbd267de87be4e1c42cb8852a1145e8c629b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "cd5c9768e538d587e669369ba336fb351fd7f924195d61048b7ffe351ef27b36",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "ce178a9804927d0177820cf78e4f125cfcec1df918a4d5144a4c84fa614e508a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
+      "category": "process-domain",
+      "source_fingerprint": "dc876db693ea88d79e1a24c941659f9008d5a1dd247bcc8e01156209944e9cba",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "category": "process-domain",
+      "source_fingerprint": "0b8c156063e1dc098afc7c44173a52001dd4446214b9aadc70e1e6e845d14ab7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "category": "process-domain",
+      "source_fingerprint": "1c5352ac8df1b3ab7cb82765bbe28a072f6a2c7771ebf365d42071429f4bf08e",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "category": "process-domain",
+      "source_fingerprint": "343d0a85bbf69b592e627e9074280f029dd67fce88c88ba683b56399f4478252",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "category": "process-domain",
+      "source_fingerprint": "457c2212dcb141e602d17458697e587c36b08eef01efbc753b07e7939f1e9ea2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "category": "process-domain",
+      "source_fingerprint": "b5f0938d3e98ef88dbbc2c5dfbde5e870df97ce3759d0cc7043840a1855328c9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c8af9499facdcdc5a029cac8f1c677fa0cf91c4c0645eba5fa82c031d83334b6",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor.cs",
+      "category": "process-domain",
+      "source_fingerprint": "dcb132870113291ed639367bf21a57bcecae037708b028ebdd650a9b8019066b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/ICollaborationWorkspaceView.cs",
+      "category": "process-domain",
+      "source_fingerprint": "95d44f4f9360318eb1960a1db80ea0d1ad37d33241cc66b8aed17c77469f80a8",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/README.md",
+      "category": "process-domain",
+      "source_fingerprint": "21758892f6b03e34985850d02b3dcbc3c0067ae7d30fb3202269b21615ac0b20",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "c8018d45181b26d767b50d08f04e9e8c4f51d29c6086f38732feaf9b86c1d71c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "b6785280b7c93c1c89220d3ce4967c67f0419aa2d60d1f34b0790f794bf64dd0",
       "count": 1
     },
     {

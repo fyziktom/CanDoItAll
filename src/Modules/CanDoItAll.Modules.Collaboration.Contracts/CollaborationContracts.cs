@@ -2,8 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CanDoItAll.Modules.Collaboration;
 
-public sealed class CollaborationThreadEditorModel
-{
+public sealed class CollaborationThreadEditorModel {
     [Required]
     [MaxLength(240)]
     public string Subject { get; set; } = string.Empty;
@@ -22,8 +21,7 @@ public sealed class CollaborationThreadEditorModel
     public string MessageBody { get; set; } = string.Empty;
 }
 
-public sealed class CollaborationReplyEditorModel
-{
+public sealed class CollaborationReplyEditorModel {
     public CollaborationMessageKind MessageKind { get; set; } = CollaborationMessageKind.Standard;
 
     [Required]

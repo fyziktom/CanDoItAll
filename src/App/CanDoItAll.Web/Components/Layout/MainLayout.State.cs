@@ -4,6 +4,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Web.Components.Layout;
 
@@ -33,6 +34,11 @@ public partial class MainLayout
     private long lastObservedDatabaseSwitchGeneration;
     private string? databaseSwitchAlert;
     private int collaborationUnreadCount;
+    private long collaborationReadGeneration;
+    private bool collaborationDisposed;
+
+    [Inject]
+    private ILogger<MainLayout> CollaborationLogger { get; set; } = default!;
 
     [Inject]
     private IEnumerable<IShellNavigationContributor> ShellNavigationContributors { get; set; } = [];
@@ -135,6 +141,8 @@ public partial class MainLayout
 
     public void Dispose()
     {
+        collaborationDisposed = true;
+        ++collaborationReadGeneration;
         Navigation.LocationChanged -= HandleLocationChanged;
         Workbench.Changed -= HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed -= HandleDatabaseSwitchChanged;

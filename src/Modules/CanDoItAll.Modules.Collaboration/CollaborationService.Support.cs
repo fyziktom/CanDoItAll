@@ -119,9 +119,14 @@ public sealed partial class CollaborationService
         }
     }
 
-    private void NotifyChanged()
-    {
-        Changed?.Invoke(this, EventArgs.Empty);
+    private void NotifyChanged() {
+        foreach (EventHandler observer in Changed?.GetInvocationList() ?? []) {
+            try {
+                observer(this, EventArgs.Empty);
+            } catch (Exception exception) {
+                logger.LogWarning(exception, "Collaboration change observer {Observer} failed after the owner operation completed.", observer.Method.Name);
+            }
+        }
     }
 
     private static string BuildPreviewText(string body)

@@ -45,6 +45,7 @@
     <Project Path="src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj" />
     <Project Path="src/UI/CanDoItAll.CrmHr.UI/CanDoItAll.CrmHr.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Prompts.UI/CanDoItAll.Prompts.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Collaboration.UI/CanDoItAll.Collaboration.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj" />
   </Folder>
   <Folder Name="/src/MAF/Common/">
@@ -115,6 +116,7 @@
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CanDoItAll.Modules.Collaboration.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.CrmHr.Contracts/CanDoItAll.Modules.CrmHr.Contracts.csproj" />

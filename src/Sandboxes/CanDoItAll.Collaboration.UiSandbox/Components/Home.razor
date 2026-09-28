@@ -1,0 +1,50 @@
+@page "/"
+@page "/collaboration"
+@implements IDisposable
+
+<PageTitle>Collaboration sandbox</PageTitle>
+<ThemeHost>
+    <Layout FitViewport="true" LockOverflow="true">
+        <Body FillHeight="true" Scrollable="false">
+            <Stack FillHeight="true" AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small" data-testid="collaboration-sandbox" data-scenario="@scenario">
+                <SurfaceCard Class="shrink-0">
+                    <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                        <strong>Collaboration sandbox</strong>
+                        <label for="scenario">Scenario</label>
+                        <select id="scenario" class="cda-input" style="width: auto; max-width: 100%" value="@scenario" @onchange="ChangeScenario" data-testid="collaboration-scenario">
+                            @foreach (var value in Enum.GetValues<CollaborationScenario>()) {
+                                <option value="@value">@value</option>
+                            }
+                        </select>
+                        <Button Text="Complete delayed action" Click="view.CompletePending" data-testid="collaboration-complete-pending" />
+                        <p role="status" data-testid="collaboration-sandbox-navigation">@view.NavigationMessage</p>
+                    </Cluster>
+                </SurfaceCard>
+                <CollaborationWorkspaceSurface View="view" Interactive="interactive" />
+            </Stack>
+        </Body>
+    </Layout>
+</ThemeHost>
+
+@code {
+    private CollaborationScenario scenario;
+    private CollaborationScenarioWorkspace view = default!;
+    private bool interactive;
+
+    protected override void OnInitialized() => view = new(scenario, StateHasChanged);
+
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+
+    private void ChangeScenario(ChangeEventArgs args) {
+        scenario = Enum.Parse<CollaborationScenario>(args.Value?.ToString() ?? nameof(CollaborationScenario.Representative));
+        view.Dispose();
+        view = new(scenario, StateHasChanged);
+    }
+
+    public void Dispose() => view.Dispose();
+}

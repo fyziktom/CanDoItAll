@@ -353,16 +353,19 @@ public partial class MainLayout
             : "The active database changed and the workbench reloaded a safe route for the current profile.";
     }
 
-    private async Task LoadCollaborationShellStateAsync()
-    {
-        var unreadCount = (await CollaborationService.GetShellStateAsync()).UnreadCount;
-        if (collaborationUnreadCount == unreadCount)
-        {
-            return;
-        }
+    private async Task LoadCollaborationShellStateAsync() {
+        var generation = ++collaborationReadGeneration;
+        try {
+            var unreadCount = (await CollaborationService.GetShellStateAsync()).UnreadCount;
+            if (collaborationDisposed || generation != collaborationReadGeneration || collaborationUnreadCount == unreadCount) {
+                return;
+            }
 
-        collaborationUnreadCount = unreadCount;
-        await InvokeAsync(StateHasChanged);
+            collaborationUnreadCount = unreadCount;
+            await InvokeAsync(StateHasChanged);
+        } catch (Exception exception) {
+            CollaborationLogger.LogWarning(exception, "Collaboration shell badge refresh failed at generation {Generation}; retaining the accepted count.", generation);
+        }
     }
 
     private string ResolveDatabaseSwitchRecoveryRoute()

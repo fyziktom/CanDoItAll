@@ -134,6 +134,37 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+### Collaboration UI slice
+
+Build the affected contracts, UI, module and Web projects directly, then the standalone
+`src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj`.
+The sandbox is outside the product solution; its browser test project reference builds it
+for browser proof. The lightweight suites are included in Unit/Components/Stable and the
+component CI shards. They do not depend on a running production host.
+
+| Project | Bounded filter | Purpose |
+|---|---|---|
+| `tests/Unit/CanDoItAll.Collaboration.Tests/CanDoItAll.Collaboration.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Unit.Collaboration.` | Scripted read/write races, drafts, selection and navigation policy |
+| `tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Components.Collaboration.` | Real renderer, scenarios, validation and dependency guards |
+| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~CollaborationHostTests\|FullyQualifiedName~MainLayoutCollaborationTests` | Real page, owner and shell over PostgreSQL |
+| `tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.CollaborationIntegrationTests` | Save boundary, observers, schema, restart and local reply semantics |
+| `tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj` | `FullyQualifiedName~CollaborationBrowserTests\|FullyQualifiedName~CollaborationSandboxBrowserTests` | Production writes/read-back and independent sandbox journeys at 1600 × 1000 |
+
+Use `--list-tests` and compare source-derived counts before each new filter, then execute
+the same filter on current assemblies. The existing `CollaborationDbContextTests` is the
+five-case mapping/token compatibility baseline. PostgreSQL lanes use only the isolated
+server described above. The browser fixture owns its random port and disposable database;
+leave `CANDOITALL_PLAYWRIGHT_BASEURL` unset to prevent attaching to another application.
+
+When a running developer app locks the ordinary output, a task-specific configuration
+such as `--configuration CollaborationProof` on the **project** commands avoids those
+outputs. Solution files support their declared configurations. Set
+`CANDOITALL_TEST_CONFIGURATION=CollaborationProof` for the browser child host. This is a
+local validation choice, not a new repository configuration or changed SDK/dependency mode.
+
+See [the boundary record](architecture/collaboration-ui-boundary.md) and
+[sandbox README](../src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/README.md).
+
 ### Prompt Gallery UI slice
 
 For changes under `src/UI/CanDoItAll.Prompts.UI`, `src/Modules/CanDoItAll.Modules.Prompts.Contracts`,

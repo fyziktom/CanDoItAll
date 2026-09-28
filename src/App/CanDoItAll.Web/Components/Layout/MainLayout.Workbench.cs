@@ -97,13 +97,14 @@ public partial class MainLayout
         });
     }
 
-    private void HandleCollaborationChanged(object? sender, EventArgs e)
-    {
-        _ = InvokeAsync(async () =>
-        {
-            await LoadCollaborationShellStateAsync();
-            StateHasChanged();
-        });
+    private void HandleCollaborationChanged(object? sender, EventArgs e) => _ = RefreshCollaborationBadgeAsync();
+
+    private async Task RefreshCollaborationBadgeAsync() {
+        try {
+            await InvokeAsync(LoadCollaborationShellStateAsync);
+        } catch (Exception exception) {
+            CollaborationLogger.LogWarning(exception, "Unable to dispatch the Collaboration shell badge refresh.");
+        }
     }
 
     private async Task ResolveAndTrackCurrentTabAsync()

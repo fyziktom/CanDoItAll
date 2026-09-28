@@ -11,6 +11,60 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 public sealed class CollaborationIntegrationTests
 {
     [Fact]
+    public async Task Throwing_observer_cannot_hide_committed_writes_or_skip_remaining_observers() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var observed = 0;
+        owner.Changed += (_, _) => throw new InvalidOperationException("Observer failed after persistence");
+        owner.Changed += (_, _) => observed++;
+
+        var created = await owner.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new() {
+            Subject = "Committed despite observer", MessageBody = "First durable message"
+        }));
+        Assert.True(created.IsSuccess);
+        Assert.Equal(1, observed);
+        Assert.True((await owner.MarkThreadAsReadAsync(created.Value)).IsSuccess);
+        Assert.Equal(2, observed);
+        Assert.True((await owner.AppendMessageAsync(CollaborationService.CreateLocalReplyRequest(created.Value, new() {
+            MessageBody = "Second durable message", MessageKind = CollaborationMessageKind.System
+        }))).IsSuccess);
+        Assert.Equal(3, observed);
+        var saved = (await owner.GetWorkspaceAsync(created.Value)).SelectedThread!;
+        Assert.Equal(2, saved.Messages.Count);
+        Assert.False(saved.IsUnread);
+    }
+
+    [Fact]
+    public async Task Actual_validation_and_missing_targets_are_known_rejections_without_writes() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var invalid = await owner.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new()));
+        Assert.True(invalid.IsFailure);
+        var missing = await owner.AppendMessageAsync(CollaborationService.CreateLocalReplyRequest(Guid.NewGuid(), new() { MessageBody = "Missing target" }));
+        Assert.True(missing.IsFailure);
+        Assert.True((await owner.MarkThreadAsReadAsync(Guid.NewGuid())).IsFailure);
+        Assert.Empty((await owner.GetWorkspaceAsync()).Threads);
+    }
+
+    [Fact]
+    public async Task Local_reply_clears_unread_while_automation_and_manual_create_raise_it() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var created = await owner.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new() {
+            Subject = "Local reply semantics", MessageBody = "Manual first message"
+        }));
+        Assert.True(created.IsSuccess);
+        Assert.Equal(1, (await owner.GetShellStateAsync()).UnreadCount);
+        Assert.True((await owner.AppendMessageAsync(CollaborationService.CreateLocalReplyRequest(created.Value, new() { MessageBody = "Local reply" }))).IsSuccess);
+        Assert.Equal(0, (await owner.GetShellStateAsync()).UnreadCount);
+        Assert.True((await owner.RecordAutomationSignalAsync(new("ui-proof", "System", "Automation", "Unread automation", CollaborationInboxItemKind.Escalation))).IsSuccess);
+        Assert.Equal(1, (await owner.GetShellStateAsync()).UnreadCount);
+    }
+
+    [Fact]
     public async Task Runtime_model_retains_complete_schema_mappings_without_foreign_entities() {
         await using var application = await TestApplication.CreateAsync();
         var ownerFactory = application.Services.GetRequiredService<IDbContextFactory<CollaborationDbContext>>();
