@@ -28,6 +28,13 @@ after unwinding. A failed refresh preserves only the same selection's accepted s
 
 The host owns draft instances and their `EditContext`. Same-target refreshes and section
 changes preserve both. Switching targets explicitly discards the old reply draft.
+Automatic selection retains a reply with text, modified fields or an admitted/unknown
+submission on its original target, even when that target leaves the active list. A visible
+status explains the retained detail. Reply input updates its draft on each input event,
+including before blur. Explicit thread selection still discards the reply; Clear preserves
+the chosen message kind, clears modified state, and permits the next Refresh to realign.
+A clean empty filter retains a genuinely empty selection. No text is rebound to another
+thread and no owner unread semantics change.
 Quick-create is independent. Each admitted form disables its fields and reset actions;
 the owner-side gate also rejects duplicate or retired callbacks. Submissions capture
 immutable values before dispatch. Local replies retain `MarkAsUnread: false`.
@@ -36,6 +43,14 @@ Successful writes retain their identity even if reconciliation fails. Retry perf
 a read. Unexpected exceptions from a dispatched command leave its submission locked with
 an unknown-outcome warning; the operator must inspect persisted state before explicitly
 starting a new draft. Observer exceptions after a save are logged and isolated individually.
+
+The sandbox separates its stored results from the accepted view. Admitted writes survive
+target retirement; only current lifetimes may reset editors or publish completion.
+Effective tab/filter changes retire create-navigation effects. Delayed operations complete
+one at a time, and delayed reconciliation exposes the same successor-edit interval as
+production. Scenario disposal abandons that isolated store, releases all owned waits and
+suppresses further writes/callbacks. These are local scenario semantics, not a production
+cancellation or durable idempotency protocol.
 
 ## Validation contract
 
@@ -62,7 +77,11 @@ sources have no drift from the handoff's provenance revision. The original Web w
 list contains 4,384 entries. Code Analytics and Components MCP were unavailable; source
 inspection and evaluated metadata are the fallback evidence, not successful MCP proof.
 
-## Completion evidence — 2026-09-28
+## Original extraction evidence — 2026-09-28 (historical)
+
+This section records the original execution before the user committed the extraction as
+`e55a780b36e75db39a05b7400408d8267d0f32d5`. The review-fix receipt below supersedes its
+current-status statements, without changing the provenance of these earlier runs.
 
 The final checkout remains on `components-decoupling` at
 `714e42706904e796e5e628f30457ca40370c7d4c`, with the implementation uncommitted. No signed
@@ -275,3 +294,164 @@ unknown outcomes, forbidden/unresolved dependencies and stale lifetimes.
 The implementation and local proof support the Collaboration boundary. Review of the
 missing module-specific documents and comparative full-Web timing remain explicitly open;
 this record does not authorize merge, release or another module.
+
+## Collaboration review fixes — 2026-09-28
+
+### Checkout and scope
+
+The complete committed review package, its original review/acceptance matrix, selection
+record and shared v3 foundation were read. Execution started on `components-decoupling`
+at `67413ee3a44c765cae7047576cf4be864b2ddb42`, with a clean worktree after the user's
+bundle commit. Final HEAD remains that SHA; this follow-up is uncommitted, so there is no
+new commit/signature to verify. No push, PR, merge, release or next-module work occurred.
+The bundled input documents remain unchanged.
+
+SDK 10.0.303, Windows x64, `UseLocalCanDoItAllLibraries=true`, Parity assets and the
+`CollaborationProof` output configuration were used. Components, FileTools and SharedInfo
+remain at the three sibling revisions recorded above. No source/package switch, project
+reference, schema, persistence owner or scoped-owner alias changed. Both Code Analytics
+and Components MCP remain unavailable; source, evaluated metadata and actual discovery
+are the stated fallback, not successful MCP calls.
+
+### Findings and red/green proof
+
+| Finding | Correction | Current evidence |
+|---|---|---|
+| R1.1–R1.3 | `CollaborationReplyPolicy` retains text, modified context or locked submission on its original target during automatic realignment. The real textarea records input before blur. A status explains the retained detail. | Six new session cases failed before the fix (empty/B remaining, successor/already-dirty, Mark-read/manual refresh). All six now pass within 35 session cases. Four real-form cases exercise both `change` and `input` without blur; all pass with exact target, draft/context, text, navigation and owner-call assertions. |
+| R1.4–R1.5 | Explicit navigation still resets the reply. Clear preserves kind and releases modified state; the next read can select B or remain genuinely empty. Existing refusal/unknown and read-failure semantics remain. | Session regressions for A→B→A, retired callbacks, validation, empty selection, same-route echoes, saved warnings and unknown results pass. Production browser retains a dirty reply through Mark-read, then verifies explicit discard without persisting it. |
+| R2a | Admitted replies update the scenario store for captured A even after navigation; current-lifetime checks fence only projection/editor effects. Delayed operations release independently in FIFO order. | Both retired-write regressions failed before the fix; both now pass, including exactly one stored older reply and a still-pending successor with unchanged context/text/gate/status. Disposal releases all waits without replacement callbacks, including nested section realignment. |
+| R2b | Effective section/filter changes advance selection intent; no-op setters do not. Retired create navigation preserves the newer view and returned identity; Refresh reveals the stored result. Read generations are separate from section intent. | Two effective-transition cases failed before the fix; two no-op controls passed. All four now pass. Delayed target/section and delayed reconciliation cases also pass in the 25-case lightweight lane. |
+| R3 | The surface exposes accepted selected ID/unread state. Browser Mark-read requires that exact previously-unread ID to become read with `data-phase=ready`, before owner read-back. | The delayed real-form test shows the old disabled button and Ready marker already true during admission, while completion remains false through the pending write and read. It passes only after accepting the target snapshot. Production journey passes with the real owner. |
+| C1 | Added positive production escalation creation, selection and durable reload, plus dirty-target navigation and stored-message checks. | Production browser creates both item kinds through real forms. Assertions use task-owned subjects/IDs, and verify escalation kind/body and absence of the discarded reply through the owner. |
+
+The initial real-form red run selected five cases: two lost the changed draft, two had no
+`input` handler, and one lacked the semantic accepted-state observation. The scenario red
+run selected seven cases: four failed and three no-op/disposal controls passed. Red evidence
+is `r1-red.trx`, `r2-red.trx` and `renderer-red-complete.trx` under the new ignored
+`artifacts/collaboration-review` directory. These are current reproductions, not inferred
+passes from the historical 59-case summary. An intermediate post-fix form assertion was
+corrected to inspect the textarea's rendered value rather than its text-content node.
+
+### Commands and final focused results
+
+All five direct builds passed with zero warnings/errors. For each project listed in the
+original build block above, the current command was:
+
+```powershell
+dotnet build $project --configuration CollaborationProof --no-restore /m:1
+```
+
+The projects were Collaboration.Contracts, Collaboration.UI, Modules.Collaboration,
+Collaboration.UiSandbox and Web; current logs are `build-contracts.log`, `build-ui.log`,
+`build-module.log`, `build-sandbox.log` and `build-web.log` in `artifacts/collaboration-review`.
+Every test row used these exact discovery/execution commands, with the values below:
+
+```powershell
+dotnet test $project --configuration CollaborationProof --list-tests --filter $filter /m:1
+dotnet test $project --configuration CollaborationProof --no-build --no-restore --filter $filter --logger "trx;LogFileName=$name.trx" --results-directory artifacts/collaboration-review /m:1
+```
+
+| Project | Exact filter | Name | Expected / discovered / passed / failed / skipped |
+|---|---|---|---|
+| `tests/Unit/CanDoItAll.Collaboration.Tests/CanDoItAll.Collaboration.Tests.csproj` | `FullyQualifiedName~CollaborationWorkspaceSessionTests` | `session-final` | 35 / 35 / 35 / 0 / 0 |
+| `tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj` | `FullyQualifiedName~Collaboration` | `renderer-sandbox-verified` | 25 / 25 / 25 / 0 / 0 |
+| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~CollaborationHostTests\|FullyQualifiedName~MainLayoutCollaborationTests\|FullyQualifiedName~CollaborationReconciliationTests` | `host-final-verified` | 8 / 8 / 8 / 0 / 0 |
+| `tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj` | `FullyQualifiedName~CollaborationDbContextTests` | `context-final` | 5 / 5 / 5 / 0 / 0 |
+| `tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | `FullyQualifiedName~CollaborationIntegrationTests` | `owner-final` | 7 / 7 / 7 / 0 / 0 |
+| `tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj` | `FullyQualifiedName~CollaborationBrowserTests\|FullyQualifiedName~CollaborationSandboxBrowserTests` | `browser-diagnostic-pair` | 2 / 2 / 2 / 0 / 0 |
+
+Total final focused execution: **82 passed, zero failed/skipped**. Existing analyzer warnings
+in unrelated Unit-project tests remain; they are not production-build warnings or failures.
+New cases use existing test projects, already present in test solutions/CI shards; no new
+project or CI wiring is needed.
+
+The owned PostgreSQL container used loopback `127.0.0.1:54510`, server version `180006`,
+the documented test connection setting and `WAL_LOG`. The browser child configuration was
+`CANDOITALL_TEST_CONFIGURATION=CollaborationProof`, with external base URL unset and
+headless runtime presentation enabled. Both browser hosts owned fresh ports/processes;
+the sandbox removed the database setting. The ordinary application/database on 5032 and
+existing watch/MCP sessions were not used or stopped.
+
+### Original acceptance matrix reconciliation
+
+| Original obligation | Status | Concrete proof / applicability |
+|---|---|---|
+| Actual checkout, dependencies and instructions | passed | Actual start/final SHA and sibling revisions above; clean start; full bundled foundation read; source and evaluated references inspected. MCP-specific execution is not run because tools are unavailable. |
+| Full renderer closure | passed | Real BaseLib descendants in `CollaborationSurfaceTests`; both real browser hosts exercise lists, forms, detail, badges and three sections. No heavy child is replaced with a stub. |
+| Route and selection | passed | Session route-echo, explicit-missing, initial-section and A→B→A tests; production notification/escalation deep links and reload. |
+| Filter-empty selection | passed | Session clean-empty/null-fallback and six retention regressions; scenario empty/B cases; real-host empty selection and browser task-owned unread/all/Threads assertions. |
+| Request lifetime | passed | Controlled ignored cancellation, old success/error/finally, retired commands and disposal in session tests; independent sandbox writes/read disposal. The unrelated shell diagnostic below remains separate. |
+| Read failure versus absence | passed | Renderer loading/empty/missing/failed/stale cases; session failure retention; sandbox browser now explicitly visits Loading, FailedLoad and StaleRefresh and recovers by reading. |
+| Draft/form lifetime and edit during save | passed | Actual form validation/mounted create context; admitted fieldset test; four successor-input cases; production dirty Mark-read and explicit navigation; no replay/rebinding. |
+| Mutation admission | passed | Session duplicate/stale callbacks, captured values and independent target gates; real form repeated submission; sandbox independent older/successor operations and exact stored counts. |
+| Owner semantics | passed | Real owner PostgreSQL tests for both item kinds, reply, missing/invalid targets, already-read no-op and automation; production create form/read-back for notification and escalation. |
+| Save then refresh failure / unknown | passed | Session create identity, reply saved-warning, read-only retry and unknown-lock tests; sandbox SavedWithRefreshWarning and OwnerRefusal real-form/browser scenarios. No receipt/idempotency protocol invented. |
+| Post-commit observer fault | passed | Real owner test retains committed writes and later observers; owner source logs each subscriber failure. Ambient transaction behavior is unchanged. |
+| Shell and linked context | passed | Existing real PostgreSQL badge case exercises create, reply and Mark-read updates; MainLayout dispatch/error/generation/disposal paths inspected; browser Scheduler link/back and escaped content; safe-route unit theory. Separate shared-shell disposal limitation below. |
+| Durable compatibility | passed | Seven integration cases include four-entity schema parity, restart/read-back and profile isolation; five context cases preserve GUID-token behavior. Enum names/values and mappings are unchanged by this follow-up. |
+| Evaluated build/runtime boundary | passed | Positive/negative/unresolved-edge guards; fresh recursive graph: Web 135 projects / 140 packages / 30 native assets, sandbox 5 / 1 framework asset package / 0 native assets; no cycles or unresolved edges. |
+| Parity assets and watch membership | passed | Actual CSS/JS/fonts in both browser hosts; fresh `dotnet watch --project <host> --list`: Web 4,394, sandbox 252, unchanged. No project, asset or production source membership change. |
+| New watch timing / full-Web comparative speedup | not run | This bounded state repair does not change the development-loop boundary. Earlier three-sample sandbox measurements remain historical; no new timings or full-Web speedup are claimed. |
+| Fast mode / feature CSS-JS edit timing | not applicable | No Fast mode or feature CSS/JS exists. Current Parity assets are reused; no new styling classes require generation. |
+| API/schema/authorization/concurrency expansion | not applicable | No API contract, schema, permissions model, per-user unread or optimistic-concurrency change. No binary consumer/type-forwarding work is introduced. |
+| Broad Stable/provider/LiveProcess/mobile proof | not run | No CI/release/merge checkpoint or named broader trigger for this bounded repair. No unrelated process, scheduler job or provider invocation was required. |
+
+### Browser diagnostics and remaining limitation
+
+Current screenshots under `output/playwright/collaboration-review` cover the retained reply,
+production escalation deep link, ordinary creation, representative sandbox and long transcript
+at 1600 × 1000. Changed-state screenshots were visually inspected. Both final journeys passed
+page/console, stylesheet/script/font and server-error checks. The latest captured
+`production-server.log` has no `fail:` or unhandled-exception entry.
+
+There was an earlier **failed** production browser run (`browser-final.trx`): all interaction
+and owner read-back assertions completed, but the final server check found an unhandled
+rendering exception. That first assertion only retained a truncated message, so its exact
+cause is not established. The test now saves the server snapshot for diagnosis. A subsequent
+production-only diagnostic run passed its assertions but logged a separate shared-shell
+`ObjectDisposedException`: `ConversationShellHost.InitializeContributorsAsync` reads
+`lifetime.Token` after disposal while advancing to the `simple-chats` contributor. The
+captured diagnostic is `artifacts/collaboration-review/server-diagnostic-production-only.log`.
+The final paired rerun passed with a clean captured log; this does **not** prove the intermittent
+shared-shell race fixed or establish it as the cause of the first rendering exception.
+
+That pre-existing conversation-shell lifecycle issue is **unresolved**, outside the requested
+Collaboration-only change. No shell error was filtered or swallowed, and no delay, forced click,
+fake production DI or public test endpoint was added. Browser reliability therefore retains
+this explicit limitation despite the final 82 passing cases. Remote CI was not triggered or
+claimed; this receipt is local proof. Original historical TRX files were not reconstructed.
+
+### Mandatory gates and architecture review
+
+Scanner/enforcer self-tests passed 6 cases and secret-scanner self-tests passed 4.
+The complete proposed-source portability scan includes untracked test files. Review found
+one added and one stale executable-source fingerprint: the sandbox's old store-based
+Escalations predicate became a typed accepted-snapshot projection. This introduces no
+platform/process assumption. Only that reviewed replacement and baseline generation metadata
+changed; no scanner pattern or exclusion changed. Final enforcement without the write flag
+passed with **15,149 reviewed executable-source findings unchanged**.
+
+```powershell
+python tools/Validation/Portability/test_enforce_portability_baseline.py
+python tools/Validation/Portability/test_scan_artifacts_for_secrets.py
+python tools/Validation/Portability/scan_portability.py --repo-root . --output artifacts/collaboration-review/portability-final-scan.json
+python tools/Validation/Portability/enforce_portability_baseline.py --scan artifacts/collaboration-review/portability-final-scan.json --baseline tools/Validation/Portability/portability-risk-baseline.json
+pwsh -NoProfile -File tools/Validation/Test-DocumentationEvidence.ps1
+pwsh -NoProfile -File tools/Validation/Test-Documentation.ps1
+git diff --check
+```
+
+Documentation evidence tests passed **9** cases; the maintained documentation validator
+passed **245** Markdown files. `git diff --check` and a separate whitespace check of both
+new test files passed. The owned PostgreSQL container
+`cda-collaboration-review-7c99b951ba` was stopped and auto-removed after verifying that no
+test databases remained. No proof Web/sandbox process remains. Local logs, TRX, graphs,
+watch inventories and screenshots stay in ignored artifact/output directories.
+
+Architecture review: **Pass for the bounded Collaboration corrections**. The sole shared
+policy is a reply-retention predicate; production still owns effects and the sandbox still
+owns isolated scenario state. No new generic draft framework, service locator, partial-file
+split, backend reference, copied component or second application owner was introduced.
+Real production and scenario implementations both consume the same renderer/contract.
+The original missing-input follow-up is reconciled above. The unrelated browser lifecycle
+diagnostic and unavailable MCP-specific proof remain explicit limitations.

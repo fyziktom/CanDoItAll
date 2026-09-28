@@ -3,12 +3,100 @@ using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Collaboration.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Tests.Unit.Collaboration;
 
 public sealed class CollaborationWorkspaceSessionTests {
     private static readonly Guid A = new(1, 0, 0, new byte[8]);
     private static readonly Guid B = new(2, 0, 0, new byte[8]);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Reply_reconciliation_retains_unsent_successor_on_its_original_target(bool remainingUnread) {
+        var owner = new Owner();
+        var routes = new List<Guid?>();
+        using var session = Session(owner, routes.Add);
+        await session.ApplyRouteAsync(null);
+        await session.SetUnreadOnlyAsync(true);
+        var target = session.Target!;
+        session.Reply.Model.MessageBody = "First accepted reply";
+        var pending = Completion<CollaborationWorkspaceModel>();
+        owner.Read = (id, _) => id == A ? pending.Task : Task.FromResult(AfterRead(id, remainingUnread));
+        var save = session.ReplyAsync(target, session.Reply);
+        var successor = session.Reply;
+        var context = successor.Context;
+        successor.Model.MessageBody = "Unsent successor for A";
+        context.NotifyFieldChanged(new(successor.Model, nameof(CollaborationReplyEditorModel.MessageBody)));
+        var validation = new ValidationMessageStore(context);
+        validation.Add(new FieldIdentifier(successor.Model, nameof(CollaborationReplyEditorModel.MessageBody)), "Unsent validation state");
+        pending.SetResult(AfterRead(A, remainingUnread));
+        await save;
+
+        Assert.Same(target, session.Target);
+        Assert.Equal(A, session.Workspace!.SelectedThread!.ThreadId);
+        Assert.Same(successor, session.Reply);
+        Assert.Same(context, session.Reply.Context);
+        Assert.Equal("Unsent successor for A", session.Reply.Model.MessageBody);
+        Assert.Equal(["Unsent validation state"], context.GetValidationMessages());
+        Assert.Empty(routes);
+        var request = Assert.Single(owner.Replies);
+        Assert.Equal(A, request.ThreadId);
+        Assert.False(request.MarkAsUnread);
+
+        await session.SetSectionAsync(CollaborationSection.Threads);
+        await session.SelectAsync(B);
+        Assert.NotSame(successor, session.Reply);
+        Assert.Empty(session.Reply.Model.MessageBody);
+        Assert.Equal([B], routes);
+        Assert.Single(owner.Replies);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Read_reconciliation_preserves_already_dirty_reply_until_explicit_discard(bool markRead, bool remainingUnread) {
+        var owner = new Owner();
+        var routes = new List<Guid?>();
+        using var session = Session(owner, routes.Add);
+        await session.ApplyRouteAsync(null);
+        await session.SetUnreadOnlyAsync(true);
+        var target = session.Target!;
+        var draft = session.Reply;
+        draft.Model.MessageBody = "Keep A's unsent text";
+        draft.Context.NotifyFieldChanged(new(draft.Model, nameof(CollaborationReplyEditorModel.MessageBody)));
+        owner.Read = (id, _) => Task.FromResult(AfterRead(id, remainingUnread));
+        if (markRead) {
+            await session.MarkReadAsync(target);
+        } else {
+            await session.RefreshAsync();
+        }
+
+        Assert.Same(target, session.Target);
+        Assert.Same(draft, session.Reply);
+        Assert.Equal("Keep A's unsent text", draft.Model.MessageBody);
+        Assert.True(draft.Context.IsModified());
+        Assert.Empty(routes);
+        Assert.Empty(owner.Replies);
+        Assert.Equal(markRead ? new[] { A } : [], owner.Marked);
+
+        session.ClearReply(target, draft);
+        await session.RefreshAsync();
+        Assert.Equal(remainingUnread ? B : (Guid?)null, session.Target?.ThreadId);
+        Assert.Equal(remainingUnread ? B : (Guid?)null, session.Workspace!.SelectedThread?.ThreadId);
+        Assert.Empty(session.Reply.Model.MessageBody);
+    }
+
+    private static CollaborationWorkspaceModel AfterRead(Guid? id, bool remainingUnread) {
+        var snapshot = Snapshot(id, unread: false);
+        return snapshot with {
+            InboxItems = snapshot.InboxItems.Select(item => item with { IsUnread = remainingUnread && item.ThreadId == B }).ToArray(),
+            SelectedThread = snapshot.SelectedThread is { } detail ? detail with { IsUnread = remainingUnread && detail.ThreadId == B } : null
+        };
+    }
 
     [Fact]
     public async Task Same_route_refresh_and_section_preserve_both_drafts_and_contexts() {

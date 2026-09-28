@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CanDoItAll.Modules.Collaboration;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Collaboration.UI;
@@ -33,4 +34,9 @@ public sealed class CollaborationTarget(Guid threadId) {
     public bool IsMarkingRead { get; set; }
     public bool OutcomeUnknown { get; set; }
     public string? Message { get; set; }
+}
+
+public static class CollaborationReplyPolicy {
+    public static bool MustRetain(CollaborationDraft<CollaborationReplyEditorModel> draft) =>
+        draft.IsLocked || draft.Context.IsModified() || !string.IsNullOrEmpty(draft.Model.MessageBody);
 }

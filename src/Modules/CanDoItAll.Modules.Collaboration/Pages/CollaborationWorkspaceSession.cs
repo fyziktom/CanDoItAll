@@ -24,6 +24,8 @@ public sealed class CollaborationWorkspaceSession(
     public CollaborationReadState ReadState { get; private set; } = CollaborationReadState.Loading;
     public bool UnreadOnly { get; private set; }
     public bool IsMissing => selectionKind == SelectionKind.Explicit && Workspace is { SelectedThread: null };
+    public bool IsReplyRetained => Workspace?.SelectedThread is { } selected && Target?.ThreadId == selected.ThreadId
+        && !VisibleIds(Workspace).Contains(selected.ThreadId) && CollaborationReplyPolicy.MustRetain(Reply);
     public string? ReadError { get; private set; }
     public CollaborationDraft<CollaborationThreadEditorModel> NewThread { get; private set; } = new(new());
     public CollaborationDraft<CollaborationReplyEditorModel> Reply { get; private set; } = new(new());
@@ -82,7 +84,7 @@ public sealed class CollaborationWorkspaceSession(
         }
 
         var visible = VisibleIds(Workspace).ToArray();
-        if (Target is not null && visible.Contains(Target.ThreadId)) {
+        if (IsReplyRetained || Target is not null && visible.Contains(Target.ThreadId)) {
             changed();
             return;
         }
@@ -328,6 +330,7 @@ public sealed class CollaborationWorkspaceSession(
                 Reply = new(new() { MessageKind = origin.Model.MessageKind });
             } else {
                 origin.Model.MessageBody = string.Empty;
+                origin.Context.MarkAsUnmodified();
             }
             changed();
         }

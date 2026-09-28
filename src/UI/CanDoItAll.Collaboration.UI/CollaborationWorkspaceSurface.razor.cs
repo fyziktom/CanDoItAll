@@ -27,6 +27,13 @@ public partial class CollaborationWorkspaceSurface {
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     });
 
+    private void HandleReplyInput(CollaborationDraft<CollaborationReplyEditorModel> origin, ChangeEventArgs args) {
+        if (ReferenceEquals(View.Reply, origin) && !origin.IsLocked) {
+            origin.Model.MessageBody = args.Value?.ToString() ?? string.Empty;
+            origin.Context.NotifyFieldChanged(new(origin.Model, nameof(CollaborationReplyEditorModel.MessageBody)));
+        }
+    }
+
     private int ResolveCurrentListCount() {
         return SelectedIndex switch {
             2 => VisibleEscalations.Count,

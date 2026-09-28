@@ -146,7 +146,7 @@ component CI shards. They do not depend on a running production host.
 |---|---|---|
 | `tests/Unit/CanDoItAll.Collaboration.Tests/CanDoItAll.Collaboration.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Unit.Collaboration.` | Scripted read/write races, drafts, selection and navigation policy |
 | `tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Components.Collaboration.` | Real renderer, scenarios, validation and dependency guards |
-| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~CollaborationHostTests\|FullyQualifiedName~MainLayoutCollaborationTests` | Real page, owner and shell over PostgreSQL |
+| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~CollaborationHostTests\|FullyQualifiedName~MainLayoutCollaborationTests\|FullyQualifiedName~CollaborationReconciliationTests` | Real page, owner and shell over PostgreSQL; controlled real-form draft retention and accepted mark-read completion |
 | `tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.CollaborationIntegrationTests` | Save boundary, observers, schema, restart and local reply semantics |
 | `tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj` | `FullyQualifiedName~CollaborationBrowserTests\|FullyQualifiedName~CollaborationSandboxBrowserTests` | Production writes/read-back and independent sandbox journeys at 1600 × 1000 |
 

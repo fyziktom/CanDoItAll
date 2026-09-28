@@ -22,6 +22,7 @@ public interface ICollaborationWorkspaceView {
     CollaborationReadState ReadState { get; }
     bool UnreadOnly { get; }
     bool IsMissing { get; }
+    bool IsReplyRetained { get; }
     string? ReadError { get; }
     CollaborationDraft<CollaborationThreadEditorModel> NewThread { get; }
     CollaborationDraft<CollaborationReplyEditorModel> Reply { get; }

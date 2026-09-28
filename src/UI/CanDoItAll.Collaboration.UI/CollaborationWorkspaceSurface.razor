@@ -7,7 +7,8 @@
     var workspace = View.Workspace ?? EmptyWorkspace;
 }
 
-<PageScaffold MaxWidthClass="max-w-full" data-testid="collaboration-workspace" data-phase="@View.ReadState.ToString().ToLowerInvariant()" data-interactive="@Interactive.ToString().ToLowerInvariant()">
+<PageScaffold MaxWidthClass="max-w-full" data-testid="collaboration-workspace" data-phase="@View.ReadState.ToString().ToLowerInvariant()" data-interactive="@Interactive.ToString().ToLowerInvariant()"
+              data-selected-thread-id="@workspace.SelectedThread?.ThreadId" data-selected-unread="@workspace.SelectedThread?.IsUnread.ToString().ToLowerInvariant()">
     <Header>
         <PageHeader Eyebrow="Collaboration"
                     Title="Inbox, threads, and escalation workspace"
@@ -58,6 +59,9 @@
                 }
                 @if (target?.Message is not null) {
                     <p role="status" data-testid="collaboration-target-message">@target.Message</p>
+                }
+                @if (View.IsReplyRetained) {
+                    <p role="status" data-testid="collaboration-reply-retained">This thread is outside the current list. Your reply stays attached here. Select another thread to leave it, or clear the reply and refresh.</p>
                 }
                 @if (create.Message is not null) {
                     <p role="status" data-testid="collaboration-create-message" data-saved-thread-id="@create.SavedThreadId">@create.Message</p>
@@ -337,7 +341,7 @@
                                     </Grid>
                                     <div class="mt-4">
                                         <label class="cda-field-label">Reply</label>
-                                        <InputTextArea @bind-Value="replyEditor.MessageBody" class="cda-input cda-input--textarea min-h-[6rem]" data-testid="collaboration-reply-message" />
+                                        <InputTextArea @bind-Value="replyEditor.MessageBody" @oninput="@(args => HandleReplyInput(reply, args))" class="cda-input cda-input--textarea min-h-[6rem]" data-testid="collaboration-reply-message" />
                                         <ValidationMessage For="@(() => replyEditor.MessageBody)" />
                                     </div>
                                     <Cluster Gap="LayoutGap.Small" Class="mt-4">

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-28T13:19:32.960673+00:00",
+  "generated_utc": "2026-09-28T14:22:16.737040+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -73438,13 +73438,13 @@
     {
       "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
       "category": "process-domain",
-      "source_fingerprint": "16f1f84860488533b1ea1b50e490c1a54dc01edba14739cbee91084d6fb71ff9",
+      "source_fingerprint": "3092abca48f5287f6d8f5c9aa194bf9ac987d7d837169274688b770bb2415152",
       "count": 1
     },
     {
       "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
       "category": "process-domain",
-      "source_fingerprint": "3092abca48f5287f6d8f5c9aa194bf9ac987d7d837169274688b770bb2415152",
+      "source_fingerprint": "4418f8b39affab6634154e1ec7595b7bd58ddb4ace5bf5c690c919711ce427f9",
       "count": 1
     },
     {
