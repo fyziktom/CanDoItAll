@@ -1,3 +1,4 @@
+@namespace CanDoItAll.Plugins.UI
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Plugins
@@ -16,14 +17,19 @@ else
     <Stack GapScale="LayoutGap.Medium">
         @foreach (var connectionDescriptor in Settings.ConnectionDescriptors.Where(item => item.AuthKind == PluginConnectionAuthKind.OAuth2))
         {
-            var connection = PluginsPageHelpers.ResolveConnection(Settings, connectionDescriptor);
-            var editor = ResolveConnectionEditor(Plugin.PluginId, Settings, connectionDescriptor);
-            var oauthStatus = ResolveOAuthStatus(Plugin.PluginId, connection?.Id, connectionDescriptor.Key);
-            var canStartOAuth = PluginsPageHelpers.CanStartOAuth(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator);
+            var editor = Workspace.View.Editor(Plugin.PluginId, connectionDescriptor);
+            var oauthStatus = Workspace.View.OAuthStatus(editor);
+            var canStartOAuth = Workspace.View.Settings.IsCurrent && Workspace.View.OAuth.IsCurrent && !editor.PreventsReplay && PluginsPageHelpers.CanStartOAuth(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator);
+            @if (editor.Operation is { } operation) {
+                <p role="status">@operation.Status: @operation.Message</p>
+                @if (operation.OAuthProgress is { } progress) {
+                    <p>Connection @progress.ConnectionId: @progress.Stage. The provider callback confirms account connection.</p>
+                }
+            }
             <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <Stack GapScale="LayoutGap.Tiny">
                     <Cluster Gap="LayoutGap.Small">
-                        <StatusBadge Tone="@PluginsPageHelpers.ResolveOAuthTone(oauthStatus?.Status)" Text="@(oauthStatus?.Status.ToString() ?? "NotConnected")" />
+                        <StatusBadge Tone="@PluginsPageHelpers.ResolveOAuthTone(oauthStatus?.Status)" Text="@(oauthStatus?.Status.ToString() ?? (Workspace.View.OAuth.IsCurrent ? "NotConnected" : "Unknown"))" />
                         <StatusBadge Tone="neutral" Text="@connectionDescriptor.Key.Value" />
                     </Cluster>
                     <span class="text-sm font-medium text-[var(--cda-text)]">@connectionDescriptor.DisplayName</span>
@@ -34,7 +40,7 @@ else
                     }
                     @if (oauthStatus is not null && !string.IsNullOrWhiteSpace(oauthStatus.LastErrorDescription))
                     {
-                        <span class="text-sm text-[var(--cda-danger)]">@oauthStatus.LastErrorDescription</span>
+                        <span class="text-sm text-[var(--cda-danger)]">Authorization failed. Review the connection settings and retry explicitly.</span>
                     }
                     @if (!canStartOAuth)
                     {
@@ -48,16 +54,16 @@ else
                             Size="ButtonSize.Small"
                             data-testid="@PluginsPageHelpers.BuildOAuthLoginTestId(Plugin.PluginId, connectionDescriptor)"
                             Disabled="@(!canStartOAuth)"
-                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "login"))"
-                            Click="@(() => OnStartOAuth(Plugin, Settings, connectionDescriptor))" />
+                            IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Connection(editor.Origin))"
+                            Click="@(() => Workspace.StartOAuthAsync(editor))" />
                     <Button Text="Disconnect"
                             Icon="link_off"
                             ButtonStyle="ButtonStyle.Warning"
                             Variant="Variant.Outlined"
                             Size="ButtonSize.Small"
-                            Disabled="@(connection is null || oauthStatus?.Status != PluginOAuthConnectionStatusKind.Connected)"
-                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "disconnect"))"
-                            Click="@(() => OnDisconnectOAuth(Plugin, connection))" />
+                            Disabled="@(editor.ConnectionId is null || editor.PreventsReplay || !Workspace.View.OAuth.IsCurrent || oauthStatus?.Status != PluginOAuthConnectionStatusKind.Connected)"
+                            IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Connection(editor.Origin))"
+                            Click="@(() => Workspace.DisconnectOAuthAsync(editor))" />
                 </Cluster>
             </div>
         }
@@ -66,25 +72,7 @@ else
 
 @code {
     private static readonly ConfigurationSchemaValidator ConnectionSettingsValidator = new();
-
-    [Parameter, EditorRequired]
-    public PluginCatalogItem Plugin { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public PluginSettingsDetail Settings { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginId, PluginSettingsDetail, PluginConnectionDescriptor, PluginConnectionEditorState> ResolveConnectionEditor { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginId, PluginConnectionId?, PluginConnectionKey, PluginOAuthConnectionStatusItem?> ResolveOAuthStatus { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginId, string, bool> IsBusy { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginCatalogItem, PluginSettingsDetail, PluginConnectionDescriptor, Task> OnStartOAuth { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginCatalogItem, PluginConnectionItem?, Task> OnDisconnectOAuth { get; set; } = default!;
+    [Parameter, EditorRequired] public PluginCatalogItem Plugin { get; set; } = default!;
+    [Parameter, EditorRequired] public PluginSettingsDetail Settings { get; set; } = default!;
+    [Parameter, EditorRequired] public IPluginsWorkspace Workspace { get; set; } = default!;
 }

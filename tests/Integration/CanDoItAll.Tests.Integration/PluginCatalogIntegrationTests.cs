@@ -560,11 +560,17 @@ public sealed class PluginCatalogIntegrationTests
         var lifetime = services.GetRequiredService<TestHostApplicationLifetime>();
 
         await restartService.MarkRestartRequiredAsync("Integration restart proof.", "integration-test");
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = lifetime.ApplicationStopping.Register(() => stopped.TrySetResult());
         var restartResult = await restartService.RequestRestartAsync(new PluginRuntimeRestartRequest("integration-test"));
-        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+        var repeated = await restartService.RequestRestartAsync(new PluginRuntimeRestartRequest("duplicate-test"));
+        await stopped.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.True(restartResult.IsSuccess, FormatErrors(restartResult.Errors));
         Assert.True(restartResult.Value!.IsRestartRequested);
+        Assert.True(repeated.IsSuccess);
+        Assert.Equal(restartResult.Value.RequestedAtUtc, repeated.Value!.RequestedAtUtc);
+        Assert.Equal("integration-test", repeated.Value.RequestedBy);
         Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
     }
 

@@ -134,6 +134,29 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+### Plugins UI slice
+
+Build Plugins.Contracts, Plugins.UI, Plugins.Presentation, the Plugins module,
+Web and the [sandbox](../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/README.md) directly.
+Use an isolated configuration such as `PluginsUiProof`, setting
+`CANDOITALL_TEST_CONFIGURATION` to the same value for browser child hosts.
+
+| Owning project | Focused selection | Proof |
+| --- | --- | --- |
+| `tests/Components/CanDoItAll.Plugins.UI.Tests` | `FullyQualifiedName~CanDoItAll.Tests.Components.Plugins` | Complete renderer, raw drafts, reads, effect admission, scenarios and dependency guards |
+| `tests/Components/CanDoItAll.Tests.Components` | `FullyQualifiedName~PluginsPageTests\|FullyQualifiedName~PluginsPageDraftRegressionTests` | Existing real-owner page journeys and failing-first draft regressions |
+| `tests/Integration/CanDoItAll.Tests.Integration` | `FullyQualifiedName~PluginsUiOwnerReceiptTests` | Actual package/connection/grant/OAuth/restart commit stages, limits, cleanup and HTTP contract compatibility |
+| `tests/Integration/CanDoItAll.Tests.Integration` | `(FullyQualifiedName~PluginCatalogIntegrationTests&FullyQualifiedName!~Docker_qdrant_plugin_workflow_live_proof)\|FullyQualifiedName~PluginsOwnerPersistenceTests` | Existing production permission, OAuth, package, runtime activation and persistence behaviors |
+| `tests/Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~PluginsBrowserTests` | Real `/plugins` route, controlled EF read-back, bounded actual InputFile upload, owned restart and complete sandbox |
+
+Derive counts from source and confirm discovery before each changed selection.
+The existing simulation MemberData uses complex descriptors: discovery lists one
+theory, while execution expands its six source rows. Record both counts explicitly.
+The opt-in Docker live proof's early return is not live evidence; select it only
+with its explicit host prerequisite. Use isolated PostgreSQL 18 and package paths
+for owner/page/browser tests. The lightweight project is selected by Components,
+Stable and current component CI shards. See the [receipt](architecture/plugins-ui-boundary.md).
+
 ### TestLab UI slice
 
 Build the TestLab.Contracts, TestLab.UI and TestLab module projects directly, followed by

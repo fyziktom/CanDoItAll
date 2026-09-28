@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../plugins/Abstractions/CanDoItAll.Plugins.Abstractions/CanDoItAll.Plugins.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

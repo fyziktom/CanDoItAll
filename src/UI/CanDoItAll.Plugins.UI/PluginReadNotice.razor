@@ -1,0 +1,19 @@
+@namespace CanDoItAll.Plugins.UI
+@using CanDoItAll.Components.BaseLib
+
+@if (Status is not PluginReadStatus.Ready) {
+    <Alert AlertStyle="@(Status is PluginReadStatus.Stale or PluginReadStatus.Unavailable ? AlertStyle.Warning : AlertStyle.Info)">
+        <span data-testid="@($"plugins-read-{Label.ToLowerInvariant().Replace(' ', '-')}")">@Label: @Description</span>
+    </Alert>
+}
+
+@code {
+    [Parameter] public PluginReadStatus Status { get; set; }
+    [Parameter] public string Label { get; set; } = string.Empty;
+    private string Description => Status switch {
+        PluginReadStatus.Loading => "Loading",
+        PluginReadStatus.Stale => "Refresh unavailable; previously loaded data may be stale.",
+        PluginReadStatus.Unavailable => "Unavailable. Refresh to retry this read.",
+        _ => "Not loaded"
+    };
+}

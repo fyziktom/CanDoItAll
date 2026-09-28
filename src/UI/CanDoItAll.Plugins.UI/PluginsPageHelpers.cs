@@ -5,16 +5,10 @@ using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
-namespace CanDoItAll.Modules.Plugins.Pages;
+namespace CanDoItAll.Plugins.UI;
 
 internal static class PluginsPageHelpers
 {
-    public const string InstallAction = "install";
-    public const string EnableAction = "enable";
-    public const string DisableAction = "disable";
-    public const string PackageInstallAction = "package-install";
-    public const string PackageUploadAction = "package-upload";
-    public const string RestartAction = "restart";
 
     public static bool ResolveCheckboxValue(ChangeEventArgs args)
         => args.Value is bool value && value;
@@ -45,31 +39,10 @@ internal static class PluginsPageHelpers
     public static string ResolveInputType(ConfigurationFieldDescriptor field)
         => field.FieldType switch
         {
-            ConfigurationFieldType.Number => "number",
+            ConfigurationFieldType.Number => "text",
             ConfigurationFieldType.Url => "url",
             _ => "text"
         };
-
-    public static string BusyKey(PluginId pluginId, string action)
-        => $"{pluginId.Value}:{action}";
-
-    public static string PackageBusyKey(PluginPackageId packageId, string action)
-        => $"package:{packageId.Value}:{action}";
-
-    public static string PageBusyKey(string action)
-        => $"page:{action}";
-
-    public static string GrantBusyKey(PluginCapabilityGrantItem grant, string action)
-        => $"{action}:{grant.Capability}:{grant.RecipeId?.Value ?? "capability"}";
-
-    public static string OAuthBusyKey(PluginConnectionDescriptor descriptor, string action)
-        => $"oauth-{action}:{descriptor.Key.Value}";
-
-    public static string ConnectionSaveBusyKey(PluginConnectionDescriptor descriptor)
-        => $"connection-save:{descriptor.Key.Value}";
-
-    public static string ConnectionEditorKey(PluginId pluginId, PluginConnectionKey connectionKey)
-        => $"{pluginId.Value}:{connectionKey.Value}";
 
     public static PluginConnectionItem? ResolveConnection(
         PluginSettingsDetail settings,
@@ -97,7 +70,7 @@ internal static class PluginsPageHelpers
         ConfigurationSchemaValidator validator)
         => plugin.IsEnabled &&
            HasGrantedCapability(settings, PluginCapabilityKind.OAuth2) &&
-           !editor.IsDirty &&
+           editor.ConnectionId is not null && editor.IsEnabled && !editor.PreventsReplay && !editor.IsDirty &&
            validator.Validate(descriptor.SettingsSchema, editor.State).Succeeded;
 
     public static string ResolveOAuthActionHint(
@@ -117,7 +90,7 @@ internal static class PluginsPageHelpers
             return "Grant OAuth2 capability before login.";
         }
 
-        if (editor.IsDirty)
+        if (editor.ConnectionId is null || editor.IsDirty)
         {
             return "Save connection settings before login.";
         }

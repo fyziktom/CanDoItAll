@@ -1,0 +1,227 @@
+@namespace CanDoItAll.Plugins.UI
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+<PageTitle>Plugins</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Plugins"
+                    Title="Plugin catalog"
+                    Description="Review plugin manifests, runtime packages, grants, connection settings, OAuth status, and logs."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="packages"
+                             Value="@View.Packages.Value.Count.ToString()"
+                             TooltipText="Runtime plugin packages available in the package catalog."
+                             Tone="info" />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="inventory_2"
+                                        Label="Install packages"
+                                        TooltipText="Open plugin package installation."
+                                        data-testid="plugin-packages-open"
+                                        Click="Workspace.OpenPackagesAsync" />
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh"
+                                        TooltipText="Refresh plugin manifests, grants, connections, OAuth status, and logs."
+                                        Click="Workspace.RefreshAsync" data-testid="plugins-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(View.Notice))
+        {
+            <Alert AlertStyle="@NoticeStyle" Class="mb-4">
+                @View.Notice
+            </Alert>
+        }
+
+        <PluginReadNotice Status="@View.Restart.Status" Label="Restart state" />
+        @foreach (var progress in View.Operations.Values.Select(operation => operation.PackageProgress).OfType<PluginPackageProgress>()) {
+            <Alert AlertStyle="AlertStyle.Warning">
+                Package @progress.PackageId: @progress.Stage. @(progress.RestartRequired ? "Restart required after installation." : "No restart declared.")
+                @if (progress.RestartStatus is null && progress.Stage >= PluginPackageStage.Installed) {
+                    <span>Installation is saved; restart metadata is unavailable. Review the host before requesting restart.</span>
+                }
+                <span>Refresh reads the stored state. After reviewing this receipt, reload the page before uploading another archive.</span>
+            </Alert>
+        }
+        @foreach (var entry in View.Operations.Where(entry => entry.Value.Status == PluginMutationStatus.Unknown && entry.Key is not PluginOperationTarget.Connection).ToArray()) {
+            <Alert AlertStyle="AlertStyle.Warning">
+                @entry.Value.Message
+                <Button Text="I reviewed stored state; resolve unknown" Click="@(() => Workspace.AcknowledgeUnknown(entry.Key))" />
+            </Alert>
+        }
+        @if (RestartStatus?.IsRestartRequired == true)
+        {
+            <Alert AlertStyle="AlertStyle.Warning" Class="mb-4">
+                <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Center">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <strong>Plugin runtime restart required</strong>
+                        <span>@RestartStatus.Reason</span>
+                    </Stack>
+                    <Button Text="Restart application"
+                            Icon="restart_alt"
+                            ButtonStyle="ButtonStyle.Warning"
+                            Size="ButtonSize.Small"
+                            data-testid="plugin-runtime-restart"
+                            Disabled="@(RestartStatus.IsRestartRequested || View.IsBlocked(new PluginOperationTarget.Restart()))"
+                            IsBusy="@View.IsBusy(new PluginOperationTarget.Restart())"
+                            Click="Workspace.RestartAsync" />
+                </Split>
+            </Alert>
+        }
+
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mb-4">
+            <StatusBadge Tone="neutral" Text="@($"{View.Catalog.Value.Count} catalog")" />
+            <StatusBadge Tone="info" Text="@($"{View.Catalog.Value.Count(item => item.IsInstalled)} installed")" />
+            <StatusBadge Tone="success" Text="@($"{View.Catalog.Value.Count(item => item.IsEnabled)} enabled")" />
+            <StatusBadge Tone="info" Text="@($"{View.Packages.Value.Count} packages")" />
+            <StatusBadge Tone="warning" Text="@($"{View.Catalog.Value.Count(item => item.Availability == PluginCatalogAvailabilityKind.Unavailable)} unavailable")" />
+        </Cluster>
+
+        <PluginReadNotice Status="@View.Catalog.Status" Label="Catalog" />
+        @if (View.Catalog.IsCurrent && View.Catalog.Value.Count == 0)
+        {
+            <EmptyState Eyebrow="No plugins"
+                        Title="No plugins are registered"
+                        Description="Catalog entries appear here after app sources or runtime packages provide manifests." />
+        }
+        else if (View.SelectedPlugin is { } selectedPlugin)
+        {
+            <ListDetailShell ListPaneWidth="24rem" DetailPaneClass="min-h-[38rem]" ListPaneClass="min-h-[38rem]">
+                <ListHeader>
+                    <ListPanelHeader Title="Available plugins"
+                                     Description="Select a plugin to inspect manifest data, settings, grants, and live connections."
+                                     Count="@($"{View.Catalog.Value.Count} plugin(s)")"
+                                     HelpText="Plugins are grouped by tags supplied by their plugin descriptors." />
+                </ListHeader>
+
+                <ListContent>
+                    <PluginList Catalog="@View.Catalog.Value"
+                                SelectedPlugin="@selectedPlugin"
+                                ExpandedNodeIds="@View.ExpandedNodeIds"
+                                OnPluginSelected="Workspace.SelectAsync"
+                                OnNodeToggled="ToggleNodeAsync" />
+                </ListContent>
+
+                <DetailHeader>
+                    <PluginDetailsHeader Plugin="@selectedPlugin" Workspace="@Workspace" />
+                </DetailHeader>
+                <DetailContent>
+                    <PluginDetails Plugin="@selectedPlugin" Workspace="@Workspace" />
+                </DetailContent>
+            </ListDetailShell>
+        }
+    </ChildContent>
+</PageScaffold>
+
+<Dialog IsOpen="@View.PackagesOpen"
+        Eyebrow="Plugin packages"
+        Title="Install runtime packages"
+        Subtitle="Install from the configured catalogue or upload a package archive."
+        Size="ModalSize.Wide"
+        TestId="plugin-packages-dialog"
+        OnClose="Workspace.ClosePackages">
+    <HeaderActions>
+        <StatusBadge Tone="info" Text="@($"{View.Packages.Value.Count} packages")" />
+    </HeaderActions>
+    <ChildContent>
+        <PluginReadNotice Status="@View.Packages.Status" Label="Packages" />
+        @if (View.UploadReading) {
+            <Alert AlertStyle="AlertStyle.Info">Reading package. Keep this dialog open; selecting another file is disabled.</Alert>
+        }
+        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+                    <h2 class="cda-title-md">Catalogue</h2>
+                    <StatusBadge Tone="info" Text="@($"{View.Packages.Value.Count} package(s)")" />
+                </Cluster>
+
+                @if (View.Packages.IsCurrent && View.Packages.Value.Count == 0)
+                {
+                    <EmptyState Eyebrow="Packages"
+                                Title="No package catalogue entries"
+                                Description="Configured package archives appear here after the catalogue folder contains valid plugin packages." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Small">
+                        @foreach (var package in View.Packages.Value)
+                        {
+                            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Tone="@PluginsPageHelpers.ResolvePackageTone(package)" Text="@(package.IsInstalled ? "Installed" : "Available")" />
+                                        <StatusBadge Tone="neutral" Text="@package.CatalogSourceKind.ToString()" />
+                                        @if (package.RequiresRestart)
+                                        {
+                                            <StatusBadge Tone="warning" Text="Restart" />
+                                        }
+                                    </Cluster>
+                                    <span class="text-sm font-medium text-[var(--cda-text)]">@package.DisplayName</span>
+                                    <span class="break-all text-xs text-[var(--cda-text-muted)]">@package.PackageId.Value</span>
+                                    <span class="text-sm text-[var(--cda-text-muted)]">@package.Description</span>
+                                </Stack>
+                                <Cluster Gap="LayoutGap.Tiny" Class="self-start">
+                                    <Button Text="Install"
+                                            Icon="download"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            data-testid="@PluginsPageHelpers.BuildPackageInstallTestId(package)"
+                                            Disabled="@(package.IsInstalled || View.IsBlocked(new PluginOperationTarget.Package(package.PackageId)))"
+                                            IsBusy="@View.IsBusy(new PluginOperationTarget.Package(package.PackageId))"
+                                            Click="@(() => Workspace.InstallPackageAsync(package))" />
+                                </Cluster>
+                            </div>
+                        }
+                    </Stack>
+                }
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Medium">
+                <h2 class="cda-title-md">Upload zip</h2>
+                <div>
+                    <label class="cda-field-label" for="plugin-package-upload">Package archive</label>
+                    <InputFile id="plugin-package-upload"
+                               class="cda-input"
+                               accept=".zip,application/zip"
+                               data-testid="plugin-package-upload"
+                               OnChange="UploadPackageAsync" disabled="@(View.UploadReading || View.IsBlocked(new PluginOperationTarget.Upload()))" />
+                </div>
+                @if (!string.IsNullOrWhiteSpace(View.UploadFileName))
+                {
+                    <p class="cda-body-muted break-all">@View.UploadFileName</p>
+                }
+            </Stack>
+        </Grid>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+            <Button Text="Close"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="Workspace.ClosePackages" Disabled="@View.UploadReading" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public IPluginsWorkspace Workspace { get; set; } = default!;
+    private PluginsWorkspaceView View => Workspace.View;
+    private PluginRuntimeRestartStatus? RestartStatus => View.Restart.Value;
+    private AlertStyle NoticeStyle => View.NoticeStatus switch {
+        PluginMutationStatus.Saved => AlertStyle.Success,
+        PluginMutationStatus.Refused => AlertStyle.Danger,
+        PluginMutationStatus.Unknown or PluginMutationStatus.SavedWithWarning => AlertStyle.Warning,
+        _ => AlertStyle.Info
+    };
+    private Task UploadPackageAsync(InputFileChangeEventArgs args) => Workspace.UploadAsync(args.File);
+    private Task ToggleNodeAsync(string nodeId) {
+        Workspace.ToggleNode(nodeId);
+        return Task.CompletedTask;
+    }
+}

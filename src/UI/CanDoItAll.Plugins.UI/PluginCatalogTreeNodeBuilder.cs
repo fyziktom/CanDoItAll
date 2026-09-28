@@ -3,9 +3,9 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 
-namespace CanDoItAll.Modules.Plugins.Pages;
+namespace CanDoItAll.Plugins.UI;
 
-internal static class PluginCatalogTreeNodeBuilder
+public static class PluginCatalogTreeNodeBuilder
 {
     private const string PluginNodePrefix = "plugins-plugin:";
     private const string TagNodePrefix = "plugins-tag:";

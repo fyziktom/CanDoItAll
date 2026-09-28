@@ -1,3 +1,4 @@
+@namespace CanDoItAll.Plugins.UI
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Plugins
@@ -24,15 +25,21 @@
 
     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
         <FormSection Title="Installation logs" Description="Package and plugin lifecycle records, newest first.">
-            @PluginsPageHelpers.RenderLogList(InstallationLogs, "installation")
+            @if (InstallationLogs.Count > 0 || InstallationStatus == PluginReadStatus.Ready) {
+                @PluginsPageHelpers.RenderLogList(InstallationLogs, "installation")
+            }
         </FormSection>
         <FormSection Title="Runtime logs" Description="Plugin executor and runtime event records, newest first.">
-            @PluginsPageHelpers.RenderLogList(RuntimeLogs, "runtime")
+            @if (RuntimeLogs.Count > 0 || RuntimeStatus == PluginReadStatus.Ready) {
+                @PluginsPageHelpers.RenderLogList(RuntimeLogs, "runtime")
+            }
         </FormSection>
     </Grid>
 </Stack>
 
 @code {
+    [Parameter] public PluginReadStatus InstallationStatus { get; set; }
+    [Parameter] public PluginReadStatus RuntimeStatus { get; set; }
     [Parameter, EditorRequired]
     public PluginCatalogItem Plugin { get; set; } = default!;
 

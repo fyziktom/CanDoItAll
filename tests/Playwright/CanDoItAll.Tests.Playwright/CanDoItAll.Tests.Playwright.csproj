@@ -22,6 +22,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="../PluginsBrowserFixture/ProbeProtocol.cs" Link="Plugins/ProbeProtocol.cs" />
+    <ProjectReference Include="../PluginsBrowserFixture/PluginsBrowserFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/CanDoItAll.Plugins.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <Compile Include="../TestLabBrowserFixture/ProbeProtocol.cs" Link="TestLab/ProbeProtocol.cs" />
     <ProjectReference Include="../TestLabBrowserFixture/TestLabBrowserFixture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj" ReferenceOutputAssembly="false" />

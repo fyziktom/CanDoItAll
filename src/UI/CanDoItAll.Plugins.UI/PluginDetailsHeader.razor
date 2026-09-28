@@ -1,3 +1,4 @@
+@namespace CanDoItAll.Plugins.UI
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Plugins
@@ -26,8 +27,9 @@
                     Icon="download"
                     ButtonStyle="ButtonStyle.Primary"
                     Size="ButtonSize.Small"
-                    IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.InstallAction)"
-                    Click="@(() => OnInstall(Plugin))" />
+                    Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    Click="@(() => Workspace.SetLifecycleAsync(Plugin, PluginLifecycleAction.Install))" />
         }
         else if (Plugin.IsEnabled)
         {
@@ -36,8 +38,9 @@
                     ButtonStyle="ButtonStyle.Warning"
                     Variant="Variant.Outlined"
                     Size="ButtonSize.Small"
-                    IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.DisableAction)"
-                    Click="@(() => OnDisable(Plugin))" />
+                    Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    Click="@(() => Workspace.SetLifecycleAsync(Plugin, PluginLifecycleAction.Disable))" />
         }
         else
         {
@@ -45,25 +48,14 @@
                     Icon="play_arrow"
                     ButtonStyle="ButtonStyle.Success"
                     Size="ButtonSize.Small"
-                    IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.EnableAction)"
-                    Click="@(() => OnEnable(Plugin))" />
+                    Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    Click="@(() => Workspace.SetLifecycleAsync(Plugin, PluginLifecycleAction.Enable))" />
         }
     </Cluster>
 </Split>
 
 @code {
-    [Parameter, EditorRequired]
-    public PluginCatalogItem Plugin { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginId, string, bool> IsBusy { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginCatalogItem, Task> OnInstall { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginCatalogItem, Task> OnEnable { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<PluginCatalogItem, Task> OnDisable { get; set; } = default!;
+    [Parameter, EditorRequired] public PluginCatalogItem Plugin { get; set; } = default!;
+    [Parameter, EditorRequired] public IPluginsWorkspace Workspace { get; set; } = default!;
 }

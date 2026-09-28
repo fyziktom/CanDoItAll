@@ -34,3 +34,7 @@ directory. Project READMEs describe the local project boundary and validation co
 
 [TestLab UI boundary](testlab-ui-boundary.md) records the full workspace extraction,
 form and submission lifetimes, production owner proof and standalone development loop.
+
+[Plugins UI boundary](plugins-ui-boundary.md) records the six-section workspace,
+connection lifetimes, staged owner receipts, real upload/OAuth/restart proof and
+[standalone sandbox](../../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/README.md).

@@ -94,13 +94,13 @@ public sealed class PluginGrantStore(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         Interlocked.Increment(ref revision);
-        logger.LogInformation(
+        PluginCommit.Observe(ToItem(record), () => logger.LogInformation(
             "Set plugin grant {PluginId} capability {Capability} recipe {RecipeId} state {State}. Actor={Actor}.",
             pluginId.Value,
             request.Capability,
             recipeId,
             record.State,
-            record.UpdatedBy);
+            record.UpdatedBy));
         return Result<PluginCapabilityGrantItem>.Success(ToItem(record));
     }
 
