@@ -8,16 +8,17 @@ namespace CanDoItAll.Modules.AgentFramework.Pages;
 public sealed class AgentsOverviewSession(
     IAgentsWorkspaceQuery query,
     ILogger<AgentsOverviewSession> logger,
-    Func<Task>? changed = null) : IDisposable {
+    Func<Task>? changed = null, TimeProvider? clock = null) : IDisposable {
     private readonly ReadLane header = new(ReadKind.Header);
     private readonly ReadLane overview = new(ReadKind.Overview);
     private readonly ReadLane usage = new(ReadKind.Usage);
-    private ProviderUsageWorkloadSelection? requestedUsage;
+    private (ProviderUsageWorkloadSelection Selection, ProviderUsagePeriod Period)? requestedUsage;
+    private readonly TimeProvider clock = clock ?? TimeProvider.System;
     private bool aggregatesDemanded;
     private bool disposed;
 
     public AgentsHeaderSnapshot? Header { get; private set; }
-    public AgentOverviewSnapshot? Overview { get; private set; }
+    public AgentRuntimeSummary? Overview { get; private set; }
     public ProviderUsageSnapshot? AcceptedUsage { get; private set; }
     public bool HeaderLoading => header.Current?.Pending == true;
     public bool OverviewLoading => overview.Current?.Pending == true;
@@ -26,28 +27,28 @@ public sealed class AgentsOverviewSession(
     public string? OverviewError => overview.Error;
     public string? UsageError => usage.Error;
 
-    public ProviderUsageSnapshot? GetAcceptedUsage(ProviderUsageWorkloadSelection selection)
-        => AcceptedUsage?.Selection == selection ? AcceptedUsage : null;
+    public ProviderUsageSnapshot? GetAcceptedUsage(ProviderUsageWorkloadSelection selection, ProviderUsagePeriod period = ProviderUsagePeriod.SevenDays)
+        => AcceptedUsage?.Query is { } accepted && accepted.Selection == selection && accepted.Period == period ? AcceptedUsage : null;
 
-    public Task EnsureAsync(AgentWorkspaceSection section, ProviderUsageWorkloadSelection selection) {
-        SetDemand(section, selection);
+    public Task EnsureAsync(AgentWorkspaceSection section, ProviderUsageWorkloadSelection selection, ProviderUsagePeriod period = ProviderUsagePeriod.SevenDays) {
+        SetDemand(section, selection, period);
         if (disposed) {
             return Task.CompletedTask;
         }
         var headerTask = ReadHeaderAsync(retry: false);
         return aggregatesDemanded
-            ? Task.WhenAll(headerTask, ReadOverviewAsync(retry: false), ReadUsageAsync(selection, retry: false))
+            ? Task.WhenAll(headerTask, ReadOverviewAsync(retry: false), ReadUsageAsync(selection, period, retry: false))
             : headerTask;
     }
 
-    public Task RefreshDemandedAsync(AgentWorkspaceSection section, ProviderUsageWorkloadSelection selection) {
-        SetDemand(section, selection);
+    public Task RefreshDemandedAsync(AgentWorkspaceSection section, ProviderUsageWorkloadSelection selection, ProviderUsagePeriod period = ProviderUsagePeriod.SevenDays) {
+        SetDemand(section, selection, period);
         if (disposed) {
             return Task.CompletedTask;
         }
         var headerTask = ReadHeaderAsync(retry: true);
         return aggregatesDemanded
-            ? Task.WhenAll(headerTask, ReadOverviewAsync(retry: true), ReadUsageAsync(selection, retry: true))
+            ? Task.WhenAll(headerTask, ReadOverviewAsync(retry: true), ReadUsageAsync(selection, period, retry: true))
             : headerTask;
     }
 
@@ -56,11 +57,11 @@ public sealed class AgentsOverviewSession(
     public Task RetryOverviewAsync()
         => disposed || !aggregatesDemanded ? Task.CompletedTask : ReadOverviewAsync(retry: true);
 
-    public Task RetryUsageAsync(ProviderUsageWorkloadSelection selection)
-        => disposed || !aggregatesDemanded || selection != requestedUsage
-            ? Task.CompletedTask : ReadUsageAsync(selection, retry: true);
+    public Task RetryUsageAsync(ProviderUsageWorkloadSelection selection, ProviderUsagePeriod period = ProviderUsagePeriod.SevenDays)
+        => disposed || !aggregatesDemanded || (selection, period) != requestedUsage
+            ? Task.CompletedTask : ReadUsageAsync(selection, period, retry: true);
 
-    private void SetDemand(AgentWorkspaceSection section, ProviderUsageWorkloadSelection selection) {
+    private void SetDemand(AgentWorkspaceSection section, ProviderUsageWorkloadSelection selection, ProviderUsagePeriod period = ProviderUsagePeriod.SevenDays) {
         if (disposed) {
             return;
         }
@@ -70,9 +71,12 @@ public sealed class AgentsOverviewSession(
         if (selection is not (ProviderUsageWorkloadSelection.Agents or ProviderUsageWorkloadSelection.SimpleChats or ProviderUsageWorkloadSelection.Both)) {
             throw new ArgumentOutOfRangeException(nameof(selection));
         }
-        if (requestedUsage != selection) {
+        if (!Enum.IsDefined(period)) {
+            throw new ArgumentOutOfRangeException(nameof(period));
+        }
+        if (requestedUsage != (selection, period)) {
             CancelPending(usage);
-            requestedUsage = selection;
+            requestedUsage = (selection, period);
         }
         aggregatesDemanded = !section.IsHistoryHost();
         if (!aggregatesDemanded) {
@@ -96,18 +100,18 @@ public sealed class AgentsOverviewSession(
     private Task ReadOverviewAsync(bool retry)
         => StartAsync(overview, null, retry, query.ReadOverviewAsync, snapshot => {
             Overview = snapshot with {
-                TopAgents = snapshot.TopAgents.ToImmutableArray(),
-                TopFailingAgents = snapshot.TopFailingAgents.ToImmutableArray(),
-                ProviderUsage = snapshot.ProviderUsage.ToImmutableArray(),
-                ModelUsage = snapshot.ModelUsage.ToImmutableArray(),
                 TeamShortcuts = snapshot.TeamShortcuts.ToImmutableArray()
             };
         });
 
-    private Task ReadUsageAsync(ProviderUsageWorkloadSelection selection, bool retry)
-        => StartAsync(usage, selection, retry, token => query.ReadUsageAsync(selection, token).AsTask(), snapshot => {
-            if (snapshot.Selection != selection) {
-                throw new InvalidDataException("Usage returned a different scope than requested.");
+    private Task ReadUsageAsync(ProviderUsageWorkloadSelection selection, ProviderUsagePeriod period, bool retry) {
+        if (!retry && usage.Current is { Query: { } existing } current && existing.Selection == selection && existing.Period == period) {
+            return current.Task;
+        }
+        var request = new ProviderUsageQuery(selection, period, clock.GetUtcNow());
+        return StartAsync(usage, request, retry, token => query.ReadUsageAsync(request, token).AsTask(), snapshot => {
+            if (snapshot.Query != request || snapshot.Selection != selection) {
+                throw new InvalidDataException("Usage returned a different query than requested.");
             }
             AcceptedUsage = snapshot with {
                 Consumers = snapshot.Consumers.ToImmutableArray(),
@@ -116,10 +120,11 @@ public sealed class AgentsOverviewSession(
                 Sources = snapshot.Sources.ToImmutableArray()
             };
         });
+    }
 
-    private Task StartAsync<T>(ReadLane lane, ProviderUsageWorkloadSelection? selection, bool retry,
+    private Task StartAsync<T>(ReadLane lane, ProviderUsageQuery? selection, bool retry,
         Func<CancellationToken, Task<T>> read, Action<T> accept) {
-        if (!retry && lane.Current is { } existing && existing.Selection == selection) {
+        if (!retry && lane.Current is { } existing && existing.Query == selection) {
             return existing.Task;
         }
         lane.Current?.Cancel();
@@ -141,11 +146,11 @@ public sealed class AgentsOverviewSession(
                     lane.Error = lane.Kind switch {
                         ReadKind.Header => "Header information could not be refreshed. Retry the header read.",
                         ReadKind.Overview => "The agent runtime summary could not be refreshed. Retry the Overview read.",
-                        ReadKind.Usage => "Usage evidence could not be refreshed. Retry the selected scope.",
+                        ReadKind.Usage => "Usage evidence could not be refreshed. Retry the selected workload and period.",
                         _ => throw new InvalidOperationException("Unknown read lane.")
                     };
                     logger.LogWarning("Agents {Lane} read {Generation} failed ({FailureType}); requested usage scope {Scope}.",
-                        lane.Kind, request.Generation, exception.GetType().Name, request.Selection);
+                        lane.Kind, request.Generation, exception.GetType().Name, request.Query);
                 }
             } finally {
                 if (IsCurrent(lane, request)) {
@@ -163,7 +168,7 @@ public sealed class AgentsOverviewSession(
         => !disposed && lane.Generation == request.Generation && ReferenceEquals(lane.Current, request)
             && !request.Token.IsCancellationRequested
             && (lane.Kind == ReadKind.Header || aggregatesDemanded)
-            && (lane.Kind != ReadKind.Usage || requestedUsage == request.Selection);
+            && (lane.Kind != ReadKind.Usage || request.Query is { } identity && requestedUsage == (identity.Selection, identity.Period));
 
     private static void CancelPending(ReadLane lane) {
         if (lane.Current is not { Pending: true } request) {
@@ -172,6 +177,14 @@ public sealed class AgentsOverviewSession(
         lane.Generation++;
         lane.Current = null;
         request.Cancel();
+    }
+
+    public void InvalidateContext() {
+        Dispose();
+        Header = null;
+        Overview = null;
+        AcceptedUsage = null;
+        usage.Error = "The workspace changed. Reload to read usage for the current workspace.";
     }
 
     public void Dispose() {
@@ -197,14 +210,14 @@ public sealed class AgentsOverviewSession(
         private readonly CancellationTokenSource cancellation = new();
         private bool disposed;
         public long Generation { get; }
-        public ProviderUsageWorkloadSelection? Selection { get; }
+        public ProviderUsageQuery? Query { get; }
         public CancellationToken Token { get; }
         public bool Pending { get; set; } = true;
         public Task Task { get; set; } = System.Threading.Tasks.Task.CompletedTask;
 
-        public ReadRequest(long generation, ProviderUsageWorkloadSelection? selection) {
+        public ReadRequest(long generation, ProviderUsageQuery? selection) {
             Generation = generation;
-            Selection = selection;
+            Query = selection;
             Token = cancellation.Token;
         }
 

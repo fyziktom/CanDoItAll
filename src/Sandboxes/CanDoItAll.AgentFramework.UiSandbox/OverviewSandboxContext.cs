@@ -6,7 +6,7 @@ namespace CanDoItAll.AgentFramework.UiSandbox;
 public enum OverviewSandboxScenario {
     Baseline, Loading, InitialFailure, StaleOverview, Empty, Ready, HeaderPartial,
     BoundUnavailable, UsageLoading, StaleUsage, ScopePending, WrongScope, Partial,
-    UnknownUnpriced, LongContent, DetailPending
+    UnknownUnpriced, LongContent, DetailPending, Indexing, LongPeriodLoading
 }
 
 public sealed record OverviewSandboxScenarioDefinition(OverviewSandboxScenario Scenario, string Token, string Label);
@@ -14,8 +14,11 @@ public sealed record OverviewSandboxScenarioDefinition(OverviewSandboxScenario S
 public sealed record OverviewSandboxContext(
     OverviewSandboxScenario Scenario = OverviewSandboxScenario.Baseline,
     CatalogSandboxLayout Layout = CatalogSandboxLayout.Matched,
-    ProviderUsageWorkloadSelection Scope = ProviderUsageWorkloadSelection.Both) {
+    ProviderUsageWorkloadSelection Scope = ProviderUsageWorkloadSelection.Both,
+    ProviderUsagePeriod Period = ProviderUsagePeriod.SevenDays) {
     public static ImmutableArray<OverviewSandboxScenarioDefinition> Scenarios { get; } = [
+        new(OverviewSandboxScenario.Indexing, "indexing", "Agent indexing"),
+        new(OverviewSandboxScenario.LongPeriodLoading, "long-period-loading", "Year loading"),
         new(OverviewSandboxScenario.Baseline, "baseline", "Production baseline"),
         new(OverviewSandboxScenario.Loading, "loading", "Initial loading"),
         new(OverviewSandboxScenario.InitialFailure, "initial-failure", "Overview unavailable"),
@@ -34,7 +37,7 @@ public sealed record OverviewSandboxContext(
         new(OverviewSandboxScenario.DetailPending, "detail-pending", "Detail already open")
     ];
 
-    public static OverviewSandboxContext Parse(string? scenario, string? layout, string? scope) => new(
+    public static OverviewSandboxContext Parse(string? scenario, string? layout, string? scope, string? period = null) => new(
         Scenarios.FirstOrDefault(item => string.Equals(item.Token, scenario?.Trim(), StringComparison.OrdinalIgnoreCase))?.Scenario
             ?? OverviewSandboxScenario.Baseline,
         string.Equals(layout?.Trim(), "flexible", StringComparison.OrdinalIgnoreCase) ? CatalogSandboxLayout.Flexible : CatalogSandboxLayout.Matched,
@@ -42,10 +45,11 @@ public sealed record OverviewSandboxContext(
             "agents" => ProviderUsageWorkloadSelection.Agents,
             "chats" => ProviderUsageWorkloadSelection.SimpleChats,
             _ => ProviderUsageWorkloadSelection.Both
-        });
+        }, ProviderUsagePeriods.TryParse(period, out var parsed) ? parsed : ProviderUsagePeriod.SevenDays);
 
     public IReadOnlyDictionary<string, object?> ToQuery() => new Dictionary<string, object?> {
         ["specimen"] = "overview",
+        ["usagePeriod"] = Period.ToWireValue(),
         ["scenario"] = Scenarios.Single(item => item.Scenario == Scenario).Token,
         ["layout"] = Layout == CatalogSandboxLayout.Matched ? "matched" : "flexible",
         ["usageScope"] = Scope switch {

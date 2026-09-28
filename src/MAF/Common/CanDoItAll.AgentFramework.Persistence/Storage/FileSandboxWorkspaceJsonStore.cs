@@ -49,6 +49,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
     private readonly DurableFileWriter durableFileWriter;
     private readonly string? managedRoot;
     private readonly FileProviderHistoryJournal? historyJournal;
+    internal FileProviderUsageIndex? UsageIndex { get; set; }
 
     public FileSandboxWorkspaceJsonStore(
         FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics = null)
@@ -92,6 +93,26 @@ internal sealed class FileSandboxWorkspaceJsonStore
     }
 
     public async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken)
+        => await ReadJsonAsync<T>(fullPath, cancellationToken, readPolicy: null);
+
+    internal async Task<T?[]> ReadJsonBatchAsync<T>(IReadOnlyList<string> paths, CancellationToken cancellationToken) {
+        const int maximumConcurrentReads = 4;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (paths.Count == 0) {
+            return [];
+        }
+        var readPolicy = managedRoot is null ? null : physicalPathPolicyFactory.Create(managedRoot);
+        var results = new T?[paths.Count];
+        await Parallel.ForEachAsync(Enumerable.Range(0, paths.Count),
+            new ParallelOptions { MaxDegreeOfParallelism = maximumConcurrentReads, CancellationToken = cancellationToken },
+            async (index, token) => {
+                results[index] = await ReadJsonAsync<T>(paths[index], token, readPolicy);
+            });
+        return results;
+    }
+
+    private async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken,
+        IPhysicalFileSystemPathPolicy? readPolicy)
     {
         if (string.IsNullOrWhiteSpace(fullPath))
         {
@@ -104,7 +125,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var stream = TryOpenSharedReadStream(fullPath);
+                var stream = TryOpenSharedReadStream(fullPath, readPolicy);
                 if (stream is null)
                 {
                     return default;
@@ -312,6 +333,9 @@ internal sealed class FileSandboxWorkspaceJsonStore
     }
 
     private async Task WriteObservedJsonAsync<T>(string fullPath, T payload, string serialized, CancellationToken cancellationToken) {
+        if (UsageIndex is not null && payload is ProviderUsageObservation usage) {
+            await UsageIndex.IncludeAsync(fullPath, usage, cancellationToken);
+        }
         var prepared = historyJournal is not null && payload is ProviderUsageObservation observation
             ? await historyJournal.PrepareWriteAsync(fullPath, observation, serialized, cancellationToken) : [];
         await WriteJsonAtomicallyAsync(fullPath, serialized, cancellationToken);
@@ -320,9 +344,13 @@ internal sealed class FileSandboxWorkspaceJsonStore
         }
     }
 
-    private FileStream? TryOpenSharedReadStream(string fullPath)
+    private FileStream? TryOpenSharedReadStream(string fullPath, IPhysicalFileSystemPathPolicy? readPolicy = null)
     {
-        EnsureSafeFilePath(fullPath, allowMissingLeaf: true);
+        if (readPolicy is null) {
+            EnsureSafeFilePath(fullPath, allowMissingLeaf: true);
+        } else {
+            readPolicy.EnsureSafePath(fullPath, allowMissingLeaf: true);
+        }
         if (!File.Exists(fullPath))
         {
             return null;

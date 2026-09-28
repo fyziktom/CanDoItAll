@@ -38,7 +38,7 @@ public sealed class AgentsOverviewSurfaceTests {
         Assert.IsType<AgentsOverviewIntent.RetryUsage>(Assert.Single(intents));
         intents.Clear();
         await cut.Find("[data-testid='agents-overview-open-provider-usage']").ClickAsync();
-        Assert.Equal(new AgentsOverviewIntent.OpenDetail(AgentsOverviewDetail.Providers, ProviderUsageWorkloadSelection.Both), Assert.Single(intents));
+        Assert.Equal(new AgentsOverviewIntent.OpenDetail(AgentsOverviewDetail.Providers, state.AcceptedQuery!), Assert.Single(intents));
         intents.Clear();
         await cut.Find("[data-testid='agents-overview-team-shortcut']").ClickAsync();
         Assert.Equal(new AgentsOverviewIntent.OpenTeam(state.Teams[0].TeamId), Assert.Single(intents));
@@ -95,6 +95,21 @@ public sealed class AgentsOverviewSurfaceTests {
         Assert.IsType<AgentsOverviewIntent.RetryHeader>(Assert.Single(intents));
     }
 
+    [Fact]
+    public async Task Period_control_is_accessible_and_remains_enabled_during_a_long_read() {
+        using var context = Context();
+        var intents = new List<AgentsOverviewIntent>();
+        var cut = context.Render<AgentsOverviewSurface>(p => p.Add(c => c.State, Ready() with {
+            DesiredPeriod = ProviderUsagePeriod.Year, UsagePhase = AgentsOverviewReadPhase.Loading
+        }).Add(c => c.Intent, intents.Add));
+        Assert.Equal("true", cut.Find("[data-testid='agents-overview-period-1y']").GetAttribute("aria-pressed"));
+        var shortPeriod = cut.Find("[data-testid='agents-overview-period-7d']");
+        Assert.False(shortPeriod.HasAttribute("disabled"));
+        await shortPeriod.ClickAsync();
+        Assert.Equal(new AgentsOverviewIntent.SelectPeriod(ProviderUsagePeriod.SevenDays), Assert.Single(intents));
+        Assert.DoesNotContain("Representative consumer", cut.Markup);
+    }
+
     private static BunitContext Context() {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -108,7 +123,8 @@ public sealed class AgentsOverviewSurfaceTests {
         return new() {
             DesiredScope = ProviderUsageWorkloadSelection.Both,
             AcceptedScope = ProviderUsageWorkloadSelection.Both,
-            Totals = AgentOverviewTotals.Empty with { AgentCount = 42 },
+            AcceptedQuery = new(ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow),
+            Totals = AgentRuntimeTotals.Empty with { AgentCount = 42 },
             UsageTotals = totals,
             OverviewPhase = AgentsOverviewReadPhase.Ready,
             UsagePhase = AgentsOverviewReadPhase.Ready,

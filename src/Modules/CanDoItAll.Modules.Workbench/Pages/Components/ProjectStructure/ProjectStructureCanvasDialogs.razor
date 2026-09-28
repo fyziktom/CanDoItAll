@@ -607,6 +607,7 @@
 @if (WebPreviewDialog is not null)
 {
     <ProjectStructureWebPreviewDialog State="WebPreviewDialog"
+                                      StopRuntime="StopWebPreviewRuntime"
                                       Close="CloseWebPreviewDialog" />
 }
 
@@ -1154,6 +1155,9 @@
 
     [Parameter]
     public EventCallback CloseWebPreviewDialog { get; set; }
+
+    [Parameter]
+    public EventCallback<string> StopWebPreviewRuntime { get; set; }
 
     [Parameter]
     public ProjectStructureNode? PreviewNode { get; set; }

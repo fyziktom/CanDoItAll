@@ -19,6 +19,7 @@ internal static class AgentsApi
     {
         var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents");
+        agents.MapUsage();
 
         agents.MapGet("/", ListAgentsAsync)
             .WithName("ListAgents")

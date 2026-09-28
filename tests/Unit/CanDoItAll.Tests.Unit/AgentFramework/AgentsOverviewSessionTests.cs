@@ -19,7 +19,7 @@ public sealed class AgentsOverviewSessionTests {
     [InlineData(LateCompletion.Canceled, true)]
     public async Task Canceled_lanes_allow_delayed_registration_without_late_publication(LateCompletion outcome, bool disposeOwner) {
         var h = new TaskCompletionSource<AgentsHeaderSnapshot>();
-        var o = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var o = new TaskCompletionSource<AgentRuntimeSummary>();
         var u = new TaskCompletionSource<ProviderUsageSnapshot>();
         var reads = new Reads { Header = _ => h.Task, Overview = _ => o.Task, Usage = (_, _) => new(u.Task) };
         var publications = 0;
@@ -32,7 +32,7 @@ public sealed class AgentsOverviewSessionTests {
         var observed = new int[3];
         var registrations = tokens.Select((token, index) => token.Register(() => observed[index]++)).ToArray();
         var nextH = new TaskCompletionSource<AgentsHeaderSnapshot>();
-        var nextO = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var nextO = new TaskCompletionSource<AgentRuntimeSummary>();
         var nextU = new TaskCompletionSource<ProviderUsageSnapshot>();
         reads.Header = _ => nextH.Task;
         reads.Overview = _ => nextO.Task;
@@ -53,7 +53,7 @@ public sealed class AgentsOverviewSessionTests {
             Assert.True(tokens[index].WaitHandle.WaitOne(0));
         }
         Finish(h, Reads.HeaderValue(), tokens[0]);
-        Finish(o, AgentOverviewSnapshot.Empty, tokens[1]);
+        Finish(o, AgentRuntimeSummary.Empty, tokens[1]);
         Finish(u, ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both), tokens[2]);
         await old;
         Assert.Equal(0, publications);
@@ -69,7 +69,7 @@ public sealed class AgentsOverviewSessionTests {
             Assert.True(session.UsageLoading);
         }
         nextH.SetResult(Reads.HeaderValue());
-        nextO.SetResult(AgentOverviewSnapshot.Empty);
+        nextO.SetResult(AgentRuntimeSummary.Empty);
         nextU.SetResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both));
         await next;
         session.Dispose();
@@ -116,7 +116,7 @@ public sealed class AgentsOverviewSessionTests {
 
     [Fact]
     public async Task Header_can_publish_while_both_aggregates_are_pending() {
-        var overview = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var overview = new TaskCompletionSource<AgentRuntimeSummary>();
         var usage = new TaskCompletionSource<ProviderUsageSnapshot>();
         var reads = new Reads { Overview = _ => overview.Task, Usage = (_, _) => new(usage.Task) };
         using var session = Session(reads);
@@ -124,7 +124,7 @@ public sealed class AgentsOverviewSessionTests {
         Assert.Equal(7, session.Header?.BoundResourceCount);
         Assert.True(session.OverviewLoading);
         Assert.True(session.UsageLoading);
-        overview.SetResult(AgentOverviewSnapshot.Empty);
+        overview.SetResult(AgentRuntimeSummary.Empty);
         usage.SetResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both));
         await load;
     }
@@ -132,7 +132,7 @@ public sealed class AgentsOverviewSessionTests {
     [Fact]
     public async Task Same_pending_request_reuses_each_read_lane() {
         var header = new TaskCompletionSource<AgentsHeaderSnapshot>();
-        var overview = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var overview = new TaskCompletionSource<AgentRuntimeSummary>();
         var usage = new TaskCompletionSource<ProviderUsageSnapshot>();
         var reads = new Reads { Header = _ => header.Task, Overview = _ => overview.Task, Usage = (_, _) => new(usage.Task) };
         using var session = Session(reads);
@@ -142,7 +142,7 @@ public sealed class AgentsOverviewSessionTests {
         Assert.Equal(1, reads.OverviewCalls);
         Assert.Equal(1, reads.UsageCalls);
         header.SetResult(Reads.HeaderValue());
-        overview.SetResult(AgentOverviewSnapshot.Empty);
+        overview.SetResult(AgentRuntimeSummary.Empty);
         usage.SetResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both));
         await Task.WhenAll(first, echo);
     }
@@ -198,7 +198,7 @@ public sealed class AgentsOverviewSessionTests {
             await session.RetryUsageAsync(ProviderUsageWorkloadSelection.Both);
             Assert.NotNull(session.UsageError);
         } else {
-            reads.Overview = _ => Task.FromException<AgentOverviewSnapshot>(new IOException("Private summary failure"));
+            reads.Overview = _ => Task.FromException<AgentRuntimeSummary>(new IOException("Private summary failure"));
             await session.RetryOverviewAsync();
             Assert.NotNull(session.OverviewError);
         }
@@ -208,11 +208,11 @@ public sealed class AgentsOverviewSessionTests {
 
     [Fact]
     public async Task Retry_isolated_to_overview_and_clears_only_its_error() {
-        var reads = new Reads { Overview = _ => Task.FromException<AgentOverviewSnapshot>(new IOException("Private failure")) };
+        var reads = new Reads { Overview = _ => Task.FromException<AgentRuntimeSummary>(new IOException("Private failure")) };
         using var session = Session(reads);
         await session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
         Assert.NotNull(session.OverviewError);
-        reads.Overview = _ => Task.FromResult(AgentOverviewSnapshot.Empty);
+        reads.Overview = _ => Task.FromResult(AgentRuntimeSummary.Empty);
         await session.RetryOverviewAsync();
         Assert.Equal(2, reads.OverviewCalls);
         Assert.Equal(1, reads.HeaderCalls);
@@ -223,8 +223,8 @@ public sealed class AgentsOverviewSessionTests {
 
     [Fact]
     public async Task Old_finally_cannot_clear_newer_overview_request() {
-        var first = new TaskCompletionSource<AgentOverviewSnapshot>();
-        var second = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var first = new TaskCompletionSource<AgentRuntimeSummary>();
+        var second = new TaskCompletionSource<AgentRuntimeSummary>();
         var reads = new Reads { Overview = _ => first.Task };
         using var session = Session(reads);
         var initial = session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
@@ -234,23 +234,23 @@ public sealed class AgentsOverviewSessionTests {
         await initial;
         Assert.True(session.OverviewLoading);
         Assert.Null(session.OverviewError);
-        second.SetResult(AgentOverviewSnapshot.Empty);
+        second.SetResult(AgentRuntimeSummary.Empty);
         await retry;
         Assert.False(session.OverviewLoading);
     }
 
     [Fact]
     public async Task History_supersession_allows_new_demand_without_waiting_for_noncooperative_read() {
-        var pending = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var pending = new TaskCompletionSource<AgentRuntimeSummary>();
         var reads = new Reads { Overview = _ => pending.Task };
         using var session = Session(reads);
         var initial = session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
         var token = reads.OverviewToken;
         await session.EnsureAsync(AgentWorkspaceSection.Providers, ProviderUsageWorkloadSelection.Both);
         Assert.True(token.IsCancellationRequested);
-        reads.Overview = _ => Task.FromResult(AgentOverviewSnapshot.Empty with { Totals = AgentOverviewTotals.Empty with { AgentCount = 12 } });
+        reads.Overview = _ => Task.FromResult(AgentRuntimeSummary.Empty with { Totals = AgentRuntimeTotals.Empty with { AgentCount = 12 } });
         await session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
-        pending.SetResult(AgentOverviewSnapshot.Empty);
+        pending.SetResult(AgentRuntimeSummary.Empty);
         await initial;
         Assert.Equal(12, session.Overview?.Totals.AgentCount);
     }
@@ -262,7 +262,7 @@ public sealed class AgentsOverviewSessionTests {
         var avatars = new Dictionary<string, string?> { ["accepted"] = "accepted-avatar.jpg" };
         var reads = new Reads {
             Header = _ => Task.FromResult(Reads.HeaderValue() with { AvatarImageUrls = avatars }),
-            Overview = _ => Task.FromResult(AgentOverviewSnapshot.Empty with { TeamShortcuts = teams }),
+            Overview = _ => Task.FromResult(AgentRuntimeSummary.Empty with { TeamShortcuts = teams }),
             Usage = (scope, _) => ValueTask.FromResult(ProviderUsageSnapshot.Empty(scope) with { Consumers = consumers })
         };
         using var session = Session(reads);
@@ -278,7 +278,7 @@ public sealed class AgentsOverviewSessionTests {
     [Fact]
     public async Task Disposal_cancels_all_lanes_and_suppresses_late_publication() {
         var header = new TaskCompletionSource<AgentsHeaderSnapshot>();
-        var overview = new TaskCompletionSource<AgentOverviewSnapshot>();
+        var overview = new TaskCompletionSource<AgentRuntimeSummary>();
         var usage = new TaskCompletionSource<ProviderUsageSnapshot>();
         var reads = new Reads { Header = _ => header.Task, Overview = _ => overview.Task, Usage = (_, _) => new(usage.Task) };
         var publications = 0;
@@ -304,7 +304,7 @@ public sealed class AgentsOverviewSessionTests {
 
     [Fact]
     public async Task Nonowner_cancellation_is_an_explicit_bounded_read_failure() {
-        var reads = new Reads { Overview = _ => Task.FromException<AgentOverviewSnapshot>(new OperationCanceledException("Private foreign cancellation")) };
+        var reads = new Reads { Overview = _ => Task.FromException<AgentRuntimeSummary>(new OperationCanceledException("Private foreign cancellation")) };
         using var session = Session(reads);
         await session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
         Assert.NotNull(session.OverviewError);
@@ -348,11 +348,90 @@ public sealed class AgentsOverviewSessionTests {
         Assert.False(session.HeaderLoading);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Period_replacement_rejects_late_success_failure_and_finally(bool failLate) {
+        var year = new TaskCompletionSource<ProviderUsageSnapshot>();
+        var seven = new TaskCompletionSource<ProviderUsageSnapshot>();
+        var fourteen = new TaskCompletionSource<ProviderUsageSnapshot>();
+        var reads = new Reads { Usage = (_, _) => new(year.Task) };
+        using var session = Session(reads);
+        var first = session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.Year);
+        var yearToken = reads.UsageToken;
+        var yearQuery = reads.LastQuery;
+        _ = session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.Year);
+        Assert.Equal(1, reads.UsageCalls);
+        Assert.Same(yearQuery, reads.LastQuery);
+        reads.Usage = (_, _) => new(seven.Task);
+        var second = session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
+        var sevenToken = reads.UsageToken;
+        reads.Usage = (_, _) => new(fourteen.Task);
+        var third = session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.FourteenDays);
+        Assert.True(yearToken.IsCancellationRequested);
+        Assert.True(sevenToken.IsCancellationRequested);
+        if (failLate) {
+            year.SetException(new IOException("Old year failure"));
+        } else {
+            year.SetResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both));
+        }
+        seven.SetResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both));
+        await Task.WhenAll(first, second);
+        Assert.True(session.UsageLoading);
+        Assert.Null(session.AcceptedUsage);
+        Assert.Null(session.UsageError);
+        fourteen.SetResult(ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both));
+        await third;
+        Assert.Equal(ProviderUsagePeriod.FourteenDays, session.AcceptedUsage!.Query!.Period);
+        Assert.Equal(1, reads.HeaderCalls);
+        Assert.Equal(1, reads.OverviewCalls);
+    }
+
+    [Fact]
+    public async Task Refresh_preserves_exact_old_window_and_context_invalidation_clears_it() {
+        var now = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero);
+        var clock = new MutableClock(now);
+        var reads = new Reads();
+        using var session = new AgentsOverviewSession(reads, NullLogger<AgentsOverviewSession>.Instance, clock: clock);
+        await session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Agents);
+        var accepted = session.AcceptedUsage;
+        clock.Now = now.AddHours(1);
+        await session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Agents);
+        Assert.Equal(1, reads.UsageCalls);
+        reads.Usage = (_, _) => ValueTask.FromException<ProviderUsageSnapshot>(new IOException("Refresh failure"));
+        await session.RetryUsageAsync(ProviderUsageWorkloadSelection.Agents);
+        Assert.Same(accepted, session.AcceptedUsage);
+        Assert.Equal(now, session.AcceptedUsage!.Query!.Window.ToUtc);
+        Assert.Equal(clock.Now, reads.LastQuery!.Window.ToUtc);
+        session.InvalidateContext();
+        Assert.Null(session.AcceptedUsage);
+        Assert.Null(session.Overview);
+        Assert.Null(session.Header);
+        await session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Agents);
+        Assert.Equal(2, reads.UsageCalls);
+    }
+
+    [Fact]
+    public async Task Mismatched_period_is_rejected_even_when_workload_matches() {
+        var reads = new Reads { Usage = (scope, _) => ValueTask.FromResult(ProviderUsageSnapshot.Empty(scope) with {
+            Query = new(scope, ProviderUsagePeriod.Year, DateTimeOffset.UtcNow)
+        }) };
+        using var session = Session(reads);
+        await session.EnsureAsync(AgentWorkspaceSection.Overview, ProviderUsageWorkloadSelection.Both);
+        Assert.Null(session.AcceptedUsage);
+        Assert.NotNull(session.UsageError);
+    }
+
+    private sealed class MutableClock(DateTimeOffset now) : TimeProvider {
+        public DateTimeOffset Now { get; set; } = now;
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
     private static AgentsOverviewSession Session(Reads reads) => new(reads, NullLogger<AgentsOverviewSession>.Instance);
 
     private sealed class Reads : IAgentsWorkspaceQuery {
         public Func<CancellationToken, Task<AgentsHeaderSnapshot>> Header { get; set; } = _ => Task.FromResult(HeaderValue());
-        public Func<CancellationToken, Task<AgentOverviewSnapshot>> Overview { get; set; } = _ => Task.FromResult(AgentOverviewSnapshot.Empty);
+        public Func<CancellationToken, Task<AgentRuntimeSummary>> Overview { get; set; } = _ => Task.FromResult(AgentRuntimeSummary.Empty);
         public Func<ProviderUsageWorkloadSelection, CancellationToken, ValueTask<ProviderUsageSnapshot>> Usage { get; set; }
             = (scope, _) => ValueTask.FromResult(ProviderUsageSnapshot.Empty(scope));
         public int HeaderCalls { get; private set; }
@@ -361,6 +440,7 @@ public sealed class AgentsOverviewSessionTests {
         public CancellationToken HeaderToken { get; private set; }
         public CancellationToken OverviewToken { get; private set; }
         public CancellationToken UsageToken { get; private set; }
+        public ProviderUsageQuery? LastQuery { get; private set; }
         public static AgentsHeaderSnapshot HeaderValue() => new(null, new Dictionary<string, string?>(), 7, AgentsHeaderFailure.HrAgent);
 
         public Task<AgentsHeaderSnapshot> ReadHeaderAsync(CancellationToken cancellationToken = default) {
@@ -369,16 +449,18 @@ public sealed class AgentsOverviewSessionTests {
             return Header(cancellationToken);
         }
 
-        public Task<AgentOverviewSnapshot> ReadOverviewAsync(CancellationToken cancellationToken = default) {
+        public Task<AgentRuntimeSummary> ReadOverviewAsync(CancellationToken cancellationToken = default) {
             OverviewCalls++;
             OverviewToken = cancellationToken;
             return Overview(cancellationToken);
         }
 
-        public ValueTask<ProviderUsageSnapshot> ReadUsageAsync(ProviderUsageWorkloadSelection selection, CancellationToken cancellationToken = default) {
+        public async ValueTask<ProviderUsageSnapshot> ReadUsageAsync(ProviderUsageQuery query, CancellationToken cancellationToken = default) {
             UsageCalls++;
             UsageToken = cancellationToken;
-            return Usage(selection, cancellationToken);
+            LastQuery = query;
+            var result = await Usage(query.Selection, cancellationToken);
+            return result with { Query = result.Query ?? query };
         }
     }
 }

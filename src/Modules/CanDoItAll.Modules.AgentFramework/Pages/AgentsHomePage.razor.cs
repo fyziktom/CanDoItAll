@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.UI.Overview;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using CanDoItAll.Infrastructure.Persistence;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
@@ -20,6 +21,12 @@ public partial class AgentsHomePage : IDisposable {
 
     [Inject]
     public IAgentsWorkspaceQuery WorkspaceQuery { get; set; } = default!;
+
+    [Inject]
+    private IDatabaseSwitchNotificationService DatabaseChanges { get; set; } = default!;
+
+    [Inject]
+    private TimeProvider Clock { get; set; } = default!;
 
     [Inject]
     public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
@@ -54,6 +61,9 @@ public partial class AgentsHomePage : IDisposable {
     [SupplyParameterFromQuery(Name = AgentWorkspaceRouteState.UsageScopeQueryKey)]
     public string? RequestedUsageScope { get; set; }
 
+    [SupplyParameterFromQuery(Name = ProviderUsagePeriods.QueryKey)]
+    public string? RequestedUsagePeriod { get; set; }
+
     [Inject]
     private ILogger<AgentsHomePage> Logger { get; set; } = default!;
 
@@ -68,7 +78,7 @@ public partial class AgentsHomePage : IDisposable {
 
     private AgentsOverviewState OverviewPresentation => AgentsOverviewPresentation.Create(
         session.Overview, session.AcceptedUsage, usageSelection, isOverviewLoading, isUsageLoading,
-        session.OverviewError, session.UsageError, overviewConsumerAvatarImageUrls) with {
+        session.OverviewError, session.UsageError, overviewConsumerAvatarImageUrls, usagePeriod) with {
             HeaderWarning = HasHeaderFailure ? HeaderFailureText : null,
             HeaderLoading = session.HeaderLoading,
             OpenDetails = openDetails.ToImmutableHashSet()
@@ -91,11 +101,12 @@ public partial class AgentsHomePage : IDisposable {
     private bool isConfirmingDefaults;
     private bool isFeedingDefaults;
     private bool isOpeningHrAgent;
-    private AgentOverviewSnapshot overview => session.Overview ?? AgentOverviewSnapshot.Empty;
+    private AgentRuntimeSummary overview => session.Overview ?? AgentRuntimeSummary.Empty;
     private ProviderUsageWorkloadSelection usageSelection => workspaceState.UsageSelection;
+    private ProviderUsagePeriod usagePeriod => workspaceState.UsagePeriod;
     private bool isUsageLoading => !hasRendered || session.UsageLoading;
     private bool isOverviewLoading => !hasRendered || session.OverviewLoading;
-    private bool hasUsageLoaded => session.GetAcceptedUsage(usageSelection) is not null;
+    private bool hasUsageLoaded => session.GetAcceptedUsage(usageSelection, usagePeriod) is not null;
     private bool hasOverviewLoaded => session.Overview is not null;
     private bool CanOpenUsage => hasUsageLoaded && !isUsageLoading;
     private IReadOnlyDictionary<string, string?> overviewConsumerAvatarImageUrls
@@ -169,15 +180,26 @@ public partial class AgentsHomePage : IDisposable {
                 if (!disposed) {
                     StateHasChanged();
                 }
-            }));
+            }), Clock);
+        DatabaseChanges.Changed += OnDatabaseChanged;
     }
 
     [Inject]
     private ILoggerFactory LoggerFactory { get; set; } = default!;
 
+    private void OnDatabaseChanged(object? sender, DatabaseProfileChangedNotification notification) {
+        session.InvalidateContext();
+        _ = InvokeAsync(() => {
+            if (!disposed) {
+                CloseOverviewDialogs();
+                StateHasChanged();
+            }
+        });
+    }
+
     protected override Task OnParametersSetAsync() {
         ApplyRequestedTab();
-        return hasRendered ? session.EnsureAsync(workspaceState.Section, usageSelection) : Task.CompletedTask;
+        return hasRendered ? session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod) : Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
@@ -185,13 +207,13 @@ public partial class AgentsHomePage : IDisposable {
             return;
         }
         hasRendered = true;
-        var load = session.EnsureAsync(workspaceState.Section, usageSelection);
+        var load = session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod);
         StateHasChanged();
         await load;
     }
 
     private Task RetryOverviewAsync() => session.RetryOverviewAsync();
-    private Task RetryUsageAsync() => session.RetryUsageAsync(usageSelection);
+    private Task RetryUsageAsync() => session.RetryUsageAsync(usageSelection, usagePeriod);
     private Task RetryHeaderAsync() => session.RetryHeaderAsync();
 
     private async Task FeedDefaultsAsync() {
@@ -230,7 +252,7 @@ public partial class AgentsHomePage : IDisposable {
             if (disposed) {
                 return;
             }
-            await session.RefreshDemandedAsync(workspaceState.Section, usageSelection);
+            await session.RefreshDemandedAsync(workspaceState.Section, usageSelection, usagePeriod);
             if (disposed) {
                 return;
             }
@@ -294,7 +316,8 @@ public partial class AgentsHomePage : IDisposable {
             RequestedSimpleChatView ?? TryGetQueryValue(AgentWorkspaceRouteState.SimpleChatViewQueryKey),
             RequestedDefinitionId ?? TryGetQueryValue(AgentWorkspaceRouteState.DefinitionIdQueryKey),
             RequestedConversationId ?? TryGetQueryValue(AgentWorkspaceRouteState.ConversationIdQueryKey),
-            RequestedUsageScope ?? TryGetQueryValue(AgentWorkspaceRouteState.UsageScopeQueryKey));
+            RequestedUsageScope ?? TryGetQueryValue(AgentWorkspaceRouteState.UsageScopeQueryKey),
+            RequestedUsagePeriod ?? TryGetQueryValue(ProviderUsagePeriods.QueryKey));
         var requestedAgentId = routeState.AgentId;
         var requestedTeamId = routeState.TeamId;
         if (selectedContextAgent?.Id != requestedAgentId) {
@@ -307,7 +330,7 @@ public partial class AgentsHomePage : IDisposable {
 
         var next = workspaceState.ApplyRoute(routeState);
         if (workspaceState.Section == AgentWorkspaceSection.Overview &&
-            (next.Section != AgentWorkspaceSection.Overview || next.UsageSelection != usageSelection)) {
+            (next.Section != AgentWorkspaceSection.Overview || next.UsageSelection != usageSelection || next.UsagePeriod != usagePeriod)) {
             CloseOverviewDialogs();
         }
         workspaceState = next;
@@ -396,11 +419,12 @@ public partial class AgentsHomePage : IDisposable {
             return Task.CompletedTask;
         }
         return intent switch {
+            AgentsOverviewIntent.SelectPeriod change => HandleUsagePeriodChangedAsync(change.Period),
             AgentsOverviewIntent.SelectUsage change => HandleUsageScopeChangedAsync(change.Selection),
             AgentsOverviewIntent.RetryOverview => RetryOverviewAsync(),
             AgentsOverviewIntent.RetryUsage => RetryUsageAsync(),
             AgentsOverviewIntent.RetryHeader => RetryHeaderAsync(),
-            AgentsOverviewIntent.OpenDetail detail => OpenUsageDialogAsync(detail.Detail, detail.Selection),
+            AgentsOverviewIntent.OpenDetail detail => OpenUsageDialogAsync(detail.Detail, detail.Query),
             AgentsOverviewIntent.OpenTeam team => OpenAgentsForTeamAsync(team.TeamId),
             _ => throw new ArgumentOutOfRangeException(nameof(intent))
         };
@@ -416,7 +440,20 @@ public partial class AgentsHomePage : IDisposable {
         CloseOverviewDialogs();
         workspaceState = workspaceState with { UsageSelection = selection };
         Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
-        await session.EnsureAsync(workspaceState.Section, usageSelection);
+        await session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod);
+    }
+
+    private async Task HandleUsagePeriodChangedAsync(ProviderUsagePeriod period) {
+        if (!Enum.IsDefined(period)) {
+            throw new ArgumentOutOfRangeException(nameof(period));
+        }
+        if (disposed || period == usagePeriod) {
+            return;
+        }
+        CloseOverviewDialogs();
+        workspaceState = workspaceState with { UsagePeriod = period };
+        Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
+        await session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod);
     }
 
     private Task HandleSimpleChatRouteStateChangedAsync(SimpleChatWorkspaceRouteState state) {
@@ -429,8 +466,8 @@ public partial class AgentsHomePage : IDisposable {
     private string BuildCurrentRoute()
         => AgentWorkspaceRouteState.Build(workspaceState.ToRoute());
 
-    private async Task OpenUsageDialogAsync(AgentsOverviewDetail detail, ProviderUsageWorkloadSelection selection) {
-        if (disposed || workspaceState.Section != AgentWorkspaceSection.Overview || selection != usageSelection
+    private async Task OpenUsageDialogAsync(AgentsOverviewDetail detail, ProviderUsageQuery query) {
+        if (disposed || workspaceState.Section != AgentWorkspaceSection.Overview || query != session.GetAcceptedUsage(usageSelection, usagePeriod)?.Query
             || !CanOpenUsage || !openDetails.Add(detail)) {
             return;
         }
@@ -445,10 +482,10 @@ public partial class AgentsHomePage : IDisposable {
         var generation = dialogGeneration;
         try {
             await DialogService.OpenAsync(title, component,
-                new Dictionary<string, object?> { [nameof(AgentUsageDialog.Selection)] = selection },
+                new Dictionary<string, object?> { [nameof(AgentUsageDialog.Query)] = query },
                 new DialogOptions {
                     Eyebrow = "Usage analytics",
-                    Subtitle = subtitle,
+                    Subtitle = $"{query.Selection} · {query.Period.Label()} · {query.Window.FromUtc:u} ≤ usage < {query.Window.ToUtc:u}. {subtitle}",
                     Size = ModalSize.Wide,
                     DenseChrome = true,
                     AriaLabel = title + " details",
@@ -547,6 +584,7 @@ public partial class AgentsHomePage : IDisposable {
     }
 
     public void Dispose() {
+        DatabaseChanges.Changed -= OnDatabaseChanged;
         if (disposed) {
             return;
         }

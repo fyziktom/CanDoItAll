@@ -60,13 +60,34 @@ public partial class ProjectStructurePage
         }
     }
 
-    private async Task StopRuntimeAsync(ProjectStructureNode node)
-    {
+    private async Task<ProjectStructureRuntimeLaunchResult> StopRuntimeAsync(ProjectStructureNode node) {
         CancelRuntimePreviewWait();
         var result = await RuntimeLauncher.StopAsync(node);
         workflowFeedback = result.Message;
         workflowFeedbackTone = result.IsSuccess ? "mint" : "warn";
         await InvokeAsync(StateHasChanged);
+        return result;
+    }
+
+    private async Task StopWebPreviewRuntimeAsync(string nodeId) {
+        var dialog = webPreviewDialog;
+        if (dialog is not { CanStopRuntime: true } ||
+            !string.Equals(dialog.NodeId, nodeId, StringComparison.Ordinal) ||
+            ResolveNode(nodeId) is not { } node) {
+            return;
+        }
+
+        var result = await StopRuntimeAsync(node);
+        if (!ReferenceEquals(webPreviewDialog, dialog)) {
+            return;
+        }
+
+        webPreviewDialog = result.IsSuccess
+            ? null
+            : dialog with {
+                CanStopRuntime = RuntimeLauncher.IsRunning(nodeId),
+                RuntimeStopError = result.Message
+            };
     }
 
     // A runtime node's web link is only useful while its process serves it; opening it earlier shows a

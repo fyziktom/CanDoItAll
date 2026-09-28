@@ -8,6 +8,23 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentProviderUsageProjectionSourceTests
 {
     [Fact]
+    public async Task Unindexed_usage_does_not_trigger_catalog_initialization_or_an_unbounded_read() {
+        var catalog = new StaticCatalogStore(SandboxWorkspaceCatalog.Empty);
+        var source = new AgentProviderUsageProjectionSource(new UnindexedEvidence(), catalog,
+            NullLogger<AgentProviderUsageProjectionSource>.Instance);
+        var result = await source.ReadWindowAsync(new(DateTimeOffset.UtcNow.AddDays(-7), DateTimeOffset.UtcNow));
+        Assert.Equal(ProviderUsageSourceState.Indexing, result.State);
+        Assert.Equal(0, catalog.Reads);
+    }
+
+    private sealed class UnindexedEvidence : IBoundedAgentProviderUsageEvidenceStore {
+        public Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Unbounded read.");
+        public Task<AgentProviderUsageWindowEvidence> LoadProviderUsageWindowAsync(ProviderUsageWindow window, CancellationToken cancellationToken = default)
+            => Task.FromResult(new AgentProviderUsageWindowEvidence(AgentProviderUsageEvidence.Empty, ProviderUsageSourceState.Indexing, null, []));
+    }
+
+    [Fact]
     public async Task AmbiguousAgentLegacyEvidenceOnlyAppearsInBoth()
     {
         var agentId = Guid.NewGuid();
@@ -79,8 +96,11 @@ public sealed class AgentProviderUsageProjectionSourceTests
 
     private sealed class StaticCatalogStore(SandboxWorkspaceCatalog catalog) : ISandboxWorkspaceCatalogStore
     {
-        public Task<SandboxWorkspaceCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(catalog);
+        public int Reads { get; private set; }
+        public Task<SandboxWorkspaceCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default) {
+            Reads++;
+            return Task.FromResult(catalog);
+        }
 
         public Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
             CancellationToken cancellationToken = default)

@@ -18,6 +18,8 @@ The architecture documentation is intentionally small:
   records the finalizer, managed-artifact, and branch-aware preflight boundary.
 - [Provider model-parameter negotiation](provider-model-parameter-negotiation.md)
   defines request-feature-aware compatibility before provider dispatch.
+- [Bounded Agents Overview usage](agents-overview-usage-window.md) defines rolling
+  usage intervals, storage indexing, API permissions, rollout and validation evidence.
 - [Project Structure transfer outcome boundary](project-structure-transfer-outcome-boundary.md)
   separates shared transfer recovery from agent transport failures.
 - [Agent tool failure recovery boundary](agent-tool-failure-recovery-boundary.md)

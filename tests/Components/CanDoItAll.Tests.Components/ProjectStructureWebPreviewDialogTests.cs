@@ -41,6 +41,7 @@ public sealed class ProjectStructureWebPreviewDialogTests
         Assert.Equal(state.Url.AbsoluteUri, externalLink.GetAttribute("href"));
         Assert.Equal("_blank", externalLink.GetAttribute("target"));
         Assert.Equal("noopener noreferrer", externalLink.GetAttribute("rel"));
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-web-preview-stop']"));
     }
 
     [Fact]

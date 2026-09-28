@@ -17,10 +17,11 @@ public sealed class AgentsWorkspaceQueryTests {
         Assert.IsType<BoundAgentResourceQuery>(scope.ServiceProvider.GetRequiredService<IBoundAgentResourceQuery>());
         var header = await query.ReadHeaderAsync();
         var overview = await query.ReadOverviewAsync();
-        var usage = await query.ReadUsageAsync(ProviderUsageWorkloadSelection.Both);
+        var usage = await query.ReadUsageAsync(new(ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow));
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var expected = await workspace.GetAgentOverviewAsync();
-        Assert.Equal(expected.Totals, overview.Totals);
+        var expected = await workspace.GetDashboardAsync();
+        Assert.Equal(expected.AgentCount, overview.Totals.AgentCount);
+        Assert.Equal(expected.ActiveRuns, overview.Totals.ActiveRuns);
         Assert.Equal(ProviderUsageWorkloadSelection.Both, usage.Selection);
         Assert.Equal(HrAgentIdentity.AgentId, header.HrAgent?.Id);
         Assert.Contains(HrAgentIdentity.AgentId.ToString("D"), header.AvatarImageUrls.Keys);
@@ -38,8 +39,9 @@ public sealed class AgentsWorkspaceQueryTests {
         Assert.Contains(HrAgentIdentity.AgentId.ToString("D"), header.AvatarImageUrls.Keys);
         Assert.Null(header.BoundResourceCount);
         Assert.Equal(AgentsHeaderFailure.BoundResources, header.Failures);
-        var expected = await scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>().GetAgentOverviewAsync();
-        Assert.Equal(expected.Totals, overview.Totals);
+        var expected = await scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>().GetDashboardAsync();
+        Assert.Equal(expected.AgentCount, overview.Totals.AgentCount);
+        Assert.Equal(expected.ActiveRuns, overview.Totals.ActiveRuns);
     }
 
     [Fact]
@@ -52,8 +54,8 @@ public sealed class AgentsWorkspaceQueryTests {
         Assert.Equal(await bound.CountAsync(), header.BoundResourceCount);
         Assert.Null(header.HrAgent);
         Assert.Equal(AgentsHeaderFailure.HrAgent | AgentsHeaderFailure.Avatars, header.Failures);
-        var expected = await scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>().GetAgentOverviewAsync();
-        Assert.Equal(expected.Totals, (await query.ReadOverviewAsync()).Totals);
+        var expected = await scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>().GetDashboardAsync();
+        Assert.Equal(expected.AgentCount, (await query.ReadOverviewAsync()).Totals.AgentCount);
     }
 
     [Fact]
@@ -63,7 +65,7 @@ public sealed class AgentsWorkspaceQueryTests {
         var query = scope.ServiceProvider.GetRequiredService<IAgentsWorkspaceQuery>();
         await Assert.ThrowsAsync<IOException>(() => query.ReadOverviewAsync());
         var header = await query.ReadHeaderAsync();
-        var usage = await query.ReadUsageAsync(ProviderUsageWorkloadSelection.Both);
+        var usage = await query.ReadUsageAsync(new(ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.SevenDays, DateTimeOffset.UtcNow));
         Assert.Equal(HrAgentIdentity.AgentId, header.HrAgent?.Id);
         Assert.Equal(AgentsHeaderFailure.None, header.Failures);
         Assert.Equal(ProviderUsageWorkloadSelection.Both, usage.Selection);
@@ -95,8 +97,8 @@ public sealed class AgentsWorkspaceQueryTests {
             if (FailCatalog && method!.Name == nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync)) {
                 return Task.FromException<IReadOnlyList<AgentDefinition>>(new IOException("Private catalog test failure"));
             }
-            if (!FailCatalog && method!.Name == nameof(IAgentFrameworkWorkspaceService.GetAgentOverviewAsync)) {
-                return Task.FromException<AgentOverviewSnapshot>(new IOException("Private overview test failure"));
+            if (!FailCatalog && method!.Name == nameof(IAgentFrameworkWorkspaceService.GetDashboardAsync)) {
+                return Task.FromException<SandboxDashboardSnapshot>(new IOException("Private overview test failure"));
             }
             return method!.Invoke(Inner, args);
         }

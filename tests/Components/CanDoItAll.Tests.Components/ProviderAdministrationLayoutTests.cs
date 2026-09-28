@@ -97,19 +97,24 @@ public sealed class ProviderAdministrationLayoutTests {
         public Action OverviewRead { get; set; } = default!;
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
             if (targetMethod!.Name == nameof(IAgentFrameworkWorkspaceService.GetAgentOverviewAsync)) {
+                throw new InvalidOperationException("Overview must not request the legacy usage aggregate.");
+            }
+            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.GetDashboardAsync)) {
                 OverviewRead();
             }
             return targetMethod.Invoke(Target, args);
         }
     }
 
-    private sealed class RecordingUsageSource : IProviderUsageProjectionSource {
+    private sealed class RecordingUsageSource : IBoundedProviderUsageProjectionSource {
         public string SourceName => nameof(RecordingUsageSource);
         public ProviderUsageWorkloadKind WorkloadKind => ProviderUsageWorkloadKind.Agent;
         internal int Reads { get; private set; }
-        public ValueTask<ProviderUsageSourceResult> ReadAsync(CancellationToken cancellationToken = default) {
+        public ValueTask<ProviderUsageSourceResult> ReadAsync(CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Overview must not request unbounded usage.");
+        public ValueTask<ProviderUsageSourceResult> ReadWindowAsync(ProviderUsageWindow window, CancellationToken cancellationToken = default) {
             Reads++;
-            return ValueTask.FromResult(new ProviderUsageSourceResult(SourceName, WorkloadKind, ProviderUsageSourceState.Complete, [], DateTimeOffset.UtcNow));
+            return ValueTask.FromResult(new ProviderUsageSourceResult(SourceName, WorkloadKind, ProviderUsageSourceState.Complete, [], DateTimeOffset.UtcNow) { Window = window });
         }
     }
 

@@ -7,7 +7,7 @@
 @if (isLoading) {
     <LoadingState Eyebrow="Provider usage"
                   Title="Loading provider usage"
-                  Description="Reading provider-level usage aggregates for this workspace." />
+                  Description="Reading provider-level usage aggregates for the accepted workload and interval." />
 }
 else if (!string.IsNullOrWhiteSpace(loadError)) {
     <EmptyState Eyebrow="Usage unavailable"
@@ -40,9 +40,9 @@ else {
                       Series="@ProviderUsageBarSeries"
                       Options="@ProviderUsageBarChartOptions"
                       Height="320"
-                      EmptyText="No provider usage has been recorded." />
+                      EmptyText="No provider usage has been recorded in this interval." />
             <CdaChart Title="Provider share"
-                      Description="Distribution across total provider usage observations in this workspace."
+                      Description="Distribution across total provider usage observations in the accepted workload and interval."
                       Series="@ProviderUsageDonutSeries"
                       Options="@ProviderUsageDonutChartOptions"
                       Height="320"
@@ -53,7 +53,7 @@ else {
             @if (snapshot.Providers.Count == 0) {
                 <EmptyState Eyebrow="No usage"
                             Title="No provider usage rows"
-                            Description="Provider usage rows appear after executions report usage observations." />
+                            Description="No provider usage was recorded for the accepted workload and interval." />
             }
             else {
                 <DataGrid TItem="ProviderUsageProviderRow"
@@ -147,14 +147,14 @@ else {
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
-    [Parameter]
-    public ProviderUsageWorkloadSelection Selection { get; set; } = ProviderUsageWorkloadSelection.Both;
+    [Parameter, EditorRequired]
+    public ProviderUsageQuery Query { get; set; } = default!;
 
     private ProviderUsageSnapshot snapshot = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isLoading = true;
     private bool disposed;
     private long generation;
-    private ProviderUsageWorkloadSelection? requestedSelection;
+    private ProviderUsageQuery? requestedSelection;
     private CancellationTokenSource? readCancellation;
     private string? loadError;
 
@@ -171,12 +171,12 @@ else {
     private IReadOnlyList<CdaChartSeries> ProviderUsageDonutSeries => BuildProviderUsageSeries(CdaChartType.Donut, "Provider share");
 
     protected override async Task OnParametersSetAsync() {
-        if (disposed || requestedSelection == Selection) {
+        if (disposed || requestedSelection == Query) {
             return;
         }
         var requestGeneration = ++generation;
         CancelRead();
-        var request = Selection;
+        var request = Query;
         requestedSelection = request;
         readCancellation = new();
         var owner = readCancellation;
@@ -184,12 +184,12 @@ else {
         isLoading = true;
         loadError = null;
         try {
-            request.Validate();
+            ArgumentNullException.ThrowIfNull(request);
             var result = await WorkspaceQuery.ReadUsageAsync(request, token);
             if (!IsCurrent()) {
                 return;
             }
-            if (result.Selection != request) {
+            if (result.Query != request) {
                 throw new InvalidDataException("Usage evidence returned a different requested scope.");
             }
             snapshot = result with {
@@ -201,7 +201,7 @@ else {
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (Exception exception) {
             if (IsCurrent()) {
-                loadError = "Usage evidence could not be refreshed. Close this dialog and retry the selected scope.";
+                loadError = "Usage evidence could not be refreshed. Close this dialog and retry the selected workload and period.";
                 Logger.LogWarning("Usage detail read failed ({FailureType}); scope {Scope}.", exception.GetType().Name, request);
             }
         } finally {
@@ -214,7 +214,7 @@ else {
             owner.Dispose();
         }
 
-        bool IsCurrent() => !disposed && generation == requestGeneration && Selection == request && !token.IsCancellationRequested;
+        bool IsCurrent() => !disposed && generation == requestGeneration && Query == request && !token.IsCancellationRequested;
     }
 
     private void CancelRead() {

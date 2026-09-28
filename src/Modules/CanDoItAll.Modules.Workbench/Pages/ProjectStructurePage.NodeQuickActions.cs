@@ -51,7 +51,7 @@ public partial class ProjectStructurePage
         webPreviewDialog = BuildWebPreviewDialog(node, link);
     }
 
-    private static ProjectStructureWebPreviewDialogState BuildWebPreviewDialog(
+    private ProjectStructureWebPreviewDialogState BuildWebPreviewDialog(
         ProjectStructureNode node,
         ProjectStructureWebLink link)
         => new(
@@ -61,7 +61,9 @@ public partial class ProjectStructurePage
             link.Uri,
             node.Notes,
             link.CanEmbed,
-            link.EmbedUnavailableReason);
+            link.EmbedUnavailableReason,
+            CanStopRuntime: ProjectStructureNodeActionCapabilityResolver.IsRuntimeCapable(node) &&
+                            RuntimeLauncher.IsRunning(node.Id));
 
     private ProjectStructureWebPreviewDialogState? RebuildWebPreviewDialog(
         IReadOnlyList<ProjectStructureNode> nodes)

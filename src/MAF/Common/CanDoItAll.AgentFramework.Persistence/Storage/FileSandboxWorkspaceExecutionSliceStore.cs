@@ -9,6 +9,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 {
     public bool ExecutionStorageExists() => layout.ExecutionStorageExists();
 
+    public async Task<bool> HasCurrentSummaryIndexAsync(CancellationToken cancellationToken)
+        => File.Exists(layout.ExecutionIndexPath) && !await ExecutionIndexNeedsDashboardCountUpgradeAsync(cancellationToken);
+
     public async Task<SandboxWorkspaceExecutionState> LoadAsync(CancellationToken cancellationToken)
     {
         if (ExecutionStorageExists())
