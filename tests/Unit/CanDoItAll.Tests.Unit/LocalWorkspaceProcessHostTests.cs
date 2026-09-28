@@ -391,6 +391,52 @@ public sealed class LocalWorkspaceProcessHostTests
     }
 
     [Fact]
+    public async Task Open_input_session_keeps_standard_input_open_while_capturing_output()
+    {
+        var host = new LocalWorkspaceProcessHost();
+        var request = CreateSessionRequest(
+            OperatingSystem.IsWindows()
+                ? "Write-Output 'open-input-ready'; $null = [Console]::In.ReadToEnd(); Write-Output 'standard-input-ended'"
+                : "printf 'open-input-ready\\n'; cat > /dev/null; printf 'standard-input-ended\\n'") with
+        {
+            StandardIoMode = WorkspaceProcessStandardIoMode.CapturedWithOpenInput
+        };
+        await using var session = await host.StartSessionAsync(request);
+
+        Assert.True(
+            SpinWait.SpinUntil(
+                () => session.CaptureOutput().Stdout.Contains("open-input-ready", StringComparison.Ordinal),
+                TimeSpan.FromSeconds(15)),
+            "Expected the open-input session to capture output while its child is running.");
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+
+        Assert.False(session.HasExited);
+        Assert.DoesNotContain("standard-input-ended", session.CaptureOutput().Stdout, StringComparison.Ordinal);
+
+        var result = await session.TerminateAsync(
+            WorkspaceProcessTerminationReason.CallerCanceled,
+            "The open-input test finished.",
+            CancellationToken.None);
+
+        Assert.False(result.ResidualProcessPossible);
+    }
+
+    [Fact]
+    public async Task Open_input_session_rejects_static_standard_input()
+    {
+        var request = CreateSessionRequest(BuildWaitCommand(1)) with
+        {
+            StandardInput = "unexpected-input",
+            StandardIoMode = WorkspaceProcessStandardIoMode.CapturedWithOpenInput
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => new LocalWorkspaceProcessHost().StartSessionAsync(request));
+
+        Assert.Contains("CapturedWithOpenInput", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_reports_timeout_and_kills_the_process_tree()
     {
         var childPidFilePath = CreateChildPidFilePath();

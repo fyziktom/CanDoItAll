@@ -76418,138 +76418,6 @@
       "count": 1
     },
     {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "572be45ee09d32835a59333663a5f72e1087b8dfd75a03ce351074a896f513d7",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "83547e42d1167b8cadd8d90aefbfd6c02a246052d200ac8dcec54dae5bc55a8a",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "931f4a073bb8db65ab86457fba9356b621465311ee61da78d6c82d3f65603b25",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "c61d7e818cd8bcc97776d62f0b961775f49a22a6e2eb1f64c42784bb9c5c2a83",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "dcb05b7cc640ce63a0d8172bc8503688c605bd7d3cb841227fdd508eed0817b2",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "f050716adb52eed6864adebebfe6703be86ce162d1ff9b5f0e7cdf3b17fa69a6",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "atomic-write",
-      "source_fingerprint": "2da8bc209133a66b085dc70263dd0bfa823d157512d8607e96d4faab026ebcf4",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "filesystem-enumeration",
-      "source_fingerprint": "537ae80a71ca6ba2b96ff5872fbed1109c277cfad78756c2e9b6212580f7570b",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "link-reparse",
-      "source_fingerprint": "9ed2dcc293cfa2d36b0637d715b3f9a96897a447a7e091fd87a4a83e998e6fa1",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "0774889afecfed5b17d05d1b88dab67d5085541585aef893fe4dbb1560fc34cd",
-      "count": 2
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "131d2ac84119fc3395fdfb08ae0a864e44605b8fc9996fb27fd7ee744906b8ae",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "4c0b1b2e5f0335412b7eb9b9b3198ce4a30fdb50c4079a3827212f2c0b90ad43",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "4f115f97840677552b2f570b716c8edeccf2f336dcdb1f0c20021d69242f67c2",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "52c54b5fa0f3ba6d2dd84cd8fe7301075435302612b70ec436800579a53d741b",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "682d6d7705c88cf62e4fbe59985809ea0ed5ca6c69cde78859ebe07a4d13ad87",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "79df02c8102873f626e857827e0acf4259fe49715defc420efd4db2b42b8c492",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "a008e135c8ac8d6967d9441f877f51fb0399e288774e6580c5c4bd9681d22a06",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "e1520dc4b8b55a4b0a78e080bfd02e7b57e316c35a39ee54f1de9f667174fdc5",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-api",
-      "source_fingerprint": "f7e3d3deef80c30eb6f1f5af3a490f452371d1d45379173ee51ed9f50d294ef9",
-      "count": 2
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-normalization",
-      "source_fingerprint": "5497845e83f3148ec54610d291f8e7b8992e925fbdc4a67f199dc4dafb52bd4a",
-      "count": 2
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-normalization",
-      "source_fingerprint": "8f7b873c7bef15f2e789ac62858583714a7162a38f76d124de6458b41cd73bf7",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindSourceMonitoring.cs",
-      "category": "path-normalization",
-      "source_fingerprint": "92ed11ad8ff7eaec32b4994abee1043bb6f455521aebbc5aaf99b448b145d519",
-      "count": 1
-    },
-    {
       "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "01a7db268b09ce20ed99b38d496911f11b995caec913ef3f9e194adef98d8fe9",
@@ -76564,32 +76432,8 @@
     {
       "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "14c46b6018a1796098b8c67ecee87790fe5a4a3ed03dbc6f6a173c79b7deb09b",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "1a0c465a6b5f71a1c27f06c9753f180bc591f79511a90e5d1099617ebdae1c13",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "3fa23f6ea827f84667c9d140b3cd8f31e6dd4d471781595ed48d4dba804dc7ea",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "absolute-path-field",
       "source_fingerprint": "5020414d5b8d49e42965610dce6a151947c9b1242728af76130ed5c9b76cf4da",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "554fcedab69e950e6372796baf1c0f3b2ceda87ad1764c72916ddd2371f342a3",
-      "count": 1
+      "count": 2
     },
     {
       "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
@@ -76601,115 +76445,25 @@
       "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "5daa39e97c1e61d616b9f8bd7d4b919c2c94ab2505a7ae2bae20b8aee0853a01",
-      "count": 2
+      "count": 4
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "6816f64e3dbec86cc43d61197c93f93db8d9603b5f7800523fbc4067074e3dfe",
+      "count": 1
     },
     {
       "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "6d01f96b9338690fa2fa1a9b8f5db0653f7796e402c0efde090d799f6e5701f1",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e977d214e76d1f3b48578b4f55219fbe61d21ee6a509f20931fdbcdd723e9861",
       "count": 3
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "9f19419502febb4f94d745cf640c9ceef57aa94c91450e372fae318996737024",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "cae269f7a445b710ad88a73910ba5da716b6852e3351b4595cba68f75aecf14e",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "e629f5ba65b18f475128a60f6dc074a1f54e5ca69098b3278899d0fd4c7fa80a",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "04b7d694edf9a54e92158d6407cf690e010e115a84e5de45e779b56b3770c2fa",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "5fb7cfc6708eeaf4e44824cdc319dc133ac43d4d6f559ca4a68632a06f2e7703",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "8ae70cf636ef3b9c8606b9b7c52ff715239dbffdf2845df8ae465bc2b1e40a65",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "d6a91240bb7ba9330f3c7d78367bebad5f76d1cbd582163e13c45d82de4cc2d7",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e6b9b0247171a0f34c0a9d9b48b124c1d640432430dee9dc332502ce40067650",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "ec623a35696d59d1b335e3101d48785414ecb85c0fb646db71af32a8fd87669b",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "filesystem-enumeration",
-      "source_fingerprint": "12fdcc78840b097e9e0a5a9c8d0abc1fe7ae2407dbb5a39c7e59a393a84af119",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "filesystem-enumeration",
-      "source_fingerprint": "428816d246f6f8cbdad533f13885649f030c32ebe2bee7822c847d9032b84eec",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "filesystem-enumeration",
-      "source_fingerprint": "448c6ebd381c50da93396410a2c3be15e874ae4cdfda27d605934e76ec9bafe3",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "path-api",
-      "source_fingerprint": "1ed0df914c5c897cf900c1ec5a38ca66e034219b08292778f2b671e692f8a74e",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "path-api",
-      "source_fingerprint": "5835470d4834d8a562c55c09d67e5ee27d38487c7e0b9d9a4b63912667e895e9",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "path-api",
-      "source_fingerprint": "b403cc8c456ad7d4a8ddc51737da396338ec4b6e447829bc5a42fd1b37a80823",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "path-api",
-      "source_fingerprint": "ba1eb3d4da8ad8017e81b7e04076a6b5ff9736880ceed8d13eae246e64eed786",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
-      "category": "path-api",
-      "source_fingerprint": "fe18b7c058b43819372742f58d1dc423c471957ffbba3836c2bb6c19a9ef0b18",
-      "count": 1
     },
     {
       "path": "tools/App/CanDoItAll.Manager/TuningExecutionAdapter.cs",
@@ -77230,6 +76984,12 @@
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "68d7046ad87194ad122444e601380df950be5ab298c945b74c52c0934c00ae8c",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "6a124e50444bee409a8cf68a9cb927e50248dcdda6e8cc411f2fc537fb3a67fd",
       "count": 1
     },
@@ -77242,6 +77002,12 @@
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "9b9233b0c25a41505cdfc8c7a5a652e4545637bb936e065616ef5d0d1af57931",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "aabc29dd09268b9b6310783a84e093c61693aaa6d551ecd054b273fcd158f9c4",
       "count": 1
     },
@@ -77249,6 +77015,12 @@
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "ad29e75f67c86d934b7b3e9ac0a7af2591191c0e85337f812cf64f60a6c9834c",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "bd137b02c9211bf1ea81852331636bef189e5dff683ea1adc7fe4aa84a51c378",
       "count": 1
     },
     {
@@ -77296,6 +77068,12 @@
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "case-policy",
+      "source_fingerprint": "baefcc4c7d691705abd05c751bac55fc91e0bab75437c01e3b0a2683e666f0da",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "case-policy",
       "source_fingerprint": "bd7df482d4e989537abfeaf41e4d0825070845a219bbca8b066e087eb4fe7be1",
       "count": 1
     },
@@ -77325,20 +77103,68 @@
     },
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
-      "category": "mcp",
-      "source_fingerprint": "7146eb99a482e29c72c254fd521721508f9e3281b7d167777be2eac44080d4c4",
+      "category": "link-reparse",
+      "source_fingerprint": "26a9f0fe3d7bac2704f3b26719ca8c92b60de336af4548c98d3d909f93f3517b",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "8409963445e782e5a652368d0cad01cc1dac29d2b95cd9f3a5e37afac5a9b2f7",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "c2673d8bacd0eff8f261291ed8bb8f2323af7c78ce6fe76cc3031010a2b5d4d4",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "efaa2f5165e4fed5bbf4fd8d6934b80df2361c6bea5e258444c4ee2c734bf724",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "f5375e2b6e7af7b88059f1ad63543879ef36e2fa5abc6aeee1ea8b9afab1c9c6",
       "count": 1
     },
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "os-branch",
-      "source_fingerprint": "df7f209892ede4398e0b4f951d6dc6b526072f749eb2af72d6bc88f62172954e",
+      "source_fingerprint": "0a76eed1eca9fa487e287387037adfb6cb425aa790c33519ceed15678cb787fe",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "os-branch",
+      "source_fingerprint": "985b375e61661f6101a2c1cf811aa3cdf988cd1ce9813fcfdc7d2cd08be64746",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "path-api",
+      "source_fingerprint": "0c4dabc622cb2a88890c7f9dfc730a8631a3cb77bacff9a53783bb51dcb31401",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "path-api",
+      "source_fingerprint": "255b8dd322080a6422c19380f13ee444ed039169cd1621a3e3a6d3dd1a50f3a1",
       "count": 1
     },
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "path-api",
       "source_fingerprint": "3a1f6e161e19aeea418222ffb8602c31425c52ad0543305792378bd57117d183",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "path-api",
+      "source_fingerprint": "56198e7d71ff030333861562284592ed674f77e3c21ea9e894403c13d47c68f3",
       "count": 1
     },
     {
@@ -77380,31 +77206,25 @@
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "path-api",
+      "source_fingerprint": "c369a3739cf92cc1a46b28c9c9517987611924d806002d29b56a83a8d6306a80",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "category": "path-api",
       "source_fingerprint": "fffd0b796263a70733d44de1953bdd243a78b510a33b6a19e47fa9fb12c6df30",
       "count": 1
     },
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "shell-elevation",
-      "source_fingerprint": "134186379bd6719889f20b5e8b791b2585f46a2b2b6762421c300f8ebeff5c72",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
-      "category": "shell-elevation",
-      "source_fingerprint": "6741700dbc6bde25e9d55a2a0af9c1ae4881de28df9cbd93612eb6f991cdd9b1",
+      "source_fingerprint": "de7a51b2ba907fc31d6f77bf66cadef01b11251dda94cf313388fc024655a65f",
       "count": 1
     },
     {
       "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
       "category": "windows-executable",
-      "source_fingerprint": "3a8192efa62afc75d3b8cf7f21e10905ee35a136a69ee955d0b20aecf54be83a",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
-      "category": "windows-executable",
-      "source_fingerprint": "d722d60f984741060316a4bb868d9fc05ad89712b9df5878e97680851deeb10d",
+      "source_fingerprint": "351d4192747f3a64d8013ec4084f566402891df4d3a56cd8a6fec339e93181ae",
       "count": 1
     },
     {

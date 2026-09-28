@@ -112,11 +112,11 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        if (request.StandardIoMode == WorkspaceProcessStandardIoMode.Duplex &&
+        if (request.StandardIoMode != WorkspaceProcessStandardIoMode.Captured &&
             request.StandardInput is not null)
         {
             throw new ArgumentException(
-                "Duplex process sessions cannot also declare static standard input.",
+                $"{request.StandardIoMode} process sessions cannot also declare static standard input.",
                 nameof(request));
         }
 
@@ -408,7 +408,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = request.StandardInput is not null ||
-                request.StandardIoMode == WorkspaceProcessStandardIoMode.Duplex,
+                request.StandardIoMode != WorkspaceProcessStandardIoMode.Captured,
             UseShellExecute = false,
             CreateNoWindow = true,
             WorkingDirectory = request.WorkingDirectory
@@ -832,6 +832,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         private readonly ILocalWorkspaceProcessOwnership ownership;
         private readonly WorkspaceProcessTerminationMode terminationMode;
         private readonly bool isDuplex;
+        private readonly bool holdsOpenInput;
         private readonly DateTimeOffset startedAtUtc;
         private readonly CancellationTokenSource stdoutReadCancellation = new();
         private readonly CancellationTokenSource stderrReadCancellation = new();
@@ -856,6 +857,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
             this.ownership = ownership;
             terminationMode = request.TerminationMode;
             isDuplex = request.StandardIoMode == WorkspaceProcessStandardIoMode.Duplex;
+            holdsOpenInput = request.StandardIoMode == WorkspaceProcessStandardIoMode.CapturedWithOpenInput;
             Identity = identity;
             this.startedAtUtc = startedAtUtc;
             stdoutCapture = new CappedTextCapture(request.StdoutLimitCharacters);
@@ -1020,7 +1022,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
                 }
 
                 standardInputCancellation.Cancel();
-                if (isDuplex)
+                if (isDuplex || holdsOpenInput)
                 {
                     TryCloseStandardInput(process);
                 }
