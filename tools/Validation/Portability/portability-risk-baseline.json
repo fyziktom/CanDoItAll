@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-29T18:22:57.182716+00:00",
+  "generated_utc": "2026-09-29T20:32:52.107050+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15207,
+  "allowance_count": 15206,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -68000,24 +68000,6 @@
       "count": 2
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageSettingsPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "79be7ff72c4027eb127d2d3b2659695eb57bc605da1ec33cdb10d5c66864da33",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageSettingsPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "97a50f8c9cfe618bd7c28649a4041d3eedd49f0525a78282b2a48bd07aac2c5c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageSettingsPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "cb5c611afaf56c16bbdbfef57c4d008607cdd38ae4f9976c52ceeff0762982ae",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceFilesOwner.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "0998e8cbc641924feb2e526b0e687a0d22086d212eab3637464bfa929755cbaf",
@@ -75371,6 +75353,18 @@
       "path": "src/UI/CanDoItAll.Workspace.ApiAccess.UI/ApiScopePickerDialog.razor",
       "category": "case-policy",
       "source_fingerprint": "e1d88f8ed99e91ea56dab7e49d151b1ba1c60de87eef70517e1b44ed2cc6974c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CatalogSession.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7751ba2b126a677a43497baba8a6630d55e5cc73673309b8e2e8547be6050a48",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CatalogSession.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cb00aa9893c16ee6622c330860ff249795c0ab3a36e11753db897f9be103376c",
       "count": 1
     },
     {

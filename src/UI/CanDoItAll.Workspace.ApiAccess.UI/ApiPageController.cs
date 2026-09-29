@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Workspace.ApiAccess.Contracts;
 
 namespace CanDoItAll.Workspace.ApiAccess.UI;
 
-public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, Task<ApiPage<T>>> read, ApiViewLifetime authority) : IDisposable {
+public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, Task<ApiPage<T>>> read, ApiViewLifetime authority, Action? accessDenied = null) : IDisposable {
     private CancellationTokenSource? reading;
     private bool disposed;
     private string desiredSearch = string.Empty;
@@ -60,16 +60,18 @@ public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, T
         } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
         } catch (UnauthorizedAccessException) {
             if (Current(origin)) {
-                authority.Dispose();
+                (accessDenied ?? authority.Dispose)();
             }
         } catch (Exception) {
             if (Current(origin)) {
                 Error = "The list could not be refreshed. Retry the read; no mutation is repeated.";
             }
         } finally {
-            if (Current(origin)) {
-                IsLoading = false;
+            if (ReferenceEquals(reading, cancellation)) {
                 reading = null;
+                IsLoading = false;
+            }
+            if (Current(origin)) {
                 Notify();
             }
         }
@@ -84,6 +86,9 @@ public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, T
     }
     private void Notify() => Changed?.Invoke();
     public void Dispose() {
+        if (disposed) {
+            return;
+        }
         disposed = true;
         Invalidate();
         Changed = null;

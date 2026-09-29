@@ -8,7 +8,7 @@ public sealed partial class WorkspaceService
 {
     public StorageCatalogEditorModel CreateStorageDraft(StorageProviderKind providerKind)
     {
-        return NewStorage(providerKind);
+        return WorkspaceStoragePolicy.CreateDraft(providerKind);
     }
 
     public async Task<IReadOnlyList<StorageCatalogSummary>> ListStorageCatalogAsync(CancellationToken cancellationToken = default)
@@ -36,13 +36,13 @@ public sealed partial class WorkspaceService
     {
         if (!id.HasValue)
         {
-            return NewStorage(StorageProviderKind.FileSystem);
+            return WorkspaceStoragePolicy.CreateDraft(StorageProviderKind.FileSystem);
         }
 
         var editor = await storageCatalogService.GetEditorAsync(id.Value, cancellationToken);
         if (editor is null)
         {
-            return NewStorage(StorageProviderKind.FileSystem);
+            return WorkspaceStoragePolicy.CreateDraft(StorageProviderKind.FileSystem);
         }
 
         var storage = editor.Catalog;
@@ -110,13 +110,13 @@ public sealed partial class WorkspaceService
             }
         }
 
-        var capabilityMask = ResolveCapabilityMask(model.ProviderKind, model.IsReadOnly);
+        var capabilityMask = WorkspaceStoragePolicy.ResolveCapabilityMask(model.ProviderKind, model.IsReadOnly);
         var record = new StorageCatalogSaveRequest
         {
             Id = model.Id ?? Guid.NewGuid(),
             Name = model.Name.Trim(),
             ProviderKind = model.ProviderKind,
-            ConnectionMode = ResolveConnectionMode(model.ProviderKind, model.ConnectionMode),
+            ConnectionMode = WorkspaceStoragePolicy.ResolveConnectionMode(model.ProviderKind, model.ConnectionMode),
             EndpointOrRoot = model.EndpointOrRoot.Trim(),
             CredentialSecretId = model.CredentialSecretId,
             IsEnabled = model.IsEnabled,
@@ -178,14 +178,14 @@ public sealed partial class WorkspaceService
             Id = model.Id ?? Guid.NewGuid(),
             Name = string.IsNullOrWhiteSpace(model.Name) ? $"Storage {model.ProviderKind}" : model.Name.Trim(),
             ProviderKind = model.ProviderKind,
-            ConnectionMode = ResolveConnectionMode(model.ProviderKind, model.ConnectionMode),
+            ConnectionMode = WorkspaceStoragePolicy.ResolveConnectionMode(model.ProviderKind, model.ConnectionMode),
             EndpointOrRoot = model.EndpointOrRoot.Trim(),
             CredentialSecretId = model.CredentialSecretId,
             IsEnabled = model.IsEnabled,
             IsSystemDefault = model.IsSystemDefault,
             IsReadOnly = model.IsReadOnly,
             DisplayOrder = model.DisplayOrder,
-            CapabilityMask = ResolveCapabilityMask(model.ProviderKind, model.IsReadOnly),
+            CapabilityMask = WorkspaceStoragePolicy.ResolveCapabilityMask(model.ProviderKind, model.IsReadOnly),
             Configuration = new StorageProviderConfiguration
             {
                 GatewayBaseUrl = model.GatewayBaseUrl.Trim(),
@@ -297,73 +297,6 @@ public sealed partial class WorkspaceService
                     rule?.Reason ?? string.Empty);
             })
             .ToList();
-    }
-
-    private static StorageCatalogEditorModel NewStorage(StorageProviderKind providerKind)
-    {
-        return new StorageCatalogEditorModel
-        {
-            ProviderKind = providerKind,
-            ConnectionMode = providerKind == StorageProviderKind.FileSystem ? StorageConnectionMode.Local : StorageConnectionMode.Remote,
-            IsEnabled = true,
-            UseSsl = providerKind == StorageProviderKind.Ftp,
-            UsePassiveMode = true,
-            PinOnUpload = providerKind == StorageProviderKind.Ipfs,
-            CapabilityMask = ResolveCapabilityMask(providerKind, isReadOnly: false)
-        };
-    }
-
-    private static StorageConnectionMode ResolveConnectionMode(StorageProviderKind providerKind, StorageConnectionMode requestedMode)
-    {
-        return providerKind == StorageProviderKind.FileSystem
-            ? StorageConnectionMode.Local
-            : requestedMode == StorageConnectionMode.Local
-                ? StorageConnectionMode.Remote
-                : requestedMode;
-    }
-
-    private static StorageCapability ResolveCapabilityMask(StorageProviderKind providerKind, bool isReadOnly)
-    {
-        var capabilityMask = providerKind switch
-        {
-            StorageProviderKind.FileSystem => StorageCapability.Read |
-                StorageCapability.Write |
-                StorageCapability.Delete |
-                StorageCapability.Download |
-                StorageCapability.InlinePreview |
-                StorageCapability.OpenLocally |
-                StorageCapability.MutableUpdate |
-                StorageCapability.BatchFolderUpload |
-                StorageCapability.BatchTransfer |
-                StorageCapability.ConnectionTest,
-            StorageProviderKind.Ipfs => StorageCapability.Read |
-                StorageCapability.Write |
-                StorageCapability.Download |
-                StorageCapability.InlinePreview |
-                StorageCapability.DirectUrl |
-                StorageCapability.BatchFolderUpload |
-                StorageCapability.BatchTransfer |
-                StorageCapability.ConnectionTest,
-            StorageProviderKind.Ftp => StorageCapability.Read |
-                StorageCapability.Write |
-                StorageCapability.Delete |
-                StorageCapability.Download |
-                StorageCapability.BatchFolderUpload |
-                StorageCapability.BatchTransfer |
-                StorageCapability.ConnectionTest,
-            _ => StorageCapability.None
-        };
-
-        if (!isReadOnly)
-        {
-            return capabilityMask;
-        }
-
-        return capabilityMask &
-            ~StorageCapability.Write &
-            ~StorageCapability.Delete &
-            ~StorageCapability.MutableUpdate &
-            ~StorageCapability.BatchFolderUpload;
     }
 
 }

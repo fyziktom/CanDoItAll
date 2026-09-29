@@ -466,6 +466,29 @@ Production sandbox. These are distinct proof layers, not interchangeable mocks.
 See the [API boundary record](architecture/workspace-api-access-ui-boundary.md) for exact
 filters, current counts, failed attempts, graph/watch samples and the broad-gate decision.
 
+## Workspace Storage catalog boundary proof
+
+`tests/Components/CanDoItAll.Workspace.StorageCatalog.UI.Tests` belongs to Components,
+Stable and the three component CI project lists. Its
+`FullyQualifiedName~CanDoItAll.Tests.Components.WorkspaceStorageCatalogUi` filter exercises
+the actual wizard, captured submissions, read lifetimes, staged receipts, scenario owners
+and forbidden dependency guards without a database. Use build-backed discovery before
+identical filtered execution.
+
+`StorageCatalogUiOwnerTests` in Integration uses private PostgreSQL, real catalog/routing
+and credential owners, and fault injection at the actual persistence and driver boundaries.
+`StorageCatalogHostTests` in Components uses production Settings and Recovery composition.
+`StorageCatalogBrowserTests` in Playwright covers the private production route and the
+source/published independent sandbox. Publish the sandbox into
+`artifacts/workspace-storage-catalog-ui/published` using the same configuration as the
+browser tests before the published case. Keep the ordinary application's base URL unset.
+The sandbox itself requires no database, vault or production driver.
+
+The [maintained Storage boundary record](architecture/workspace-storage-catalog-ui-boundary.md)
+records AP-R1/AP-R2 failing-first proof, exact application consumer selections, counts,
+owner semantics, graph/watch measurements and the broad Stable trigger. Recovery,
+Data Sources and shared catalog pickers retain their existing owners and validation lanes.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

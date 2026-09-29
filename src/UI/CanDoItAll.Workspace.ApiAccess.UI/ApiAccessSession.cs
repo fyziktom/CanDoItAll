@@ -30,6 +30,7 @@ public sealed class ApiAccessSession(
         RetireChildren();
         reading?.Cancel();
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(life.Token);
+        var token = cancellation.Token;
         reading = cancellation;
         var origin = ++revision;
         Configuration = null;
@@ -38,11 +39,16 @@ public sealed class ApiAccessSession(
         ManagementFailure = ApiFailure.None;
         ObservationMessage = null;
         Notify();
-        await Task.WhenAll(ReadConfigurationAsync(), ReadAccessAsync());
+        try {
+            await Task.WhenAll(ReadConfigurationAsync(), ReadAccessAsync());
+        } finally {
+            if (ReferenceEquals(reading, cancellation)) {
+                reading = null;
+            }
+        }
         if (!Current(origin)) {
             return;
         }
-        reading = null;
         if (Configuration is { AuthorizationEnabled: true, SigningKeyConfigured: true } configuration && ManagementFailure == ApiFailure.None) {
             authority = new(life);
             authority.Retired += AccessRetired;
@@ -56,7 +62,7 @@ public sealed class ApiAccessSession(
 
         async Task ReadConfigurationAsync() {
             try {
-                var value = await configurationOwner.ReadAsync(cancellation.Token);
+                var value = await configurationOwner.ReadAsync(token);
                 if (Current(origin)) {
                     Configuration = value;
                 }
@@ -73,7 +79,7 @@ public sealed class ApiAccessSession(
         }
         async Task ReadAccessAsync() {
             try {
-                var allowed = await configurationOwner.CanManageAsync(cancellation.Token);
+                var allowed = await configurationOwner.CanManageAsync(token);
                 if (Current(origin)) {
                     ManagementFailure = allowed ? ApiFailure.None : ApiFailure.Denied;
                 }
@@ -141,9 +147,15 @@ public sealed class ApiAccessSession(
         }
     }
     public void Dispose() {
+        if (!life.IsActive) {
+            return;
+        }
         RetireChildren();
         life.Dispose();
         reading?.Cancel();
+        reading = null;
+        StatusLoading = false;
+        ManagementLoading = false;
         Changed = null;
     }
 }

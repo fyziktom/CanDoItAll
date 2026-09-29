@@ -19,7 +19,7 @@ public sealed class ApiAccountController : IDisposable {
         Configuration = configuration;
         life = new(authority);
         life.Retired += RetireEditor;
-        Page = new(owner.SearchAsync, life);
+        Page = new(owner.SearchAsync, life, authority.Dispose);
         Page.Changed += Notify;
     }
 
@@ -75,9 +75,11 @@ public sealed class ApiAccountController : IDisposable {
                 EditorError = "The exact account could not be loaded. Retry this account before editing.";
             }
         } finally {
+            if (ReferenceEquals(editorRead, cancellation)) {
+                editorRead = null;
+            }
             if (CurrentEditorRead(revision)) {
                 EditorLoading = false;
-                editorRead = null;
                 Notify();
             }
         }

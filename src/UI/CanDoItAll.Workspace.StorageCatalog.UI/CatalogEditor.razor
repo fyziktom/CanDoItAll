@@ -1,0 +1,237 @@
+        <EditForm EditContext="Draft.EditContext" OnSubmit="@(() => Session.MutateAsync(CatalogEffect.Save))">
+            <Stack AlignItems="AlignItems.Stretch" Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                <ValidationSummary />
+                <Steps @bind-Value="Draft.Step"
+                       NavigationPosition="StepsNavigationPosition.Bottom"
+                       NextText="Next step"
+                       PreviousText="Previous step"
+                       data-testid="storage-settings-wizard">
+                    <StepsItem Text="Identity"
+                               Icon="inventory_2"
+                               Description="Name the target, choose the provider kind, and make its operating mode explicit.">
+                        <FormSection Title="Storage identity"
+                                     Description="Keep the label concrete. This catalog drives routing and UI labels across workbench attachments and prompt exports.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Name</label>
+                                    <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.Name"
+                                               class="cda-input"
+                                               data-testid="storage-settings-name" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Provider kind</label>
+                                    <InputSelect disabled="@(Draft.IsSystemDefault || Draft.Deleted)" Value="Draft.ProviderKind"
+                                                 ValueChanged="@((CatalogProvider value) => ChangeProvider(value))"
+                                                 ValueExpression="() => Draft.ProviderKind"
+                                                 class="cda-input"
+                                                 data-testid="storage-settings-provider">
+                                        @if (!Session.Choices.Providers.Any(choice => choice.Value == Draft.ProviderKind)) {
+                                            <option value="@Draft.ProviderKind">@Session.ProviderLabel(Draft.ProviderKind)</option>
+                                        }
+                                        @foreach (var providerKind in Session.Choices.Providers.Select(choice => choice.Value)) {
+                                            <option value="@providerKind">@Session.ProviderLabel(providerKind)</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Connection mode</label>
+                                    <InputSelect @bind-Value="Draft.ConnectionMode"
+                                                 class="cda-input"
+                                                 disabled="@(Draft.ProviderKind == CatalogProvider.FileSystem || Draft.IsSystemDefault || Draft.Deleted)"
+                                                 data-testid="storage-settings-connection-mode">
+                                        @if (!Session.Choices.Connections.Any(choice => choice.Value == Draft.ConnectionMode)) {
+                                            <option value="@Draft.ConnectionMode">Unsupported mode (@((int)Draft.ConnectionMode))</option>
+                                        }
+                                        @foreach (var connectionMode in Session.Choices.Connections.Select(choice => choice.Value)) {
+                                            <option value="@connectionMode">@Session.Choices.Connections.First(choice => choice.Value == connectionMode).Label</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Credential secret</label>
+                                    <InputSelect disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.CredentialSecretId"
+                                                 class="cda-input"
+                                                 data-testid="storage-settings-secret">
+                                        <option value="">None</option>
+                                        @if (Draft.CredentialSecretId is { } secretId && !Session.Secrets.Value.Any(secret => secret.Id == secretId)) {
+                                            <option value="@secretId">Unavailable secret (@secretId)</option>
+                                        }
+                                        @foreach (var secret in Session.Secrets.Value) {
+                                            <option value="@secret.Id">@secret.Name@(!secret.IsEnabled ? " (disabled)" : string.Empty)</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <label class="cda-inline-option">
+                                    <InputCheckbox disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.IsEnabled"
+                                                   data-testid="storage-settings-enabled" />
+                                    Enabled
+                                </label>
+                                <label class="cda-inline-option">
+                                    <InputCheckbox disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.IsReadOnly"
+                                                   data-testid="storage-settings-read-only" />
+                                    Read only
+                                </label>
+                            </Grid>
+
+                            <div>
+                                <label class="cda-field-label">Display order</label>
+                                <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.DisplayOrderText"
+                                             class="cda-input"
+                                             data-testid="storage-settings-display-order" />
+                            </div>
+                        </FormSection>
+                    </StepsItem>
+                    <StepsItem Text="Connectivity"
+                               Icon="lan"
+                               Description="Capture the root or endpoint, then add provider-specific connection details without guessing.">
+                        <FormSection Title="Driver configuration"
+                                     Description="Use exact host or root values. Test connection should fail loudly when the catalog entry is incomplete or the driver is unavailable.">
+                            <div>
+                                <label class="cda-field-label">@(Draft.ProviderKind == CatalogProvider.FileSystem ? "Root path" : "Endpoint or host")</label>
+                                <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.EndpointOrRoot"
+                                           class="cda-input"
+                                           data-testid="storage-settings-endpoint" />
+                            </div>
+
+                            @if (Draft.ProviderKind == CatalogProvider.Ipfs) {
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    <div>
+                                        <label class="cda-field-label">Gateway base URL</label>
+                                        <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.GatewayBaseUrl"
+                                                   class="cda-input"
+                                                   data-testid="storage-settings-ipfs-gateway" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Base path</label>
+                                        <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.BasePath"
+                                                   class="cda-input"
+                                                   data-testid="storage-settings-base-path" />
+                                    </div>
+                                </Grid>
+
+                                <label class="cda-inline-option">
+                                    <InputCheckbox disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.PinOnUpload"
+                                                   data-testid="storage-settings-pin-on-upload" />
+                                    Pin on upload
+                                </label>
+                            }
+                            else if (Draft.ProviderKind == CatalogProvider.Ftp) {
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    <div>
+                                        <label class="cda-field-label">Port</label>
+                                        <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.PortText"
+                                                     class="cda-input"
+                                                     data-testid="storage-settings-ftp-port" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Username</label>
+                                        <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.Username"
+                                                   class="cda-input"
+                                                   data-testid="storage-settings-ftp-username" />
+                                    </div>
+                                </Grid>
+
+                                <div>
+                                    <label class="cda-field-label">Base path</label>
+                                    <TextBox Immediate="true" Disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.BasePath"
+                                               class="cda-input"
+                                               data-testid="storage-settings-base-path" />
+                                </div>
+
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    <label class="cda-inline-option">
+                                        <InputCheckbox disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.UseSsl"
+                                                       data-testid="storage-settings-use-ssl" />
+                                        Use SSL
+                                    </label>
+                                    <label class="cda-inline-option">
+                                        <InputCheckbox disabled="@(Draft.IsSystemDefault || Draft.Deleted)" @bind-Value="Draft.UsePassiveMode"
+                                                       data-testid="storage-settings-use-passive" />
+                                        Passive mode
+                                    </label>
+                                </Grid>
+                            }
+
+                            <StorageSummaryCard Model="@CatalogSummaries.Capabilities(Session, Draft)"
+                                                data-testid="storage-settings-capability-summary" />
+                        </FormSection>
+                    </StepsItem>
+
+                    <StepsItem Text="Routing"
+                               Icon="alt_route"
+                               Description="Choose which artifact lanes should prefer this target when the workspace has not overridden routing elsewhere.">
+                        <FormSection Title="Default routing purposes"
+                                     Description="Only assign lanes this target can genuinely support. Prompt attachments and evidence usually need preview-friendly storage, while exports and releases can route elsewhere.">
+                            <div class="grid gap-3 md:grid-cols-2" data-testid="storage-settings-purpose-grid">
+                                @foreach (var purpose in Session.Choices.Purposes.Select(choice => choice.Value)) {
+                                    <label class="cda-inline-option rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                                        <input type="checkbox" disabled="@(Draft.IsSystemDefault || Draft.Deleted)"
+                                               checked="@Draft.DefaultPurposes.Contains(purpose)"
+                                               @onchange="@((ChangeEventArgs args) => Draft.TogglePurpose(purpose, args.Value is bool selected && selected))"
+                                               data-testid="@($"storage-settings-purpose-{purpose.ToString().ToLowerInvariant()}")" />
+                                        @Session.PurposeLabel(purpose)
+                                    </label>
+                                }
+                            </div>
+
+                            @if (Session.Routes.Value.Length > 0) {
+                                <FactTable>
+                                    <div class="grid gap-x-4 gap-y-3 md:grid-cols-2">
+                                        @foreach (var routingDefault in Session.Routes.Value) {
+                                            <div class="min-w-0 rounded-[1.1rem] border border-slate-200 bg-white/90 px-4 py-3">
+                                                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-500">@Session.PurposeLabel(routingDefault.Purpose)</p>
+                                                <p class="mt-1 text-sm text-slate-700">@(string.IsNullOrWhiteSpace(routingDefault.Name) ? "No workspace default assigned" : routingDefault.Name)</p>
+                                            </div>
+                                        }
+                                    </div>
+                                </FactTable>
+                            }
+                        </FormSection>
+                    </StepsItem>
+                </Steps>
+                <p class="cda-body-muted" data-testid="storage-test-contract">@(Draft.Id.HasValue ? "Test saves this draft configuration and its health to the existing catalog row. It does not change routing." : "Test checks this draft without creating a catalog row.")</p>
+
+                <StickyActionFooter StatusLabel="Storage catalog"
+                                    StatusTone="success">
+                    <SecondaryActions>
+                        <Button Text="Clear"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(() => Session.New(Draft.ProviderKind))" />
+                        <Button Text="Test connection"
+                                ButtonStyle="ButtonStyle.Info"
+                                Click="@(() => Session.MutateAsync(CatalogEffect.Test))" Disabled="@(!Session.CanMutate)"
+                                data-testid="storage-settings-test" />
+                    </SecondaryActions>
+                    <PrimaryActions>
+                        <Button Text="Save storage"
+                                Type="submit" Disabled="@(!Session.CanMutate)"
+                                data-testid="storage-settings-save" />
+                    </PrimaryActions>
+                    <DangerActions>
+                        @if (Draft.Id.HasValue && !Draft.IsSystemDefault) {
+                            <Button Text="Delete"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Click="@(() => Session.MutateAsync(CatalogEffect.Delete))" Disabled="@(!Session.CanMutate)"
+                                    data-testid="storage-settings-delete" />
+                        }
+                    </DangerActions>
+                </StickyActionFooter>
+            </Stack>
+        </EditForm>
+
+@code {
+    [Parameter, EditorRequired] public CatalogSession Session { get; set; } = default!;
+    [Parameter, EditorRequired] public CatalogDraft Draft { get; set; } = default!;
+    private void ChangeProvider(CatalogProvider value) {
+        var choice = Session.Choices.Providers.FirstOrDefault(item => item.Value == value);
+        if (choice is not null) {
+            Draft.ChangeProvider(choice);
+        }
+    }
+}

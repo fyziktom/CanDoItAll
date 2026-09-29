@@ -17,7 +17,7 @@ public sealed class ApiTokenListController : IDisposable {
         this.authority = authority;
         this.ledger = ledger;
         life = new(authority);
-        Page = new(owner.SearchAsync, life);
+        Page = new(owner.SearchAsync, life, authority.Dispose);
         Page.Changed += Notify;
     }
 

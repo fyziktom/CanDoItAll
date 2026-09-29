@@ -96,7 +96,7 @@ intentional composition, not a move of conversation rules into the Agent module.
 
 Workspace Settings Core shares its shell, defaults, Secrets, Files and provider history
 renderers through Workspace.Contracts, Workspace.Presentation and Workspace.UI, with a
-standalone Workspace.UiSandbox. Data Sources and Storage remain in the
+standalone Workspace.UiSandbox. Data Sources remains in the
 Workspace production module; this is a partial extraction. See the
 [boundary and validation record](workspace-settings-core-ui-boundary.md).
 
@@ -105,3 +105,11 @@ Workspace.ApiAccess.UiSandbox. Its status, issuance, token metadata and ordinary
 editors share presentation controllers; the production module retains authorization,
 canonical scopes, signing, password and instance-local persistence owners. Core acquires
 no API dependency. See the [API boundary record](workspace-api-access-ui-boundary.md).
+
+Storage catalog administration has a separate StorageCatalog.Contracts / StorageCatalog.UI
+leaf and Workspace.StorageCatalog.UiSandbox. Its three-step wizard uses independent read
+lanes, stable drafts and explicit owner-stage receipts. Production retains credentials,
+drivers, routing, profile fences and persistence. Neither Core nor API gains a Storage edge.
+Recovery, shared catalog pickers, Data Sources and residual settings-renderer integration
+still require separate audits; Workspace is not complete. See the
+[Storage boundary record](workspace-storage-catalog-ui-boundary.md).

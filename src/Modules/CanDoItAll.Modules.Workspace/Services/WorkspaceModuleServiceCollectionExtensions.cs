@@ -8,6 +8,8 @@ using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.ApiAccess.Contracts;
 using CanDoItAll.Modules.Workspace.ApiAccess.Presentation;
 using CanDoItAll.Workspace.ApiAccess.UI;
+using CanDoItAll.Workspace.StorageCatalog.UI;
+using CanDoItAll.Modules.Workspace.StorageCatalog.Contracts;
 
 namespace CanDoItAll.Modules.Workspace;
 
@@ -41,6 +43,9 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<ConnectorCommandProcessor>();
         services.AddScoped<ConnectorOutboxService>();
         services.AddScoped<WorkspaceService>();
+        services.AddScoped<StorageCatalogCommands>();
+        services.AddScoped<IStorageCatalogOwner, WorkspaceStorageCatalogOwner>();
+        services.AddScoped<CatalogOperationLedger>();
         services.AddScoped<IWorkspaceDefaultsOwner, WorkspaceDefaultsOwner>();
         services.AddScoped<IWorkspaceSecretsOwner, WorkspaceSecretsOwner>();
         services.AddScoped<IWorkspaceFilesOwner, WorkspaceFilesOwner>();

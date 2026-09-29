@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../CanDoItAll.Modules.Workspace.Presentation/CanDoItAll.Modules.Workspace.Presentation.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageCatalog.UI/CanDoItAll.Workspace.StorageCatalog.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.Workspace.ApiAccess.UI/CanDoItAll.Workspace.ApiAccess.UI.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
