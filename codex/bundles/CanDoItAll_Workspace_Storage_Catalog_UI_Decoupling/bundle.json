@@ -1,0 +1,94 @@
+{
+  "bundle_id": "CDA-WORKSPACE-STORAGE-CATALOG-UI-DECOUPLING-v1",
+  "title": "API read-lifetime corrections and independent Workspace Storage catalog UI",
+  "created_on": "2026-09-29",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "executable": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "56f615a19f5d7eb22042584230ceebcc611bf549",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/README.md",
+  "documents": [
+    "README.md",
+    "prompt.md",
+    "API_REVIEW.md",
+    "WORKSPACE_STATUS.md",
+    "ARCHITECTURE.md",
+    "STORAGE_REVIEW_NOTES.md",
+    "SENSITIVE_STATE.md",
+    "VALIDATION_MATRIX.md",
+    "APPLICATION_REGRESSION_MATRIX.md",
+    "DEV_LOOP.md",
+    "PROOF_STATUS.md",
+    "SOURCES.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "phases": [
+    {
+      "id": "S0",
+      "scope": "Reproduce/repair AP-R1 and AP-R2, preserving previous closures"
+    },
+    {
+      "id": "C1",
+      "scope": "Source/consumer inventory and original real UI/graph baseline"
+    },
+    {
+      "id": "C2",
+      "scope": "Independent catalog leaf contracts/rendering/host composition without reverse edges"
+    },
+    {
+      "id": "C3",
+      "scope": "Exact drafts, effect stages, original profile and existing owner semantics"
+    },
+    {
+      "id": "C4",
+      "scope": "Faithful bounded backend-free catalog sandbox"
+    },
+    {
+      "id": "C5",
+      "scope": "Application/owner/browser/publish/graph/watch validation and mandatory gates"
+    }
+  ],
+  "completion_scope": {
+    "prior_fixes": [
+      "AP-R1",
+      "AP-R2"
+    ],
+    "extracted": [
+      "Storage catalog list/search/summary",
+      "Three-step catalog editor",
+      "FileSystem/IPFS/FTP configuration",
+      "Tracked default routing purpose controls",
+      "Explicit Test/Save/Delete and original-target outcomes",
+      "Recovery launch integration only"
+    ],
+    "preserved_deferred": [
+      "StoragePlacementRecoveryDialog and owner continuation",
+      "StorageCatalogSelectionField/Dialog family",
+      "DatabaseSourcesSettingsPanel and transfer/switching",
+      "Residual SettingsRendererHost/configuration-host family"
+    ],
+    "entire_workspace_module_complete": false,
+    "core_and_api_sandboxes_must_not_gain_storage_dependencies": true
+  },
+  "out_of_scope": [
+    "API-only transport",
+    "New authentication/storage/routing runtime",
+    "Schema migration or global concurrency protocol",
+    "Whole Storage contract migration",
+    "Data Sources/recovery/picker/Projects/Processes/Workbench extraction"
+  ],
+  "review_proof": {
+    "type": "connected-source-and-metadata",
+    "product_build_run": false,
+    "product_tests_run": false,
+    "browser_run": false,
+    "watch_measured": false,
+    "runtime_regressions_reproduced": false,
+    "raw_implementer_artifacts_available": false
+  },
+  "artifact_proof_is_product_proof": false
+}
