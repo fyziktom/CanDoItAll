@@ -1,4 +1,5 @@
 @using CanDoItAll.Modules.Security
+@using CanDoItAll.Configuration.UI
 @using CanDoItAll.SharedKernel.Configuration
 
 @if (Schema.Fields.Count == 0)
@@ -13,7 +14,7 @@ else
             <div>
                 <ConnectorConfigFieldEditor Field="field"
                                             State="State"
-                                            Secrets="Secrets"
+                                            Secrets="@Secrets.Select(secret => new ConfigurationSecretOption(secret.Id, secret.Name)).ToArray()"
                                             InputClass="cda-input"
                                             TestId="@BuildFieldTestId(field)"
                                             StateChanged="HandleStateChangedAsync" />

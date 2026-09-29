@@ -1,13 +1,22 @@
 .resources-file-browse-pane {
     height: calc(100vh - 13.5rem);
-    min-height: 42rem;
+    min-height: 34rem;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.resources-file-browse-pane ::deep .resources-browse-receipts {
+    max-height: 9rem;
+    overflow-y: auto;
+    flex: 0 0 auto;
 }
 
 .resources-file-browse-pane ::deep .cda-list-detail-shell,
 .resources-file-browse-pane ::deep .cda-list-detail-shell__grid {
     height: 100%;
     min-height: 0;
+    flex: 1 1 0;
 }
 
 .resources-file-browse-pane ::deep .cda-list-detail-shell__grid > section {

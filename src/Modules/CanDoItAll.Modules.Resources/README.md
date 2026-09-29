@@ -20,7 +20,23 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
-This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
+`ResourcesPage` is the production route, canonical-navigation and Agent-context host.
+The complete Registry, Browse, promotion and governed preview tree lives in
+`CanDoItAll.Resources.UI`; shared presentation controllers own its drafts and effect
+receipts. `ResourceRegistryOwner` and `ResourceBrowseOwner` bind those typed ports to
+the existing in-process services and current canonical profile. The standalone sandbox
+uses the same renderer/controllers with deterministic owners. See the
+[Resources UI boundary](../../../docs/architecture/resources-ui-boundary.md).
+
+Stable value contracts live in `CanDoItAll.Modules.Resources.Contracts`, retaining
+their public namespaces and serialization. This module still owns business behavior,
+connector validation, source resolution, project admission and file authority.
+
+Confirmed Save/Delete and promotion identities survive postcommit logging, revision,
+read-back or handle-cleanup failure. The original failure remains available; secondary
+diagnostic failures record their type without payloads. A lost commit acknowledgement
+is unknown and is never treated as proof that a write rolled back. UI recovery performs
+an explicit exact-identity read, without repeating the write.
 
 `ResourcesDbContext` maps only resource metadata. Resource reads, writes, promotion,
 reopening and Memory snapshots use its per-operation factory pinned to the host's

@@ -26,6 +26,8 @@ public static class ResourcesModuleServiceCollectionExtensions
         services.AddScoped<ResourceConnectorPluginRegistry>();
         services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ResourceConnectorPluginRegistry>());
         services.AddScoped<ResourcesService>();
+        services.AddScoped<IResourceRegistryOwner, ResourceRegistryOwner>();
+        services.AddScoped<IResourceBrowseOwner, ResourceBrowseOwner>();
         services.AddScoped<IResourceFileSourceCatalog, ResourceFileSourceCatalog>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IFileToolsStorageBindingSource, ResourceFileToolsStorageBindingSource>());

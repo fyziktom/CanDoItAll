@@ -281,6 +281,10 @@ public sealed class OwnerPostcommitPageTests {
         await SubmitAsync(page);
         Assert.Same(editor, Editor(page));
         Assert.Null(EditorId(page));
+        if (owner == PostcommitOwner.Resource) {
+            var registry = ((ResourcesPage)page.Instance).Registry;
+            Assert.True(registry.Receipts.Count > 0, $"Resource dispatch was not reached. Access={registry.Access}; Error={registry.Error}");
+        }
         Assert.Contains(services.GetRequiredService<NotificationService>().Messages,
             message => message.Severity == NotificationSeverity.Error && message.Summary ==
                 (owner == PostcommitOwner.Resource ? "Resource save failed" : "Test plan save failed"));
@@ -323,18 +327,33 @@ public sealed class OwnerPostcommitPageTests {
         page.WaitForAssertion(() => {
             Assert.Equal(projectId, EditorProject(page));
             Assert.Equal(id, EditorId(page));
+            if (owner == PostcommitOwner.Resource) {
+                var registry = ((ResourcesPage)page.Instance).Registry;
+                Assert.Equal(ResourceViewAccess.Ready, registry.Access);
+                Assert.NotNull(registry.Draft.Editor.ExpectedProjectAdmission);
+                Assert.Same(registry.Draft.Editor, Editor(page));
+            }
         }, TimeSpan.FromSeconds(30));
         harness.Context.Services.GetRequiredService<NotificationService>().Messages.Clear();
         return page;
     }
 
     private static async Task FillAsync(IRenderedComponent<IComponent> page, PostcommitOwner owner, IServiceProvider services, ProjectWriteAdmission admission) {
+        if (owner == PostcommitOwner.Resource) {
+            await page.InvokeAsync(() => page.Find("[data-testid='resource-plugin-select']")
+                .ChangeAsync(new ChangeEventArgs { Value = ResourceConnectorPluginKeys.WebLink }));
+            page.WaitForAssertion(() => Assert.Equal(ResourceConnectorPluginKeys.WebLink, Assert.IsType<ResourceEditorModel>(Editor(page)).ConnectorPluginKey));
+        }
         await page.InvokeAsync(() => {
             if (owner == PostcommitOwner.Resource) {
                 var target = Assert.IsType<ResourceEditorModel>(Editor(page));
                 var source = OwnerPostcommitTestProbe.Resource(services, admission);
                 target.ConnectorPluginKey = source.ConnectorPluginKey;
-                target.Configuration = source.Configuration;
+                foreach (var field in source.Configuration.Values) {
+                    target.Configuration.SetText(field.Key, field.Value);
+                }
+                target.ConfigSchemaVersion = services.GetRequiredService<ResourceConnectorPluginRegistry>()
+                    .Resolve(source.ConnectorPluginKey).Manifest.ConfigurationSchema.Version;
                 target.ConfigJson = source.ConfigJson;
                 target.Description = source.Description;
                 target.SupportsPreview = source.SupportsPreview;
@@ -360,9 +379,9 @@ public sealed class OwnerPostcommitPageTests {
     }
 
     private static Task ChangeTitleAsync(IRenderedComponent<IComponent> page, PostcommitOwner owner, string value)
-        => page.InvokeAsync(() => page.Find(owner == PostcommitOwner.Resource
-                ? "[data-testid='resource-name-input']" : "[data-testid='testlab-title-input']")
-            .ChangeAsync(new ChangeEventArgs { Value = value }));
+        => page.InvokeAsync(() => owner == PostcommitOwner.Resource
+            ? page.Find("[data-testid='resource-name-input']").InputAsync(new ChangeEventArgs { Value = value })
+            : page.Find("[data-testid='testlab-title-input']").ChangeAsync(new ChangeEventArgs { Value = value }));
 
     private static Task SubmitAsync(IRenderedComponent<IComponent> page) => page.FindComponent<EditForm>().Find("form").SubmitAsync();
     private static Task DeleteAsync(IRenderedComponent<IComponent> page) => page.FindComponent<EditForm>().FindAll("button")

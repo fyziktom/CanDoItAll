@@ -31,6 +31,8 @@
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Resources.Presentation\CanDoItAll.Modules.Resources.Presentation.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Resources.Contracts\CanDoItAll.Modules.Resources.Contracts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />

@@ -10,6 +10,7 @@
     <Project Path="../Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Memory.UI.Tests/CanDoItAll.Memory.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
   </Folder>
   <Folder Name="/tests/Integration/">

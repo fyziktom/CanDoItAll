@@ -9,66 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Resources;
 
-public enum ResourceValidationStatus
-{
-    Unknown,
-    Valid,
-    Warning,
-    Invalid
-}
-
-public enum ResourceSensitivity
-{
-    Normal,
-    Sensitive,
-    Restricted
-}
-
-public sealed record ResourceDescriptor(
-    ResourceKind Kind,
-    string DisplayName,
-    string PrimaryLabel,
-    string Summary);
-
-public sealed record RepositoryResourceConfig(string RepositoryUrl, string DefaultBranch, string RelativePath);
-
-public sealed record FolderResourceConfig(string Path, string WorkingDirectory);
-
-public sealed record FileResourceConfig(string Path, string WorkingDirectory);
-
-public sealed record WebLinkResourceConfig(string Url, string TitleHint);
-
-public sealed record FtpResourceConfig(string Host, int? Port, string RemotePath, string UserName);
-
-public sealed record SshResourceConfig(string Host, int? Port, string UserName, string WorkingDirectory);
-
-public sealed record PowerShellScriptResourceConfig(string ScriptPath, string Arguments, string WorkingDirectory);
-
-public sealed record DockerComposeResourceConfig(string ComposeFilePath, string ServiceName);
-
-public sealed record SecretLinkResourceConfig(string Purpose, string SecretNameHint);
-
-public sealed record PromptLinkResourceConfig(string PromptReference, string PromptTitleHint);
-
-public static class ResourceDescriptorRegistry
-{
-    public static IReadOnlyList<ResourceDescriptor> All { get; } =
-    [
-        new(ResourceKind.Repository, "Repository", "Repository URL", "Track a source repository with branch and path details."),
-        new(ResourceKind.Folder, "Folder", "Folder path", "Register a working directory, mounted volume, or content root."),
-        new(ResourceKind.File, "File", "File path", "Track a concrete file that the project depends on."),
-        new(ResourceKind.WebLink, "Web link", "URL", "Register documentation, APIs, and browser-based resources."),
-        new(ResourceKind.Ftp, "FTP", "Host", "Store FTP connection metadata while keeping secrets external."),
-        new(ResourceKind.Ssh, "SSH", "Host", "Store SSH connection metadata and target working directory."),
-        new(ResourceKind.PowerShellScript, "PowerShell script", "Script path", "Track automation scripts and expected arguments."),
-        new(ResourceKind.DockerCompose, "Docker Compose", "Compose file", "Describe Compose or Docker-based local infrastructure."),
-        new(ResourceKind.SecretLink, "Secret link", "Purpose", "Link a resource to an external secret reference."),
-        new(ResourceKind.PromptLink, "Prompt link", "Prompt reference", "Connect a resource to a reusable prompt artifact.")
-    ];
-
-    public static ResourceDescriptor Get(ResourceKind kind) => All.First(item => item.Kind == kind);
-}
-
 public sealed class ProjectResource
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -124,58 +64,6 @@ internal sealed class ProjectResourceConfiguration : IEntityTypeConfiguration<Pr
         builder.Property(resource => resource.ConfigJson).HasColumnType("TEXT");
         builder.Property(resource => resource.LinkedSecretIdsJson).HasColumnType("TEXT");
     }
-}
-
-public sealed record ResourceSummary(
-    Guid Id,
-    Guid ProjectId,
-    string ProjectName,
-    ResourceKind? LegacyResourceKind,
-    string ConnectorPluginKey,
-    string ConnectorDisplayName,
-    string Name,
-    string LocationOrIdentifier,
-    ResourceValidationStatus ValidationStatus,
-    ResourceSensitivity Sensitivity) {
-    [System.Text.Json.Serialization.JsonIgnore]
-    public Guid? ProjectLifetimeId { get; init; }
-}
-
-public sealed class ResourceEditorModel
-{
-    public Guid? Id { get; set; }
-
-    public Guid? ProjectId { get; set; }
-
-    public ProjectWriteAdmission? ExpectedProjectAdmission { get; set; }
-
-    public Guid? OwnerPartyId { get; set; }
-
-    public Guid? MaintainerPartyId { get; set; }
-
-    public string Name { get; set; } = string.Empty;
-
-    public string Description { get; set; } = string.Empty;
-
-    public string ConnectorPluginKey { get; set; } = ResourceConnectorPluginKeys.Repository;
-
-    public string ConfigSchemaVersion { get; set; } = string.Empty;
-
-    public string LocationOrIdentifier { get; set; } = string.Empty;
-
-    public string ConfigJson { get; set; } = "{}";
-
-    public ConnectorConfigState Configuration { get; set; } = new();
-
-    public Guid? LinkedSecretId { get; set; }
-
-    public ResourceValidationStatus ValidationStatus { get; set; } = ResourceValidationStatus.Unknown;
-
-    public ResourceSensitivity Sensitivity { get; set; } = ResourceSensitivity.Normal;
-
-    public bool SupportsPreview { get; set; }
-
-    public bool SupportsIndexing { get; set; }
 }
 
 public sealed class ResourcesService(
@@ -282,8 +170,8 @@ public sealed class ResourcesService(
                 resource.ProjectLifetimeId is { } lifetimeId && projects.TryGetValue(resource.ProjectId, out var project) &&
                     project.LifetimeId == lifetimeId ? project.Name : "Unknown project",
                 resource.ResourceKind,
-                resourceConnectorPluginRegistry.Resolve(resource).Manifest.PluginKey,
-                resourceConnectorPluginRegistry.Resolve(resource).Manifest.DisplayName,
+                resourceConnectorPluginRegistry.TryResolve(resource, out var connector) ? connector!.Manifest.PluginKey : resource.ConnectorPluginKey,
+                connector?.Manifest.DisplayName ?? "Unavailable connector",
                 resource.Name,
                 resource.LocationOrIdentifier,
                 resource.ValidationStatus,
@@ -326,9 +214,12 @@ public sealed class ResourcesService(
             SupportsIndexing = resource.SupportsIndexing
         };
 
-        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(resource);
-        editor.ConnectorPluginKey = connectorPlugin.Manifest.PluginKey;
-        connectorPlugin.ApplyConfig(editor, resource.ConfigJson);
+        if (resourceConnectorPluginRegistry.TryResolve(resource, out var connectorPlugin)) {
+            editor.ConnectorPluginKey = connectorPlugin!.Manifest.PluginKey;
+            connectorPlugin.ApplyConfig(editor, resource.ConfigJson);
+        } else {
+            editor.ConnectorPluginKey = resource.ConnectorPluginKey;
+        }
         return editor;
     }
 
@@ -434,8 +325,8 @@ public sealed class ResourcesService(
                 Route: $"/resources?resourceId={entity.Id}"), cancellationToken);
             return Result<Guid>.Success(entity.Id);
         } catch (Exception exception) when (committed) {
-            logger?.LogError("Resource {ResourceId} was saved in profile {ProfileId}; a subsequent operation failed with {FailureType}.",
-                entityId, writeAdmissions.DatabaseProfileId, exception.GetType().FullName);
+            ResourceMutationDiagnostics.PreservePrimary(exception, () => logger?.LogError("Resource {ResourceId} was saved in profile {ProfileId}; a subsequent operation failed with {FailureType}.",
+                entityId, writeAdmissions.DatabaseProfileId, exception.GetType().FullName));
             throw new ResourceCommittedMutationException(entityId, ResourceMutationKind.Save, exception);
         }
     }
@@ -458,7 +349,7 @@ public sealed class ResourcesService(
                         expectedProjectAdmission.DatabaseProfileId != writeAdmissions.DatabaseProfileId ||
                         expectedProjectAdmission.ProjectId != resource.ProjectId || expectedProjectAdmission.LifetimeId != lifetimeId) ||
                     resource.ProjectLifetimeId is null && expectedProjectAdmission is not null) {
-                    throw new InvalidOperationException("The resource project binding changed. Reload Resources before deletion.");
+                    throw new ResourceActionRefusedException("The resource project binding changed. Reload Resources before deletion.");
                 }
                 dbContext.Remove(resource);
                 await dbContext.SaveChangesAsync(cancellationToken);
@@ -470,8 +361,8 @@ public sealed class ResourcesService(
                 "resources", "delete", "Deleted resource", resource.Name, ProjectId: resource.ProjectId,
                 ArtifactKind: "resource", ArtifactId: resource.Id, Route: "/resources"), cancellationToken);
         } catch (Exception exception) when (committed) {
-            logger?.LogError("Resource {ResourceId} was deleted in profile {ProfileId}; a subsequent operation failed with {FailureType}.",
-                id, writeAdmissions.DatabaseProfileId, exception.GetType().FullName);
+            ResourceMutationDiagnostics.PreservePrimary(exception, () => logger?.LogError("Resource {ResourceId} was deleted in profile {ProfileId}; a subsequent operation failed with {FailureType}.",
+                id, writeAdmissions.DatabaseProfileId, exception.GetType().FullName));
             throw new ResourceCommittedMutationException(id, ResourceMutationKind.Delete, exception);
         }
     }

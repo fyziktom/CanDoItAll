@@ -1,4 +1,9 @@
 using Bunit;
+using CanDoItAll.Resources.UI;
+using CanDoItAll.AppComponents.FileTools;
+using CanDoItAll.Components.BaseLib;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.JSInterop;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
@@ -16,57 +21,24 @@ namespace CanDoItAll.Tests.Components.Shell;
 public sealed class ResourceFileBrowsePaneTests
 {
     [Fact]
-    public async Task Late_source_open_cannot_replace_or_publish_current_source_and_is_disposed()
-    {
+    public async Task Late_source_open_cannot_replace_or_publish_current_source_and_is_disposed() {
         using var context = CreateContext(out _);
         var gate = new ControlledWorkspaceOpenGate();
-        TestResourceFileBrowsePane.Gate = gate;
         context.Services.AddSingleton<IResourceFileSourceCatalog>(gate.SourceCatalog);
-        var positions = new List<ResourceBrowseAgentChatPosition?>();
-        var cut = context.Render<TestResourceFileBrowsePane>(parameters => parameters
-            .Add(
-                component => component.PositionChanged,
-                EventCallback.Factory.Create<ResourceBrowseAgentChatPosition?>(
-                    this,
-                    position => positions.Add(position))));
-
-        try
-        {
-            Task firstOpen = cut
-                .WaitForElement($"[data-testid='resources-source-{gate.FirstSource.Key.Value}'] button")
-                .ClickAsync(new MouseEventArgs());
-            await gate.FirstStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-            await cut
-                .Find($"[data-testid='resources-source-{gate.SecondSource.Key.Value}'] button")
-                .ClickAsync(new MouseEventArgs());
-            await gate.FirstCanceled.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-            cut.WaitForAssertion(() =>
-            {
-                ResourceBrowseAgentChatPosition current = Assert.Single(positions.OfType<ResourceBrowseAgentChatPosition>());
-                Assert.Equal(gate.SecondSource.DisplayName, current.DisplayName);
-                Assert.Contains(gate.SecondSource.DisplayName, cut.Markup, StringComparison.Ordinal);
-                Assert.False(gate.SecondWorkspace.IsDisposed);
-            });
-
-            gate.ReleaseFirst();
-            await firstOpen.WaitAsync(TimeSpan.FromSeconds(10));
-
-            cut.WaitForAssertion(() =>
-            {
-                ResourceBrowseAgentChatPosition current = Assert.Single(positions.OfType<ResourceBrowseAgentChatPosition>());
-                Assert.Equal(gate.SecondSource.DisplayName, current.DisplayName);
-                Assert.Contains(gate.SecondSource.DisplayName, cut.Markup, StringComparison.Ordinal);
-                Assert.True(gate.FirstWorkspace.IsDisposed);
-                Assert.False(gate.SecondWorkspace.IsDisposed);
-            });
-        }
-        finally
-        {
-            gate.ReleaseFirst();
-            TestResourceFileBrowsePane.Gate = null!;
-        }
+        context.Services.AddSingleton(gate);
+        var cut = context.Render<ResourceFileBrowseTestHost>();
+        var controller = cut.Instance.Controller;
+        var first = cut.WaitForElement($"[data-testid='resources-source-{gate.FirstSource.Key.Value}'] button").ClickAsync(new MouseEventArgs());
+        await gate.FirstStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await cut.Find($"[data-testid='resources-source-{gate.SecondSource.Key.Value}'] button").ClickAsync(new MouseEventArgs());
+        await gate.FirstCanceled.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(gate.SecondSource.Key, controller.Position!.SourceId);
+        Assert.False(gate.SecondWorkspace.IsDisposed);
+        gate.ReleaseFirst();
+        await first.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(gate.SecondSource.Key, controller.Position!.SourceId);
+        Assert.True(gate.FirstWorkspace.IsDisposed);
+        Assert.False(gate.SecondWorkspace.IsDisposed);
     }
 
     [Fact]
@@ -74,7 +46,7 @@ public sealed class ResourceFileBrowsePaneTests
     {
         using var context = CreateContext(out ResourceBrowseTestState state);
 
-        var cut = context.Render<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowseTestHost>();
 
         cut.WaitForAssertion(() =>
         {
@@ -91,7 +63,7 @@ public sealed class ResourceFileBrowsePaneTests
     public async Task Invoked_file_opens_governed_promotion_dialog()
     {
         using var context = CreateContext(out ResourceBrowseTestState state);
-        var cut = context.Render<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowseTestHost>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
         var file = cut.WaitForElement(".ft-file-browser__item-main");
 
@@ -114,7 +86,7 @@ public sealed class ResourceFileBrowsePaneTests
             supportsLocalOpen: true,
             fileName: "manual.pdf",
             mediaType: "application/pdf");
-        var cut = context.Render<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowseTestHost>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
 
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
@@ -135,7 +107,7 @@ public sealed class ResourceFileBrowsePaneTests
             supportsLocalOpen: true,
             fileName: "report.xlsx",
             mediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        var cut = context.Render<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowseTestHost>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
 
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
@@ -154,7 +126,7 @@ public sealed class ResourceFileBrowsePaneTests
     public void Keyboard_invocation_preserves_promotion_when_local_launch_is_available()
     {
         using var context = CreateContext(out ResourceBrowseTestState state, supportsLocalOpen: true);
-        var cut = context.Render<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowseTestHost>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
 
         cut.WaitForElement(".ft-file-browser__item-main").KeyUp("Enter");
@@ -170,7 +142,7 @@ public sealed class ResourceFileBrowsePaneTests
     public async Task Successful_promotion_refreshes_source_and_offers_authorized_reopen()
     {
         using var context = CreateContext(out ResourceBrowseTestState state);
-        var cut = context.Render<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowseTestHost>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
         cut.WaitForElement("[data-testid='resources-promotion-save']").Click();
@@ -182,7 +154,7 @@ public sealed class ResourceFileBrowsePaneTests
             Assert.Equal(2, state.BrowseSessions.CreateCount);
             Assert.NotNull(cut.Find("[data-testid='resources-promotion-success']"));
             Assert.NotNull(cut.Find("[data-testid='resources-open-stored-object']"));
-            Assert.Contains("Source revision is now 1", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("revision 1", cut.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -195,6 +167,8 @@ public sealed class ResourceFileBrowsePaneTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddTransient<IResourceBrowseOwner, BrowseOwner>();
         state = new ResourceBrowseTestState(supportsLocalOpen, fileName, mediaType);
         context.Services.AddSingleton(new FileInteractionComponentBuilder()
             .AddBuiltIns()
@@ -413,14 +387,50 @@ public sealed class ResourceFileBrowsePaneTests
             => ValueTask.FromResult(activation);
     }
 
-    public sealed class TestResourceFileBrowsePane : ResourceFileBrowsePane
-    {
-        internal static ControlledWorkspaceOpenGate Gate { get; set; } = null!;
+    public sealed class ResourceFileBrowseTestHost : ComponentBase, IAsyncDisposable {
+        [Inject] public IResourceBrowseOwner Owner { get; set; } = default!;
+        [Inject] public IJSRuntime Js { get; set; } = default!;
+        public ResourceBrowseController Controller { get; private set; } = default!;
+        protected override async Task OnInitializedAsync() {
+            Controller = new(Owner, new(Js));
+            Controller.Changed += OnChanged;
+            await Controller.RefreshAsync();
+        }
+        protected override void BuildRenderTree(RenderTreeBuilder builder) {
+            builder.OpenComponent<ResourceFileBrowsePane>(0);
+            builder.AddAttribute(1, nameof(ResourceFileBrowsePane.Workspace), Controller);
+            builder.CloseComponent();
+        }
+        private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+        public async ValueTask DisposeAsync() {
+            Controller.Changed -= OnChanged;
+            await Controller.DisposeAsync();
+        }
+    }
 
-        internal override ValueTask<ResourceFileBrowseWorkspace> OpenWorkspaceAsync(
-            ResourceFileSourceKey sourceKey,
-            CancellationToken cancellationToken)
-            => Gate.OpenAsync(sourceKey, cancellationToken);
+    private sealed class BrowseOwner(IResourceFileSourceCatalog catalog, ResourceFileBrowseCoordinator browse,
+        ResourceStorageObjectPromotionService promotion, IFileToolsBrowseItemActionService actions, IServiceProvider services) : IResourceBrowseOwner {
+        public bool IsCurrent => true;
+        public bool IsLocalLaunchAvailable => actions.IsLocalLaunchAvailable;
+        public async Task<ResourceBrowseCatalog> LoadAsync(CancellationToken cancellationToken = default) {
+            var snapshot = await catalog.LoadAsync(cancellationToken);
+            return new(snapshot.Sources.Select(Map).ToArray(), snapshot.Projects.Select(p => new ResourceProjectOption(p.Id, p.Name, p.Admission)).ToArray(), snapshot.Fingerprint);
+        }
+        public async ValueTask<ResourceBrowseLease> OpenAsync(ResourceFileSourceKey key, CancellationToken cancellationToken = default) {
+            var gate = services.GetService<ControlledWorkspaceOpenGate>();
+            var workspace = gate is null ? await browse.OpenAsync(key, cancellationToken) : await gate.OpenAsync(key, cancellationToken);
+            return new(Map(workspace.Source), workspace.Browser, workspace.ActionAvailability, workspace.Revision, workspace.DisposeAsync);
+        }
+        public async ValueTask<ResourcePromotionObservation> PromoteAsync(ResourcePromotionRequest command) {
+            var result = await promotion.PromoteAsync(new(command.Selection.Source.Key, command.Selection.Item.Key, command.Project.ProjectId,
+                command.Name, command.Project, command.Sensitivity));
+            return new(result.ResourceId, result.Created, result.Revision.Scope);
+        }
+        public ValueTask<ResourcePreviewLease> OpenResourceAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(ResourceFileSelection selection, FileToolsLocalFileAction action, CancellationToken cancellationToken = default) => actions.LaunchAsync(selection.Source.Scope, selection.Item.Key, action, cancellationToken);
+        public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(ResourceFileSelection selection, CancellationToken cancellationToken = default) => actions.AuthorizeDownloadAsync(selection.Source.Scope, selection.Item.Key, cancellationToken);
+        private static ResourceBrowseSource Map(ResourceFileSourceDescriptor source) => new(source.Key, source.SourceClass, source.DisplayName, source.Detail, source.Scope, source.StorageId, true,
+            source.HealthStatus is { } health ? (ResourceSourceHealth)(int)health : null);
     }
 
     internal sealed class ControlledWorkspaceOpenGate

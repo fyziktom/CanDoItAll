@@ -211,6 +211,7 @@ composition, focus and result adaptation, or a real route boundary.
 | [CRM / HR Home, account summary and activity](crm-hr-home-ui-boundary.md), [Financials](crm-hr-financials-ui-boundary.md) | Immutable presentation records, rendered-origin intents, an interactivity signal, and a chart whose sparse currencies stay separate | Read surfaces with few intents |
 | [Prompt Gallery](prompt-gallery-ui-boundary.md) | A contracts assembly, a renderer library, module sessions and hosts, and a target-bound picker | A catalog and its editor, not a record workspace |
 | [Collaboration](collaboration-ui-boundary.md) | One aggregate read, two independent drafts, rendered-target callbacks, per-form admission and a backend-free sandbox | Inbox, Threads and Escalations; no new paging, concurrency or HTTP protocol |
+| [Resources](resources-ui-boundary.md) | Stable editor drafts, typed owner ports, independent browse/preview leases, exact effect receipts and a database-free host with real shared file components | Registry and Browse together; project admission, storage and file authority stay with their owners |
 | [Agent tool failure recovery](agent-tool-failure-recovery-boundary.md) | Effect ownership and recovery across an agent runtime boundary | Runtime effects, not form editing |
 
 ## Traps this product has actually hit

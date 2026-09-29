@@ -1,0 +1,413 @@
+@namespace CanDoItAll.Resources.UI
+@implements IDisposable
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Resources"
+                    Title="Project resources and storage objects"
+                    Description="Manage typed resource records or browse authorized project, filesystem, IPFS, and FTP sources."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="resources" Value="@resources.Count.ToString()" TooltipText="Registered resources across all projects." />
+                <CompactStat Label="visible" Value="@FilteredResources.Count.ToString()" TooltipText="Resources matching the current filters." Tone="info" />
+                <CompactStat Label="projects" Value="@resources.Select(item => item.ProjectId).Distinct().Count().ToString()" TooltipText="Projects currently represented in the registry." />
+                <CompactStat Label="validated" Value="@resources.Count(item => item.ValidationStatus == ResourceValidationStatus.Valid).ToString()" TooltipText="Entries already marked valid." Tone="success" />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="refresh" Label="Refresh" TooltipText="Refresh references without resetting the editor." Click="Registry.RefreshAsync" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="New resource"
+                                        TooltipText="Create a new typed resource."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Tabs @bind-SelectedIndex="resourcesTabIndex" @bind-SelectedIndex:after="NotifyTabAsync"
+              Variant="TabsVariant.WorkspacePrimary"
+              BorderMode="TabsBorderMode.Soft"
+              PanelOverflowMode="TabsPanelOverflowMode.Hidden"
+              FillHeight="true"
+              AriaLabel="Resources registry and storage browser"
+              data-testid="resources-tabs">
+            <TabItems>
+                <TabsItem Text="Registry"
+                          Icon="inventory_2"
+                          BadgeText="@resources.Count.ToString()"
+                          data-testid="resources-tab-registry">
+        <ListDetailShell ListPaneWidth="25rem">
+            <ListHeader>
+                <ListPanelHeader Title="Resource registry"
+                                 Description="Select a resource to continue editing it, or start a new typed entry."
+                                 Count="@($"{FilteredResources.Count} item(s)")">
+                    <Filters>
+                        <FilterBar ResultText="@($"{FilteredResources.Count} matching resource(s)")">
+                            <input @bind="resourceSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search resources" />
+                            <InputSelect @bind-Value="projectFilter" class="cda-input">
+                                <option value="">All projects</option>
+                                @foreach (var project in projects.OrderBy(item => item.Name)) {
+                                    <option value="@project.Id.ToString()">@project.Name</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="connectorFilter" class="cda-input">
+                                <option value="">All connectors</option>
+                                @foreach (var manifest in resourceManifests) {
+                                    <option value="@manifest.PluginKey">@manifest.DisplayName</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="validationFilter" class="cda-input">
+                                <option value="">All validation states</option>
+                                @foreach (var status in Enum.GetValues<ResourceValidationStatus>()) {
+                                    <option value="@status.ToString()">@status</option>
+                                }
+                            </InputSelect>
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+
+            <ListContent>
+                @if (FilteredResources.Count == 0) {
+                    <EmptyState Eyebrow="No resources"
+                                Title="@(resources.Count == 0 ? "Register the first typed resource" : "No resources match the filters")"
+                                Description="Resources appear here once they have been saved through the shared editor.">
+                        <Actions>
+                            <Button Text="New resource" Click="CreateNewAsync" />
+                        </Actions>
+                    </EmptyState>
+                }
+                else {
+                    <Stack GapScale="LayoutGap.Medium">
+                        @foreach (var resource in FilteredResources) {
+                            <SelectionListItem Title="@resource.Name"
+                                               Eyebrow="@resource.ConnectorDisplayName"
+                                               Meta="@BuildResourceMeta(resource)"
+                                               Summary="@resource.LocationOrIdentifier"
+                                               IsSelected="@(editor.Id == resource.Id)"
+                                               OnSelect="@(() => EditAsync(resource.Id))">
+                                <Status>
+                                    <StatusBadge Tone="@ResolveTone(resource.ValidationStatus)" Text="@resource.ValidationStatus.ToString()" />
+                                </Status>
+                            </SelectionListItem>
+                        }
+                    </Stack>
+                }
+            </ListContent>
+
+            <DetailHeader>
+                <Stack GapScale="LayoutGap.Medium">
+                    <Split Gap="LayoutGap.Medium">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <p class="cda-eyebrow">Resource editor</p>
+                            <h2 class="cda-title-xl">@EditorTitle</h2>
+                            <p class="cda-body-muted">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
+                        </Stack>
+                        <Cluster Gap="LayoutGap.Small">
+                            <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
+                            <StatusBadge Tone="neutral" Text="@SelectedResourceConnectorLabel" />
+                            @if (!string.IsNullOrWhiteSpace(SelectedProjectName)) {
+                                <StatusBadge Tone="info" Text="@SelectedProjectName" />
+                            }
+                        </Cluster>
+                    </Split>
+
+                    @if (SelectedResourceManifest is not null) {
+                        <Alert AlertStyle="AlertStyle.Info">
+                            <p class="font-semibold">@SelectedResourceManifest.DisplayName</p>
+                            <p class="mt-1 break-all">Plugin key: @SelectedResourceManifest.PluginKey</p>
+                            <p class="mt-1">@SelectedResourceManifest.HealthCheck.Summary</p>
+                            @if (editor.ConfigSchemaVersion != SelectedResourceManifest.ConfigurationSchema.Version) {
+                                <p>The stored schema @editor.ConfigSchemaVersion differs from the current schema @SelectedResourceManifest.ConfigurationSchema.Version.</p>
+                                <Button Text="Use current schema" Click="() => Registry.ChangeConnectorAsync(editor.ConnectorPluginKey)" />
+                            }
+                        </Alert>
+                    }
+                </Stack>
+            </DetailHeader>
+
+            <DetailContent>
+                @if (Registry.Access == ResourceViewAccess.Loading) {
+                    <Alert AlertStyle="AlertStyle.Info">Loading the selected resource. Writes wait for its exact identity and project admission.</Alert>
+                }
+                @if (Registry.IsLoading) {
+                    <Alert AlertStyle="AlertStyle.Info">Refreshing resource references; your editor is retained.</Alert>
+                }
+                @if (Registry.Error is { } error) {
+                    <Alert AlertStyle="AlertStyle.Danger" data-testid="resource-registry-error">@error</Alert>
+                }
+                @foreach (var warning in Registry.ReferenceErrors) {
+                    <Alert AlertStyle="AlertStyle.Warning">@warning</Alert>
+                }
+                @if (editor.ProjectId.HasValue && SelectedProjectName is null) {
+                    <Alert AlertStyle="AlertStyle.Warning">The loaded project lifetime is unavailable. Its admission is retained until you explicitly select a current project.</Alert>
+                }
+                <ResourceMutationHistory Workspace="Registry" />
+                @if (IsGovernedStorageObject) {
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XLarge">
+                        <Alert AlertStyle="AlertStyle.Info" data-testid="resource-governed-storage-object">
+                            This resource stores a stable storage occurrence. Its source, locator, and authority can only be changed through Resources browse promotion.
+                        </Alert>
+                        <FormSection Title="Governed storage object" Description="The opaque browser authority was not persisted. Reopening resolves this stable identity against current source and actor state.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Resource" />
+                                    <h3 class="mt-1 text-base font-semibold text-slate-950">@editor.Name</h3>
+                                    <TextBlock TextStyle="TextStyle.Caption" Value="@(SelectedProjectName ?? "Unknown project")" />
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Stable identifier" />
+                                    <p class="mt-1 break-all text-sm text-slate-700">@editor.LocationOrIdentifier</p>
+                                </SurfaceCard>
+                            </Grid>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
+                                <StatusBadge Tone="neutral" Text="@editor.Sensitivity.ToString()" />
+                                <StatusBadge Tone="info" Text="Authorized reopen" />
+                            </Cluster>
+                        </FormSection>
+                        <StickyActionFooter StatusLabel="Governed resource state">
+                            <SecondaryActions>
+                                <Button Text="Browse sources"
+                                        Icon="folder_open"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="OpenBrowseTab" />
+                            </SecondaryActions>
+                            <DangerActions>
+                                @if (editor.Id.HasValue) {
+                                    <Button Text="Delete" Disabled="@Registry.IsBusy" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                }
+                            </DangerActions>
+                        </StickyActionFooter>
+                    </Stack>
+                }
+                else {
+                <EditForm EditContext="Registry.Draft.EditContext" OnSubmit="SaveAsync">
+                    <ValidationSummary />
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                        <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose the connector plugin before editing manifest fields.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Project</label>
+                                    <InputSelect @bind-Value:get="editor.ProjectId" @bind-Value:set="Registry.ChangeProjectAsync" class="cda-input" data-testid="resource-project-select">
+                                        <option value="">Select a project</option>
+                                        @if (editor.ProjectId.HasValue && !projects.Any(p => p.Id == editor.ProjectId)) {
+                                            <option value="@editor.ProjectId">Unavailable project (@editor.ProjectId)</option>
+                                        }
+                                        @foreach (var project in projects) {
+                                            <option value="@project.Id">@project.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Connector plugin</label>
+                                    <InputSelect @bind-Value:get="editor.ConnectorPluginKey" @bind-Value:set="Registry.ChangeConnectorAsync" class="cda-input" data-testid="resource-plugin-select">
+                                        @if (SelectedResourceManifest is null) {
+                                            <option value="@editor.ConnectorPluginKey">Unavailable connector (@editor.ConnectorPluginKey)</option>
+                                        }
+                                        @foreach (var manifest in EditableResourceManifests) {
+                                            <option value="@manifest.PluginKey">@manifest.DisplayName</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Name</label>
+                                    <TextBox @bind-Value="editor.Name" @bind-Value:after="() => Edited(ResourceEditorField.Name)" Immediate="true" Class="cda-input" Style="width:100%" data-testid="resource-name-input" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Linked secret</label>
+                                    <InputSelect @bind-Value="editor.LinkedSecretId" @bind-Value:after="() => Edited(ResourceEditorField.Secret)" class="cda-input">
+                                        <option value="">None</option>
+                                        @if (editor.LinkedSecretId.HasValue && !secrets.Any(p => p.Id == editor.LinkedSecretId)) {
+                                            <option value="@editor.LinkedSecretId">Unavailable secret (@editor.LinkedSecretId)</option>
+                                        }
+                                        @foreach (var secret in secrets) {
+                                            <option value="@secret.Id">@secret.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Owner</label>
+                                    <InputSelect @bind-Value="editor.OwnerPartyId" @bind-Value:after="() => Edited(ResourceEditorField.Owner)" class="cda-input" data-testid="resource-owner-select">
+                                        <option value="">None</option>
+                                        @if (editor.OwnerPartyId.HasValue && !responsiblePartyOptions.Any(p => p.Id == editor.OwnerPartyId)) {
+                                            <option value="@editor.OwnerPartyId">Unavailable party (@editor.OwnerPartyId)</option>
+                                        }
+                                        @foreach (var option in responsiblePartyOptions) {
+                                            <option value="@option.Id">@option.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Maintainer</label>
+                                    <InputSelect @bind-Value="editor.MaintainerPartyId" @bind-Value:after="() => Edited(ResourceEditorField.Maintainer)" class="cda-input" data-testid="resource-maintainer-select">
+                                        <option value="">None</option>
+                                        @if (editor.MaintainerPartyId.HasValue && !responsiblePartyOptions.Any(p => p.Id == editor.MaintainerPartyId)) {
+                                            <option value="@editor.MaintainerPartyId">Unavailable party (@editor.MaintainerPartyId)</option>
+                                        }
+                                        @foreach (var option in responsiblePartyOptions) {
+                                            <option value="@option.Id">@option.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+                        </FormSection>
+
+                        <FormSection Title="Location and connector details" Description="The manifest schema drives which connector fields appear for the selected resource plugin.">
+                            <TextBlock TextStyle="TextStyle.Caption" Value="Explicit connector or schema changes retain matching fields and discard fields outside the selected schema." />
+                            @if (SelectedResourceManifest is null) {
+                                <TextArea Value="@editor.ConfigJson" ReadOnly="true" Rows="4" Style="width:100%" aria-label="Retained configuration for the unavailable connector" />
+                            }
+                            <Stack GapScale="LayoutGap.Medium">
+                                @foreach (var field in SelectedResourceFields) {
+                                    <ConnectorConfigFieldEditor Field="field"
+                                                                State="editor.Configuration"
+                                                                Draft="Registry.Draft.Configuration"
+                                                                StateChanged="ConfigurationChanged"
+                                                                Secrets="secrets"
+                                                                InputClass="cda-input"
+                                                                TestId="@ResolveResourceFieldTestId(field, SelectedResourceFields)" />
+                                }
+                            </Stack>
+
+                            <div class="cda-panel-card--soft">
+                                <p class="cda-eyebrow cda-eyebrow--tight">Stored identifier preview</p>
+                                <p class="cda-text-block cda-text-block--body2 mt-2 break-all">@PreviewLocation</p>
+                            </div>
+                        </FormSection>
+
+                        <FormSection Title="Metadata and capabilities" Description="Keep validation, sensitivity, and handling flags explicit on every resource record.">
+                            <div>
+                                <label class="cda-field-label">Description</label>
+                                <TextArea @bind-Value="editor.Description" @bind-Value:after="() => Edited(ResourceEditorField.Description)" Immediate="true" Class="cda-input" Style="width:100%" Rows="4" />
+                            </div>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Validation</label>
+                                    <InputSelect @bind-Value="editor.ValidationStatus" @bind-Value:after="() => Edited(ResourceEditorField.Validation)" class="cda-input">
+                                        @foreach (var status in Enum.GetValues<ResourceValidationStatus>()) {
+                                            <option value="@status">@status</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Sensitivity</label>
+                                    <InputSelect @bind-Value="editor.Sensitivity" @bind-Value:after="() => Edited(ResourceEditorField.Sensitivity)" class="cda-input">
+                                        @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>()) {
+                                            <option value="@sensitivity">@sensitivity</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsPreview" @bind-Value:after="() => Edited(ResourceEditorField.Preview)" /> Preview capable</label>
+                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsIndexing" @bind-Value:after="() => Edited(ResourceEditorField.Indexing)" /> Indexing capable</label>
+                            </Grid>
+                        </FormSection>
+
+                        <StickyActionFooter StatusLabel="Resource save state">
+                            <SecondaryActions>
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
+                            </SecondaryActions>
+                            <PrimaryActions>
+                                <Button Text="Save resource" Type="submit" Disabled="@Registry.IsBusy" data-testid="resource-save-button" />
+                            </PrimaryActions>
+                            <DangerActions>
+                                @if (editor.Id.HasValue) {
+                                    <Button Text="Delete" Disabled="@Registry.IsBusy" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                }
+                            </DangerActions>
+                        </StickyActionFooter>
+                    </Stack>
+                </EditForm>
+                }
+            </DetailContent>
+        </ListDetailShell>
+                </TabsItem>
+                <TabsItem Text="Browse"
+                          Icon="folder_open"
+                          data-testid="resources-tab-browse">
+                    <ResourceFileBrowsePane Workspace="Browse" />
+                </TabsItem>
+            </TabItems>
+        </Tabs>
+    </ChildContent>
+</PageScaffold>
+
+
+
+@code {
+    [Parameter, EditorRequired] public IResourceRegistryWorkspace Registry { get; set; } = default!;
+    [Parameter, EditorRequired] public IResourceBrowseWorkspace Browse { get; set; } = default!;
+    [Parameter] public EventCallback<int> TabChanged { get; set; }
+    private IResourceRegistryWorkspace? subscribedRegistry;
+    private IResourceBrowseWorkspace? subscribedBrowse;
+    private int resourcesTabIndex;
+    private ResourceEditorModel editor => Registry.Draft.Editor;
+    private IReadOnlyList<ResourceSummary> resources => Registry.Resources;
+    private IReadOnlyList<ResourceSummary> FilteredResources => Registry.FilteredResources;
+    private IReadOnlyList<ResourceProjectOption> projects => Registry.Projects;
+    private IReadOnlyList<ConfigurationSecretOption> secrets => Registry.Secrets;
+    private IReadOnlyList<ResourceReferenceOption> responsiblePartyOptions => Registry.Parties;
+    private IReadOnlyList<ConnectorPluginManifest> resourceManifests => Registry.Manifests;
+    private ConnectorPluginManifest? SelectedResourceManifest => Registry.SelectedManifest;
+    private IReadOnlyList<ConfigurationFieldDescriptor> SelectedResourceFields => SelectedResourceManifest?.ConfigurationSchema.Fields ?? [];
+    private IEnumerable<ConnectorPluginManifest> EditableResourceManifests => resourceManifests.Where(m => m.PluginKey != ResourceConnectorPluginKeys.StorageObject);
+    private string SelectedResourceConnectorLabel => SelectedResourceManifest?.DisplayName ?? "Unavailable connector";
+    private string? SelectedProjectName => Registry.SelectedProjectName;
+    private string PreviewLocation => Registry.PreviewLocation;
+    private string EditorTitle => editor.Id.HasValue ? editor.Name : "New resource";
+    private bool IsGovernedStorageObject => Registry.IsGoverned;
+    private string resourceSearch { get => Registry.Search; set => Registry.Search = value; }
+    private Guid? projectFilter { get => Registry.ProjectFilter; set => Registry.ProjectFilter = value; }
+    private string? connectorFilter { get => Registry.ConnectorFilter; set => Registry.ConnectorFilter = value; }
+    private ResourceValidationStatus? validationFilter { get => Registry.ValidationFilter; set => Registry.ValidationFilter = value; }
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(subscribedRegistry, Registry) || !ReferenceEquals(subscribedBrowse, Browse)) {
+            Dispose();
+            subscribedRegistry = Registry;
+            subscribedBrowse = Browse;
+            Registry.Changed += OnChanged;
+            Browse.Changed += OnChanged;
+        }
+    }
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+    private void Edited(ResourceEditorField field) => Registry.Draft.Edited(field);
+    private void ConfigurationChanged(ConfigurationState state) { }
+    private Task SaveAsync() => Registry.SaveAsync();
+    private Task DeleteAsync() => Registry.DeleteAsync();
+    private Task EditAsync(Guid id) => Registry.SelectAsync(id);
+    private void ResetFilters() => Registry.ResetFilters();
+    private async Task CreateNewAsync() {
+        resourcesTabIndex = 0;
+        await NotifyTabAsync();
+        await Registry.NewAsync();
+    }
+    private Task OpenBrowseTab() {
+        resourcesTabIndex = 1;
+        return NotifyTabAsync();
+    }
+    private Task NotifyTabAsync() => TabChanged.InvokeAsync(resourcesTabIndex);
+    private static string BuildResourceMeta(ResourceSummary resource) => $"{resource.ProjectName} / {resource.ConnectorDisplayName}";
+    private static string ResolveTone(ResourceValidationStatus status) => status switch {
+        ResourceValidationStatus.Valid => "success", ResourceValidationStatus.Warning => "warning", ResourceValidationStatus.Invalid => "danger", _ => "neutral"
+    };
+    private static string ResolveResourceFieldTestId(ConfigurationFieldDescriptor field, IReadOnlyList<ConfigurationFieldDescriptor> fields) => fields.FirstOrDefault()?.Key == field.Key ? "resource-primary-input" : $"resource-config-{field.Key}";
+    public void Dispose() {
+        if (subscribedRegistry is not null) {
+            subscribedRegistry.Changed -= OnChanged;
+        }
+        if (subscribedBrowse is not null) {
+            subscribedBrowse.Changed -= OnChanged;
+        }
+    }
+}

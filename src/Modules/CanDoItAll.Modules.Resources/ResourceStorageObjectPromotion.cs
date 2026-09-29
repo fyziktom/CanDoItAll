@@ -6,6 +6,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Runtime.ExceptionServices;
 
 namespace CanDoItAll.Modules.Resources;
 
@@ -181,8 +182,10 @@ internal sealed class ResourceStorageObjectPromotionService(
                 exception);
         }
 
-        try
-        {
+        StorageObjectResourceWriteResult? written = null;
+        FileCatalogRevision? revision = null;
+        Exception? failure = null;
+        try {
             FileAccessContext context = await accessContextProvider.GetCurrentAsync(cancellationToken);
             AuthorizedStorageFile authorized;
             try
@@ -211,7 +214,6 @@ internal sealed class ResourceStorageObjectPromotionService(
                 activation.FileName,
                 activation.MediaType ?? authorized.Reference.ContentType,
                 activation.Size ?? authorized.Reference.ContentLength);
-            StorageObjectResourceWriteResult written;
             try
             {
                 written = await writer.SaveAsync(
@@ -239,7 +241,7 @@ internal sealed class ResourceStorageObjectPromotionService(
                     exception);
             }
 
-            FileCatalogRevision revision = written.Created
+            revision = written.Created
                 ? catalogChanges.PublishScopeChanged(source.Scope, authorized.Storage.Id)
                 : catalogRevisions.Get(source.Scope, authorized.Storage.Id);
             logger.LogInformation(
@@ -250,23 +252,30 @@ internal sealed class ResourceStorageObjectPromotionService(
                 authorized.Storage.Id,
                 authorized.Storage.ProviderKind,
                 written.Created,
-                revision.Scope);
-            return new ResourceStorageObjectPromotionResult(written.ResourceId, written.Created, revision);
+                revision.Value.Scope);
+        } catch (Exception exception) {
+            failure = exception;
         }
-        finally
-        {
-            try
-            {
-                await authorizationCoordinator.RevokeAsync(activation.Request.File, CancellationToken.None);
+        try {
+            await authorizationCoordinator.RevokeAsync(activation.Request.File, CancellationToken.None);
+        } catch (Exception exception) {
+            if (failure is null) {
+                failure = exception;
+            } else {
+                failure.Data[nameof(IStorageFileAccessAuthorizationCoordinator.RevokeAsync)] = exception.GetType().FullName;
             }
-            catch (Exception exception)
-            {
-                logger.LogError(
+            ResourceMutationDiagnostics.PreservePrimary(failure, () => logger.LogError(
                     "Storage-object promotion handle cleanup failed. SourceKey={SourceKey} FailureType={FailureType}.",
                     source.Key.Value,
-                    exception.GetType().Name);
-            }
+                    exception.GetType().Name));
         }
+        if (failure is not null) {
+            if (written is not null) {
+                throw new ResourcePromotionCommittedException(written.ResourceId, written.Created, revision, failure);
+            }
+            ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+        return new ResourceStorageObjectPromotionResult(written!.ResourceId, written.Created, revision!.Value);
     }
 
     private static void ValidateCommand(ResourceStorageObjectPromotionCommand command)

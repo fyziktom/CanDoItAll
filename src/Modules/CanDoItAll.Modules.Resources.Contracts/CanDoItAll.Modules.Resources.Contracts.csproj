@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CanDoItAll.Modules.Projects.Contracts/CanDoItAll.Modules.Projects.Contracts.csproj" />
+    <ProjectReference Include="../../Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="../../Integration/CanDoItAll.FileTools.Integration.Abstractions/CanDoItAll.FileTools.Integration.Abstractions.csproj" />
+    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="$(CanDoItAllFileToolsPackageVersion)" />
+  </ItemGroup>
+</Project>

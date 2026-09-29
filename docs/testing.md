@@ -785,3 +785,37 @@ Use current source-derived discovery counts and the same filtered, newly built a
 for execution. Transport/protocol/Agent/API consumers are selected by actual impact.
 [The Memory boundary record](architecture/memory-ui-boundary.md) contains the extraction's
 current evidence, measurements, scope decisions and standalone asset proof.
+
+## Resources UI boundary proof
+
+`tests/Components/CanDoItAll.Resources.UI.Tests` is registered in Components, Stable and
+all three actual CI component-shard project lists. It tests the shared presentation
+controllers and complete Registry/Browse renderer with real BaseLib, FileBrowser and
+read-only FileInteraction descendants. It needs no production database or file provider.
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration ResourcesUiProof --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
+dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration ResourcesUiProof --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
+```
+
+Derive the expected count from current facts and expanded theory rows before discovery.
+The main component project retains the existing Resources page, browse and postcommit
+tests, with the real Workspace configuration fallback and FileTools action/picker consumers.
+Do not drop shared TestLab rows from owner regression selections because Resources moved.
+
+`ResourcePromotionOutcomeTests` uses actual PostgreSQL commits and task-owned files.
+Only revision/log/cleanup and acknowledgement fault boundaries are substituted. A real
+transaction-committed interceptor proves that a lost acknowledgement stays unknown;
+exact identity review does not replay the write. Existing admission, owner persistence,
+connector, Memory source and Workbench projection tests cover the unchanged owner rules.
+
+`ResourcesBrowserTests` uses its owned production Web host for registry CRUD and real
+file promotion/reopen/download, and an independent database-free sandbox for focus, raw
+fields, held operations and retirement. Set the browser child-host configuration to the
+configuration actually built; use the isolated PostgreSQL prerequisite above. Local
+application launches and external FTP/IPFS transports are not exercised by these tests.
+
+The [Resources boundary receipt](architecture/resources-ui-boundary.md) records exact
+executed selections, source and published asset proof, source-mode graph/watch and
+three-sample edit measurements. Portability, documentation/evidence and secret gates
+remain mandatory; targeted test success does not replace them.

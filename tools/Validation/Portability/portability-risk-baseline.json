@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-29T00:28:13.608661+00:00",
+  "generated_utc": "2026-09-29T07:13:16.970325+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15139,
+  "allowance_count": 15186,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -56966,6 +56966,258 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/CanDoItAll.Modules.Resources.Contracts.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "2c1d2df22ef961df891b648891940d529ffd0e56ae4c98e920f0c1faeedf7187",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/CanDoItAll.Modules.Resources.Contracts.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "9697236a589491d5bd8a65f9bb918f5e31a0fc9eeb814056d9a3c323f1374be1",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/CanDoItAll.Modules.Resources.Contracts.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "ca53801819faf4fa234cf68a900cc996b1a60c8542f9766fcd8f7a335b410ec1",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "244dcc06b3d09624ddfe3ca61b6807351b3c532dabe3e7fa1ca3349e1d0c599d",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "29d72c976db50462d064507708dea7680412f37761033d4e6e0ed797a0031c7c",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "1cbc5919e4a9252722cb6ce32220dd9e335f89042671020224d39ded3d2fa49b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "1ef523d87d00077ddd79d8470225cef790909d62aaa5921ac6b2e4b5cd915ff9",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "63a95eccf30b70c9f3224bea31db5614160da716553a76abe118e6d6895adea8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "7fbdc4a4a3c4eeda6eaf8c368c245e814c87a0b27a597c8aeab6e88e67d27979",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "9f7faceba7b47475b24af91747ac6e8fd5feba64364aa35ee08dbefe58285c2f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "a064f4792878e1533dbf385c2c82cb1004220a104dc4e2671ffb324e4817a6b6",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "db4576b9befff6fb9bc05a7817348cc72496760fec2aada6c8fdc12c5b805591",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "fa8ac15bd27f70896ea379c00e8de65efe4a33aec9b43179d04e9b7aef9ce002",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceConnectorKeys.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5f84471fe5b52492cdca35ea4cd3fa7f8d555b8791f528703cfd7affa083846c",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceConnectorKeys.cs",
+      "category": "shell-elevation",
+      "source_fingerprint": "305de7c0eed2af4319ff3ca187d6c94720c84956a7b15fb1970bd42c9cdf48f5",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceConnectorKeys.cs",
+      "category": "windows-executable",
+      "source_fingerprint": "b58aa35f74ef973b543a93a132bac471a74ec8ff2a64aae63f598f4194cdbf8b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceKind.Legacy.cs",
+      "category": "shell-elevation",
+      "source_fingerprint": "9d72184c0524c7467340da969d5109577679107ea31ade84a72564ce66279efc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "2da7161cc74f5145af90b0a8d802f6200d5e59e67e5ea4a98f8c3770d422e8d9",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "d182eb9d99c47c0d0788649d689b7e8bb26c372099282a03801e00b9b8ba4331",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f36574a3ef435d53e465806d25d6a5b595a906c2e54b40ee08b8344df1b03659",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f6ecd88ddb17ff97254bb671d3e4abd55234a1978255c7e7102a7ed69c58bbd3",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
+      "category": "shell-elevation",
+      "source_fingerprint": "55b40ff01220bcc57ec08ba24aacb06080848cb28a4674a39a29706120a64024",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
+      "category": "shell-elevation",
+      "source_fingerprint": "7834a759491206a4d737a0b1f9b49e963c928c2ce9d54efab1dad9ed621c183b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
+      "category": "windows-executable",
+      "source_fingerprint": "bbe026a9f9a10e3040f891ac14a2c7a5be33a9a2be39814615cd2556f6777b16",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "2a1a619f5c0fcc064930564582a03ffb2ce5c8b996e49e35fca6e92859747079",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "1c39c5d1f89d639cd0cb495cb0b7a8198c9cac14f903288c2f1ce5a5a916e17b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "00f29564fbd9056b0efcfc1f754d4f9b98832e71d1afd81950d370a5a95c60b7",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "02584ec9f36133074ce7f73a3c5962e2ad0d2384d8cb5826e665237711de3e33",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "1b7c3300c39bd2329da39566ee1a9b9addcee33b1195c91845a1a5bccfd82760",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "46245c20a715996c3f2622118c7739ebd6c4da80bed36a83e85fd7876533e4f6",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "4d6c0fbf8540c9af0e308c84b845f877dcfd5144808df50f11033ce242209352",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "552632fa48d64ec6eaf9e15a5476df307a98829434cfdfe11f8be7c937c49b7a",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "8caf8e3b439de2bcf80f7a815b59b68516d252e2bc359b6fc9984f273a6307cd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "a2b4c9b23a67aad777f3f2be4f8e6254939261571826b4a69839339df8a36504",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "ae85d60e7b29d62bd176117f294ccf340b397a25f8dcb7c66f2ab692b3a61ed2",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "c05b80c170de797fc229faf4353f70559f8d02e3c23abedda0b857748f1fbbc0",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "c63ed6f46bc430bd47f63942d4f07fcb62d7f103c3913fda6003e7fd1e9a2b14",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "d2bd44ab51a356e47e2a1ffe1d35c31d449eeab5eafd4cbb81a02ef410803d63",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "e2540144ce0a399e61f21ed5449b18f414160cb7a9b60fe9739a7ac4a8b07104",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "category": "external-tool",
+      "source_fingerprint": "fbd12d6162f0359e876d5a26a0eb45ba01ea65b4c7869e69d49330178c1be1fc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceRegistryController.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5c54f27cc7a793f8b4d298981e7ca1d8d5c66158591f7355d37d526653cf1b01",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceRegistryController.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9fa16fbe63b680a1b63cc115402ee7e3acda0d8d0974fccf3b247677dfd1d2de",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj",
       "category": "external-tool",
       "source_fingerprint": "088e9231f0ff7af2ad2c19ba645c0c279b38394c6005e4f17bd0cea276557033",
@@ -57002,171 +57254,9 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "02634518182e3d897534cd3a5c7debfe680307107fa18f565ddcadf2d6c4c317",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "05e457f453861bb4b8de1c60882609358f956a27e84a216c2c7d1f5e916bad97",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "097c4e790f2ec86496a4f2ed4cbf4058ef8dc3221853a0580e6f5364b98a44bc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "0dbdad4a9c072c02c2d601563a5adc209f3afd2f5f65a19e8d8bb0086b92e06d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "4b11ccd2401f4631d4eaf11d8c0356e2953bc5a40306a8f71e90c81bca75635a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "4d09e221bc803ced3a5bcacf0940cce981f48c4c063f5e535275934f4fa6c266",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "8af79851ddf6602500ed93669bfeb1d68b2eaf01ca743b396fb053aa3e7329d5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "8e9119e0ac45a9c05cc431ae61fbfa1495875c00ad82448389802d7181fd5eea",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "982db79f24c77854cd3f50f9c70b8436ec33ce5e2ea5d9afdd5f70b15cb68412",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "a9df7303c6d8bcbf77703c9cbdd5c9704f0dd0b19e725db85aa91d91ff9962e2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "ac73611f464dc6239e41dcc10c3bfef256a4f4f9c8258315947db42248a50556",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "d2f43b1312b81ffb84037f10b910f74ccd813bc8dea6fa8971d499fc6640af40",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "de39accb48d3258e8a004776f64c8d4955bcef7b5ac60e59ecbb9eeefc78641c",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
-      "category": "external-tool",
-      "source_fingerprint": "f19ff2c9c4139742535a08469232f1a8f4dde2b7c4e737e1dc5d5c6172576d97",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor",
-      "category": "secret-provider",
-      "source_fingerprint": "2b05409c5032b6a78e8a8630f75c61428e12d5a986abfdc5889847abc6ff2329",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "0d987b6facaccdab9b8c3921b343f11247c7c48e543adfaf96ab8244e396db79",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "17365ca03bc2f0a1621e30428fc009d2a9dd839a1f7e9808a4f95a798aa2e88d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "689deb7f7ae97f2dff9ffa52aab1ee8aafc804305cba3624b7d5e8a49b40b283",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "776cc57c2a8c5f687987c5b2a05adb5ab8b74a42a654dd10cfbc293b9824d394",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "79f586ca903cc5f0cc477c07a79424a0e7cac43514107dd417450b0e7934b771",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "814db133ad4dbeab3c48025c2fff9453c91a8cb16520e485a97004d45c93d455",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "936eef628e9c0021b153aa87a1a41ad549c740faa562649cc63d5f8b0212889f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "964e8b2cd913822f4100fdbaa2c5de4b486e86a9da41d88c634dabf9125bbaa6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "9ae081aeb3449778ef81cdfecf153a53640c9bb4ac839e05f2dd8f111e7820a6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "c384e1dad6f5b1b63da13996d20fb49f34270f19fb8f1dcb73bbdeef8f6bedd7",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "d165d2c9e15c44f536433c9ce1226bfb4e4634b2c4e11aee2fdc7328bd4afd1d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e3f62f80be2fdacc700601079566bafc59672da101528166418cc12043c7c4a0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "category": "secret-provider",
-      "source_fingerprint": "0167e0967dcb9cee4301e4ebd584d2c0fe5ad351fb3cc4385127f8241149ca56",
+      "category": "external-tool",
+      "source_fingerprint": "b834bbe2618b09f0ce7355f6fbcddc8f279dd6af4e934113a5b19722a09d92df",
       "count": 1
     },
     {
@@ -57188,9 +57278,33 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceConnectorPlugins.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "300b52d01754c3c85a55d2c958a588b4217735aed112b6b0fecd82be7ffe2b7f",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "0c7753061fcc68342eb937ce5abc7030f9b42aaf62090c3938b0005f53b4f6bc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "0fb043095b68f13496a2f6e75e3f209e7b54a3e1947323065a36e617e1c423ad",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "46fdb5ea18c832d02743e1b4f9818655d26ef741fc07229033b1c2324c0ebdbd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "9f0e111051d8416da2e492dd3f291c2bab67fdb9dcfeac22480bb218289d2e6b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "ba7e67c44f0df3633746eccaf343f2552fe3bb883e0f2ccc09a24d827cb47c20",
       "count": 1
     },
     {
@@ -57274,19 +57388,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceConnectorPlugins.cs",
       "category": "shell-elevation",
-      "source_fingerprint": "a705a0956459b248f2753a7ae270f680dfcf58f2334ee47fdf23ab2ebff02124",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceConnectorPlugins.cs",
-      "category": "shell-elevation",
       "source_fingerprint": "d344fcabb5e98b18f4f2dba853a27ca1662dfaca83cd2ec5627033347ef2904c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceConnectorPlugins.cs",
-      "category": "windows-executable",
-      "source_fingerprint": "2a17b908290e8d45dad616ea7d099edf067877619b4d0b0d629b074d5eccf06f",
       "count": 1
     },
     {
@@ -57482,36 +57584,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceKind.Legacy.cs",
-      "category": "shell-elevation",
-      "source_fingerprint": "48b3ef788ebb4dba90d54be7b157810c9405b90265fec63642e517459ed7bead",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "1d274d49525f848282ec1ca0c8b9d5545ebd04ec26909e7c31dcd3fe5d873e10",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "2b56c508c430af8cd9ee9dc0c571e6bdc9dd50bb51f7c4cd5ffc3e97bb213503",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "607df6e5374f2c0432f74d88aa10d7759a09f55b59cc2491c4b925e13557e689",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "8256040d26055f8341413c421dd843df056854dd020af52bf49b0e1558835dae",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
       "category": "case-policy",
       "source_fingerprint": "53d620a4e7b386004d98aebe7da9902a255730765efe798b1c374f6483f156de",
@@ -57524,21 +57596,15 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
-      "category": "shell-elevation",
-      "source_fingerprint": "66a74b3b0db52eb5516cdcb9c4bdcf8cb1fd19e141d1fca4366987478a53ca83",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourcePromotionCommittedException.cs",
+      "category": "external-tool",
+      "source_fingerprint": "c7bbe916fd6936b9ff493bdf0897e059516365d62340d26fa6498f3b52c26766",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
-      "category": "shell-elevation",
-      "source_fingerprint": "a533d655b91507ea77fc3b3bf11de8de0085c38c60230c9a0e5566be2f7a257b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
-      "category": "windows-executable",
-      "source_fingerprint": "e96e84a4ed6f6e4a4611a6c6af0c847dee905ec9c95e9042d1c0fb5d3a655d01",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceRegistryOwner.cs",
+      "category": "secret-provider",
+      "source_fingerprint": "194be7c948275cf66dafc6f3221cd47abc981f3a52a5c0dc5b69063b97d0ce87",
       "count": 1
     },
     {
@@ -57605,6 +57671,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectInteraction.cs",
       "category": "external-tool",
       "source_fingerprint": "bf00f88f23e9b14b4b6d8d25b98c3acf8c80a0f81c75ac074e1007859643d5e8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectInteraction.cs",
+      "category": "external-tool",
+      "source_fingerprint": "d3a383aaede86b08b73b78ac075423936ce1f1c448be6b676736348f20d8d5d5",
       "count": 1
     },
     {
@@ -73466,6 +73538,84 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs",
+      "category": "external-tool",
+      "source_fingerprint": "b01dfeeed530683bb03df6f968a7f3b3b7f3b88e3049a89bbc9d1ba7661200c0",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/README.md",
+      "category": "external-tool",
+      "source_fingerprint": "287166059ac31c67e0cbd0a332106864a1ad5957ca002abca74eceb55dca57a7",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "37e90df540ae97a5ee11151dbf8a4a8ed3e1f5646c590fe2cd358f7123f74cf0",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "13821126bc2f6b489dde45cf1bc3218d8a8746ced7adb5833c921711828ea2a7",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "0b551bd18819738269c2e51270327868fa2291fead0ca0d4dcc9f714dd4c9aa0",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "2397498da1dbb71fa2b4fa5ebab158ea1f81ff0f68ff23187ebe91de2e88c63e",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "5a55bd5ab6f0a73df2775e673d414158f1ba6e40a8b92eaaf91803821da8432b",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "72e458293cca6117cf005a066d1f94791cf3cb89e2ce2564162ccd2499902124",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "7aaf6aa6c14b5ed42fba9231ed7635eb7382845122ad1ecd7a2c9959016d93bc",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "7b42f48343055dedaa2263ac0c93f580f339aaaac3fd4c379b36b3254485efd9",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "99b18181a73c4c6d0ee17e5211eb270767947e3f52dccb94d42eabe1951c5434",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "c4fb7b1842ef82ee45ef3d8e50f424503326d63902c626066fedcc43ea2461db",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "category": "external-tool",
+      "source_fingerprint": "f2b69c7fc9411657ef5584f0f4b669eeba10c8da1458f529a998432ffb94ad70",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "547d2b90a828c03a5900fdecfcb1b7341b68dce2d6d3045d17f929454fc51e60",
@@ -74432,6 +74582,42 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.Configuration.UI/ConfigurationInputDraft.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4b6c49bec2b4d0ece9c4415bca98ea88d0a004ef117fbac278a9b0160dc3ee63",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI/ConfigurationInputDraft.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b943610a87d7197baae316d483d54ecbbb5127d48bd162f4eaeb8fbdd94cfb20",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI/ConfigurationInputDraft.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cfc6fa6f816274b78fdb37941910a79a5d92df30cb98adfa5a942c1f3760b7fb",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI/ConfigurationInputDraft.cs",
+      "category": "case-policy",
+      "source_fingerprint": "fb3504c74ee194dcb65f25a25d0af8bc65b446148efbc4983f471b9f927c5bec",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "0c61e60a70dc88575de039bc9dea1a3f0bd358f6731db2177ef32cef3ebd3f8d",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "5a5525f93b5035eed7e5eb43f5940ba2c63f274af31ec96de1e31fa1d824d76b",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationMarkdownUriPolicy.cs",
       "category": "windows-path",
       "source_fingerprint": "7e8a2bc5978e0a1e1eeea922bfcf6af394511ad0aad08971054dc561b82b4ef6",
@@ -74825,6 +75011,102 @@
       "path": "src/UI/CanDoItAll.Prompts.UI/Editor/PromptGalleryEditorForm.cs",
       "category": "case-policy",
       "source_fingerprint": "fb897889ce1a2d60c88d3cc0c53ebba26c31c481f0ce044eb1913ce3a5e03dd9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "1af199171c62158d356e586a84b112dd44e795aca6e1685494e8669328bfaf76",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "abbd7dc830d8c01c4da8d4fc21050fc7bb009bba98b96887396662e666fe769f",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "951304ce4dfc4172346d6a24b08a217deeff1cebd3855a0d3c97742de7ac15bd",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "800df4fa17150d36bdd1ef7c2d31b60327922018872039353fb6a270ec65f7d1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "category": "external-tool",
+      "source_fingerprint": "2c5f576935e14c050bd17c7917a7281d71d5f013bab00096aa2cc109f91980c0",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "category": "external-tool",
+      "source_fingerprint": "4a4b945730ddaac02c9795a0df55ac1e072fc067899205c04b3b9ad233cfe291",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "category": "external-tool",
+      "source_fingerprint": "4d6c87b3ac42e95bcd2351835d65da43ea928b17d406b7f96eef4c3749ee79c2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "category": "external-tool",
+      "source_fingerprint": "762b92140f10768fdc20e4c7e8bca79743c697cb4b22b0126b149c470b34df4c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "category": "external-tool",
+      "source_fingerprint": "781e0af28b6a1f504647d1074d1c1ce548fb243810a008a7ca422825fe1a73bb",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "category": "external-tool",
+      "source_fingerprint": "7a3dbea7e1d4bccdc9047136a285dc7ba8bcf30bc6247c2ff94554a017f1bba7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "0da0d81608574329d6490828006ca5db81081dcb3f53c29a34ab1f0b50c92015",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "360fd7682436762321f5fd894a1ce98201af7304220d45bdfc449feb73699cf8",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "5660565202275668d2d29fe459cb5c58aeb2bce2a1ecdaa6d4b496e552cdf534",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "7f771a3efcfb0b91c6b912a71ec4694994d200df91232721691988b34d9b3bae",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "c4f3d38838660494982a7d9ffeefa61cd266ca3ada3c5fc9cca2c8aeaddae77a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "d40b6ae3ea8bbddce1ec32de798c75f24a0e72925e0b4b752689528df3217003",
       "count": 1
     },
     {
