@@ -435,6 +435,19 @@ launcher. It uses unique fixture resource names through test-only seams; a diffe
 InstallRoot by itself would not isolate the production installer's fixed Docker names.
 Without `-RunDocker` or `-NativeBinPath`, only non-provisioning native rejection cases run.
 
+## Workspace Settings Core
+
+For the Workspace Settings Core slice, use `FullyQualifiedName~WorkspaceUi` in
+`tests/Components/CanDoItAll.Workspace.UI.Tests` for standalone renderer/controller proof,
+`FullyQualifiedName~WorkspaceCoreOwnerOutcomeTests|FullyQualifiedName~WorkspaceSettingsHttpOutcomeTests`
+in Integration for real owner outcomes and the unchanged six-field HTTP contract, and
+`FullyQualifiedName~WorkspaceSettingsBrowserTests` in Playwright for the owned full Web
+and standalone sandbox journeys. Run build-backed `--list-tests` before the same-filter
+execution. PostgreSQL selections require the isolated PostgreSQL 18 fixture described
+above; do not supply the ordinary application's Playwright base URL. Current counts,
+dependent consumer filters, publish commands and development-loop observations are in
+[the maintained proof record](architecture/workspace-settings-core-ui-boundary.md).
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

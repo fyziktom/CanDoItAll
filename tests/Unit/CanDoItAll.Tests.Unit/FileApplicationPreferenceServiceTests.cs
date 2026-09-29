@@ -3,6 +3,7 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Unit.Storage;
 
@@ -12,6 +13,23 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         Path.GetTempPath(),
         nameof(FileApplicationPreferenceServiceTests),
         Guid.NewGuid().ToString("N"));
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Logging_failure_preserves_known_durable_preference_effect(bool delete) {
+        var executable = CreateExecutable("never-execute-fixture.exe");
+        var preference = new FileApplicationPreference(new(".owned"), executable);
+        await CreateService().SaveAsync(preference);
+        var service = CreateService(new ThrowingLogger());
+        var warning = await Assert.ThrowsAsync<FileApplicationPreferenceCommittedException>(() => delete
+            ? service.DeleteAsync(preference.Extension) : service.SaveAsync(preference));
+        Assert.Equal(preference.Extension, warning.Extension);
+        Assert.Equal(delete, warning.Deleted);
+        var stored = await CreateService().ListAsync();
+        Assert.Equal(delete, stored.Count == 0);
+        Assert.DoesNotContain(executable, warning.ToString(), StringComparison.Ordinal);
+    }
 
     [Theory]
     [InlineData("xlsx", ".xlsx")]
@@ -275,11 +293,18 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
 
     private string SettingsPath => Path.Combine(rootPath, "file-application-preferences.json");
 
-    private FileApplicationPreferenceService CreateService()
+    private FileApplicationPreferenceService CreateService(ILogger<FileApplicationPreferenceService>? logger = null)
         => new(
             new StaticControlPlanePathResolver(rootPath),
             new DurableFileWriter(TestWorkspaceServices.PhysicalPathPolicyFactory),
-            NullLogger<FileApplicationPreferenceService>.Instance);
+            logger ?? NullLogger<FileApplicationPreferenceService>.Instance);
+
+    private sealed class ThrowingLogger : ILogger<FileApplicationPreferenceService> {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => throw new IOException("Owned logging failure.");
+    }
 
     private string CreateExecutable(string fileName)
     {

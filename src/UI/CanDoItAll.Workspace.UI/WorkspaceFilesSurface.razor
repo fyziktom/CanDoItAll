@@ -1,0 +1,112 @@
+@namespace CanDoItAll.Workspace.UI
+@implements IDisposable
+<Stack GapScale="LayoutGap.Medium">
+    <Button Text="Refresh references" ButtonStyle="ButtonStyle.Light" Click="State.RefreshAsync" Disabled="State.IsLoading" data-testid="files-refresh" />
+    @if (State.Error is { } error) {
+        <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
+    }
+    <Stack GapScale="LayoutGap.XXLarge" data-testid="file-application-settings">
+        <FormSection Title="Preferred file applications"
+                     Icon="open_in_new"
+                     Description="CanDoItAll uses the operating system association by default. Add an override only when one extension must always open in a specific locally installed application.">
+            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                Overrides apply to this machine only. The application receives the selected file as one argument; command templates and shell fragments are not supported.
+            </Alert>
+
+            <EditForm EditContext="State.Draft.EditContext" OnSubmit="State.SaveAsync">
+                <Stack GapScale="LayoutGap.Large">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label">File extension</label>
+                            <TextBox Immediate="true" @bind-Value="State.Draft.Extension" @bind-Value:after="State.Draft.Edited"
+                                       class="cda-input"
+                                       placeholder=".xlsx"
+                                       data-testid="file-application-extension" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Application executable</label>
+                            <TextBox Immediate="true" @bind-Value="State.Draft.ExecutablePath" @bind-Value:after="State.Draft.Edited"
+                                       class="cda-input"
+                                       placeholder="Absolute path to the application executable"
+                                       data-testid="file-application-executable" />
+                        </div>
+                    </Grid>
+
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <Button Text="Save override"
+                                Icon="save"
+                                Type="submit"
+                                Disabled="@(!State.CanMutate)"
+                                data-testid="file-application-save" />
+                        <Button Text="New override"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="State.New" />
+                        @if (State.Draft.Selected.HasValue) {
+                            <Button Text="Use system default"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Variant="Variant.Outlined"
+                                    Disabled="@(!State.CanMutate)"
+                                    Click="State.DeleteAsync"
+                                    data-testid="file-application-delete" />
+                        }
+                    </Cluster>
+                </Stack>
+            </EditForm>
+        </FormSection>
+
+        <FormSection Title="Configured overrides"
+                     Icon="apps"
+                     Description="Extensions not listed here continue to use the application registered by Windows, Linux, or macOS.">
+            @if (State.IsLoading) {
+                <LoadingState Eyebrow="File applications"
+                              Title="Loading machine preferences"
+                              Description="Reading the local control-plane settings." />
+            } else if (!string.IsNullOrWhiteSpace(State.Error)) {
+                <Alert AlertStyle="AlertStyle.Danger"
+                       Variant="Variant.Outlined"
+                       data-testid="file-application-load-error">
+                    @State.Error
+                </Alert>
+            }
+            @if (State.Preferences.Count == 0) {
+                <EmptyState Eyebrow="System associations"
+                            Title="All files use the system default"
+                            Description="For example, .xlsx opens in Excel or LibreOffice when that application owns the operating-system association." />
+            } else {
+                <Stack GapScale="LayoutGap.Medium">
+                    @foreach (WorkspaceFilePreference preference in State.Preferences) {
+                        <SelectionListItem Title="@preference.Extension.Value"
+                                           Eyebrow="@(preference.RequiresRebind ? "Inactive: requires rebind" : "Active application override")"
+                                           Meta="@Path.GetFileName(preference.ExecutablePath)"
+                                           Summary="@preference.ExecutablePath"
+                                           IsSelected="@(State.Draft.Selected == preference.Extension)"
+                                           OnSelect="@(() => State.Select(preference))"
+                                           DataTestId="@($"file-application-{NormalizeTestId(preference.Extension.Value)}")" />
+                    }
+                </Stack>
+            }
+        </FormSection>
+    </Stack>
+
+    <SettingsReceipts Entries="State.Receipts" Review="State.ReviewAsync" />
+</Stack>
+@code {
+    [Parameter, EditorRequired] public IWorkspaceFilesState State { get; set; } = default!;
+    private IWorkspaceFilesState? subscribed;
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(subscribed, State)) {
+            if (subscribed is not null) {
+                subscribed.Changed -= Changed;
+            }
+            subscribed = State;
+            subscribed.Changed += Changed;
+        }
+    }
+    private static string NormalizeTestId(string value) => value.TrimStart('.').Replace('.', '-');
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() {
+        if (subscribed is not null) {
+            subscribed.Changed -= Changed;
+        }
+    }
+}

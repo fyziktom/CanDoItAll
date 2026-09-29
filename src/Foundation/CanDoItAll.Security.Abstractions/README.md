@@ -22,6 +22,13 @@ The authoritative project dependency list is in [CanDoItAll.Security.Abstraction
 
 Consumers depend on these contracts without knowing the selected vault provider. Provider selection, protection, storage, and migration remain in the security module and composition root.
 
+`SecretKind`, `SecretListItem` and the transient `SecretEditorModel` retain their existing
+`CanDoItAll.Modules.Security` namespace and values here so renderers can use them without
+the vault implementation. Only an explicit editor resolves plaintext. Redacted committed
+and uncertain outcome exceptions carry identity and stage; they never carry a command,
+payload, vault key or inner exception. The Security service still owns persistence and
+postcommit cleanup.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

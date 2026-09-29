@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/Sandboxes/">
+    <Project Path="src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CanDoItAll.CrmHr.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Prompts.UiSandbox/CanDoItAll.Prompts.UiSandbox.csproj" />
@@ -38,6 +39,7 @@
     <Project Path="src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory/CanDoItAll.Memory.Drivers.CognitiveMemory.csproj" />
   </Folder>
   <Folder Name="/src/UI/">
+    <Project Path="src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
@@ -120,6 +122,8 @@
     <Project Path="src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj" />
   </Folder>
   <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/CanDoItAll.Modules.Workspace.Contracts/CanDoItAll.Modules.Workspace.Contracts.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Workspace.Presentation/CanDoItAll.Modules.Workspace.Presentation.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Collaboration.Contracts/CanDoItAll.Modules.Collaboration.Contracts.csproj" />

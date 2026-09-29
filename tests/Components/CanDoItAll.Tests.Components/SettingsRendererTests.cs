@@ -36,7 +36,7 @@ public sealed class SettingsRendererTests
             .Add(component => component.TestIdPrefix, "settings-renderer"));
 
         Assert.Contains("settings-renderer", cut.Markup, StringComparison.Ordinal);
-        cut.Find("[data-testid='settings-renderer-endpointUrl']").Change("https://example.test/hooks");
+        cut.Find("[data-testid='settings-renderer-endpointUrl']").Input("https://example.test/hooks");
         cut.Find("[data-testid='settings-renderer-operation']").Change("WriteText");
         cut.Find("[data-testid='settings-renderer-enabled']").Change(true);
 

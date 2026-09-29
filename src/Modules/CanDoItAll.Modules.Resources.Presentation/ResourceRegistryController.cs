@@ -16,6 +16,10 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     private Guid? routeResource;
     private Guid? routeProject;
     private ValidationMessageStore? validation;
+    private ResourceViewAccess catalogAccess = ResourceViewAccess.Loading;
+    private string? catalogError;
+    private string? editorError;
+    private string? actionError;
 
     public event Action? Changed;
     public event Action<ResourceMutationReceipt>? Completed;
@@ -26,8 +30,10 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     public IReadOnlyList<ConfigurationSecretOption> Secrets { get; private set; } = [];
     public IReadOnlyList<ConnectorPluginManifest> Manifests { get; private set; } = [];
     public IReadOnlyList<ResourceMutationReceipt> Receipts => receipts;
-    public ResourceViewAccess Access { get; private set; } = ResourceViewAccess.Loading;
-    public string? Error { get; private set; }
+    public ResourceViewAccess EditorAccess { get; private set; } = ResourceViewAccess.Loading;
+    public ResourceViewAccess Access => EditorAccess == ResourceViewAccess.Ready ? catalogAccess : EditorAccess;
+    public bool CanMutate => !disposed && owner.IsCurrent && EditorAccess == ResourceViewAccess.Ready;
+    public string? Error { get => editorError ?? catalogError ?? actionError; private set => actionError = value; }
     public IReadOnlyList<string> ReferenceErrors { get; private set; } = [];
     public bool IsLoading { get; private set; }
     public bool IsBusy => Blocked(Draft);
@@ -54,6 +60,8 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         routeResource = resourceId;
         routeProject = projectId;
         ReplaceDraft(new() { Id = resourceId, ProjectId = projectId });
+        EditorAccess = ResourceViewAccess.Loading;
+        editorError = null;
         var draft = Draft;
         var version = ++editorVersion;
         await RefreshAsync();
@@ -61,6 +69,8 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
             return;
         }
         if (!ResolveRoute(resourceId, projectId)) {
+            EditorAccess = ResourceViewAccess.Failed;
+            editorError = "The requested editor has not been acquired. Refresh references and retry the exact selection, or explicitly start a new resource.";
             Notify();
             return;
         }
@@ -68,6 +78,7 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
             await LoadEditorAsync(id, version);
         } else {
             ReplaceDraft(NewEditor(projectId));
+            EditorAccess = ResourceViewAccess.Ready;
             await LoadPartiesAsync();
         }
         Notify();
@@ -89,8 +100,8 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         }
         IsLoading = false;
         if (!owner.IsCurrent) {
-            Access = ResourceViewAccess.Failed;
-            Error = "The database profile changed. Open a new Resources workspace.";
+            catalogAccess = ResourceViewAccess.Failed;
+            catalogError = "The database profile changed. Open a new Resources workspace.";
             Notify();
             return;
         }
@@ -109,19 +120,19 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         ReferenceErrors = warnings;
         if (resources.Result.Success) {
             Resources = resources.Result.Value!;
-            Access = ResourceViewAccess.Ready;
-            Error = null;
+            catalogAccess = ResourceViewAccess.Ready;
+            catalogError = null;
             if (Draft.Editor.Id is { } id && !Resources.Any(r => r.Id == id)) {
-                Access = ResourceViewAccess.Failed;
-                Error = "The selected resource is missing. Its draft and identity are retained.";
+                catalogAccess = ResourceViewAccess.Failed;
+                catalogError = "The selected resource is missing. Its draft and identity are retained.";
             }
         } else {
-            Access = ResourceViewAccess.Failed;
-            Error = "Resources could not be refreshed. Displayed rows are stale; your draft is retained.";
+            catalogAccess = ResourceViewAccess.Failed;
+            catalogError = "Resources could not be refreshed. Displayed rows are stale; your draft is retained.";
         }
         if (routeProject is not null && (!projects.Result.Success || !Projects.Any(p => p.Id == routeProject))) {
-            Access = ResourceViewAccess.Failed;
-            Error = "The requested project is unavailable. No current project was substituted.";
+            catalogAccess = ResourceViewAccess.Failed;
+            catalogError = "The requested project is unavailable. No current project was substituted.";
         }
         if (routeResource is not null && Draft.Editor.Id == routeResource) {
             ResolveRoute(routeResource, routeProject);
@@ -130,7 +141,11 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     }
 
     public async Task SelectAsync(Guid id) {
-        if (Draft.Editor.Id == id && Access == ResourceViewAccess.Ready) {
+        if (disposed || !owner.IsCurrent || Draft.Editor.Id == id && EditorAccess == ResourceViewAccess.Ready) {
+            return;
+        }
+        if (routeResource == id && !ResolveRoute(id, routeProject)) {
+            Notify();
             return;
         }
         ReplaceDraft(new() { Id = id });
@@ -139,21 +154,27 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
 
     public async Task RefreshAfterPromotionAsync() {
         await RefreshAsync();
-        if (Access == ResourceViewAccess.Failed || ReferenceErrors.Count != 0) {
+        if (catalogAccess == ResourceViewAccess.Failed || ReferenceErrors.Count != 0) {
             throw new InvalidOperationException("The resource was promoted, but registry references could not be refreshed.");
         }
     }
 
     public async Task NewAsync() {
+        if (disposed || !owner.IsCurrent) {
+            return;
+        }
         editorVersion++;
         ReplaceDraft(NewEditor(routeProject));
-        Access = routeProject is null || Projects.Any(p => p.Id == routeProject) ? ResourceViewAccess.Ready : ResourceViewAccess.Failed;
-        Error = Access == ResourceViewAccess.Ready ? null : "The requested project is unavailable.";
+        EditorAccess = routeProject is null || Projects.Any(p => p.Id == routeProject) ? ResourceViewAccess.Ready : ResourceViewAccess.Failed;
+        editorError = EditorAccess == ResourceViewAccess.Ready ? null : "The requested project is unavailable.";
         Notify();
         await LoadPartiesAsync();
     }
 
     public async Task ChangeProjectAsync(Guid? projectId) {
+        if (!CanMutate) {
+            return;
+        }
         var admission = Projects.FirstOrDefault(p => p.Id == projectId)?.Admission;
         if (Draft.Editor.ProjectId == projectId && Draft.Editor.ExpectedProjectAdmission == admission) {
             return;
@@ -167,6 +188,9 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     }
 
     public Task ChangeConnectorAsync(string key) {
+        if (!CanMutate) {
+            return Task.CompletedTask;
+        }
         if (Draft.Editor.ConnectorPluginKey == key && SelectedManifest?.ConfigurationSchema.Version == Draft.Editor.ConfigSchemaVersion) {
             return Task.CompletedTask;
         }
@@ -189,7 +213,8 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
 
     private async Task LoadEditorAsync(Guid id, long version) {
         var draft = Draft;
-        Access = ResourceViewAccess.Loading;
+        EditorAccess = ResourceViewAccess.Loading;
+        editorError = null;
         Notify();
         try {
             var editor = await owner.GetAsync(id, lifetime.Token);
@@ -197,18 +222,18 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
                 return;
             }
             if (editor.Id != id) {
-                Access = ResourceViewAccess.Failed;
-                Error = "The selected resource no longer exists. This is not a new-resource draft.";
+                EditorAccess = ResourceViewAccess.Failed;
+                editorError = "The selected resource no longer exists. This is not a new-resource draft.";
             } else {
                 ReplaceDraft(editor);
-                Access = ResourceViewAccess.Ready;
-                Error = null;
+                EditorAccess = ResourceViewAccess.Ready;
+                editorError = null;
                 await LoadPartiesAsync();
             }
         } catch (Exception) {
             if (Current(draft) && version == editorVersion) {
-                Access = ResourceViewAccess.Failed;
-                Error = "The selected resource could not be read. Retry the exact selection.";
+                EditorAccess = ResourceViewAccess.Failed;
+                editorError = "The selected resource could not be read. Retry the exact selection.";
             }
         }
         Notify();
@@ -236,7 +261,7 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     public Task DeleteAsync() => MutateAsync(ResourceMutationKind.Delete);
 
     private async Task MutateAsync(ResourceMutationKind kind) {
-        if (disposed || !owner.IsCurrent || Access == ResourceViewAccess.Loading || Blocked(Draft)) {
+        if (!CanMutate || Blocked(Draft)) {
             return;
         }
         var draft = Draft;
@@ -400,11 +425,11 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     private bool ResolveRoute(Guid? id, Guid? projectId) {
         var selection = Pages.ResourceRouteContextSelection.Resolve(id, projectId, Resources, Projects);
         if (!selection.IsResolved) {
-            Access = ResourceViewAccess.Failed;
-            Error = "The requested resource/project binding is unavailable or belongs to a different project lifetime.";
+            catalogAccess = ResourceViewAccess.Failed;
+            catalogError = "The requested resource/project binding is unavailable or belongs to a different project lifetime.";
             return false;
         }
-        return Access == ResourceViewAccess.Ready;
+        return catalogAccess == ResourceViewAccess.Ready;
     }
 
     private ResourceEditorModel NewEditor(Guid? projectId) {
@@ -415,6 +440,7 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     private void ReplaceDraft(ResourceEditorModel editor) {
         Draft = new(editor);
         validation = null;
+        actionError = null;
         partyVersion++;
     }
     private bool Blocked(ResourceRegistryDraft draft) => receipts.Any(r => r.BlocksDispatch &&
@@ -440,6 +466,9 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         }
     }
     public void Dispose() {
+        if (disposed) {
+            return;
+        }
         disposed = true;
         lifetime.Cancel();
         lifetime.Dispose();

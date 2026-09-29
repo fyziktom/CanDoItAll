@@ -28,5 +28,11 @@ This module owns product semantics for its bounded area. Keep business behavior 
 
 ## Related Docs
 
+Settings Core rendering and presentation now live in Workspace.UI and
+Workspace.Presentation through Workspace.Contracts. This module keeps `/settings`, profile
+and authority lifetime subscriptions and adapters to the existing owners. Data Sources,
+Storage and API Access remain real active production hosts. Providers still redirects to
+Agents. See the [partial completion and proof record](../../../docs/architecture/workspace-settings-core-ui-boundary.md).
+
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`

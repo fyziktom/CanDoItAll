@@ -5,8 +5,7 @@ public sealed record WorkspaceProviderOption(
     string Name,
     bool IsEnabled);
 
-public interface IWorkspaceProviderCatalog
-{
+public interface IWorkspaceProviderCatalog {
     Task<IReadOnlyList<WorkspaceProviderOption>> ListAsync(
         CancellationToken cancellationToken = default);
 }

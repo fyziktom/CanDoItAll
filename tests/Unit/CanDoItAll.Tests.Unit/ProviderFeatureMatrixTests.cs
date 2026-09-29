@@ -378,7 +378,8 @@ public sealed class ProviderFeatureMatrixTests
         Assert.DoesNotContain("ProviderAdministrationService", settingsPageSource, StringComparison.Ordinal);
         Assert.DoesNotContain("providerModel", settingsPageSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Provider editor", settingsPageMarkup, StringComparison.Ordinal);
-        Assert.Contains("IWorkspaceProviderCatalog", settingsPageMarkup, StringComparison.Ordinal);
+        var settingsOwner = ReadRepositoryFile("src", "Modules", "CanDoItAll.Modules.Workspace", "Presentation", "WorkspaceDefaultsOwner.cs");
+        Assert.Contains("IWorkspaceProviderCatalog", settingsOwner, StringComparison.Ordinal);
         Assert.Contains("/agents?tab=providers", settingsPageSource, StringComparison.Ordinal);
         Assert.Contains("ProviderModelPricingEditor", providerPanelMarkup, StringComparison.Ordinal);
         Assert.Contains("ComfyUiWorkflowTemplateJson", providerExecutionSource, StringComparison.Ordinal);

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-29T07:13:16.970325+00:00",
+  "generated_utc": "2026-09-29T12:09:54.981702+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15186,
+  "allowance_count": 15198,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -67748,6 +67748,60 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "35f73df156fd25c1caf0abcccc14d1a43d9c88b10ba0b08867d4adc3907cceb8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "9b325d6b1e33c3370a61a10764d1ae0aae3c519e424310b5b8c15d76f2c9e62f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceOwnerContracts.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0f008ffe942a4c02ba91b09145fb68c35b04ade201b8c344026ae20055cfd19f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceOwnerContracts.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "4274ed56ce7eccffc891c489e90321914dcaaca7cfe3313a66b336a179cb5ad9",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceOwnerContracts.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "7c3967b6bc253be4fd4be7c79b07c65d61d7cdc870a53e3764eb0ec10328e950",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "9528dcf6c5596493dda69c0ec5b5ff12f95a1490ea7889813356d6e5092884b8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "c3666ee5167180ff2d4ebdfa1bb577a807fd6250cb1f860fecd9a32fec3e4490",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceFilesController.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a66aa36516151d973ecffdd4385ea2fdf00efaeb964a2dbebe1a689ec664e2af",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceFilesController.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "cfb92af5e70ee8fa7912aaab6fb80578f329db960e980bfa079e174f54ea25b9",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiJwtTokenWriter.cs",
       "category": "path-normalization",
       "source_fingerprint": "69f10d62c7ff1bfe5bfd9369d663d5d413feafd6e1a29b2da050a413302fbfdd",
@@ -67952,66 +68006,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "34f0c9fea409b38f98f34e0dc752170e0fe9755c24e142c4c6f037ac136fe19b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "549e870cfebcd71ed75e5b66e79f00906183966401549c4f3c3ef91b89fe62a7",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "6e53c38e513b03ba34327653e1cc23d86551f7a35c302f53d33a72398f8aec8d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "9891661c6a20b83a765bc42c65082c3bcbdab0880384c3cd9914ce5db9bccd8e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "a533b9c3659f5f941db7f952bbb9db6fea09e729ca3920d8d728a009d42a987c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "b0bb5aeb65b4edbdf64547b6c05e65cced0995ea42f28d0816814fe5c1e2670d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "b8a05c889b69dc2ebf7b26a5b4f115a36ae5ae822f3201fd42eb38ccc62eee51",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "bf913131c422ef45bb9f08e0491632945e110bb3c2ddb614fa7a1345af4e4c35",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "windows-executable",
-      "source_fingerprint": "0ab3a2bd18130285f68d074e68939699f3951619354dfb7576f0313334ec5c85",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
-      "category": "windows-path",
-      "source_fingerprint": "c5f4b37ec7b6903abd42dfe2fbfe461a3baaa49205e8416df36b939477449f74",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageCatalogSelectionDialog.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "d7b682b3cc1d13195b65b70210fb568105c30cc6a6e03b176577c794f88f846f",
@@ -68036,39 +68030,27 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceFilesOwner.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0998e8cbc641924feb2e526b0e687a0d22086d212eab3637464bfa929755cbaf",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceFilesOwner.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "af0a922de84d575f2173d012b31b5a746d20e43ed55687c3bf653d9f1d81f970",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceFilesOwner.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b0eb984b5332dbaa918ae44cc95d372852bdd48fe97a0b6475682f0f24815b61",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceSecretsOwner.cs",
       "category": "secret-provider",
-      "source_fingerprint": "9f472f1ac00042d6804c4a17d3fb16e9ab5e59996fa39f8a8f3c1316822c2d41",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "32ce52d2cea10564e7ff61ab531de84de1da6b85d5347eaa6f7a0ef32f43177a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "febc47a13bf4c26efc07e0a6db00aece72ae9b0784ccba6ea45076b578f35455",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
-      "category": "secret-provider",
-      "source_fingerprint": "68f1cfb313013d5b08c5d87e41265eb94e1fd5bfc2279501eda66333fad692be",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
-      "category": "secret-provider",
-      "source_fingerprint": "dea125c736b99373fbb912b2d215765751056a506bc03616f246d7604c2847bd",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
-      "category": "secret-provider",
-      "source_fingerprint": "efde66b4bd1e863bc395b3fb734ac54ac145d870332e02071cf63edccee27343",
+      "source_fingerprint": "94de94b9a549a18c07b3b0b2a4332202d86d91abc12a69b2e93d3339dd258f41",
       "count": 1
     },
     {
@@ -73646,6 +73628,42 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "f82b8f6123ef1b337b16dcc05ca74550f7f2f2f24438d63d5374ad31dc7932bd",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "b1102c7796f2e8f33cd005be1683b46b3821b8109bfcf85e99788ad70b78d7d9",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/WorkspaceScenarioStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5b71b73173758e1265030f34154d153b0fe33400898581fc98f1837372eab3e5",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/WorkspaceScenarioStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "9ad55adc6075b521d472a0013e6200c4a6390d5ad2874c25f7861678b56cb26a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/WorkspaceScenarioStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "d85f356862634dfb3c71f2b2dea6a3fb99b5c3eb1f3768771de013d77b469e1b",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/WorkspaceScenarioStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e535b7c295f058136cbb0a239809c70869578bad6bc0c77329f9559382a23aa3",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Capabilities/AgentCapabilitiesSurface.razor",
       "category": "mcp",
       "source_fingerprint": "0b30ee0cf769125b0f899d53c9ac256a40b6ab76433ebc04e5eb1221f3772821",
@@ -75305,6 +75323,48 @@
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "category": "case-policy",
       "source_fingerprint": "c82ef3c83c59a08b776ae9d455e8689ff6fabc9028a421ee670ec09d04650137",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "7365e66cc7b0b9c93ede308328ce371eb4d7dfbeb47be17e702cb39a4ee23974",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "12b2285d59b68bf2aedde40190c9a0a0c4f9aaf293120f07df1311cd428ef22b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceFilesState.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0c3b2c97daf353d418f867f2fd1e6adcead08275137ced87f5ed2f0dd018df2a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceFilesSurface.razor",
+      "category": "absolute-path-field",
+      "source_fingerprint": "22016057db427e5038d43ac112a85d57abda3fe4f4b0517169e561b039e40d79",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceFilesSurface.razor",
+      "category": "absolute-path-field",
+      "source_fingerprint": "516f9cd5d9f700d6e23dd6fb3338a19330c7b740bedcf79996ff5d79184c8935",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceFilesSurface.razor",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5c57d29eb76900109c8d374ff002a2b5c76299b1a4a18f0741a1a5879256ac68",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "6a57feb575203d9d028459d443e68060ff2ed7f54cdf37621a409ffaa6529b6d",
       "count": 1
     },
     {

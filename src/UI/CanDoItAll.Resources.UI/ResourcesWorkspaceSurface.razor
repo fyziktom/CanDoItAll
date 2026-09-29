@@ -128,7 +128,7 @@
             </DetailHeader>
 
             <DetailContent>
-                @if (Registry.Access == ResourceViewAccess.Loading) {
+                @if (Registry.EditorAccess == ResourceViewAccess.Loading) {
                     <Alert AlertStyle="AlertStyle.Info">Loading the selected resource. Writes wait for its exact identity and project admission.</Alert>
                 }
                 @if (Registry.IsLoading) {
@@ -176,7 +176,7 @@
                             </SecondaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue) {
-                                    <Button Text="Delete" Disabled="@Registry.IsBusy" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Disabled="@(!Registry.CanMutate || Registry.IsBusy)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>
@@ -319,11 +319,11 @@
                                 <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
-                                <Button Text="Save resource" Type="submit" Disabled="@Registry.IsBusy" data-testid="resource-save-button" />
+                                <Button Text="Save resource" Type="submit" Disabled="@(!Registry.CanMutate || Registry.IsBusy)" data-testid="resource-save-button" />
                             </PrimaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue) {
-                                    <Button Text="Delete" Disabled="@Registry.IsBusy" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Disabled="@(!Registry.CanMutate || Registry.IsBusy)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>

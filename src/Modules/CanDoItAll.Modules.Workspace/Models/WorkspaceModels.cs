@@ -1,5 +1,4 @@
 using CanDoItAll.Infrastructure.Configuration;
-using System.ComponentModel;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Security;
@@ -44,28 +43,6 @@ internal sealed class WorkspaceSettingsConfiguration : IEntityTypeConfiguration<
     }
 }
 
-[Description("Workspace business defaults from the selected database; contains no credentials or deployment switches.")]
-public sealed class WorkspaceSettingsModel
-{
-    [Description("Default provider profile GUID, or null when no default is selected.")]
-    public Guid? DefaultProviderProfileId { get; set; }
-
-    [Description("Human-readable workspace name.")]
-    public string WorkspaceName { get; set; } = "CanDoItAll";
-
-    [Description("Default output format suggested for prompts, such as Markdown.")]
-    public string DefaultPromptOutputFormat { get; set; } = "Markdown";
-
-    [Description("Three-letter uppercase currency code used by the workspace.")]
-    public string CurrencyCode { get; set; } = CurrencyDisplaySettings.Default.CurrencyCode;
-
-    [Description(".NET culture name used to format currency values.")]
-    public string CurrencyCultureName { get; set; } = CurrencyDisplaySettings.Default.CultureName;
-
-    [Description("Operator-authored notes about the workspace.")]
-    public string Notes { get; set; } = string.Empty;
-}
-
 public sealed partial class WorkspaceService(
     IDbContextFactory<WorkspaceSettingsDbContext> dbContextFactory,
     IClock clock,
@@ -108,6 +85,7 @@ public sealed partial class WorkspaceService(
     public async Task<WorkspaceSettingsModel> SaveSettingsAsync(WorkspaceSettingsModel model, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
+        model = model.Copy();
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var settings = await dbContext.Set<WorkspaceSettings>()
@@ -127,17 +105,9 @@ public sealed partial class WorkspaceService(
         settings.CurrencyCultureName = currencySettings.CultureName;
         settings.Notes = model.Notes?.Trim() ?? string.Empty;
         settings.UpdatedAtUtc = clock.GetUtcNow();
-        currencyDisplayState.Update(currencySettings);
-
         await dbContext.SaveChangesAsync(cancellationToken);
-        try {
-            await activityStream.RecordAsync(new ActivityWriteRequest(
-                "workspace", "save-defaults", "Updated workspace defaults",
-                $"Workspace name: {settings.WorkspaceName}.", Route: "/settings"), cancellationToken);
-        } catch (Exception exception) {
-            logger.LogWarning("Workspace settings committed, but activity recording failed: {ErrorType}.", exception.GetType().Name);
-        }
-        return new WorkspaceSettingsModel {
+        currencyDisplayState.Update(currencySettings);
+        var saved = new WorkspaceSettingsModel {
             WorkspaceName = settings.WorkspaceName,
             DefaultProviderProfileId = settings.DefaultProviderProfileId,
             DefaultPromptOutputFormat = settings.DefaultPromptOutputFormat,
@@ -145,6 +115,19 @@ public sealed partial class WorkspaceService(
             CurrencyCultureName = settings.CurrencyCultureName,
             Notes = settings.Notes
         };
+        try {
+            await activityStream.RecordAsync(new ActivityWriteRequest(
+                "workspace", "save-defaults", "Updated workspace defaults",
+                $"Workspace name: {settings.WorkspaceName}.", Route: "/settings"), cancellationToken);
+        } catch (Exception exception) {
+            try {
+                logger.LogWarning("Workspace settings committed, but activity recording failed: {ErrorType}.", exception.GetType().Name);
+            } catch (Exception) {
+                throw new WorkspaceSettingsCommittedException(saved, SettingsDiagnostic.LoggingPending);
+            }
+            throw new WorkspaceSettingsCommittedException(saved, SettingsDiagnostic.ActivityPending);
+        }
+        return saved;
     }
 
     public Task<IReadOnlyList<SecretListItem>> ListSecretsAsync(CancellationToken cancellationToken = default)

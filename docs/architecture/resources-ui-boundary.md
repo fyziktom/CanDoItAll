@@ -1,5 +1,12 @@
 # Resources UI boundary
 
+The Workspace Settings Core follow-on closes RS-R1: catalog/reference readiness no longer
+marks an exact Registry editor acquired. Held/failed reads block placeholder mutations;
+failed same-ID selection and initial routes can retry. Acquired dirty editors retain their
+state and allowed cleanup after optional-reference failure. See the
+[current prerequisite proof](workspace-settings-core-ui-boundary.md) for the failing-first
+cases, 70 light cases, 21 routed/owner cases and accepted Memory origin regression.
+
 Resources renders its complete Registry and Browse workspace through the same lightweight
 boundary in production and the standalone sandbox. Project admission, connector validation,
 transactions, source resolution, actor authorization, storage and launch remain with the

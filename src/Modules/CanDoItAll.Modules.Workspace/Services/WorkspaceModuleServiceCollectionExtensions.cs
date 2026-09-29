@@ -34,6 +34,9 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<ConnectorCommandProcessor>();
         services.AddScoped<ConnectorOutboxService>();
         services.AddScoped<WorkspaceService>();
+        services.AddScoped<IWorkspaceDefaultsOwner, WorkspaceDefaultsOwner>();
+        services.AddScoped<IWorkspaceSecretsOwner, WorkspaceSecretsOwner>();
+        services.AddScoped<IWorkspaceFilesOwner, WorkspaceFilesOwner>();
         services.TryAddScoped<IStorageCatalogSelectionSource, WorkspaceStorageCatalogSelectionSource>();
         services.AddScoped<DatabaseProfileWorkspaceService>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();

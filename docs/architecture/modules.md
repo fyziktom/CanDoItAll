@@ -93,3 +93,9 @@ The Simple Chats domain remains under `src/MAF/SimpleChats`; the AgentFramework 
 product presentation adapter, route state, Prompt Gallery action, and shared usage projection. This is
 intentional composition, not a move of conversation rules into the Agent module. See
 [LLM Chats boundary and integration ownership](llm-chats-boundary-and-handoffs.md).
+
+Workspace Settings Core shares its shell, defaults, Secrets, Files and provider history
+renderers through Workspace.Contracts, Workspace.Presentation and Workspace.UI, with a
+standalone Workspace.UiSandbox. Data Sources, Storage and API Access remain in the
+Workspace production module; this is a partial extraction. See the
+[boundary and validation record](workspace-settings-core-ui-boundary.md).

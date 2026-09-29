@@ -20,7 +20,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
         Assert.Contains("Policy not requested", cut.Markup);
         cut.Find("[data-testid='history-policy-load']").Click();
         cut.WaitForElement("[data-testid='history-policy-form']");
-        cut.Find("[data-testid='history-policy-metadata-days']").Change("20");
+        cut.Find("[data-testid='history-policy-metadata-days']").Input("20");
         Assert.Empty(policy.Updates);
         Assert.Equal(0, policy.Previews);
         cut.Find("[data-testid='history-policy-form']").Submit();
@@ -41,7 +41,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         cut.Find("[data-testid='history-policy-load']").Click();
-        cut.WaitForElement("[data-testid='history-policy-metadata-days']").Change("10");
+        cut.WaitForElement("[data-testid='history-policy-metadata-days']").Input("10");
         cut.Find("[data-testid='history-policy-preview']").Click();
         cut.WaitForElement("[data-testid='history-policy-confirmation']");
         Assert.Equal(1, policy.Previews);
@@ -82,7 +82,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         cut.Find("[data-testid='history-policy-load']").Click();
-        cut.WaitForElement($"[data-testid='history-policy-{field}']").Change(value);
+        cut.WaitForElement($"[data-testid='history-policy-{field}']").Input(value);
         cut.Find("[data-testid='history-policy-form']").Submit();
         cut.Find("[data-testid='history-policy-preview']").Click();
         Assert.NotEmpty(cut.FindAll(".validation-message"));

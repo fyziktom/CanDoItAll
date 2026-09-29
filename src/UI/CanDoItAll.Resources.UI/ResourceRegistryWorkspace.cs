@@ -69,6 +69,8 @@ public interface IResourceRegistryWorkspace {
     IReadOnlyList<ResourceMutationReceipt> Receipts { get; }
     ConnectorPluginManifest? SelectedManifest { get; }
     ResourceViewAccess Access { get; }
+    ResourceViewAccess EditorAccess { get; }
+    bool CanMutate { get; }
     string? Error { get; }
     IReadOnlyList<string> ReferenceErrors { get; }
     string? SelectedProjectName { get; }
