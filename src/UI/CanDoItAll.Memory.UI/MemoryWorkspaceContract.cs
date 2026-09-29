@@ -52,6 +52,8 @@ public sealed class MemoryWorkspaceDraft(string? providerId) {
     public bool IsInitialized { get; set; }
     public string? ErrorMessage { get; set; }
     public MemoryProviderQueryUiResult? QueryResult { get; set; }
+    public MemorySubmission? QuerySubmission { get; set; }
+    public long? AutoFeedbackContextVersion { get; set; }
     public MemoryProviderOperationUiResult? OperationResult { get; set; }
     public MemoryProviderFeedbackUiResult? FeedbackResult { get; set; }
     public MemoryProviderManualIngestionUiResult? IngestionResult { get; set; }
@@ -65,6 +67,7 @@ public sealed class MemorySubmission(Guid origin, string? providerId, MemoryActi
     public Guid Id { get; } = Guid.NewGuid();
     public Guid Origin { get; } = origin;
     public string? ProviderId { get; } = providerId;
+    public MemoryProviderRevision? ProviderRevision { get; init; }
     public MemoryAction Action { get; } = action;
     public MemoryEffectState State { get; set; } = MemoryEffectState.Pending;
     public string Message { get; set; } = "Waiting for the owner result.";

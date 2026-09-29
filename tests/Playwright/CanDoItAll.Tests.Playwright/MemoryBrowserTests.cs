@@ -67,7 +67,8 @@ public sealed class MemoryBrowserTests(MemoryBrowserFixture memoryFixture) {
             await Assertions.Expect(page.GetByTestId("memory-ui-submissions")).ToContainTextAsync("Observed");
             await Assertions.Expect(name).ToBeVisibleAsync();
             await page.GetByTestId("memory-ui-tab-query").ClickAsync();
-            await Assertions.Expect(page.GetByText("Synthetic context for captured browser query", new() { Exact = true })).ToHaveCountAsync(0);
+            await Assertions.Expect(page.GetByTestId("memory-ui-query").GetByText("Synthetic context for captured browser query", new() { Exact = true })).ToHaveCountAsync(0);
+            await Assertions.Expect(page.GetByTestId("memory-ui-historical-query")).ToContainTextAsync("Synthetic context for captured browser query");
             await page.GetByTestId("memory-scenario-AcceptedQuery").ClickAsync();
             await page.GetByTestId("memory-ui-tab-query").ClickAsync();
             await page.GetByTestId("memory-ui-query-async").CheckAsync();
@@ -200,6 +201,47 @@ public sealed class MemoryBrowserTests(MemoryBrowserFixture memoryFixture) {
             await Shot(page, "production-" + tab);
         }
         Assert.Empty(errors);
+    }
+
+    [Fact]
+    public async Task Production_query_readback_moves_replaced_profile_result_to_history() {
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(fixture.OwnedDatabaseProfile, "Memory.Browser.Origin", TestSchemaBootstrapModules.Full,
+            new Dictionary<string, string?> { [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind });
+        await using var scope = provider.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<IMemoryProviderManagementUiService>();
+        await using var remote = await HeldProvider.CreateAsync();
+        var editor = new MemoryProviderProfileEditorModel {
+            InstanceId = "provider.browser-origin", DisplayName = "Original query profile", DriverKind = MemoryProviderDriverKind.Http,
+            ProviderKind = "memory.http", HealthState = MemoryProviderHealthState.Healthy,
+            Http = new() { BaseUrl = remote.Url, TimeoutMilliseconds = 120000 }
+        };
+        await owner.SaveProviderAsync(editor);
+        await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1600, Height = 1000 } });
+        var page = await context.NewPageAsync();
+        var errors = Observe(page);
+        await page.GotoAsync(fixture.BaseUrl + "/memory");
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await page.GetByTestId("memory-provider-provider-browser-origin").ClickAsync();
+        await page.GetByTestId("memory-ui-tab-query").ClickAsync();
+        await page.GetByTestId("memory-ui-query-submit").ClickAsync();
+        await remote.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+        await page.GetByTestId("memory-ui-query-text").FillAsync("unblurred successor query");
+        editor.DisplayName = "Replacement query profile";
+        await owner.SaveProviderAsync(editor);
+        remote.Release.TrySetResult();
+        await Assertions.Expect(page.GetByTestId("memory-ui-historical-query")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.GetByTestId("memory-ui-query").GetByTestId("memory-ui-query-result")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("memory-ui-query-text")).ToHaveValueAsync("unblurred successor query");
+        await page.GetByTestId("memory-ui-submissions").Locator("summary").First.ClickAsync();
+        await page.GetByTestId("memory-ui-historical-query").Locator("summary").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("memory-ui-historical-query")).ToContainTextAsync("Owned HTTP context");
+        await page.GetByTestId("memory-ui-refresh").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("memory-ui-query").GetByTestId("memory-ui-query-result")).ToHaveCountAsync(0);
+        Assert.Equal(1, remote.Requests);
+        Assert.Single((await owner.GetSnapshotAsync(editor.InstanceId)).Operations);
+        Assert.Empty(errors);
+        Directory.CreateDirectory(Artifacts);
+        await Shot(page, "result-origin-history");
     }
 
     private static List<string> Observe(IPage page) {

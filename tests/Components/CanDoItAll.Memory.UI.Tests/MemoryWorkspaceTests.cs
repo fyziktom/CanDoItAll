@@ -381,6 +381,23 @@ public sealed class MemoryWorkspaceTests {
         return context;
     }
 
+    [Fact]
+    public async Task Stale_read_cannot_retire_newer_query_result() {
+        var store = new MemoryScenarioStore();
+        var owner = new DelayedReads(store);
+        using var workspace = new MemoryProvidersPageController(owner);
+        await workspace.RefreshAsync();
+        var held = owner.Hold();
+        var read = workspace.RefreshAsync();
+        await workspace.RunQueryAsync();
+        var result = workspace.QueryResult;
+        held.SetResult((await store.GetSnapshotAsync(MemoryScenarioStore.ProviderA)) with { SelectedProvider = null, SelectedRevision = null });
+        await read.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.NotNull(result);
+        Assert.Same(result, workspace.QueryResult);
+        Assert.Equal(1, store.QueryCount);
+    }
+
     private sealed class DelayedReads(MemoryScenarioStore store) : IMemoryProviderManagementUiService {
         private TaskCompletionSource<MemoryProviderManagementSnapshot>? next;
         public bool IsCurrent => store.IsCurrent;

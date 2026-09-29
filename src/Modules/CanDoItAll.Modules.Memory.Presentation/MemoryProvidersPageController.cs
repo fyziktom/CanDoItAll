@@ -92,8 +92,10 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
                 receipt.OperationId = result.Operation?.OperationId ?? result.AcceptedOperation?.OperationId;
                 receipt.Message = result.Diagnostic;
                 draft.QueryResult = result;
+                draft.QuerySubmission = receipt;
                 if (result.ContextPack is { } pack && string.IsNullOrWhiteSpace(draft.Feedback.ContextPackId)) {
                     draft.Feedback.ContextPackId = pack.ContextPackId.Value.ToString("D");
+                    draft.AutoFeedbackContextVersion = draft.Feedback.ContextPackEditVersion;
                 }
             });
     }
@@ -186,7 +188,7 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
         }
         var draft = Draft;
         var selectedVersion = selectionVersion;
-        var receipt = new MemorySubmission(draft.Origin, provider, action) { OperationId = operationId };
+        var receipt = new MemorySubmission(draft.Origin, provider, action) { OperationId = operationId, ProviderRevision = Snapshot?.SelectedRevision };
         submissions.Add(receipt);
         ErrorMessage = null;
         Notify();
@@ -283,6 +285,15 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
             }
             if (Snapshot?.SelectedRevision != next.SelectedRevision) {
                 selectionVersion++;
+            }
+            if (draft.QuerySubmission is { } query &&
+                (query.ProviderId != next.SelectedProvider?.InstanceId.Value || query.ProviderRevision != next.SelectedRevision)) {
+                draft.QueryResult = null;
+                draft.QuerySubmission = null;
+                if (draft.AutoFeedbackContextVersion == draft.Feedback.ContextPackEditVersion) {
+                    draft.Feedback.ContextPackId = string.Empty;
+                }
+                draft.AutoFeedbackContextVersion = null;
             }
             Snapshot = next;
             if (!draft.IsInitialized) {

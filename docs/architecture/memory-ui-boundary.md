@@ -415,3 +415,36 @@ external provider accounts and new refused driver features were not run or imple
 they are outside this assignment, not missing proof for a claimed capability. The remaining
 bounded-history/paging and assembly compatibility limits are stated above. No downstream
 module was started.
+
+## ME-R1 result-origin correction (Resources prerequisite, 2026-09-29)
+
+Query receipts now retain the submitted provider revision as well as provider, draft and
+operation identity. An accepted snapshot that proves replacement or removal retires the
+current result into labelled, read-only history. This also covers replacement discovered
+by the query's own automatic read-back. Failed reads retain the result as stale; identical
+revisions preserve it. Removal followed by reappearance does not revive a retired result.
+No refresh dispatches a query or status operation. Query and feedback drafts remain live;
+only untouched auto-filled feedback context is cleared. A field edit counter distinguishes
+manual edit-away-and-back from untouched automatic content.
+
+The four visible/held query and replacement/removal reproductions failed before the fix.
+Fresh `ResourcesUiProof` discovery and execution selected 33 `MemoryUi` component cases,
+3 `MemoryBoundaryTests`, 12 `MemoryWorkspaceOwnerTests` and 3 `MemoryBrowserTests`.
+The owner tests use owned PostgreSQL 18.6 and the real snapshot/revision path; the browser
+uses the production Web host and a held, loopback HTTP provider response. The inspected
+1600×1000 image shows original context/operation facts under historical results and the
+replacement profile beside the retained current query draft. No external provider account
+or new provider capability was used.
+
+The first component discovery was intentionally stopped because the `MemoryUi` namespace
+filter selected 33 rather than the whole project's 36 cases; the remaining three boundary
+cases have their own verified filter. The first owner assertion incorrectly assumed the
+Mock driver returns a feedback handle; it was corrected to assert the real context pack
+and unchanged result identity. The old browser assertion assumed historical context was
+absent from the entire DOM; it now checks absence from the current Query panel and presence
+in labelled history. These failed attempts remain in ignored `artifacts/resources-ui`.
+
+The complete proposed-tree portability scan passes with 15,139 reviewed executable-source
+findings unchanged; baseline and scanner rules are unchanged. Scheduler presentation and
+its focused tests have no diff from the reviewed closure. This correction introduces no
+project/reference/composition change. S0 is the prerequisite for the Resources slice only.

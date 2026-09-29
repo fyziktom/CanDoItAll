@@ -13,6 +13,13 @@
                 @if (receipt.OperationId is { } operationId) {
                     <TextBlock Value="@($"Operation: {operationId.Value:D}")" />
                 }
+                @if (receipt.QueryResult is { } result && !ReferenceEquals(Workspace.Draft.QuerySubmission, receipt)) {
+                    <details data-testid="memory-ui-historical-query">
+                        <summary>Historical query result for @receipt.ProviderId</summary>
+                        <TextBlock Value="@($"Submitted profile revision: {receipt.ProviderRevision?.Value ?? "unavailable"}")" />
+                        <MemoryProviderQueryResultPanel Result="result" FeedbackEditor="historicalFeedback" />
+                    </details>
+                }
                 @if (receipt.State == MemoryEffectState.Unknown) {
                     <Button Text="Review stored identity" Click="@(() => Workspace.ReviewAsync(receipt))"
                             Disabled="receipt.IsReviewing" IsBusy="receipt.IsReviewing" data-testid="memory-ui-review" />
@@ -23,5 +30,6 @@
 }
 
 @code {
+    private readonly MemoryFeedbackEditorModel historicalFeedback = new();
     [Parameter, EditorRequired] public IMemoryWorkspace Workspace { get; set; } = null!;
 }

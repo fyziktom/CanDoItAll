@@ -14,6 +14,34 @@ namespace CanDoItAll.Tests.Integration.Memory;
 
 public sealed class MemoryWorkspaceOwnerTests {
     [Fact]
+    public async Task Production_snapshot_revision_retires_query_without_replaying_or_losing_provenance() {
+        await using var app = await CreateAsync();
+        await using var scope = app.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<IMemoryProviderManagementUiService>();
+        var editor = Editor("provider.result-origin");
+        await owner.SaveProviderAsync(editor);
+        using var workspace = new MemoryProvidersPageController(owner);
+        await workspace.SelectProviderAsync(editor.InstanceId);
+        var original = workspace.Snapshot!.SelectedRevision;
+        Assert.Equal(MemoryProviderRevision.Capture(workspace.SelectedProvider!), original);
+        await workspace.RunQueryAsync();
+        var result = workspace.QueryResult;
+        await workspace.RefreshAsync();
+        Assert.Same(result, workspace.QueryResult);
+        Assert.Equal(original, workspace.Snapshot!.SelectedRevision);
+        editor.DisplayName = "Replacement profile";
+        await owner.SaveProviderAsync(editor);
+        await workspace.RefreshAsync();
+        Assert.NotEqual(original, workspace.Snapshot!.SelectedRevision);
+        Assert.Equal(MemoryProviderRevision.Capture(workspace.SelectedProvider!), workspace.Snapshot.SelectedRevision);
+        Assert.Null(workspace.QueryResult);
+        Assert.NotNull(result!.ContextPack);
+        Assert.Same(result, Assert.Single(workspace.Submissions).QueryResult);
+        Assert.Equal(original, workspace.Submissions[0].ProviderRevision);
+        Assert.Equal(result.Operation!.OperationId, Assert.Single(workspace.Snapshot.Operations).OperationId);
+    }
+
+    [Fact]
     public async Task PostgreSql_saved_destination_survives_failed_followup_without_renaming_original_or_replaying() {
         await using var app = await CreateAsync();
         await using var scope = app.Services.CreateAsyncScope();

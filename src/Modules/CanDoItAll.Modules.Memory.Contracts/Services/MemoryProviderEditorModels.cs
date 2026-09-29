@@ -16,10 +16,17 @@ public sealed class MemoryQueryEditorModel
     public string Citation { get; set; } = "Project 1";
 }
 
-public sealed class MemoryFeedbackEditorModel
-{
+public sealed class MemoryFeedbackEditorModel {
+    private string contextPackId = string.Empty;
     public MemoryFeedbackEditorModel Capture() => (MemoryFeedbackEditorModel)MemberwiseClone();
-    public string ContextPackId { get; set; } = string.Empty;
+    public long ContextPackEditVersion { get; private set; }
+    public string ContextPackId {
+        get => contextPackId;
+        set {
+            contextPackId = value;
+            ContextPackEditVersion++;
+        }
+    }
 
     public MemoryFeedbackOutcome Outcome { get; set; } = MemoryFeedbackOutcome.Useful;
 
