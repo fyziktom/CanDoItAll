@@ -766,3 +766,22 @@ Do not report the full suite as green unless both exact no-filter commands pass 
 required browsers, hosts, databases, and sibling processes are available. Expected
 quarantine failures and missing environment dependencies are still failures of this
 gate and must be reported as such.
+
+## Memory UI boundary proof
+
+`tests/Components/CanDoItAll.Memory.UI.Tests` is in Components, Stable and the actual component
+CI shards. It builds the standalone sandbox and tests the shared controller, raw controls,
+request and effect identity, extension lifetime and negative dependency closure. Its stable
+filter is `FullyQualifiedName~CanDoItAll.Tests.Components.Memory` in that owning project.
+
+The existing Memory page/editor/round-trip/validation/surface tests remain in the main
+component project. `MemoryWorkspaceOwnerTests` exercises the real production facade and
+PostgreSQL stores, including read-back failures, partial demo writes, pre-dispatch capture,
+profile changes and unsupported claims. `MemoryBrowserTests` uses an owned production host
+with explicitly enabled shipped Mock/HTTP drivers and a held loopback HTTP response, plus
+the backend-free sandbox. These test settings do not change application defaults.
+
+Use current source-derived discovery counts and the same filtered, newly built assemblies
+for execution. Transport/protocol/Agent/API consumers are selected by actual impact.
+[The Memory boundary record](architecture/memory-ui-boundary.md) contains the extraction's
+current evidence, measurements, scope decisions and standalone asset proof.

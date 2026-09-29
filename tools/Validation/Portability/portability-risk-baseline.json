@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-28T22:10:04.630678+00:00",
+  "generated_utc": "2026-09-29T00:28:13.608661+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15131,
+  "allowance_count": 15139,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -47462,117 +47462,195 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryEditorDefaults.cs",
+      "category": "mcp",
+      "source_fingerprint": "a8308c4bf428ec3fcc1a5b6aafd95766e6b5b160a3fb075f2ab81494fbb63d32",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "102dc2d50406e759c067244632692229faceebb28eee82d0768ae11bd35d431f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "108426ae0080d2d4255ad2ed82c705bb28169ee2e3248610ca1d362e87eaefe8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "22dc7c65a0bd1ddce2ed330acc3852c3b687ce8daa009d0c798ce0c80bcb7211",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "39dcdcd6943bd51ba34a5b1cb322b8826a14ce1a52c5531e2298b3919db869dc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "47633c10b034e5512767f4aebbc895182f23402992a4f83d34780cc1678791f0",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "563393cf53dcfccb71207fa1db473cd2b6aa63462b3caa52cf620c3dd30d7923",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "6bfe5123166dccf1be181d8606227c334079372f8986cad4c98bbf6ba18d232f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "b294d1684204f959277078217dd677eb53c2f64ec296c54456c384667309893c",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderCapabilityPolicy.cs",
+      "category": "mcp",
+      "source_fingerprint": "b62bf0b9775e019202f495c730089cfd702a01fac8b492f3dec9a5c8f6f385b9",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "007e4976b2c755638f562ae91ed3ecd6d1259bbe3b7d9065c02b1c6b9864b193",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "0e5f0123251d15ac018268910a84c56660ba85d46623e5abd04fa4b303e4cd48",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "16367e4eb049350aa190fad942e11820b03df013f2cf10c5c0e68882217be8c2",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "1640369cdf43f5deafe079c3603e4790ce55a15e4d8953d698ef3ed6cc2e3ce9",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "1eb106ad8fb767e844376ec51ec4f69779a171e195a2649d58e8cdb4383fb53f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "2e4e47223680b33bafe3c42844fed59fd2fb06bed1b531f55dbae89a4ec8b60c",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "5ce8f846fb5257e01e94fe55d70e578745848c8540ebf57a01d83384d4d3b599",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "5d8adc740cbdf9a1fc135a105f49a6070c4986fc12acfab7c58f249cd21d6dea",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "5ee7a19b70bddd520dd8c9b1fa2db8ddad6dbf9f74f2aeaa3dab5dffa542d57f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "6eb1242008e2e9da34ea6853364f8e7bda007263eba4537781a462e50acf823d",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "6fde6e5c3e8446eaab2cea82f46cf839c3180be2e0830f43e27f5344eb1567c7",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "ad4c27a9a5978ae41a7a02c47ff3a0d50d2d93975b3fe331930c747405d7513c",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "c6299db62b65b433fda97ca511b97a6716d988c7672741e88e813ef7ecdf1d19",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "cde55d84040b137cd49c26e28cf598f7f7a06cd0c7ee942f031199851b6ca7b5",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "e88cdc4dd8a46f2d0b75903b92096e8a8cab930bd4f61a44f77453bea3c5b96d",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "ee7a7a0821e31edda8a9893b469c5bcec9c497c1495da07775b6c506f36bf3d9",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "ef56b4c1a38417f2b81b79fdd0e0a430b293688969bc7c6c0c426c141dc20c85",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "category": "mcp",
+      "source_fingerprint": "f6230ea4187c3f046d8c7533d2b606e681267ac9396a8d78c374f72d35d755ff",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderUiUrlPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "1e206c45d6823474fec982472cec66165d2ed71be78d3c4739041c40330f5605",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderUiUrlPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3b598c6d299af020cb020631da9af7f6ab9cf264ef3cb1227e10626b51d73b48",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj",
       "category": "mcp",
       "source_fingerprint": "eaa967733bd63cd926645361d8a52c16605d11b0a9552d1a763f0379e1882d57",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Memory/README.md",
       "category": "mcp",
-      "source_fingerprint": "0da10d9ca9a5b480bab9c5b629f389751cebaf35d22c30bc3a16742eea8de9f2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "1371dda97e5687426d7a4e808f97c54782b1a9a03ee591355866b2529e08043e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "2c5a3bec3a04574c57f149a1eecd0ce36599e5c12553ba068bf487d6e254cccc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "42f8456d81c32041cec3263a6a2ce5fb200388c096364b49388cf867991088c1",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "430289b5bcb4bc5e9818d5abad5202439c20014bfa5ff00776421b5f57ee2fee",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "62c05c607e3ef688061e1001752a3d5529032306366fbef59748effaa2dbc40b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "76fbbd76427b92d1cb4c04816f1b8e47224249e2000957503b445a4e31f97a7f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "882ba6fc405c9c18f4c3fd97616b52c11bc52f04b040f6f55c5ab4afcc60798f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "8a85b4bf7e900cf6d9fc525a46c6e7c5043bb03cd081ea3ef6747b984815c1f2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "8b0c3713ce7aa70fcf066de83db51a5a992819ec8a79f10ff33437bb633473a5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "af583cf4316289e43636938f8cd532a8d116ca9e587b59ae7db05590f6360887",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "b1269a76cc6b5832e8163dc186c4d7987fa5aa5bd7f4395ad8c3b7bb7b9d43c3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "d92f7df7fadeab271a3e97ccd5d1ae22b79761ac3593e2e3d12e45b94d3dac72",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "e0527f053c9ff3e3079d1cc161f55c50836a1edb04ae11f2566c1073348d667c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "e434eb06a04646d6f668e906b8380cf03b467874a81bff58724e4b4e152f33f6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderMcpTransportEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "fb0a7af5b976048990f2884d4dc89b613e07785b39037798679bb2f3664246d7",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderProfileEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "39b993fc5cc38f232d8bc83f87e35ffa6fcdba7aa9d2186bc5d9b2cd9de2fec0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Components/MemoryProviderProfileEditor.razor",
-      "category": "mcp",
-      "source_fingerprint": "56f6b3c373d5e2529d69b273e25c965881877639a449c779a1b0830576939bda",
+      "source_fingerprint": "f8c0935df43848b53c2363f79694081f54f5174f50ffc9355fe475f80667cffb",
       "count": 1
     },
     {
@@ -47585,60 +47663,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Memory/README.md",
       "category": "windows-executable",
       "source_fingerprint": "5dc0ed063418b1b108835121f6adb137bb4b0f22fcff50e0803b31c89022cf06",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "57391e2b8d974f66e833275cde18fc2f7f91c967d2c89bc403827ea040654fe2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "6f0372c629fdbe4dba1fc55f97fa178901bab0a24e63bea0ec6d8c3f7eb75dda",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "7f933d07afb8ca40eec5c1f05cb057863a4ffe39de4e4b04310205aae1aab7a0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "9a610a1e786cc51db3d4792a2ac23c65a8cb101eeba098c8e1e1279a1058f92b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "a9d654956046c94e275c877fe99b353d00776ff3040d466942deedc0c08fde82",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "a9f8ecc235d476ff0ae0d5a8402e92214affd8183c2f497c4bd012664cfc1df8",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "b52d1ea25d842ddd850fdf10d0e1c61995fda35429647f3c698626a4efe797a4",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "e7b2470d95b962d877182e4d57fc98bbb174012efc7dce96393d6cf6d1cd5fca",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderCapabilityPolicy.cs",
-      "category": "mcp",
-      "source_fingerprint": "eba9714938c7ab0964bd7907c4faafcd0daa876e921f23a92203934a3fca3554",
       "count": 1
     },
     {
@@ -48164,123 +48188,9 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "02310cc31c0c30da2307f1fb00aacc4609165fbbd39b26723731409b201f0c49",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "03d05e1076b43887adbd825ec387484f6f70d8bef2c99273e2c295612716fe6e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "256c0b1239cc7b729bf2664fa9deea45165cbfa354aa2ba46d199e15f2bd296e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "5ec4388b718ed838932ea9a368224a02dd052c1af92d49a9b9231ed0daf6f69e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "9db8b592a2f8c3a364e99f29a0ecc7a3234f95cbda71ab2825e35155df7aa073",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "b8b4168f9b8a0f1a4f5f948b8d7f0351f59b60eecf9989e6b85e16a68d0f97ad",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "bf4adcc954f5f46a34d9c64aefdb00a4955cff5bb8244978d8bdf69f2e99555b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "c8aba943ce3e3ee1540ccfb5e06159cd49fd7c0187a47dc0750080fe6f6e2039",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "c9efe15d5d908b3a6ccbd7b2953265b519ecf397ea98de2bf5c4a945e0958809",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "cd0d49afa2dbb51b0e527327fa409723dbbcbf02c78e3309140fbce380dd8626",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "d97f40043de545cf8eb25441b595ecc9cec363f88d03bc2fa40827fb1e70d13c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "e1a3ce50f01f71a20a1f1976cbb1a43eb890eef63d295e647c936f1cbc1930f9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "e791456c239f819b1c5d72f16654a7e053a4856da31548bb0a6b1a8300003893",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "ec0c6e1c7994e88adc66c3bfbb1bd0ff5958c24142f6c51a98353bff38ef436f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "ecf7427213b9ecc89756d3bdcca769e1b8683d992265991cecb5f81a195e1baa",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "f68bd6c8a28862eddc9c663b6a2f1e7d98c9200299d20151585ee3ef09587236",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileEditorModel.cs",
-      "category": "mcp",
-      "source_fingerprint": "f96c939cefccbf3510246fb0ba1527807b67573124adce8967dedb3f9c1ad56a",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderSnapshotReader.cs",
       "category": "case-policy",
       "source_fingerprint": "6e7272a8f3d438c8597d6cd1a467965338fa0feadd452052849f857f365db9d0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderUiSurfaceProjector.cs",
-      "category": "case-policy",
-      "source_fingerprint": "29098d6a72322c2484c54bc0ef7550680ccb595ad0cb17564829fe4423931789",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderUiSurfaceProjector.cs",
-      "category": "case-policy",
-      "source_fingerprint": "878ea108e42c81af95d398e57c30b2fc81119722a460dad0dde3f1b031bbd440",
       "count": 1
     },
     {
@@ -73460,6 +73370,36 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/MemoryScenarioStore.cs",
+      "category": "mcp",
+      "source_fingerprint": "25d219d63ce441cbe7bc1aa53c8903839b1512bf31a9381e0003788c44e56d7a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/MemoryScenarioStore.cs",
+      "category": "mcp",
+      "source_fingerprint": "3bc352ef9958e5378c01f179711010cf4ac905caedcf9b175248fa3d2da19ae6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/MemoryScenarioStore.cs",
+      "category": "mcp",
+      "source_fingerprint": "3c3add5991a28fee1eddaf1596f874a394b3310daebbd2577dedb248b3c02399",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "6ed85d9a2e070e9ce3b882eff898ba566a91e52cdb316ac40bf413bdaa7ca32f",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "f6df2068d3ae0afb83a5caf9cd74afaff1b97cb2880804be5ef9e558c3a3aa86",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "ae53997bc47636bae40b7d81b80d5664c822dcd060455d16172b5d3e504aba44",
@@ -74639,6 +74579,114 @@
       "path": "src/UI/CanDoItAll.CrmHr.UI/Pickers/PartyAffiliationPicker.razor",
       "category": "case-policy",
       "source_fingerprint": "d127f91f830a67688f3ade952cb7f12200b55dce521051fe77d78437912e5762",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "26f056c93fcb359fb65cdf8c2881147c1d7795088b54b81368627b0bb6b319bc",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "304e708e79e51023d8f58dc12053d7aab25748fd42c7f3cf31709b9cc7e38a51",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "305d6f0f04b9ccec8e5cdfe99c329327bcc2c4b23c683ba312808a3e4ea0306b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "566aa8b8725279f282958e400912fcdb1f704dce92dce6271a81832c2ecac96e",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "6620c7b7b95d8140edfa68fef57565841cdbb4f9a625d78a0e1064a3c14dfc9b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "71d21b2b48b4eea72baee4ebd3ef6f1d62eec73b29e13111dba99d93c7122809",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "7fa710892949b97af56c7167412538f6ce6c9244a7a671b0eecd4df32aa37d42",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "85809242454458dc260a5cc91bc8d5442985a72028be107057d619303034e3e9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "8621ff4279da9ba99c1f503f87611166a7428ce6a84ffe0c67eec2302c1d7e64",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "8a86f86a18fa8195427df81dc51153b065b957e7f84531f2c2996bce54662749",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "8bd5cdac90ef645927d4cc9c7dc64c48fb86b9e87eab35cfc92225254b2d3e6d",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "a147ad7722d11d164e5eb7d8629dfcb03261e9b7ff273f768d15699204928976",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "a6d6228ce6589790257e1b6a8becd7e4e3ef87395044aa919ef46c5be1780007",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "ee013d84aae04fc0fad942d0182a685c8df0948ce17862d6dddf83dcaf17025c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "f9d43d406c6e0b6b0b039c30a467b1087ef5edf387b02fa63d35823dd02183b6",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderMcpTransportEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "fa672f65ca4731cbe52b96bfe8c92a756aec7fdd2d4ecf2d254d719dfd945b49",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderProfileEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "33aee61c8c22d8f9b2040e43495a2909d986c25fd70b74b2a2ca2ef12a4fadad",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderProfileEditor.razor",
+      "category": "mcp",
+      "source_fingerprint": "509b04840c4adf1f3c6b91821447731f8cfe2c0203f8749f2fe952cf840b73c1",
       "count": 1
     },
     {

@@ -1,0 +1,67 @@
+@page "/"
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<PageTitle>Memory UI sandbox</PageTitle>
+<SurfaceCard>
+    <TextBlock TextStyle="TextStyle.Subtitle1" Value="Memory development sandbox" />
+    <TextBlock Value="Deterministic local owner records. Accepted results are synthetic display fixtures; they do not enable unsupported production capabilities." />
+    <Cluster Wrap="FlexWrap.Wrap">
+        @foreach (var scenario in Enum.GetValues<MemoryScenario>()) {
+            <Button Text="@scenario.ToString()" Click="@(() => ResetAsync(scenario))" data-testid="@($"memory-scenario-{scenario}")" />
+        }
+    </Cluster>
+    <Cluster Wrap="FlexWrap.Wrap">
+        @foreach (var lane in Enum.GetValues<MemoryScenarioLane>()) {
+            <Button Text="@($"Hold next {lane}")" Click="@(() => store.HoldNext(lane))" data-testid="@($"memory-hold-{lane}")" />
+        }
+        <Button Text="Release pending" Click="Release" data-testid="memory-release" />
+        <Button Text="Fail next read" Click="@(() => store.FailNextRead = true)" data-testid="memory-fail-read" />
+        <Button Text="Remove selected" Click="RemoveSelectedAsync" data-testid="memory-remove" />
+        <Button Text="Discard draft and reload" Click="workspace.ResetDraftAsync" data-testid="memory-reset-draft" />
+    </Cluster>
+    <TextBlock Value="@($"Scenario: {currentScenario}; pending: {store.PendingCount}; retired stores: {retired.Count}; retired writes: {retired.Sum(s => s.WriteCount)}")" data-testid="memory-scenario-state" />
+    <TextBlock Value="Selection or explicit reset starts a new draft. Refresh and tab changes retain current raw input. Pending writes still finish against their original store." />
+    @if (retired.Count > 0) {
+        <details data-testid="memory-retired-stores">
+            <summary>Retired scenario stores</summary>
+            @foreach (var previous in retired) {
+                <TextBlock Value="@($"Writes: {previous.WriteCount}; profiles: {string.Join(", ", previous.Profiles.Values.Select(p => p.DisplayName))}")" />
+            }
+        </details>
+    }
+</SurfaceCard>
+<MemoryWorkspaceSurface @key="workspace" Controller="workspace" />
+
+@code {
+    private MemoryScenario currentScenario;
+    private MemoryScenarioStore store = null!;
+    private MemoryProvidersPageController workspace = null!;
+    private readonly List<MemoryScenarioStore> retired = [];
+    protected override Task OnInitializedAsync() => ResetAsync(MemoryScenario.Populated);
+    private async Task ResetAsync(MemoryScenario scenario) {
+        if (workspace is not null) {
+            workspace.Dispose();
+            store.ReleaseAll();
+            retired.Add(store);
+            if (retired.Count > 4) {
+                retired.RemoveAt(0);
+            }
+        }
+        currentScenario = scenario;
+        store = new(scenario, new Uri(new Uri(Navigation.BaseUri), "provider-fixture").AbsoluteUri);
+        workspace = new(store);
+        await workspace.RefreshAsync();
+    }
+    private void Release() => store.ReleaseAll();
+    private async Task RemoveSelectedAsync() {
+        if (workspace.SelectedProviderId is { } id) {
+            store.Remove(id);
+            await workspace.RefreshAsync();
+        }
+    }
+    public void Dispose() {
+        workspace?.Dispose();
+        store?.ReleaseAll();
+    }
+}

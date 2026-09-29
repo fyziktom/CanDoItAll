@@ -20,6 +20,8 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     private CanDoItAllTestEnvironment? _testEnvironment;
     private TestDatabaseProfile? _activeProfile;
 
+    public IReadOnlyDictionary<string, string?> RuntimeConfiguration { get; init; } = new Dictionary<string, string?>();
+
     public string BaseUrl { get; } = ResolveBaseUrl();
 
     public IPlaywright Playwright { get; private set; } = default!;
@@ -85,11 +87,11 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
         processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
-        foreach (var pair in _activeProfile.CreateEnvironmentVariables(new Dictionary<string, string?>
-        {
+        var configuration = new Dictionary<string, string?>(RuntimeConfiguration) {
             ["DevelopmentManager:TuningModeEnabled"] = "false",
             [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
-        }))
+        };
+        foreach (var pair in _activeProfile.CreateEnvironmentVariables(configuration))
         {
             processStartInfo.Environment[pair.Key] = pair.Value;
         }

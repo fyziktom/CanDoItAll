@@ -12,6 +12,7 @@ run command. Sandbox success is separate from production owner proof.
 | [Collaboration](CanDoItAll.Collaboration.UiSandbox/README.md) | Collaboration workspace |
 | [TestLab](CanDoItAll.TestLab.UiSandbox/README.md) | Test plan workspace |
 | [Plugins](CanDoItAll.Plugins.UiSandbox/README.md) | Catalog, six detail sections and package dialog |
+| [Memory](CanDoItAll.Memory.UiSandbox/README.md) | Seven-tab provider workspace, shared presentation policy and controlled local owner scenarios |
 
 See [UI component seams](../../docs/architecture/ui-component-seams.md) for the
 shared boundary and proof rules.

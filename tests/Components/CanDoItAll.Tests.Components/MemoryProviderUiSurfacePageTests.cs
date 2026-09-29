@@ -177,6 +177,7 @@ public sealed class MemoryProviderUiSurfacePageTests
         context.Services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
         context.Services.AddGenericMemoryModule();
         configureServices?.Invoke(context.Services);
+        context.Services.AddSingleton<CanDoItAll.Infrastructure.ControlPlane.ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
         context.Services.AddMemoryUiModule();
 
         using var scope = context.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();

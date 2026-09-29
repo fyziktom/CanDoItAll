@@ -4,6 +4,7 @@ using CanDoItAll.Memory.Application;
 namespace CanDoItAll.Modules.Memory.Services;
 
 public sealed class MemoryProviderProfileUiService(
+    MemoryUiProfileOrigin origin,
     IMemoryProviderProfileStore providerProfileStore,
     MemoryProviderProfileEditorMapper editorMapper,
     TimeProvider timeProvider)
@@ -12,7 +13,13 @@ public sealed class MemoryProviderProfileUiService(
         MemoryProviderProfileEditorModel editor,
         CancellationToken cancellationToken)
     {
-        var profile = editorMapper.ToProfile(editor);
+        origin.RequireCurrent();
+        MemoryProviderProfile profile;
+        try {
+            profile = editorMapper.ToProfile(editor.Capture());
+        } catch (Exception exception) when (exception is ArgumentException or InvalidOperationException) {
+            throw new MemoryActionRefusedException(exception.Message);
+        }
         await providerProfileStore.UpsertAsync(profile, timeProvider.GetUtcNow(), cancellationToken);
         return profile;
     }
@@ -20,17 +27,21 @@ public sealed class MemoryProviderProfileUiService(
     public async Task<IReadOnlyList<MemoryProviderProfile>> CreateDemoProvidersAsync(
         CancellationToken cancellationToken)
     {
-        var existingIds = (await providerProfileStore.ListAsync(cancellationToken))
-            .Select(profile => profile.InstanceId.Value)
-            .ToHashSet(StringComparer.Ordinal);
+        origin.RequireCurrent();
+        HashSet<string> existingIds;
+        try {
+            existingIds = (await providerProfileStore.ListAsync(cancellationToken)).Select(profile => profile.InstanceId.Value).ToHashSet(StringComparer.Ordinal);
+        } catch (Exception) {
+            throw new MemoryActionRefusedException("The demo catalog could not be read. No demo profile writes were started.");
+        }
         var demoProfiles = new[]
         {
             CreateDemoProvider(
-                "provider.business-demo",
+                MemoryDemoProviderIds.Business,
                 "Business demo memory",
                 MemoryProviderHealthState.Healthy),
             CreateDemoProvider(
-                "provider.programming-demo",
+                MemoryDemoProviderIds.Programming,
                 "Programming demo memory",
                 MemoryProviderHealthState.Degraded)
         };
@@ -38,8 +49,13 @@ public sealed class MemoryProviderProfileUiService(
         var savedProfiles = new List<MemoryProviderProfile>();
         foreach (var profile in demoProfiles.Where(profile => !existingIds.Contains(profile.InstanceId.Value)))
         {
-            await providerProfileStore.UpsertAsync(profile, timeProvider.GetUtcNow(), cancellationToken);
-            savedProfiles.Add(profile);
+            try {
+                origin.RequireCurrent();
+                await providerProfileStore.UpsertAsync(profile, timeProvider.GetUtcNow(), cancellationToken);
+                savedProfiles.Add(profile);
+            } catch (Exception exception) {
+                throw new MemoryDemoInterruptedException(savedProfiles, exception);
+            }
         }
 
         return savedProfiles;

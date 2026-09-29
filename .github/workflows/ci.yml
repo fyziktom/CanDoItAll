@@ -398,7 +398,7 @@ jobs:
           CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: >-
           ./tools/Validation/Invoke-TestShard.ps1
-          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj, ./tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj, ./tests/Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj, ./tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj, ./tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj, ./tests/Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj, ./tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj, ./tests/Components/CanDoItAll.Memory.UI.Tests/CanDoItAll.Memory.UI.Tests.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
           -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
           -ShardIndex ${{ matrix.shard }} -ShardCount 5
           -WeightsPath ./tools/Validation/TestShardWeights.json
@@ -514,7 +514,7 @@ jobs:
           CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: >-
           ./tools/Validation/Invoke-TestShard.ps1
-          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj, ./tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj, ./tests/Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj, ./tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj, ./tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj, ./tests/Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj, ./tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj, ./tests/Components/CanDoItAll.Memory.UI.Tests/CanDoItAll.Memory.UI.Tests.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
           -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform"
           -ShardIndex ${{ matrix.shard }} -ShardCount 3
           -WeightsPath ./tools/Validation/TestShardWeights.json
@@ -528,7 +528,7 @@ jobs:
           CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: >-
           ./tools/Validation/Invoke-TestShard.ps1
-          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj, ./tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj, ./tests/Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj, ./tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          -Project ./tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj, ./tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj, ./tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj, ./tests/Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj, ./tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj, ./tests/Components/CanDoItAll.Memory.UI.Tests/CanDoItAll.Memory.UI.Tests.csproj, ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
           -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
           -ShardIndex ${{ matrix.shard }} -ShardCount 3
           -WeightsPath ./tools/Validation/TestShardWeights.json

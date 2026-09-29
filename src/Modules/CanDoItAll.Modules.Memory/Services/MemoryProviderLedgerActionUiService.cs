@@ -24,8 +24,8 @@ public sealed class MemoryProviderLedgerActionUiService(
             requestFactory.CreateRetentionPolicy());
         var result = await operationHandler.GetStatusAsync(request, cancellationToken);
         return new MemoryProviderOperationUiResult(
-            result.Status,
-            result.Diagnostic,
+            MemoryProviderUiRecordMapper.ToUiStatus(result.Status),
+            MemoryProviderUiRecordMapper.SafeDiagnostic(result.Status, result.Diagnostic),
             result.Output is null ? null : MemoryProviderUiRecordMapper.ToUiRecord(result.Output));
     }
 
@@ -43,8 +43,8 @@ public sealed class MemoryProviderLedgerActionUiService(
             requestFactory.CreateRetentionPolicy());
         var result = await operationHandler.CancelAsync(request, cancellationToken);
         return new MemoryProviderOperationUiResult(
-            result.Status,
-            result.Diagnostic,
+            MemoryProviderUiRecordMapper.ToUiStatus(result.Status),
+            MemoryProviderUiRecordMapper.SafeDiagnostic(result.Status, result.Diagnostic),
             result.Output is null ? null : MemoryProviderUiRecordMapper.ToUiRecord(result.Output));
     }
 
@@ -54,6 +54,7 @@ public sealed class MemoryProviderLedgerActionUiService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(editor);
+        editor = editor.Capture();
         var requiredCapability = editor.Stage is MemoryFeedbackStage.ContextUsed or MemoryFeedbackStage.ImmediateToolResult
             ? MemoryCapabilityIds.FeedbackImmediate
             : MemoryCapabilityIds.FeedbackDelayed;
@@ -77,8 +78,8 @@ public sealed class MemoryProviderLedgerActionUiService(
                 "Feedback was submitted without a persisted context delivery record."));
         var result = await operationHandler.SubmitFeedbackAsync(request, cancellationToken);
         return new MemoryProviderFeedbackUiResult(
-            result.Status,
-            result.Diagnostic,
+            MemoryProviderUiRecordMapper.ToUiStatus(result.Status),
+            MemoryProviderUiRecordMapper.SafeDiagnostic(result.Status, result.Diagnostic),
             result.Output is null ? null : MemoryProviderUiRecordMapper.ToUiRecord(result.Output));
     }
 
@@ -102,6 +103,6 @@ public sealed class MemoryProviderLedgerActionUiService(
                 accepted ? "Accepted from Memory UI." : "Rejected from Memory UI."),
             requestFactory.CreateRetentionPolicy());
         var result = await operationHandler.AcknowledgeEventAsync(request, cancellationToken);
-        return new MemoryProviderEventAcknowledgeUiResult(result.Status, result.Diagnostic, eventId);
+        return new MemoryProviderEventAcknowledgeUiResult(MemoryProviderUiRecordMapper.ToUiStatus(result.Status), MemoryProviderUiRecordMapper.SafeDiagnostic(result.Status, result.Diagnostic), eventId);
     }
 }
