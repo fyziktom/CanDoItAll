@@ -1,0 +1,74 @@
+{
+  "id": "CDA-RESOURCES-UI-DECOUPLING-v1",
+  "title": "Memory result-origin correction, then complete Resources Registry and Browse UI decoupling",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "language": "en",
+  "executable": true,
+  "product_changes_authorized_by_this_bundle": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+  "observed_branch_head": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+  "review_date": "2026-09-28",
+  "review_timezone": "America/Curacao",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/bundle.json",
+  "documents": [
+    "README.md",
+    "MEMORY_REVIEW.md",
+    "RESOURCES_REVIEW_NOTES.md",
+    "VALIDATION_MATRIX.md",
+    "DEV_LOOP.md",
+    "SOURCES.md",
+    "PROOF_STATUS.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "stages": [
+    {
+      "id": "S0",
+      "purpose": "Close ME-R1: current query result provenance after snapshot revision changes; preserve Scheduler corrections."
+    },
+    {
+      "id": "R1-R5",
+      "purpose": "Complete Resources Registry/Browse renderer, governed promotion/reopen and sandbox with current layered proof."
+    }
+  ],
+  "authorization": {
+    "local_signed_commits": true,
+    "remote_push": false,
+    "merge": false,
+    "force_checkout_or_reset": false,
+    "sibling_changes_without_separate_authorization": false,
+    "ordinary_app_restart_or_database_use": false
+  },
+  "suggested_projects": [
+    "src/Modules/CanDoItAll.Modules.Resources.Contracts",
+    "src/UI/CanDoItAll.Resources.UI",
+    "src/Sandboxes/CanDoItAll.Resources.UiSandbox"
+  ],
+  "excluded_scope": [
+    "API-only UI or new auth architecture",
+    "Database schema/migrations",
+    "New provider or resource execution capabilities",
+    "Generalized distributed concurrency, outbox or transaction redesign",
+    "Whole Workspace/Projects/Workbench/Processes extraction",
+    "Unrelated shared library or FileTools runtime rewrite",
+    "Ordinary storage mutation or unrequested local application launch"
+  ],
+  "reviewer_execution": {
+    "product_builds": false,
+    "product_tests": false,
+    "product_browser_reproduction": false,
+    "product_watch_measurement": false,
+    "implementer_raw_artifacts_inspected": false
+  },
+  "previous_implementer_receipt": {
+    "source_id": "EV03",
+    "reported_memory_cases": 184,
+    "reported_scheduler_cases": 76,
+    "reported_total_selected_cases": 260,
+    "independently_rerun": false
+  }
+}
