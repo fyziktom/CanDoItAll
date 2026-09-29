@@ -4,6 +4,7 @@ using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
+using CanDoItAll.Modules.Workspace;
 
 namespace CanDoItAll.Tests.Unit.Storage;
 
@@ -13,6 +14,54 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         Path.GetTempPath(),
         nameof(FileApplicationPreferenceServiceTests),
         Guid.NewGuid().ToString("N"));
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Workspace_files_adopts_saved_destination_and_deletes_only_that_real_preference(bool warning) {
+        var executable = CreateExecutable("never-execute-captured.exe");
+        var laterExecutable = CreateExecutable("never-execute-later.exe");
+        var service = CreateService();
+        await service.SaveAsync(new(new(".sample"), executable));
+        var owner = new HeldFilesOwner(new WorkspaceFilesOwner(warning ? CreateService(new ThrowingLogger()) : service));
+        using var state = new WorkspaceFilesController(owner);
+        await state.RefreshAsync();
+        state.Select(Assert.Single(state.Preferences));
+        state.Draft.Extension = " NEXT ";
+        state.Draft.Edited();
+        var pending = state.SaveAsync();
+        await owner.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        state.Draft.ExecutablePath = laterExecutable;
+        state.Draft.Edited();
+        owner.Release.SetResult();
+        await pending;
+        Assert.Equal(new WorkspaceFileExtension(".next"), state.Draft.Selected);
+        Assert.Equal(laterExecutable, state.Draft.ExecutablePath);
+        var saved = await CreateService().ListAsync();
+        Assert.Equal(executable, saved.Single(item => item.Extension.Value == ".next").ExecutablePath);
+        Assert.Equal(2, saved.Count);
+        await state.DeleteAsync();
+        Assert.Equal(".next", owner.Deleted!.Value.Value);
+        Assert.Equal(".sample", Assert.Single(await CreateService().ListAsync()).Extension.Value);
+    }
+
+    private sealed class HeldFilesOwner(IWorkspaceFilesOwner owner) : IWorkspaceFilesOwner {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public WorkspaceFileExtension? Deleted { get; private set; }
+        public WorkspaceFileCommand Capture(string extension, string path) => owner.Capture(extension, path);
+        public Task<IReadOnlyList<WorkspaceFilePreference>> ListAsync(CancellationToken token) => owner.ListAsync(token);
+        public async Task<SettingsWriteResult<WorkspaceFileExtension>> SaveAsync(WorkspaceFileCommand command, CancellationToken token) {
+            var result = await owner.SaveAsync(command, token);
+            Entered.SetResult();
+            await Release.Task;
+            return result;
+        }
+        public Task<SettingsWriteResult<WorkspaceFileExtension>> DeleteAsync(WorkspaceFileExtension extension, CancellationToken token) {
+            Deleted = extension;
+            return owner.DeleteAsync(extension, token);
+        }
+    }
 
     [Theory]
     [InlineData(false)]

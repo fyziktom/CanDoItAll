@@ -96,6 +96,12 @@ intentional composition, not a move of conversation rules into the Agent module.
 
 Workspace Settings Core shares its shell, defaults, Secrets, Files and provider history
 renderers through Workspace.Contracts, Workspace.Presentation and Workspace.UI, with a
-standalone Workspace.UiSandbox. Data Sources, Storage and API Access remain in the
+standalone Workspace.UiSandbox. Data Sources and Storage remain in the
 Workspace production module; this is a partial extraction. See the
 [boundary and validation record](workspace-settings-core-ui-boundary.md).
+
+Workspace API Access has a separate ApiAccess.Contracts / ApiAccess.UI leaf and
+Workspace.ApiAccess.UiSandbox. Its status, issuance, token metadata and ordinary account
+editors share presentation controllers; the production module retains authorization,
+canonical scopes, signing, password and instance-local persistence owners. Core acquires
+no API dependency. See the [API boundary record](workspace-api-access-ui-boundary.md).

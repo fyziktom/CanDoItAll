@@ -1,4 +1,4 @@
-@using CanDoItAll.Modules.Workspace.ApiAccess
+
 
 <Dialog IsOpen="true" Title="API namespaces and permissions"
         Subtitle="Select explicit API capabilities. Execution and configuration grants can affect shared data and tools."
@@ -56,12 +56,14 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    [Parameter, EditorRequired] public IReadOnlyList<ApiScopeChoice> Definitions { get; set; } = [];
+
     private readonly HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
-    private IReadOnlyList<ApiScopeDefinition> scopes = [];
+    private IReadOnlyList<ApiScopeChoice> scopes = [];
 
     protected override void OnInitialized() {
-        selected.UnionWith(ApiScopeCatalog.Parse(Value));
-        scopes = ApiScopeCatalog.All.Where(scope => ForUser ? scope.UserSelectable : scope.MachineSelectable).ToArray();
+        selected.UnionWith(Value.Split([' ', ',', ';', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        scopes = Definitions.Where(scope => ForUser ? scope.UserSelectable : scope.MachineSelectable).ToArray();
         selected.IntersectWith(scopes.Select(scope => scope.Name));
     }
 

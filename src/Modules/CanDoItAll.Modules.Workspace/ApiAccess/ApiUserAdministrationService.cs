@@ -40,7 +40,9 @@ public sealed record ApiUserDetails(
     [property: Description("Explicit business capabilities currently assigned to this account.")] IReadOnlyList<string> Scopes,
     [property: Description("Current account version required by update, reset and delete operations.")] long Version,
     [property: Description("Account creation instant in UTC.")] DateTimeOffset CreatedAtUtc,
-    [property: Description("Most recent account mutation instant in UTC.")] DateTimeOffset UpdatedAtUtc);
+    [property: Description("Most recent account mutation instant in UTC.")] DateTimeOffset UpdatedAtUtc) {
+    internal bool DiagnosticWarning { get; init; }
+}
 
 [Description("Bounded account search page without credential material.")]
 public sealed record ApiUserPage(
@@ -74,8 +76,9 @@ public sealed class ApiUserAdministrationService(
     }
 
     public async Task<ApiUserDetails> CreateAsync(ApiUserCreateRequest request, CancellationToken cancellationToken = default) {
-        await EnsureAccessAsync(cancellationToken);
         ArgumentNullException.ThrowIfNull(request);
+        request = request with { Scopes = request.Scopes?.ToArray()! };
+        await EnsureAccessAsync(cancellationToken);
         var userName = ValidateUserName(request.UserName);
         var displayName = ApiIdentityRules.DisplayName(request.DisplayName);
         var scopes = ApiScopeCatalog.ValidateGrants(request.Scopes, forUser: true);
@@ -83,14 +86,15 @@ public sealed class ApiUserAdministrationService(
         var now = clock.GetUtcNow();
         var user = new ApiUserRecord(Guid.NewGuid(), userName, userName.ToUpperInvariant(), displayName,
             request.Enabled, hash, scopes, 1, 1, now, now);
-        await store.SaveAsync(user, expectedVersion: null, cancellationToken);
-        logger.LogInformation("Created API account {AccountId} with {ScopeCount} capabilities.", user.Id, scopes.Count);
-        return ToDetails(user);
+        cancellationToken.ThrowIfCancellationRequested();
+        await SaveAsync(user, null);
+        return Complete(user, () => logger.LogInformation("Created API account {AccountId} with {ScopeCount} capabilities.", user.Id, scopes.Count));
     }
 
     public async Task<ApiUserDetails> UpdateAsync(Guid id, ApiUserUpdateRequest request, CancellationToken cancellationToken = default) {
-        await EnsureAccessAsync(cancellationToken);
         ArgumentNullException.ThrowIfNull(request);
+        request = request with { Scopes = request.Scopes?.ToArray()! };
+        await EnsureAccessAsync(cancellationToken);
         var userName = ValidateUserName(request.UserName);
         var current = await FindAsync(id, cancellationToken);
         var user = current with {
@@ -103,9 +107,9 @@ public sealed class ApiUserAdministrationService(
             AuthenticationRevision = checked(current.AuthenticationRevision + 1),
             UpdatedAtUtc = clock.GetUtcNow()
         };
-        await store.SaveAsync(user, request.ExpectedVersion, cancellationToken);
-        logger.LogInformation("Updated API account {AccountId}; existing sessions invalidated.", id);
-        return ToDetails(user);
+        cancellationToken.ThrowIfCancellationRequested();
+        await SaveAsync(user, request.ExpectedVersion);
+        return Complete(user, () => logger.LogInformation("Updated API account {AccountId}; existing sessions invalidated.", id));
     }
 
     public async Task<ApiUserDetails> ResetPasswordAsync(Guid id, ApiUserPasswordResetRequest request, CancellationToken cancellationToken = default) {
@@ -118,15 +122,43 @@ public sealed class ApiUserAdministrationService(
             AuthenticationRevision = checked(current.AuthenticationRevision + 1),
             UpdatedAtUtc = clock.GetUtcNow()
         };
-        await store.SaveAsync(user, request.ExpectedVersion, cancellationToken);
-        logger.LogInformation("Reset API account {AccountId} password; existing sessions invalidated.", id);
-        return ToDetails(user);
+        cancellationToken.ThrowIfCancellationRequested();
+        await SaveAsync(user, request.ExpectedVersion);
+        return Complete(user, () => logger.LogInformation("Reset API account {AccountId} password; existing sessions invalidated.", id));
     }
 
     public async Task DeleteAsync(Guid id, long expectedVersion, CancellationToken cancellationToken = default) {
+        await DeleteWithOutcomeAsync(id, expectedVersion, cancellationToken);
+    }
+
+    internal async Task<bool> DeleteWithOutcomeAsync(Guid id, long expectedVersion, CancellationToken cancellationToken = default) {
         await EnsureAccessAsync(cancellationToken);
-        await store.DeleteAsync(id, expectedVersion, cancellationToken);
-        logger.LogInformation("Deleted API account {AccountId}; existing sessions invalidated.", id);
+        cancellationToken.ThrowIfCancellationRequested();
+        await WriteAsync(id, () => store.DeleteAsync(id, expectedVersion, CancellationToken.None));
+        return DiagnosticFailed(() => logger.LogInformation("Deleted API account {AccountId}; existing sessions invalidated.", id));
+    }
+
+    private Task SaveAsync(ApiUserRecord user, long? expectedVersion) =>
+        WriteAsync(user.Id, () => store.SaveAsync(user, expectedVersion, CancellationToken.None));
+
+    private static async Task WriteAsync(Guid id, Func<Task> write) {
+        try {
+            await write();
+        } catch (Exception exception) when (exception is not (ApiUserConflictException or KeyNotFoundException or ArgumentException)) {
+            throw new ApiDurableAcknowledgementException(id, exception.GetType().Name);
+        }
+    }
+
+    private static ApiUserDetails Complete(ApiUserRecord user, Action diagnostic) =>
+        ToDetails(user) with { DiagnosticWarning = DiagnosticFailed(diagnostic) };
+
+    private static bool DiagnosticFailed(Action diagnostic) {
+        try {
+            diagnostic();
+            return false;
+        } catch (Exception) {
+            return true;
+        }
     }
 
     private string ValidateUserName(string? value) {

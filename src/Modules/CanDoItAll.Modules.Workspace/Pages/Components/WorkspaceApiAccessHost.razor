@@ -1,66 +1,71 @@
-@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Workspace.ApiAccess
-@using Microsoft.Extensions.Logging
-@inject IApiTokenService ApiTokens
-@inject ILogger<WorkspaceApiAccessHost> Logger
-@if (status is null) {
-    <Alert AlertStyle="AlertStyle.Warning">API status is unavailable. Authorization has not been determined.</Alert>
-} else {
-    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-        <FormSection Title="API access"
-                     Icon="console"
-                     Description="Control the local API surface and create JWT bearer tokens when authorization is active.">
-            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                <Stack GapScale="LayoutGap.Small">
-                    <p class="cda-eyebrow">API</p>
-                    <StatusBadge Tone="@(status.ApiEnabled == true ? "success" : "warning")" Text="@(status.ApiEnabled == true ? "Enabled" : "Disabled")" />
-                    <p class="cda-body-muted break-all">OpenAPI: @(status.OpenApiEnabled == true ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
-                </Stack>
-                <Stack GapScale="LayoutGap.Small">
-                    <p class="cda-eyebrow">Authorization</p>
-                    <StatusBadge Tone="@(status.AuthorizationEnabled == true ? "warning" : "info")" Text="@(status.AuthorizationEnabled == true ? "JWT required" : "JWT disabled")" />
-                    <p class="cda-body-muted break-all">@FormatApiAudience()</p>
-                </Stack>
-            </Grid>
+@using CanDoItAll.Modules.Workspace.ApiAccess.Contracts
+@using CanDoItAll.Workspace.ApiAccess.UI
+@using Microsoft.AspNetCore.Components.Authorization
+@implements IDisposable
+@inject IApiAccessConfigurationOwner ConfigurationOwner
+@inject IApiTokenOwner TokenOwner
+@inject IApiAccountOwner AccountOwner
+@inject ApiOperationLedger Ledger
 
-            @if (status.AuthorizationEnabled != true) {
-                <Alert AlertStyle="AlertStyle.Info">
-                    <p>API authorization is disabled. User permissions do not isolate anonymously accessible business operations.</p>
-                </Alert>
-            } else if (status.SigningKeyConfigured) {
-                <ApiTokenAdministrationPanel Status="status" />
-                <Alert AlertStyle="AlertStyle.Info" data-testid="api-effective-configuration">
-                    User login: @(status.UserAuthenticationEnabled ? "enabled" : "disabled") (Api:UserAuthentication:Enabled).
-                    @if (!status.AccessManagementEnabled) {
-                        <p>HTTP access administration is disabled. Trusted local administration is still available.</p>
-                    } else {
-                        <p>HTTP access administration is enabled and requires a configured administrator session.</p>
-                    }
-                    <p>Api:AccessManagement:Enabled and other deployment options require configuration and restart. User sessions expire after @status.UserTokenLifetimeMinutes minutes.</p>
-                </Alert>
-                <FormSection Title="API users" Icon="group" Description="Manage instance-local accounts and explicit business capabilities.">
-                    <ApiUserAdministrationPanel />
-                </FormSection>
-            } else {
-                <Alert AlertStyle="AlertStyle.Warning">
-                    <p>JWT authorization is enabled, but no signing key is configured. Set Api:Authorization:SigningKey to at least 32 UTF-8 bytes before creating tokens.</p>
-                </Alert>
-            }
-        </FormSection>
-    </Stack>
+@if (session is not null) {
+    <ApiAccessSurface @key="session" Session="session" />
 }
+
 @code {
     [Parameter] public EventCallback<ApiAccessStatus?> StatusChanged { get; set; }
-    private ApiAccessStatus? status;
+    [CascadingParameter] public Task<AuthenticationState>? AuthenticationState { get; set; }
+    private Task<AuthenticationState>? previousAuthentication;
+    private ApiAccessSession? session;
+    private ApiAccessConfiguration? reportedConfiguration;
+    private bool reported;
+    private bool disposed;
+
     protected override async Task OnInitializedAsync() {
-        try {
-            status = ApiTokens.GetStatus();
-        } catch (Exception exception) {
-            Logger.LogWarning("API access status could not be read while activating Settings ({FailureType}); authorization remains unavailable.", exception.GetType().Name);
-        }
-        await StatusChanged.InvokeAsync(status);
+        previousAuthentication = AuthenticationState;
+        await ActivateAsync();
     }
-    private string FormatApiAudience() => status?.AuthorizationEnabled == true
-        ? $"Issuer: {status.Issuer} / Audience: {status.Audience}"
-        : "Bearer tokens are not required.";
+    protected override async Task OnParametersSetAsync() {
+        if (!ReferenceEquals(previousAuthentication, AuthenticationState)) {
+            previousAuthentication = AuthenticationState;
+            Retire();
+            await ActivateAsync();
+        }
+    }
+    private async Task ActivateAsync() {
+        reported = false;
+        session = new(ConfigurationOwner, TokenOwner, AccountOwner, Ledger);
+        session.Changed += Changed;
+        await session.LoadAsync();
+    }
+    private void Changed() => _ = InvokeAsync(async () => {
+        if (disposed || session is null) {
+            return;
+        }
+        var configuration = session.Configuration;
+        if (!reported || !ReferenceEquals(reportedConfiguration, configuration)) {
+            reported = true;
+            reportedConfiguration = configuration;
+            var status = configuration is null ? null : new ApiAccessStatus(configuration.ApiEnabled, configuration.OpenApiEnabled,
+                configuration.SwaggerUiEnabled, configuration.AuthorizationEnabled, configuration.SigningKeyConfigured,
+                configuration.Issuer, configuration.Audience, configuration.DefaultTokenLifetimeMinutes, configuration.MaxTokenLifetimeMinutes) {
+                UserAuthenticationEnabled = configuration.UserAuthenticationEnabled,
+                AccessManagementEnabled = configuration.AccessManagementEnabled,
+                UserTokenLifetimeMinutes = configuration.UserTokenLifetimeMinutes
+            };
+            await StatusChanged.InvokeAsync(status);
+        }
+        StateHasChanged();
+    });
+    private void Retire() {
+        if (session is not null) {
+            session.Changed -= Changed;
+            session.Dispose();
+            session = null;
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        Retire();
+    }
 }

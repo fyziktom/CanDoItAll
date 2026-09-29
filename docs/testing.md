@@ -448,6 +448,24 @@ above; do not supply the ordinary application's Playwright base URL. Current cou
 dependent consumer filters, publish commands and development-loop observations are in
 [the maintained proof record](architecture/workspace-settings-core-ui-boundary.md).
 
+## Workspace API Access boundary proof
+
+`tests/Components/CanDoItAll.Workspace.ApiAccess.UI.Tests` is included in Components,
+Stable and all three actual component CI project lists. Select
+`FullyQualifiedName~CanDoItAll.Tests.Components.WorkspaceApiUi` for backend-free controller,
+renderer and dependency proof. Build-backed discovery must precede same-filter execution.
+
+The main component project retains the production `ApiTokenAdministrationTests`,
+`ApiUserAdministrationPanelTests`, `ApiIssuanceCaptureTests` and `WorkspaceApiStatusTests`.
+Unit `ApiAdministrationOutcomeTests` and `ApiAdministrationDurabilityTests` use real
+private control-plane owners. Integration `ApiAdministrationOutcomeHttpTests` extends
+the existing API authorization/contract/session selections with real durable faults.
+`ApiAccessSettingsBrowserTests` uses a disposable secured production host;
+`ApiAccessSandboxBrowserTests` exercises the independent Development and published
+Production sandbox. These are distinct proof layers, not interchangeable mocks.
+See the [API boundary record](architecture/workspace-api-access-ui-boundary.md) for exact
+filters, current counts, failed attempts, graph/watch samples and the broad-gate decision.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

@@ -12,6 +12,7 @@
     <Project Path="../Components/CanDoItAll.Memory.UI.Tests/CanDoItAll.Memory.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workspace.UI.Tests/CanDoItAll.Workspace.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.ApiAccess.UI.Tests/CanDoItAll.Workspace.ApiAccess.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
   </Folder>
   <Folder Name="/tests/Integration/">

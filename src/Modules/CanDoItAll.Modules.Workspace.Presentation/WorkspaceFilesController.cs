@@ -73,6 +73,7 @@ public sealed class WorkspaceFilesController(IWorkspaceFilesOwner owner) : IWork
         }
         var draft = Draft;
         var revision = draft.Revision;
+        var targetRevision = draft.TargetRevision;
         WorkspaceFileCommand command;
         try {
             command = delete ? new(draft.Selected!.Value, string.Empty) : owner.Capture(draft.Extension, draft.ExecutablePath);
@@ -92,10 +93,10 @@ public sealed class WorkspaceFilesController(IWorkspaceFilesOwner owner) : IWork
                 : await owner.SaveAsync(command, lifetime.Token);
             SettingsOperationLedger.Complete(receipt, result);
             if (result.State != SettingsWriteState.Refused && !disposed) {
-                if (ReferenceEquals(Draft, draft) && draft.Revision == revision) {
-                    if (delete) {
+                if (ReferenceEquals(Draft, draft)) {
+                    if (delete && draft.Revision == revision) {
                         New();
-                    } else {
+                    } else if (!delete && draft.TargetRevision == targetRevision) {
                         draft.Selected = result.Value;
                         draft.Extension = result.Value.Value;
                     }

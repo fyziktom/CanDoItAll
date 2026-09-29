@@ -5,6 +5,9 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Modules.Workspace.ApiAccess.Contracts;
+using CanDoItAll.Modules.Workspace.ApiAccess.Presentation;
+using CanDoItAll.Workspace.ApiAccess.UI;
 
 namespace CanDoItAll.Modules.Workspace;
 
@@ -29,6 +32,10 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.TryAddScoped<ApiUserAdministrationService>();
         services.TryAddScoped<IApiTokenAdministrationAccess, UnavailableApiTokenAdministrationAccess>();
         services.TryAddScoped<ApiTokenAdministrationService>();
+        services.TryAddScoped<IApiAccessConfigurationOwner, ApiAccessConfigurationOwner>();
+        services.TryAddScoped<IApiTokenOwner, ApiTokenOwner>();
+        services.TryAddScoped<IApiAccountOwner, ApiAccountOwner>();
+        services.TryAddScoped<ApiOperationLedger>();
         services.TryAddScoped<ConnectorPluginRegistry>();
         services.TryAddScoped<ISettingsRendererRegistry, SettingsRendererRegistry>();
         services.AddScoped<ConnectorCommandProcessor>();

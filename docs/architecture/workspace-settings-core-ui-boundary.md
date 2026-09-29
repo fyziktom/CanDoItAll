@@ -1,5 +1,10 @@
 # Workspace Settings Core UI boundary
 
+Follow-up: [Workspace API Access](workspace-api-access-ui-boundary.md) reproduces and
+repairs WSC-R1 by separating the Files destination revision from later path edits. It
+also extracts the previously deferred API leaf without changing the Core graph. The
+counts and closure below describe the original Core checkpoint, not that later proof.
+
 Completed `CanDoItAll_Workspace_Settings_Core_UI_Decoupling` on the current checkout.
 Entry: `components-decoupling` at `ba6192b7982383b49a042291f8c47833b79c98e4`, clean tree.
 The only change since the reviewed Resources implementation is the sealed input package.

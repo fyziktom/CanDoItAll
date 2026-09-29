@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-29T12:09:54.981702+00:00",
+  "generated_utc": "2026-09-29T18:22:57.182716+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15198,
+  "allowance_count": 15207,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -67946,18 +67946,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiScopePickerDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "3c92e91d9710b5a3dfd640547be9464820a58f38373bb0903bb115882ccad4e0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiScopePickerDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "ff595589d684311b7b933d428272f5266232e125938b444ae05e222abd6cab78",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ConfigurationSchemaFallbackRenderer.razor",
       "category": "case-policy",
       "source_fingerprint": "40c26f983b86a62df2c7d528006ac61278c1b04d02f17cf363201419ea2b153f",
@@ -73628,6 +73616,54 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/ApiScenarioStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3c6a1760d3247b2cc8c690e61b6da5b9f9c2d79bc9782f3d1f401b05590f1f04",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/ApiScenarioStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "586e177c10e89409c201b7f4054544b2b1f7ab3540033cfddb05acc6a848ac5a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/ApiScenarioStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7d3d45a2dfbf5839dbfd773cdf7e4427abbacf2706cf69246ca7d843075f5060",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/ApiScenarioStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "801cf61f1c62f2283aed0dac8bcd8815406149ae2bbb079f73c4616dc8322186",
+      "count": 2
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/ApiScenarioStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b62e876ffccba5ea5fa82e412acef9ba2a059d2b72190c30b3dc2daa70574a56",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Components/ApiAccess.razor",
+      "category": "case-policy",
+      "source_fingerprint": "acb40a3ddac00760d36f47085c492958f9fb575eff4957870cc06347e1134885",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "6b93905d858dda05cf0719d81001b2ba07f34a2873418cd95922aaf17b1a86ed",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "fadaa430a71e5521d44c2678300521efc4b50659d234535065cc8168bca61f44",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "f82b8f6123ef1b337b16dcc05ca74550f7f2f2f24438d63d5374ad31dc7932bd",
@@ -75323,6 +75359,18 @@
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "category": "case-policy",
       "source_fingerprint": "c82ef3c83c59a08b776ae9d455e8689ff6fabc9028a421ee670ec09d04650137",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.ApiAccess.UI/ApiScopePickerDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "0798e19be3f5ad9caf53685563e01c4f8924f8bb5b6349479c08c093bce73c65",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.ApiAccess.UI/ApiScopePickerDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "e1d88f8ed99e91ea56dab7e49d151b1ba1c60de87eef70517e1b44ed2cc6974c",
       "count": 1
     },
     {
