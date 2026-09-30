@@ -1,5 +1,32 @@
 # Live campaign follow-up
 
+## Closure update — 2026-09-30
+
+The [current closure report](workspace-critical-fixes-closure.md) records the repaired harness and final source pair. **No new real-model request
+is authorized or issued.** The original journal remains exhausted at 40/40, with SHA-256
+`f3b88f709b6d26e35a6c3792930608b3937aa77e3d230dfb2fb3eedb854712e4`.
+LIVE-01, LIVE-02 and LIVE-03 are all BLOCKED_AUTHORIZATION for this source pair; the historical
+LIVE-02 pass below is not transferred as a new execution.
+
+`LiveUiHost`, `UiEvidence`, `AgentUiJourneySupport`, `ProjectFilesUiJourney` and
+`ScriptedAgentUiFixture` are now top-level support types. The original CRM/HR cases remain
+in `CrmHrLiveAgentToolUiSmokeTests`; Project Files, Workflow and deterministic controls
+have their own classes. Typed proposal checks bind approval to original run, context,
+target, path, content and overwrite/media policy. Exact delayed approval is admitted once.
+The first watchdog/budget stop is recorded separately; app stop retains the database and
+evidence roots until read-back and repeated cleanup finish.
+
+The full browser inventory executes the deterministic harness controls through actual
+MAF/Workflow/UI owners, including cancellation, timeout, quota refusal, queued completion,
+delayed registration and retained evidence. Safe allowlisted HTTP/provider terminal metadata
+is separate from reservations, batches and owner effects. Output-token forwarding remains
+150 in its deterministic control, and HTTP 200 with incomplete Responses is rejected.
+The earlier 150-token/incomplete explanation remains a hypothesis about the historical live
+failure, not an established root cause. A later operator authorization must explicitly bind
+the remaining live journeys to a provider and bounded budget; these repairs do not supply it.
+
+## Historical campaign record
+
 The Workspace completion campaign exhausted its authorised forty requests, including
 all failed attempts. No limit was increased. LIVE-01 and LIVE-03 remain FAILED; further
 live validation is blocked by the exhausted budget. LIVE-02 passed with actual planner

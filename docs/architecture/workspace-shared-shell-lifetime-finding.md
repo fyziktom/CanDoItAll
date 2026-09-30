@@ -1,5 +1,31 @@
 # WC-C1: Simple Chat reads outlive disposed scoped services
 
+## Closure update — 2026-09-30
+
+Status: **CLOSED for WC-C1** on application `3d7c88f384b7920744464a7c7570530ca825325a`
+(base repair `e6672c14fca3eb2ca22e56771a3bfb2dcedd64e0`). See the [current closure report](workspace-critical-fixes-closure.md) for frozen proof.
+
+`LlmChatProfileScopeRunner` now owns admitted/waiting participants until they settle,
+denies new admission after retirement and retains the semaphore until its final user exits.
+`ExecuteOwnedAsync` retains the actual asynchronous service scope containing each admitted
+operation's dependencies; three scope-bound wrappers resolve their dependencies inside it.
+The original profile lease and operation token remain attached to that work. Contributor
+retirement fences late publication and keeps captured cancellation ownership safe.
+
+Failing-first runner, real EF scope and contributor controls are retained in `c1-*-before`;
+`c1-runner-after`, `c1-scope-after` and `c1-contributor-after` pass. The fresh full Stable
+checkpoint and held real catalog-query browser sequence exercise the repaired composition.
+ConversationShellHost's S0 nonblocking initialization remains intact. No disposal exception
+is used as a success signal. The new WCL-NAV1 framework navigation finding is separate.
+
+The complete Stable run has one private receipt-test failure: it expected a public operation
+to flush a caller's unrelated tracked edit. The test-only correction
+`02bbb723396514f035eb4d2748bea71c5899f9e9` restores the intended rollback-owner exercise and
+adds real context-isolation and explicit-save assertions. All 31 receipt-class cases pass.
+Production bytes are unchanged, and the original 15,865-pass/one-failure checkpoint is retained.
+
+## Historical campaign record
+
 Status: OPEN. Priority P2; application regression readiness is blocked. Workspace
 renderers and the existing S0 shell fix remain unchanged by this finding.
 

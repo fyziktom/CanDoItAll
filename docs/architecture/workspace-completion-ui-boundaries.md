@@ -1,5 +1,18 @@
 # Workspace completion and application regression
 
+## Current closure — 2026-09-30
+
+The completed Workspace renderers, production hosts and 22-entry census remain intact.
+The [critical-fixes closure](workspace-critical-fixes-closure.md) records final production
+application `3d7c88f384b7920744464a7c7570530ca825325a` and Components
+`22d5b21afdf80c2bca74c1c598f0b1bb72c86f9e`, followed by separately identified private
+test-observation/catalog corrections. WCL-R1, WC-C1 and WC-C2 are closed locally; WC-C3's
+controlled correction passes but composed navigation remains open under WCL-NAV1.
+WCL-DEL1, required live/environment proof and remote dependency delivery also remain open.
+Application readiness is false. WC-H1's completed test-support ownership is recorded below.
+
+## Completed extraction record
+
 This record follows the sealed `CanDoItAll_Workspace_Completion_and_Regression` package on
 `components-decoupling`. Entry HEAD is `1080c24163afd3cf65fcc68756913c5dd3262a62` (bundle only);
 the reviewed product checkpoint is `fbfba65de9d3118729b73ce9dcf97f28a219c84c`.
@@ -345,7 +358,7 @@ gate retains the failed lifetime and live-validation groups.
 | Construction | Module DI composes owner adapters; sandboxes supply explicit scenario owners. No new domain service locator, provider SDK or registration-time service-provider build was introduced. |
 | Independent testability | Recovery passes 20 leaf cases and Data Sources passes 21 without production services. Real wrapper/owner/browser cases separately prove composition, refusal, late completion, exact origin and partial progress. |
 | Extension seam | New renderer behavior belongs in the leaf/session. A new backend action requires an explicit neutral command and original owner policy. The trusted configuration host still rejects invalid renderer claims. |
-| Partial-class policy | No production partial or runtime extension cluster was introduced. The live acceptance fixture temporarily groups its added file, Workflow and deterministic journeys in test-only partial files; the explicit removal boundary is recorded below. These files are not claimed as architectural extraction. |
+| Partial-class policy | The Workspace renderer boundaries are unchanged. The existing MainLayout host has a bounded lifetime companion; no new feature layer or runtime project is introduced. Top-level test-support owners and separate acceptance classes replace the temporary live fixture partial scaffold; exact moved identities are reconciled. |
 
 CodeAnalytics, Components MCP and dotnetwatch MCP were unavailable in this session.
 The recorded fallback uses source inspection, evaluated MSBuild/NuGet graphs, assembly
@@ -359,23 +372,21 @@ the caller's fields, focus and raw validation state. Normal and open-overlay scr
 were inspected separately from assertion results. The live capture review also records
 blank/loading frames and icons as inspected media, never as proof of a hydrated feature.
 
-### WC-H1: temporary acceptance-fixture split
+### WC-H1: acceptance-fixture ownership closed
 
-The `CrmHrLiveAgentToolUiSmokeTests` partial files are a temporary campaign test scaffold,
-sharing the existing private host, proposal inspection and evidence writer. They preserve
-the existing opt-in case identities during this bounded live campaign. They do not isolate
-production behavior, and adding another journey through another partial file is prohibited.
+The closure removes the temporary `CrmHrLiveAgentToolUiSmokeTests` partial scaffold.
+`LiveUiHost` owns the private runtime and two independent stop controls; `UiEvidence`
+collects retained owner/HTTP/provider evidence; `AgentUiJourneySupport` and
+`ProjectFilesUiJourney` own their respective orchestration; `ScriptedAgentUiFixture`
+owns the external scripted control. The support partial declaration needed by
+`GeneratedRegex` is compiler plumbing, not a growing fixture split.
 
-The next authorised live-proof repair bundle must extract `LiveUiHost`, `UiEvidence` and
-the scoped owner-read helpers into cohesive top-level test-support types, then move the
-new Project Files, Workflow and deterministic acceptance cases into separate test classes.
-Keep the existing CRM/HR class/case identities and update discovery mappings for moved
-cases. No new runtime project or provider abstraction is needed. The new retirement case
-already uses its own top-level test class.
+Project Files, Workflow, Agent runtime, file-harness and shared-host journeys now have
+separate test classes. The two original CRM/HR identities remain; ten moved identities
+are mapped in `test-identity-moves.json` under the ignored closure evidence root.
+The complete final browser inventory executes the deterministic budget, approval,
+timeout, retained-evidence and actual MAF/Workflow controls. No production project,
+renderer ownership or provider abstraction was added. Live rows stay authorization-blocked.
 
-Removal proof requires budget-concurrency/refusal tests, controlled host-retirement tests,
-the deterministic real MAF/Workflow cases and exact inventory reconciliation. Live repeats
-remain subject to a separately authorised budget; moving a helper cannot certify a live
-pass. Production leaf architecture and pure session tests do not depend on this temporary
-split. WC-H1 is test-maintenance follow-up, distinct from the release-blocking WC-C1/WC-C2/WC-C3
-and LIVE-01/LIVE-03 findings.
+See the [current closure report](workspace-critical-fixes-closure.md) for exact source,
+proof, dependency delivery and remaining application readiness limits.

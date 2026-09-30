@@ -1,5 +1,28 @@
 # WC-C2: shared Dialog interop cancellation escapes retirement
 
+## Closure update — 2026-09-30
+
+Status: **CLOSED for WC-C2 locally** in signed Components
+`22d5b21afdf80c2bca74c1c598f0b1bb72c86f9e`, consumed by application
+`3d7c88f384b7920744464a7c7570530ca825325a`. Remote CI consumption is pending publication;
+the [current closure report](workspace-critical-fixes-closure.md) gives the exact branch-resolution and operator delivery order.
+
+The owning Dialog caches import/close/retirement work, rejects late open/import publication,
+contains only expected retired cancellation/disconnection, and attempts both module and
+callback release even when close fails. Unexpected active faults remain observable.
+The actual JS owns dialog identity, detached cleanup, scrolling and late focus work.
+The SDK initializer records a disabled opener's focus ownership without changing Button
+behavior or stealing focus from an unrelated dialog.
+
+The original cancelled-disposal failure precedes the repair. Final Components gates pass
+443 tests; source/package/published JS hashes agree. Real production parent/child controls
+pass 30 checks and the actual Components sandbox passes nine checks across three sizes,
+including Escape, backdrop, focus return, unrelated ownership and scrolling. The final
+full browser inventory includes the repaired real-JS focus regression. WCL-NAV1's stack
+does not contain Dialog or DialogInterop, and its original failing log remains retained.
+
+## Historical campaign record
+
 Status: OPEN. Priority P2 for the application regression gate. This finding belongs to
 the shared Components dependency and its consumer validation, not Collaboration's owner
 or a new Workspace extraction.

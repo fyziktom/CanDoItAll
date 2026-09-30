@@ -1,5 +1,28 @@
 # WC-C3: initial tab tracking persists after circuit disconnection
 
+## Closure update — 2026-09-30
+
+Status: **original WC-C3 controls repaired; shared navigation closure OPEN**.
+Application `3d7c88f384b7920744464a7c7570530ca825325a` includes the bounded MainLayout and
+browser-state repair from `e6672c14fca3eb2ca22e56771a3bfb2dcedd64e0`.
+The [current closure report](workspace-critical-fixes-closure.md) distinguishes this correction from unresolved
+[WCL-NAV1](workspace-navigation-acknowledgement-finding.md).
+
+MainLayout fences each asynchronous stage with exact layout, route and profile ownership,
+observes queued work, and releases its listener by unique identity. BrowserStateStore
+rejects stale profile work and never reports a disconnected Save as acknowledged.
+Workbench initializes only after its acknowledged write; active failures remain visible
+and retryable. No renderer/JS-dependent teardown drain is introduced.
+
+Three failing layout controls and a failing store control are preserved. The repaired
+five layout and three store controls, existing consumers, fresh Stable selection and
+deliberately held-query/shared-route browser journey pass. The complete fresh browser
+checkpoint nevertheless records an unhandled RemoteNavigationManager cancellation.
+Its initiating application call is not known, so isolated passes do not close this shared
+application boundary or permit a readiness verdict.
+
+## Historical campaign record
+
 Status: OPEN, priority P2. Application shared-shell readiness is blocked. This finding
 does not change Workspace renderer ownership or the existing ConversationShellHost S0 fix.
 

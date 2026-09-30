@@ -1,5 +1,32 @@
 # Workspace completion regression findings
 
+## Closure update — 2026-09-30
+
+The [current closure report](workspace-critical-fixes-closure.md) supersedes the readiness decision, while the original evidence below stays
+historical. Raw new attempts are retained under
+`artifacts/workspace-closure/20260930-d9273a889`; original failures were not overwritten.
+
+| Finding | Current disposition |
+| --- | --- |
+| WCL-R1 | Closed: editor-specific exact existence/kind/protection admission occurs inside real catalog coordination. A known catalog commit followed by selection failure produces retained Partial progress, never an upsert replay. |
+| WC-C1 | Closed: admitted Simple Chat work retains its actual scoped dependencies and profile; waiting/new admission and contributor retirement are controlled. |
+| WC-C2 | Closed locally: owning Components Dialog/JS retirement, release, focus and scrolling are verified on the exact signed sibling. Remote dependency publication remains pending. |
+| WC-C3 | Original MainLayout/browser-state controlled failures repaired; shared navigation closure remains open under WCL-NAV1. |
+| WCL-A1 | Closed: FloatingAgentChatCoordinator retains its initialization token and fences held settings, catalog warmup and maintenance after retirement. Both failing orderings and all 13 focused controls pass. |
+| WCL-F1 | Closed: a native disabled opener lost focus before dialog mount; the exact BaseLib JS initializer preserves its return target. Real nested and unrelated dialogs verify the correction. |
+| WCL-HISTORY | Test observation corrected: tool/result continuation creates additional legitimate publisher requests. Exact credential-filtered attempt IDs and the one disjoint relay attempt pass. The same attempt remains failed because real Agent cleanup exposes WCL-DEL1. No fixture protocol or model permission was changed. |
+| WCL-NOTE | Test observation corrected: wait for the real canvas keyboard handler before Tab. The affected three cases later pass. One supplemental image-selection timeout remains retained as an unattributed intermittent failure; the unchanged rerun is not a production fix. |
+| WCL-CATALOG | Runtime integration catalog corrected from 45 to 44: commit `4476b39a15de3a63618bbea6e6a1d7e44243e193` removed the obsolete one-shot Tailwind retry test and added watch restart unit controls. All seven integration class guards remain. |
+| WCL-RECEIPT | Private receipt test ownership corrected in `02bbb723396514f035eb4d2748bea71c5899f9e9`: rollback is exercised on the actual tracked context, a public operation must leave its caller's unrelated edit pending, and explicit owner save must never flush an abandoned definition. All 31 owning-class cases pass. The original complete Stable result remains 15,865 passed / one failed; it is not relabeled as an all-green rerun. |
+| WCL-NAV1 | Open: full shared-host log records RemoteNavigationManager TaskCanceledException. The 60-second timing correlation with Agent scope-test teardown is not causal attribution; separate repetitions do not close it. |
+| WCL-DEL1 | Open: history cleanup cannot confirm deletion of its exact temporary Agent after two completed runs. The catalog still contains it after reload. Original multi-file owner evidence is preserved privately; the swallowed owner exception and commit boundary require investigation. |
+| WC-H1 | Closed: cohesive top-level support and separate journey classes replace the temporary acceptance partial scaffold. Ten moved identities and the two retained CRM/HR cases are explicitly reconciled. |
+
+There is no new module, renderer extraction, schema, provider feature, authorization grant
+or wider transaction protocol in this closure. Live authorization remains zero.
+
+## Historical campaign record
+
 This index belongs to the Workspace completion campaign on entry commit
 `1080c24163afd3cf65fcc68756913c5dd3262a62`. Raw attempts, source manifests and safe
 media are retained in `artifacts/workspace-completion/20260930-1080c2416`.

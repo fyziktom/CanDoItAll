@@ -1,5 +1,30 @@
 # Workspace completion: campaign decision and evidence
 
+## Closure update — 2026-09-30
+
+Workspace rendering remains complete. Application readiness remains **false**.
+The [current closure report](workspace-critical-fixes-closure.md) records the fresh campaign on application `3d7c88f384b7920744464a7c7570530ca825325a`
+and Components `22d5b21afdf80c2bca74c1c598f0b1bb72c86f9e`, followed by separately identified
+test-observation/catalog corrections. The original 29 obligations are carried into all
+35 closure groups. The earlier counts below remain historical and are not added to new coverage.
+
+The fresh complete Stable run executes 15,866 cases: 15,865 pass, one fails and none skip.
+The private receipt test's owner-context correction then passes all 31 class cases; its
+signed commit is `02bbb723396514f035eb4d2748bea71c5899f9e9`. The original full Stable gate
+remains FAILED. The complete browser run is 157 passed / 14 failed; separate follow-ups
+yield 162 PASSED, two FAILED, six BLOCKED and one NOT_RUN of the same 171-case inventory.
+Neither aggregate is presented as a second all-green complete run.
+
+WCL-R1, WC-C1 and WC-C2 have verified bounded corrections. WC-C3's original controlled
+retirement failures are repaired, but shared navigation closure remains open because the
+fresh complete browser run records [WCL-NAV1](workspace-navigation-acknowledgement-finding.md).
+The history follow-up passes its request-identity assertions but its real Agent cleanup
+fails under [WCL-DEL1](workspace-agent-deletion-closure-finding.md); that attempt stays failed.
+Three live rows remain BLOCKED_AUTHORIZATION, and external/platform/dependency delivery
+limits remain explicit. The original 40/40 reservation journal is unchanged.
+
+## Historical campaign record
+
 Entry: `1080c24163afd3cf65fcc68756913c5dd3262a62`, branch `components-decoupling`.
 The checkout was clean and its entry change contained the bundle. The reviewed product
 commit was `fbfba65de9d3118729b73ce9dcf97f28a219c84c`; the checkout was not reset to it.
