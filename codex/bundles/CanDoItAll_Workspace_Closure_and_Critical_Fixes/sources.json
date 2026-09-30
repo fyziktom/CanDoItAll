@@ -1,0 +1,407 @@
+{
+  "schema_version": 1,
+  "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+  "review_repositories": {
+    "fyziktom/CanDoItAll": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+    "fyziktom/CanDoItAll.Components": "f258ab6a959a97fa16c01d0858e7dc122728a11a"
+  },
+  "sources": [
+    {
+      "id": "R01",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-regression-campaign.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "0b72b99bccbc3d5640a680ec444f1e58b612fe52",
+      "coverage": "Full maintained campaign report, not raw execution artifacts.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-regression-campaign.md",
+      "conversation_evidence": "turn642file0"
+    },
+    {
+      "id": "R02",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-regression-findings.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "d114d9fc84cc7520b1d8dc8a8f83a5b5f6fa2059",
+      "coverage": "Full findings index and historical attempt dispositions.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-regression-findings.md",
+      "conversation_evidence": "turn641file0"
+    },
+    {
+      "id": "R03",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-completion-ui-boundaries.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "6f38088d30a10720771f3a2e53879b4a65eb67ac",
+      "coverage": "Lines 1-230: stages, Recovery, Data Sources, and beginning of Configuration boundary.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-completion-ui-boundaries.md",
+      "conversation_evidence": "turn647file0"
+    },
+    {
+      "id": "R04",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-closure-map.json",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "f52825bc79ab1b10ed6c6ae5e45df94762925394",
+      "coverage": "Lines 1-245: declared census and principal module hosts; remainder must be rescanned at execution.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-closure-map.json",
+      "conversation_evidence": "turn671file0"
+    },
+    {
+      "id": "R05",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-shared-shell-lifetime-finding.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "296c22897d618b66dd635fb886d51ac430cf0aaf",
+      "coverage": "Full WC-C1 map; stack is reported, original raw log unavailable to reviewer.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-shared-shell-lifetime-finding.md",
+      "conversation_evidence": "turn643file0"
+    },
+    {
+      "id": "R06",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-dialog-retirement-finding.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "9af417bd415ef7d4f816551da1acb1ca7a94378e",
+      "coverage": "Full WC-C2 map and dependency context.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-dialog-retirement-finding.md",
+      "conversation_evidence": "turn644file0"
+    },
+    {
+      "id": "R07",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-browser-state-retirement-finding.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "42be3991a04d6c6ec625e38c3b1265faeb17f0cd",
+      "coverage": "Full WC-C3 map and attribution limits.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-browser-state-retirement-finding.md",
+      "conversation_evidence": "turn645file0"
+    },
+    {
+      "id": "R08",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workspace-live-follow-up.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "b03e819c319e2455eb9fc75b2367a33bfafb5366",
+      "coverage": "Full WC-L1/WC-L2 map and exhausted budget.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/architecture/workspace-live-follow-up.md",
+      "conversation_evidence": "turn646file0"
+    },
+    {
+      "id": "R09",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Database/WorkspaceDataSourcesOwner.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "adf5ef0d705bf1e8b6378c9c2fc81b00d4ebee0d",
+      "coverage": "Full source: preflight, commands, classification, projection, password handling.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/Modules/CanDoItAll.Modules.Workspace/Database/WorkspaceDataSourcesOwner.cs",
+      "conversation_evidence": "turn648file0"
+    },
+    {
+      "id": "R10",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "f8c4585960942bd8043c06cdaf32faa61a27fdf4",
+      "coverage": "Lines 1-370 and 624-880: coordinated Save/Delete, BuildPersistedProfile, protected password and editor mapping. Not all 51 KB reviewed.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+      "conversation_evidence": "turn667file0;turn668file0;turn669file0"
+    },
+    {
+      "id": "R11",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DataSourcesOwnerTests.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "ad6f49484d6c7ef4d0cfec39876c3981b947a08c",
+      "coverage": "Full source: deletion before preflight, pending protection, bootstrap and transfer tests. No execution here.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/tests/Integration/CanDoItAll.Tests.Integration/DataSourcesOwnerTests.cs",
+      "conversation_evidence": "turn670file0"
+    },
+    {
+      "id": "R12",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesSession.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "d33a6d9f72c878f301edfdd4459cad7c56e1dadc",
+      "coverage": "Full source: initialization/editor revisions, Save identity, schema/transfer and disposal.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesSession.cs",
+      "conversation_evidence": "turn649file0"
+    },
+    {
+      "id": "R13",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourceTransferSession.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "0452d73791d0f014197e6272d6774f5667e744af",
+      "coverage": "Full source: source/target reads and per-group command receipt.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourceTransferSession.cs",
+      "conversation_evidence": "turn651file0"
+    },
+    {
+      "id": "R14",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourceOperationLedger.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "c4f183829af23925152247f2e001e2f50f2086c7",
+      "coverage": "Full source: circuit admission, bounded safe receipt list, unknown/partial blocking.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourceOperationLedger.cs",
+      "conversation_evidence": "turn665file0"
+    },
+    {
+      "id": "R15",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Workspace.StorageRecovery.UI/RecoverySession.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "52112d0aad0415fa05b9c63c620d4df88b10bdc1",
+      "coverage": "Full source: rendered target, command result before observation, retirement.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/UI/CanDoItAll.Workspace.StorageRecovery.UI/RecoverySession.cs",
+      "conversation_evidence": "turn650file0"
+    },
+    {
+      "id": "R16",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Storage/WorkspaceStorageRecoveryOwner.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "d92ee936f4476838ed1e1d91ae80cd93806bada6",
+      "coverage": "Full source: mapping to existing Recovery/continuation owners and expected Workflow identity.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/Modules/CanDoItAll.Modules.Workspace/Storage/WorkspaceStorageRecoveryOwner.cs",
+      "conversation_evidence": "turn680file0"
+    },
+    {
+      "id": "R17",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/Application/LlmChatProfileScopeRunner.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "8d1aa12ecbbf9f40fac718ee675f0dab16cc08d1",
+      "coverage": "Full source: semaphore admission, profile lease, Release and synchronous Dispose.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/Application/LlmChatProfileScopeRunner.cs",
+      "conversation_evidence": "turn653file0"
+    },
+    {
+      "id": "R18",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatConversationShellContributor.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "ea7e8cc1d5af88d360c2e6337028e2640c3698f7",
+      "coverage": "Initialization, sequential gateway reads, dialogs, event publication and DisposeAsync reviewed.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatConversationShellContributor.cs",
+      "conversation_evidence": "turn655file0"
+    },
+    {
+      "id": "R19",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellHost.razor.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "17b2f9d112fba7eafd10b962f36c4aa291ed1591",
+      "coverage": "Full source: S0 lifetime token ownership, initialization and asynchronous release.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/UI/CanDoItAll.Conversations.Shell/ConversationShellHost.razor.cs",
+      "conversation_evidence": "turn657file0"
+    },
+    {
+      "id": "R20",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/Dialog.razor",
+      "review_commit": "f258ab6a959a97fa16c01d0858e7dc122728a11a",
+      "observed_blob_sha": "4278f61a05ac422b9871a8ac44efd6a6ddd15aa6",
+      "coverage": "Lines 180-350: open/close guards and full disposal path.",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/f258ab6a959a97fa16c01d0858e7dc122728a11a/src/CanDoItAll.Components.BaseLib/Components/Modals/Dialog.razor",
+      "conversation_evidence": "turn658file0"
+    },
+    {
+      "id": "R21",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogInterop.cs",
+      "review_commit": "f258ab6a959a97fa16c01d0858e7dc122728a11a",
+      "observed_blob_sha": "b59796d5e4c632c8b4d5fd509e928f35b4bb4a5f",
+      "coverage": "Full source: pending module ownership, active close and disposal.",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/f258ab6a959a97fa16c01d0858e7dc122728a11a/src/CanDoItAll.Components.BaseLib/Components/Modals/DialogInterop.cs",
+      "conversation_evidence": "turn660file0"
+    },
+    {
+      "id": "R22",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "61608348763738231193980788b53c37e4997f0d",
+      "coverage": "Lines 1-230: entire shown first-render sequence, subscriptions and Dispose.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
+      "conversation_evidence": "turn661file0"
+    },
+    {
+      "id": "R23",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "7b167469f7392172d1485463089dd72d13508f11",
+      "coverage": "Lines 1-240: navigation callbacks, tab resolution and early route branches.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
+      "conversation_evidence": "turn662file0"
+    },
+    {
+      "id": "R24",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/App/CanDoItAll.Web/Infrastructure/BrowserWorkspaceStateStore.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "26b6a21a5210fcae64d9d5675d89d74232d15fcf",
+      "coverage": "Full source: profile-keyed load/save and JS acknowledgement.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/App/CanDoItAll.Web/Infrastructure/BrowserWorkspaceStateStore.cs",
+      "conversation_evidence": "turn664file0"
+    },
+    {
+      "id": "R25",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrLiveAgentToolUiSmokeTests.ProjectFiles.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "c6660b342d9c2e7869523b92aac29d5f86145ed1",
+      "coverage": "Lines 1-240: positive/negative journey, tool receipt assertions and approval decision loop.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrLiveAgentToolUiSmokeTests.ProjectFiles.cs",
+      "conversation_evidence": "turn672file0"
+    },
+    {
+      "id": "R26",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/LiveModelRequestProxy.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "72e1770996c7ca12af55efd0144322240c5d7b0f",
+      "coverage": "Full source: actual outbound reservation gate, 10/40 limits, durable journal and counters.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/tests/Playwright/CanDoItAll.Tests.Playwright/LiveModelRequestProxy.cs",
+      "conversation_evidence": "turn673file0"
+    },
+    {
+      "id": "R27",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrLiveAgentToolUiSmokeTests.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "a403a407421278a496fe1e9b6163574f91bf3592",
+      "coverage": "Lines 435-860: LiveUiHost, batch watchdog, provider journal, evidence redaction and writing.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrLiveAgentToolUiSmokeTests.cs",
+      "conversation_evidence": "turn674file0;turn675file0"
+    },
+    {
+      "id": "R28",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrLiveAgentToolUiSmokeTests.Workflow.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "c9de7d563c4c72d535f1efc6e3c2c25992b71145",
+      "coverage": "Lines 1-210: actual live/scripted Workflow, immutable version and asset/TestLab proof.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrLiveAgentToolUiSmokeTests.Workflow.cs",
+      "conversation_evidence": "turn681file0"
+    },
+    {
+      "id": "R29",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Runtime/WorkflowLlmComponentInvoker.cs",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "0a2e187a26776f09eb50b008933ff8843133b1a0",
+      "coverage": "Lines 1-240: actual MaxOutputTokens forwarding, provider validation and usage/error handling.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Runtime/WorkflowLlmComponentInvoker.cs",
+      "conversation_evidence": "turn685file0"
+    },
+    {
+      "id": "R30",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": ".github/workflows/ci.yml",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "812c7c769f027f6436e3f62333b8d74eeb0f5850",
+      "coverage": "Lines 1-150: event branches, Components resolution from target branch and SHA output, FileTools pin.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/.github/workflows/ci.yml",
+      "conversation_evidence": "turn678file0"
+    },
+    {
+      "id": "R31",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "AGENTS.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "coverage": "Full repository agent instructions.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/AGENTS.md",
+      "conversation_evidence": "turn682file0"
+    },
+    {
+      "id": "R32",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/testing.md",
+      "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+      "observed_blob_sha": "3e2f6875b4ce42652f3d5a92f02486fdf4a8414c",
+      "coverage": "Lines 1-150: current isolated database, build/discovery, actual bUnit event/disposal rules. Read rest at execution.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/d9273a88973d28d73c4d29f8686f2b3d68ef8f3a/docs/testing.md",
+      "conversation_evidence": "turn683file0"
+    },
+    {
+      "id": "EXT01",
+      "kind": "primary-documentation",
+      "title": "SemaphoreSlim.Dispose",
+      "url": "https://learn.microsoft.com/en-us/dotnet/api/system.threading.semaphoreslim.dispose?view=net-10.0",
+      "coverage": "Primary documentation: dispose must not overlap other operations.",
+      "accessed_on": "2026-09-30"
+    },
+    {
+      "id": "EXT02",
+      "kind": "primary-documentation",
+      "title": "Blazor component disposal",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/blazor/components/component-disposal?view=aspnetcore-10.0",
+      "coverage": "Primary documentation: timing is not ordered with incomplete lifecycle tasks; release .NET/JS references, avoid long component disposal.",
+      "accessed_on": "2026-09-30"
+    },
+    {
+      "id": "EXT03",
+      "kind": "primary-documentation",
+      "title": "Blazor synchronization context",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/blazor/components/synchronization-context?view=aspnetcore-10.0",
+      "coverage": "Primary documentation: re-entry at incomplete awaits, independent circuits and lifecycle checks.",
+      "accessed_on": "2026-09-30"
+    },
+    {
+      "id": "META01",
+      "kind": "connected-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/branches/components-decoupling",
+      "coverage": "Branch resolved to d9273a88973d28d73c4d29f8686f2b3d68ef8f3a at entry and final ref recheck.",
+      "conversation_evidence": "turn639file0;turn688file0"
+    },
+    {
+      "id": "META02",
+      "kind": "connected-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll.Components/branches?per_page=100",
+      "coverage": "Returned branch inventory: main f258ab6..., development ff528974..., no components-decoupling branch in returned inventory. Not a guarantee of future state.",
+      "conversation_evidence": "turn676file0"
+    },
+    {
+      "id": "META03",
+      "kind": "connected-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/actions/runs?head_sha=d9273a88973d28d73c4d29f8686f2b3d68ef8f3a&per_page=10",
+      "coverage": "Actions query for reviewed SHA returned zero runs. This does not refute local execution reports.",
+      "conversation_evidence": "turn689file0"
+    }
+  ]
+}

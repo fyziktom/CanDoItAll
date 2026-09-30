@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "campaign_id": "CDA-WORKSPACE-COMPLETION-REGRESSION-v1",
+  "review_commit": "fbfba65de9d3118729b73ce9dcf97f28a219c84c",
+  "live_budget": {
+    "maximum_requests_per_execution": 10,
+    "maximum_requests_total": 40
+  },
+  "cases": [
+    {
+      "id": "BASE-01",
+      "title": "Current catalog and selection closure",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "WS-01",
+      "title": "Recovery feeds, scope and read-only UI",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "WS-02",
+      "title": "Recovery exact Workflow/native continuation",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "WS-03",
+      "title": "Data Sources profile/schema/private owner",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "WS-04",
+      "title": "Exact transfer with per-group outcomes",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "WS-05",
+      "title": "Restart activation and canonical isolation",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "WS-06",
+      "title": "Configuration fallback and trusted host",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-01",
+      "title": "Startup/routes/navigation/hydration",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": false
+    },
+    {
+      "id": "APP-02",
+      "title": "Workspace Core real owners",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-03",
+      "title": "API access and session compatibility",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-04",
+      "title": "Storage and Agent runtime allow-list",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-05",
+      "title": "Resources and governed file read-back",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-06",
+      "title": "Agent conversation/stream/cancellation",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-07",
+      "title": "Workflow runtime and artifact",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-08",
+      "title": "Actual scheduled Workflow delivery",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-09",
+      "title": "Prompts and actual consumer",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-10",
+      "title": "Collaboration persisted actions",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-11",
+      "title": "TestLab identities/evidence/references",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-12",
+      "title": "Plugins safe runtime path and configuration",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-13",
+      "title": "Memory supported query/provenance/refusals",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-14",
+      "title": "CRM/HR linked project and task state",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "APP-15",
+      "title": "Cross-view/profile/current-outcome isolation",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "LIVE-01",
+      "title": "Live Project Structure and actual files",
+      "required": true,
+      "required_mode": "live-agent",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "LIVE-02",
+      "title": "Live CRM planner and HR approve/deny",
+      "required": true,
+      "required_mode": "live-agent",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "LIVE-03",
+      "title": "Live model-backed Workflow UI",
+      "required": true,
+      "required_mode": "live-agent",
+      "needs_ui": true,
+      "needs_owner": true
+    },
+    {
+      "id": "GATE-01",
+      "title": "Frozen product/Stable checkpoint",
+      "required": true,
+      "required_mode": "static",
+      "needs_ui": false,
+      "needs_owner": false
+    },
+    {
+      "id": "GATE-02",
+      "title": "Broad non-live browser and new published sandboxes",
+      "required": true,
+      "required_mode": "production-ui",
+      "needs_ui": true,
+      "needs_owner": false
+    },
+    {
+      "id": "GATE-03",
+      "title": "Dependency/asset/watch closure",
+      "required": true,
+      "required_mode": "static",
+      "needs_ui": false,
+      "needs_owner": false
+    },
+    {
+      "id": "GATE-04",
+      "title": "Static/documentation/secrets/cleanup",
+      "required": true,
+      "required_mode": "static",
+      "needs_ui": false,
+      "needs_owner": false
+    }
+  ]
+}
