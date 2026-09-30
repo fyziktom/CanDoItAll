@@ -11,6 +11,19 @@ namespace CanDoItAll.Tests.Unit.Infrastructure;
 public sealed class BrowserStateStoreTests
 {
     [Fact]
+    public async Task Store_from_a_retired_profile_never_stamps_its_snapshot_with_the_replacement_profile() {
+        var resolver = new TestActiveDatabaseProfileResolver(CreateProfile(Guid.NewGuid(), "profile-a"));
+        var runtime = new TestJsRuntime();
+        var store = new BrowserWorkspaceStateStore(runtime, Options.Create(new WorkbenchOptions()), resolver);
+        await store.LoadAsync();
+        resolver.Profile = CreateProfile(Guid.NewGuid(), "profile-b");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveAsync(new(4, "dashboard", [])).AsTask());
+
+        Assert.Null(runtime.SavedKey);
+    }
+
+    [Fact]
     public async Task SaveAsync_uses_a_profile_scoped_storage_key_and_embeds_profile_metadata()
     {
         var profileId = Guid.NewGuid();
@@ -87,7 +100,8 @@ public sealed class BrowserStateStoreTests
 
     private sealed class TestActiveDatabaseProfileResolver(ResolvedDatabaseProfile profile) : IActiveDatabaseProfileResolver
     {
-        public ResolvedDatabaseProfile ResolveCurrentProfile() => profile;
+        public ResolvedDatabaseProfile Profile { get; set; } = profile;
+        public ResolvedDatabaseProfile ResolveCurrentProfile() => Profile;
     }
 
     private sealed class TestJsRuntime : IJSRuntime

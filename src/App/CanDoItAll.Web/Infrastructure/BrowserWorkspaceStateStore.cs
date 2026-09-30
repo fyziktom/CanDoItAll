@@ -12,16 +12,20 @@ public sealed class BrowserWorkspaceStateStore(
     IOptions<WorkbenchOptions> options,
     IActiveDatabaseProfileResolver activeDatabaseProfileResolver) : IWorkbenchStateStore
 {
+    private readonly ResolvedDatabaseProfile originalProfile = activeDatabaseProfileResolver.ResolveCurrentProfile();
     private readonly WorkbenchOptions _options = options.Value;
     private readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
     public async ValueTask<WorkbenchSessionSnapshot?> LoadAsync(CancellationToken cancellationToken = default)
     {
-        var activeProfile = activeDatabaseProfileResolver.ResolveCurrentProfile();
+        cancellationToken.ThrowIfCancellationRequested();
+        var activeProfile = RequireOriginalProfile();
         var payload = await jsRuntime.InvokeAsync<string?>(
             "CanDoItAll.browserState.load",
             cancellationToken,
             BuildStorageKey(activeProfile));
+        cancellationToken.ThrowIfCancellationRequested();
+        RequireOriginalProfile();
         if (string.IsNullOrWhiteSpace(payload))
         {
             return null;
@@ -49,7 +53,8 @@ public sealed class BrowserWorkspaceStateStore(
 
     public async ValueTask SaveAsync(WorkbenchSessionSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        var activeProfile = activeDatabaseProfileResolver.ResolveCurrentProfile();
+        cancellationToken.ThrowIfCancellationRequested();
+        var activeProfile = RequireOriginalProfile();
         var payload = JsonSerializer.Serialize(
             snapshot with
             {
@@ -63,6 +68,17 @@ public sealed class BrowserWorkspaceStateStore(
             cancellationToken,
             BuildStorageKey(activeProfile),
             payload);
+        cancellationToken.ThrowIfCancellationRequested();
+        RequireOriginalProfile();
+    }
+
+    private ResolvedDatabaseProfile RequireOriginalProfile() {
+        var current = activeDatabaseProfileResolver.ResolveCurrentProfile();
+        if (current.Profile.Id != originalProfile.Profile.Id ||
+            !string.Equals(current.Profile.Runtime.Fingerprint, originalProfile.Profile.Runtime.Fingerprint, StringComparison.Ordinal)) {
+            throw new InvalidOperationException("The browser state store belongs to a retired runtime profile.");
+        }
+        return originalProfile;
     }
 
     private string BuildStorageKey(ResolvedDatabaseProfile profile)

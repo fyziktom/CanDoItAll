@@ -31,6 +31,8 @@ public sealed class LlmChatConversationShellContributor(
     private bool initialized;
     private bool attached;
     private int disposed;
+    private readonly CancellationTokenSource retirement = new();
+    private bool IsRetired => Volatile.Read(ref disposed) != 0;
 
     public string SourceId => SourceIdentifier;
 
@@ -40,6 +42,7 @@ public sealed class LlmChatConversationShellContributor(
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(IsRetired, this);
         if (initialized || !initializationTask.IsCompleted)
         {
             return initializationTask;
@@ -84,6 +87,9 @@ public sealed class LlmChatConversationShellContributor(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (IsRetired) {
+            return;
+        }
         if (!LlmChatDefinitionPresentationMapper.TryGetDefinitionId(request.ParticipantKey, out var definitionId))
         {
             throw new ArgumentException($"'{request.ParticipantKey.Value}' is not a Simple Chat definition key.", nameof(request));
@@ -109,6 +115,9 @@ public sealed class LlmChatConversationShellContributor(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (IsRetired) {
+            return;
+        }
         if (!LlmChatConversationPresentationMapper.TryGetConversationId(request.ItemKey, out var conversationId) ||
             !activeConversations.TryGetValue(conversationId, out var state))
         {
@@ -135,6 +144,9 @@ public sealed class LlmChatConversationShellContributor(
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (IsRetired) {
+            return Task.CompletedTask;
+        }
         var conversationId = ResolveWindowId(windowId);
         if (activeConversations.TryGetValue(conversationId, out var state))
         {
@@ -151,12 +163,16 @@ public sealed class LlmChatConversationShellContributor(
 
     private async Task InitializeCoreAsync(CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+        ObjectDisposedException.ThrowIf(IsRetired, this);
+        using var readCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retirement.Token);
+        cancellationToken = readCancellation.Token;
         Attach();
         failureMessage = string.Empty;
         try
         {
-            authorizationSnapshot = await authorization.GetAsync(cancellationToken);
+            var currentAuthorization = await authorization.GetAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            authorizationSnapshot = currentAuthorization;
             if (!authorizationSnapshot.CanRead)
             {
                 failureMessage = "Read Simple Chats permission is required.";
@@ -164,6 +180,7 @@ public sealed class LlmChatConversationShellContributor(
             }
 
             await ReloadCatalogsAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             initialized = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -189,9 +206,11 @@ public sealed class LlmChatConversationShellContributor(
         var definitionResult = await definitions.ListPageAsync(
             new(take: LlmChatConversationWorkspaceController.MaximumDefinitionCount, status: LlmChatDefinitionStatus.Active),
             cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         var conversationResult = await conversations.ListPageAsync(
             new(take: LlmChatConversationWorkspaceController.MaximumConversationCount),
             cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!definitionResult.IsSuccess || definitionResult.Value is null)
         {
             SetFailure(definitionResult.Failures);
@@ -310,6 +329,9 @@ public sealed class LlmChatConversationShellContributor(
 
         var definition = activeDefinitions.Single(item => item.DefinitionId == definitionId);
         var result = await conversations.CreateAsync(definitionId, $"{definition.Name} chat", cancellationToken);
+        if (IsRetired) {
+            return;
+        }
         if (!result.IsSuccess || result.Value is null)
         {
             NotifyFailure("Unable to start Simple Chat", result.Failures);
@@ -344,7 +366,7 @@ public sealed class LlmChatConversationShellContributor(
                 TestId = "floating-simple-chat-history-dialog",
                 AriaLabel = "Simple Chat conversation history"
             });
-        if (result is not Guid conversationId)
+        if (IsRetired || result is not Guid conversationId)
         {
             return;
         }
@@ -372,7 +394,7 @@ public sealed class LlmChatConversationShellContributor(
                 TestId = "floating-simple-chat-archive-dialog",
                 AriaLabel = "Archive Simple Chat conversation"
             });
-        if (confirmed is not true)
+        if (IsRetired || confirmed is not true)
         {
             return;
         }
@@ -381,6 +403,9 @@ public sealed class LlmChatConversationShellContributor(
             conversation.ConversationId,
             conversation.ConcurrencyToken,
             cancellationToken);
+        if (IsRetired) {
+            return;
+        }
         if (!result.IsSuccess || result.Value is null)
         {
             NotifyFailure("Unable to archive Simple Chat", result.Failures);
@@ -438,6 +463,9 @@ public sealed class LlmChatConversationShellContributor(
         object? sender,
         LlmChatDefinitionCatalogInvalidatedEventArgs eventArgs)
     {
+        if (IsRetired) {
+            return;
+        }
         var definition = eventArgs.Definition;
         var unchangedDefinitions = activeDefinitions.Where(item =>
             item.DefinitionId != definition.DefinitionId);
@@ -453,7 +481,7 @@ public sealed class LlmChatConversationShellContributor(
 
     private void RaiseChanged()
     {
-        if (Volatile.Read(ref disposed) == 0)
+        if (!IsRetired)
         {
             Changed?.Invoke(this, EventArgs.Empty);
         }
@@ -482,12 +510,22 @@ public sealed class LlmChatConversationShellContributor(
             return ValueTask.CompletedTask;
         }
 
-        if (attached)
-        {
+        retirement.Cancel();
+        if (attached) {
             definitionCatalogInvalidator.Invalidated -= HandleDefinitionCatalogInvalidated;
         }
+        _ = ReleaseRetirementAsync();
 
         return ValueTask.CompletedTask;
+    }
+
+    private async Task ReleaseRetirementAsync() {
+        try {
+            await initializationTask;
+        } catch (OperationCanceledException) when (IsRetired) {
+        } finally {
+            retirement.Dispose();
+        }
     }
 
     private sealed record FloatingConversationState(

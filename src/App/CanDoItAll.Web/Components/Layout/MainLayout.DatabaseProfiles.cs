@@ -10,9 +10,16 @@ public partial class MainLayout
 {
     private async Task LoadDatabaseProfileUiAsync(bool showStartupPrompt)
     {
-        databaseProfiles = await DatabaseProfileWorkspaceService.ListProfilesAsync();
-        databaseSelection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync();
-        currentDatabaseEditor = await DatabaseProfileWorkspaceService.GetCurrentEditorAsync();
+        EnsureLayoutCurrent();
+        var profiles = await DatabaseProfileWorkspaceService.ListProfilesAsync(layoutLifetime.Token);
+        EnsureLayoutCurrent();
+        var selection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync(layoutLifetime.Token);
+        EnsureLayoutCurrent();
+        var editor = await DatabaseProfileWorkspaceService.GetCurrentEditorAsync(layoutLifetime.Token);
+        EnsureLayoutCurrent();
+        databaseProfiles = profiles;
+        databaseSelection = selection;
+        currentDatabaseEditor = editor;
         selectedDatabaseProfileId ??= databaseSelection.RuntimeProfileId;
         if (databaseProfiles.Count > 0 &&
             !databaseProfiles.Any(profile => profile.Id == selectedDatabaseProfileId))
@@ -26,8 +33,9 @@ public partial class MainLayout
         }
 
         if (ShouldPromptForStartupDatabaseConfirmation(databaseSelection) &&
-            !await JS.InvokeAsync<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed"))
+            !await JS.InvokeAsync<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed", layoutLifetime.Token))
         {
+            EnsureLayoutCurrent();
             databaseDialogStartupMode = true;
             databaseDialogOpen = true;
         }
@@ -48,13 +56,13 @@ public partial class MainLayout
         .Take(2)
         .ToList();
 
-    private async Task OpenDatabaseDialogAsync()
-    {
+    private Task OpenDatabaseDialogAsync() => RunLayoutWorkAsync(nameof(OpenDatabaseDialogAsync), async () => {
         databaseProfileMessage = null;
         databaseDialogStartupMode = false;
         await LoadDatabaseProfileUiAsync(showStartupPrompt: false);
+        EnsureLayoutCurrent();
         databaseDialogOpen = true;
-    }
+    });
 
     private Task SelectDatabaseProfileAsync(Guid profileId)
     {
@@ -63,30 +71,29 @@ public partial class MainLayout
         return Task.CompletedTask;
     }
 
-    private async Task ContinueWithCurrentDatabaseAsync()
-    {
+    private Task ContinueWithCurrentDatabaseAsync() => RunLayoutWorkAsync(nameof(ContinueWithCurrentDatabaseAsync), async () => {
         await DismissStartupPromptIfNeededAsync();
+        EnsureLayoutCurrent();
         databaseDialogOpen = false;
         databaseDialogStartupMode = false;
-    }
+    });
 
-    private async Task CloseDatabaseDialogAsync()
-    {
+    private Task CloseDatabaseDialogAsync() => RunLayoutWorkAsync(nameof(CloseDatabaseDialogAsync), async () => {
         await DismissStartupPromptIfNeededAsync();
+        EnsureLayoutCurrent();
         databaseDialogOpen = false;
         databaseDialogStartupMode = false;
-    }
+    });
 
-    private async Task OpenDatabaseSettingsAsync()
-    {
+    private Task OpenDatabaseSettingsAsync() => RunLayoutWorkAsync(nameof(OpenDatabaseSettingsAsync), async () => {
         await DismissStartupPromptIfNeededAsync();
+        EnsureLayoutCurrent();
         databaseDialogOpen = false;
         databaseDialogStartupMode = false;
         Navigation.NavigateTo("/settings?tab=data-sources");
-    }
+    });
 
-    private async Task SwitchDatabaseProfileAsync()
-    {
+    private Task SwitchDatabaseProfileAsync() => RunLayoutWorkAsync(nameof(SwitchDatabaseProfileAsync), async () => {
         if (!selectedDatabaseProfileId.HasValue || !CanSwitchSelectedProfile)
         {
             return;
@@ -95,7 +102,11 @@ public partial class MainLayout
         databaseDialogBusy = true;
         databaseProfileMessage = null;
 
+        EnsureLayoutCurrent();
         var result = await DatabaseProfileWorkspaceService.ActivateProfileAsync(selectedDatabaseProfileId.Value);
+        if (!IsLayoutCurrent) {
+            return;
+        }
         databaseDialogBusy = false;
         if (result.IsFailure)
         {
@@ -120,9 +131,10 @@ public partial class MainLayout
         }
 
         await DismissStartupPromptIfNeededAsync();
+        EnsureLayoutCurrent();
         databaseDialogOpen = false;
         databaseDialogStartupMode = false;
-    }
+    });
 
     private async Task SwitchDatabaseProfileFromFlyoutAsync(Guid profileId)
     {
@@ -137,24 +149,28 @@ public partial class MainLayout
 
     private async Task DismissStartupPromptIfNeededAsync()
     {
+        EnsureLayoutCurrent();
         if (!databaseDialogStartupMode)
         {
             return;
         }
 
-        await JS.InvokeVoidAsync("CanDoItAll.browserState.dismissDatabaseStartupPrompt");
+        await JS.InvokeVoidAsync("CanDoItAll.browserState.dismissDatabaseStartupPrompt", layoutLifetime.Token);
     }
 
     [JSInvokable]
     public Task HandleBrowserDatabaseSwitchAsync(string payload)
     {
+        if (!IsLayoutCurrent) {
+            return Task.CompletedTask;
+        }
         var browserMessage = DeserializeDatabaseSwitchMessage(payload);
         if (browserMessage is null || browserMessage.Generation <= lastObservedDatabaseSwitchGeneration)
         {
             return Task.CompletedTask;
         }
 
-        return HandleDatabaseSwitchAsync(browserMessage, publishToBrowser: false);
+        return RunLayoutWorkAsync(nameof(HandleBrowserDatabaseSwitchAsync), () => HandleDatabaseSwitchAsync(browserMessage, publishToBrowser: false));
     }
 
     private string ResolveDatabaseMessageClass()
@@ -309,16 +325,17 @@ public partial class MainLayout
     }
 
     private void HandleDatabaseSwitchChanged(object? sender, DatabaseProfileChangedNotification notification)
-        => _ = InvokeAsync(() => HandleDatabaseSwitchAsync(
+        => _ = RunLayoutWorkAsync(nameof(HandleDatabaseSwitchChanged), () => InvokeAsync(() => HandleDatabaseSwitchAsync(
             new BrowserDatabaseSwitchMessage(
                 notification.CurrentProfileId,
                 notification.CurrentFingerprint,
                 notification.Generation,
                 Workbench.HasDirtyTabs),
-            publishToBrowser: true));
+            publishToBrowser: true)));
 
     private async Task HandleDatabaseSwitchAsync(BrowserDatabaseSwitchMessage browserMessage, bool publishToBrowser)
     {
+        EnsureLayoutCurrent();
         if (browserMessage.Generation <= lastObservedDatabaseSwitchGeneration)
         {
             return;
@@ -331,16 +348,19 @@ public partial class MainLayout
         var payload = JsonSerializer.Serialize(browserMessage);
         if (publishToBrowser)
         {
-            await JS.InvokeVoidAsync("CanDoItAll.browserState.publishDatabaseSwitch", payload);
+            await JS.InvokeVoidAsync("CanDoItAll.browserState.publishDatabaseSwitch", layoutLifetime.Token, payload);
+            EnsureLayoutCurrent();
         }
 
-        await JS.InvokeVoidAsync("CanDoItAll.browserState.rememberDatabaseSwitchAlert", payload);
+        await JS.InvokeVoidAsync("CanDoItAll.browserState.rememberDatabaseSwitchAlert", layoutLifetime.Token, payload);
+        EnsureLayoutCurrent();
         Navigation.NavigateTo(ResolveDatabaseSwitchRecoveryRoute(), forceLoad: true);
     }
 
     private async Task RestoreDatabaseSwitchAlertAsync()
     {
-        var payload = await JS.InvokeAsync<string?>("CanDoItAll.browserState.consumeDatabaseSwitchAlert");
+        var payload = await JS.InvokeAsync<string?>("CanDoItAll.browserState.consumeDatabaseSwitchAlert", layoutLifetime.Token);
+        EnsureLayoutCurrent();
         var browserMessage = DeserializeDatabaseSwitchMessage(payload);
         if (browserMessage is null)
         {

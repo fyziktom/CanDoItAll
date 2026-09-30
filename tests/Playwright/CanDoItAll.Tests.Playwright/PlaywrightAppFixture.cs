@@ -14,6 +14,9 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         "CANDOITALL_PLAYWRIGHT_HEADLESS_RUNTIME_PRESENTATION";
 
     private readonly ConcurrentQueue<string> _logs = new();
+    private readonly object _cleanupLock = new();
+    private Task? _stopTask;
+    private Task? _disposeTask;
     private Process? _process;
     private Task? _stdoutPump;
     private Task? _stderrPump;
@@ -115,24 +118,43 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         });
     }
 
-    public async Task DisposeAsync()
-    {
-        if (Browser is not null)
-        {
-            await Browser.DisposeAsync();
-        }
-
-        Playwright?.Dispose();
-
-        await StopOwnedApplicationAsync();
-
-        if (_testEnvironment is not null)
-        {
-            await _testEnvironment.DisposeAsync();
+    public Task DisposeAsync() {
+        lock (_cleanupLock) {
+            return _disposeTask ??= DisposeCoreAsync();
         }
     }
 
-    internal async Task StopOwnedApplicationAsync() {
+    private async Task DisposeCoreAsync() {
+        var failures = new List<Exception>();
+        Func<Task>[] cleanup = [
+            () => Browser?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+            () => {
+                Playwright?.Dispose();
+                return Task.CompletedTask;
+            },
+            StopOwnedApplicationAsync,
+            () => _testEnvironment?.DisposeAsync().AsTask() ?? Task.CompletedTask
+        ];
+        foreach (var release in cleanup) {
+            try {
+                await release();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+        }
+        _process?.Dispose();
+        if (failures.Count > 0) {
+            throw new AggregateException("Playwright fixture cleanup failed.", failures);
+        }
+    }
+
+    internal Task StopOwnedApplicationAsync() {
+        lock (_cleanupLock) {
+            return _stopTask ??= StopOwnedApplicationCoreAsync();
+        }
+    }
+
+    private async Task StopOwnedApplicationCoreAsync() {
         if (_process is not null && !_process.HasExited) {
             _process.Kill(entireProcessTree: true);
             await _process.WaitForExitAsync();
@@ -151,7 +173,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     {
         while (await reader.ReadLineAsync() is { } line)
         {
-            _logs.Enqueue(line);
+            _logs.Enqueue($"{DateTimeOffset.UtcNow:O} [host:{_process?.Id}] {line}");
         }
     }
 

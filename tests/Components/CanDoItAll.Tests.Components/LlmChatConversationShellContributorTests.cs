@@ -16,6 +16,30 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 public sealed class LlmChatConversationShellContributorTests
 {
     [Fact]
+    public async Task Retired_contributor_does_not_start_the_second_catalog_read_or_publish_late_definitions() {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var definitions = new StubDefinitionGateway(new(Guid.NewGuid(), "Held", string.Empty, string.Empty,
+            LlmChatDefinitionStatus.Active, 1, 1, DateTimeOffset.UtcNow, [])) { Delay = release.Task };
+        var conversations = new StubConversationGateway(null);
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddConversationShell();
+        await using var contributor = new LlmChatConversationShellContributor(definitions, conversations,
+            new AllowAllAuthorization(), new LlmChatDefinitionCatalogInvalidationHub(),
+            context.Services.GetRequiredService<IConversationShellCoordinator>(), context.Services.GetRequiredService<DialogService>(),
+            context.Services.GetRequiredService<NotificationService>(), NullLogger<LlmChatConversationShellContributor>.Instance);
+        var initialization = contributor.InitializeAsync();
+        Assert.Equal(1, definitions.ListCalls);
+        await contributor.DisposeAsync();
+        release.TrySetResult();
+        var failure = await Record.ExceptionAsync(() => initialization.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.True(failure is null or OperationCanceledException);
+        Assert.Equal(0, conversations.ListCalls);
+        Assert.Empty(contributor.Snapshot().Available);
+    }
+
+    [Fact]
     public async Task Create_hide_and_reopen_use_durable_conversation_identity_without_ambient_context()
     {
         var definitionId = Guid.NewGuid();
@@ -172,14 +196,15 @@ public sealed class LlmChatConversationShellContributorTests
 
         public int ListCalls { get; private set; }
 
-        public Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
+        public Task Delay { get; init; } = Task.CompletedTask;
+
+        public async Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
             LlmChatDefinitionQuery query,
             CancellationToken cancellationToken = default)
         {
             ListCalls++;
-            return Task.FromResult(
-                LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>.Success(
-                    new([Definition], null)));
+            await Delay;
+            return LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>.Success(new([Definition], null));
         }
 
         public Task<LlmChatUiResult<LlmChatDefinitionListItem>> GetAsync(

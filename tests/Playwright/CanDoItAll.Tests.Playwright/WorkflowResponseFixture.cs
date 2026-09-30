@@ -16,7 +16,7 @@ internal sealed class WorkflowResponseFixture : IAsyncDisposable {
     internal string BaseUrl { get; private set; } = "";
     internal int Requests => Volatile.Read(ref requests);
 
-    internal static async Task<WorkflowResponseFixture> StartAsync(string output) {
+    internal static async Task<WorkflowResponseFixture> StartAsync(string output, bool incomplete = false) {
         var fixture = new WorkflowResponseFixture();
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();
@@ -30,7 +30,7 @@ internal sealed class WorkflowResponseFixture : IAsyncDisposable {
             Assert.Equal(1, Interlocked.Increment(ref fixture.requests));
             await context.Response.WriteAsJsonAsync(new {
                 id = "resp_workflow_fixture", @object = "response", created_at = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                status = "completed", model = input.RootElement.GetProperty("model").GetString(),
+                status = incomplete ? "incomplete" : "completed", incomplete_details = incomplete ? new { reason = "max_output_tokens" } : null, model = input.RootElement.GetProperty("model").GetString(),
                 output = new[] { new { id = "msg_workflow_fixture", type = "message", status = "completed", role = "assistant",
                     content = new[] { new { type = "output_text", text = output, annotations = Array.Empty<object>() } } } },
                 parallel_tool_calls = false, tools = Array.Empty<object>(), usage = new { input_tokens = 5, output_tokens = 20, total_tokens = 25 }

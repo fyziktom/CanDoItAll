@@ -161,7 +161,14 @@ public sealed class DatabaseProfileControlPlaneService(
     }
 
     public Task<Result<Guid>> SaveAsync(DatabaseProfileEditorModel model, CancellationToken cancellationToken = default)
-    {
+        => SaveCoreAsync(model, null, cancellationToken);
+
+    public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(runtimeProfile);
+        return SaveCoreAsync(model, runtimeProfile, cancellationToken);
+    }
+
+    private Task<Result<Guid>> SaveCoreAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile? editorRuntime, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(model);
 
         var validation = Validate(model);
@@ -178,6 +185,15 @@ public sealed class DatabaseProfileControlPlaneService(
                 ? document.Profiles.FirstOrDefault(item => item.Id == model.Id.Value)
                 : null;
 
+            if (editorRuntime is not null) {
+                if (editorRuntime.Profile.Runtime.LockedByRuntimeOverride || TryResolveExplicitOverrideLocked() is not null) {
+                    return Task.FromResult(Result<Guid>.Failure(Error.Validation("Startup-controlled profiles cannot be edited.")));
+                }
+                if (model.Id.HasValue && (existing is null || !IsPersistedRuntimeProfile(existing))) {
+                    return Task.FromResult(Result<Guid>.Failure(Error.Validation("The acquired database profile no longer exists.")));
+                }
+            }
+
             if (existing?.Runtime.LockedByRuntimeOverride == true)
             {
                 return Task.FromResult(Result<Guid>.Failure(Error.Failure("Runtime override profiles cannot be persisted.")));
@@ -187,11 +203,14 @@ public sealed class DatabaseProfileControlPlaneService(
             UpsertProfile(document, profile);
             WriteCatalogLocked(document);
 
-            var activeState = ReadActiveProfileStateLocked();
-            if (!activeState.ActiveProfileId.HasValue)
-            {
-                activeState.ActiveProfileId = profile.Id;
-                WriteActiveProfileStateLocked(activeState);
+            try {
+                var activeState = ReadActiveProfileStateLocked();
+                if (!activeState.ActiveProfileId.HasValue) {
+                    activeState.ActiveProfileId = profile.Id;
+                    WriteActiveProfileStateLocked(activeState);
+                }
+            } catch (Exception exception) when (editorRuntime is not null) {
+                throw new DatabaseProfileCatalogCommittedException(profile.Id, exception);
             }
 
             ClearSelectionLogLocked();
@@ -200,7 +219,14 @@ public sealed class DatabaseProfileControlPlaneService(
     }
 
     public Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
+        => DeleteCoreAsync(id, null, cancellationToken);
+
+    public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(runtimeProfile);
+        return DeleteCoreAsync(id, runtimeProfile, cancellationToken);
+    }
+
+    private Task<Result> DeleteCoreAsync(Guid id, ResolvedDatabaseProfile? editorRuntime, CancellationToken cancellationToken) {
         lock (_sync)
         {
             using IDisposable coordination = AcquireCoordination(cancellationToken);
@@ -211,10 +237,15 @@ public sealed class DatabaseProfileControlPlaneService(
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
             }
 
+            var activeState = ReadActiveProfileStateLocked();
+            if (editorRuntime is not null && (editorRuntime.Profile.Runtime.LockedByRuntimeOverride ||
+                TryResolveExplicitOverrideLocked() is not null || editorRuntime.Profile.Id == id || activeState.ActiveProfileId == id)) {
+                return Task.FromResult(Result.Failure(Error.Validation("Current, pending or startup-controlled profiles cannot be deleted.")));
+            }
+
             document.Profiles.Remove(profile);
             WriteCatalogLocked(document);
 
-            var activeState = ReadActiveProfileStateLocked();
             if (activeState.ActiveProfileId == id)
             {
                 activeState.ActiveProfileId = null;

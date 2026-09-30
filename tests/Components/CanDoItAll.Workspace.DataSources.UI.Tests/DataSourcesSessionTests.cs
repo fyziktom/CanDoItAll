@@ -5,10 +5,12 @@ using CanDoItAll.Workspace.DataSources.UiSandbox;
 namespace CanDoItAll.Tests.Components.WorkspaceDataSourcesUi;
 
 public sealed class DataSourcesSessionTests {
-    [Fact]
-    public async Task Save_captures_once_adopts_confirmed_identity_and_preserves_later_fields_and_password_intent() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Save_captures_once_adopts_confirmed_identity_and_preserves_later_fields_and_password_intent(bool partial) {
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var owner = new DataSourcesScenarioOwner { BeforeWrite = () => gate.Task };
+        var owner = new DataSourcesScenarioOwner { BeforeWrite = () => gate.Task, FailSelectionAfterSave = partial };
         var operations = new DataSourceOperationLedger();
         using var session = new DataSourcesSession(owner, operations);
         await session.InitializeAsync();
@@ -34,6 +36,12 @@ public sealed class DataSourcesSessionTests {
         Assert.Equal("later-ephemeral", session.Password);
         Assert.True(owner.ReceivedPassword);
         Assert.Equal(draft.Id, Assert.Single(operations.Receipts).Result!.ProfileId);
+        if (partial) {
+            await session.RefreshAsync();
+            await session.SaveAsync();
+            Assert.Single(owner.Commands);
+            Assert.True(operations.HasUnknown);
+        }
     }
 
     [Fact]

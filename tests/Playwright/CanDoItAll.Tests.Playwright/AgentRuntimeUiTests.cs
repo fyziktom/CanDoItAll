@@ -9,9 +9,13 @@ using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
+using static CanDoItAll.Tests.Playwright.Smoke.AgentUiJourneySupport;
+using static CanDoItAll.Tests.Playwright.Smoke.ProjectFilesUiJourney;
+using static CanDoItAll.Tests.Playwright.Smoke.ScriptedAgentUiFixture;
+
 namespace CanDoItAll.Tests.Playwright.Smoke;
 
-public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
+public sealed class AgentRuntimeUiTests {
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -33,25 +37,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
                 objectType = "File", title, parentNodeKey = fixture.ParentId,
                 media = new { fileName = "actual.txt", contentType = "text/plain", base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(marker)) }
             } });
-            await host.SeedAsync(async services => {
-                var secret = await services.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {
-                    Name = "Synthetic Agent fixture credential", Kind = SecretKind.ApiKey, SecretValue = "local-fixture-credential", Scope = "workspace"
-                });
-                Assert.True(secret.IsSuccess);
-                var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-                var provider = await workspace.SaveProviderAsync(new ProviderProfileEditorModel {
-                    Name = "Scripted external Agent provider", Kind = ProviderKind.OpenAi, Transport = ProviderTransportKind.Responses,
-                    BaseUrl = wire.BaseUrl, ApiKeyEnvironmentVariable = $"secret:{secret.Value:D}",
-                    DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel, SuggestedModels = [ManagedSeedProviderFallbacks.OpenAiDefaultModel],
-                    SupportsStreaming = true, SupportsTools = true,
-                    ModelPrices = [new() { Model = ManagedSeedProviderFallbacks.OpenAiDefaultModel, TariffKind = ProviderTariffKind.ExplicitFree }]
-                });
-                var agent = await workspace.GetAgentEditorAsync(fixture.Agent.Id);
-                agent.ProviderProfileId = provider;
-                agent.Model = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
-                await workspace.SaveAgentAsync(agent);
-                return true;
-            });
+            await ConfigureScriptedAgentAsync(host, fixture.Agent.Id, wire.BaseUrl);
             var page = await host.NewPageAsync();
             var oracle = CrmHrBrowserOracle.Attach(page);
             await GrantFileJourneyAsync(host, oracle, page, fixture);
@@ -105,7 +91,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
             Assert.Equal(approve ? 2 : 1, wire.Requests);
             await oracle.NavigateAsync($"{host.BaseUrl}/agents?tab=chat&agentId={fixture.Agent.Id:D}");
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-            await page.WaitForFunctionAsync("() => typeof databaseSwitchStorageListener === 'function'");
+            await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
             await page.GetByRole(AriaRole.Button, new() { Name = "Open thread " + result.ChatSession!.Title, Exact = true }).ClickAsync();
             await Assertions.Expect(page.GetByText("Loading agent workspace", new() { Exact = true })).ToHaveCountAsync(0);
             await Assertions.Expect(page.GetByTestId("agent-thread-selected-agent")).ToContainTextAsync(fixture.Agent.Name);
@@ -126,4 +112,5 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
             await evidence.WriteAsync(host);
         }
     }
+
 }

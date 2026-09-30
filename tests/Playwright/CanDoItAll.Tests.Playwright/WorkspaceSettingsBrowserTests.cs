@@ -198,7 +198,7 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
         new() { NameRegex = new Regex("^" + Regex.Escape(name)) }).ClickAsync();
     private static async Task ShellReady(IPage page) {
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-        await page.WaitForFunctionAsync("() => typeof databaseSwitchStorageListener === 'function'");
+        await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
     }
     private static Task Shot(IPage page, string name) => page.ScreenshotAsync(new() { Path = Path.Combine(Artifacts, name + ".png") });
     private static List<string> Observe(IPage page) {

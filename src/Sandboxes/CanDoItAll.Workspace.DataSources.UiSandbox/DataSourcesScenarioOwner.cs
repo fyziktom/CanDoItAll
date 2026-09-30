@@ -25,6 +25,7 @@ public sealed class DataSourcesScenarioOwner(DataSourcesScenario scenario = Data
     public Func<Guid, Task<SchemaHealth>>? SchemaRead { get; set; }
     public Func<Task>? BeforeListRead { get; set; }
     public Func<Task>? BeforeWrite { get; set; }
+    public bool FailSelectionAfterSave { get; set; }
     public void Release() => release.TrySetResult();
 
     public async Task<RuntimeSelection> ReadRuntimeAsync(CancellationToken cancellationToken) {
@@ -74,7 +75,9 @@ public sealed class DataSourcesScenarioOwner(DataSourcesScenario scenario = Data
         await WriteAsync(DataSourceAction.Save);
         var id = values.Id ?? Guid.NewGuid();
         profiles[id] = values with { Id = id };
-        return new(id, DataSourceOutcome.Confirmed, "Data source saved.");
+        return FailSelectionAfterSave
+            ? new(id, DataSourceOutcome.Partial, "The catalog was saved; active-selection processing failed.")
+            : new(id, DataSourceOutcome.Confirmed, "Data source saved.");
     }
     public async Task<DataSourceResult> ExecuteAsync(DataSourceCommand command) {
         await WriteAsync(command.Action);

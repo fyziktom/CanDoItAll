@@ -11,9 +11,12 @@ using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
+using static CanDoItAll.Tests.Playwright.Smoke.AgentUiJourneySupport;
+using static CanDoItAll.Tests.Playwright.Smoke.ProjectFilesUiJourney;
+
 namespace CanDoItAll.Tests.Playwright.Smoke;
 
-public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
+public sealed class WorkflowAssetUiTests {
     [Fact]
     [Trait("Category", "LiveAgent")]
     public async Task Workflow_UI_executes_real_model_and_preserves_generated_project_asset() {
@@ -30,13 +33,19 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
     public Task Workflow_UI_real_runtime_preserves_asset_with_only_external_model_scripted()
         => WorkflowAssetJourneyAsync(live: false);
 
-    private static async Task WorkflowAssetJourneyAsync(bool live) {
+    [Fact]
+    [Trait("Category", "Playwright")]
+    [Trait("Category", "HostPlatform")]
+    public Task Workflow_UI_rejects_http_success_with_incomplete_model_output_before_creating_an_asset()
+        => WorkflowAssetJourneyAsync(live: false, incomplete: true);
+
+    private static async Task WorkflowAssetJourneyAsync(bool live, bool incomplete = false) {
         var evidence = new UiEvidence(live ? "ui-live-workflow-asset" : "ui-deterministic-workflow-asset") {
             Execution = live ? "live" : "deterministic-external-model"
         };
         var marker = "workflow-" + Guid.NewGuid().ToString("D");
         var output = "# Generated proof\n" + marker;
-        await using var scripted = live ? null : await WorkflowResponseFixture.StartAsync(output);
+        await using var scripted = live ? null : await WorkflowResponseFixture.StartAsync(output, incomplete);
         await using var host = await LiveUiHost.StartAsync();
         try {
             Guid providerId;
@@ -105,7 +114,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
             var oracle = CrmHrBrowserOracle.Attach(page);
             await oracle.NavigateAsync($"{host.BaseUrl}/agents/workflows?workflowId={definition.Id.Value:D}");
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-            await page.WaitForFunctionAsync("() => typeof databaseSwitchStorageListener === 'function'");
+            await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
             await page.GetByTestId("workflows-tab-history").ClickAsync();
             var input = JsonSerializer.Serialize(new { prompt = "Generate the requested harmless marker.", marker, projectId, nodeId = $"project:{projectId:D}" });
             await page.GetByTestId("workflows-test-input").FillAsync(input);
@@ -130,6 +139,25 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
             evidence.Observations["terminalResult"] = Sanitize(terminalResult);
             if (!terminalResult.Contains("Succeeded", StringComparison.Ordinal)) {
                 await page.ScreenshotAsync(new() { Path = host.Artifact(live ? "workflow-live-failed.png" : "workflow-scripted-failed.png") });
+            }
+            if (incomplete) {
+                Assert.Contains("Failed", terminalResult, StringComparison.Ordinal);
+                await host.SeedAsync(async services => {
+                    var store = services.GetRequiredService<IWorkflowRunStore>();
+                    var failedRun = Assert.Single(await store.ListRunsAsync(definition.Id));
+                    Assert.Equal(WorkflowRunState.Failed, failedRun.State);
+                    Assert.Equal(definition.VersionId, failedRun.VersionId);
+                    var tree = await services.GetRequiredService<ProjectStructureAgentService>().GetStructureAsync(projectId, new(IncludeAssets: true));
+                    Assert.DoesNotContain(tree.Nodes, item => item.Title == "Workflow generated proof");
+                    Assert.DoesNotContain(await store.ListEventsAsync(failedRun.RunId), item => item.Kind == WorkflowEventKind.ExecutorCompleted && item.NodeId?.Value == "asset");
+                    evidence.Observations["incompleteResponse"] = new { failedRun.RunId, failedRun.State, httpStatus = 200,
+                        reason = LiveProviderReason.OutputTokenLimit, assetsCreated = 0, maxOutputTokens = 150 };
+                    return true;
+                });
+                Assert.Equal(1, scripted!.Requests);
+                await oracle.AssertCleanAsync();
+                evidence.Passed = true;
+                return;
             }
             Assert.Contains("Succeeded", terminalResult, StringComparison.Ordinal);
             var (run, events, artifacts, node, content) = await host.SeedAsync(async services => {

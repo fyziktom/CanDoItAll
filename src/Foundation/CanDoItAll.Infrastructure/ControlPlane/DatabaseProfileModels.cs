@@ -282,7 +282,11 @@ public interface IDatabaseProfileService
 
     Task<Result<Guid>> SaveAsync(DatabaseProfileEditorModel model, CancellationToken cancellationToken = default);
 
+    Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default);
+
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default);
 
     Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default);
 

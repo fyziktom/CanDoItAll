@@ -75,6 +75,8 @@ public sealed class DatabaseSourcesLifetimeTests {
         ]);
         public Task<DatabaseProfileEditorModel> GetEditorAsync(Guid? id = null, CancellationToken cancellationToken = default) => Task.FromResult(new DatabaseProfileEditorModel { Id = id, DisplayName = id == Id ? "Original" : "Saved name" });
         public Result Validate(DatabaseProfileEditorModel model) => Result.Success();
+        public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => SaveAsync(model, cancellationToken);
+        public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public async Task<Result<Guid>> SaveAsync(DatabaseProfileEditorModel model, CancellationToken cancellationToken = default) {
             Captured = model;
             Started.TrySetResult();

@@ -93,6 +93,14 @@ public sealed class DatabaseProfileWorkspaceService(
         return profileService.SaveAsync(model, cancellationToken);
     }
 
+    public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, CancellationToken cancellationToken = default) {
+        return profileService.SaveEditorAsync(model, profileAccessor.ResolveCurrentProfile(), cancellationToken);
+    }
+
+    public Task<Result> DeleteEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+        return profileService.DeleteEditorAsync(id, profileAccessor.ResolveCurrentProfile(), cancellationToken);
+    }
+
     public Task<Result> DeleteProfileAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return profileService.DeleteAsync(id, cancellationToken);

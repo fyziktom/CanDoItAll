@@ -39,8 +39,14 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
     public Guid ResourceA { get; private set; }
     public Guid AccountId { get; } = Guid.NewGuid();
     public Guid TokenId { get; } = Guid.NewGuid();
+    public string ArtifactDirectory { get; } = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "data-sources-hosts", $"{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Guid.NewGuid():N}");
+    public string LogSnapshot => string.Join(System.Environment.NewLine, logs);
 
-    public async Task StartAsync() {
+    public async Task StartAsync(bool enableApiManagement = false) {
+        if (enableApiManagement) {
+            configuration["Api:Authorization:Enabled"] = "true";
+            configuration["Api:Authorization:SigningKey"] = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        }
         A = Environment.CreatePostgreSqlProfile("data-sources-a");
         targetLease = PostgresTestDatabaseLease.Create("data-sources-b");
         B = Environment.CreatePostgreSqlProfile("data-sources-b", targetLease.ConnectionString);
@@ -135,7 +141,7 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
     }
     private async Task Pump(StreamReader reader) {
         while (await reader.ReadLineAsync() is { } line) {
-            logs.Enqueue(line);
+            logs.Enqueue($"{DateTimeOffset.UtcNow:O} [host:{process?.Id}] {line}");
         }
     }
     private async Task StopProcessAsync() {
@@ -152,9 +158,7 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
     }
     public async ValueTask DisposeAsync() {
         await StopProcessAsync();
-        var output = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "artifacts", "workspace-completion", "data-sources");
-        Directory.CreateDirectory(output);
-        await File.WriteAllLinesAsync(Path.Combine(output, "production-host.log"), logs);
+        await CaptureLogAsync();
         if (Services is not null) {
             await Services.DisposeAsync();
         }
@@ -162,6 +166,11 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
             await targetLease.DisposeAsync();
         }
         await Environment.DisposeAsync();
+    }
+
+    public async Task CaptureLogAsync() {
+        Directory.CreateDirectory(ArtifactDirectory);
+        await File.WriteAllLinesAsync(Path.Combine(ArtifactDirectory, "server.log"), logs);
     }
 }
 

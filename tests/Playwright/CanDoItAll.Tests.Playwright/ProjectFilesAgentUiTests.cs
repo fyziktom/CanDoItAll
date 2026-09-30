@@ -6,13 +6,17 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
+using static CanDoItAll.Tests.Playwright.Smoke.AgentUiJourneySupport;
+using static CanDoItAll.Tests.Playwright.Smoke.ProjectFilesUiJourney;
+
 namespace CanDoItAll.Tests.Playwright.Smoke;
 
-public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
+public sealed class ProjectFilesAgentUiTests {
     [Fact]
     [Trait("Category", "LiveAgent")]
     public async Task Project_structure_scoped_agent_reads_creates_attaches_and_reopens_actual_file_content() {
@@ -94,7 +98,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
                 "sourceFileName roundtrip.md, sourceContentType text/markdown. Preserve the returned node ID. " +
                 $"Finally call both {ProjectStructureToolPolicy.ProjectStructureAssetGet} and " +
                 $"{ProjectStructureToolPolicy.ProjectStructureAssetContentGet} for that node together in one tool batch. No other writes or tools.",
-                approveFileMutations: true);
+                expected: new(fixture.ProjectId, fixture.ParentId, title, bytes, "roundtrip.md", "text/markdown", relativePath));
             evidence.RecordRun("write-attach-two-readbacks", created);
             foreach (var tool in new[] { ToolContractCatalog.WorkspaceWriteFile, ProjectStructureToolPolicy.ProjectStructureAssetCreate,
                 ProjectStructureToolPolicy.ProjectStructureAssetGet, ProjectStructureToolPolicy.ProjectStructureAssetContentGet }) {
@@ -181,6 +185,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
                 $"nested request objectType File, title {JsonSerializer.Serialize(rejectedTitle)}, parentNodeKey " +
                 $"{JsonSerializer.Serialize(fixture.ParentId)}, media {{\"fileName\":\"rejected.txt\",\"contentType\":\"text/plain\",\"base64Data\":\"c2FmZQ==\"}}. " +
                 "Wait for the operator decision; if rejected, stop without retrying or writing any other file.",
+                expected: new(fixture.ProjectId, fixture.ParentId, rejectedTitle, "safe", "rejected.txt", "text/plain"),
                 rejectAsset: true, requireCompleted: false);
             evidence.RecordRun("asset-approval-rejected", rejected);
             var proposal = Assert.Single(Proposals(rejected), item => item.Payload.ToolName == ProjectStructureToolPolicy.ProjectStructureAssetCreate);
@@ -200,155 +205,4 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests {
         }
     }
 
-    private static void AssertSuccessfulTool(ExecutionRunDetail run, string name) {
-        Assert.Contains(run.ToolReceipts, receipt => receipt.ToolName == name && receipt.InvocationOutcome == AgentToolInvocationOutcome.Succeeded);
-        Assert.Contains(Proposals(run), proposal => proposal.Payload.ToolName == name && proposal.State == AgentToolProposalState.Completed);
-    }
-
-    private static async Task<ExecutionRunDetail> FileTurnAsync(LiveUiHost host, IPage page, ILocator chat, Guid agentId,
-        string prompt, bool approveFileMutations = false, bool rejectAsset = false, bool requireCompleted = true) {
-        var previous = await host.SeedAsync(async services => (await services.GetRequiredService<IAgentFrameworkWorkspaceService>()
-            .ListExecutionRunsAsync(new ExecutionRunQuery(AgentId: agentId))).Select(item => item.Id).ToHashSet());
-        var decisions = new HashSet<AgentToolBusinessIntentId>();
-        await SendAsync(chat, prompt);
-        var deadline = DateTimeOffset.UtcNow.AddMilliseconds(ModelTurnTimeoutMilliseconds);
-        while (DateTimeOffset.UtcNow < deadline) {
-            var approvals = chat.Locator("[data-testid^='chat-approval-approve-']");
-            if (await approvals.CountAsync() > 0) {
-                var pending = await host.SeedAsync(services => ReadLatestRunAsync(services, agentId));
-                var proposals = Proposals(pending).Where(item => item.ApprovalStatus == ExecutionApprovalStatus.Pending &&
-                    !string.IsNullOrWhiteSpace(item.ApprovalId) && !decisions.Contains(item.IntentId)).ToArray();
-                if (proposals.Length > 0) {
-                    Assert.DoesNotContain(pending.Run.Id, previous);
-                    var proposal = Assert.Single(proposals);
-                    Assert.Contains(proposal.Payload.ToolName, new[] { ToolContractCatalog.WorkspaceWriteFile, ProjectStructureToolPolicy.ProjectStructureAssetCreate });
-                    Assert.True(approveFileMutations || rejectAsset, "An unexpected approval cannot be accepted by this journey.");
-                    var decision = chat.GetByTestId($"chat-approval-{(rejectAsset ? "reject" : "approve")}-{proposal.ApprovalId}");
-                    if (!await decision.IsVisibleAsync() || !await decision.IsEnabledAsync()) {
-                        await Task.Delay(200);
-                        continue;
-                    }
-                    decisions.Add(proposal.IntentId);
-                    if (rejectAsset) {
-                        Assert.Equal(ProjectStructureToolPolicy.ProjectStructureAssetCreate, proposal.Payload.ToolName);
-                        await page.ScreenshotAsync(new() { Path = host.Artifact("files-04-rejected-approval.png") });
-                    }
-                    await decision.ClickAsync();
-                }
-            }
-            var runs = await host.SeedAsync(services => services.GetRequiredService<IAgentFrameworkWorkspaceService>()
-                .ListExecutionRunsAsync(new ExecutionRunQuery(AgentId: agentId)));
-            var current = runs.Where(item => !previous.Contains(item.Id)).OrderByDescending(item => item.CreatedAtUtc).FirstOrDefault();
-            if (current is not null && current.State is ExecutionState.Completed or ExecutionState.Failed) {
-                var result = await host.SeedAsync(services => services.GetRequiredService<IAgentFrameworkWorkspaceService>()
-                    .GetExecutionRunDetailAsync(current.Id));
-                await Assertions.Expect(chat.GetByTestId("agent-execution-activity-phase")).ToHaveTextAsync(TerminalPhase);
-                if (requireCompleted) {
-                    Assert.Equal(ExecutionState.Completed, result.Run.State);
-                }
-                return result;
-            }
-            await Task.Delay(200);
-        }
-        throw new TimeoutException("The bounded live file turn did not reach a persisted terminal state.");
-    }
-
-    private static Task<string> ReadFileContentAsync(LiveUiHost host, Guid projectId, string nodeId) => host.SeedAsync(async services => {
-        var content = await services.GetRequiredService<ProjectStructureAgentService>().GetAssetContentAsync(projectId, nodeId);
-        Assert.False(content.Base64DataOmitted);
-        return Encoding.UTF8.GetString(Convert.FromBase64String(content.Base64Data));
-    });
-
-    private static Task<FileJourney> CreateFileJourneyAsync(LiveUiHost host) => host.SeedAsync(async services => {
-        var projects = services.GetRequiredService<ProjectsService>();
-        var suffix = Guid.NewGuid().ToString("N")[..8];
-        var projectName = "Live files " + suffix;
-        var project = await projects.SaveAsync(new ProjectEditorModel { Name = projectName, Description = "Synthetic live file proof." });
-        var sibling = await projects.SaveAsync(new ProjectEditorModel { Name = "Denied sibling " + suffix });
-        Assert.True(project.IsSuccess);
-        Assert.True(sibling.IsSuccess);
-        var parent = await services.GetRequiredService<ProjectWorkbenchService>().CreateObjectAsync(project.Value,
-            new(ProjectObjectType.ProjectBlock, "Selected files", "", "Synthetic file proof parent.", $"project:{project.Value:D}", X: 450, Y: 220));
-        var agentService = services.GetRequiredService<ProjectStructureAgentService>();
-        var setup = new ProjectStructureAgentContext(FixtureActor, FixtureActor, Environment.MachineName, "", "", suffix);
-        var nonce = "seed-" + Guid.NewGuid().ToString("D");
-        var seededBytes = "Existing asset nonce: " + nonce;
-        var seed = await agentService.CreateAssetAsync(project.Value, new(ProjectObjectType.File, "Existing nonce asset", "", "",
-            new("seed.txt", "text/plain", Convert.ToBase64String(Encoding.UTF8.GetBytes(seededBytes))), parent.Id), setup);
-        var canary = "sibling-" + Guid.NewGuid().ToString("D");
-        var siblingAsset = await agentService.CreateAssetAsync(sibling.Value, new(ProjectObjectType.File, "Private sibling asset", "", "",
-            new("canary.txt", "text/plain", Convert.ToBase64String(Encoding.UTF8.GetBytes(canary))), $"project:{sibling.Value:D}"), setup);
-        var providerAgent = await SelectOrdinaryPlannerAsync(services);
-        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var agentId = await workspace.SaveAgentAsync(new AgentEditorModel {
-            Name = "Scoped file agent " + suffix, Status = AgentLifecycleStatus.Active, ProviderProfileId = providerAgent.ProviderProfileId,
-            Model = providerAgent.Model, Instructions = "Use only the exact requested tools and scoped project. Respect approvals and denials. Never invent tool results.",
-            WorkspaceToolAccess = new() { Profile = AgentWorkspaceToolProfileKind.Custom }
-        });
-        return new FileJourney(project.Value, projectName, parent.Id, seed.Id, nonce, seededBytes, sibling.Value,
-            siblingAsset.Id, canary, await FindAgentAsync(services, agentId));
-    });
-
-    private static async Task GrantFileJourneyAsync(LiveUiHost host, CrmHrBrowserOracle oracle, IPage page, FileJourney fixture) {
-        await oracle.NavigateAsync($"{host.BaseUrl}/agents?tab=agents&agentId={fixture.Agent.Id:D}");
-        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-        await page.WaitForFunctionAsync("() => typeof databaseSwitchStorageListener === 'function'");
-        var dialog = page.GetByTestId("agents-details-dialog").Last;
-        await Assertions.Expect(dialog.GetByTestId("agents-catalog-name")).ToHaveValueAsync(fixture.Agent.Name, new() { Timeout = 60_000 });
-        await dialog.GetByRole(AriaRole.Tab, new() { Name = "Project Structure Access", Exact = true }).ClickAsync();
-        await dialog.GetByTestId("agents-catalog-project-structure-read").CheckAsync();
-        await dialog.GetByTestId("agents-catalog-project-structure-non-task-write").CheckAsync();
-        await Assertions.Expect(dialog.GetByTestId("agents-catalog-project-structure-all")).Not.ToBeCheckedAsync();
-        await dialog.GetByTestId("agents-catalog-project-structure-projects").GetByLabel(fixture.ProjectName, new() { Exact = true }).CheckAsync();
-        await dialog.GetByRole(AriaRole.Tab, new() { Name = "Workspace Tools", Exact = true }).ClickAsync();
-        await dialog.GetByTestId("agents-catalog-workspace-profile").SelectOptionAsync(nameof(AgentWorkspaceToolProfileKind.Custom));
-        await dialog.GetByTestId("agents-catalog-workspace-read").CheckAsync();
-        await dialog.GetByTestId("agents-catalog-workspace-write").CheckAsync();
-        await dialog.GetByTestId("agents-catalog-save").ClickAsync();
-        await page.GetByText("Agent saved", new() { Exact = true }).First.WaitForAsync(new() { Timeout = 60_000 });
-        var saved = await host.SeedAsync(services => services.GetRequiredService<IAgentFrameworkWorkspaceService>().GetAgentEditorAsync(fixture.Agent.Id));
-        Assert.Equal([fixture.ProjectId], saved.ProjectStructureAccess.AllowedProjectIds);
-        Assert.False(saved.ProjectStructureAccess.AllowAllProjects);
-        Assert.False(saved.ProjectStructureAccess.CanWrite);
-        Assert.True(saved.ProjectStructureAccess.CanRead);
-        Assert.True(saved.ProjectStructureAccess.CanWriteNonTaskStructure);
-        Assert.True(saved.WorkspaceToolAccess.CanWriteFiles);
-        Assert.False(saved.WorkspaceToolAccess.CanWriteStorage);
-        Assert.Empty(saved.SelectedCapabilityIds);
-        Assert.Empty(saved.AllowedSecretReferences);
-    }
-
-    private static async Task<ILocator> OpenFileChatAsync(LiveUiHost host, CrmHrBrowserOracle oracle, IPage page, FileJourney fixture) {
-        await oracle.NavigateAsync($"{host.BaseUrl}/projects/{fixture.ProjectId:D}/structure");
-        await ReadyFileCanvasAsync(page);
-        await SelectFileNodeAsync(page, fixture.ParentId, "Selected files");
-        return await OpenFloatingChatFromCatalogAsync(page, "project-structure-agents-toggle", fixture.Agent.Id,
-            host.Artifact("files-catalog-failure.png"));
-    }
-
-    private static async Task ReadyFileCanvasAsync(IPage page) {
-        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-        await page.GetByTestId("project-structure-canvas-loaded").WaitForAsync(new() { Timeout = 60_000, State = WaitForSelectorState.Attached });
-        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-canvas-host')).some(host => !!host.__canvasWorkbenchState)");
-    }
-
-    private static async Task SelectFileNodeAsync(IPage page, string nodeId, string title) {
-        var window = page.GetByTestId("project-structure-object-index-window");
-        if (!await window.IsVisibleAsync()) {
-            await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
-        }
-        if (await window.EvaluateAsync<bool>("node => node.classList.contains('is-minimized')")) {
-            await window.GetByRole(AriaRole.Button, new() { Name = "Expand window" }).ClickAsync();
-        }
-        var outlineId = "project-structure-outline-node-" + new string(nodeId.Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-').ToArray());
-        await page.GetByTestId(outlineId).ClickAsync();
-        var selection = page.GetByTestId("project-structure-selection-window");
-        await Assertions.Expect(selection).ToContainTextAsync(title);
-        if (await selection.EvaluateAsync<bool>("node => node.classList.contains('is-minimized')")) {
-            await selection.GetByRole(AriaRole.Button, new() { Name = "Expand window" }).ClickAsync();
-        }
-    }
-
-    private sealed record FileJourney(Guid ProjectId, string ProjectName, string ParentId, string SeedAssetId, string SeedNonce,
-        string SeedContent, Guid SiblingId, string SiblingAssetId, string SiblingContent, AgentDefinition Agent);
 }

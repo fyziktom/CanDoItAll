@@ -1,4 +1,7 @@
 using System.Net;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -16,7 +19,10 @@ internal sealed class LiveModelRequestProxy : IAsyncDisposable {
     internal const int CampaignLimit = 40;
     private readonly Guid execution = Guid.NewGuid();
     private readonly string budgetPath;
-    private readonly HttpClient client = new(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(4) };
+    private readonly HttpClient client;
+    private readonly ConcurrentQueue<LiveProviderObservation> observations = new();
+    private int attempts;
+    private int disposed;
     private WebApplication? app;
     private int admitted;
     private int successful;
@@ -24,10 +30,15 @@ internal sealed class LiveModelRequestProxy : IAsyncDisposable {
     internal int Admitted => Volatile.Read(ref admitted);
     internal int Successful => Volatile.Read(ref successful);
     internal int Refused => Volatile.Read(ref refused);
+    internal int Attempts => Volatile.Read(ref attempts);
+    internal IReadOnlyList<LiveProviderObservation> Observations => observations.ToArray();
     internal string BaseUrl { get; private set; } = string.Empty;
     internal Guid Execution => execution;
 
-    internal LiveModelRequestProxy(string budgetPath) => this.budgetPath = budgetPath;
+    internal LiveModelRequestProxy(string budgetPath, HttpMessageHandler? transport = null) {
+        this.budgetPath = budgetPath;
+        client = new(transport ?? new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(4) };
+    }
 
     internal static async Task<LiveModelRequestProxy> StartAsync() {
         var path = Environment.GetEnvironmentVariable(BudgetFileVariable);
@@ -45,7 +56,7 @@ internal sealed class LiveModelRequestProxy : IAsyncDisposable {
         return proxy;
     }
 
-    private async Task ForwardAsync(HttpContext context) {
+    internal async Task ForwardAsync(HttpContext context) {
         if (!HttpMethods.IsPost(context.Request.Method) || context.Request.Path != "/v1/responses" || context.Request.QueryString.HasValue) {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             return;
@@ -61,17 +72,51 @@ internal sealed class LiveModelRequestProxy : IAsyncDisposable {
         };
         request.Headers.TryAddWithoutValidation("Authorization", context.Request.Headers.Authorization.ToArray());
         request.Content.Headers.TryAddWithoutValidation("Content-Type", context.Request.ContentType);
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
-        context.Response.StatusCode = (int)response.StatusCode;
-        context.Response.ContentType = response.Content.Headers.ContentType?.ToString();
-        if (response.Headers.TryGetValues("x-request-id", out var requestIds)) {
-            context.Response.Headers["x-request-id"] = requestIds.ToArray();
+        var observation = new LiveProviderObservation(Interlocked.Increment(ref attempts), null,
+            LiveProviderTerminal.Missing, LiveProviderReason.None, null, null, null);
+        try {
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
+            observation = observation with { HttpStatus = (int)response.StatusCode,
+                Terminal = response.IsSuccessStatusCode ? LiveProviderTerminal.Missing : LiveProviderTerminal.HttpRejected };
+            context.Response.StatusCode = (int)response.StatusCode;
+            context.Response.ContentType = response.Content.Headers.ContentType?.ToString();
+            if (response.Headers.TryGetValues("x-request-id", out var requestIds)) {
+                var ids = requestIds.ToArray();
+                context.Response.Headers["x-request-id"] = ids;
+                observation = observation with { RequestCorrelationHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(',', ids)))) };
+            }
+            if (response.IsSuccessStatusCode) {
+                Interlocked.Increment(ref successful);
+            }
+            if (!response.IsSuccessStatusCode) {
+                await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
+                return;
+            }
+            if (response.Content.Headers.ContentType?.MediaType == "text/event-stream") {
+                using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(context.RequestAborted));
+                while (await reader.ReadLineAsync(context.RequestAborted) is { } line) {
+                    if (line.StartsWith("data:", StringComparison.Ordinal) && line.Length <= AgentResponseObservationLimit) {
+                        observation = LiveProviderStatusReader.Read(line[5..].TrimStart(), observation);
+                    }
+                    await context.Response.WriteAsync(line + "\n", context.RequestAborted);
+                    await context.Response.Body.FlushAsync(context.RequestAborted);
+                }
+            } else {
+                var payload = await response.Content.ReadAsStringAsync(context.RequestAborted);
+                if (payload.Length <= AgentResponseObservationLimit) {
+                    observation = LiveProviderStatusReader.Read(payload, observation);
+                }
+                await context.Response.WriteAsync(payload, context.RequestAborted);
+            }
+        } catch {
+            observation = observation with { Terminal = LiveProviderTerminal.TransportFailure };
+            throw;
+        } finally {
+            observations.Enqueue(observation);
         }
-        if (response.IsSuccessStatusCode) {
-            Interlocked.Increment(ref successful);
-        }
-        await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
     }
+
+    private const int AgentResponseObservationLimit = 4_194_304;
 
     internal async Task<bool> ReserveAsync(CancellationToken cancellationToken) {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -103,6 +148,9 @@ internal sealed class LiveModelRequestProxy : IAsyncDisposable {
     }
 
     public async ValueTask DisposeAsync() {
+        if (Interlocked.Exchange(ref disposed, 1) != 0) {
+            return;
+        }
         if (app is not null) {
             await app.DisposeAsync();
         }

@@ -1016,6 +1016,8 @@ public sealed class ProjectsPageTests
     private sealed class StubDatabaseProfileService(
         IReadOnlyList<DatabaseProfileSummary> profiles) : IDatabaseProfileService
     {
+        public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<DatabaseProfileSummary>> ListAsync(
             CancellationToken cancellationToken = default)
             => Task.FromResult(profiles);

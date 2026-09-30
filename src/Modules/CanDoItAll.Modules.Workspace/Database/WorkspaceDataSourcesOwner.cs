@@ -81,7 +81,7 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
                 throw new DataSourcesException(DataSourceFailure.InvalidRequest);
             }
             return await WriteAsync(values.Id ?? Guid.Empty, DataSourceAction.Save, async () => {
-                var result = await workspace.SaveProfileAsync(model);
+                var result = await workspace.SaveEditorAsync(model);
                 return result.IsSuccess ? new(result.Value, DataSourceOutcome.Confirmed, "Data source saved. The database has not been created or activated by Save.")
                     : new(values.Id ?? Guid.Empty, DataSourceOutcome.Refused, "The profile owner refused the save. Review the required fields and current profile.");
             });
@@ -109,7 +109,7 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
                     : Unknown(command.ProfileId, "Activation did not finish. Bootstrap or saved selection may have progressed; inspect the original target before restarting.");
             }
             var result = command.Action switch {
-                DataSourceAction.Delete => await workspace.DeleteProfileAsync(command.ProfileId),
+                DataSourceAction.Delete => await workspace.DeleteEditorAsync(command.ProfileId),
                 DataSourceAction.TestConnection => await workspace.TestConnectionAsync(command.ProfileId),
                 DataSourceAction.CreateEmpty => await workspace.CreateEmptyAsync(command.ProfileId),
                 DataSourceAction.ApplySchema => await workspace.ApplySchemaAsync(command.ProfileId),
@@ -195,6 +195,11 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
     private async Task<DataSourceResult> WriteAsync(Guid id, DataSourceAction action, Func<Task<DataSourceResult>> write) {
         try {
             return await write();
+        } catch (DatabaseProfileCatalogCommittedException exception) when (action == DataSourceAction.Save) {
+            logger.LogWarning("Data Sources saved catalog profile {ProfileId}; active-selection processing failed with {FailureType}.",
+                exception.ProfileId, exception.InnerException?.GetType().Name);
+            return new(exception.ProfileId, DataSourceOutcome.Partial,
+                "The profile was saved to the catalog. Active-selection processing did not finish; inspect the saved profile and restart selection before another operation. Do not repeat Save to recover the read.");
         } catch (DataSourcesException) {
             throw;
         } catch (Exception exception) {

@@ -171,7 +171,7 @@ public sealed class DataSourcesSession : IDisposable {
             return;
         }
         if (revision == editorRevision && ReferenceEquals(draft, Draft)) {
-            if (result.Outcome == DataSourceOutcome.Confirmed) {
+            if (result.Outcome is DataSourceOutcome.Confirmed or DataSourceOutcome.Partial && result.ProfileId != Guid.Empty) {
                 Draft.Id = result.ProfileId;
             }
             Message = result.Message;

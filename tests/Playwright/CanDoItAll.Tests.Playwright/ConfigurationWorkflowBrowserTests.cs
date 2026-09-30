@@ -39,7 +39,7 @@ public sealed class ConfigurationWorkflowBrowserTests(PlaywrightAppFixture fixtu
         };
         await page.GotoAsync($"{fixture.BaseUrl}/agents/workflows?workflowId={definition.Id.Value:D}");
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-        await page.WaitForFunctionAsync("() => typeof databaseSwitchStorageListener === 'function'");
+        await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
         await page.GetByTestId("workflows-tab-editor").ClickAsync();
         await page.GetByTestId("workflow-canvas-editor").WaitForAsync();
         if (!await page.GetByTestId("workflow-canvas-selection-window").IsVisibleAsync()) {
@@ -77,7 +77,7 @@ public sealed class ConfigurationWorkflowBrowserTests(PlaywrightAppFixture fixtu
         Assert.Equal(trusted.Id, savedTrusted.Settings.ExecutorId);
         await page.ReloadAsync();
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-        await page.WaitForFunctionAsync("() => typeof databaseSwitchStorageListener === 'function'");
+        await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
         await page.GetByTestId("workflows-tab-editor").ClickAsync();
         await page.GetByTestId("workflow-canvas-editor").WaitForAsync();
         if (!await page.GetByTestId("workflow-canvas-selection-window").IsVisibleAsync()) {
