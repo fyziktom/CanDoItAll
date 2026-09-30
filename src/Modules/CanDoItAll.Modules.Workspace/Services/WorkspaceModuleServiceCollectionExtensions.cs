@@ -10,6 +10,7 @@ using CanDoItAll.Modules.Workspace.ApiAccess.Presentation;
 using CanDoItAll.Workspace.ApiAccess.UI;
 using CanDoItAll.Workspace.StorageCatalog.UI;
 using CanDoItAll.Modules.Workspace.StorageCatalog.Contracts;
+using CanDoItAll.Modules.Workspace.StorageSelection.Contracts;
 
 namespace CanDoItAll.Modules.Workspace;
 

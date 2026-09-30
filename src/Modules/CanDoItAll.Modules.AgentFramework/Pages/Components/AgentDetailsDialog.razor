@@ -597,8 +597,9 @@ else
                                     </p>
                                 </div>
                                 <div class="cda-admin-subpanel md:col-span-2">
-                                    <StorageCatalogSelectionField
+                                    <CanDoItAll.Workspace.StorageSelection.UI.StorageCatalogSelectionField
                                         Value="@editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds"
+                                        OwnerLifetime="@renderedSession.CancellationToken"
                                         ValueChanged="selection => ApplyStorageCatalogSelection(renderedSession, selection)"
                                         AllowAll="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
                                         DataTestId="agents-catalog-storage-selection" />

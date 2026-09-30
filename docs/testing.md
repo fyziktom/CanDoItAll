@@ -486,8 +486,32 @@ The sandbox itself requires no database, vault or production driver.
 
 The [maintained Storage boundary record](architecture/workspace-storage-catalog-ui-boundary.md)
 records AP-R1/AP-R2 failing-first proof, exact application consumer selections, counts,
-owner semantics, graph/watch measurements and the broad Stable trigger. Recovery,
-Data Sources and shared catalog pickers retain their existing owners and validation lanes.
+owner semantics, graph/watch measurements and the broad Stable trigger. Recovery and
+Data Sources retain their existing owners and validation lanes. The subsequent selection
+slice is recorded below.
+
+## Workspace Storage selection boundary proof
+
+`tests/Components/CanDoItAll.Workspace.StorageSelection.UI.Tests` is included in Components,
+Stable and all three component CI project lists. Discover and then execute
+`FullyQualifiedName~CanDoItAll.Tests.Components.WorkspaceStorageSelectionUi` with the same
+configuration. It preserves the original eight picker cases and adds controlled lifetime,
+real dialog and evaluated boundary proof. `CatalogReselectionTests` in the catalog UI
+project covers SCAT-R1; API read-lifetime and Core Files identity suites remain separate.
+
+Main Components retains the actual Agent host and generic picker/table tests. Integration
+`StorageSelectionAdapterIntegrationTests` checks the registered read adapter against real
+private catalog/bootstrap/profile owners. Storage runtime, attachment, disclosure and
+routing selections remain in Unit/Integration. `StorageSelectionBrowserTests` verifies
+actual Agent child Apply, parent Cancel, explicit Save and persisted read-back. The
+`StorageSelectionSandboxBrowserTests` theory separately builds/runs the source host and
+publishes/runs its DLL in Production without database/vault configuration.
+
+Keep `CANDOITALL_PLAYWRIGHT_BASEURL` unset and use the owned PostgreSQL 18 fixture for
+production cases. The [selection boundary record](architecture/workspace-storage-selection-ui-boundary.md)
+contains the exact filters, discovery/execution counts, application matrix, graph/watch
+comparisons, reversible edit measurements and broad Stable assessment. Sandbox Apply
+is evidence of staged selection only, never a substitute for Agent persistence/authority.
 
 ## Broad Stable Gate
 

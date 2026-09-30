@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-29T20:32:52.107050+00:00",
+  "generated_utc": "2026-09-30T01:17:46.193223+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15206,
+  "allowance_count": 15208,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -67994,12 +67994,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageCatalogSelectionDialog.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "d7b682b3cc1d13195b65b70210fb568105c30cc6a6e03b176577c794f88f846f",
-      "count": 2
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceFilesOwner.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "0998e8cbc641924feb2e526b0e687a0d22086d212eab3637464bfa929755cbaf",
@@ -73646,6 +73640,18 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "d4ab40c2d7e4bafcf0369035647a04997e7bbbf9999fea0d016418db06c53abc",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "d1490b5af331b3470e8dfabc3fa99ec45d9be7e01e4843b978d9dbf8d034d9a8",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "f82b8f6123ef1b337b16dcc05ca74550f7f2f2f24438d63d5374ad31dc7932bd",
@@ -75365,6 +75371,18 @@
       "path": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CatalogSession.cs",
       "category": "case-policy",
       "source_fingerprint": "cb00aa9893c16ee6622c330860ff249795c0ab3a36e11753db897f9be103376c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.StorageSelection.UI/SelectionIntent.cs",
+      "category": "case-policy",
+      "source_fingerprint": "084fea0a6b7fd73bd3670c7daf4d3bbcd7c0fe7ea11a5d5f53af42845eecce83",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.StorageSelection.UI/StorageCatalogSelectionDialog.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "fa314e9171f3c2bd35f73aea763e88d19e98ee82ce5f660d06a554cce2ecae4c",
       "count": 1
     },
     {

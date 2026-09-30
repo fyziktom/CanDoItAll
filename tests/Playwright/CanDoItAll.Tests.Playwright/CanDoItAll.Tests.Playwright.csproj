@@ -28,6 +28,7 @@
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/CanDoItAll.Workspace.ApiAccess.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/CanDoItAll.Workspace.StorageCatalog.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/CanDoItAll.Workspace.StorageSelection.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <Compile Include="../PluginsBrowserFixture/ProbeProtocol.cs" Link="Plugins/ProbeProtocol.cs" />
     <ProjectReference Include="../PluginsBrowserFixture/PluginsBrowserFixture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/CanDoItAll.Plugins.UiSandbox.csproj" ReferenceOutputAssembly="false" />

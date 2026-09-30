@@ -1,24 +1,19 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Infrastructure.Storage;
-using CanDoItAll.Modules.Workspace;
-using CanDoItAll.Modules.Workspace.Pages.Components;
+using CanDoItAll.Modules.Workspace.StorageSelection.Contracts;
+using CanDoItAll.Workspace.StorageSelection.UI;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components.Workspace;
+namespace CanDoItAll.Tests.Components.WorkspaceStorageSelectionUi;
 
-[Trait("Category", "HostPlatform")]
-public sealed class StorageCatalogSelectionComponentsTests
-{
+public sealed class StorageCatalogSelectionComponentsTests {
     private static readonly Guid AlphaId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid BetaId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly Guid MissingId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
     [Fact]
-    public async Task Dialog_loads_the_current_catalog_on_every_open()
-    {
-        var source = new RecordingStorageCatalogSelectionSource
-        {
+    public async Task Dialog_loads_the_current_catalog_on_every_open() {
+        var source = new RecordingStorageCatalogSelectionSource {
             Catalogs = [CreateCatalog(AlphaId, "Alpha catalog")]
         };
         using var context = CreateContext(source);
@@ -42,10 +37,8 @@ public sealed class StorageCatalogSelectionComponentsTests
     }
 
     [Fact]
-    public async Task Dialog_preserves_missing_and_disabled_selected_ids_until_removed()
-    {
-        var source = new RecordingStorageCatalogSelectionSource
-        {
+    public async Task Dialog_preserves_missing_and_disabled_selected_ids_until_removed() {
+        var source = new RecordingStorageCatalogSelectionSource {
             Catalogs = [CreateCatalog(AlphaId, "Offline archive", isEnabled: false)]
         };
         using var context = CreateContext(source);
@@ -74,8 +67,7 @@ public sealed class StorageCatalogSelectionComponentsTests
             $"[data-testid='storage-dialog-option-{MissingId:N}']")));
 
         disabledSelection.Click();
-        host.WaitForAssertion(() =>
-        {
+        host.WaitForAssertion(() => {
             var removedDisabledSelection = host.Find(
                 $"[data-testid='storage-dialog-option-{AlphaId:N}']");
             Assert.True(removedDisabledSelection.HasAttribute("disabled"));
@@ -89,10 +81,8 @@ public sealed class StorageCatalogSelectionComponentsTests
     }
 
     [Fact]
-    public async Task Dialog_blocks_new_disabled_ids_and_allows_read_only_ids()
-    {
-        var source = new RecordingStorageCatalogSelectionSource
-        {
+    public async Task Dialog_blocks_new_disabled_ids_and_allows_read_only_ids() {
+        var source = new RecordingStorageCatalogSelectionSource {
             Catalogs =
             [
                 CreateCatalog(AlphaId, "Disabled catalog", isEnabled: false),
@@ -132,10 +122,8 @@ public sealed class StorageCatalogSelectionComponentsTests
     }
 
     [Fact]
-    public async Task Cancel_discards_staged_selection()
-    {
-        var source = new RecordingStorageCatalogSelectionSource
-        {
+    public async Task Cancel_discards_staged_selection() {
+        var source = new RecordingStorageCatalogSelectionSource {
             Catalogs = [CreateCatalog(AlphaId, "Alpha catalog")]
         };
         using var context = CreateContext(source);
@@ -154,10 +142,8 @@ public sealed class StorageCatalogSelectionComponentsTests
     }
 
     [Fact]
-    public async Task Dialog_retry_recovers_from_a_catalog_load_failure()
-    {
-        var source = new RecordingStorageCatalogSelectionSource
-        {
+    public async Task Dialog_retry_recovers_from_a_catalog_load_failure() {
+        var source = new RecordingStorageCatalogSelectionSource {
             Catalogs = [CreateCatalog(AlphaId, "Recovered catalog")],
             FailuresRemaining = 1
         };
@@ -166,7 +152,8 @@ public sealed class StorageCatalogSelectionComponentsTests
 
         var resultTask = OpenDialog(context, []);
         var retry = host.WaitForElement("[data-testid='storage-dialog-retry']");
-        Assert.Contains("Temporary catalog failure", host.Markup, StringComparison.Ordinal);
+        Assert.Contains("Your staged selection is retained", host.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Temporary catalog failure", host.Markup, StringComparison.Ordinal);
         Assert.True(host.Find("[data-testid='storage-dialog-apply']").HasAttribute("disabled"));
 
         retry.Click();
@@ -180,8 +167,7 @@ public sealed class StorageCatalogSelectionComponentsTests
     }
 
     [Fact]
-    public void Field_preserves_selection_and_disables_editing_when_allow_all_is_enabled()
-    {
+    public void Field_preserves_selection_and_disables_editing_when_allow_all_is_enabled() {
         var source = new RecordingStorageCatalogSelectionSource();
         using var context = CreateContext(source);
         IReadOnlyList<Guid>? changedValue = null;
@@ -202,10 +188,8 @@ public sealed class StorageCatalogSelectionComponentsTests
     }
 
     [Fact]
-    public void Field_resolves_a_saved_catalog_id_to_its_readable_name_without_opening_the_chooser()
-    {
-        var source = new RecordingStorageCatalogSelectionSource
-        {
+    public void Field_resolves_a_saved_catalog_id_to_its_readable_name_without_opening_the_chooser() {
+        var source = new RecordingStorageCatalogSelectionSource {
             Catalogs = [CreateCatalog(AlphaId, "Customer documents")]
         };
         using var context = CreateContext(source);
@@ -214,8 +198,7 @@ public sealed class StorageCatalogSelectionComponentsTests
             .Add(component => component.Value, [AlphaId])
             .Add(component => component.DataTestId, "storage-field"));
 
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             var row = cut.Find($"[data-testid='storage-field-selected-row-{AlphaId:N}']");
             Assert.Contains("Customer documents", row.TextContent, StringComparison.Ordinal);
             Assert.Contains(AlphaId.ToString("D"), row.TextContent, StringComparison.Ordinal);
@@ -225,10 +208,8 @@ public sealed class StorageCatalogSelectionComponentsTests
     }
 
     [Fact]
-    public void Field_resolves_catalog_details_when_selected_ids_arrive_after_initial_render()
-    {
-        var source = new RecordingStorageCatalogSelectionSource
-        {
+    public void Field_resolves_catalog_details_when_selected_ids_arrive_after_initial_render() {
+        var source = new RecordingStorageCatalogSelectionSource {
             Catalogs = [CreateCatalog(AlphaId, "Later customer documents")]
         };
         using var context = CreateContext(source);
@@ -246,8 +227,7 @@ public sealed class StorageCatalogSelectionComponentsTests
             .Add(component => component.Value, [AlphaId])
             .Add(component => component.DataTestId, "storage-field"));
 
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             var row = cut.Find($"[data-testid='storage-field-selected-row-{AlphaId:N}']");
             Assert.Contains("Later customer documents", row.TextContent, StringComparison.Ordinal);
             Assert.Contains(AlphaId.ToString("D"), row.TextContent, StringComparison.Ordinal);
@@ -256,8 +236,7 @@ public sealed class StorageCatalogSelectionComponentsTests
         Assert.Equal(1, source.CallCount);
     }
 
-    private static BunitContext CreateContext(RecordingStorageCatalogSelectionSource source)
-    {
+    private static BunitContext CreateContext(RecordingStorageCatalogSelectionSource source) {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
@@ -267,59 +246,52 @@ public sealed class StorageCatalogSelectionComponentsTests
 
     private static Task<object?> OpenDialog(
         BunitContext context,
-        IReadOnlyList<Guid> selectedCatalogIds)
-    {
+        IReadOnlyList<Guid> selectedCatalogIds) {
         return context.Services.GetRequiredService<DialogService>()
             .OpenAsync<StorageCatalogSelectionDialog>(
                 "Choose storage catalogs",
-                new Dictionary<string, object?>
-                {
+                new Dictionary<string, object?> {
                     [nameof(StorageCatalogSelectionDialog.SelectedCatalogIds)] = selectedCatalogIds,
                     [nameof(StorageCatalogSelectionDialog.DataTestId)] = "storage-dialog"
                 },
-                new DialogOptions
-                {
+                new DialogOptions {
                     TestId = "storage-dialog-shell"
                 });
     }
 
-    private static StorageCatalogSummary CreateCatalog(
+    private static StorageSelectionItem CreateCatalog(
         Guid id,
         string name,
         bool isEnabled = true,
-        bool isReadOnly = false)
-    {
-        return new StorageCatalogSummary(
+        bool isReadOnly = false) {
+        return new StorageSelectionItem(
             id,
             name,
-            StorageProviderKind.FileSystem,
-            StorageConnectionMode.Local,
-            $"C:\\catalogs\\{name}",
+            "File system",
+            "Local",
+            $"/scenario/catalogs/{name}",
             0,
             isEnabled,
             false,
             isReadOnly,
-            StorageCapability.Read | StorageCapability.Write,
-            StorageHealthStatus.Healthy,
-            DateTimeOffset.UtcNow,
-            "Available");
+            "Healthy");
     }
 
-    private sealed class RecordingStorageCatalogSelectionSource : IStorageCatalogSelectionSource
-    {
-        public IReadOnlyList<StorageCatalogSummary> Catalogs { get; set; } = [];
+    private sealed class RecordingStorageCatalogSelectionSource : IStorageCatalogSelectionSource {
+        public StorageCatalogSelectionContext Context { get; } = new(Guid.NewGuid(), 0);
+        public bool IsCurrent => true;
+        public event Action? ContextChanged { add { } remove { } }
+        public IReadOnlyList<StorageSelectionItem> Catalogs { get; set; } = [];
 
         public int CallCount { get; private set; }
 
         public int FailuresRemaining { get; set; }
 
-        public Task<IReadOnlyList<StorageCatalogSummary>> ListAsync(
-            CancellationToken cancellationToken = default)
-        {
+        public Task<IReadOnlyList<StorageSelectionItem>> ListAsync(
+            CancellationToken cancellationToken = default) {
             cancellationToken.ThrowIfCancellationRequested();
             CallCount++;
-            if (FailuresRemaining > 0)
-            {
+            if (FailuresRemaining > 0) {
                 FailuresRemaining--;
                 throw new InvalidOperationException("Temporary catalog failure.");
             }

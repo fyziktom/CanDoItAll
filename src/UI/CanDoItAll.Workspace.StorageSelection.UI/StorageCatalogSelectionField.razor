@@ -10,8 +10,7 @@
            Wrap="FlexWrap.Wrap">
         <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
             <p class="cda-field-label m-0">@Label</p>
-            @if (!string.IsNullOrWhiteSpace(Description))
-            {
+            @if (!string.IsNullOrWhiteSpace(Description)) {
                 <p class="m-0 text-sm leading-5 text-slate-600">@Description</p>
             }
         </Stack>
@@ -26,25 +25,25 @@
                 data-testid="@($"{DataTestId}-choose")" />
     </Split>
 
-    @if (AllowAll)
-    {
+    @if (AllowAll) {
         <Alert AlertStyle="AlertStyle.Info">
             <p class="m-0">All current and future storage catalogs are allowed. Turn off Allow all to edit the preserved selection.</p>
         </Alert>
     }
 
-    @if (!string.IsNullOrWhiteSpace(openErrorMessage))
-    {
+    @if (!string.IsNullOrWhiteSpace(openErrorMessage)) {
         <Alert AlertStyle="AlertStyle.Warning">
             <p class="m-0">@openErrorMessage</p>
         </Alert>
     }
 
-    @if (!string.IsNullOrWhiteSpace(catalogDetailsErrorMessage))
-    {
+    @if (!string.IsNullOrWhiteSpace(catalogDetailsErrorMessage)) {
         <Alert AlertStyle="AlertStyle.Warning"
                data-testid="@($"{DataTestId}-details-warning")">
             <p class="m-0">@catalogDetailsErrorMessage</p>
+            <Button Text="Retry details" Icon="refresh" Click="LoadCatalogDetailsAsync"
+                    Disabled="@(intent?.IsCurrent != true || isResolvingCatalogDetails)"
+                    data-testid="@($"{DataTestId}-details-retry")" />
         </Alert>
     }
 

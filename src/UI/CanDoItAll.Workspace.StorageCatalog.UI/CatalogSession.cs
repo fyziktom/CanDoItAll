@@ -62,6 +62,9 @@ public sealed class CatalogSession : IDisposable {
         if (!IsCurrent) {
             return Task.CompletedTask;
         }
+        if (SelectedId == id && Draft is { Deleted: false } acquired && acquired.Id == id) {
+            return Task.CompletedTask;
+        }
         SelectedId = id;
         Draft = null;
         return EditorRead.ReadAsync(token => owner.ReadEditorAsync(id, token), editor => {

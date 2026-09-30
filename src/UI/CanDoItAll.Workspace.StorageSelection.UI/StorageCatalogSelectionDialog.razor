@@ -3,14 +3,11 @@
 <Stack GapScale="LayoutGap.Medium"
        AlignItems="AlignItems.Stretch"
        data-testid="@DataTestId">
-    @if (isLoading)
-    {
+    @if (isLoading) {
         <LoadingState Eyebrow="Storage access"
                       Title="Loading storage catalogs"
                       Description="Reading the current workspace catalog." />
-    }
-    else if (!string.IsNullOrWhiteSpace(loadErrorMessage))
-    {
+    } else if (!string.IsNullOrWhiteSpace(loadErrorMessage)) {
         <EmptyState Eyebrow="Storage catalogs unavailable"
                     Title="The storage catalog could not be loaded"
                     Description="@loadErrorMessage">
@@ -21,9 +18,7 @@
                         data-testid="@($"{DataTestId}-retry")" />
             </Actions>
         </EmptyState>
-    }
-    else
-    {
+    } else {
         <Split Breakpoint="LayoutBreakpoint.None"
                Gap="LayoutGap.Small"
                AlignItems="AlignItems.Center"
@@ -58,7 +53,7 @@
                 data-testid="@($"{DataTestId}-cancel")" />
         <Button Text="Apply selection"
                 Icon="check"
-                Disabled="@(isLoading || !string.IsNullOrWhiteSpace(loadErrorMessage))"
+                Disabled="@(!CanApply)"
                 Click="ConfirmAsync"
                 data-testid="@($"{DataTestId}-apply")" />
     </Cluster>

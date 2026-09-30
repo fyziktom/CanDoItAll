@@ -34,5 +34,12 @@ and authority lifetime subscriptions and adapters to the existing owners. Data S
 Storage and API Access remain real active production hosts. Providers still redirects to
 Agents. See the [partial completion and proof record](../../../docs/architecture/workspace-settings-core-ui-boundary.md).
 
+API Access and Storage catalog administration now have their own UI boundaries.
+The Storage selection field/dialog live in StorageSelection.UI; this module supplies
+only their contextual display-safe read adapter over the existing catalog owner.
+AgentDetailsDialog composes the renderer with its captured editor lifetime and retains
+explicit Save and access normalization. Recovery, Data Sources and residual configuration
+hosts remain here. See the [selection record](../../../docs/architecture/workspace-storage-selection-ui-boundary.md).
+
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`

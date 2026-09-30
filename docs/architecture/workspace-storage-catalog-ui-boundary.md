@@ -5,6 +5,11 @@ This record covers AP-R1/AP-R2 and Storage catalog
 administration only. Data Sources, placement recovery, shared catalog pickers and the
 remaining configuration host require separate audits; Workspace is not complete.
 
+Subsequent selection slice: [Storage selection boundary](workspace-storage-selection-ui-boundary.md)
+records the failing-first SCAT-R1 repair, the extracted field/dialog and its production
+and independent sandbox proof. The measurements below remain this catalog slice's
+historical evidence; they are not rerun claims for the selection work.
+
 ## Entry and work units
 
 Entry: `components-decoupling`, `73053bd4fe723d56043df410c322c0651f6cea4c`, clean.

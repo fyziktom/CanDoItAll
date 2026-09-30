@@ -251,8 +251,9 @@ database, so a rendering change can be seen without starting the application:
 | [`CanDoItAll.Collaboration.UI`](src/UI/CanDoItAll.Collaboration.UI/README.md) | [Collaboration UI sandbox](src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.Collaboration.UiSandbox --no-launch-profile --urls http://127.0.0.1:5187` |
 | [`CanDoItAll.Prompts.UI`](src/UI/CanDoItAll.Prompts.UI/README.md) | [Prompt Gallery UI sandbox](src/Sandboxes/CanDoItAll.Prompts.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.Prompts.UiSandbox --launch-profile "Prompts sandbox"` |
 | [`CanDoItAll.AgentFramework.UI`](src/UI/CanDoItAll.AgentFramework.UI) | [Agent catalog sandbox](src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile "Catalog sandbox"` |
+| [`CanDoItAll.Workspace.StorageSelection.UI`](src/UI/CanDoItAll.Workspace.StorageSelection.UI/README.md) | [Storage selection sandbox](src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox --no-launch-profile --urls http://127.0.0.1:0` |
 
-The default Parity assets use the real production stylesheet. Collaboration supports Parity only.
+The default Parity assets use the real production stylesheet. Collaboration and Storage selection support Parity only.
 The other sandbox READMEs also document their optional Fast asset mode and its narrower scan,
 as well as launch profiles and ports. Asset modes are separate from source/package dependency mode.
 
@@ -260,8 +261,9 @@ The shared record browser, picker and selection family lives in
 [`CanDoItAll.AppComponents.RecordBrowsing`](src/UI/CanDoItAll.AppComponents.RecordBrowsing/README.md)
 and the application-wide shell in [`CanDoItAll.AppComponents`](src/UI/CanDoItAll.AppComponents/README.md).
 
-This separation is being applied module by module. CRM / HR and the Prompt Gallery are done; the
-other modules keep their rendering in the module itself, which is a supported state and not a defect.
+This separation is being applied module by module. The table is a selection of available hosts;
+the maintained architecture records describe each completed slice and its remaining owners.
+Workspace remains partial: Data Sources, Recovery and residual configuration hosts are deferred.
 [UI component seams](docs/architecture/ui-component-seams.md) is the guidance, and each completed
 slice has its own record under [`docs/architecture`](docs/architecture).
 
