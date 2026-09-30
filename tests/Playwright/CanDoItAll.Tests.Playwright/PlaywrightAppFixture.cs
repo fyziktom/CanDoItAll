@@ -63,6 +63,8 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
             _logs.Reverse().Take(maxLines).Reverse());
     }
 
+    internal string[] GetLogLines() => _logs.ToArray();
+
     public async Task InitializeAsync()
     {
         if (await IsRuntimeReadyAsync(TimeSpan.FromSeconds(3)))
@@ -93,6 +95,9 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
         var configuration = new Dictionary<string, string?>(RuntimeConfiguration) {
             ["DevelopmentManager:TuningModeEnabled"] = "false",
+            ["Logging:LogLevel:Microsoft.AspNetCore.Components.Server.Circuits.RemoteNavigationManager"] = "Debug",
+            ["Logging:LogLevel:Microsoft.AspNetCore.Components.Server.Circuits.CircuitHost"] = "Debug",
+            ["Logging:LogLevel:Microsoft.AspNetCore.Components.Server.Circuits.CircuitRegistry"] = "Debug",
             [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = EnableBackgroundWorkers ? "" : LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
         };
         foreach (var pair in _activeProfile.CreateEnvironmentVariables(configuration))

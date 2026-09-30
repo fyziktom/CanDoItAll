@@ -60,21 +60,47 @@ evidence.
 
 ## Rendering libraries and contracts assemblies
 
-Two modules have moved their rendering out of the module and into a feature UI library that binds to
-a contract the routed host implements:
+Current rendering boundaries, reviewed for Workspace closure R2 on 2026-09-30, are listed
+below. Routed hosts, production adapters, authorization and durable effects remain with
+their owners. The boundary records distinguish completed rendering from application acceptance.
 
 | Module | Contracts assembly | Rendering library | Scenario host |
 |---|---|---|---|
 | CRM / HR | `CanDoItAll.Modules.CrmHr.Contracts` | `CanDoItAll.CrmHr.UI` | `CanDoItAll.CrmHr.UiSandbox` |
 | Prompts | `CanDoItAll.Modules.Prompts.Contracts` | `CanDoItAll.Prompts.UI` | `CanDoItAll.Prompts.UiSandbox` |
+| Collaboration | `CanDoItAll.Modules.Collaboration.Contracts` | `CanDoItAll.Collaboration.UI` | `CanDoItAll.Collaboration.UiSandbox` |
+| TestLab | `CanDoItAll.Modules.TestLab.Contracts` | `CanDoItAll.TestLab.UI` | `CanDoItAll.TestLab.UiSandbox` |
+| Plugins | `CanDoItAll.Modules.Plugins.Contracts` | `CanDoItAll.Plugins.UI` | `CanDoItAll.Plugins.UiSandbox` |
+| Scheduler Planner | `CanDoItAll.Modules.SchedulerPlanner.Contracts` | `CanDoItAll.SchedulerPlanner.UI` | `CanDoItAll.SchedulerPlanner.UiSandbox` |
+| Memory | `CanDoItAll.Modules.Memory.Contracts` | `CanDoItAll.Memory.UI` | `CanDoItAll.Memory.UiSandbox` |
+| Resources | `CanDoItAll.Modules.Resources.Contracts` | `CanDoItAll.Resources.UI` | `CanDoItAll.Resources.UiSandbox` |
+| Workspace Core | `CanDoItAll.Modules.Workspace.Contracts` | `CanDoItAll.Workspace.UI` | `CanDoItAll.Workspace.UiSandbox` |
+| Workspace API Access | `CanDoItAll.Modules.Workspace.ApiAccess.Contracts` | `CanDoItAll.Workspace.ApiAccess.UI` | `CanDoItAll.Workspace.ApiAccess.UiSandbox` |
+| Workspace Storage catalog | `CanDoItAll.Modules.Workspace.StorageCatalog.Contracts` | `CanDoItAll.Workspace.StorageCatalog.UI` | `CanDoItAll.Workspace.StorageCatalog.UiSandbox` |
+| Workspace Storage selection | `CanDoItAll.Modules.Workspace.StorageSelection.Contracts` | `CanDoItAll.Workspace.StorageSelection.UI` | `CanDoItAll.Workspace.StorageSelection.UiSandbox` |
+| Workspace Storage recovery | `CanDoItAll.Modules.Workspace.StorageRecovery.Contracts` | `CanDoItAll.Workspace.StorageRecovery.UI` | `CanDoItAll.Workspace.StorageRecovery.UiSandbox` |
+| Workspace Data Sources | `CanDoItAll.Modules.Workspace.DataSources.Contracts` | `CanDoItAll.Workspace.DataSources.UI` | `CanDoItAll.Workspace.DataSources.UiSandbox` |
+
+The [Configuration renderer](../../src/UI/CanDoItAll.Configuration.UI/README.md) is a neutral
+schema loop over SharedKernel types, with Configuration.UiSandbox. Trusted renderer registration
+and adaptation remain production composition. The [Workspace census](workspace-closure-map.json)
+classifies its remaining wrappers and external render consumers; a retained Razor host is not
+automatically unfinished rendering work. See the [Workspace completion record](workspace-completion-ui-boundaries.md).
+
+AgentFramework is partially extracted: its [UI library](../../src/UI/CanDoItAll.AgentFramework.UI/README.md)
+and sandbox cover the catalog, capabilities and Overview. The technical Agent detail editor and
+other provider/runtime dialogs still contain substantial rendering in the module. Existing
+Simple Chats and Workflows UI libraries under `src/MAF` are additional foundations, not evidence
+that every Agent or Workflow authoring surface has moved.
 
 `CanDoItAll.Modules.Projects.Contracts` exists for the same reason in the other direction: it lets a
 renderer or another module name a project, its write admission and its assignment queries without
 referencing the Projects implementation. A contracts assembly keeps the namespace of its module, so
 no consumer had to be rewritten when the types moved.
 
-The owners above are unchanged by that move: a rendering library performs no write and holds no
-session. [UI component seams](ui-component-seams.md) describes the seam, and the per-module records
+The owners above remain authoritative. Renderers and presentation controllers may own drafts
+and read lifetimes; production adapters own durable writes and authorization.
+[UI component seams](ui-component-seams.md) describes the seam, and the per-module records
 under this directory describe what each slice moved and what it deliberately left behind.
 
 Stable seams for the next UI decoupling are the owner application services and the
@@ -96,8 +122,8 @@ intentional composition, not a move of conversation rules into the Agent module.
 
 Workspace Settings Core shares its shell, defaults, Secrets, Files and provider history
 renderers through Workspace.Contracts, Workspace.Presentation and Workspace.UI, with a
-standalone Workspace.UiSandbox. Data Sources remains in the
-Workspace production module; this is a partial extraction. See the
+standalone Workspace.UiSandbox. Data Sources now has its own rendering and presentation leaf;
+the module retains its canonical profile, schema, secret, transfer and restart owners. See the
 [boundary and validation record](workspace-settings-core-ui-boundary.md).
 
 Workspace API Access has a separate ApiAccess.Contracts / ApiAccess.UI leaf and
@@ -110,6 +136,35 @@ Storage catalog administration has a separate StorageCatalog.Contracts / Storage
 leaf and Workspace.StorageCatalog.UiSandbox. Its three-step wizard uses independent read
 lanes, stable drafts and explicit owner-stage receipts. Production retains credentials,
 drivers, routing, profile fences and persistence. Neither Core nor API gains a Storage edge.
-Recovery, shared catalog pickers, Data Sources and residual settings-renderer integration
-still require separate audits; Workspace is not complete. See the
+Recovery, Storage selection, Data Sources and generic Configuration rendering have completed
+their separate boundaries. Agent parent Save and runtime allow-lists still own applied storage
+selection; Recovery retains the original interrupted intent and continuation authority. See the
 [Storage boundary record](workspace-storage-catalog-ui-boundary.md).
+
+## Remaining rendering roadmap
+
+This is a source-backed planning order, not authorization to start another module during
+Workspace closure. Effort is relative architectural complexity (1–5), not elapsed time.
+A slice includes the production renderer and host seam, assets, representative independent
+sandbox, owner/consumer checks and browser proof. Counts are provisional until a complete
+caller, descendant, asset and evaluated-dependency census precedes that assignment.
+
+| Order | Family and current source | Proposed scope | Effort / provisional slices |
+|---|---|---|---|
+| 1 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md): portfolio, board/cards, modal editor, hierarchy and file panes remain in the implementation | Start with portfolio and the real editor flow; preserve route selection, project lifetime admission, CRM references and governed files | 3/5 first slice; 4/5 family; 2–3 slices |
+| 2 | [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md): extracted catalog/capabilities/Overview alongside the remaining detail forms and provider/runtime/dialog renderers | Technical editor and dependent selectors, then provider/history/configuration and residual chat/usage surfaces; preserve permissions and nested lifetimes | 3–4/5; 2–4 slices |
+| 3 | [Workflow authoring](../../src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor): substantial canvas/toolbox/inspector markup remains despite the existing light Workflows.UI project | Reuse Workflows.UI; separate catalog/run views, canvas/inspector and settings/admission dialogs while retaining immutable version/input and launch authority | 4/5; 2–4 slices |
+| 4 | [Workbench](../../src/Modules/CanDoItAll.Modules.Workbench/README.md): calendar, assignments, native editors and Structure canvas/runtime/file composition remain | Smaller calendar/read panels first; Structure canvas and cross-module runtime/file context last within the family | 5/5; 4–6 slices |
+| 5 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md): thin routes still compose implementation-bound rendering and runtime services | Catalog/read panels, editor/configuration, launch/approval, monitoring/recovery and final integration; preserve SSE, claims, snapshots and receipts | 5/5; 4–6 slices; last major family |
+
+Simple Chats needs a bounded residual-renderer, adapter and scenario audit around its existing
+UI library (roughly 2/5), not a replacement domain module. Web Home/dashboard and runtime
+capability pages are composition surfaces; assess reusable rendering after the major feature
+cuts (2–3/5, roughly 1–2 possible slices). Security has no separate extraction assignment
+without an actual remaining screen: Secrets and API administration already belong to Workspace.
+Shared AppComponents, Conversations and Configuration retain their generic boundaries.
+
+These estimates inspect current projects, routes and representative remaining markup; they
+are not a line-by-line audit of every large module or a completion percentage. CRM/HR, Prompts,
+Collaboration, TestLab, Plugins, Scheduler Planner, Memory, Resources and Workspace retain
+their completed rendering work and require regression evidence, not new replacement projects.

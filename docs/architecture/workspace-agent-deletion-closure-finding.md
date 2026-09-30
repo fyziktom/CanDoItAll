@@ -1,8 +1,26 @@
 # WCL-DEL1: Agent deletion cannot confirm cleanup after completed history runs
 
-Status: **OPEN, P2**. The failure crosses the execution, chat, usage and catalog deletion
-owners. Its root cause is unproven. The actual history acceptance attempt remains FAILED;
-successful history assertions alone are not closure.
+Status: **R2 owner repair verified; composed closure pending**. The original failed attempt
+below remains failed. R2 reproduced the exact retained bytes in a new private root: deletion
+throws `InvalidDataException` while subtracting the canonical receipt count, before journal
+admission. The index records two receipts while the target's two terminal runs own four;
+seven receipt files exist in the scope. The independent audit writer persists receipts and
+artifacts before run-detail persistence, so its subsequent index delta can be zero.
+
+`LoadIndexForAgentDeletionAsync` now reconciles only session, receipt and artifact counts
+from their existing physical owner paths. It preserves the revision and all other strict
+counters. Target run consistency and pending approval checks run before deletion admission.
+No journal format, provider-history retention policy, lease or UI boundary changes.
+This metadata reconciliation can write before journal admission; a missing journal still
+does not prove no effects. Corrupt log counters and foreign run payloads remain refused.
+
+New ignored evidence lives under `artifacts/workspace-closure-r2/20260930-6b05246f7`.
+`deletion-baseline.json` records the original failure with no changed file bytes;
+`deletion-final.json` records deletion of the same Agent, one session and two runs after
+the final owner checks. `del-owner-04` passes all 28 discovered cases, including real audit
+writer histories, survivor bytes, all journal boundaries, restart, cancellation, pending
+approval, unresolved effects and foreign payload refusal. The original UI/projection and
+shared-provider acceptance must still pass before closing the composed finding.
 
 ## Original operation, scope and effects
 

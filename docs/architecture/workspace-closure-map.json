@@ -480,5 +480,14 @@
       "remaining_risk": "Explicitly retained app-wide composition; no whole-shell extraction authorized.",
       "finding_id": null
     }
-  ]
+  ],
+  "current_census_review": {
+    "date": "2026-09-30",
+    "review_base": "6b05246f72fa29ad069a85d12881c80631de263f",
+    "module_ui_file_count": 11,
+    "classified_entries": 22,
+    "unclassified_module_files": 0,
+    "record": "modules.md",
+    "scope": "Recursive Workspace .razor/.razor.cs/.razor.css/.js source, excluding bin/obj; existing entries and hosts preserved."
+  }
 }

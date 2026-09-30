@@ -1,7 +1,28 @@
 # WCL-NAV1: navigation acknowledgement outlives the observed browser sequence
 
-Status: **OPEN, P2**. Attribution is unproven. This finding blocks composed-application
-readiness and leaves WC-C3 shared navigation closure open after its controlled repairs.
+Status: **R2 observation correction verified; frozen composed closure pending**. New tests
+intercept the real framework dispatcher and independently hold only the navigation JS
+acknowledgement. They retain the actual callback and connection identities. The browser
+route and both usage charts are visible before that acknowledgement reaches the server.
+An active connection and an abruptly disconnected retained circuit both reproduce the
+normal near-60-second `TaskCanceledException`; permanent circuit retirement takes the
+framework's explicit session-ended path. Releasing the acknowledgement produces the real
+server `NavigationCompleted` event. The original historical caller was not instrumented,
+so this evidence proves the mechanism without retroactively inventing its correlation.
+
+The usage journey now requires both its actual successful JS acknowledgement and the
+matching framework completion before disposing its context. A second request with the same
+URI makes attribution fail rather than borrowing another view's completion. The complete
+shared fixture logs remain asserted. The correction changes test observation, not production
+navigation, JS timeout, circuit retention, unsaved tabs or the prior C1/C2/C3 lifetime fences.
+
+Ignored R2 evidence: `artifacts/workspace-closure-r2/20260930-6b05246f7/nav-corrected-01`
+passes eight discovered cases (three controls and all five original consolidation cases).
+`nav-permanent-02` separately proves permanent retirement. ABA navigation and two independent
+contexts are covered; closing the first does not break the survivor. The first permanent
+control used a deadline shorter than the framework's unchanged interop deadline and failed;
+that attempt is retained as `nav-permanent-01`. Fresh full shared Development history and
+published-host evidence are still required for composed closure.
 
 ## Original observation and ownership
 
