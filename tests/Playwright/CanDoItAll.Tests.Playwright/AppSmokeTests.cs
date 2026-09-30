@@ -1872,6 +1872,7 @@ public sealed partial class AppSmokeTests
 
     private static async Task<ILocator> OpenInlineNoteEditorAsync(IPage page)
     {
+        await page.WaitForFunctionAsync("() => typeof document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.handlers?.keyDown === 'function'");
         await page.Locator(".cw-canvas-host").FocusAsync();
         await page.Locator(".cw-canvas-host").PressAsync("Tab");
         var noteEditor = page.Locator(".cw-note-editor__input");

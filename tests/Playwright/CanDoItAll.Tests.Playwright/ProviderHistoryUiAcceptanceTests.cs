@@ -71,7 +71,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
                 await publisherResults.WaitForAsync();
                 var text = await publisherResults.InnerTextAsync();
                 if (expectedKeyLabels.All(label => text.Contains(label, StringComparison.OrdinalIgnoreCase))
-                    && Regex.Matches(text, Regex.Escape(subject), RegexOptions.IgnoreCase).Count == 3) {
+                    && Regex.Matches(text, Regex.Escape(subject), RegexOptions.IgnoreCase).Count >= 3) {
                     break;
                 }
                 await Task.Delay(500);
@@ -84,14 +84,34 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             Assert.Equal(clientGlobal.Take(2).Order(), clientProvider.Take(2).Order());
             await ScreenshotAsync(client, settings, "5212-provider-history.png");
 
-            var publisherGlobal = await SearchGlobalAsync(source, settings.SharedUrl, ProviderName);
-            var publisherProvider = await SearchProviderAsync(source, settings.SharedUrl, ProviderName);
-            Assert.Equal(publisherGlobal.Take(2).Order(), publisherProvider.Take(2).Order());
+            var publisherGlobal = await SearchGlobalAsync(source, settings.SharedUrl, ProviderName, issued[0].Id);
+            var publisherProvider = await SearchProviderAsync(source, settings.SharedUrl, ProviderName, issued[0].Id);
+            Assert.Equal(publisherGlobal.Order(), publisherProvider.Order());
             var publisherText = await source.GetByTestId("history-results").InnerTextAsync();
-            Assert.Contains($"Key {issued[0].Id:N}"[..12], publisherText, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains($"Key {issued[1].Id:N}"[..12], publisherText, StringComparison.OrdinalIgnoreCase);
-            Assert.Equal(3, Regex.Matches(publisherText, Regex.Escape(subject), RegexOptions.IgnoreCase).Count);
-            await ScreenshotAsync(source, settings, "5210-two-key-provider-history.png");
+            Assert.Contains(expectedKeyLabels[0], publisherText, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(expectedKeyLabels[1], publisherText, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(publisherProvider.Count, Regex.Matches(publisherText, Regex.Escape(subject), RegexOptions.IgnoreCase).Count);
+            await ScreenshotAsync(source, settings, "5210-agent-key-provider-history.png");
+
+            var relayGlobal = await SearchGlobalAsync(source, settings.SharedUrl, ProviderName, issued[1].Id, 1);
+            var relayProvider = await SearchProviderAsync(source, settings.SharedUrl, ProviderName, issued[1].Id, 1);
+            Assert.Equal(relayGlobal, relayProvider);
+            Assert.Single(relayProvider);
+            Assert.Empty(relayProvider.Intersect(publisherProvider));
+            var relayText = await source.GetByTestId("history-results").InnerTextAsync();
+            Assert.Contains(expectedKeyLabels[1], relayText, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(expectedKeyLabels[0], relayText, StringComparison.OrdinalIgnoreCase);
+            Assert.Single(Regex.Matches(relayText, Regex.Escape(subject), RegexOptions.IgnoreCase));
+            await ScreenshotAsync(source, settings, "5210-relay-key-provider-history.png");
+            await File.WriteAllTextAsync(Path.Combine(settings.EvidenceDirectory, "history-attempt-identities.json"),
+                System.Text.Json.JsonSerializer.Serialize(new {
+                    ClientGlobal = clientGlobal,
+                    ClientProvider = clientProvider,
+                    PublisherGlobal = publisherGlobal,
+                    PublisherProvider = publisherProvider,
+                    RelayGlobal = relayGlobal,
+                    RelayProvider = relayProvider
+                }));
         } catch (Exception exception) {
             failure = exception;
             try {
@@ -279,30 +299,35 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         }
     }
 
-    private static async Task<IReadOnlyList<Guid>> SearchGlobalAsync(IPage page, string baseUrl, string providerName) {
+    private static async Task<IReadOnlyList<Guid>> SearchGlobalAsync(IPage page, string baseUrl, string providerName, Guid? credentialId = null, int minimumAttempts = 2) {
         await NavigateAsync(page, $"{baseUrl}/agents?tab=request-history");
-        return await SearchAndReadIdsAsync(page, providerName);
+        return await SearchAndReadIdsAsync(page, providerName, credentialId, minimumAttempts);
     }
 
-    private static async Task<IReadOnlyList<Guid>> SearchProviderAsync(IPage page, string baseUrl, string providerName) {
+    private static async Task<IReadOnlyList<Guid>> SearchProviderAsync(IPage page, string baseUrl, string providerName, Guid? credentialId = null, int minimumAttempts = 2) {
         await SharedProviderMetadataUiChecks.OpenProviderAsync(page, baseUrl, providerName);
         await page.GetByTestId("provider-editor-tab-history").ClickAsync();
-        return await SearchAndReadIdsAsync(page, providerName);
+        return await SearchAndReadIdsAsync(page, providerName, credentialId, minimumAttempts);
     }
 
-    private static async Task<IReadOnlyList<Guid>> SearchAndReadIdsAsync(IPage page, string providerName) {
+    private static async Task<IReadOnlyList<Guid>> SearchAndReadIdsAsync(IPage page, string providerName, Guid? credentialId, int minimumAttempts) {
         var panel = page.GetByTestId("provider-request-history");
         await panel.WaitForAsync();
         await panel.GetByText("History not requested", new() { Exact = true }).WaitForAsync();
         Assert.Equal(0, await panel.GetByTestId("history-results").CountAsync());
+        if (credentialId.HasValue) {
+            await panel.GetByTestId("history-credential").FillAsync(credentialId.Value.ToString("D"));
+        }
         await panel.GetByTestId("history-search").ClickAsync();
         var results = panel.GetByTestId("history-results");
         await results.WaitForAsync();
         Assert.Contains(providerName, await results.InnerTextAsync(), StringComparison.Ordinal);
         var details = results.GetByTestId("history-details");
-        Assert.True(await details.CountAsync() >= 2);
+        var available = await details.CountAsync();
+        Assert.InRange(available, minimumAttempts, 20);
+        var readCount = credentialId.HasValue ? available : minimumAttempts;
         var ids = new List<Guid>();
-        for (var index = 0; index < 2; index++) {
+        for (var index = 0; index < readCount; index++) {
             await details.Nth(index).ClickAsync();
             var dialog = page.GetByTestId("history-detail-dialog");
             await dialog.GetByText("Entry / provider", new() { Exact = true }).WaitForAsync();

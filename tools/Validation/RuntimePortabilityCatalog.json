@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "2026-08-19.1",
+  "catalogVersion": "2026-09-30.1",
   "traitFilter": "Category=UnixRuntimePortability",
   "scopes": [
     {
@@ -30,7 +30,7 @@
       "projectPath": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
       "assemblyPath": "tests/Integration/CanDoItAll.Tests.Integration/bin/{configuration}/net10.0/CanDoItAll.Tests.Integration.dll",
       "trxFileName": "runtime-portability-integration.trx",
-      "expectedCaseCount": 45,
+      "expectedCaseCount": 44,
       "expectedClasses": [
         "CanDoItAll.Tests.Integration.AgentFramework.CapsuleCatalogServiceIntegrationTests",
         "CanDoItAll.Tests.Integration.AgentFramework.McpExternalToolPortabilityIntegrationTests",
