@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-WORKSPACE-CLOSURE-R2-v1",
+  "workspace_rendering_complete": false,
+  "product_fixes_closed": false,
+  "ready_for_next_module": false,
+  "accepted_checkpoint": {
+    "app_commit": null,
+    "components_commit": null,
+    "filetools_commit": null,
+    "source_manifest_sha256": null
+  },
+  "open_critical_findings": [
+    "WCL-DEL1",
+    "WCL-NAV1"
+  ],
+  "dependency_delivery": {
+    "status": "NOT_RUN",
+    "consumer_components_commit": null,
+    "intended_consumer": null,
+    "evidence": []
+  },
+  "live_authorization": {
+    "authorized": false,
+    "campaign_id": null,
+    "operator_reference": null,
+    "max_requests_total": 0,
+    "max_requests_per_execution": 0,
+    "evidence": []
+  },
+  "live_executions": [],
+  "groups": [
+    {
+      "id": "BASE-01",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "WS-01",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "WS-02",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "WS-03",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "WS-04",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "WS-05",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "WS-06",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-01",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-02",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-03",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-04",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-05",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-06",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-07",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-08",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-09",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-10",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-11",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-12",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-13",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-14",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "APP-15",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "LIVE-01",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "LIVE-02",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "LIVE-03",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "GATE-01",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "GATE-02",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "GATE-03",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "GATE-04",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "FIX-DS",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "FIX-C1",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "FIX-C2",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "FIX-C3",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "FIX-HARNESS",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "DELIVERY",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "FIX-DEL",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "FIX-NAV",
+      "selected_attempt_id": null,
+      "attempts": []
+    },
+    {
+      "id": "DOC-MAP",
+      "selected_attempt_id": null,
+      "attempts": []
+    }
+  ],
+  "reviewed_starting_state": {
+    "workspace_rendering": "Structurally complete per source/report; not a new executed pass.",
+    "product_fixes": "DEL1 and NAV1 open.",
+    "dependency": "Recorded Components fix not remotely retrievable during review.",
+    "live": "No new authorization; old 40/40 unchanged."
+  }
+}
